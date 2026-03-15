@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 5066",
     "lint": "eslint",
     "sitemap": "node scripts/generate-sitemap.js",
     "git": "node scripts/git-push.js"
