@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -146,17 +146,60 @@ function CheckboxGroup({ options, selected, onChange, name }) {
   );
 }
 
+function getInitialStepAndEmail() {
+  if (typeof sessionStorage === "undefined") return { step: "email", email: "" };
+  try {
+    const stored = sessionStorage.getItem("listing_verified_email");
+    if (stored && stored.trim()) return { step: "form", email: stored.trim() };
+  } catch (_) { }
+  return { step: "email", email: "" };
+}
+
 export default function ListYourCenterPage() {
-  const [step, setStep] = useState("email"); // email | verify | form | done
-  const [email, setEmail] = useState("");
+  const { step: initialStep, email: initialEmail } = getInitialStepAndEmail();
+  const [step, setStep] = useState(initialStep); // email | verify | form | done
+  const [email, setEmail] = useState(initialEmail);
   const [verificationCode, setVerificationCode] = useState("");
-  const [formData, setFormData] = useState(defaultFormData());
+  const [formData, setFormData] = useState(() => ({
+    ...defaultFormData(),
+    ...(initialEmail ? { email: initialEmail } : {}),
+  }));
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoError, setLogoError] = useState("");
+  const addressAutoFilled = useRef(false);
+
+  useEffect(() => {
+    try {
+      const stored = typeof sessionStorage !== "undefined" ? sessionStorage.getItem("listing_verified_email") : null;
+      if (stored && stored.trim() && step === "email") {
+        setEmail(stored.trim());
+        setFormData((prev) => ({ ...prev, email: stored.trim() }));
+        setStep("form");
+      }
+    } catch (_) { }
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "form" || addressAutoFilled.current) return;
+    addressAutoFilled.current = true;
+    fetch("/api/geo", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || (!data.city && !data.zip && !data.state)) return;
+        setFormData((prev) => ({
+          ...prev,
+          city: data.city ?? prev.city,
+          state: data.state ?? prev.state,
+          zipCode: data.zip ?? prev.zipCode,
+          country: data.country || prev.country,
+        }));
+      })
+      .catch(() => { });
+  }, [step]);
 
   const updateForm = useCallback((e) => {
     const { name, value } = e.target;
@@ -230,8 +273,10 @@ export default function ListYourCenterPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Invalid code");
+      const verifiedEmail = email.trim();
+      if (typeof sessionStorage !== "undefined") sessionStorage.setItem("listing_verified_email", verifiedEmail);
       setStep("form");
-      setFormData((prev) => ({ ...prev, email: email.trim() }));
+      setFormData((prev) => ({ ...prev, email: verifiedEmail }));
     } catch (err) {
       setSubmitError(err.message || "Invalid verification code. Please check and try again.");
     } finally {
@@ -321,7 +366,7 @@ export default function ListYourCenterPage() {
                 rel="noopener noreferrer"
                 className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
               >
-                See how listings look on our site
+                See how listings look on our directory
                 <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                 </svg>

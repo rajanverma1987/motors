@@ -14,11 +14,10 @@ export async function GET(request) {
     const list = await Listing.find({ status: "approved" })
       .sort({ companyName: 1 })
       .lean();
-    const withId = list.map((l) => ({
-      ...l,
-      id: l._id.toString(),
-      _id: undefined,
-    }));
+    const withId = list.map((l) => {
+      const { isSeed, _id, ...rest } = l;
+      return { ...rest, id: _id.toString() };
+    });
 
     const filtered = filterListingsByLocation(withId, { state, city, zip });
 

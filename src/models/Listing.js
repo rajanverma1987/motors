@@ -47,6 +47,7 @@ const listingSchema = new mongoose.Schema(
     reviewedAt: { type: Date },
     reviewedBy: { type: String },
     rejectionReason: { type: String },
+    isSeed: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

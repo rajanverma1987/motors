@@ -39,6 +39,11 @@ const COLUMNS = [
     ),
   },
   {
+    key: "isSeed",
+    label: "Source",
+    render: (val) => (val ? <Badge variant="default">Seed</Badge> : <span className="text-secondary">—</span>),
+  },
+  {
     key: "submittedAt",
     label: "Submitted",
     render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),

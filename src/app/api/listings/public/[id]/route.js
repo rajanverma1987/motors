@@ -20,11 +20,11 @@ export async function GET(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    const { isSeed, _id, ...rest } = doc;
     return NextResponse.json(
       {
-        ...doc,
-        id: doc._id.toString(),
-        _id: undefined,
+        ...rest,
+        id: _id.toString(),
       },
       {
         headers: {

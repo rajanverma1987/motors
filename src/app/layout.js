@@ -76,6 +76,9 @@ export const metadata = {
   alternates: {
     canonical: siteUrl,
   },
+  icons: {
+    icon: [{ url: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'/>", sizes: "any" }],
+  },
 };
 
 export default function RootLayout({ children }) {

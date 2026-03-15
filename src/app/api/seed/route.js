@@ -53,6 +53,7 @@ export async function POST(request) {
       numEngineers: "2",
       yearsCombinedExperience: "85",
       status: "approved",
+      isSeed: true,
     };
     const inserted = await Listing.insertMany(
       SEED_LISTINGS.map((s) => ({ ...base, ...s, address: `123 Industrial Blvd, ${s.city}, ${s.state} ${s.zipCode}` }))
