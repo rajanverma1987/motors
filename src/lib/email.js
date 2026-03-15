@@ -76,6 +76,43 @@ export async function sendAreaListedNotification(toEmail, locationLabel, shopLis
   return sendEmail(toEmail, subject, html);
 }
 
+/** Send demo request to admin as plain HTML table. Subject: RFQ - MotorsWinding CRM Demo. */
+export async function sendDemoRequestToAdmin(fields) {
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const rows = [
+    ["Name", fields.name],
+    ["Email", fields.email],
+    ["Phone", fields.phone],
+    ["Date", fields.preferDate],
+    ["Time", fields.preferTime],
+    ["Timezone", fields.timezone],
+  ]
+    .filter(([, v]) => v != null && String(v).trim() !== "")
+    .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
+    .join("");
+  const html = `
+    <p>A visitor requested a CRM demo via the contact page.</p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:16px;">— MotorsWinding.com (contact form)</p>
+  `;
+  return sendEmail("contact@MotorsWinding.com", "RFQ - MotorsWinding CRM Demo.", html);
+}
+
+/** Send thank-you email to client after demo request. */
+export async function sendDemoRequestThankYou(toName, toEmail) {
+  const name = toName ? ` ${toName}` : "";
+  const subject = "We received your demo request – MotorsWinding.com";
+  const html = `
+    <p>Hi${name},</p>
+    <p>Thank you for requesting a demo of MotorsWinding.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
+    <p>In the meantime, feel free to explore our <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/features">our features</a>.</p>
+    <p>— The MotorsWinding.com team</p>
+  `;
+  return sendEmail(toEmail, subject, html);
+}
+
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
   const subject = "Your MotorsWinding.com verification code";

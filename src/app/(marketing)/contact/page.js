@@ -1,61 +1,63 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
 
+function getDetectedTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+  } catch {
+    return "";
+  }
+}
+
 export default function ContactPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
-    subject: "",
-    message: "",
+    phone: "",
+    preferDate: "",
+    preferTime: "",
+    timezone: "",
   });
-  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const tz = getDetectedTimezone();
+    if (tz) setForm((prev) => ({ ...prev, timezone: tz }));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setError("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: wire to backend
-    setSubmitted(true);
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/contact-demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Something went wrong");
+      router.push("/contact/thank-you");
+    } catch (err) {
+      setError(err.message || "Failed to send. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
-
-  if (submitted) {
-    return (
-      <>
-        <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/5 via-card to-card py-20 sm:py-28">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,var(--color-primary)/.08,transparent)]" aria-hidden />
-          <div className="relative mx-auto max-w-6xl px-4 sm:px-6 text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-              Message sent
-            </div>
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl">
-              Thanks for reaching out
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg text-secondary">
-              We&apos;ll get back to you within 1–2 business days. In the meantime, explore our directory or list your center.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-              <Link href="/">
-                <Button variant="primary">Back to Home</Button>
-              </Link>
-              <Link href="/electric-motor-reapir-shops-listings">
-                <Button variant="outline">Browse repair centers</Button>
-              </Link>
-            </div>
-          </div>
-        </section>
-      </>
-    );
-  }
 
   return (
     <>
@@ -132,10 +134,15 @@ export default function ContactPage() {
             {/* Form */}
             <div className="order-1 lg:order-2">
               <Form onSubmit={handleSubmit} className="shadow-sm sm:p-8">
-                <h2 className="text-xl font-semibold text-title">Send a message</h2>
+                <h2 className="text-xl font-semibold text-title">Request a demo</h2>
                 <p className="mt-1 text-sm text-secondary">
-                  Fill in the form and we&apos;ll get back to you shortly.
+                  Tell us when works for you and we&apos;ll get back shortly.
                 </p>
+                {error && (
+                  <p className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                    {error}
+                  </p>
+                )}
                 <div className="mt-6 space-y-5">
                   <Input
                     label="Name"
@@ -155,29 +162,44 @@ export default function ContactPage() {
                     required
                   />
                   <Input
-                    label="Subject"
-                    name="subject"
-                    value={form.subject}
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
                     onChange={handleChange}
-                    placeholder="e.g. Demo request, Pricing, Support"
+                    placeholder="e.g. (555) 123-4567"
                   />
-                  <div className="flex flex-col gap-1">
-                    <label htmlFor="message" className="text-sm font-medium text-title">
-                      Message
-                    </label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      placeholder="Tell us what you need..."
-                      value={form.message}
-                      onChange={handleChange}
-                      className="min-h-[140px] rounded-md border border-border bg-bg px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                  </div>
+                  <Input
+                    label="Date"
+                    name="preferDate"
+                    type="date"
+                    value={form.preferDate}
+                    onChange={handleChange}
+                  />
+                  <Input
+                    label="Time"
+                    name="preferTime"
+                    type="time"
+                    value={form.preferTime}
+                    onChange={handleChange}
+                  />
+                  <Input
+                    label="Timezone"
+                    name="timezone"
+                    value={form.timezone}
+                    onChange={handleChange}
+                    placeholder="Auto-detected from your browser"
+                  />
                 </div>
                 <div className="mt-8">
-                  <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto">
-                    Send message
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Sending…" : "Request demo"}
                   </Button>
                 </div>
               </Form>
