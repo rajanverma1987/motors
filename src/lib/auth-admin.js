@@ -1,9 +1,16 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "motors-admin-secret-change-in-production"
-);
+let _adminSecret = null;
+function getAdminJwtSecret() {
+  if (_adminSecret) return _adminSecret;
+  const secret = process.env.JWT_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("JWT_SECRET must be set and at least 32 characters in production");
+  }
+  _adminSecret = new TextEncoder().encode(secret || "motors-admin-secret-change-in-production");
+  return _adminSecret;
+}
 const COOKIE_NAME = "motors_admin";
 
 export async function hashPassword(password) {
@@ -18,12 +25,12 @@ export async function createAdminToken(email) {
   return new SignJWT({ email })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getAdminJwtSecret());
 }
 
 export async function verifyAdminToken(token) {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getAdminJwtSecret());
     return payload.email;
   } catch {
     return null;

@@ -3,10 +3,15 @@ import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { verifyPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "portal-login", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
   try {
     const body = await request.json();
     const { email, password } = body || {};

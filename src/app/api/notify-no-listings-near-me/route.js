@@ -1,16 +1,22 @@
 import { NextResponse } from "next/server";
 import { sendNoListingsNearMeNotification } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { LIMITS, clampString } from "@/lib/validation";
 
 /**
  * POST: Notify contact@MotorsWinding.com when no listings were found for a location (near-me page).
  * Body: { city?: string, state?: string, zip?: string }
  */
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "notify-no-listings", 15);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
   try {
     const body = await request.json();
-    const city = (body?.city ?? "").trim();
-    const state = (body?.state ?? "").trim();
-    const zip = (body?.zip ?? "").trim();
+    const city = clampString(body?.city, LIMITS.city);
+    const state = clampString(body?.state, LIMITS.state);
+    const zip = clampString(body?.zip, LIMITS.zip);
 
     if (!city && !state && !zip) {
       return NextResponse.json(

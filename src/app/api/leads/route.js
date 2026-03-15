@@ -2,8 +2,14 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Lead from "@/models/Lead";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "lead", 20);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
   try {
     await connectDB();
     const body = await request.json();
@@ -29,21 +35,27 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
     const doc = await Lead.create({
-      name: name.trim(),
-      email: email.trim(),
-      phone: (phone || "").trim(),
-      message: (message || "").trim(),
-      company: (company || "").trim(),
-      city: (city || "").trim(),
-      zipCode: (zipCode || "").trim(),
-      motorType: (motorType || "").trim(),
-      motorHp: (motorHp || "").trim(),
-      voltage: (voltage || "").trim(),
-      problemDescription: (problemDescription || "").trim(),
-      urgencyLevel: (urgencyLevel || "").trim(),
-      motorPhotos: Array.isArray(motorPhotos) ? motorPhotos.filter(Boolean) : [],
-      sourceListingId: (listingId || "").trim(),
+      name: clampString(name, LIMITS.name.max),
+      email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
+      phone: clampString(phone, 30),
+      message: clampString(message, LIMITS.message.max),
+      company: clampString(company, LIMITS.companyName.max),
+      city: clampString(city, LIMITS.city.max),
+      zipCode: clampString(zipCode, LIMITS.zip.max),
+      motorType: clampString(motorType, LIMITS.shortText.max),
+      motorHp: clampString(motorHp, LIMITS.shortText.max),
+      voltage: clampString(voltage, LIMITS.shortText.max),
+      problemDescription: clampString(problemDescription, LIMITS.message.max),
+      urgencyLevel: clampString(urgencyLevel, LIMITS.shortText.max),
+      motorPhotos: clampArray(motorPhotos, 20),
+      sourceListingId: clampString(listingId, 50),
       assignedListingIds: [],
     });
     return NextResponse.json({ ok: true, id: doc._id.toString() });

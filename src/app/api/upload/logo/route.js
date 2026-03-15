@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const UPLOAD_DIR = "public/uploads/logos";
 const MAX_SIZE_MB = 2;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "upload-logo", 15);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
+  }
   try {
     const formData = await request.formData();
     const file = formData.get("file");

@@ -20,11 +20,18 @@ export async function GET(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json({
-      ...doc,
-      id: doc._id.toString(),
-      _id: undefined,
-    });
+    return NextResponse.json(
+      {
+        ...doc,
+        id: doc._id.toString(),
+        _id: undefined,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch (err) {
     console.error("Get public listing error:", err);
     return NextResponse.json(

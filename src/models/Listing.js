@@ -51,4 +51,8 @@ const listingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+listingSchema.index({ status: 1, submittedAt: -1 });
+listingSchema.index({ status: 1 });
+listingSchema.index({ companyName: 1 });
+
 export default mongoose.models.Listing || mongoose.model("Listing", listingSchema);

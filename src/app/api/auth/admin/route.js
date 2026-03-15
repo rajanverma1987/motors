@@ -2,10 +2,15 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { createAdminToken, getAdminCookieName } from "@/lib/auth-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "admin-login", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
   try {
     const body = await request.json();
     const { email, password } = body || {};

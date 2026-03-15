@@ -1,9 +1,16 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || process.env.PORTAL_JWT_SECRET || "motors-portal-secret-change-in-production"
-);
+let _portalSecret = null;
+function getPortalJwtSecret() {
+  if (_portalSecret) return _portalSecret;
+  const secret = process.env.JWT_SECRET || process.env.PORTAL_JWT_SECRET;
+  if (process.env.NODE_ENV === "production" && (!secret || secret.length < 32)) {
+    throw new Error("JWT_SECRET or PORTAL_JWT_SECRET must be set and at least 32 characters in production");
+  }
+  _portalSecret = new TextEncoder().encode(secret || "motors-portal-secret-change-in-production");
+  return _portalSecret;
+}
 const COOKIE_NAME = "motors_portal";
 
 export async function hashPassword(password) {
@@ -18,12 +25,12 @@ export async function createPortalToken(payload) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
-    .sign(JWT_SECRET);
+    .sign(getPortalJwtSecret());
 }
 
 export async function verifyPortalToken(token) {
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
     return payload;
   } catch {
     return null;

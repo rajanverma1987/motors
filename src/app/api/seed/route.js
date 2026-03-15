@@ -27,6 +27,9 @@ const SEED_LISTINGS = [
 ];
 
 export async function POST(request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not available" }, { status: 404 });
+  }
   try {
     const admin = await getAdminFromRequest(request);
     if (!admin) {

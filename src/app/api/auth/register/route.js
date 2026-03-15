@@ -3,10 +3,16 @@ import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { hashPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "register", 5);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
+  }
   try {
     const body = await request.json();
     const { email, password, shopName, contactName } = body || {};
@@ -16,9 +22,21 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    if (password.length < 6) {
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
+    if (password.length < LIMITS.password.min) {
       return NextResponse.json(
         { error: "Password must be at least 6 characters" },
+        { status: 400 }
+      );
+    }
+    if (password.length > LIMITS.password.max) {
+      return NextResponse.json(
+        { error: "Password too long" },
         { status: 400 }
       );
     }
@@ -34,10 +52,10 @@ export async function POST(request) {
 
     const passwordHash = await hashPassword(password);
     const user = await User.create({
-      email: email.trim().toLowerCase(),
+      email: email.trim().toLowerCase().slice(0, LIMITS.email.max),
       passwordHash,
-      shopName: (shopName || "").trim(),
-      contactName: (contactName || "").trim(),
+      shopName: clampString(shopName, LIMITS.name.max),
+      contactName: clampString(contactName, LIMITS.name.max),
     });
 
     const token = await createPortalToken({

@@ -2,8 +2,17 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+
+const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
+const URL_MAX = LIMITS.url.max;
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "listing-submit", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
+  }
   try {
     await connectDB();
     const body = await request.json();
@@ -53,45 +62,51 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address." },
+        { status: 400 }
+      );
+    }
 
     const doc = await Listing.create({
-      email,
-      companyName: companyName || "",
-      logoUrl: logoUrl || "",
-      shortDescription: shortDescription || "",
-      yearsInBusiness: yearsInBusiness || "",
-      phone: phone || "",
-      website: website || "",
-      primaryContactPerson: primaryContactPerson || "",
-      address: address || "",
-      city: city || "",
-      state: state || "",
-      zipCode: zipCode || "",
-      country: country || "United States",
-      services: Array.isArray(services) ? services : [],
-      maxMotorSizeHP: maxMotorSizeHP || "",
-      maxVoltage: maxVoltage || "",
-      maxWeightHandled: maxWeightHandled || "",
-      motorCapabilities: Array.isArray(motorCapabilities) ? motorCapabilities : [],
-      equipmentTesting: Array.isArray(equipmentTesting) ? equipmentTesting : [],
-      rewindingCapabilities: Array.isArray(rewindingCapabilities) ? rewindingCapabilities : [],
-      industriesServed: Array.isArray(industriesServed) ? industriesServed : [],
+      email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
+      companyName: STR(companyName, LIMITS.companyName.max),
+      logoUrl: STR(logoUrl, URL_MAX),
+      shortDescription: STR(shortDescription, 500),
+      yearsInBusiness: STR(yearsInBusiness),
+      phone: STR(phone, 30),
+      website: STR(website, URL_MAX),
+      primaryContactPerson: STR(primaryContactPerson),
+      address: STR(address, 300),
+      city: STR(city, LIMITS.city.max),
+      state: STR(state, LIMITS.state.max),
+      zipCode: STR(zipCode, LIMITS.zip.max),
+      country: STR(country, 100) || "United States",
+      services: clampArray(services),
+      maxMotorSizeHP: STR(maxMotorSizeHP),
+      maxVoltage: STR(maxVoltage),
+      maxWeightHandled: STR(maxWeightHandled),
+      motorCapabilities: clampArray(motorCapabilities),
+      equipmentTesting: clampArray(equipmentTesting),
+      rewindingCapabilities: clampArray(rewindingCapabilities),
+      industriesServed: clampArray(industriesServed),
       pickupDeliveryAvailable: !!pickupDeliveryAvailable,
-      craneCapacity: craneCapacity || "",
-      forkliftCapacity: forkliftCapacity || "",
+      craneCapacity: STR(craneCapacity),
+      forkliftCapacity: STR(forkliftCapacity),
       rushRepairAvailable: !!rushRepairAvailable,
-      turnaroundTime: turnaroundTime || "",
-      certifications: Array.isArray(certifications) ? certifications : [],
-      shopSizeSqft: shopSizeSqft || "",
-      numTechnicians: numTechnicians || "",
-      numEngineers: numEngineers || "",
-      yearsCombinedExperience: yearsCombinedExperience || "",
-      galleryPhotoUrls: Array.isArray(galleryPhotoUrls) ? galleryPhotoUrls : [],
-      serviceZipCode: serviceZipCode || "",
-      serviceRadiusMiles: serviceRadiusMiles || "",
-      statesServed: statesServed || "",
-      citiesOrMetrosServed: citiesOrMetrosServed || "",
-      areaCoveredFrom: areaCoveredFrom || "",
+      turnaroundTime: STR(turnaroundTime),
+      certifications: clampArray(certifications),
+      shopSizeSqft: STR(shopSizeSqft),
+      numTechnicians: STR(numTechnicians),
+      numEngineers: STR(numEngineers),
+      yearsCombinedExperience: STR(yearsCombinedExperience),
+      galleryPhotoUrls: clampArray(galleryPhotoUrls, 30).map((u) => STR(u, URL_MAX)),
+      serviceZipCode: STR(serviceZipCode, 20),
+      serviceRadiusMiles: STR(serviceRadiusMiles),
+      statesServed: STR(statesServed, 500),
+      citiesOrMetrosServed: STR(citiesOrMetrosServed, 1000),
+      areaCoveredFrom: STR(areaCoveredFrom, 300),
       status: "in-review",
     });
 

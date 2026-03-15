@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const UPLOAD_DIR = "public/uploads/leads";
 const MAX_FILES = 5;
 const MAX_SIZE_MB = 5;
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export async function POST(request) {
+  const { allowed } = checkRateLimit(request, "leads-upload", 10);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
+  }
   try {
     const formData = await request.formData();
     const files = formData.getAll("files").filter((f) => f && typeof f.arrayBuffer === "function");
@@ -27,6 +33,13 @@ export async function POST(request) {
     const urls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const type = (file.type || "").toLowerCase();
+      if (!ALLOWED_TYPES.includes(type)) {
+        return NextResponse.json(
+          { error: "Only JPEG, PNG, GIF, or WebP images are allowed." },
+          { status: 400 }
+        );
+      }
       const buffer = Buffer.from(await file.arrayBuffer());
       if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
         return NextResponse.json(
