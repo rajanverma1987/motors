@@ -1,0 +1,169 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import { createPortal } from "react-dom";
+import { useModalStack } from "@/components/modal-provider";
+
+const BASE_Z = 50;
+const sizeClasses = {
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
+  "2xl": "max-w-2xl",
+  "3xl": "max-w-3xl",
+  "4xl": "max-w-4xl",
+  full: "max-w-[90vw]",
+};
+
+function toCssValue(v) {
+  if (v == null) return undefined;
+  if (typeof v === "number") return `${v}px`;
+  return String(v);
+}
+
+export default function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  showClose = true,
+  size = "md",
+  width,
+  height,
+  className = "",
+}) {
+  const stackContext = useModalStack();
+  const { addModal, removeModal } = stackContext || {};
+  const [modalId, setModalId] = useState(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStartRef = useRef({ clientX: 0, clientY: 0, posX: 0, posY: 0 });
+  const dialogRef = useRef(null);
+
+  const handleHeaderMouseDown = (e) => {
+    if (e.button !== 0) return;
+    dragStartRef.current = {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      posX: position.x,
+      posY: position.y,
+    };
+    setDragging(true);
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e) => {
+      const { clientX, clientY, posX, posY } = dragStartRef.current;
+      let nextX = posX + e.clientX - clientX;
+      let nextY = posY + e.clientY - clientY;
+
+      if (dialogRef.current) {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const { width, height } = dialogRef.current.getBoundingClientRect();
+        const minX = width / 2 - vw / 2;
+        const maxX = vw / 2 - width / 2;
+        const minY = height / 2 - vh / 2;
+        const maxY = vh / 2 - height / 2;
+        nextX = Math.max(minX, Math.min(maxX, nextX));
+        nextY = Math.max(minY, Math.min(maxY, nextY));
+      }
+
+      setPosition({ x: nextX, y: nextY });
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [dragging]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (addModal && removeModal) {
+      const id = addModal(onClose);
+      setModalId(id);
+      return () => {
+        removeModal(id);
+        setModalId(null);
+      };
+    }
+    const handler = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onClose, addModal, removeModal]);
+
+  if (!open) return null;
+
+  const style = {};
+  const w = toCssValue(width);
+  const h = toCssValue(height);
+  if (w) style.width = w;
+  if (h) style.height = h;
+
+  const zIndex =
+    stackContext && modalId != null
+      ? BASE_Z + stackContext.stack.findIndex((item) => item.id === modalId)
+      : BASE_Z;
+
+  const dialogStyle = {
+    ...(Object.keys(style).length ? style : {}),
+    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+  };
+
+  const modalContent = (
+    <div
+      className="fixed inset-0 p-4"
+      style={{ zIndex }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={title ? "modal-title" : undefined}
+    >
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+      <div
+        ref={dialogRef}
+        style={dialogStyle}
+        className={`absolute left-1/2 top-1/2 w-full rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {(title != null || showClose) && (
+          <div
+            className={`flex items-center justify-between gap-4 border-b border-border px-4 py-3 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            onMouseDown={handleHeaderMouseDown}
+          >
+            {title != null && (
+              <h2 id="modal-title" className="text-lg font-semibold text-title pointer-events-none">
+                {title}
+              </h2>
+            )}
+            <span className={title != null ? "" : "ml-auto"} />
+            {showClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                onMouseDown={(e) => e.stopPropagation()}
+                className="rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                aria-label="Close"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        )}
+        <div className="flex-1 min-h-0 overflow-auto p-4">{children}</div>
+      </div>
+    </div>
+  );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(modalContent, document.body);
+}

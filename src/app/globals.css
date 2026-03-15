@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
+/* Base font size 90% of browser default (16px → ~14.4px) */
+html {
+  font-size: 90%;
+}
+
+/* Design system theme tokens (HSL values without hsl()) */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: 210 25% 99%;
+  --card: 210 22% 98%;
+  --form-bg: 210 12% 96%;
+  --text: 222 47% 11%;
+  --title: 218 44% 8%;
+  --primary: 214 72% 38%;
+  --secondary: 215 25% 42%;
+  --border: 214 18% 94%;
+  --accent: 24 95% 53%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
+}
+
+/* Dark theme: next-themes adds class="dark" to <html> */
+html.dark {
+  --bg: 222 40% 12%;
+  --card: 222 36% 16%;
+  --form-bg: 222 36% 16%;
+  --text: 210 38% 98%;
+  --title: 0 0% 100%;
+  --primary: 213 85% 62%;
+  --secondary: 215 22% 68%;
+  --border: 217 22% 28%;
+  --accent: 24 95% 53%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --color-bg: hsl(var(--bg));
+  --color-card: hsl(var(--card));
+  --color-form-bg: hsl(var(--form-bg));
+  --color-text: hsl(var(--text));
+  --color-title: hsl(var(--title));
+  --color-primary: hsl(var(--primary));
+  --color-secondary: hsl(var(--secondary));
+  --color-border: hsl(var(--border));
+  --color-accent: hsl(var(--accent));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+  --font-sans: var(--font-inter), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Tabular numbers for tables (aligns numbers in columns) */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Table horizontal scrollbar: show only on hover, not permanently visible */
+.table-scroll-x::-webkit-scrollbar {
+  height: 8px;
+}
+.table-scroll-x::-webkit-scrollbar-track {
+  background: transparent;
+}
+.table-scroll-x::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.table-scroll-x:hover::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+}
+.table-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--secondary));
+}
+/* Firefox: thin scrollbar, transparent until hover */
+.table-scroll-x {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.table-scroll-x:hover {
+  scrollbar-color: hsl(var(--border)) transparent;
 }

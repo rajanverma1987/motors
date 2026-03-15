@@ -1,0 +1,24 @@
+import { NextResponse } from "next/server";
+
+export function middleware(request) {
+  const { pathname } = request.nextUrl;
+  const cookieHeader = request.headers.get("cookie") || "";
+  const hasAdminCookie = cookieHeader.includes("motors_admin=");
+  const hasPortalCookie = cookieHeader.includes("motors_portal=");
+
+  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
+    if (!hasAdminCookie) {
+      return NextResponse.redirect(new URL("/admin/login", request.url));
+    }
+  }
+  if (pathname.startsWith("/dashboard")) {
+    if (!hasPortalCookie) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/admin", "/admin/listings/:path*", "/admin/leads/:path*", "/admin/clients/:path*", "/admin/location-pages/:path*", "/dashboard", "/dashboard/:path*"],
+};
