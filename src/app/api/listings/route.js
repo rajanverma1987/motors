@@ -4,6 +4,7 @@ import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+import { sendNewListingSubmittedToAdmin } from "@/lib/email";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -109,6 +110,12 @@ export async function POST(request) {
       areaCoveredFrom: STR(areaCoveredFrom, 300),
       status: "in-review",
     });
+
+    try {
+      await sendNewListingSubmittedToAdmin(doc);
+    } catch (e) {
+      console.warn("New listing notification email failed:", e);
+    }
 
     return NextResponse.json({ ok: true, id: doc._id.toString() });
   } catch (err) {

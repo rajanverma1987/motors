@@ -1,8 +1,7 @@
-import { Resend } from "resend";
-import { hasSmtp, getTransporter } from "@/lib/email-transport";
+import { getTransporter } from "@/lib/email-transport";
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
-const fromEmail = process.env.EMAIL_FROM || "onboarding@resend.dev";
+const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
+const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
 
 export async function sendListingApproved(to, companyName) {
   const subject = "Congratulations! Your listing is live on MotorsWinding.com";
@@ -113,6 +112,57 @@ export async function sendDemoRequestThankYou(toName, toEmail) {
   return sendEmail(toEmail, subject, html);
 }
 
+/** Email address to receive "new listing submitted" and "shop listed" notifications. */
+const listingNotifyEmail = () =>
+  process.env.NOTIFY_LISTING_EMAIL?.trim() ||
+  process.env.ADMIN_EMAIL?.trim() ||
+  "contact@MotorsWinding.com";
+
+/** Notify admin when someone submits a new listing from list-your-electric-motor-services. */
+export async function sendNewListingSubmittedToAdmin(doc) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const rows = [
+    ["Company", doc.companyName],
+    ["Email", doc.email],
+    ["Phone", doc.phone],
+    ["Website", doc.website],
+    ["City", doc.city],
+    ["State", doc.state],
+    ["ZIP", doc.zipCode],
+    ["Primary contact", doc.primaryContactPerson],
+    ["Short description", (doc.shortDescription || "").slice(0, 200)],
+  ]
+    .filter(([, v]) => v != null && String(v).trim() !== "")
+    .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
+    .join("");
+  const html = `
+    <p>A new repair center listing was submitted from the <strong>List your electric motor services</strong> page.</p>
+    <p>Review and approve or reject in the admin: <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/admin/listings">Admin → Listings</a></p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>${rows}</tbody>
+    </table>
+    <p style="margin-top:16px;">— MotorsWinding.com (automated)</p>
+  `;
+  return sendEmail(to, "New listing submitted – MotorsWinding.com", html);
+}
+
+/** Notify admin when a listing is approved and the shop is now listed on the website. */
+export async function sendShopListedNotificationToAdmin(doc) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "");
+  const html = `
+    <p>A repair center has been <strong>approved</strong> and is now listed on the website.</p>
+    <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
+    Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || "—"}</p>
+    <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-reapir-shops-listings">Public directory</a></p>
+    <p style="margin-top:16px;">— MotorsWinding.com (automated)</p>
+  `;
+  return sendEmail(to, "Shop listed on website – MotorsWinding.com", html);
+}
+
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
   const subject = "Your MotorsWinding.com verification code";
@@ -126,41 +176,31 @@ export async function sendVerificationCodeEmail(to, code) {
   return sendEmail(to, subject, html);
 }
 
-async function sendEmail(to, subject, html) {
+/**
+ * Send an email. Uses options.from when provided (e.g. for marketing); otherwise uses default EMAIL_FROM.
+ */
+async function sendEmail(to, subject, html, options = {}) {
+  const from = options.from || fromEmail || process.env.SMTP_USER;
   const transport = getTransporter();
-  if (transport) {
-    try {
-      const from = fromEmail || process.env.SMTP_USER;
-      await transport.sendMail({
-        from,
-        to,
-        subject,
-        html,
-      });
-      return { ok: true };
-    } catch (err) {
-      console.error("Nodemailer error:", err);
-      return { ok: false, error: err.message };
-    }
+  if (!transport) {
+    console.error("[Email not configured] Set SMTP_USER and SMTP_PASS. To:", to, "Subject:", subject);
+    return { ok: false, error: "Email not configured. Set SMTP_USER and SMTP_PASS." };
   }
-  if (resend) {
-    try {
-      const { error } = await resend.emails.send({
-        from: fromEmail,
-        to: [to],
-        subject,
-        html,
-      });
-      if (error) {
-        console.error("Resend error:", error);
-        return { ok: false, error: error.message };
-      }
-      return { ok: true };
-    } catch (err) {
-      console.error("Send email error:", err);
-      return { ok: false, error: err.message };
-    }
+  try {
+    await transport.sendMail({
+      from,
+      to,
+      subject,
+      html,
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("Nodemailer error:", err);
+    return { ok: false, error: err.message };
   }
-  console.log("[Email not configured] To:", to, "Subject:", subject);
-  return { ok: true };
+}
+
+/** Send email using the marketing "from" address (EMAIL_MARKETING_FROM). Use for admin marketing campaigns. */
+export async function sendMarketingEmail(to, subject, html) {
+  return sendEmail(to, subject, html, { from: marketingFrom });
 }

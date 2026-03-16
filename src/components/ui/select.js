@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import HelpIcon from "./help-icon";
+
+const DROPDOWN_Z = 9999;
 
 export default function Select({
   label,
@@ -18,7 +21,10 @@ export default function Select({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dropdownRect, setDropdownRect] = useState(null);
   const containerRef = useRef(null);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   const selectedValues = multiple
     ? Array.isArray(value) ? value : value ? [value] : []
@@ -43,14 +49,36 @@ export default function Select({
       : placeholder
     : selectedLabels || placeholder;
 
+  const updateDropdownRect = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownRect({ top: rect.bottom, left: rect.left, width: rect.width });
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updateDropdownRect();
+      const onScrollOrResize = () => updateDropdownRect();
+      window.addEventListener("scroll", onScrollOrResize, true);
+      window.addEventListener("resize", onScrollOrResize);
+      return () => {
+        window.removeEventListener("scroll", onScrollOrResize, true);
+        window.removeEventListener("resize", onScrollOrResize);
+      };
+    } else {
+      setDropdownRect(null);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
+      const inContainer = containerRef.current?.contains(event.target);
+      const inDropdown = dropdownRef.current?.contains(event.target);
+      if (!inContainer && !inDropdown) setIsOpen(false);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   const handleSelect = (opt) => {
@@ -115,6 +143,7 @@ export default function Select({
         </span>
       )}
       <div
+        ref={triggerRef}
         id={id}
         role="button"
         tabIndex={0}
@@ -142,55 +171,68 @@ export default function Select({
         </svg>
       </div>
 
-      {isOpen && (
-        <div className="absolute top-full z-[100] mt-1 w-full rounded-md border border-border bg-bg shadow-lg">
-          {searchable && (
-            <div className="border-b border-border p-2">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search..."
-                className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
-                autoFocus
-                onKeyDown={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
-          <ul className="max-h-48 overflow-auto py-1">
-            {filteredOptions.length === 0 ? (
-              <li className="px-3 py-2 text-sm text-title">No options</li>
-            ) : (
-              filteredOptions.map((opt, i) => (
-                <li key={i}>
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(opt)}
-                    className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-bg ${
-                      isSelected(opt) ? "bg-bg text-primary font-medium" : "text-text"
-                    }`}
-                  >
-                    {multiple && (
-                      <span
-                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border ${
-                          isSelected(opt) ? "bg-primary border-primary" : "bg-card"
-                        }`}
-                      >
-                        {isSelected(opt) && (
-                          <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </span>
-                    )}
-                    {opt.label}
-                  </button>
-                </li>
-              ))
+      {isOpen && dropdownRect && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="rounded-md border border-border bg-bg shadow-lg"
+            style={{
+              position: "fixed",
+              top: dropdownRect.top + 4,
+              left: dropdownRect.left,
+              width: dropdownRect.width,
+              zIndex: DROPDOWN_Z,
+            }}
+          >
+            {searchable && (
+              <div className="border-b border-border p-2">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
             )}
-          </ul>
-        </div>
-      )}
+            <ul className="max-h-48 overflow-auto py-1">
+              {filteredOptions.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-title">No options</li>
+              ) : (
+                filteredOptions.map((opt, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(opt)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-bg ${
+                        isSelected(opt) ? "bg-bg text-primary font-medium" : "text-text"
+                      }`}
+                    >
+                      {multiple && (
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border ${
+                            isSelected(opt) ? "bg-primary border-primary" : "bg-card"
+                          }`}
+                        >
+                          {isSelected(opt) && (
+                            <svg className="h-2.5 w-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
+                      {opt.label}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>,
+          document.body
+        )
+      }
     </div>
   );
 }

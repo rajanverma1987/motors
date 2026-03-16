@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
-import { sendListingApproved, sendListingRejected } from "@/lib/email";
+import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
 import { getListingSlug } from "@/lib/listing-slug";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 
@@ -40,6 +40,11 @@ export async function POST(request) {
       await doc.save();
       if (newStatus === "approved") {
         await sendListingApproved(doc.email, doc.companyName);
+        try {
+          await sendShopListedNotificationToAdmin(doc);
+        } catch (e) {
+          console.warn("Shop listed notification email failed:", e);
+        }
         try {
           await notifyAreaRequestsForListing(doc);
         } catch (e) {
