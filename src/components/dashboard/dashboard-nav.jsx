@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiSearch } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -16,22 +16,21 @@ export default function DashboardNav() {
   };
 
   return (
-    <nav className="border-b border-border bg-card px-4 py-3">
-      <div className="mx-auto flex max-w-6xl items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-lg font-semibold text-title hover:text-primary">
-            MotorsWinding.com
-          </Link>
-          <Link href="/dashboard" className="text-sm text-secondary hover:text-text">
-            Dashboard
-          </Link>
-          {user && (
-            <span className="text-sm text-secondary" title={user.email}>
-              {user.shopName}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+    <nav className="border-b border-border bg-card px-4 py-3 sm:px-6">
+      <div className="flex w-full items-center justify-between gap-4">
+        <Link href="/dashboard" className="text-lg font-semibold text-title hover:text-primary shrink-0" title={user?.email}>
+          {user?.shopName || "Dashboard"}
+        </Link>
+        <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4 max-w-2xl ml-4">
+          <div className="relative flex-1 min-w-0 max-w-md">
+            <FiSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" aria-hidden />
+            <input
+              type="search"
+              placeholder="Search…"
+              aria-label="Search"
+              className="w-full rounded-md border border-border bg-bg py-2 pl-9 pr-3 text-sm text-title placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
           <ThemeToggle />
           <button
             type="button"

@@ -9,7 +9,7 @@ const footerLinks = {
   ],
   "For buyers": [
     { href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" },
-    { href: "/electric-motor-reapir-shops-near-me", label: "Repair shops near me" },
+    { href: "/electric-motor-reapir-near-me", label: "Repair shops near me" },
     { href: "/how-to-choose-electric-motor-repair-shop", label: "How to choose a shop" },
     { href: "/when-to-repair-or-replace-electric-motor", label: "Repair vs. replace" },
     { href: "/types-of-electric-motor-repair-services", label: "Types of repair" },

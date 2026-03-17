@@ -91,19 +91,33 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
     : "Submit your repair requirement. We'll match you with repair centers in your area.";
 
   return (
-    <Modal open={open} onClose={handleClose} title="Send your requirement" size="4xl">
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="Send your requirement"
+      size="4xl"
+      actions={
+        submitted ? (
+          <Button type="button" variant="outline" size="sm" onClick={handleClose}>Close</Button>
+        ) : (
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={handleClose}>Cancel</Button>
+            <Button type="submit" form="lead-form-modal-form" variant="primary" size="sm" disabled={submitting}>
+              {submitting ? "Sending…" : "Submit"}
+            </Button>
+          </>
+        )
+      }
+    >
       {submitted ? (
         <div className="py-4 text-center">
           <p className="text-title font-medium">Thank you for your request.</p>
           <p className="mt-2 text-sm text-secondary">
             Your requirement has been submitted. {listing ? "The repair center will be in touch." : "We'll match you with repair centers and get back to you."}
           </p>
-          <Button variant="outline" className="mt-6" onClick={handleClose}>
-            Close
-          </Button>
         </div>
       ) : (
-        <Form onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
+        <Form id="lead-form-modal-form" onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
           <p className="text-sm text-secondary">{introText}</p>
 
           <div>
@@ -214,14 +228,6 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={handleClose}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" disabled={submitting}>
-              {submitting ? "Sending…" : "Submit"}
-            </Button>
-          </div>
         </Form>
       )}
     </Modal>

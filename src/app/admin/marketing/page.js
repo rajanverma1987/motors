@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -80,7 +81,20 @@ function EditContactModal({ contact, open, onClose, onSaved }) {
 
   if (!contact) return null;
   return (
-    <Modal open={open} onClose={onClose} title="Update contact" size="md">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Update contact"
+      size="md"
+      actions={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="button" variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </>
+      }
+    >
       <div className="space-y-4">
         <p className="text-sm text-secondary">{contact.email}</p>
         <Select
@@ -97,14 +111,6 @@ function EditContactModal({ contact, open, onClose, onSaved }) {
           rows={3}
           placeholder="e.g. Replied, listed on 3/1"
         />
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </div>
       </div>
     </Modal>
   );
@@ -221,6 +227,48 @@ export default function AdminMarketingPage() {
   };
 
   const columns = [
+    {
+      key: "actions",
+      label: "",
+      render: (_, row) => (
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => openEdit(row)}
+            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Edit"
+          >
+            <FiEdit2 className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={async () => {
+              const confirmed = await confirm({
+                title: "Remove contact",
+                message: `Remove ${row.email} from the list?`,
+                confirmLabel: "Remove",
+                cancelLabel: "Cancel",
+                variant: "danger",
+              });
+              if (!confirmed) return;
+              try {
+                const res = await fetch(`/api/admin/marketing/contacts/${row.id}`, { method: "DELETE", credentials: "include" });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || "Delete failed");
+                toast.success("Contact removed.");
+                fetchContacts();
+              } catch (err) {
+                toast.error(err.message || "Delete failed");
+              }
+            }}
+            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+            aria-label="Delete"
+          >
+            <FiTrash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
     { key: "email", label: "Email" },
     { key: "name", label: "Name", render: (v) => v || "—" },
     { key: "companyName", label: "Company", render: (v) => v || "—" },
@@ -249,43 +297,6 @@ export default function AdminMarketingPage() {
     },
     { key: "followUpCount", label: "Follow-ups", render: (v) => v ?? 0 },
     { key: "notes", label: "Notes", render: (v) => (v ? String(v).slice(0, 30) + (v.length > 30 ? "…" : "") : "—") },
-    {
-      key: "actions",
-      label: "",
-      render: (_, row) => (
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => openEdit(row)}>
-            Edit
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-red-600 hover:text-red-700 hover:border-red-300 dark:text-red-400 dark:hover:text-red-300"
-            onClick={async () => {
-              const confirmed = await confirm({
-                title: "Remove contact",
-                message: `Remove ${row.email} from the list?`,
-                confirmLabel: "Remove",
-                cancelLabel: "Cancel",
-                variant: "danger",
-              });
-              if (!confirmed) return;
-              try {
-                const res = await fetch(`/api/admin/marketing/contacts/${row.id}`, { method: "DELETE", credentials: "include" });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Delete failed");
-                toast.success("Contact removed.");
-                fetchContacts();
-              } catch (err) {
-                toast.error(err.message || "Delete failed");
-              }
-            }}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
   ];
 
   const tableData = contacts
@@ -353,7 +364,51 @@ export default function AdminMarketingPage() {
       </div>
 
       {/* Add contacts popup */}
-      <Modal open={addContactsOpen} onClose={() => setAddContactsOpen(false)} title="Add contacts" size="md">
+      <Modal
+        open={addContactsOpen}
+        onClose={() => setAddContactsOpen(false)}
+        title="Add contacts"
+        size="md"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setAddContactsOpen(false)}>Cancel</Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={async () => {
+                const list = parsePastedEmails(pasteText);
+                if (list.length === 0) {
+                  toast.warning("Paste one email per line.");
+                  return;
+                }
+                setUploading(true);
+                try {
+                  const res = await fetch("/api/admin/marketing/contacts", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ contacts: list }),
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.error || "Upload failed");
+                  toast.success(`Added ${data.added} new contact(s). ${data.total - data.added} already existed.`);
+                  setPasteText("");
+                  setAddContactsOpen(false);
+                  fetchContacts();
+                } catch (err) {
+                  toast.error(err.message || "Upload failed");
+                } finally {
+                  setUploading(false);
+                }
+              }}
+              disabled={uploading || !pasteText.trim()}
+            >
+              {uploading ? "Adding…" : "Add"}
+            </Button>
+          </>
+        }
+      >
         <p className="mb-3 text-sm text-secondary">
           One email per line. Names and company are optional (emails only is fine).
         </p>
@@ -364,45 +419,20 @@ export default function AdminMarketingPage() {
           rows={6}
           className="font-mono text-sm"
         />
-        <div className="mt-4 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setAddContactsOpen(false)}>Cancel</Button>
-          <Button
-            variant="primary"
-            onClick={async () => {
-              const list = parsePastedEmails(pasteText);
-              if (list.length === 0) {
-                toast.warning("Paste one email per line.");
-                return;
-              }
-              setUploading(true);
-              try {
-                const res = await fetch("/api/admin/marketing/contacts", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  credentials: "include",
-                  body: JSON.stringify({ contacts: list }),
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Upload failed");
-                toast.success(`Added ${data.added} new contact(s). ${data.total - data.added} already existed.`);
-                setPasteText("");
-                setAddContactsOpen(false);
-                fetchContacts();
-              } catch (err) {
-                toast.error(err.message || "Upload failed");
-              } finally {
-                setUploading(false);
-              }
-            }}
-            disabled={uploading || !pasteText.trim()}
-          >
-            {uploading ? "Adding…" : "Add contacts"}
-          </Button>
-        </div>
       </Modal>
 
       {/* Send batch popup */}
-      <Modal open={sendBatchOpen} onClose={() => setSendBatchOpen(false)} title="Send batch" size="md">
+      <Modal
+        open={sendBatchOpen}
+        onClose={() => setSendBatchOpen(false)}
+        title="Send batch"
+        size="md"
+        actions={
+          <Button type="button" variant="primary" size="sm" onClick={handleSendBatch} disabled={sending}>
+            {sending ? "Sending…" : "Send batch"}
+          </Button>
+        }
+      >
         <p className="mb-3 text-sm text-secondary">
           Sends new emails to pending contacts, or follow-ups to contacted ones (5+ days since last email). Listed, Do not contact, and Unsubscribed are skipped.
         </p>
@@ -415,11 +445,6 @@ export default function AdminMarketingPage() {
             searchable={false}
             className="w-24"
           />
-          <div className="flex items-end gap-2">
-            <Button variant="primary" onClick={handleSendBatch} disabled={sending}>
-              {sending ? "Sending…" : "Send batch"}
-            </Button>
-          </div>
         </div>
         {lastSendResult && (
           <p className="mt-4 text-sm text-secondary">
@@ -430,7 +455,28 @@ export default function AdminMarketingPage() {
       </Modal>
 
       {/* Templates popup */}
-      <Modal open={templatesOpen} onClose={() => setTemplatesOpen(false)} title="Email templates" size="4xl">
+      <Modal
+        open={templatesOpen}
+        onClose={() => setTemplatesOpen(false)}
+        title="Email templates"
+        size="4xl"
+        actions={
+          !templatesLoading && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={async () => {
+                await handleSaveTemplates();
+                setTemplatesOpen(false);
+              }}
+              disabled={templatesSaving}
+            >
+              {templatesSaving ? "Saving…" : "Save"}
+            </Button>
+          )
+        }
+      >
         <p className="mb-3 text-sm text-secondary">
           Use {"{{unsubscribe_url}}"} in body for the unsubscribe link. Preview updates as you type.
         </p>
@@ -493,14 +539,6 @@ export default function AdminMarketingPage() {
                   }}
                 />
               </div>
-            </div>
-            <div className="flex justify-end pt-2">
-              <Button variant="primary" onClick={async () => {
-                await handleSaveTemplates();
-                setTemplatesOpen(false);
-              }} disabled={templatesSaving}>
-                {templatesSaving ? "Saving…" : "Save templates"}
-              </Button>
             </div>
           </div>
         )}

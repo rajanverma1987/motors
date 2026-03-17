@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { FiEye, FiLock, FiUnlock } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -48,6 +49,31 @@ function ClientDetailModal({ client, open, onClose }) {
 }
 
 const COLUMNS = [
+  {
+    key: "view",
+    label: "",
+    render: (_, row) => (
+      <button
+        type="button"
+        onClick={() => row._onView?.()}
+        className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="View"
+      >
+        <FiEye className="h-4 w-4" />
+      </button>
+    ),
+  },
+  {
+    key: "actions",
+    label: "",
+    render: (_, row) => (
+      <ClientActions
+        id={row.id}
+        canLogin={row.canLogin}
+        onUpdate={row._onUpdate}
+      />
+    ),
+  },
   { key: "email", label: "Email" },
   { key: "shopName", label: "Shop name" },
   { key: "contactName", label: "Contact name" },
@@ -64,30 +90,6 @@ const COLUMNS = [
     key: "createdAt",
     label: "Registered",
     render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
-  },
-  {
-    key: "view",
-    label: "",
-    render: (_, row) => (
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => row._onView?.()}
-      >
-        View
-      </Button>
-    ),
-  },
-  {
-    key: "actions",
-    label: "",
-    render: (_, row) => (
-      <ClientActions
-        id={row.id}
-        canLogin={row.canLogin}
-        onUpdate={row._onUpdate}
-      />
-    ),
   },
 ];
 
@@ -115,23 +117,25 @@ function ClientActions({ id, canLogin, onUpdate }) {
   }
 
   return canLogin ? (
-    <Button
-      variant="outline"
-      size="sm"
+    <button
+      type="button"
       onClick={handleToggle}
       disabled={loading}
+      className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+      aria-label="Revoke access"
     >
-      {loading ? "…" : "Revoke"}
-    </Button>
+      <FiLock className="h-4 w-4" />
+    </button>
   ) : (
-    <Button
-      variant="primary"
-      size="sm"
+    <button
+      type="button"
       onClick={handleToggle}
       disabled={loading}
+      className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+      aria-label="Grant access"
     >
-      {loading ? "…" : "Grant"}
-    </Button>
+      <FiUnlock className="h-4 w-4" />
+    </button>
   );
 }
 

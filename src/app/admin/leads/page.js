@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { FiEye, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -101,6 +102,30 @@ export default function AdminLeadsPage() {
 
   const COLUMNS = useMemo(
     () => [
+      {
+        key: "actions",
+        label: "",
+        render: (_, row) => (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => openViewModal(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="View"
+            >
+              <FiEye className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openAssignModal(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Assign"
+            >
+              <FiUserPlus className="h-4 w-4" />
+            </button>
+          </div>
+        ),
+      },
       { key: "name", label: "Name" },
       { key: "email", label: "Email" },
       {
@@ -121,20 +146,6 @@ export default function AdminLeadsPage() {
         key: "createdAt",
         label: "Submitted",
         render: (val) => (val ? new Date(val).toLocaleString() : "—"),
-      },
-      {
-        key: "actions",
-        label: "",
-        render: (_, row) => (
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => openViewModal(row)}>
-              View
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => openAssignModal(row)}>
-              Assign
-            </Button>
-          </div>
-        ),
       },
     ],
     [listingMap]
@@ -160,7 +171,18 @@ export default function AdminLeadsPage() {
         />
       </div>
 
-      <Modal open={viewModalOpen} onClose={closeViewModal} title="Lead details" size="lg">
+      <Modal
+        open={viewModalOpen}
+        onClose={closeViewModal}
+        title="Lead details"
+        size="lg"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={closeViewModal}>Close</Button>
+            <Button type="button" variant="primary" size="sm" onClick={() => { closeViewModal(); openAssignModal(viewingLead); }}>Assign</Button>
+          </>
+        }
+      >
         {viewingLead && (
           <div className="space-y-6">
             <div>
@@ -213,15 +235,24 @@ export default function AdminLeadsPage() {
                 Submitted {new Date(viewingLead.createdAt).toLocaleString()}
               </p>
             )}
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button variant="outline" onClick={closeViewModal}>Close</Button>
-              <Button variant="primary" onClick={() => { closeViewModal(); openAssignModal(viewingLead); }}>Assign</Button>
-            </div>
           </div>
         )}
       </Modal>
 
-      <Modal open={assignModalOpen} onClose={closeAssignModal} title="Assign lead to companies" size="md">
+      <Modal
+        open={assignModalOpen}
+        onClose={closeAssignModal}
+        title="Assign lead to companies"
+        size="md"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={closeAssignModal}>Cancel</Button>
+            <Button type="button" variant="primary" size="sm" onClick={handleSaveAssignments} disabled={saving || assignIds.length > MAX_ASSIGNMENTS}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
         {assigningLead && (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-secondary">
@@ -240,14 +271,6 @@ export default function AdminLeadsPage() {
               searchable
               placeholder="Select up to 3 companies"
             />
-            <div className="flex justify-end gap-2 border-t border-border pt-4">
-              <Button variant="outline" onClick={closeAssignModal}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={handleSaveAssignments} disabled={saving || assignIds.length > MAX_ASSIGNMENTS}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-            </div>
           </div>
         )}
       </Modal>

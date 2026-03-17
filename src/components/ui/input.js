@@ -33,7 +33,7 @@ export default function Input({
         readOnly={readOnly}
         required={required}
         maxLength={maxLength}
-        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 ${readOnly ? "cursor-default opacity-90" : ""}`}
+        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 ${readOnly ? "cursor-default opacity-90" : ""}`}
       />
     </div>
   );

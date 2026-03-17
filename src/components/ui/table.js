@@ -292,7 +292,7 @@ export default function Table({
             <button
               type="button"
               onClick={() => onEdit(row, i)}
-              className="rounded p-1.5 text-text hover:bg-bg hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
             >
               <FiEdit2 className="h-4 w-4" aria-hidden />
@@ -302,7 +302,7 @@ export default function Table({
             <button
               type="button"
               onClick={() => onDelete(row, i)}
-              className="rounded p-1.5 text-text hover:bg-danger/10 hover:text-danger focus:outline-none focus:ring-2 focus:ring-danger"
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
               aria-label="Delete"
             >
               <FiTrash2 className="h-4 w-4" aria-hidden />

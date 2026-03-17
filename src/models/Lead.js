@@ -17,6 +17,12 @@ const leadSchema = new mongoose.Schema(
     motorPhotos: [{ type: String }],
     sourceListingId: { type: String, default: "" },
     assignedListingIds: [{ type: String }],
+    /** CRM: new → contacted → quoted → won | lost */
+    status: { type: String, enum: ["new", "contacted", "quoted", "won", "lost"], default: "new" },
+    /** How lead arrived: website submission, admin assignment, or manual entry */
+    leadSource: { type: String, enum: ["website", "admin_assigned", "manual"], default: "website" },
+    /** Set when lead is created manually from dashboard (shop user email) */
+    createdByEmail: { type: String, default: "" },
   },
   { timestamps: true }
 );

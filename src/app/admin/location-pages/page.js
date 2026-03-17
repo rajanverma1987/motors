@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { FiEye, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -99,6 +100,35 @@ export default function AdminLocationPagesPage() {
   }
 
   const columns = [
+    {
+      key: "view",
+      label: "",
+      render: (_, row) => (
+        <a
+          href={`${baseUrl}${LOCATION_PAGE_PATH}/${row.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+          aria-label="View"
+        >
+          <FiEye className="h-4 w-4" />
+        </a>
+      ),
+    },
+    {
+      key: "delete",
+      label: "",
+      render: (_, row) => (
+        <button
+          type="button"
+          onClick={() => handleDelete(row.id)}
+          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+          aria-label="Delete"
+        >
+          <FiTrash2 className="h-4 w-4" />
+        </button>
+      ),
+    },
     { key: "slug", label: "Slug" },
     { key: "title", label: "Title" },
     {
@@ -111,29 +141,6 @@ export default function AdminLocationPagesPage() {
       label: "Status",
       render: (val) => (
         <Badge variant={val === "active" ? "success" : "warning"}>{val}</Badge>
-      ),
-    },
-    {
-      key: "view",
-      label: "",
-      render: (_, row) => (
-        <a
-          href={`${baseUrl}${LOCATION_PAGE_PATH}/${row.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline text-sm"
-        >
-          View
-        </a>
-      ),
-    },
-    {
-      key: "delete",
-      label: "",
-      render: (_, row) => (
-        <Button variant="outline" size="sm" onClick={() => handleDelete(row.id)}>
-          Delete
-        </Button>
       ),
     },
   ];

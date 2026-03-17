@@ -1,3 +1,9 @@
 create every .md files in documnets folder only
 do all programing in javascript only, no typescript (STRICT)
 be very consistent about theme on every page. (STRICT)
+Make sure to use the already built component for any form and pages (STRICT)
+
+Modal forms: Put form action buttons (Save, Cancel, Submit, Close, etc.) in the modal header on the right using the Modal component's `actions` prop, so users don't have to scroll to the bottom. Use smaller buttons: `size="sm"`. For submit actions, use <Button type="submit" form="your-form-id" ...> and give the <Form> id="your-form-id".
+
+Tables: Put the actions column (View, Edit, Delete, Assign, etc.) as the first column. Use colored icon buttons instead of text buttons where possible: FiEye (View, primary), FiEdit2 (Edit, primary), FiTrash2 (Delete, danger), FiUserPlus (Assign, primary), FiLock/FiUnlock (Revoke/Grant). Use classes like text-primary hover:bg-primary/10 and text-danger hover:bg-danger/10 for icon buttons.
+Table - if table have action buttos, make this field the first fields. and use colored icons instead of buttons wherever possible.

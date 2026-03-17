@@ -6,7 +6,6 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { getListingSlug } from "@/lib/listing-slug";
 import ListingsHeroCta from "@/app/(marketing)/electric-motor-reapir-shops-listings/listings-hero-cta";
-import HeroBackground from "@/components/marketing/HeroBackground";
 import { useToast } from "@/components/toast-provider";
 
 function ListingCard({ listing }) {
@@ -50,10 +49,10 @@ function ListingCard({ listing }) {
   );
 }
 
-export default function NearMePage() {
+export default function NearMeContent() {
   const toast = useToast();
-  const autoNotifiedRef = useRef(null); // location key we already sent to contact@
-  const [locationStatus, setLocationStatus] = useState("loading"); // loading | detected | denied | error
+  const autoNotifiedRef = useRef(null);
+  const [locationStatus, setLocationStatus] = useState("loading");
   const [userLocation, setUserLocation] = useState({ city: "", state: "", zip: "" });
   const [listings, setListings] = useState([]);
   const [loadingListings, setLoadingListings] = useState(false);
@@ -70,9 +69,12 @@ export default function NearMePage() {
       if (zip) params.set("zip", zip);
       const res = await fetch(`/api/listings/public?${params.toString()}`);
       const data = await res.json();
-      setListings(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      setListings(list);
+      return list.length;
     } catch {
       setListings([]);
+      return 0;
     } finally {
       setLoadingListings(false);
     }
@@ -92,12 +94,30 @@ export default function NearMePage() {
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
           );
           const data = await res.json();
-          const city = data.city || data.locality || "";
-          const state = data.principalSubdivision || data.principalSubdivisionCode || "";
-          const zip = data.postcode || "";
+          const city = (data.city || data.locality || "").trim();
+          const state = (data.principalSubdivision || data.principalSubdivisionCode || "").trim();
+          const zip = (data.postcode || "").trim();
           setUserLocation({ city, state, zip });
           setLocationStatus("detected");
-          await fetchListingsNear(city, state, zip);
+          const count = await fetchListingsNear(city, state, zip);
+          if (count === 0) {
+            const hasLocation = city || state || zip;
+            if (hasLocation) {
+              const key = [city, state, zip].filter(Boolean).join("|");
+              if (autoNotifiedRef.current !== key) {
+                autoNotifiedRef.current = key;
+                fetch("/api/notify-no-listings-near-me", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    city: city || undefined,
+                    state: state || undefined,
+                    zip: zip || undefined,
+                  }),
+                }).catch((err) => console.error("Auto-notify no listings error:", err));
+              }
+            }
+          }
         } catch {
           setLocationStatus("error");
           setListings([]);
@@ -112,59 +132,23 @@ export default function NearMePage() {
     detectLocation();
   }, [detectLocation]);
 
-  // Auto-notify contact@ when no listings are found (once per location per session)
-  useEffect(() => {
-    if (locationStatus !== "detected" || loadingListings || listings.length > 0) return;
-    const key = [userLocation.city, userLocation.state, userLocation.zip].filter(Boolean).join("|") || "unknown";
-    if (autoNotifiedRef.current === key) return;
-    autoNotifiedRef.current = key;
-    fetch("/api/notify-no-listings-near-me", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        city: userLocation.city,
-        state: userLocation.state,
-        zip: userLocation.zip,
-      }),
-    }).catch((err) => console.error("Auto-notify no listings error:", err));
-  }, [locationStatus, loadingListings, listings.length, userLocation.city, userLocation.state, userLocation.zip]);
-
   const locationLabel = [userLocation.city, userLocation.state, userLocation.zip].filter(Boolean).join(", ") || "your area";
 
   return (
     <>
-      <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
-        <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-            Near you
-          </span>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
-            Electric motor repair shops near me
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg text-secondary">
-            Use your location to find approved repair centers in your area. We&apos;ll show shops that serve your city, state, or zip code.
-          </p>
-          <div className="mt-6 flex flex-wrap items-center gap-3">
-            {(locationStatus === "denied" || locationStatus === "error") && (
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={detectLocation}
-              >
-                Find shops near me
-              </Button>
-            )}
-            <Link href="/electric-motor-reapir-shops-listings">
-              <Button variant="outline" size="lg">
-                Browse all listings
-              </Button>
-            </Link>
-          </div>
-          <ListingsHeroCta />
-        </div>
-      </section>
-
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {(locationStatus === "denied" || locationStatus === "error") && (
+          <Button variant="primary" size="lg" onClick={detectLocation}>
+            Find shops near me
+          </Button>
+        )}
+        <Link href="/electric-motor-reapir-shops-listings">
+          <Button variant="outline" size="lg">
+            Browse all listings
+          </Button>
+        </Link>
+      </div>
+      <ListingsHeroCta />
       <section className="py-10 sm:py-14">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           {locationStatus === "denied" && (
@@ -230,7 +214,7 @@ export default function NearMePage() {
               </div>
               <div className="mt-8 max-w-sm mx-auto">
                 <p className="text-sm font-medium text-title">Get notified when we add repair centers in your area</p>
-                <p className="mt-1 text-xs text-secondary">We'll email you when listings are available near {locationLabel}.</p>
+                <p className="mt-1 text-xs text-secondary">We&apos;ll email you when listings are available near {locationLabel}.</p>
                 {!notifySent ? (
                   <form
                     className="mt-4 flex flex-col sm:flex-row gap-2"
@@ -273,7 +257,7 @@ export default function NearMePage() {
                     </Button>
                   </form>
                 ) : (
-                  <p className="mt-4 text-sm text-success">You're on the list. We'll email you when we add repair centers here.</p>
+                  <p className="mt-4 text-sm text-success">You&apos;re on the list. We&apos;ll email you when we add repair centers here.</p>
                 )}
               </div>
             </div>

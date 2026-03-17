@@ -32,6 +32,8 @@ export default function Modal({
   width,
   height,
   className = "",
+  /** Actions (e.g. Save, Cancel) rendered in header right, before close. Use size="sm" buttons. */
+  actions,
 }) {
   const stackContext = useModalStack();
   const { addModal, removeModal } = stackContext || {};
@@ -133,9 +135,9 @@ export default function Modal({
         className={`absolute left-1/2 top-1/2 w-full rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {(title != null || showClose) && (
+        {(title != null || showClose || actions) && (
           <div
-            className={`flex items-center justify-between gap-4 border-b border-border px-4 py-3 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
             onMouseDown={handleHeaderMouseDown}
           >
             {title != null && (
@@ -143,13 +145,14 @@ export default function Modal({
                 {title}
               </h2>
             )}
-            <span className={title != null ? "" : "ml-auto"} />
+            <span className="flex-1 min-w-0" />
+            {actions != null && <div className="flex items-center gap-2 shrink-0 pointer-events-auto">{actions}</div>}
             {showClose && (
               <button
                 type="button"
                 onClick={onClose}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                className="rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer shrink-0"
                 aria-label="Close"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -129,7 +129,7 @@ export default function Select({
       })}
     </div>
   ) : (
-    <span className={selectedLabels ? "text-text" : "text-secondary"}>
+    <span className={selectedLabels ? "text-text" : "text-secondary text-sm"}>
       {displayText}
     </span>
   );

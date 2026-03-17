@@ -41,7 +41,7 @@ export async function sendNewReviewNotification(to, companyName, reviewerName, r
   return sendEmail(to, subject, html);
 }
 
-/** Notify contact@MotorsWinding.com when a user reports no listings in their area (near-me page). */
+/** Notify contact@MotorsWinding.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
   const to = "contact@MotorsWinding.com";
   const subject = "MotorsWinding.com – No repair centers in this area (near-me page)";

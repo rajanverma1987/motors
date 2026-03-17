@@ -6,6 +6,8 @@ export default function Button({
   type = "button",
   className = "",
   disabled = false,
+  form,
+  ...rest
 }) {
   const variants = {
     primary: "bg-primary text-white hover:opacity-90",
@@ -25,7 +27,9 @@ export default function Button({
       type={type}
       onClick={onClick}
       disabled={disabled}
+      form={form}
       className={`rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
+      {...rest}
     >
       {children}
     </button>

@@ -27,7 +27,7 @@ export default function Textarea({
         placeholder={placeholder}
         onChange={onChange}
         rows={rows}
-        className="rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text min-h-[120px] focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 resize-y"
+        className="rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text min-h-[120px] placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 resize-y"
       />
     </div>
   );

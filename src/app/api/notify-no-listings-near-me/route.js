@@ -13,17 +13,10 @@ export async function POST(request) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
   try {
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const city = clampString(body?.city, LIMITS.city);
     const state = clampString(body?.state, LIMITS.state);
     const zip = clampString(body?.zip, LIMITS.zip);
-
-    if (!city && !state && !zip) {
-      return NextResponse.json(
-        { error: "At least one of city, state, or zip is required." },
-        { status: 400 }
-      );
-    }
 
     const result = await sendNoListingsNearMeNotification(city, state, zip);
     if (!result.ok) {

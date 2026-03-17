@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
+import { FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -18,6 +19,19 @@ const STATUS_OPTIONS = [
 ];
 
 const COLUMNS = [
+  {
+    key: "view",
+    label: "",
+    render: (_, row) => (
+      <Link
+        href={`/admin/listings/${row.id}`}
+        className="inline-flex rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="View"
+      >
+        <FiEye className="h-4 w-4" />
+      </Link>
+    ),
+  },
   { key: "companyName", label: "Company" },
   { key: "email", label: "Email" },
   {
@@ -47,17 +61,6 @@ const COLUMNS = [
     key: "submittedAt",
     label: "Submitted",
     render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
-  },
-  {
-    key: "view",
-    label: "",
-    render: (_, row) => (
-      <Link href={`/admin/listings/${row.id}`}>
-        <Button variant="outline" size="sm">
-          View
-        </Button>
-      </Link>
-    ),
   },
 ];
 
