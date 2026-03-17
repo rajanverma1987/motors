@@ -5,6 +5,7 @@ export default function Badge({
 }) {
   const variants = {
     default: "bg-card border border-border text-text",
+    primary: "bg-card border border-border text-primary",
     success: "bg-card border border-border text-success",
     warning: "bg-card border border-border text-warning",
     danger: "bg-card border border-border text-danger",

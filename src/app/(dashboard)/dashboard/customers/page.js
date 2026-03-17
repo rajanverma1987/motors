@@ -2,14 +2,21 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEye, FiEdit2 } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
+import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+
+const MOTOR_TYPE_OPTIONS = [
+  { value: "", label: "Select type" },
+  { value: "AC", label: "AC" },
+  { value: "DC", label: "DC" },
+];
 
 const INITIAL_MOTOR_FORM = {
   customerId: "",
@@ -19,8 +26,14 @@ const INITIAL_MOTOR_FORM = {
   hp: "",
   rpm: "",
   voltage: "",
+  kw: "",
+  amps: "",
   frameSize: "",
   motorType: "",
+  slots: "",
+  coreLength: "",
+  coreDiameter: "",
+  bars: "",
   notes: "",
 };
 
@@ -34,8 +47,14 @@ function buildMotorPayload(form) {
     hp: f.hp ?? "",
     rpm: f.rpm ?? "",
     voltage: f.voltage ?? "",
+    kw: f.kw ?? "",
+    amps: f.amps ?? "",
     frameSize: f.frameSize ?? "",
     motorType: f.motorType ?? "",
+    slots: f.slots ?? "",
+    coreLength: f.coreLength ?? "",
+    coreDiameter: f.coreDiameter ?? "",
+    bars: f.bars ?? "",
     motorPhotos: Array.isArray(f.motorPhotos) ? f.motorPhotos : [],
     nameplateImages: Array.isArray(f.nameplateImages) ? f.nameplateImages : [],
     notes: f.notes ?? "",
@@ -472,14 +491,6 @@ export default function DashboardCustomersPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => openViewModal(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="View"
-            >
-              <FiEye className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
               onClick={() => openEditModal(row)}
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
@@ -489,7 +500,19 @@ export default function DashboardCustomersPage() {
           </div>
         ),
       },
-      { key: "companyName", label: "Company" },
+      {
+        key: "companyName",
+        label: "Company",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => openViewModal(row)}
+            className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+          >
+            {row.companyName || "—"}
+          </button>
+        ),
+      },
       { key: "primaryContactName", label: "Contact" },
       { key: "phone", label: "Phone" },
       { key: "email", label: "Email" },
@@ -555,6 +578,7 @@ export default function DashboardCustomersPage() {
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder="Search company, contact, email…"
+          onRefresh={() => { setLoading(true); loadCustomers(); }}
           responsive
         />
       </div>
@@ -566,12 +590,9 @@ export default function DashboardCustomersPage() {
         title="Enter New Customer"
         size="4xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEnterModal}>Cancel</Button>
-            <Button type="submit" form="enter-customer-form" variant="primary" size="sm" disabled={savingCustomer}>
-              {savingCustomer ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="enter-customer-form" variant="primary" size="sm" disabled={savingCustomer}>
+            {savingCustomer ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="enter-customer-form" onSubmit={handleEnterSubmit} className="flex flex-col gap-5 !space-y-0">
@@ -946,11 +967,12 @@ export default function DashboardCustomersPage() {
                 onChange={(e) => setMotorForm((f) => ({ ...f, model: e.target.value }))}
                 placeholder="Model"
               />
-              <Input
+              <Select
                 label="Motor type"
+                options={MOTOR_TYPE_OPTIONS}
                 value={motorForm.motorType}
-                onChange={(e) => setMotorForm((f) => ({ ...f, motorType: e.target.value }))}
-                placeholder="e.g. AC induction, DC"
+                onChange={(e) => setMotorForm((f) => ({ ...f, motorType: e.target.value ?? "" }))}
+                placeholder="Select type"
               />
               <Input
                 label="HP"
@@ -971,10 +993,46 @@ export default function DashboardCustomersPage() {
                 placeholder="e.g. 480V"
               />
               <Input
+                label="KW"
+                value={motorForm.kw}
+                onChange={(e) => setMotorForm((f) => ({ ...f, kw: e.target.value }))}
+                placeholder="e.g. 37"
+              />
+              <Input
+                label="AMPs"
+                value={motorForm.amps}
+                onChange={(e) => setMotorForm((f) => ({ ...f, amps: e.target.value }))}
+                placeholder="e.g. 45"
+              />
+              <Input
                 label="Frame size"
                 value={motorForm.frameSize}
                 onChange={(e) => setMotorForm((f) => ({ ...f, frameSize: e.target.value }))}
                 placeholder="Frame size"
+              />
+              <Input
+                label="Slots"
+                value={motorForm.slots}
+                onChange={(e) => setMotorForm((f) => ({ ...f, slots: e.target.value }))}
+                placeholder="Slots"
+              />
+              <Input
+                label="Core length"
+                value={motorForm.coreLength}
+                onChange={(e) => setMotorForm((f) => ({ ...f, coreLength: e.target.value }))}
+                placeholder="Core length"
+              />
+              <Input
+                label="Core diameter"
+                value={motorForm.coreDiameter}
+                onChange={(e) => setMotorForm((f) => ({ ...f, coreDiameter: e.target.value }))}
+                placeholder="Core diameter"
+              />
+              <Input
+                label="Bars"
+                value={motorForm.bars}
+                onChange={(e) => setMotorForm((f) => ({ ...f, bars: e.target.value }))}
+                placeholder="Bars"
               />
             </div>
           </div>
@@ -997,12 +1055,9 @@ export default function DashboardCustomersPage() {
         title="Edit customer"
         size="4xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEditModal}>Cancel</Button>
-            <Button type="submit" form="edit-customer-form" variant="primary" size="sm" disabled={savingCustomer}>
-              {savingCustomer ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="edit-customer-form" variant="primary" size="sm" disabled={savingCustomer}>
+            {savingCustomer ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="edit-customer-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">

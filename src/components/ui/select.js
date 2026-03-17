@@ -18,6 +18,7 @@ export default function Select({
   multiple = false,
   searchable = true,
   placeholder = "Select...",
+  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,13 +73,17 @@ export default function Select({
   }, [isOpen]);
 
   useEffect(() => {
+    if (disabled) setIsOpen(false);
+  }, [disabled]);
+
+  useEffect(() => {
     function handleClickOutside(event) {
       const inContainer = containerRef.current?.contains(event.target);
       const inDropdown = dropdownRef.current?.contains(event.target);
       if (!inContainer && !inDropdown) setIsOpen(false);
     }
-    document.addEventListener("click", handleClickOutside);
-    return () => document.removeEventListener("click", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside, true);
+    return () => document.removeEventListener("mousedown", handleClickOutside, true);
   }, []);
 
   const handleSelect = (opt) => {
@@ -137,7 +142,7 @@ export default function Select({
   return (
     <div ref={containerRef} className={`relative flex flex-col gap-1 ${className}`}>
       {label && (
-        <span className="inline-flex items-center gap-1.5 text-sm text-title">
+        <span className={`inline-flex items-center gap-1.5 text-sm text-title ${disabled ? "opacity-70" : ""}`}>
           {label}
           <HelpIcon text={help} />
         </span>
@@ -146,19 +151,22 @@ export default function Select({
         ref={triggerRef}
         id={id}
         role="button"
-        tabIndex={0}
+        tabIndex={disabled ? -1 : 0}
+        aria-disabled={disabled}
         onClick={() => {
+          if (disabled) return;
           setIsOpen((o) => !o);
           setSearchQuery("");
         }}
         onKeyDown={(e) => {
+          if (disabled) return;
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             setIsOpen((o) => !o);
             setSearchQuery("");
           }
         }}
-        className="flex w-full min-h-[2.5rem] cursor-pointer items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary"
+        className={`flex w-full min-h-[2.5rem] items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary ${disabled ? "cursor-not-allowed opacity-60 bg-card border-border/80" : "cursor-pointer"}`}
       >
         {triggerContent}
         <svg

@@ -40,8 +40,14 @@ export async function GET(request, context) {
       hp: doc.hp ?? "",
       rpm: doc.rpm ?? "",
       voltage: doc.voltage ?? "",
+      kw: doc.kw ?? "",
+      amps: doc.amps ?? "",
       frameSize: doc.frameSize ?? "",
       motorType: doc.motorType ?? "",
+      slots: doc.slots ?? "",
+      coreLength: doc.coreLength ?? "",
+      coreDiameter: doc.coreDiameter ?? "",
+      bars: doc.bars ?? "",
       motorPhotos: Array.isArray(doc.motorPhotos) ? doc.motorPhotos : [],
       nameplateImages: Array.isArray(doc.nameplateImages) ? doc.nameplateImages : [],
       notes: doc.notes ?? "",
@@ -83,8 +89,14 @@ export async function PATCH(request, context) {
       hp,
       rpm,
       voltage,
+      kw,
+      amps,
       frameSize,
       motorType,
+      slots,
+      coreLength,
+      coreDiameter,
+      bars,
       motorPhotos,
       nameplateImages,
       notes,
@@ -101,8 +113,14 @@ export async function PATCH(request, context) {
     if (hp !== undefined) doc.hp = clampString(hp, 50);
     if (rpm !== undefined) doc.rpm = clampString(rpm, 50);
     if (voltage !== undefined) doc.voltage = clampString(voltage, 50);
+    if (kw !== undefined) doc.kw = clampString(kw, 50);
+    if (amps !== undefined) doc.amps = clampString(amps, 50);
     if (frameSize !== undefined) doc.frameSize = clampString(frameSize, 100);
     if (motorType !== undefined) doc.motorType = clampString(motorType, LIMITS.shortText.max);
+    if (slots !== undefined) doc.slots = clampString(slots, 50);
+    if (coreLength !== undefined) doc.coreLength = clampString(coreLength, 50);
+    if (coreDiameter !== undefined) doc.coreDiameter = clampString(coreDiameter, 50);
+    if (bars !== undefined) doc.bars = clampString(bars, 50);
     if (motorPhotos !== undefined) doc.motorPhotos = clampArray(motorPhotos, MAX_PHOTOS);
     if (nameplateImages !== undefined) doc.nameplateImages = clampArray(nameplateImages, MAX_PHOTOS);
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);

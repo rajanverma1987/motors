@@ -3,7 +3,11 @@ do all programing in javascript only, no typescript (STRICT)
 be very consistent about theme on every page. (STRICT)
 Make sure to use the already built component for any form and pages (STRICT)
 
+Dashboard pages: Center page contents using the same layout as other dashboard pages: wrap main content in a div with className "mx-auto max-w-6xl px-4 py-8" (or equivalent max-width) so content is centered and consistent across Customers, Motors, Leads, Quotes, etc.
+
 Modal forms: Put form action buttons (Save, Cancel, Submit, Close, etc.) in the modal header on the right using the Modal component's `actions` prop, so users don't have to scroll to the bottom. Use smaller buttons: `size="sm"`. For submit actions, use <Button type="submit" form="your-form-id" ...> and give the <Form> id="your-form-id".
 
 Tables: Put the actions column (View, Edit, Delete, Assign, etc.) as the first column. Use colored icon buttons instead of text buttons where possible: FiEye (View, primary), FiEdit2 (Edit, primary), FiTrash2 (Delete, danger), FiUserPlus (Assign, primary), FiLock/FiUnlock (Revoke/Grant). Use classes like text-primary hover:bg-primary/10 and text-danger hover:bg-danger/10 for icon buttons.
 Table - if table have action buttos, make this field the first fields. and use colored icons instead of buttons wherever possible.
+
+Status display: Wherever we show status (e.g. PO status, quote status, order status, line item status), use a colored label so it is clearly visible. Use the existing Badge component with an appropriate variant (default, primary, success, warning, danger) so the label is formatted correctly for both light and dark theme. Do not show status as plain text; use <Badge variant="…" className="rounded-full px-2.5 py-0.5 text-xs">…</Badge> or equivalent. Map status values to semantic variants (e.g. success for "Delivered"/"Closed"/"Paid", warning for "Partially…", default for "Open"/"Ordered").

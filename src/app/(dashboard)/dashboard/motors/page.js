@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiEye, FiEdit2 } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -13,6 +13,12 @@ import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 
+const MOTOR_TYPE_OPTIONS = [
+  { value: "", label: "Select type" },
+  { value: "AC", label: "AC" },
+  { value: "DC", label: "DC" },
+];
+
 const INITIAL_FORM = {
   customerId: "",
   serialNumber: "",
@@ -21,8 +27,14 @@ const INITIAL_FORM = {
   hp: "",
   rpm: "",
   voltage: "",
+  kw: "",
+  amps: "",
   frameSize: "",
   motorType: "",
+  slots: "",
+  coreLength: "",
+  coreDiameter: "",
+  bars: "",
   notes: "",
 };
 
@@ -36,8 +48,14 @@ function buildMotorPayload(form) {
     hp: f.hp ?? "",
     rpm: f.rpm ?? "",
     voltage: f.voltage ?? "",
+    kw: f.kw ?? "",
+    amps: f.amps ?? "",
     frameSize: f.frameSize ?? "",
     motorType: f.motorType ?? "",
+    slots: f.slots ?? "",
+    coreLength: f.coreLength ?? "",
+    coreDiameter: f.coreDiameter ?? "",
+    bars: f.bars ?? "",
     motorPhotos: Array.isArray(f.motorPhotos) ? f.motorPhotos : [],
     nameplateImages: Array.isArray(f.nameplateImages) ? f.nameplateImages : [],
     notes: f.notes ?? "",
@@ -194,8 +212,14 @@ export default function DashboardMotorsPage() {
       hp: dataToUse.hp ?? "",
       rpm: dataToUse.rpm ?? "",
       voltage: dataToUse.voltage ?? "",
+      kw: dataToUse.kw ?? "",
+      amps: dataToUse.amps ?? "",
       frameSize: dataToUse.frameSize ?? "",
       motorType: dataToUse.motorType ?? "",
+      slots: dataToUse.slots ?? "",
+      coreLength: dataToUse.coreLength ?? "",
+      coreDiameter: dataToUse.coreDiameter ?? "",
+      bars: dataToUse.bars ?? "",
       notes: dataToUse.notes ?? "",
     });
     setEditModalOpen(true);
@@ -292,14 +316,6 @@ export default function DashboardMotorsPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => openViewModal(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="View"
-            >
-              <FiEye className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
               onClick={() => openEditModal(row)}
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
@@ -314,7 +330,19 @@ export default function DashboardMotorsPage() {
         label: "Customer",
         render: (_, row) => customerNameMap[row.customerId] || row.customerId || "—",
       },
-      { key: "serialNumber", label: "Serial" },
+      {
+        key: "serialNumber",
+        label: "Serial",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => openViewModal(row)}
+            className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+          >
+            {row.serialNumber || "—"}
+          </button>
+        ),
+      },
       { key: "manufacturer", label: "Manufacturer" },
       { key: "model", label: "Model" },
       { key: "hp", label: "HP" },
@@ -349,6 +377,7 @@ export default function DashboardMotorsPage() {
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder="Search customer, serial, manufacturer, model…"
+          onRefresh={async () => { setLoading(true); await loadMotors(); setLoading(false); }}
           responsive
         />
       </div>
@@ -360,12 +389,9 @@ export default function DashboardMotorsPage() {
         title="Create Motor"
         size="4xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeCreateModal}>Cancel</Button>
-            <Button type="submit" form="create-motor-form" variant="primary" size="sm" disabled={savingMotor}>
-              {savingMotor ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="create-motor-form" variant="primary" size="sm" disabled={savingMotor}>
+            {savingMotor ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="create-motor-form" onSubmit={handleCreateSubmit} className="flex flex-col gap-5 !space-y-0">
@@ -404,11 +430,12 @@ export default function DashboardMotorsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
                 placeholder="Model"
               />
-              <Input
+              <Select
                 label="Motor type"
+                options={MOTOR_TYPE_OPTIONS}
                 value={form.motorType}
-                onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value }))}
-                placeholder="e.g. AC induction, DC"
+                onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value ?? "" }))}
+                placeholder="Select type"
               />
               <Input
                 label="HP"
@@ -429,10 +456,46 @@ export default function DashboardMotorsPage() {
                 placeholder="e.g. 480V"
               />
               <Input
+                label="KW"
+                value={form.kw}
+                onChange={(e) => setForm((f) => ({ ...f, kw: e.target.value }))}
+                placeholder="e.g. 37"
+              />
+              <Input
+                label="AMPs"
+                value={form.amps}
+                onChange={(e) => setForm((f) => ({ ...f, amps: e.target.value }))}
+                placeholder="e.g. 45"
+              />
+              <Input
                 label="Frame size"
                 value={form.frameSize}
                 onChange={(e) => setForm((f) => ({ ...f, frameSize: e.target.value }))}
                 placeholder="Frame size"
+              />
+              <Input
+                label="Slots"
+                value={form.slots}
+                onChange={(e) => setForm((f) => ({ ...f, slots: e.target.value }))}
+                placeholder="Slots"
+              />
+              <Input
+                label="Core length"
+                value={form.coreLength}
+                onChange={(e) => setForm((f) => ({ ...f, coreLength: e.target.value }))}
+                placeholder="Core length"
+              />
+              <Input
+                label="Core diameter"
+                value={form.coreDiameter}
+                onChange={(e) => setForm((f) => ({ ...f, coreDiameter: e.target.value }))}
+                placeholder="Core diameter"
+              />
+              <Input
+                label="Bars"
+                value={form.bars}
+                onChange={(e) => setForm((f) => ({ ...f, bars: e.target.value }))}
+                placeholder="Bars"
               />
             </div>
           </div>
@@ -481,7 +544,13 @@ export default function DashboardMotorsPage() {
                 <div><dt className="text-secondary">HP</dt><dd className="text-title">{viewingMotor.hp || "—"}</dd></div>
                 <div><dt className="text-secondary">RPM</dt><dd className="text-title">{viewingMotor.rpm || "—"}</dd></div>
                 <div><dt className="text-secondary">Voltage</dt><dd className="text-title">{viewingMotor.voltage || "—"}</dd></div>
+                <div><dt className="text-secondary">KW</dt><dd className="text-title">{viewingMotor.kw || "—"}</dd></div>
+                <div><dt className="text-secondary">AMPs</dt><dd className="text-title">{viewingMotor.amps || "—"}</dd></div>
                 <div><dt className="text-secondary">Frame size</dt><dd className="text-title">{viewingMotor.frameSize || "—"}</dd></div>
+                <div><dt className="text-secondary">Slots</dt><dd className="text-title">{viewingMotor.slots || "—"}</dd></div>
+                <div><dt className="text-secondary">Core length</dt><dd className="text-title">{viewingMotor.coreLength || "—"}</dd></div>
+                <div><dt className="text-secondary">Core diameter</dt><dd className="text-title">{viewingMotor.coreDiameter || "—"}</dd></div>
+                <div><dt className="text-secondary">Bars</dt><dd className="text-title">{viewingMotor.bars || "—"}</dd></div>
               </dl>
             </div>
             {(viewingMotor.notes || "").trim() && (
@@ -506,12 +575,9 @@ export default function DashboardMotorsPage() {
         title="Edit motor"
         size="4xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEditModal}>Cancel</Button>
-            <Button type="submit" form="edit-motor-form" variant="primary" size="sm" disabled={savingMotor}>
-              {savingMotor ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="edit-motor-form" variant="primary" size="sm" disabled={savingMotor}>
+            {savingMotor ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="edit-motor-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
@@ -550,11 +616,12 @@ export default function DashboardMotorsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, model: e.target.value }))}
                 placeholder="Model"
               />
-              <Input
+              <Select
                 label="Motor type"
+                options={MOTOR_TYPE_OPTIONS}
                 value={form.motorType}
-                onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value }))}
-                placeholder="e.g. AC induction, DC"
+                onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value ?? "" }))}
+                placeholder="Select type"
               />
               <Input
                 label="HP"
@@ -575,10 +642,46 @@ export default function DashboardMotorsPage() {
                 placeholder="e.g. 480V"
               />
               <Input
+                label="KW"
+                value={form.kw}
+                onChange={(e) => setForm((f) => ({ ...f, kw: e.target.value }))}
+                placeholder="e.g. 37"
+              />
+              <Input
+                label="AMPs"
+                value={form.amps}
+                onChange={(e) => setForm((f) => ({ ...f, amps: e.target.value }))}
+                placeholder="e.g. 45"
+              />
+              <Input
                 label="Frame size"
                 value={form.frameSize}
                 onChange={(e) => setForm((f) => ({ ...f, frameSize: e.target.value }))}
                 placeholder="Frame size"
+              />
+              <Input
+                label="Slots"
+                value={form.slots}
+                onChange={(e) => setForm((f) => ({ ...f, slots: e.target.value }))}
+                placeholder="Slots"
+              />
+              <Input
+                label="Core length"
+                value={form.coreLength}
+                onChange={(e) => setForm((f) => ({ ...f, coreLength: e.target.value }))}
+                placeholder="Core length"
+              />
+              <Input
+                label="Core diameter"
+                value={form.coreDiameter}
+                onChange={(e) => setForm((f) => ({ ...f, coreDiameter: e.target.value }))}
+                placeholder="Core diameter"
+              />
+              <Input
+                label="Bars"
+                value={form.bars}
+                onChange={(e) => setForm((f) => ({ ...f, bars: e.target.value }))}
+                placeholder="Bars"
               />
             </div>
           </div>

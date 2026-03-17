@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { FiEye, FiEdit2 } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -11,6 +11,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import Badge from "@/components/ui/badge";
 
 const SOURCE_LABELS = {
   website: "Website",
@@ -26,12 +27,12 @@ const STATUS_OPTIONS = [
   { value: "lost", label: "Lost" },
 ];
 
-const STATUS_TAG_CLASS = {
-  new: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300",
-  contacted: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-  quoted: "bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300",
-  won: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-  lost: "bg-neutral-200 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-300",
+const STATUS_BADGE_VARIANT = {
+  new: "primary",
+  contacted: "warning",
+  quoted: "primary",
+  won: "success",
+  lost: "danger",
 };
 
 const FILTER_STATUS_OPTIONS = [
@@ -274,14 +275,6 @@ export default function DashboardLeadsPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => openDetail(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="View"
-            >
-              <FiEye className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
               onClick={() => openEditModal(row)}
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
@@ -291,7 +284,19 @@ export default function DashboardLeadsPage() {
           </div>
         ),
       },
-      { key: "name", label: "Name" },
+      {
+        key: "name",
+        label: "Name",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => openDetail(row)}
+            className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+          >
+            {row.name || "—"}
+          </button>
+        ),
+      },
       { key: "company", label: "Company" },
       { key: "email", label: "Email" },
       {
@@ -304,14 +309,12 @@ export default function DashboardLeadsPage() {
         label: "Status",
         render: (_, row) => {
           const status = row.status || "new";
+          const variant = STATUS_BADGE_VARIANT[status] || "default";
           const label = STATUS_OPTIONS.find((o) => o.value === status)?.label ?? status;
-          const tagClass = STATUS_TAG_CLASS[status] || STATUS_TAG_CLASS.new;
           return (
-            <span
-              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${tagClass}`}
-            >
+            <Badge variant={variant} className="rounded-full px-2.5 py-0.5 text-xs">
               {label}
-            </span>
+            </Badge>
           );
         },
       },
@@ -359,6 +362,7 @@ export default function DashboardLeadsPage() {
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder="Search name, company, email…"
+          onRefresh={() => { setLoading(true); loadLeads(); }}
           responsive
         />
       </div>
@@ -370,12 +374,9 @@ export default function DashboardLeadsPage() {
         title="Enter Lead"
         size="lg"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEnterModal}>Cancel</Button>
-            <Button type="submit" form="enter-lead-form" variant="primary" size="sm" disabled={savingLead}>
-              {savingLead ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="enter-lead-form" variant="primary" size="sm" disabled={savingLead}>
+            {savingLead ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="enter-lead-form" onSubmit={handleEnterLeadSubmit} className="flex flex-col gap-5 !space-y-0">
@@ -501,12 +502,9 @@ export default function DashboardLeadsPage() {
         size="4xl"
         actions={
           editingLead && (
-            <>
-              <Button type="button" variant="outline" size="sm" onClick={closeEditModal}>Cancel</Button>
-              <Button type="submit" form="edit-lead-form" variant="primary" size="sm" disabled={savingLead}>
-                {savingLead ? "Saving…" : "Save"}
-              </Button>
-            </>
+            <Button type="submit" form="edit-lead-form" variant="primary" size="sm" disabled={savingLead}>
+              {savingLead ? "Saving…" : "Save"}
+            </Button>
           )
         }
       >

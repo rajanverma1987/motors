@@ -10,12 +10,14 @@ import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useConfirm } from "@/components/confirm-provider";
 
 const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 const LOCATION_PAGE_PATH = "/motor-repair-shop";
 
 export default function AdminLocationPagesPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -82,7 +84,14 @@ export default function AdminLocationPagesPage() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("Delete this location page? This cannot be undone.")) return;
+    const confirmed = await confirm({
+      title: "Delete location page",
+      message: "Delete this location page? This cannot be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/location-pages/${id}`, {
         method: "DELETE",

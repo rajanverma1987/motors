@@ -181,6 +181,7 @@ export async function sendVerificationCodeEmail(to, code) {
  */
 async function sendEmail(to, subject, html, options = {}) {
   const from = options.from || fromEmail || process.env.SMTP_USER;
+  const attachments = options.attachments;
   const transport = getTransporter();
   if (!transport) {
     console.error("[Email not configured] Set SMTP_USER and SMTP_PASS. To:", to, "Subject:", subject);
@@ -192,6 +193,7 @@ async function sendEmail(to, subject, html, options = {}) {
       to,
       subject,
       html,
+      ...(attachments && attachments.length ? { attachments } : {}),
     });
     return { ok: true };
   } catch (err) {
@@ -203,4 +205,38 @@ async function sendEmail(to, subject, html, options = {}) {
 /** Send email using the marketing "from" address (EMAIL_MARKETING_FROM). Use for admin marketing campaigns. */
 export async function sendMarketingEmail(to, subject, html) {
   return sendEmail(to, subject, html, { from: marketingFrom });
+}
+
+/** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no MotorsWinding.com). */
+export async function sendQuoteToCustomer(toEmail, customerName, rfqNumber, respondUrl, shopCompanyName) {
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const subject = `Your quote ${esc(rfqNumber) || "is ready"} – ${shopName}`;
+  const signature = esc(shopName);
+  const html = `
+    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
+    <p>Your service quote ${rfqNumber ? `(RFQ# ${esc(rfqNumber)})` : ""} is ready for your review.</p>
+    <p><strong>View your quote and approve or reject it here:</strong></p>
+    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
+    <p>You can also print or save the quote as PDF from that page.</p>
+    <p>— ${signature}</p>
+  `;
+  return sendEmail(toEmail, subject, html);
+}
+
+/** Send purchase order to vendor with link to view, print, and update delivery status. Uses motor shop name in subject and signature. */
+export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName) {
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const subject = `Purchase order ${esc(poNumber) || ""} – ${shopName}`;
+  const signature = esc(shopName);
+  const html = `
+    <p>Hi${vendorName ? ` ${esc(vendorName)}` : ""},</p>
+    <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${signature}.</p>
+    <p><strong>View, print, and update delivery status for each line item here:</strong></p>
+    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
+    <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
+    <p>— ${signature}</p>
+  `;
+  return sendEmail(toEmail, subject, html);
 }

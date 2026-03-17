@@ -17,7 +17,16 @@ function getRowsFromData(data, columns) {
       (k) => row[k] == null || String(row[k]).trim() === ""
     );
   const lastIsBlank = source.length > 0 && isBlank(source[source.length - 1]);
-  return lastIsBlank && source.length > 0 ? [...source] : [...source, {}];
+  const rows = lastIsBlank && source.length > 0 ? [...source] : [...source, {}];
+  const calculatedCols = columns.filter((c) => c.calculated && typeof c.formula === "function");
+  if (calculatedCols.length === 0) return rows;
+  return rows.map((row) => {
+    const r = { ...row };
+    calculatedCols.forEach((col) => {
+      r[col.key] = col.formula(r);
+    });
+    return r;
+  });
 }
 
 export default function DataTable({ columns = [], data = [], onChange, striped = false }) {
@@ -135,14 +144,14 @@ export default function DataTable({ columns = [], data = [], onChange, striped =
                 {col.label}
               </th>
             ))}
-            <th className="w-9 px-1 py-2" aria-label="Delete row" />
+            <th className="w-9 px-1 py-1.5" aria-label="Delete row" />
           </tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              className={`border-b border-border last:border-b-0 hover:bg-bg transition-colors ${striped && rowIndex % 2 === 1 ? "bg-card" : ""}`}
+              className={`h-8 border-b border-border last:border-b-0 ${striped && rowIndex % 2 === 1 ? "bg-card" : ""}`}
             >
               {columns.map((col, colIndex) => {
                 if (col.calculated) {
@@ -154,7 +163,7 @@ export default function DataTable({ columns = [], data = [], onChange, striped =
                   return (
                     <td
                       key={col.key ?? colIndex}
-                      className="px-3 py-1 text-sm text-text tabular"
+                      className="px-2 py-0 text-sm text-text tabular-nums align-middle h-8"
                       style={getColStyle(col)}
                     >
                       {display}
@@ -167,8 +176,9 @@ export default function DataTable({ columns = [], data = [], onChange, striped =
                 const isSelect = options && Array.isArray(options) && options.length > 0;
                 const inputType = col.type === "number" ? "number" : "text";
 
-                const cellClass =
-                  "w-full min-w-0 border-0 bg-transparent px-3 py-2 text-sm text-text outline-none focus:bg-card transition-colors rounded-none";
+                const inputClass =
+                  "min-w-0 h-full min-h-0 rounded-none border-0 border-border bg-bg px-2 py-0 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors [box-sizing:border-box]";
+                const fullWidthStyle = { width: "100%", minWidth: 0, boxSizing: "border-box", height: "100%" };
 
                 if (isSelect) {
                   const normalizedOptions = options.map((opt) =>
@@ -177,47 +187,57 @@ export default function DataTable({ columns = [], data = [], onChange, striped =
                       : { value: opt.value, label: opt.label ?? opt.value }
                   );
                   return (
-                    <td key={col.key ?? colIndex} className="p-0" style={getColStyle(col)}>
-                      <select
+                    <td key={col.key ?? colIndex} className="p-0 align-middle min-w-0 h-8" style={getColStyle(col)}>
+                      <div className="block w-full min-w-0 h-full" style={fullWidthStyle}>
+                        <select
+                          data-cell={`${rowIndex}-${editableIdx}`}
+                          value={row[col.key] ?? ""}
+                          onChange={(e) =>
+                            updateRow(rowIndex, col.key, e.target.value)
+                          }
+                          onKeyDown={(e) => handleKeyDown(e, rowIndex, editableIdx)}
+                          className={`${inputClass} cursor-pointer border border-border`}
+                          style={fullWidthStyle}
+                          aria-label={`${col.label} row ${rowIndex + 1}`}
+                        >
+                          {col.placeholder !== false && (
+                            <option value="">{col.placeholder ?? "Select..."}</option>
+                          )}
+                          {normalizedOptions.map((opt, i) => (
+                            <option key={i} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </td>
+                  );
+                }
+
+                const inputPlaceholder =
+                  col.placeholder != null && col.placeholder !== false ? String(col.placeholder) : undefined;
+
+                return (
+                  <td key={col.key ?? colIndex} className="p-0 align-middle min-w-0 h-8" style={getColStyle(col)}>
+                    <div className="block w-full min-w-0 h-full" style={fullWidthStyle}>
+                      <input
+                        type={inputType}
                         data-cell={`${rowIndex}-${editableIdx}`}
                         value={row[col.key] ?? ""}
                         onChange={(e) =>
                           updateRow(rowIndex, col.key, e.target.value)
                         }
                         onKeyDown={(e) => handleKeyDown(e, rowIndex, editableIdx)}
-                        className={`${cellClass} cursor-pointer`}
+                        placeholder={inputPlaceholder}
+                        style={fullWidthStyle}
+                        className={`${inputClass} border border-border tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                         aria-label={`${col.label} row ${rowIndex + 1}`}
-                      >
-                        {col.placeholder !== false && (
-                          <option value="">{col.placeholder ?? "Select..."}</option>
-                        )}
-                        {normalizedOptions.map((opt, i) => (
-                          <option key={i} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                  );
-                }
-
-                return (
-                  <td key={col.key ?? colIndex} className="p-0" style={getColStyle(col)}>
-                    <input
-                      type={inputType}
-                      data-cell={`${rowIndex}-${editableIdx}`}
-                      value={row[col.key] ?? ""}
-                      onChange={(e) =>
-                        updateRow(rowIndex, col.key, e.target.value)
-                      }
-                      onKeyDown={(e) => handleKeyDown(e, rowIndex, editableIdx)}
-                      className={`${cellClass} tabular [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
-                      aria-label={`${col.label} row ${rowIndex + 1}`}
-                    />
+                      />
+                    </div>
                   </td>
                 );
               })}
-              <td className="w-9 px-1 py-1 align-middle">
+              <td className="w-9 px-1 py-0 align-middle h-8">
                 {rowIndex < lastRowIndex ? (
                   <button
                     type="button"

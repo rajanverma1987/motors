@@ -11,6 +11,7 @@ export default function Input({
   name,
   className = "",
   readOnly = false,
+  disabled = false,
   required = false,
   maxLength,
 }) {
@@ -18,7 +19,7 @@ export default function Input({
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       {label && (
-        <label htmlFor={id} className="inline-flex items-center gap-1.5 text-sm text-title">
+        <label htmlFor={id} className={`inline-flex items-center gap-1.5 text-sm text-title ${disabled || readOnly ? "opacity-70" : ""}`}>
           {label}
           <HelpIcon text={help} />
         </label>
@@ -31,9 +32,10 @@ export default function Input({
         placeholder={placeholder}
         onChange={onChange}
         readOnly={readOnly}
+        disabled={disabled}
         required={required}
         maxLength={maxLength}
-        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 ${readOnly ? "cursor-default opacity-90" : ""}`}
+        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-gray-800/70 !border-border dark:!border-gray-600 select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-gray-800/70 !border-border dark:!border-gray-600 select-none" : ""}`}
       />
     </div>
   );

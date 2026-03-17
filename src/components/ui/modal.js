@@ -34,6 +34,8 @@ export default function Modal({
   className = "",
   /** Actions (e.g. Save, Cancel) rendered in header right, before close. Use size="sm" buttons. */
   actions,
+  /** Optional override so this modal appears above others (e.g. when opening a modal from another modal). */
+  zIndex: zIndexOverride,
 }) {
   const stackContext = useModalStack();
   const { addModal, removeModal } = stackContext || {};
@@ -108,9 +110,11 @@ export default function Modal({
   if (h) style.height = h;
 
   const zIndex =
-    stackContext && modalId != null
-      ? BASE_Z + stackContext.stack.findIndex((item) => item.id === modalId)
-      : BASE_Z;
+    zIndexOverride != null
+      ? zIndexOverride
+      : stackContext && modalId != null
+        ? BASE_Z + stackContext.stack.findIndex((item) => item.id === modalId)
+        : BASE_Z;
 
   const dialogStyle = {
     ...(Object.keys(style).length ? style : {}),

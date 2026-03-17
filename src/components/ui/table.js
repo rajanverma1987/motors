@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiRotateCw } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
@@ -90,6 +90,8 @@ export default function Table({
   onColumnVisibilityChange,
   // Optional: resizable columns (drag column border in header to resize)
   resizableColumns = false,
+  // Optional: refresh callback (shows refresh icon to the right of search; call to refetch table data)
+  onRefresh,
 }) {
   const hasPagination = pagination && typeof onPageChange === "function";
   const hasEdit = typeof onEdit === "function";
@@ -104,6 +106,7 @@ export default function Table({
   const hasFooter = footer != null && (Array.isArray(footer) ? footer.length > 0 : true);
   const hasColumnWidths = columns.some((c) => c.width || c.minWidth || c.maxWidth);
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
+  const hasRefresh = typeof onRefresh === "function";
 
   const cellPy = dense ? "py-1.5" : "py-2";
   const headerPy = dense ? "py-1.5" : "py-2";
@@ -550,7 +553,7 @@ export default function Table({
 
   return (
     <div className="space-y-4">
-      {(hasSearch || loading || (exportable && data.length > 0) || hasColumnSettings) && (
+      {(hasSearch || hasRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
         <div className="flex flex-nowrap items-center gap-2 min-w-0">
           {hasSearch && (
             <input
@@ -562,7 +565,19 @@ export default function Table({
               aria-label="Search table"
             />
           )}
-          {loading && (
+          {hasRefresh && (
+            <button
+              type="button"
+              onClick={() => onRefresh()}
+              disabled={loading}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              aria-label="Refresh table"
+              title="Refresh"
+            >
+              <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
+            </button>
+          )}
+          {loading && !hasRefresh && (
             <span
               className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
               aria-label="Loading"

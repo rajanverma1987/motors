@@ -80,6 +80,35 @@ export default function NearMeContent() {
     }
   }, []);
 
+  const reverseGeocode = useCallback(async (latitude, longitude) => {
+    try {
+      const res = await fetch(
+        `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
+      );
+      if (!res.ok) throw new Error("BigDataCloud error");
+      const data = await res.json();
+      const city = (data.city || data.locality || "").trim();
+      const state = (data.principalSubdivision || data.principalSubdivisionCode || "").trim();
+      const zip = (data.postcode || "").trim();
+      return { city, state, zip };
+    } catch {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+          { headers: { "Accept-Language": "en", "User-Agent": "MotorsWindingNearMe/1.0" } }
+        );
+        if (!res.ok) throw new Error("Nominatim error");
+        const data = await res.json();
+        const city = (data.address?.city || data.address?.town || data.address?.village || data.address?.municipality || "").trim();
+        const state = (data.address?.state || data.address?.county || "").trim();
+        const zip = (data.address?.postcode || "").trim();
+        return { city, state, zip };
+      } catch {
+        return { city: "", state: "", zip: "" };
+      }
+    }
+  }, []);
+
   const detectLocation = useCallback(() => {
     setLocationStatus("loading");
     if (!navigator.geolocation) {
@@ -89,44 +118,33 @@ export default function NearMeContent() {
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
-        try {
-          const res = await fetch(
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`
-          );
-          const data = await res.json();
-          const city = (data.city || data.locality || "").trim();
-          const state = (data.principalSubdivision || data.principalSubdivisionCode || "").trim();
-          const zip = (data.postcode || "").trim();
-          setUserLocation({ city, state, zip });
-          setLocationStatus("detected");
-          const count = await fetchListingsNear(city, state, zip);
-          if (count === 0) {
-            const hasLocation = city || state || zip;
-            if (hasLocation) {
-              const key = [city, state, zip].filter(Boolean).join("|");
-              if (autoNotifiedRef.current !== key) {
-                autoNotifiedRef.current = key;
-                fetch("/api/notify-no-listings-near-me", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    city: city || undefined,
-                    state: state || undefined,
-                    zip: zip || undefined,
-                  }),
-                }).catch((err) => console.error("Auto-notify no listings error:", err));
-              }
+        const { city, state, zip } = await reverseGeocode(latitude, longitude);
+        setUserLocation({ city, state, zip });
+        setLocationStatus("detected");
+        const count = await fetchListingsNear(city, state, zip);
+        if (count === 0) {
+          const hasLocation = city || state || zip;
+          if (hasLocation) {
+            const key = [city, state, zip].filter(Boolean).join("|");
+            if (autoNotifiedRef.current !== key) {
+              autoNotifiedRef.current = key;
+              fetch("/api/notify-no-listings-near-me", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  city: city || undefined,
+                  state: state || undefined,
+                  zip: zip || undefined,
+                }),
+              }).catch((err) => console.error("Auto-notify no listings error:", err));
             }
           }
-        } catch {
-          setLocationStatus("error");
-          setListings([]);
         }
       },
       () => setLocationStatus("denied"),
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
-  }, [fetchListingsNear]);
+  }, [fetchListingsNear, reverseGeocode]);
 
   useEffect(() => {
     detectLocation();
@@ -180,6 +198,9 @@ export default function NearMeContent() {
               {locationStatus === "detected" && (
                 <p className="text-sm text-secondary">
                   Showing centers near <span className="font-medium text-title">{locationLabel}</span>
+                  {!userLocation.city && !userLocation.state && !userLocation.zip && (
+                    <span className="block mt-1 text-xs">We couldn&apos;t resolve your city/state from coordinates. Showing all listings below.</span>
+                  )}
                   <button type="button" onClick={detectLocation} className="ml-2 text-sm text-primary hover:underline">
                     Update location
                   </button>
