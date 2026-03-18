@@ -1,4 +1,4 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import InvoicesPageClient from "./invoices-page-client";
 
 export const metadata = {
   title: "Invoices",
@@ -6,10 +6,5 @@ export const metadata = {
 };
 
 export default function InvoicesPage() {
-  return (
-    <CrmPlaceholder
-      title="Invoices"
-      description="Create invoice from quote detail by selecting completed work orders. Add line items, generate, email to customer."
-    />
-  );
+  return <InvoicesPageClient />;
 }

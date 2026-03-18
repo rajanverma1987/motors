@@ -5,6 +5,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { sendNewListingSubmittedToAdmin } from "@/lib/email";
+import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -16,11 +17,40 @@ export async function POST(request) {
   }
   try {
     await connectDB();
-    const body = await request.json();
+    const contentType = request.headers.get("content-type") || "";
+    let body;
+    let logoUrlFromUpload = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const form = await request.formData();
+      const dataStr = form.get("data");
+      if (!dataStr || typeof dataStr !== "string") {
+        return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+      }
+      try {
+        body = JSON.parse(dataStr);
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON in form" }, { status: 400 });
+      }
+      const logo = form.get("logo");
+      if (logo && typeof logo.arrayBuffer === "function" && logo.size > 0) {
+        try {
+          logoUrlFromUpload = await saveUploadedLogoFile(logo);
+        } catch (e) {
+          return NextResponse.json(
+            { error: e.message || "Logo upload failed" },
+            { status: 400 }
+          );
+        }
+      }
+    } else {
+      body = await request.json();
+    }
+
     const {
       email,
       companyName,
-      logoUrl,
+      logoUrl: logoUrlBody,
       shortDescription,
       yearsInBusiness,
       phone,
@@ -69,6 +99,11 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+
+    const logoUrl =
+      logoUrlFromUpload != null
+        ? logoUrlFromUpload
+        : sanitizeListingLogoUrlForCreate(logoUrlBody, URL_MAX);
 
     const doc = await Listing.create({
       email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiEdit2, FiRotateCw, FiSend } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -13,6 +14,8 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "40%" },
@@ -127,7 +130,12 @@ function sumLineItems(lines) {
 
 export default function DashboardPurchaseOrdersPage() {
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openPoId = searchParams.get("open");
   const confirm = useConfirm();
+  const fmt = useFormatMoney();
+  const { settings: accountSettings } = useUserSettings();
   const [pos, setPos] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [quotes, setQuotes] = useState([]);
@@ -226,6 +234,14 @@ export default function DashboardPurchaseOrdersPage() {
     })();
     return () => { cancelled = true; };
   }, [loadPos, loadVendors, loadQuotes]);
+
+  useEffect(() => {
+    const id = openPoId?.trim();
+    if (!id) return;
+    setViewLoadingPoId(id);
+    setViewModalOpen(true);
+    router.replace("/dashboard/purchase-orders", { scroll: false });
+  }, [openPoId, router]);
 
   const openCreateModal = () => {
     setForm(INITIAL_FORM);
@@ -634,11 +650,23 @@ export default function DashboardPurchaseOrdersPage() {
           </Badge>
         ),
       },
-      { key: "totalOrder", label: "Order total", render: (_, row) => (row.totalOrder ? `$${row.totalOrder}` : "—") },
-      { key: "totalInvoiced", label: "Invoiced $", render: (_, row) => (row.totalInvoiced ? `$${row.totalInvoiced}` : "—") },
-      { key: "totalPaid", label: "Paid $", render: (_, row) => (row.totalPaid ? `$${row.totalPaid}` : "—") },
+      {
+        key: "totalOrder",
+        label: "Order total",
+        render: (_, row) => (row.totalOrder ? fmt(row.totalOrder) : "—"),
+      },
+      {
+        key: "totalInvoiced",
+        label: "Invoiced",
+        render: (_, row) => (row.totalInvoiced ? fmt(row.totalInvoiced) : "—"),
+      },
+      {
+        key: "totalPaid",
+        label: "Paid",
+        render: (_, row) => (row.totalPaid ? fmt(row.totalPaid) : "—"),
+      },
     ],
-    [vendorNameMap, sendingVendorId]
+    [vendorNameMap, sendingVendorId, fmt]
   );
 
   const todayString = () => {
@@ -647,8 +675,8 @@ export default function DashboardPurchaseOrdersPage() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-title">Purchase orders</h1>
           <Button variant="primary" onClick={openCreateModal} className="shrink-0">
@@ -660,7 +688,7 @@ export default function DashboardPurchaseOrdersPage() {
         </p>
       </div>
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={filteredPos}
@@ -744,7 +772,7 @@ export default function DashboardPurchaseOrdersPage() {
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
             />
-            <p className="mt-2 text-sm text-secondary">Order total: ${sumLineItems(form.lineItems)}</p>
+            <p className="mt-2 text-sm text-secondary">Order total: {fmt(parseFloat(sumLineItems(form.lineItems)) || 0)}</p>
           </div>
           <div>
             <Textarea
@@ -937,6 +965,17 @@ export default function DashboardPurchaseOrdersPage() {
                 <div><dt className="text-secondary">Paid</dt><dd><Badge variant={PAID_STATUS_VARIANT[viewingPo.paidStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.paidStatus ?? "—"}</Badge></dd></div>
               </dl>
             </div>
+            {(accountSettings?.accountsBillingAddress || accountSettings?.accountsShippingAddress) && (
+              <div className="rounded-lg border border-border bg-form-bg/50 p-4">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Your billing &amp; ship-to (shown to vendor)
+                </h3>
+                <PoVendorAccountsSection
+                  billingAddress={accountSettings?.accountsBillingAddress}
+                  shippingAddress={accountSettings?.accountsShippingAddress}
+                />
+              </div>
+            )}
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Line items</h3>
               {Array.isArray(viewingPo.lineItems) && viewingPo.lineItems.length > 0 ? (
@@ -957,16 +996,31 @@ export default function DashboardPurchaseOrdersPage() {
                         const q = parseFloat(row?.qty ?? "1");
                         const p = parseFloat(row?.unitPrice ?? "0");
                         const total = Number.isFinite(q) && Number.isFinite(p) ? (q * p).toFixed(2) : "—";
-                        const itemStatus = row?.status === "Received" ? "Received" : (row?.status === "Delivered" || row?.status === "Dispatch") ? "Dispatch" : "Ordered";
+                        const itemStatus =
+                          row?.status === "Received"
+                            ? "Received"
+                            : row?.status === "Back Order"
+                              ? "Back Order"
+                              : row?.status === "Delivered" || row?.status === "Dispatch"
+                                ? "Dispatch"
+                                : "Ordered";
+                        const itemBadgeVariant =
+                          itemStatus === "Received"
+                            ? "success"
+                            : itemStatus === "Back Order"
+                              ? "warning"
+                              : itemStatus === "Dispatch"
+                                ? "primary"
+                                : "default";
                         return (
                           <tr key={i} className="border-t border-border">
                             <td className="px-3 py-2 text-title">{row?.description || "—"}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{row?.qty ?? "—"}</td>
                             <td className="px-3 py-2 text-title">{row?.uom || "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{row?.unitPrice ? `$${row.unitPrice}` : "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">${total}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{row?.unitPrice ? fmt(row.unitPrice) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{total !== "—" ? fmt(parseFloat(total)) : "—"}</td>
                             <td className="px-3 py-2">
-                              <Badge variant={itemStatus === "Received" ? "success" : itemStatus === "Dispatch" ? "primary" : "default"} className="rounded-full px-2 py-0.5 text-xs">
+                              <Badge variant={itemBadgeVariant} className="rounded-full px-2 py-0.5 text-xs">
                                 {itemStatus}
                               </Badge>
                             </td>
@@ -979,7 +1033,7 @@ export default function DashboardPurchaseOrdersPage() {
               ) : (
                 <p className="text-sm text-secondary">No line items.</p>
               )}
-              <p className="mt-2 text-sm font-medium text-title">Order total: ${viewingPo.totalOrder || "0.00"}</p>
+              <p className="mt-2 text-sm font-medium text-title">Order total: {fmt(viewingPo.totalOrder || 0)}</p>
             </div>
             {(viewingPo.notes || "").trim() && (
               <div>
@@ -1068,7 +1122,7 @@ export default function DashboardPurchaseOrdersPage() {
                         <tr key={i} className="border-t border-border">
                           <td className="px-3 py-2 text-title">{inv?.invoiceNumber || "—"}</td>
                           <td className="px-3 py-2 text-secondary">{inv?.date || "—"}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-title">${inv?.amount || "0"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(inv?.amount || 0)}</td>
                           <td className="px-3 py-2">
                             {inv?.attachmentUrl ? (
                               <a href={inv.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -1086,7 +1140,7 @@ export default function DashboardPurchaseOrdersPage() {
               ) : (
                 <p className="text-sm text-secondary">No vendor invoices attached yet.</p>
               )}
-              <p className="mt-1 text-sm text-secondary">Total invoiced: ${viewingPo.totalInvoiced || "0.00"}</p>
+              <p className="mt-1 text-sm text-secondary">Total invoiced: {fmt(viewingPo.totalInvoiced || 0)}</p>
             </div>
           )}
         </Form>
@@ -1148,7 +1202,7 @@ export default function DashboardPurchaseOrdersPage() {
                     <tbody>
                       {viewingPo.payments.map((pay, i) => (
                         <tr key={i} className="border-t border-border">
-                          <td className="px-3 py-2 text-right tabular-nums text-title">${pay?.amount || "0"}</td>
+                          <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(pay?.amount || 0)}</td>
                           <td className="px-3 py-2 text-secondary">{pay?.date || "—"}</td>
                           <td className="px-3 py-2 text-title">{pay?.method || "—"}</td>
                           <td className="px-3 py-2 text-secondary">{pay?.reference || "—"}</td>
@@ -1160,7 +1214,7 @@ export default function DashboardPurchaseOrdersPage() {
               ) : (
                 <p className="text-sm text-secondary">No payments recorded yet.</p>
               )}
-              <p className="mt-1 text-sm text-secondary">Total paid: ${viewingPo.totalPaid || "0.00"}</p>
+              <p className="mt-1 text-sm text-secondary">Total paid: {fmt(viewingPo.totalPaid || 0)}</p>
             </div>
           )}
         </Form>
@@ -1220,7 +1274,7 @@ export default function DashboardPurchaseOrdersPage() {
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
             />
-            <p className="mt-2 text-sm text-secondary">Order total: ${sumLineItems(form.lineItems)}</p>
+            <p className="mt-2 text-sm text-secondary">Order total: {fmt(parseFloat(sumLineItems(form.lineItems)) || 0)}</p>
           </div>
           <div>
             <Textarea

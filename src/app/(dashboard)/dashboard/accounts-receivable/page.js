@@ -1,4 +1,4 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import AccountsReceivablePageClient from "./accounts-receivable-page-client";
 
 export const metadata = {
   title: "Accounts receivable",
@@ -6,10 +6,5 @@ export const metadata = {
 };
 
 export default function AccountsReceivablePage() {
-  return (
-    <CrmPlaceholder
-      title="Accounts receivable"
-      description="Track customer payments. Record payment, view outstanding balances and invoice history."
-    />
-  );
+  return <AccountsReceivablePageClient />;
 }

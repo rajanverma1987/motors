@@ -208,35 +208,110 @@ export async function sendMarketingEmail(to, subject, html) {
 }
 
 /** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no MotorsWinding.com). */
-export async function sendQuoteToCustomer(toEmail, customerName, rfqNumber, respondUrl, shopCompanyName) {
+export async function sendQuoteToCustomer(
+  toEmail,
+  customerName,
+  rfqNumber,
+  respondUrl,
+  shopCompanyName,
+  options = {}
+) {
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
   const subject = `Your quote ${esc(rfqNumber) || "is ready"} – ${shopName}`;
   const signature = esc(shopName);
+  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
+  const logoBlock = logoAbs
+    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+    : "";
   const html = `
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
     <p>Your service quote ${rfqNumber ? `(RFQ# ${esc(rfqNumber)})` : ""} is ready for your review.</p>
     <p><strong>View your quote and approve or reject it here:</strong></p>
     <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
     <p>You can also print or save the quote as PDF from that page.</p>
-    <p>— ${signature}</p>
+    ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
+    ${logoBlock}
+    <p style="margin-top:16px">— ${signature}</p>
+  `;
+  return sendEmail(toEmail, subject, html);
+}
+
+/**
+ * Invoice email to customer — primary CTA is link to view/print (same idea as quote respond link).
+ * Pass options.viewUrl (e.g. /invoice/view/{token}).
+ */
+export async function sendInvoiceToCustomer(
+  toEmail,
+  customerName,
+  invoiceNumber,
+  shopCompanyName,
+  options = {}
+) {
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const invNo = esc(invoiceNumber) || "—";
+  const subject = `Invoice ${invNo} – ${esc(shopName)}`;
+  const signature = esc(shopName);
+  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
+  const logoBlock = logoAbs
+    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+    : "";
+  const accountsBlock =
+    typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim()
+      ? options.accountsEmailBlock
+      : "";
+  const viewUrl = typeof options.viewUrl === "string" ? options.viewUrl.trim() : "";
+
+  if (viewUrl) {
+    const html = `
+    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
+    <p>Your invoice <strong>#${invNo}</strong> from ${signature} is ready.</p>
+    <p><strong>View and print your invoice here:</strong></p>
+    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View invoice</a></p>
+    <p>You can print or save the invoice as PDF from that page.</p>
+    ${accountsBlock}
+    <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
+    ${logoBlock}
+    <p style="margin-top:16px">— ${signature}</p>
+  `;
+    return sendEmail(toEmail, subject, html);
+  }
+
+  const totalLine = options.totalFormatted ? `<p><strong>Amount due:</strong> ${esc(options.totalFormatted)}</p>` : "";
+  const notesBlock = options.summaryHtml ? `<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">${options.summaryHtml}</div>` : "";
+  const html = `
+    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
+    <p>Please find your invoice <strong>#${invNo}</strong> from ${signature}.</p>
+    ${totalLine}
+    ${notesBlock}
+    ${accountsBlock}
+    <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
+    ${logoBlock}
+    <p style="margin-top:16px">— ${signature}</p>
   `;
   return sendEmail(toEmail, subject, html);
 }
 
 /** Send purchase order to vendor with link to view, print, and update delivery status. Uses motor shop name in subject and signature. */
-export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName) {
+export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName, options = {}) {
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
   const subject = `Purchase order ${esc(poNumber) || ""} – ${shopName}`;
   const signature = esc(shopName);
+  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
+  const logoBlock = logoAbs
+    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+    : "";
   const html = `
     <p>Hi${vendorName ? ` ${esc(vendorName)}` : ""},</p>
     <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${signature}.</p>
     <p><strong>View, print, and update delivery status for each line item here:</strong></p>
     <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
     <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
-    <p>— ${signature}</p>
+    ${typeof options.poVendorAddressesHtml === "string" && options.poVendorAddressesHtml.trim() ? options.poVendorAddressesHtml : ""}
+    ${logoBlock}
+    <p style="margin-top:16px">— ${signature}</p>
   `;
   return sendEmail(toEmail, subject, html);
 }

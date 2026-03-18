@@ -1,15 +1,10 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import ReportsPageClient from "./reports-page-client";
 
 export const metadata = {
   title: "Reports",
-  description: "Management reports.",
+  description: "Management reports: leads, quotes, work orders, AR, AP.",
 };
 
 export default function ReportsPage() {
-  return (
-    <CrmPlaceholder
-      title="Reports"
-      description="Weekly/monthly revenue, completed jobs, outstanding invoices, top customers, technician productivity."
-    />
-  );
+  return <ReportsPageClient />;
 }

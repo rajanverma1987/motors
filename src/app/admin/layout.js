@@ -12,10 +12,12 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="flex min-h-screen bg-bg">
+    <div className="flex h-screen overflow-hidden bg-bg">
       <AdminSidebar />
-      <main className="min-w-0 flex-1 overflow-auto">
-        {children}
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+          {children}
+        </div>
       </main>
     </div>
   );

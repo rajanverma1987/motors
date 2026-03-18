@@ -4,10 +4,20 @@ import { connectDB } from "@/lib/db";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
+import Vendor from "@/models/Vendor";
+import { poBalanceDue } from "@/lib/po-payable";
 
 const MAX_LINE_ITEMS = 100;
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
+
+function normalizeLineItemStatus(row) {
+  const s = row?.status;
+  if (s === "Received") return "Received";
+  if (s === "Back Order") return "Back Order";
+  if (s === "Delivered" || s === "Dispatch") return "Dispatch";
+  return "Ordered";
+}
 
 function normalizeLineItems(arr) {
   if (!Array.isArray(arr)) return [];
@@ -16,7 +26,7 @@ function normalizeLineItems(arr) {
     qty: clampString(String(row?.qty ?? "1"), 50),
     uom: clampString(row?.uom, 20),
     unitPrice: clampString(row?.unitPrice, 50),
-    status: row?.status === "Received" ? "Received" : (row?.status === "Delivered" || row?.status === "Dispatch") ? "Dispatch" : "Ordered",
+    status: normalizeLineItemStatus(row),
   }));
 }
 
@@ -121,15 +131,25 @@ export async function GET(request, context) {
     const totalPaid = sumAmounts(payments);
     const lineItemsWithStatus = lineItems.map((item) => ({
       ...item,
-      status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered",
+      status: normalizeLineItemStatus(item),
     }));
     const deliveryStatus = computeDeliveryStatus(lineItemsWithStatus);
     const invoicedStatus = computeInvoicedStatus(totalOrder, totalInvoiced);
     const paidStatus = computePaidStatus(totalInvoiced, totalPaid);
+    const balanceDue = poBalanceDue(doc);
+    const vendorDoc = doc.vendorId
+      ? await Vendor.findOne({
+          _id: doc.vendorId,
+          createdByEmail: user.email.trim().toLowerCase(),
+        })
+          .select("name")
+          .lean()
+      : null;
     const out = {
       id: doc._id.toString(),
       poNumber: doc.poNumber ?? "",
       vendorId: doc.vendorId ?? "",
+      vendorName: vendorDoc?.name?.trim() || doc.vendorId || "—",
       type: doc.type ?? "shop",
       quoteId: doc.quoteId ?? "",
       lineItems: lineItemsWithStatus,
@@ -139,6 +159,7 @@ export async function GET(request, context) {
       totalInvoiced: totalInvoiced.toFixed(2),
       totalPaid: totalPaid.toFixed(2),
       status: computeStatus(totalOrder, totalInvoiced, totalPaid),
+      balanceDue,
       deliveryStatus,
       invoicedStatus,
       paidStatus,
@@ -223,14 +244,16 @@ export async function PATCH(request, context) {
         vendorId: po.vendorId,
         type: po.type,
         quoteId: po.quoteId ?? "",
-        lineItems: (po.lineItems ?? []).map((item) => ({ ...item, status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered" })),
+        lineItems: (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) })),
         vendorInvoices: po.vendorInvoices ?? [],
         payments: po.payments ?? [],
         totalOrder: totalOrder.toFixed(2),
         totalInvoiced: totalInvoiced.toFixed(2),
         totalPaid: totalPaid.toFixed(2),
         status: computeStatus(totalOrder, totalInvoiced, totalPaid),
-        deliveryStatus: computeDeliveryStatus((po.lineItems ?? []).map((item) => ({ ...item, status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered" }))),
+        deliveryStatus: computeDeliveryStatus(
+          (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) }))
+        ),
         invoicedStatus: computeInvoicedStatus(totalOrder, totalInvoiced),
         paidStatus: computePaidStatus(totalInvoiced, totalPaid),
         notes: po.notes ?? "",

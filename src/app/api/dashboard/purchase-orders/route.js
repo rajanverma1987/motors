@@ -103,7 +103,14 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}) {
   const paidStatus = computePaidStatus(totalInvoiced, totalPaid);
   const lineItemsWithStatus = lineItems.map((item) => ({
     ...item,
-    status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered",
+    status:
+      item?.status === "Received"
+        ? "Received"
+        : item?.status === "Back Order"
+          ? "Back Order"
+          : item?.status === "Delivered" || item?.status === "Dispatch"
+            ? "Dispatch"
+            : "Ordered",
   }));
   const deliveryStatus = computeDeliveryStatus(lineItemsWithStatus);
   return {

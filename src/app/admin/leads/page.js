@@ -152,15 +152,15 @@ export default function AdminLeadsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Leads</h1>
         <p className="mt-1 text-sm text-secondary">
           Contact requests from the listing pages. Assign each lead to up to 3 repair companies.
         </p>
       </div>
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={COLUMNS}
           data={leads}

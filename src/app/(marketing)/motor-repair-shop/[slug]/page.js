@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLocationPageBySlug } from "@/lib/location-pages-public";
 import { getListingsFilteredByLocation } from "@/lib/listings-public";
-import { getListingSlug } from "@/lib/listing-slug";
+import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import ListingsHeroCta from "@/app/(marketing)/electric-motor-reapir-shops-listings/listings-hero-cta";
 
@@ -13,7 +13,7 @@ function ListingCard({ listing }) {
     ? listing.galleryPhotoUrls[0]
     : null;
   const imageUrl = logoUrl || (firstPhoto?.startsWith("http") ? firstPhoto : firstPhoto?.startsWith("/") ? firstPhoto : null);
-  const slug = getListingSlug(listing.companyName, listing.id);
+  const slug = getListingPublicPathSegment(listing);
 
   return (
     <Link

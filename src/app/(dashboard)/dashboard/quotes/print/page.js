@@ -2,8 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 
 export default function QuotePrintPage() {
+  const fmt = useFormatMoney();
+  const { user } = useAuth();
+  const { settings: accountSettings } = useUserSettings();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
   const [quote, setQuote] = useState(null);
@@ -74,10 +81,21 @@ export default function QuotePrintPage() {
     );
   }
 
-  const total = (parseFloat(quote.laborTotal || 0) + parseFloat(quote.partsTotal || 0)).toFixed(2);
+  const totalNum = parseFloat(quote.laborTotal || 0) + parseFloat(quote.partsTotal || 0);
 
   return (
     <div className="max-w-3xl mx-auto p-6 print:p-4 text-sm text-title">
+      <div className="mb-6 border-b border-border pb-4">
+        <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Motor Shop</h2>
+        <p className="font-semibold text-title">{user?.shopName || "—"}</p>
+        <p className="text-sm text-secondary">{[user?.contactName, user?.email].filter(Boolean).join(" · ") || "—"}</p>
+      </div>
+      <div className="mb-6 border-b border-border pb-4">
+        <CompanyAccountsPrint
+          billingAddress={accountSettings?.accountsBillingAddress}
+          paymentTermsLabel={accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms)}
+        />
+      </div>
       <div className="border-b border-border pb-4 mb-4">
         <h1 className="text-2xl font-bold">Quote {quote.rfqNumber || ""}</h1>
       </div>
@@ -101,9 +119,9 @@ export default function QuotePrintPage() {
       <section className="mb-6">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Totals</h2>
         <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="text-secondary">Scope total</dt><dd>{quote.laborTotal ? `$${quote.laborTotal}` : "—"}</dd></div>
-          <div><dt className="text-secondary">Parts total</dt><dd>{quote.partsTotal ? `$${quote.partsTotal}` : "—"}</dd></div>
-          <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold">${total}</dd></div>
+          <div><dt className="text-secondary">Scope total</dt><dd>{quote.laborTotal ? fmt(quote.laborTotal) : "—"}</dd></div>
+          <div><dt className="text-secondary">Parts total</dt><dd>{quote.partsTotal ? fmt(quote.partsTotal) : "—"}</dd></div>
+          <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold">{fmt(totalNum)}</dd></div>
           <div><dt className="text-secondary">Est. completion</dt><dd>{quote.estimatedCompletion || "—"}</dd></div>
         </dl>
       </section>
@@ -115,7 +133,7 @@ export default function QuotePrintPage() {
             <thead className="bg-card"><tr><th className="px-3 py-2 text-left font-medium">Scope</th><th className="px-3 py-2 text-right font-medium">Price</th></tr></thead>
             <tbody>
               {quote.scopeLines.map((row, i) => (
-                <tr key={i} className="border-t border-border"><td className="px-3 py-2">{row.scope || "—"}</td><td className="px-3 py-2 text-right">{row.price ? `$${row.price}` : "—"}</td></tr>
+                <tr key={i} className="border-t border-border"><td className="px-3 py-2">{row.scope || "—"}</td><td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td></tr>
               ))}
             </tbody>
           </table>
@@ -137,8 +155,8 @@ export default function QuotePrintPage() {
                     <td className="px-3 py-2">{row.item || "—"}</td>
                     <td className="px-3 py-2 text-right">{row.qty ?? "1"}</td>
                     <td className="px-3 py-2">{row.uom || "—"}</td>
-                    <td className="px-3 py-2 text-right">{row.price ? `$${row.price}` : "—"}</td>
-                    <td className="px-3 py-2 text-right">{lineTotal !== "—" ? `$${lineTotal}` : "—"}</td>
+                    <td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td>
+                    <td className="px-3 py-2 text-right">{lineTotal !== "—" ? fmt(parseFloat(lineTotal)) : "—"}</td>
                   </tr>
                 );
               })}

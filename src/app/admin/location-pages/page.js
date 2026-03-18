@@ -155,15 +155,15 @@ export default function AdminLocationPagesPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">SEO location pages</h1>
         <p className="mt-1 text-sm text-secondary">
           Create pages like &quot;Motor repair shop in Atlanta, Georgia&quot;. They appear at /motor-repair-shop/[slug] and show listings in that area.
         </p>
       </div>
 
-      <Form onSubmit={handleSubmit} className="mt-8 max-w-2xl">
+      <Form onSubmit={handleSubmit} className="mt-8 max-w-2xl shrink-0">
         <h2 className="text-lg font-semibold text-title">Add location page</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
@@ -231,8 +231,8 @@ export default function AdminLocationPagesPage() {
         </Button>
       </Form>
 
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-title mb-3">Existing pages</h2>
+      <div className="mt-8 flex min-h-0 min-w-0 flex-1 flex-col">
+        <h2 className="mb-3 shrink-0 text-lg font-semibold text-title">Existing pages</h2>
         <Table
           columns={columns}
           data={pages}

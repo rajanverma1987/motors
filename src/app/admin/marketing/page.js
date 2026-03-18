@@ -312,8 +312,8 @@ export default function AdminMarketingPage() {
     .map((c) => ({ ...c }));
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Marketing emails</h1>
           <p className="text-sm text-secondary">
@@ -334,8 +334,8 @@ export default function AdminMarketingPage() {
       </div>
 
       {/* Contacts table only on main page */}
-      <div className="mt-6">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+        <div className="flex shrink-0 flex-wrap items-center gap-4">
           <Input
             type="search"
             placeholder="Search email, name, company, notes…"
@@ -351,7 +351,7 @@ export default function AdminMarketingPage() {
             className="w-40"
           />
         </div>
-        <div className="mt-4 min-w-0">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Table
             columns={columns}
             data={tableData}

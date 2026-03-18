@@ -1,6 +1,13 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, useEffect } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+} from "react";
 
 const ModalStackContext = createContext(null);
 
@@ -11,18 +18,20 @@ function generateId() {
 
 export function ModalStackProvider({ children }) {
   const [stack, setStack] = useState([]);
+  const stackRef = useRef(stack);
+  stackRef.current = stack;
 
   useEffect(() => {
     const handler = (e) => {
       if (e.key !== "Escape") return;
-      setStack((s) => {
-        if (s.length === 0) return s;
-        const top = s[s.length - 1];
-        top.onClose();
-        return s;
-      });
+      const s = stackRef.current;
+      if (s.length === 0) return;
+      const onClose = s[s.length - 1].onClose;
       e.preventDefault();
       e.stopPropagation();
+      // Never call onClose synchronously from here: it updates the page that owns the modal,
+      // which triggers "Cannot update X while rendering Y" if run inside setStack's updater.
+      queueMicrotask(() => onClose());
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);

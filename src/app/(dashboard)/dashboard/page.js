@@ -16,6 +16,12 @@ import {
   FiUserPlus,
   FiExternalLink,
 } from "react-icons/fi";
+import { useUserSettings } from "@/contexts/user-settings-context";
+import { formatMoney } from "@/lib/format-currency";
+import { normalizeInvoiceStatusSlug, INVOICE_STATUS_OPTIONS } from "@/lib/invoice-status";
+import DashboardPeriodFilter from "@/components/dashboard/dashboard-period-filter";
+import { isOpenInvoiceOverdueForTerms } from "@/lib/accounts-payment-terms";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
 const LEAD_STATUS_LABELS = { new: "New", contacted: "Contacted", quoted: "Quoted", won: "Won", lost: "Lost" };
 const QUOTE_STATUS_LABELS = { draft: "Draft", sent: "Sent", approved: "Approved", rejected: "Rejected", rnr: "RNR" };
@@ -37,31 +43,80 @@ const ENDPOINTS = [
   { key: "employees", url: "/api/dashboard/employees", href: "/dashboard/employees", label: "Employees", icon: FiUserPlus },
 ];
 
-const PLACEHOLDER_ITEMS = [
-  { key: "workOrders", href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard, placeholder: true },
-  { key: "invoices", href: "/dashboard/invoices", label: "Invoices", icon: FiDollarSign, placeholder: true },
-  { key: "accountsReceivable", href: "/dashboard/accounts-receivable", label: "Accounts receivable", icon: FiTrendingUp, placeholder: true },
-  { key: "accountsPayable", href: "/dashboard/accounts-payable", label: "Accounts payable", icon: FiCreditCard, placeholder: true },
-];
-
 function countByStatus(items, statusKey, labels) {
   const out = {};
   if (!labels) return out;
-  Object.keys(labels).forEach((k) => { out[k] = 0; });
+  Object.keys(labels).forEach((k) => {
+    out[k] = 0;
+  });
   if (!Array.isArray(items)) return out;
   items.forEach((item) => {
     const s = (item[statusKey] || "").toLowerCase().trim();
     if (s && out[s] !== undefined) out[s]++;
-    else if (s && !out[s]) out[s] = 1;
+    else if (s && out[s] === undefined) out[s] = 1;
   });
   return out;
 }
 
-function StatCard({ href, label, count, icon: Icon, placeholder, byStatus, statusLabels }) {
+function countInvoiceBySlug(items) {
+  const out = {};
+  INVOICE_STATUS_OPTIONS.forEach((o) => {
+    out[o.value] = 0;
+  });
+  if (!Array.isArray(items)) return out;
+  items.forEach((inv) => {
+    const slug = normalizeInvoiceStatusSlug(inv.status);
+    if (out[slug] !== undefined) out[slug]++;
+  });
+  return out;
+}
+
+function workOrderStatusBreakdown(items) {
+  const m = new Map();
+  if (!Array.isArray(items)) return [];
+  for (const w of items) {
+    const s = (w.status || "Unknown").trim() || "Unknown";
+    m.set(s, (m.get(s) || 0) + 1);
+  }
+  return [...m.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, n]) => ({ label, value: n }));
+}
+
+function accountsPayableFromPOs(poList) {
+  if (!Array.isArray(poList)) return { openCount: 0, lines: [] };
+  const open = poList.filter((po) => String(po.status || "").toLowerCase() !== "closed");
+  const by = new Map();
+  for (const po of open) {
+    const s = po.status || "Open";
+    by.set(s, (by.get(s) || 0) + 1);
+  }
+  const lines = [...by.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([label, n]) => ({ label, value: n }));
+  return { openCount: open.length, lines };
+}
+
+function StatCard({
+  href,
+  label,
+  count,
+  icon: Icon,
+  placeholder,
+  byStatus,
+  statusLabels,
+  extraLines,
+  loading,
+}) {
   const statusEntries = useMemo(() => {
     if (!statusLabels) return [];
     return Object.entries(statusLabels).map(([key, lab]) => [lab, (byStatus && byStatus[key]) ?? 0]);
   }, [byStatus, statusLabels]);
+
+  const showMain = !placeholder && count != null && !loading;
+  const showLoading = loading && !placeholder;
 
   return (
     <Link
@@ -73,8 +128,18 @@ function StatCard({ href, label, count, icon: Icon, placeholder, byStatus, statu
         <Icon className="h-5 w-5 shrink-0 text-secondary" aria-hidden />
       </div>
       <p className="mt-2 text-2xl font-semibold tabular-nums text-title">
-        {placeholder ? "—" : count != null ? Number(count) : "…"}
+        {placeholder ? "—" : showLoading ? "…" : showMain ? Number(count) : "—"}
       </p>
+      {extraLines && extraLines.length > 0 && (
+        <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
+          {extraLines.map((row) => (
+            <li key={row.label} className="flex justify-between gap-2 text-xs text-secondary">
+              <span>{row.label}</span>
+              <span className="shrink-0 tabular-nums text-title">{row.value}</span>
+            </li>
+          ))}
+        </ul>
+      )}
       {statusEntries.length > 0 && (
         <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
           {statusEntries.map(([statusLabel, n]) => (
@@ -94,62 +159,191 @@ function StatCard({ href, label, count, icon: Icon, placeholder, byStatus, statu
   );
 }
 
+function itemInCreatedRange(item, range) {
+  if (!range) return true;
+  const t = item?.createdAt ? new Date(item.createdAt).getTime() : NaN;
+  if (!Number.isFinite(t)) return false;
+  return t >= range.from.getTime() && t <= range.to.getTime();
+}
+
+function arRowInInvoiceDateRange(row, range) {
+  if (!range) return true;
+  if (!row?.date) return false;
+  const t = new Date(String(row.date).slice(0, 10) + "T12:00:00").getTime();
+  if (!Number.isFinite(t)) return false;
+  return t >= range.from.getTime() && t <= range.to.getTime();
+}
+
 export default function DashboardPage() {
-  const [counts, setCounts] = useState({});
-  const [byStatus, setByStatus] = useState({});
+  const { settings } = useUserSettings();
+  const arTermsSlug = settings?.accountsPaymentTerms || "net30";
+  const arTermsDisplay = accountsPaymentTermsLabel(arTermsSlug);
+  const currency = settings?.currency || "USD";
+  const fmt = (n) => formatMoney(n, currency);
+
+  const [raw, setRaw] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [periodRange, setPeriodRange] = useState(null);
 
   const loadCounts = useCallback(async () => {
     setLoading(true);
-    const nextCounts = {};
-    const nextByStatus = {};
-    await Promise.all(
-      ENDPOINTS.map(async (ep) => {
-        try {
+    const epData = {};
+    try {
+      const results = await Promise.all([
+        ...ENDPOINTS.map(async (ep) => {
           const res = await fetch(ep.url, { credentials: "include", cache: "no-store" });
           const data = await res.json();
-          if (!res.ok || !Array.isArray(data)) {
-            nextCounts[ep.key] = null;
-            return;
-          }
-          nextCounts[ep.key] = data.length;
-          if (ep.statusKey && ep.statusLabels) {
-            nextByStatus[ep.key] = countByStatus(data, ep.statusKey, ep.statusLabels);
-          }
-        } catch {
-          nextCounts[ep.key] = null;
+          return { ep, ok: res.ok, data };
+        }),
+        fetch("/api/dashboard/work-orders", { credentials: "include", cache: "no-store" }).then(
+          async (res) => ({ kind: "wo", ok: res.ok, data: await res.json() })
+        ),
+        fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }).then(
+          async (res) => ({ kind: "inv", ok: res.ok, data: await res.json() })
+        ),
+        fetch("/api/dashboard/accounts-receivable?include=open", {
+          credentials: "include",
+          cache: "no-store",
+        }).then(async (res) => ({ kind: "ar", ok: res.ok, data: await res.json() })),
+      ]);
+
+      let woData = [];
+      let invData = [];
+      let arPayload = { rows: [], summary: {} };
+
+      for (const r of results) {
+        if (r.ep) {
+          const { ep, ok, data } = r;
+          epData[ep.key] = ok && Array.isArray(data) ? data : [];
+        } else if (r.kind === "wo" && r.ok && Array.isArray(r.data)) woData = r.data;
+        else if (r.kind === "inv" && r.ok && Array.isArray(r.data)) invData = r.data;
+        else if (r.kind === "ar" && r.ok && r.data && typeof r.data === "object") {
+          arPayload = {
+            rows: Array.isArray(r.data.rows) ? r.data.rows : [],
+            summary: r.data.summary || {},
+          };
         }
-      })
-    );
-    setCounts(nextCounts);
-    setByStatus(nextByStatus);
-    setLoading(false);
+      }
+
+      setRaw({ epData, woData, invData, arPayload });
+    } catch {
+      setRaw(null);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     loadCounts();
   }, [loadCounts]);
 
+  const { counts, byStatus, extra } = useMemo(() => {
+    if (!raw) {
+      return {
+        counts: {},
+        byStatus: {},
+        extra: {
+          workOrders: { total: 0, lines: [] },
+          invoices: { total: 0, bySlug: {} },
+          ar: { openCount: 0, outstanding: 0, overdue: 0 },
+          ap: { openCount: 0, lines: [] },
+        },
+      };
+    }
+    const range = periodRange;
+    const nextCounts = {};
+    const nextByStatus = {};
+    let poList = [];
+
+    for (const ep of ENDPOINTS) {
+      const arr = (raw.epData[ep.key] || []).filter((x) => itemInCreatedRange(x, range));
+      nextCounts[ep.key] = arr.length;
+      if (ep.key === "purchaseOrders") poList = arr;
+      if (ep.statusKey && ep.statusLabels) {
+        nextByStatus[ep.key] = countByStatus(arr, ep.statusKey, ep.statusLabels);
+      }
+    }
+
+    const woList = raw.woData.filter((x) => itemInCreatedRange(x, range));
+    const invList = raw.invData.filter((x) => itemInCreatedRange(x, range));
+
+    let arBlock;
+    if (range) {
+      const arFiltered = raw.arPayload.rows.filter((row) => arRowInInvoiceDateRange(row, range));
+      const totalOutstanding =
+        Math.round(arFiltered.reduce((s, r) => s + (Number(r.balance) || 0), 0) * 100) / 100;
+      arBlock = {
+        openCount: arFiltered.length,
+        outstanding: totalOutstanding,
+        overdue: arFiltered.filter((r) =>
+          isOpenInvoiceOverdueForTerms(r.daysOutstanding, arTermsSlug)
+        ).length,
+      };
+    } else {
+      const s = raw.arPayload.summary || {};
+      arBlock = {
+        openCount: Number(s.openCount) || 0,
+        outstanding: Number(s.totalOutstanding) || 0,
+        overdue: Number(s.overdueCount) || 0,
+      };
+    }
+
+    return {
+      counts: nextCounts,
+      byStatus: nextByStatus,
+      extra: {
+        workOrders: {
+          total: woList.length,
+          lines: workOrderStatusBreakdown(woList),
+        },
+        invoices: {
+          total: invList.length,
+          bySlug: countInvoiceBySlug(invList),
+        },
+        ar: arBlock,
+        ap: accountsPayableFromPOs(poList),
+      },
+    };
+  }, [raw, periodRange, arTermsSlug]);
+
+  const invoiceStatusEntries = useMemo(
+    () =>
+      INVOICE_STATUS_OPTIONS.map((o) => ({
+        label: o.label,
+        value: extra.invoices.bySlug[o.value] ?? 0,
+      })),
+    [extra.invoices.bySlug]
+  );
+
   return (
-    <div className="min-h-screen bg-bg">
-      <main className="mx-auto max-w-5xl px-4 py-8">
+    <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-title">Dashboard</h1>
             <p className="mt-1 text-sm text-secondary">
-              Overview of your CRM. Use the sidebar to open each section.
+              Overview of your CRM. Filter by period (created date). AR uses invoice date on open items.
             </p>
           </div>
           <Link
             href="/list-your-electric-motor-services"
             target="_blank"
             rel="noopener noreferrer"
-            className="shrink-0 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="inline-flex shrink-0 items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
           >
             Get more visibility
             <FiExternalLink className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         </div>
+
+        <DashboardPeriodFilter
+          onRangeChange={setPeriodRange}
+          note={
+            periodRange
+              ? "Counts use created date in this range. Accounts receivable uses invoice date on open items."
+              : undefined
+          }
+        />
 
         <section className="mb-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-secondary">
@@ -166,19 +360,66 @@ export default function DashboardPage() {
                 placeholder={false}
                 byStatus={byStatus[key]}
                 statusLabels={statusLabels}
+                loading={loading}
               />
             ))}
-            {PLACEHOLDER_ITEMS.map(({ key, href, label, icon }) => (
-              <StatCard
-                key={key}
-                href={href}
-                label={label}
-                count={null}
-                icon={icon}
-                placeholder
-              />
-            ))}
+            <StatCard
+              href="/dashboard/work-orders"
+              label="Work orders"
+              count={loading ? undefined : extra.workOrders.total}
+              icon={FiClipboard}
+              placeholder={false}
+              extraLines={extra.workOrders.lines.map((r) => ({
+                label: r.label,
+                value: r.value,
+              }))}
+              loading={loading}
+            />
+            <StatCard
+              href="/dashboard/invoices"
+              label="Invoices"
+              count={loading ? undefined : extra.invoices.total}
+              icon={FiDollarSign}
+              placeholder={false}
+              extraLines={invoiceStatusEntries.map((r) => ({
+                label: r.label,
+                value: r.value,
+              }))}
+              loading={loading}
+            />
+            <StatCard
+              href="/dashboard/accounts-receivable"
+              label="Accounts receivable"
+              count={loading ? undefined : extra.ar.openCount}
+              icon={FiTrendingUp}
+              placeholder={false}
+              extraLines={[
+                { label: "Outstanding", value: fmt(extra.ar.outstanding) },
+                {
+                  label: `Overdue (past ${arTermsDisplay})`,
+                  value: String(extra.ar.overdue),
+                },
+              ]}
+              loading={loading}
+            />
+            <StatCard
+              href="/dashboard/accounts-payable"
+              label="Accounts payable"
+              count={loading ? undefined : extra.ap.openCount}
+              icon={FiCreditCard}
+              placeholder={false}
+              extraLines={
+                extra.ap.openCount === 0
+                  ? [{ label: "All POs closed", value: "—" }]
+                  : extra.ap.lines.map((r) => ({ label: r.label, value: r.value }))
+              }
+              loading={loading}
+            />
           </div>
+          <p className="mt-3 text-xs text-secondary">
+            Payable counts are from purchase orders (in period) not in Closed status. Full AP tracking can be
+            added later.
+          </p>
         </section>
 
         <section className="mb-8 rounded-xl border border-border bg-card p-4">
@@ -188,31 +429,45 @@ export default function DashboardPage() {
           <div className="flex flex-wrap gap-3">
             <Link
               href="/dashboard/leads"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:bg-primary/10 hover:border-primary/30"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
             >
               <FiInbox className="h-4 w-4" aria-hidden />
               Enter lead
             </Link>
             <Link
               href="/dashboard/customers"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:bg-primary/10 hover:border-primary/30"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
             >
               <FiUsers className="h-4 w-4" aria-hidden />
               Add customer
             </Link>
             <Link
               href="/dashboard/quotes"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:bg-primary/10 hover:border-primary/30"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
             >
               <FiFileText className="h-4 w-4" aria-hidden />
               Create quote
             </Link>
             <Link
               href="/dashboard/motors"
-              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:bg-primary/10 hover:border-primary/30"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
             >
               <FiPackage className="h-4 w-4" aria-hidden />
               Add motor
+            </Link>
+            <Link
+              href="/dashboard/work-orders"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
+            >
+              <FiClipboard className="h-4 w-4" aria-hidden />
+              Work orders
+            </Link>
+            <Link
+              href="/dashboard/invoices"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
+            >
+              <FiDollarSign className="h-4 w-4" aria-hidden />
+              Invoices
             </Link>
           </div>
         </section>

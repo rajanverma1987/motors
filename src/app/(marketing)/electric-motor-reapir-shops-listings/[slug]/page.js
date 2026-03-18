@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getPublicListings, getPublicListingById } from "@/lib/listings-public";
+import { getPublicListings, resolvePublicListingFromSlugParam } from "@/lib/listings-public";
 import { getListingReviewStats } from "@/lib/reviews-public";
 import { getLocationPageForArea } from "@/lib/location-pages-public";
-import { getIdFromSlugParam, getListingSlug } from "@/lib/listing-slug";
+import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
   const listings = await getPublicListings();
-  return listings.map((l) => ({ slug: getListingSlug(l.companyName, l.id) }));
+  return listings.filter((l) => l.urlSlug).map((l) => ({ slug: l.urlSlug }));
 }
 
 /** Allow new slugs not in generateStaticParams (e.g. newly approved) to be generated on demand */
@@ -80,8 +80,7 @@ function formatListAsReadableArray(arr) {
 export async function generateMetadata({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
-  const id = getIdFromSlugParam(slug);
-  const listing = id ? await getPublicListingById(id) : null;
+  const { listing } = await resolvePublicListingFromSlugParam(slug);
   if (!listing) return { title: "Repair center not found" };
   return {
     title: `${listing.companyName} | Motor Repair Center`,
@@ -92,9 +91,11 @@ export async function generateMetadata({ params }) {
 export default async function ListingDetailPage({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
-  const id = getIdFromSlugParam(slug);
+  const { listing, redirectToSlug } = await resolvePublicListingFromSlugParam(slug);
 
-  const listing = id ? await getPublicListingById(id) : null;
+  if (redirectToSlug) {
+    redirect(`/electric-motor-reapir-shops-listings/${redirectToSlug}`);
+  }
 
   if (!listing) {
     return (
@@ -107,9 +108,8 @@ export default async function ListingDetailPage({ params }) {
     );
   }
 
-  // Redirect old ID-only URLs to canonical company-name-id URL for SEO
-  const canonicalSlug = getListingSlug(listing.companyName, listing.id);
-  if (slug && slug.trim() !== canonicalSlug) {
+  const canonicalSlug = getListingPublicPathSegment(listing);
+  if (slug && canonicalSlug && slug.trim() !== canonicalSlug) {
     redirect(`/electric-motor-reapir-shops-listings/${canonicalSlug}`);
   }
 
@@ -120,7 +120,8 @@ export default async function ListingDetailPage({ params }) {
   const gallery = Array.isArray(listing.galleryPhotoUrls) ? listing.galleryPhotoUrls.filter(Boolean) : [];
   const firstGallery = gallery[0];
   const firstGallerySrc = firstGallery?.startsWith("http") ? firstGallery : firstGallery?.startsWith("/") ? firstGallery : firstGallery ? `/${firstGallery}` : null;
-  const heroImage = firstGallerySrc || logoUrl;
+  /** Wide hero only for gallery photos — not the logo (logo stays compact next to the title). */
+  const heroImage = firstGallerySrc;
 
   const reviewStats = await getListingReviewStats(listing.id);
   const sameAreaPage = await getLocationPageForArea(listing.city, listing.state);

@@ -17,7 +17,12 @@ const purchaseOrderSchema = new mongoose.Schema(
         qty: { type: String, default: "1", trim: true },
         uom: { type: String, default: "", trim: true },
         unitPrice: { type: String, default: "", trim: true },
-        status: { type: String, enum: ["Ordered", "Dispatch", "Received"], default: "Ordered", trim: true },
+        status: {
+          type: String,
+          enum: ["Ordered", "Dispatch", "Received", "Back Order"],
+          default: "Ordered",
+          trim: true,
+        },
       },
     ],
     /** Vendor invoices attached to this PO */
@@ -37,6 +42,8 @@ const purchaseOrderSchema = new mongoose.Schema(
         date: { type: String, default: "", trim: true },
         method: { type: String, default: "", trim: true },
         reference: { type: String, default: "", trim: true },
+        notes: { type: String, default: "", trim: true },
+        recordedAt: { type: Date, default: Date.now },
       },
     ],
     notes: { type: String, default: "", trim: true },

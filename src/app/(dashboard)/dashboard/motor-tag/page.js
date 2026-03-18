@@ -1,15 +1,11 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Motor tag",
-  description: "Print motor job tag; scan to view and update work orders.",
+  description: "Print motor tag QR from a quote.",
 };
 
+/** Motor tag QR is printed from Quotes (modal toolbar). */
 export default function MotorTagPage() {
-  return (
-    <CrmPlaceholder
-      title="Motor tag"
-      description="Tag is linked to quote. Print from quote or work order. When scanned, shows all work orders for that quote with current status; technician can move any WO in the pipeline. Updates reflect on job board."
-    />
-  );
+  redirect("/dashboard/quotes");
 }

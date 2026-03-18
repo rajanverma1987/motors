@@ -108,6 +108,7 @@ export default function DashboardCustomersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLeadId = searchParams.get("fromLead");
+  const openCustomerId = searchParams.get("open");
 
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -196,6 +197,14 @@ export default function DashboardCustomersPage() {
     })();
     return () => { cancelled = true; };
   }, [fromLeadId, toast, router]);
+
+  useEffect(() => {
+    const id = openCustomerId?.trim();
+    if (!id) return;
+    setViewLoadingCustomerId(id);
+    setViewModalOpen(true);
+    router.replace("/dashboard/customers", { scroll: false });
+  }, [openCustomerId, router]);
 
   const openEnterModal = () => {
     setForm(INITIAL_FORM);
@@ -522,8 +531,8 @@ export default function DashboardCustomersPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Customers</h1>
           <p className="mt-1 text-sm text-secondary">
@@ -538,7 +547,7 @@ export default function DashboardCustomersPage() {
       </div>
 
       {existingCustomerFromLead && (
-        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+        <div className="mt-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
           <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
             A customer with this email or company already exists.
           </p>
@@ -568,7 +577,7 @@ export default function DashboardCustomersPage() {
         </div>
       )}
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={filteredCustomers}

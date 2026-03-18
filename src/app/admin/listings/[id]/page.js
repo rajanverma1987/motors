@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Button from "@/components/ui/button";
@@ -100,6 +100,9 @@ export default function AdminListingDetailPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [fetchError, setFetchError] = useState("");
   const [galleryUploading, setGalleryUploading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const listingRef = useRef(listing);
+  listingRef.current = listing;
 
   useEffect(() => {
     if (!id) return;
@@ -124,6 +127,35 @@ export default function AdminListingDetailPage() {
 
   function updateFieldBool(field, value) {
     setListing((prev) => (prev ? { ...prev, [field]: !!value } : null));
+  }
+
+  async function handleLogoFileUpload(e) {
+    const file = e.target.files?.[0];
+    if (!file || !id) return;
+    setLogoUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const up = await fetch("/api/upload/logo", { method: "POST", body: fd });
+      const upData = await up.json();
+      if (!up.ok) throw new Error(upData.error || "Logo upload failed");
+      const patchRes = await fetch(`/api/listings/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ logoUrl: upData.url }),
+      });
+      const patchData = await patchRes.json();
+      if (!patchRes.ok) throw new Error(patchData.error || "Failed to save logo");
+      setListing(patchData.listing);
+      listingRef.current = patchData.listing;
+      toast.success("Logo saved.");
+    } catch (err) {
+      toast.error(err.message || "Logo upload failed");
+    } finally {
+      setLogoUploading(false);
+      e.target.value = "";
+    }
   }
 
   async function handleGalleryUpload(e) {
@@ -156,14 +188,54 @@ export default function AdminListingDetailPage() {
   }
 
   async function handleSave() {
-    if (!listing) return;
+    const current = listingRef.current;
+    if (!current) return;
     setSaving(true);
     try {
+      // Build payload with all editable fields so nothing is omitted (JSON.stringify drops undefined)
+      const payload = {
+        companyName: current.companyName ?? "",
+        logoUrl: current.logoUrl ?? "",
+        shortDescription: current.shortDescription ?? "",
+        yearsInBusiness: current.yearsInBusiness ?? "",
+        phone: current.phone ?? "",
+        website: current.website ?? "",
+        primaryContactPerson: current.primaryContactPerson ?? "",
+        address: current.address ?? "",
+        city: current.city ?? "",
+        state: current.state ?? "",
+        zipCode: current.zipCode ?? "",
+        country: current.country ?? "",
+        services: current.services ?? [],
+        maxMotorSizeHP: current.maxMotorSizeHP ?? "",
+        maxVoltage: current.maxVoltage ?? "",
+        maxWeightHandled: current.maxWeightHandled ?? "",
+        motorCapabilities: current.motorCapabilities ?? [],
+        equipmentTesting: current.equipmentTesting ?? [],
+        rewindingCapabilities: current.rewindingCapabilities ?? [],
+        industriesServed: current.industriesServed ?? [],
+        pickupDeliveryAvailable: !!current.pickupDeliveryAvailable,
+        craneCapacity: current.craneCapacity ?? "",
+        forkliftCapacity: current.forkliftCapacity ?? "",
+        rushRepairAvailable: !!current.rushRepairAvailable,
+        turnaroundTime: current.turnaroundTime ?? "",
+        certifications: current.certifications ?? [],
+        shopSizeSqft: current.shopSizeSqft ?? "",
+        numTechnicians: current.numTechnicians ?? "",
+        numEngineers: current.numEngineers ?? "",
+        yearsCombinedExperience: current.yearsCombinedExperience ?? "",
+        galleryPhotoUrls: current.galleryPhotoUrls ?? [],
+        serviceZipCode: current.serviceZipCode ?? "",
+        serviceRadiusMiles: current.serviceRadiusMiles ?? "",
+        statesServed: current.statesServed ?? "",
+        citiesOrMetrosServed: current.citiesOrMetrosServed ?? "",
+        areaCoveredFrom: current.areaCoveredFrom ?? "",
+      };
       const res = await fetch(`/api/listings/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(listing),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
@@ -221,7 +293,7 @@ export default function AdminListingDetailPage() {
 
   if (loading || !listing) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-12">
+      <div className="mx-auto max-w-6xl px-4 py-12">
         {loading && <p className="text-secondary">Loading…</p>}
         {!loading && fetchError && <p className="text-secondary">{fetchError}</p>}
         {!loading && !listing && !fetchError && <p className="text-secondary">Listing not found.</p>}
@@ -242,7 +314,7 @@ export default function AdminListingDetailPage() {
   const statusLabel = listing.status === "pending" ? "In-review" : listing.status === "in-review" ? "In-review" : listing.status;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
+    <div className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/admin/listings" className="text-sm text-primary hover:underline">
@@ -264,7 +336,34 @@ export default function AdminListingDetailPage() {
         <FormSectionTitle as="h2">Company & contact</FormSectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input label="Company name" value={listing.companyName ?? ""} onChange={(e) => updateField("companyName", e.target.value)} />
-          <Input label="Logo URL" value={listing.logoUrl ?? ""} onChange={(e) => updateField("logoUrl", e.target.value)} />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-title">Company logo</label>
+            <p className="mb-2 text-xs text-secondary">Upload an image — stored on this server (JPEG, PNG, GIF, WebP, max 2MB).</p>
+            {listing.logoUrl ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <img
+                  src={listing.logoUrl.startsWith("http") ? listing.logoUrl : listing.logoUrl.startsWith("/") ? listing.logoUrl : `/${listing.logoUrl}`}
+                  alt="Logo"
+                  className="h-16 w-16 rounded border border-border object-cover"
+                />
+                <label className="cursor-pointer text-sm text-primary hover:underline">
+                  {logoUploading ? "Uploading…" : "Replace logo"}
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" className="sr-only" onChange={handleLogoFileUpload} disabled={logoUploading} />
+                </label>
+              </div>
+            ) : (
+              <div>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  onChange={handleLogoFileUpload}
+                  disabled={logoUploading}
+                  className="block w-full max-w-sm text-sm text-secondary file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-white"
+                />
+                {logoUploading && <p className="mt-1 text-xs text-secondary">Uploading…</p>}
+              </div>
+            )}
+          </div>
           <Input label="Years in business" value={listing.yearsInBusiness ?? ""} onChange={(e) => updateField("yearsInBusiness", e.target.value)} />
           <Input label="Phone" value={listing.phone ?? ""} onChange={(e) => updateField("phone", e.target.value)} />
           <Input label="Email" value={listing.email ?? ""} onChange={(e) => updateField("email", e.target.value)} />

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 
 export default function QuoteRespondPage() {
   const params = useParams();
@@ -159,9 +160,17 @@ export default function QuoteRespondPage() {
           <section className="mb-6 pb-4 border-b border-gray-200">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Motor Shop</h2>
             <p className="font-semibold text-gray-900">{quote.shop?.name || "—"}</p>
-            <p className="text-sm text-gray-500">{quote.shop?.address || "—"}</p>
             <p className="text-sm text-gray-500">{quote.shop?.contact || "—"}</p>
           </section>
+          <div className="mb-6 border-b border-gray-200 pb-4">
+            <CompanyAccountsPrint
+              billingAddress={quote.accountsBillingAddress}
+              paymentTermsLabel={quote.accountsPaymentTermsLabel}
+              bodyClassName="text-sm text-gray-900 whitespace-pre-wrap"
+              termsLabelClassName="text-gray-500"
+              termsValueClassName="font-medium text-gray-900"
+            />
+          </div>
 
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900 print:block hidden">Service Proposal</h1>

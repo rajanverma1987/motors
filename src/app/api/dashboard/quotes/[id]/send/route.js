@@ -5,6 +5,9 @@ import Quote from "@/models/Quote";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendQuoteToCustomer } from "@/lib/email";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -56,14 +59,34 @@ export async function POST(request, context) {
         : "") ||
       "https://motorswinding.com";
     const respondUrl = `${baseUrl.replace(/\/$/, "")}/quote/respond/${doc.respondToken}`;
-    const shopCompanyName = process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
+    const shopCompanyName =
+      (user.shopName && String(user.shopName).trim()) ||
+      process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
+      "";
+
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: user.email.trim().toLowerCase() }).lean();
+    const uSettings = mergeUserSettings(settingsDoc?.settings);
+    const logoPath = typeof uSettings.logoUrl === "string" ? uSettings.logoUrl.trim() : "";
+    const logoAbsoluteUrl =
+      logoPath.startsWith("/uploads/shop-settings/") && baseUrl
+        ? `${baseUrl.replace(/\/$/, "")}${logoPath}`
+        : "";
+
+    const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({
+      billingAddress: uSettings.accountsBillingAddress,
+      paymentTermsLabel: accountsPaymentTermsLabel(uSettings.accountsPaymentTerms),
+    });
 
     const emailResult = await sendQuoteToCustomer(
       toEmail,
       customer.primaryContactName || customer.companyName,
       doc.rfqNumber,
       respondUrl,
-      shopCompanyName
+      shopCompanyName,
+      {
+        ...(logoAbsoluteUrl ? { logoAbsoluteUrl } : {}),
+        ...(accountsEmailBlock.trim() ? { accountsEmailBlock } : {}),
+      }
     );
     if (!emailResult.ok) {
       return NextResponse.json(

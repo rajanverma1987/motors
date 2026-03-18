@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -46,6 +47,9 @@ function buildVendorPayload(form) {
 
 export default function DashboardVendorsPage() {
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openVendorId = searchParams.get("open");
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enterModalOpen, setEnterModalOpen] = useState(false);
@@ -75,6 +79,14 @@ export default function DashboardVendorsPage() {
   useEffect(() => {
     loadVendors();
   }, [loadVendors]);
+
+  useEffect(() => {
+    const id = openVendorId?.trim();
+    if (!id) return;
+    setViewLoadingVendorId(id);
+    setViewModalOpen(true);
+    router.replace("/dashboard/vendors", { scroll: false });
+  }, [openVendorId, router]);
 
   const openEnterModal = () => {
     setForm(INITIAL_FORM);
@@ -280,8 +292,8 @@ export default function DashboardVendorsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Vendors</h1>
           <p className="mt-1 text-sm text-secondary">
@@ -293,7 +305,7 @@ export default function DashboardVendorsPage() {
         </Button>
       </div>
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={filteredVendors}

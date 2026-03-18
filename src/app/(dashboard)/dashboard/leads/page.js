@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -50,6 +51,9 @@ const URGENCY_OPTIONS = [
 
 export default function DashboardLeadsPage() {
   const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const openLeadId = searchParams.get("open");
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enterModalOpen, setEnterModalOpen] = useState(false);
@@ -158,6 +162,27 @@ export default function DashboardLeadsPage() {
     setViewingLead(lead);
     setDetailModalOpen(true);
   };
+
+  useEffect(() => {
+    const id = openLeadId?.trim();
+    if (!id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/leads/${id}`, { credentials: "include" });
+        const data = await res.json();
+        if (cancelled || !res.ok) return;
+        setViewingLead({ ...data, id: data.id || id });
+        setDetailModalOpen(true);
+        router.replace("/dashboard/leads", { scroll: false });
+      } catch {
+        if (!cancelled) toast.error("Could not open lead.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [openLeadId, router, toast]);
 
   const closeDetail = () => {
     setDetailModalOpen(false);
@@ -328,8 +353,8 @@ export default function DashboardLeadsPage() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Leads</h1>
           <p className="mt-1 text-sm text-secondary">
@@ -352,7 +377,7 @@ export default function DashboardLeadsPage() {
         </div>
       </div>
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={filteredLeads}

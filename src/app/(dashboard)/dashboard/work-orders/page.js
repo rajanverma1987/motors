@@ -1,15 +1,15 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import { Suspense } from "react";
+import WorkOrdersPageClient from "./work-orders-page-client";
 
 export const metadata = {
   title: "Work orders",
-  description: "Track repair jobs.",
+  description: "AC/DC work orders from quotes; sync to motor assets.",
 };
 
 export default function WorkOrdersPage() {
   return (
-    <CrmPlaceholder
-      title="Work orders"
-      description="Track repair jobs. Types: AC, DC, Armature. One quote can have multiple work orders. Use shop-configured status list."
-    />
+    <Suspense fallback={<div className="p-8 text-secondary">Loading…</div>}>
+      <WorkOrdersPageClient />
+    </Suspense>
   );
 }

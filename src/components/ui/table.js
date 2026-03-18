@@ -6,6 +6,7 @@ import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
 import Modal from "./modal";
+import { useUserSettings } from "@/contexts/user-settings-context";
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10" },
@@ -92,8 +93,13 @@ export default function Table({
   resizableColumns = false,
   // Optional: refresh callback (shows refresh icon to the right of search; call to refetch table data)
   onRefresh,
+  /** When true (default), table grows to fill parent flex area and body scrolls inside */
+  fillHeight = true,
+  /** Client-side slice when server pagination is not used (default: on). Set false to show all rows. */
+  paginateClientSide = true,
 }) {
   const hasPagination = pagination && typeof onPageChange === "function";
+  const enableClientPagination = !hasPagination && paginateClientSide;
   const hasEdit = typeof onEdit === "function";
   const hasDelete = typeof onDelete === "function";
   const hasBulkDelete = typeof onBulkDelete === "function";
@@ -120,6 +126,21 @@ export default function Table({
   resizingRef.current = resizing;
   const debouncedSearchRef = useRef(null);
   const isMountedRef = useRef(true);
+  const { settings: dashboardUserSettings } = useUserSettings();
+  const preferredPageSize = dashboardUserSettings?.tablePageSize;
+  const [internalPage, setInternalPage] = useState(1);
+  const [internalPageSize, setInternalPageSize] = useState(() =>
+    [10, 25, 50, 100].includes(Number(preferredPageSize)) ? Number(preferredPageSize) : 25
+  );
+
+  useEffect(() => {
+    if (!enableClientPagination) return;
+    const n = Number(preferredPageSize);
+    if ([10, 25, 50, 100].includes(n) && n !== internalPageSize) {
+      setInternalPageSize(n);
+      setInternalPage(1);
+    }
+  }, [preferredPageSize, enableClientPagination]);
 
   function parseColWidth(col) {
     if (col.minWidth != null) return typeof col.minWidth === "number" ? col.minWidth : parseInt(String(col.minWidth), 10) || 80;
@@ -154,30 +175,60 @@ export default function Table({
     };
   }, [searchInput, hasSearch, searchDebounceMs, onSearch]);
 
-  const page = hasPagination ? Math.max(1, Number(pagination.page) || 1) : 1;
-  const pageSize = hasPagination ? Math.max(1, Number(pagination.pageSize) || data.length) : data.length;
+  const page = hasPagination
+    ? Math.max(1, Number(pagination.page) || 1)
+    : enableClientPagination
+      ? internalPage
+      : 1;
+  const pageSize = hasPagination
+    ? Math.max(1, Number(pagination.pageSize) || data.length)
+    : enableClientPagination
+      ? internalPageSize
+      : Math.max(1, data.length);
   const totalCount = hasPagination ? Number(pagination.totalCount) || data.length : data.length;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const totalPages = Math.max(1, Math.ceil((totalCount || 1) / pageSize));
   const startItem = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, totalCount);
 
+  const displayData =
+    enableClientPagination && data.length > 0
+      ? data.slice((page - 1) * pageSize, page * pageSize)
+      : data;
+
+  useEffect(() => {
+    if (!enableClientPagination) return;
+    const tp = Math.max(1, Math.ceil(data.length / internalPageSize) || 1);
+    if (internalPage > tp) setInternalPage(tp);
+  }, [data.length, internalPageSize, enableClientPagination, internalPage]);
+
   const handlePrev = (e) => {
     e?.preventDefault();
-    if (page > 1) onPageChange(page - 1, pageSize);
+    if (page <= 1) return;
+    if (hasPagination) onPageChange(page - 1, pageSize);
+    else setInternalPage((p) => Math.max(1, p - 1));
   };
 
   const handleNext = (e) => {
     e?.preventDefault();
-    if (page < totalPages) onPageChange(page + 1, pageSize);
+    if (page >= totalPages) return;
+    if (hasPagination) onPageChange(page + 1, pageSize);
+    else setInternalPage((p) => p + 1);
   };
 
   const handlePageSizeChange = (e) => {
     const newSize = Math.max(1, Number(e.target.value) || 10);
-    onPageChange(1, newSize);
+    if (hasPagination) onPageChange(1, newSize);
+    else {
+      setInternalPageSize(newSize);
+      setInternalPage(1);
+    }
   };
 
+  const showPaginationBar = hasPagination || enableClientPagination;
+  const effectiveStickyHeader = stickyHeader || fillHeight;
+
   const selectedSet = new Set(selectedRowIds);
-  const currentPageIds = data.map((row, i) => getRowId(row, i, rowKey));
+  const currentPageIds = displayData.map((row, i) => getRowId(row, i, rowKey));
   const allOnPageSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedSet.has(id));
   const someOnPageSelected = currentPageIds.some((id) => selectedSet.has(id));
   const selectAllRef = useRef(null);
@@ -295,7 +346,7 @@ export default function Table({
             <button
               type="button"
               onClick={() => onEdit(row, i)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              className="rounded p-1.5 text-primary hover:bg-primary/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Edit"
             >
               <FiEdit2 className="h-4 w-4" aria-hidden />
@@ -305,7 +356,7 @@ export default function Table({
             <button
               type="button"
               onClick={() => onDelete(row, i)}
-              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+              className="rounded p-1.5 text-danger hover:bg-danger/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-danger"
               aria-label="Delete"
             >
               <FiTrash2 className="h-4 w-4" aria-hidden />
@@ -333,7 +384,7 @@ export default function Table({
             e.stopPropagation();
             onCellClick(row, col.key, value, i);
           }}
-          className="w-full min-w-0 text-left rounded px-0 py-0 border-0 bg-transparent text-primary cursor-pointer underline decoration-primary/50 hover:decoration-primary hover:opacity-90 focus:outline-none"
+          className="w-full min-w-0 text-left rounded px-0 py-0 border-0 bg-transparent text-primary cursor-pointer underline decoration-primary/50 hover:decoration-primary hover:opacity-90 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1"
         >
           {content}
         </button>
@@ -406,7 +457,7 @@ export default function Table({
               <th
                 key={col.key ?? i}
                 className={`${thClass(col)} ${canResize ? "relative" : ""}`}
-                style={stickyHeader ? { ...thStickyStyle, ...style } : style}
+                style={effectiveStickyHeader ? { ...thStickyStyle, ...style } : style}
               >
                 {col.isSelect ? (
                   <input
@@ -425,7 +476,7 @@ export default function Table({
                           <button
                             type="button"
                             onClick={() => handleSort(col)}
-                            className="flex items-center gap-1 rounded cursor-pointer focus:outline-none focus:ring-0"
+                            className="flex items-center gap-1 rounded cursor-pointer outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                           >
                             {col.label}
                             <span className="text-secondary" aria-hidden>
@@ -481,7 +532,7 @@ export default function Table({
             </td>
           </tr>
         ) : (
-          data.map((row, i) => (
+          displayData.map((row, i) => (
             <tr
               key={getRowId(row, i, rowKey)}
               className={`border-b border-border last:border-b-0 hover:bg-bg transition-colors ${striped && i % 2 === 1 ? "bg-card" : ""}`}
@@ -505,7 +556,7 @@ export default function Table({
           ))
         )}
       </tbody>
-      {hasFooter && !stickyHeader && (
+      {hasFooter && !effectiveStickyHeader && (
         <tfoot className="border-t-2 border-border bg-card font-medium text-title">
           {(Array.isArray(footer) ? footer : [footer]).map((row, ri) => (
             <tr key={ri} className="border-b border-border last:border-b-0">
@@ -528,7 +579,7 @@ export default function Table({
   );
 
   const footerTable =
-    stickyHeader && hasFooter ? (
+    effectiveStickyHeader && hasFooter ? (
       <table className={`${tableClass} w-full table-fixed`} style={{ tableLayout: "fixed" }}>
         {colgroup}
         <tbody>
@@ -551,10 +602,18 @@ export default function Table({
       </table>
     ) : null;
 
+  const scrollMaxStyle =
+    effectiveStickyHeader && !fillHeight
+      ? { maxHeight: stickyHeaderMaxHeight ?? "70vh" }
+      : undefined;
+  const scrollAreaClass = fillHeight
+    ? "table-scroll-x min-h-0 flex-1 overflow-auto"
+    : "table-scroll-x min-h-0 overflow-auto";
+
   return (
-    <div className="space-y-4">
+    <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-4" : "space-y-4"}>
       {(hasSearch || hasRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
-        <div className="flex flex-nowrap items-center gap-2 min-w-0">
+        <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
           {hasSearch && (
             <input
               type="search"
@@ -570,7 +629,7 @@ export default function Table({
               type="button"
               onClick={() => onRefresh()}
               disabled={loading}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
               aria-label="Refresh table"
               title="Refresh"
             >
@@ -592,7 +651,7 @@ export default function Table({
             <button
               type="button"
               onClick={openSettingsModal}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
               aria-label="Table column settings"
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -637,7 +696,7 @@ export default function Table({
       )}
 
       {hasSelection && selectedRowIds.length > 0 && hasBulkDelete && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-2">
+        <div className={`flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-4 py-2 ${fillHeight ? "shrink-0" : ""}`}>
           <span className="text-sm text-title">
             {selectedRowIds.length} selected
           </span>
@@ -647,41 +706,39 @@ export default function Table({
         </div>
       )}
 
-      <div className="border border-border rounded-lg overflow-hidden">
-        {stickyHeader ? (
+      <div
+        className={
+          fillHeight
+            ? "ui-table-shell flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border"
+            : "ui-table-shell overflow-hidden rounded-lg border border-border"
+        }
+      >
+        {effectiveStickyHeader ? (
           hasFooter ? (
-            <div
-              className="table-scroll-x overflow-auto min-h-0"
-              style={{ maxHeight: stickyHeaderMaxHeight ?? "70vh" }}
-            >
+            <div className={scrollAreaClass} style={scrollMaxStyle}>
               <div className="min-w-full w-max">
                 {tableContent}
                 {footerTable}
               </div>
             </div>
           ) : (
-            <>
-              <div
-                className="table-scroll-x overflow-auto min-h-0"
-                style={{ maxHeight: stickyHeaderMaxHeight ?? "70vh" }}
-              >
-                {tableContent}
-              </div>
-            </>
-          )
-        ) : (
-          responsive ? (
-            <div className="table-scroll-x overflow-x-auto">
+            <div className={scrollAreaClass} style={scrollMaxStyle}>
               {tableContent}
             </div>
-          ) : (
-            tableContent
           )
+        ) : responsive ? (
+          <div className={`table-scroll-x overflow-x-auto ${fillHeight ? "min-h-0 flex-1" : ""}`}>
+            {tableContent}
+          </div>
+        ) : (
+          <div className={fillHeight ? "min-h-0 flex-1 overflow-auto" : ""}>{tableContent}</div>
         )}
       </div>
 
-      {hasPagination && (
-        <div className="flex flex-wrap items-center justify-between gap-4 border border-border rounded-lg bg-card px-4 py-3">
+      {showPaginationBar && (
+        <div
+          className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3 ${fillHeight ? "shrink-0" : ""}`}
+        >
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-title">
               Showing {startItem}–{endItem} of {totalCount}
@@ -691,7 +748,7 @@ export default function Table({
               <select
                 value={String(pageSize)}
                 onChange={handlePageSizeChange}
-                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {pageSizeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>

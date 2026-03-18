@@ -195,18 +195,16 @@ export default function AdminClientsPage() {
     : users;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
-      <div className="border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Registered clients</h1>
         <p className="text-sm text-secondary">
           Portal users who can log in to the dashboard. Revoke or grant login access.
         </p>
       </div>
 
-      <div className="mt-6 min-w-0">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
-          stickyHeader
-          stickyHeaderMaxHeight="80vh"
           columns={COLUMNS}
           data={filteredUsers}
           rowKey="id"

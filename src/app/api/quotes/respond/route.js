@@ -3,6 +3,10 @@ import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import Customer from "@/models/Customer";
 import Motor from "@/models/Motor";
+import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
 export async function GET(request) {
@@ -27,6 +31,14 @@ export async function GET(request) {
       if (motor)
         motorLabel = [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "";
     }
+    const ownerEmail = (doc.createdByEmail || "").trim().toLowerCase();
+    const owner = ownerEmail ? await User.findOne({ email: ownerEmail }).lean() : null;
+    const settingsDoc = ownerEmail
+      ? await UserSettings.findOne({ ownerEmail }).lean()
+      : null;
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const shopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
+
     const out = {
       id: doc._id.toString(),
       rfqNumber: doc.rfqNumber ?? "",
@@ -44,7 +56,14 @@ export async function GET(request) {
       partsTotal: doc.partsTotal ?? "",
       estimatedCompletion: doc.estimatedCompletion ?? "",
       customerNotes: doc.customerNotes ?? "",
-      shop: { name: "", address: "", contact: "" },
+      shop: {
+        name: owner?.shopName?.trim() || "",
+        address: "",
+        contact: shopContact,
+      },
+      accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
+      accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
+      accountsPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       respondedAt:
         doc.respondedAt
           ? (doc.respondedAt.toISOString?.() ?? String(doc.respondedAt))

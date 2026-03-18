@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getPublicListings, getListingsFilteredByLocation } from "@/lib/listings-public";
-import { getListingSlug } from "@/lib/listing-slug";
+import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import { FormContainer } from "@/components/ui/form-layout";
 import ListingsHeroCta from "./listings-hero-cta";
 import HeroBackground from "@/components/marketing/HeroBackground";
@@ -12,7 +12,7 @@ function ListingCard({ listing }) {
     ? listing.galleryPhotoUrls[0]
     : null;
   const imageUrl = logoUrl || (firstPhoto?.startsWith("http") ? firstPhoto : firstPhoto?.startsWith("/") ? firstPhoto : null);
-  const slug = getListingSlug(listing.companyName, listing.id);
+  const slug = getListingPublicPathSegment(listing);
 
   return (
     <Link

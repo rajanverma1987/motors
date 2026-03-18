@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
-import { getListingSlug } from "@/lib/listing-slug";
+import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { ensureLocationPageForArea } from "@/lib/location-pages-public";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 
@@ -65,6 +65,9 @@ export async function PATCH(request, context) {
       if (newStatus === "rejected") {
         doc.rejectionReason = rejectionReason || "";
       }
+      if (newStatus === "approved" && !(doc.urlSlug || "").trim()) {
+        doc.urlSlug = await generateUniqueListingUrlSlug(doc.companyName, doc._id);
+      }
       await doc.save();
 
       if (newStatus === "approved") {
@@ -85,9 +88,9 @@ export async function PATCH(request, context) {
         } catch (e) {
           console.warn("ensureLocationPageForArea failed:", e);
         }
-        const slug = getListingSlug(doc.companyName, doc._id.toString());
+        const pathSlug = (doc.urlSlug || "").trim();
         revalidatePath("/electric-motor-reapir-shops-listings");
-        revalidatePath(`/electric-motor-reapir-shops-listings/${slug}`);
+        if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
       } else {
         await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
         revalidatePath("/electric-motor-reapir-shops-listings");
@@ -103,7 +106,7 @@ export async function PATCH(request, context) {
       });
     }
 
-    // General update (admin editing fields)
+    // General update (admin editing fields) – build $set from allowed keys present in body
     const allowed = [
       "companyName", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
       "primaryContactPerson", "address", "city", "state", "zipCode", "country",
@@ -114,22 +117,39 @@ export async function PATCH(request, context) {
       "yearsCombinedExperience", "galleryPhotoUrls", "serviceZipCode", "serviceRadiusMiles",
       "statesServed", "citiesOrMetrosServed", "areaCoveredFrom",
     ];
+    const set = {};
     for (const key of allowed) {
-      if (updates[key] !== undefined) {
-        doc[key] = updates[key];
+      if (Object.prototype.hasOwnProperty.call(updates, key)) {
+        set[key] = updates[key];
       }
     }
-    await doc.save();
+    if (Object.keys(set).length === 0) {
+      const current = await Listing.findById(id).lean();
+      return NextResponse.json({
+        ok: true,
+        listing: { ...current, id: current._id.toString(), _id: undefined },
+      });
+    }
+
+    const saved = await Listing.findByIdAndUpdate(
+      id,
+      { $set: set },
+      { new: true, runValidators: true }
+    ).lean();
+
+    if (!saved) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     revalidatePath("/electric-motor-reapir-shops-listings");
-    const slug = getListingSlug(doc.companyName, doc._id.toString());
-    revalidatePath(`/electric-motor-reapir-shops-listings/${slug}`);
+    const pathSlug = (saved.urlSlug || "").trim();
+    if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
 
     return NextResponse.json({
       ok: true,
       listing: {
-        ...doc.toObject(),
-        id: doc._id.toString(),
+        ...saved,
+        id: saved._id.toString(),
         _id: undefined,
       },
     });

@@ -13,6 +13,9 @@ const sizeClasses = {
   "2xl": "max-w-2xl",
   "3xl": "max-w-3xl",
   "4xl": "max-w-4xl",
+  "5xl": "max-w-5xl",
+  "6xl": "max-w-6xl",
+  "7xl": "max-w-7xl",
   full: "max-w-[90vw]",
 };
 
@@ -34,6 +37,8 @@ export default function Modal({
   className = "",
   /** Actions (e.g. Save, Cancel) rendered in header right, before close. Use size="sm" buttons. */
   actions,
+  /** Optional class on header row (e.g. flex-wrap). */
+  headerClassName = "",
   /** Optional override so this modal appears above others (e.g. when opening a modal from another modal). */
   zIndex: zIndexOverride,
 }) {
@@ -141,7 +146,7 @@ export default function Modal({
       >
         {(title != null || showClose || actions) && (
           <div
-            className={`flex items-center justify-between gap-3 border-b border-border px-4 py-2 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 select-none sm:gap-3 ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
             onMouseDown={handleHeaderMouseDown}
           >
             {title != null && (
@@ -150,7 +155,11 @@ export default function Modal({
               </h2>
             )}
             <span className="flex-1 min-w-0" />
-            {actions != null && <div className="flex items-center gap-2 shrink-0 pointer-events-auto">{actions}</div>}
+            {actions != null && (
+              <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2 pointer-events-auto">
+                {actions}
+              </div>
+            )}
             {showClose && (
               <button
                 type="button"

@@ -1,28 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Lead from "@/models/Lead";
-import Listing from "@/models/Listing";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getListingIdsForUser, leadBelongsToShop } from "@/lib/dashboard-leads-scope";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
-
-/** Get listing IDs for the current shop user (by email). */
-async function getListingIdsForUser(email) {
-  if (!email) return [];
-  const listings = await Listing.find({ email: email.trim().toLowerCase() })
-    .select("_id")
-    .lean();
-  return listings.map((l) => l._id.toString());
-}
-
-/** Lead belongs to shop if: assigned to one of shop's listings, or from shop's listing (website), or created manually by this user. */
-function leadBelongsToShop(lead, listingIds, userEmail) {
-  const email = (userEmail || "").trim().toLowerCase();
-  if (lead.createdByEmail?.toLowerCase() === email) return true;
-  const listIds = lead.assignedListingIds || [];
-  if (listIds.some((id) => listingIds.includes(id))) return true;
-  if (lead.sourceListingId && listingIds.includes(lead.sourceListingId)) return true;
-  return false;
-}
 
 export async function GET(request) {
   try {

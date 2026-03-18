@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
-import { getListingSlug } from "@/lib/listing-slug";
+import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 
 export async function POST(request) {
@@ -37,6 +37,9 @@ export async function POST(request) {
       doc.reviewedAt = new Date();
       doc.reviewedBy = admin;
       if (newStatus === "rejected") doc.rejectionReason = rejectionReason || "";
+      if (newStatus === "approved" && !(doc.urlSlug || "").trim()) {
+        doc.urlSlug = await generateUniqueListingUrlSlug(doc.companyName, doc._id);
+      }
       await doc.save();
       if (newStatus === "approved") {
         await sendListingApproved(doc.email, doc.companyName);
@@ -50,8 +53,8 @@ export async function POST(request) {
         } catch (e) {
           console.warn("notifyAreaRequestsForListing failed:", e);
         }
-        const slug = getListingSlug(doc.companyName, doc._id.toString());
-        revalidatePath(`/electric-motor-reapir-shops-listings/${slug}`);
+        const pathSlug = (doc.urlSlug || "").trim();
+        if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
       } else {
         await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
       }

@@ -23,6 +23,12 @@ const motorSchema = new mongoose.Schema(
     /** Optional nameplate images */
     nameplateImages: [{ type: String }],
     notes: { type: String, default: "", trim: true },
+    /** Filled from AC work orders (technician) */
+    acSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Filled from DC work order — DC tab */
+    dcSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Filled from DC work order — Armature tab */
+    dcArmatureSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     /** Shop that owns this motor (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
   },
@@ -32,8 +38,8 @@ const motorSchema = new mongoose.Schema(
 motorSchema.index({ createdByEmail: 1, createdAt: -1 });
 motorSchema.index({ createdByEmail: 1, customerId: 1 });
 
-// Recompile if cached model was created before slots/kw/amps (or other new fields) were added
-if (mongoose.models.Motor && !mongoose.models.Motor.schema.paths.kw) {
+// Recompile if cached model was created before new fields were added
+if (mongoose.models.Motor && !mongoose.models.Motor.schema.paths.acSpecs) {
   delete mongoose.models.Motor;
 }
 

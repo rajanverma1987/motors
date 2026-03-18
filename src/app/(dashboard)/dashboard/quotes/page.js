@@ -3,7 +3,19 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEdit2, FiSave, FiPaperclip, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
+import {
+  FiEdit2,
+  FiSave,
+  FiPaperclip,
+  FiSend,
+  FiPrinter,
+  FiTrash2,
+  FiRotateCw,
+  FiClipboard,
+  FiEye,
+  FiFileText,
+} from "react-icons/fi";
+import { LuQrCode } from "react-icons/lu";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -15,6 +27,13 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
+import MotorAssetReadonlyDetail from "@/components/motor-asset-readonly-detail";
+import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
@@ -169,9 +188,12 @@ function buildQuotePayload(form) {
 export default function DashboardQuotesPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const { user } = useAuth();
+  const { settings: accountSettings } = useUserSettings();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLeadId = searchParams.get("fromLead");
+  const openQuoteId = searchParams.get("open");
 
   const [quotes, setQuotes] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -185,6 +207,8 @@ export default function DashboardQuotesPage() {
   const [viewLoadingQuoteId, setViewLoadingQuoteId] = useState(null);
   const [savingQuote, setSavingQuote] = useState(false);
   const [sendingQuote, setSendingQuote] = useState(false);
+  const [workOrderLookupLoading, setWorkOrderLookupLoading] = useState(false);
+  const [quoteWoModal, setQuoteWoModal] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -208,6 +232,7 @@ export default function DashboardQuotesPage() {
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const [deletingAttachmentUrl, setDeletingAttachmentUrl] = useState(null);
   const attachmentFileInputRef = useRef(null);
+  const fmt = useFormatMoney();
 
   const attachmentLoadingQuoteIdRef = useRef(null);
   const openAttachmentModal = useCallback(async (quoteId, rfqNumber, initialAttachments) => {
@@ -490,6 +515,14 @@ export default function DashboardQuotesPage() {
     return () => { cancelled = true; };
   }, [fromLeadId, toast, router]);
 
+  useEffect(() => {
+    const id = openQuoteId?.trim();
+    if (!id) return;
+    setViewModalOpen(true);
+    setViewLoadingQuoteId(id);
+    router.replace("/dashboard/quotes", { scroll: false });
+  }, [openQuoteId, router]);
+
   const customerOptions = useMemo(
     () => customers.map((c) => ({ value: c.id, label: c.companyName || c.id || "—" })),
     [customers]
@@ -728,11 +761,27 @@ export default function DashboardQuotesPage() {
         quote: quoteToPrint,
         customerName: customerNameMap[quoteToPrint.customerId] || "",
         motorLabel: motorLabelMap[quoteToPrint.motorId] || "",
-        shop: { name: "", address: "", contact: "" },
+        shop: {
+          name: user?.shopName || "",
+          address: "",
+          contact: [user?.contactName, user?.email].filter(Boolean).join(" · ") || "",
+        },
+        accountsBillingAddress: accountSettings?.accountsBillingAddress || "",
+        accountsPaymentTermsLabel: accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
       });
       setPrintPreviewOpen(true);
     },
-    [viewingQuote, customerNameMap, motorLabelMap]
+    [viewingQuote, customerNameMap, motorLabelMap, user, accountSettings]
+  );
+
+  const handlePrintMotorTagQr = useCallback(
+    async (rfqNumber, tagOptions = {}) => {
+      const ok = await printQuoteMotorTagQr(rfqNumber, tagOptions);
+      if (!ok) {
+        toast.error("Allow pop-ups to print the tag, or try again.");
+      }
+    },
+    [toast]
   );
 
   const handlePrintPreviewPrint = () => {
@@ -749,6 +798,42 @@ export default function DashboardQuotesPage() {
     setEditModalOpen(false);
     setViewingQuote(null);
     setViewLoadingQuoteId(null);
+  };
+
+  const handleCreateWorkOrder = (quoteId) => {
+    if (!quoteId) return;
+    setQuoteWoModal({ draftQuoteId: quoteId });
+  };
+
+  const handleViewWorkOrder = async (quoteId) => {
+    if (!quoteId) return;
+    setWorkOrderLookupLoading(true);
+    try {
+      const res = await fetch("/api/dashboard/work-orders", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const list = await res.json();
+      if (!res.ok) throw new Error(list.error || "Could not load work orders");
+      const matches = list.filter((w) => String(w.quoteId) === String(quoteId));
+      if (!matches.length) {
+        toast.error("No work order exists for this quote yet.");
+        return;
+      }
+      matches.sort(
+        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+      );
+      setQuoteWoModal({ workOrderId: matches[0].id });
+    } catch (e) {
+      toast.error(e.message || "Could not open work order");
+    } finally {
+      setWorkOrderLookupLoading(false);
+    }
+  };
+
+  const handleCreateInvoiceFromQuote = (quoteId) => {
+    if (!quoteId) return;
+    router.push(`/dashboard/invoices?draftQuote=${encodeURIComponent(quoteId)}`);
   };
 
   useEffect(() => {
@@ -894,12 +979,12 @@ export default function DashboardQuotesPage() {
       {
         key: "laborTotal",
         label: "Labor",
-        render: (_, row) => row.laborTotal ? `$${row.laborTotal}` : "—",
+        render: (_, row) => (row.laborTotal ? fmt(row.laborTotal) : "—"),
       },
       {
         key: "partsTotal",
         label: "Other Cost",
-        render: (_, row) => row.partsTotal ? `$${row.partsTotal}` : "—",
+        render: (_, row) => (row.partsTotal ? fmt(row.partsTotal) : "—"),
       },
       {
         key: "grandTotal",
@@ -908,12 +993,12 @@ export default function DashboardQuotesPage() {
           const labor = parseFloat(row.laborTotal || 0);
           const parts = parseFloat(row.partsTotal || 0);
           const total = labor + parts;
-          return total ? `$${total.toFixed(2)}` : "—";
+          return total ? fmt(total) : "—";
         },
       },
       { key: "estimatedCompletion", label: "Est. completion" },
     ],
-    [customerNameMap, motorLabelMap, sendingQuoteId]
+    [customerNameMap, motorLabelMap, sendingQuoteId, fmt]
   );
 
   const employeeOptions = useMemo(
@@ -944,31 +1029,34 @@ export default function DashboardQuotesPage() {
   }, [quotes]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Quotes</h1>
           <p className="mt-1 text-sm text-secondary">
             Prepare repair estimates. Create quote from list or from lead. Send link or mark as approved when ready.
           </p>
         </div>
-        <Button variant="primary" onClick={openCreateModal} className="shrink-0">
-          Create Quote
-        </Button>
-      </div>
-
-      <div className="mt-6 min-w-0 space-y-3">
-        <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           <Select
+            label="Filter by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value ?? "")}
             options={[
               { value: "", label: "All" },
               ...STATUS_OPTIONS,
             ]}
+            searchable={false}
             placeholder="All statuses"
+            className="w-44"
           />
+          <Button variant="primary" onClick={openCreateModal} className="shrink-0">
+            Create Quote
+          </Button>
         </div>
+      </div>
+
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={filteredQuotes}
@@ -990,6 +1078,7 @@ export default function DashboardQuotesPage() {
         title="Create Quote"
         size="full"
         width="55vw"
+        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
             <span title="Save the RFQ prior to attach documents" className="inline-block">
@@ -1005,6 +1094,40 @@ export default function DashboardQuotesPage() {
             <span title="Save the RFQ prior to print" className="inline-block">
               <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
                 <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
+              </Button>
+            </span>
+            <span
+              title={
+                nextRfqNumber?.trim()
+                  ? "Print QR label (quote #) for shop floor"
+                  : "RFQ number not assigned yet"
+              }
+              className="inline-block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!nextRfqNumber?.trim()}
+                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                aria-label="Print motor tag QR"
+                onClick={() =>
+                  handlePrintMotorTagQr(nextRfqNumber, {
+                    customerName: selectedCustomer?.companyName || "",
+                    motor: selectedMotor || null,
+                    motorFallbackLine: form.motorId
+                      ? motorLabelMap[form.motorId] || ""
+                      : "",
+                  })
+                }
+              >
+                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+              </Button>
+            </span>
+            <span title="Save the RFQ prior to create work order" className="inline-block">
+              <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
+                <FiClipboard className="mr-1.5 h-4 w-4 inline" />Create work order
               </Button>
             </span>
             <Button type="submit" form="create-quote-form" variant="primary" size="sm" disabled={savingQuote}>
@@ -1124,9 +1247,9 @@ export default function DashboardQuotesPage() {
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
-              <span className="text-sm text-secondary">Scope total: ${scopeTotal.toFixed(2)}</span>
-              <span className="text-sm text-secondary">Other Cost total: ${partsTotalSum.toFixed(2)}</span>
-              <span className="font-semibold text-title">Service proposal total: ${serviceProposalTotal.toFixed(2)}</span>
+              <span className="text-sm text-secondary">Scope total: {fmt(scopeTotal)}</span>
+              <span className="text-sm text-secondary">Other Cost total: {fmt(partsTotalSum)}</span>
+              <span className="font-semibold text-title">Service proposal total: {fmt(serviceProposalTotal)}</span>
             </div>
           </div>
           <div>
@@ -1296,6 +1419,7 @@ export default function DashboardQuotesPage() {
         title="Quote details"
         size="full"
         width="55vw"
+        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
             <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block">
@@ -1331,6 +1455,76 @@ export default function DashboardQuotesPage() {
                 <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
               </Button>
             </span>
+            <span
+              title={
+                viewingQuote?.rfqNumber?.trim()
+                  ? "Print QR motor tag (encodes this quote #)"
+                  : "No quote number"
+              }
+              className="inline-block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!viewingQuote?.rfqNumber?.trim()}
+                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                aria-label="Print motor tag QR"
+                onClick={() =>
+                  handlePrintMotorTagQr(viewingQuote.rfqNumber, {
+                    customerName: customerNameMap[viewingQuote.customerId] || "",
+                    motor: motors.find((m) => m.id === viewingQuote.motorId) || null,
+                    motorFallbackLine: motorLabelMap[viewingQuote.motorId] || "",
+                  })
+                }
+              >
+                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+              </Button>
+            </span>
+            <span
+              title={
+                !viewingQuote?.id
+                  ? "Save the RFQ first"
+                  : "Open work order form — saved to database when you click Save on that form"
+              }
+              className="inline-block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!viewingQuote?.id}
+                onClick={() => handleCreateWorkOrder(viewingQuote?.id)}
+              >
+                <FiClipboard className="mr-1.5 h-4 w-4 inline" />
+                Create work order
+              </Button>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!viewingQuote?.id || workOrderLookupLoading}
+              onClick={() => handleViewWorkOrder(viewingQuote?.id)}
+            >
+              {workOrderLookupLoading ? (
+                <FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />
+              ) : (
+                <FiEye className="mr-1.5 h-4 w-4 inline" />
+              )}
+              View work order
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!viewingQuote?.id}
+              onClick={() => handleCreateInvoiceFromQuote(viewingQuote?.id)}
+            >
+              <FiFileText className="mr-1.5 h-4 w-4 inline" />
+              Create invoice
+            </Button>
             <Button type="button" variant="outline" size="sm" onClick={() => { closeViewModal(); openEditModal(viewingQuote); }}>Edit</Button>
           </>
         }
@@ -1359,9 +1553,9 @@ export default function DashboardQuotesPage() {
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Status & totals</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><dt className="text-secondary">Status</dt><dd className="text-title">{STATUS_OPTIONS.find((o) => o.value === (viewingQuote.status || ""))?.label ?? (viewingQuote.status || "—")}</dd></div>
-                <div><dt className="text-secondary">Scope total</dt><dd className="text-title">{viewingQuote.laborTotal ? `$${viewingQuote.laborTotal}` : "—"}</dd></div>
-                <div><dt className="text-secondary">Other Cost total</dt><dd className="text-title">{viewingQuote.partsTotal ? `$${viewingQuote.partsTotal}` : "—"}</dd></div>
-                <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold text-title">${(parseFloat(viewingQuote.laborTotal || 0) + parseFloat(viewingQuote.partsTotal || 0)).toFixed(2)}</dd></div>
+                <div><dt className="text-secondary">Scope total</dt><dd className="text-title">{viewingQuote.laborTotal ? fmt(viewingQuote.laborTotal) : "—"}</dd></div>
+                <div><dt className="text-secondary">Other Cost total</dt><dd className="text-title">{viewingQuote.partsTotal ? fmt(viewingQuote.partsTotal) : "—"}</dd></div>
+                <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold text-title">{fmt(parseFloat(viewingQuote.laborTotal || 0) + parseFloat(viewingQuote.partsTotal || 0))}</dd></div>
                 <div><dt className="text-secondary">Est. completion</dt><dd className="text-title">{viewingQuote.estimatedCompletion || "—"}</dd></div>
               </dl>
             </div>
@@ -1375,7 +1569,7 @@ export default function DashboardQuotesPage() {
                         <thead className="border-b border-border bg-card"><tr><th className="px-3 py-2 text-left text-xs font-medium text-title">Scope</th><th className="px-3 py-2 text-right text-xs font-medium text-title">Price</th></tr></thead>
                         <tbody>
                           {viewingQuote.scopeLines.map((row, i) => (
-                            <tr key={i} className="border-b border-border last:border-b-0"><td className="px-3 py-2 text-text">{row.scope || "—"}</td><td className="px-3 py-2 text-right tabular-nums">${row.price || "0"}</td></tr>
+                            <tr key={i} className="border-b border-border last:border-b-0"><td className="px-3 py-2 text-text">{row.scope || "—"}</td><td className="px-3 py-2 text-right tabular-nums">{fmt(row.price || 0)}</td></tr>
                           ))}
                         </tbody>
                       </table>
@@ -1398,8 +1592,8 @@ export default function DashboardQuotesPage() {
                                 <td className="px-3 py-2 text-text">{row.item || "—"}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{row.qty ?? "1"}</td>
                                 <td className="px-3 py-2 text-secondary">{row.uom || "—"}</td>
-                                <td className="px-3 py-2 text-right tabular-nums">{row.price ? `$${row.price}` : "—"}</td>
-                                <td className="px-3 py-2 text-right tabular-nums">{total != null ? `$${total.toFixed(2)}` : "—"}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{row.price ? fmt(row.price) : "—"}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{total != null ? fmt(total) : "—"}</td>
                               </tr>
                             );
                           })}
@@ -1467,6 +1661,7 @@ export default function DashboardQuotesPage() {
         title="Edit quote"
         size="full"
         width="55vw"
+        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
             <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block">
@@ -1507,6 +1702,78 @@ export default function DashboardQuotesPage() {
                 <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
               </Button>
             </span>
+            <span
+              title={
+                (form.rfqNumber || viewingQuote?.rfqNumber || "").trim()
+                  ? "Print QR motor tag (encodes this quote #)"
+                  : "No quote number"
+              }
+              className="inline-block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!(form.rfqNumber || viewingQuote?.rfqNumber || "").trim()}
+                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                aria-label="Print motor tag QR"
+                onClick={() => {
+                  const mid = form.motorId || viewingQuote?.motorId;
+                  const cid = form.customerId || viewingQuote?.customerId;
+                  handlePrintMotorTagQr(form.rfqNumber || viewingQuote?.rfqNumber, {
+                    customerName: customerNameMap[cid] || "",
+                    motor: motors.find((m) => m.id === mid) || null,
+                    motorFallbackLine: mid ? motorLabelMap[mid] || "" : "",
+                  });
+                }}
+              >
+                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+              </Button>
+            </span>
+            <span
+              title={
+                !viewingQuote?.id
+                  ? "Save the RFQ first"
+                  : "Open work order form — saved to database when you click Save on that form"
+              }
+              className="inline-block"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={!viewingQuote?.id}
+                onClick={() => handleCreateWorkOrder(viewingQuote?.id)}
+              >
+                <FiClipboard className="mr-1.5 h-4 w-4 inline" />
+                Create work order
+              </Button>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!viewingQuote?.id || workOrderLookupLoading}
+              onClick={() => handleViewWorkOrder(viewingQuote?.id)}
+            >
+              {workOrderLookupLoading ? (
+                <FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />
+              ) : (
+                <FiEye className="mr-1.5 h-4 w-4 inline" />
+              )}
+              View work order
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={!viewingQuote?.id}
+              onClick={() => handleCreateInvoiceFromQuote(viewingQuote?.id)}
+            >
+              <FiFileText className="mr-1.5 h-4 w-4 inline" />
+              Create invoice
+            </Button>
             <Button type="submit" form="edit-quote-form" variant="primary" size="sm" disabled={savingQuote}>
               {savingQuote ? "Saving…" : <><FiSave className="mr-1.5 h-4 w-4 inline" />Save</>}
             </Button>
@@ -1629,9 +1896,9 @@ export default function DashboardQuotesPage() {
               </div>
             </div>
             <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
-              <span className="text-sm text-secondary">Scope total: ${scopeTotal.toFixed(2)}</span>
-              <span className="text-sm text-secondary">Other Cost total: ${partsTotalSum.toFixed(2)}</span>
-              <span className="font-semibold text-title">Service proposal total: ${serviceProposalTotal.toFixed(2)}</span>
+              <span className="text-sm text-secondary">Scope total: {fmt(scopeTotal)}</span>
+              <span className="text-sm text-secondary">Other Cost total: {fmt(partsTotalSum)}</span>
+              <span className="font-semibold text-title">Service proposal total: {fmt(serviceProposalTotal)}</span>
             </div>
           </div>
           <div>
@@ -1767,13 +2034,18 @@ export default function DashboardQuotesPage() {
             <div className="mb-6 pb-4 border-b border-border">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Motor Shop</h2>
               <p className="font-semibold text-title">{printPreviewData.shop?.name || "—"}</p>
-              <p className="text-sm text-secondary">{printPreviewData.shop?.address || "—"}</p>
               <p className="text-sm text-secondary">{printPreviewData.shop?.contact || "—"}</p>
+            </div>
+            <div className="mb-6 border-b border-border pb-4">
+              <CompanyAccountsPrint
+                billingAddress={printPreviewData.accountsBillingAddress}
+                paymentTermsLabel={printPreviewData.accountsPaymentTermsLabel}
+              />
             </div>
 
             {(() => {
               const q = printPreviewData.quote;
-              const total = (parseFloat(q.laborTotal || 0) + parseFloat(q.partsTotal || 0)).toFixed(2);
+              const totalNum = parseFloat(q.laborTotal || 0) + parseFloat(q.partsTotal || 0);
               return (
                 <>
                   <div className="mb-6">
@@ -1800,7 +2072,7 @@ export default function DashboardQuotesPage() {
                         <thead className="bg-card"><tr><th className="px-3 py-2 text-left font-medium">Scope</th><th className="px-3 py-2 text-right font-medium">Price</th></tr></thead>
                         <tbody>
                           {q.scopeLines.map((row, i) => (
-                            <tr key={i} className="border-t border-border"><td className="px-3 py-2">{row.scope || "—"}</td><td className="px-3 py-2 text-right">{row.price ? `$${row.price}` : "—"}</td></tr>
+                            <tr key={i} className="border-t border-border"><td className="px-3 py-2">{row.scope || "—"}</td><td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td></tr>
                           ))}
                         </tbody>
                       </table>
@@ -1815,14 +2087,14 @@ export default function DashboardQuotesPage() {
                           {q.partsLines.map((row, i) => {
                             const qty = parseFloat(row?.qty ?? "1");
                             const price = parseFloat(row?.price ?? "0");
-                            const lineTotal = Number.isFinite(qty) && Number.isFinite(price) ? (qty * price).toFixed(2) : "—";
+                            const lineTotalNum = Number.isFinite(qty) && Number.isFinite(price) ? qty * price : null;
                             return (
                               <tr key={i} className="border-t border-border">
                                 <td className="px-3 py-2">{row.item || "—"}</td>
                                 <td className="px-3 py-2 text-right">{row.qty ?? "1"}</td>
                                 <td className="px-3 py-2">{row.uom || "—"}</td>
-                                <td className="px-3 py-2 text-right">{row.price ? `$${row.price}` : "—"}</td>
-                                <td className="px-3 py-2 text-right">{lineTotal !== "—" ? `$${lineTotal}` : "—"}</td>
+                                <td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td>
+                                <td className="px-3 py-2 text-right">{lineTotalNum != null ? fmt(lineTotalNum) : "—"}</td>
                               </tr>
                             );
                           })}
@@ -1833,9 +2105,9 @@ export default function DashboardQuotesPage() {
                   <section className="mb-6">
                     <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Totals</h2>
                     <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                      <div><dt className="text-secondary">Scope total</dt><dd>{q.laborTotal ? `$${q.laborTotal}` : "—"}</dd></div>
-                      <div><dt className="text-secondary">Other Cost total</dt><dd>{q.partsTotal ? `$${q.partsTotal}` : "—"}</dd></div>
-                      <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold">${total}</dd></div>
+                      <div><dt className="text-secondary">Scope total</dt><dd>{q.laborTotal ? fmt(q.laborTotal) : "—"}</dd></div>
+                      <div><dt className="text-secondary">Other Cost total</dt><dd>{q.partsTotal ? fmt(q.partsTotal) : "—"}</dd></div>
+                      <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold">{fmt(totalNum)}</dd></div>
                       <div><dt className="text-secondary">Est. completion</dt><dd>{q.estimatedCompletion || "—"}</dd></div>
                     </dl>
                   </section>
@@ -1853,6 +2125,15 @@ export default function DashboardQuotesPage() {
             document.body
           )
         : null}
+
+      <WorkOrderFormModal
+        open={!!quoteWoModal}
+        draftQuoteId={quoteWoModal?.draftQuoteId ?? null}
+        workOrderId={quoteWoModal?.workOrderId ?? null}
+        onClose={() => setQuoteWoModal(null)}
+        onAfterSave={loadQuotes}
+        zIndex={60}
+      />
 
       {/* Customer detail modal (from quote form) */}
       <Modal
@@ -1935,43 +2216,16 @@ export default function DashboardQuotesPage() {
         open={viewMotorDetailOpen}
         onClose={() => { setViewMotorDetailOpen(false); setViewingMotorDetail(null); setLoadingMotorDetailId(null); }}
         title="Motor details"
-        size="4xl"
+        width="min(1600px, 96vw)"
         actions={<Button type="button" variant="outline" size="sm" onClick={() => { setViewMotorDetailOpen(false); setViewingMotorDetail(null); setLoadingMotorDetailId(null); }}>Close</Button>}
       >
         {loadingMotorDetailId ? (
           <div className="flex items-center justify-center py-12"><span className="text-secondary">Loading…</span></div>
         ) : viewingMotorDetail ? (
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Customer</h3>
-              <p className="text-title font-medium">{customerNameMap[viewingMotorDetail.customerId] || viewingMotorDetail.customerId || "—"}</p>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Identification & specs</h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div><dt className="text-secondary">Serial</dt><dd className="text-title">{viewingMotorDetail.serialNumber || "—"}</dd></div>
-                <div><dt className="text-secondary">Manufacturer</dt><dd className="text-title">{viewingMotorDetail.manufacturer || "—"}</dd></div>
-                <div><dt className="text-secondary">Model</dt><dd className="text-title">{viewingMotorDetail.model || "—"}</dd></div>
-                <div><dt className="text-secondary">Motor type</dt><dd className="text-title">{viewingMotorDetail.motorType || "—"}</dd></div>
-                <div><dt className="text-secondary">HP</dt><dd className="text-title">{viewingMotorDetail.hp || "—"}</dd></div>
-                <div><dt className="text-secondary">RPM</dt><dd className="text-title">{viewingMotorDetail.rpm || "—"}</dd></div>
-                <div><dt className="text-secondary">Voltage</dt><dd className="text-title">{viewingMotorDetail.voltage || "—"}</dd></div>
-                <div><dt className="text-secondary">KW</dt><dd className="text-title">{viewingMotorDetail.kw || "—"}</dd></div>
-                <div><dt className="text-secondary">AMPs</dt><dd className="text-title">{viewingMotorDetail.amps || "—"}</dd></div>
-                <div><dt className="text-secondary">Frame size</dt><dd className="text-title">{viewingMotorDetail.frameSize || "—"}</dd></div>
-                <div><dt className="text-secondary">Slots</dt><dd className="text-title">{viewingMotorDetail.slots || "—"}</dd></div>
-                <div><dt className="text-secondary">Core length</dt><dd className="text-title">{viewingMotorDetail.coreLength || "—"}</dd></div>
-                <div><dt className="text-secondary">Core diameter</dt><dd className="text-title">{viewingMotorDetail.coreDiameter || "—"}</dd></div>
-                <div><dt className="text-secondary">Bars</dt><dd className="text-title">{viewingMotorDetail.bars || "—"}</dd></div>
-              </dl>
-            </div>
-            {(viewingMotorDetail.notes || "").trim() && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                <p className="whitespace-pre-wrap text-sm text-title">{viewingMotorDetail.notes}</p>
-              </div>
-            )}
-          </div>
+          <MotorAssetReadonlyDetail
+            motor={viewingMotorDetail}
+            customerName={customerNameMap[viewingMotorDetail.customerId] || viewingMotorDetail.customerId || "—"}
+          />
         ) : null}
       </Modal>
     </div>

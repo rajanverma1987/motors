@@ -48,10 +48,19 @@ const listingSchema = new mongoose.Schema(
     reviewedBy: { type: String },
     rejectionReason: { type: String },
     isSeed: { type: Boolean, default: false },
+    /** Public directory URL segment (no Mongo id): e.g. clearwater-electric-motor-repair-llc */
+    urlSlug: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
+listingSchema.index(
+  { urlSlug: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { urlSlug: { $type: "string", $ne: "" } },
+  }
+);
 listingSchema.index({ status: 1, submittedAt: -1 });
 listingSchema.index({ status: 1 });
 listingSchema.index({ companyName: 1 });

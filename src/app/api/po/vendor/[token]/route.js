@@ -19,7 +19,14 @@ function normalizeLineItemsForVendor(arr) {
     qty: clampString(String(row?.qty ?? "1"), 50),
     uom: clampString(row?.uom, 20),
     unitPrice: clampString(row?.unitPrice, 50),
-    status: row?.status === "Received" ? "Received" : (row?.status === "Delivered" || row?.status === "Dispatch") ? "Dispatch" : "Ordered",
+    status:
+      row?.status === "Received"
+        ? "Received"
+        : row?.status === "Back Order"
+          ? "Back Order"
+          : row?.status === "Delivered" || row?.status === "Dispatch"
+            ? "Dispatch"
+            : "Ordered",
   }));
 }
 
@@ -53,17 +60,37 @@ export async function GET(request, context) {
           zipCode: vendorDoc.zipCode ?? "",
         }
       : null;
+    const User = (await import("@/models/User")).default;
+    const UserSettings = (await import("@/models/UserSettings")).default;
+    const ownerEmail = String(doc.createdByEmail || "")
+      .trim()
+      .toLowerCase();
+    const owner = ownerEmail ? await User.findOne({ email: ownerEmail }).lean() : null;
+    const settingsDoc = ownerEmail
+      ? await UserSettings.findOne({ ownerEmail }).lean()
+      : null;
+    const { mergeUserSettings } = await import("@/lib/user-settings");
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const shopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
+
     const lineItems = (doc.lineItems ?? []).map((item) => ({
       description: item?.description ?? "",
       qty: item?.qty ?? "1",
       uom: item?.uom ?? "",
       unitPrice: item?.unitPrice ?? "",
-      status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered",
+      status:
+        item?.status === "Received"
+          ? "Received"
+          : item?.status === "Back Order"
+            ? "Back Order"
+            : item?.status === "Delivered" || item?.status === "Dispatch"
+              ? "Dispatch"
+              : "Ordered",
     }));
     const shop = {
-      name: process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "",
-      address: process.env.MOTOR_SHOP_ADDRESS?.trim() || "",
-      contact: process.env.MOTOR_SHOP_CONTACT?.trim() || "",
+      name: owner?.shopName?.trim() || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "",
+      address: "",
+      contact: shopContact || process.env.MOTOR_SHOP_CONTACT?.trim() || "",
     };
     return NextResponse.json({
       id: doc._id.toString(),
@@ -75,6 +102,8 @@ export async function GET(request, context) {
       lineItems,
       notes: doc.notes ?? "",
       shop,
+      accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
+      accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
       totalOrder: lineItems.reduce((sum, row) => {
         const q = parseFloat(row?.qty ?? "1");
         const p = parseFloat(row?.unitPrice ?? "0");
@@ -112,7 +141,14 @@ export async function PATCH(request, context) {
     const po = doc.toObject();
     const lineItems = (po.lineItems ?? []).map((item) => ({
       ...item,
-      status: item?.status === "Received" ? "Received" : (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered",
+      status:
+        item?.status === "Received"
+          ? "Received"
+          : item?.status === "Back Order"
+            ? "Back Order"
+            : item?.status === "Delivered" || item?.status === "Dispatch"
+              ? "Dispatch"
+              : "Ordered",
     }));
     return NextResponse.json({
       ok: true,

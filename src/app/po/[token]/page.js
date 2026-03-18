@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Button from "@/components/ui/button";
+import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 
 export default function PoVendorViewPage() {
   const params = useParams();
@@ -111,12 +112,19 @@ export default function PoVendorViewPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm print:shadow-none print:border print:p-4">
-          {(po.shop?.name || po.shop?.address || po.shop?.contact) && (
+          {(po.shop?.name || po.shop?.contact) && (
             <section className="mb-6 border-b border-border pb-4">
               <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Motor Shop</h2>
               {po.shop?.name && <p className="font-semibold text-title">{po.shop.name}</p>}
-              {po.shop?.address && <p className="text-sm text-secondary">{po.shop.address}</p>}
               {po.shop?.contact && <p className="text-sm text-secondary">{po.shop.contact}</p>}
+            </section>
+          )}
+          {(po.accountsBillingAddress || po.accountsShippingAddress) && (
+            <section className="mb-6 border-b border-border pb-4">
+              <PoVendorAccountsSection
+                billingAddress={po.accountsBillingAddress}
+                shippingAddress={po.accountsShippingAddress}
+              />
             </section>
           )}
           {po.vendor && (

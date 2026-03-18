@@ -92,3 +92,10 @@ body {
 .table-scroll-x:hover {
   scrollbar-color: hsl(var(--border)) transparent;
 }
+
+/* Table: hide focus ring on mouse click; Tab still shows browser outline for plain links/buttons in cells */
+.ui-table-shell button:focus:not(:focus-visible),
+.ui-table-shell a:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}

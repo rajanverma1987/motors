@@ -12,7 +12,6 @@ import {
   FiTrendingUp,
   FiCreditCard,
   FiGrid,
-  FiTag,
   FiTruck,
   FiShoppingCart,
   FiPackage as FiBox,
@@ -49,7 +48,6 @@ const PROCUREMENT_NAV = [
 
 const OPERATIONS_NAV = [
   { href: "/dashboard/job-board", label: "Shop floor job board", icon: FiGrid },
-  { href: "/dashboard/motor-tag", label: "Motor tag", icon: FiTag },
   { href: "/dashboard/logistics", label: "Logistics", icon: FiBox },
 ];
 

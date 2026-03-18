@@ -88,7 +88,6 @@ const US_STATES = [
 
 const defaultFormData = () => ({
   companyName: "",
-  logoUrl: "",
   shortDescription: "",
   yearsInBusiness: "",
   phone: "",
@@ -168,7 +167,8 @@ export default function ListYourCenterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
   const [logoError, setLogoError] = useState("");
   const addressAutoFilled = useRef(false);
 
@@ -211,30 +211,48 @@ export default function ListYourCenterPage() {
     setFormData((prev) => ({ ...prev, galleryPhotos: files }));
   }, []);
 
-  const handleLogoUpload = useCallback(async (e) => {
+  const handleLogoFileChange = useCallback((e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
     setLogoError("");
-    setLogoUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload/logo", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
-      setFormData((prev) => ({ ...prev, logoUrl: data.url }));
-    } catch (err) {
-      setLogoError(err.message || "Failed to upload logo. Try again.");
-    } finally {
-      setLogoUploading(false);
-      e.target.value = "";
+    if (logoPreviewUrl) {
+      URL.revokeObjectURL(logoPreviewUrl);
+      setLogoPreviewUrl(null);
     }
-  }, []);
+    if (!file) {
+      setLogoFile(null);
+      e.target.value = "";
+      return;
+    }
+    const okType = ["image/jpeg", "image/png", "image/gif", "image/webp"].includes(file.type);
+    if (!okType) {
+      setLogoError("Use JPEG, PNG, GIF, or WebP.");
+      setLogoFile(null);
+      e.target.value = "";
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setLogoError("Logo must be under 2MB.");
+      setLogoFile(null);
+      e.target.value = "";
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreviewUrl(URL.createObjectURL(file));
+    e.target.value = "";
+  }, [logoPreviewUrl]);
 
   const clearLogo = useCallback(() => {
-    setFormData((prev) => ({ ...prev, logoUrl: "" }));
+    if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    setLogoFile(null);
+    setLogoPreviewUrl(null);
     setLogoError("");
-  }, []);
+  }, [logoPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+    };
+  }, [logoPreviewUrl]);
 
   const updateFormBool = useCallback((name, checked) => {
     setFormData((prev) => ({ ...prev, [name]: checked }));
@@ -292,7 +310,6 @@ export default function ListYourCenterPage() {
       const payload = {
         email: formData.email,
         companyName: formData.companyName,
-        logoUrl: formData.logoUrl,
         shortDescription: formData.shortDescription,
         yearsInBusiness: formData.yearsInBusiness,
         phone: formData.phone,
@@ -328,10 +345,12 @@ export default function ListYourCenterPage() {
         citiesOrMetrosServed: formData.citiesOrMetrosServed,
         areaCoveredFrom: formData.areaCoveredFrom,
       };
+      const fd = new FormData();
+      fd.append("data", JSON.stringify(payload));
+      if (logoFile) fd.append("logo", logoFile);
       const res = await fetch("/api/listings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: fd,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Submission failed");
@@ -571,26 +590,26 @@ export default function ListYourCenterPage() {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-title">Logo</label>
-                  <p className="mb-2 text-xs text-secondary">Upload your company logo (JPEG, PNG, GIF or WebP, max 2MB)</p>
-                  {formData.logoUrl ? (
+                  <label className="mb-1 block text-sm font-medium text-title">Company logo (optional)</label>
+                  <p className="mb-2 text-xs text-secondary">
+                    Upload a logo image — it is stored on our servers and shown on your listing. JPEG, PNG, GIF or WebP, max 2MB. Submitted with your listing.
+                  </p>
+                  {logoPreviewUrl ? (
                     <div className="flex items-center gap-3">
-                      <img src={formData.logoUrl} alt="Logo preview" className="h-14 w-14 rounded border border-border object-cover" />
+                      <img src={logoPreviewUrl} alt="Logo preview" className="h-16 w-16 rounded border border-border object-cover" />
                       <div>
-                        <button type="button" onClick={clearLogo} className="text-sm text-primary hover:underline">Remove logo</button>
+                        <button type="button" onClick={clearLogo} className="text-sm text-primary hover:underline">
+                          Remove logo
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/gif,image/webp"
-                        onChange={handleLogoUpload}
-                        disabled={logoUploading}
-                        className="block w-full text-sm text-secondary file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-white file:transition-opacity hover:file:opacity-90"
-                      />
-                      {logoUploading && <p className="mt-1 text-xs text-secondary">Uploading…</p>}
-                    </>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/gif,image/webp"
+                      onChange={handleLogoFileChange}
+                      className="block w-full text-sm text-secondary file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-white file:transition-opacity hover:file:opacity-90"
+                    />
                   )}
                   {logoError && <p className="mt-1 text-sm text-danger">{logoError}</p>}
                 </div>

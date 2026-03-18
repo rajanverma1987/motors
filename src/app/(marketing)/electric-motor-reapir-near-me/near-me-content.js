@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import { getListingSlug } from "@/lib/listing-slug";
+import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import ListingsHeroCta from "@/app/(marketing)/electric-motor-reapir-shops-listings/listings-hero-cta";
 import { useToast } from "@/components/toast-provider";
 
@@ -15,7 +15,7 @@ function ListingCard({ listing }) {
     ? listing.galleryPhotoUrls[0]
     : null;
   const imageUrl = logoUrl || (firstPhoto?.startsWith("http") ? firstPhoto : firstPhoto?.startsWith("/") ? firstPhoto : null);
-  const slug = getListingSlug(listing.companyName, listing.id);
+  const slug = getListingPublicPathSegment(listing);
 
   return (
     <Link

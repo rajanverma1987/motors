@@ -100,11 +100,11 @@ async function fetchDynamicUrls() {
 
     const listings = await db
       .collection("listings")
-      .find({ status: "approved" }, { projection: { companyName: 1, _id: 1 } })
+      .find({ status: "approved" }, { projection: { companyName: 1, _id: 1, urlSlug: 1 } })
       .toArray();
 
     const listingSlugs = listings.map((l) => ({
-      slug: getListingSlug(l.companyName, l._id.toString()),
+      slug: (l.urlSlug && String(l.urlSlug).trim()) || getListingSlug(l.companyName, l._id.toString()),
       updatedAt: l.updatedAt,
     }));
 

@@ -5,6 +5,9 @@ import PurchaseOrder from "@/models/PurchaseOrder";
 import Vendor from "@/models/Vendor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendPoToVendor } from "@/lib/email";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -67,14 +70,34 @@ export async function POST(request, context) {
         : "") ||
       "https://motorswinding.com";
     const viewUrl = `${baseUrl.replace(/\/$/, "")}/po/${doc.vendorShareToken}`;
-    const shopCompanyName = process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
+    const shopCompanyName =
+      (user.shopName && String(user.shopName).trim()) ||
+      process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
+      "";
+
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const uSettings = mergeUserSettings(settingsDoc?.settings);
+    const logoPath = typeof uSettings.logoUrl === "string" ? uSettings.logoUrl.trim() : "";
+    const logoAbsoluteUrl =
+      logoPath.startsWith("/uploads/shop-settings/") && baseUrl
+        ? `${baseUrl.replace(/\/$/, "")}${logoPath}`
+        : "";
+
+    const poVendorAddressesHtml = buildPoVendorAddressesEmailBlock({
+      billingAddress: uSettings.accountsBillingAddress,
+      shippingAddress: uSettings.accountsShippingAddress,
+    });
 
     const emailResult = await sendPoToVendor(
       toEmail,
       vendor.name || vendor.contactName,
       doc.poNumber || "",
       viewUrl,
-      shopCompanyName
+      shopCompanyName,
+      {
+        ...(logoAbsoluteUrl ? { logoAbsoluteUrl } : {}),
+        ...(poVendorAddressesHtml.trim() ? { poVendorAddressesHtml } : {}),
+      }
     );
     if (!emailResult.ok) {
       return NextResponse.json(

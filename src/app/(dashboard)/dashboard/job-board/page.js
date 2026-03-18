@@ -1,15 +1,17 @@
-import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
+import { Suspense } from "react";
+import JobBoardClient from "./job-board-client";
 
 export const metadata = {
   title: "Shop floor job board",
-  description: "Visual board of work orders by stage.",
+  description: "Work orders by status.",
 };
 
 export default function JobBoardPage() {
   return (
-    <CrmPlaceholder
-      title="Shop floor job board"
-      description="Visual board by status. Generate unique URL for big screen (no login). Updates when technician scans motor tag and changes status."
-    />
+    <div className="flex min-h-0 flex-1 flex-col md:min-h-[calc(100dvh-5.5rem)]">
+      <Suspense fallback={<div className="p-8 text-secondary">Loading…</div>}>
+        <JobBoardClient />
+      </Suspense>
+    </div>
   );
 }

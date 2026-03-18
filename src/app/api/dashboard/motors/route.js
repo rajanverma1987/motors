@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Motor from "@/models/Motor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString, clampArray } from "@/lib/validation";
+import { sanitizeSpecs } from "@/lib/sanitize-specs";
 
 const MAX_PHOTOS = 20;
 
@@ -58,6 +59,9 @@ export async function POST(request) {
       motorPhotos,
       nameplateImages,
       notes,
+      acSpecs,
+      dcSpecs,
+      dcArmatureSpecs,
     } = body;
     if (!customerId?.trim()) {
       return NextResponse.json({ error: "Customer is required" }, { status: 400 });
@@ -81,6 +85,9 @@ export async function POST(request) {
       motorPhotos: clampArray(motorPhotos, MAX_PHOTOS),
       nameplateImages: clampArray(nameplateImages, MAX_PHOTOS),
       notes: clampString(notes, LIMITS.message.max),
+      acSpecs: sanitizeSpecs(acSpecs),
+      dcSpecs: sanitizeSpecs(dcSpecs),
+      dcArmatureSpecs: sanitizeSpecs(dcArmatureSpecs),
       createdByEmail: user.email.trim().toLowerCase(),
     });
     return NextResponse.json({

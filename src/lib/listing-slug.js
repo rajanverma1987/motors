@@ -1,5 +1,6 @@
 /**
- * SEO-friendly listing URLs: /electric-motor-reapir-shops-listings/company-name-69b3ed10502adecbe92a2279
+ * Public listing URLs use urlSlug (company-based, unique), e.g. clearwater-electric-motor-repair-llc.
+ * Legacy URLs ended with MongoDB ObjectId; getIdFromSlugParam still parses those for redirects.
  */
 
 const ID_REGEX = /[a-f0-9]{24}$/i;
@@ -31,4 +32,13 @@ export function getIdFromSlugParam(slug) {
   const trimmed = slug.trim();
   const match = trimmed.match(ID_REGEX);
   return match ? match[0] : null;
+}
+
+/** Path segment for links to a public listing detail page. */
+export function getListingPublicPathSegment(listing) {
+  const s = listing?.urlSlug?.trim();
+  if (s) return s;
+  const id = listing?.id || listing?._id?.toString?.();
+  const name = listing?.companyName;
+  return getListingSlug(name, id);
 }
