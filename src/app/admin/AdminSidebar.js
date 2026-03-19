@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiList, FiInbox, FiUsers, FiMapPin, FiMail, FiLogOut } from "react-icons/fi";
+import { FiList, FiInbox, FiUsers, FiMapPin, FiMail, FiLogOut, FiShoppingBag } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
 const NAV_ITEMS = [
   { href: "/admin/listings", label: "Listings", icon: FiList },
   { href: "/admin/leads", label: "Leads", icon: FiInbox },
   { href: "/admin/clients", label: "Clients", icon: FiUsers },
+  { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },
   { href: "/admin/marketing", label: "Marketing", icon: FiMail },
 ];

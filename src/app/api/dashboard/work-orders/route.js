@@ -8,6 +8,7 @@ import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { workOrderToBoardPayload, notifyWorkOrderBoardCreated } from "@/lib/job-board-emit";
+import { notifyTechnicianWorkOrderAssigned } from "@/lib/notify-technician-work-order";
 import {
   motorClassFromMotorType,
   prefillSpecsFromMotor,
@@ -175,6 +176,16 @@ export async function POST(request) {
           customerCompany: o.companyName,
         };
         notifyWorkOrderBoardCreated(email, workOrderToBoardPayload(payload)).catch(() => {});
+        if (technicianEmployeeId) {
+          notifyTechnicianWorkOrderAssigned({
+            shopEmail: email,
+            assigneeEmployeeId: technicianEmployeeId,
+            workOrderId: doc._id.toString(),
+            workOrderNumber: doc.workOrderNumber,
+            companyName: o.companyName,
+            quoteRfqNumber: rfq,
+          }).catch(() => {});
+        }
         return NextResponse.json({
           ok: true,
           workOrder: payload,

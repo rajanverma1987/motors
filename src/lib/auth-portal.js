@@ -54,3 +54,49 @@ export async function getPortalUserFromRequest(request) {
     contactName: payload.contactName || "",
   };
 }
+
+const TECH_JWT_TYP = "motors_technician";
+
+/**
+ * JWT for Motop Technician mobile app (Bearer). Not interchangeable with portal cookie tokens.
+ */
+export async function createTechnicianToken({ employeeId, shopEmail, name, employeeEmail }) {
+  return new SignJWT({
+    typ: TECH_JWT_TYP,
+    employeeId: String(employeeId || ""),
+    shopEmail: String(shopEmail || "").toLowerCase().trim(),
+    name: String(name || ""),
+    employeeEmail: String(employeeEmail || "").toLowerCase().trim(),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyTechnicianToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== TECH_JWT_TYP) return null;
+    const shopEmail = String(payload.shopEmail || "")
+      .trim()
+      .toLowerCase();
+    const employeeId = String(payload.employeeId || "").trim();
+    if (!shopEmail || !employeeId) return null;
+    return {
+      employeeId,
+      shopEmail,
+      name: String(payload.name || ""),
+      employeeEmail: String(payload.employeeEmail || "").trim().toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getTechnicianFromRequest(request) {
+  const auth = request.headers.get("authorization") || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  const token = m ? m[1].trim() : "";
+  if (!token) return null;
+  return verifyTechnicianToken(token);
+}

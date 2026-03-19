@@ -5,7 +5,7 @@ import HeroBackground from "@/components/marketing/HeroBackground";
 export const metadata = {
   title: "Pricing",
   description:
-    "Plans and pricing for motor repair center software and lead generation. Starter, Professional, and Enterprise. Contact for demo.",
+    "Plans and pricing for motor repair center software, lead generation, and marketplace listings. Starter, Professional, and Enterprise. Contact for demo.",
   openGraph: {
     title: "Pricing | MotorsWinding.com",
     description: "Plans and pricing for motor repair center software and lead generation.",
@@ -36,6 +36,7 @@ const plans = [
     features: [
       "Everything in Starter",
       "Lead generation network",
+      "Public marketplace listings",
       "Vendor & PO management",
       "Receiving & shipping",
       "Reports & analytics",

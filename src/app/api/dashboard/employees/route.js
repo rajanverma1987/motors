@@ -13,6 +13,7 @@ function toEmployeeJson(e) {
     role: e.role ?? "",
     phone: e.phone ?? "",
     canLogin: Boolean(e.canLogin),
+    technicianAppAccess: Boolean(e.technicianAppAccess),
   };
 }
 
@@ -42,7 +43,7 @@ export async function POST(request) {
     }
     await connectDB();
     const body = await request.json();
-    const { name, email, role, phone, canLogin, password } = body;
+    const { name, email, role, phone, canLogin, technicianAppAccess, password } = body;
     if (!name?.trim()) {
       return NextResponse.json({ error: "Employee name is required" }, { status: 400 });
     }
@@ -68,6 +69,7 @@ export async function POST(request) {
       role: clampString(role ?? "", LIMITS.shortText.max),
       phone: clampString(phone ?? "", 30),
       canLogin: Boolean(canLogin),
+      technicianAppAccess: Boolean(technicianAppAccess),
       passwordHash,
       createdByEmail: user.email.trim().toLowerCase(),
     });

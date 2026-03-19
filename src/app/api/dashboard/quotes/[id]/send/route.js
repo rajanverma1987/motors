@@ -5,6 +5,7 @@ import Quote from "@/models/Quote";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendQuoteToCustomer } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
@@ -52,12 +53,7 @@ export async function POST(request, context) {
       await doc.save();
     }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (request.headers.get("x-forwarded-proto") && request.headers.get("host")
-        ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("host")}`
-        : "") ||
-      "https://motorswinding.com";
+    const baseUrl = getPublicSiteUrl(request);
     const respondUrl = `${baseUrl.replace(/\/$/, "")}/quote/respond/${doc.respondToken}`;
     const shopCompanyName =
       (user.shopName && String(user.shopName).trim()) ||

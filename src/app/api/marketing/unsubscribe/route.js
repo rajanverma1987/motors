@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { connectDB } from "@/lib/db";
 import MarketingContact from "@/models/MarketingContact";
 import crypto from "crypto";
@@ -20,7 +21,7 @@ export async function handleUnsubscribe(request) {
     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email")?.trim()?.toLowerCase();
     const token = searchParams.get("token");
-    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "");
+    const baseUrl = getPublicSiteUrl(request);
     const successUrl = `${baseUrl}/unsubscribe/success`;
 
     if (!email) {
@@ -40,7 +41,7 @@ export async function handleUnsubscribe(request) {
     return NextResponse.redirect(successUrl);
   } catch (err) {
     console.error("Unsubscribe error:", err);
-    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "");
+    const baseUrl = getPublicSiteUrl(request);
     return NextResponse.redirect(`${baseUrl}/unsubscribe/success?error=1`);
   }
 }

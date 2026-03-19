@@ -11,6 +11,7 @@ import {
   notifyWorkOrderBoardUpdated,
   notifyWorkOrderBoardDeleted,
 } from "@/lib/job-board-emit";
+import { notifyTechnicianWorkOrderAssigned } from "@/lib/notify-technician-work-order";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -89,6 +90,8 @@ export async function PATCH(request, context) {
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
     const body = await request.json().catch(() => ({}));
 
+    const previousTechnicianId = String(doc.technicianEmployeeId || "").trim();
+
     if (body.date !== undefined) doc.date = String(body.date || "").slice(0, 20);
     if (body.technicianEmployeeId !== undefined) {
       doc.technicianEmployeeId = String(body.technicianEmployeeId || "").trim();
@@ -117,6 +120,23 @@ export async function PATCH(request, context) {
       .lean();
     const customerCompany =
       customer?.companyName || customer?.primaryContactName || doc.companyName || "";
+
+    const newTechnicianId = String(doc.technicianEmployeeId || "").trim();
+    if (
+      body.technicianEmployeeId !== undefined &&
+      newTechnicianId &&
+      newTechnicianId !== previousTechnicianId
+    ) {
+      notifyTechnicianWorkOrderAssigned({
+        shopEmail: email,
+        assigneeEmployeeId: newTechnicianId,
+        workOrderId: doc._id.toString(),
+        workOrderNumber: doc.workOrderNumber,
+        companyName: customerCompany || doc.companyName,
+        quoteRfqNumber: doc.quoteRfqNumber,
+      }).catch(() => {});
+    }
+
     notifyWorkOrderBoardUpdated(
       email,
       workOrderToBoardPayload(doc, customerCompany)

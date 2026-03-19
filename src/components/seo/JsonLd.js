@@ -1,13 +1,15 @@
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 export function HomePageJsonLd() {
+  const siteUrl = getPublicSiteUrl();
+
   const webSite = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "MotorsWinding.com",
     url: siteUrl,
     description:
-      "Motor repair center software and lead generation. Center management, work orders, and repair leads for motor repair and rewinding businesses.",
+      "Motor repair center software, lead generation, and a public marketplace for parts and equipment. Center management, work orders, repair leads, and SEO-friendly listings for motor repair and rewinding businesses.",
     potentialAction: {
       "@type": "SearchAction",
       target: { "@type": "EntryPoint", urlTemplate: `${siteUrl}/contact?q={search_term_string}` },
@@ -22,7 +24,7 @@ export function HomePageJsonLd() {
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
-      "Motor repair Job management software with work orders, job board, customer and motor registry, quotes, invoicing, and lead generation network for repair centers.",
+      "Motor repair job management software with work orders, job board, customer and motor registry, quotes, invoicing, lead generation network, and a public marketplace to list parts and surplus—with buyer requests managed in the CRM.",
     url: siteUrl,
     offers: {
       "@type": "Offer",

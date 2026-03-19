@@ -2,12 +2,14 @@ import Link from "next/link";
 
 const footerLinks = {
   "For repair shops": [
+    { href: "/motor-repair-marketplace", label: "Marketplace for shops" },
     { href: "/list-your-electric-motor-services", label: "List your center" },
     { href: "/why-list-your-motor-repair-shop", label: "Why list your shop" },
     { href: "/how-motor-repair-shops-get-more-customers", label: "Get more customers" },
     { href: "/benefits-of-motor-repair-directory", label: "Directory benefits" },
   ],
   "For buyers": [
+    { href: "/marketplace", label: "Parts & equipment marketplace" },
     { href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" },
     { href: "/electric-motor-reapir-near-me", label: "Repair shops near me" },
     { href: "/how-to-choose-electric-motor-repair-shop", label: "How to choose a shop" },

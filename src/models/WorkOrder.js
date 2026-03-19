@@ -19,6 +19,18 @@ const workOrderSchema = new mongoose.Schema(
     acSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     dcSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     armatureSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Notes from Motop Technician app (append-only log) */
+    technicianAppNotes: {
+      type: [
+        {
+          at: { type: Date, default: Date.now },
+          text: { type: String, default: "", trim: true, maxlength: 4000 },
+          authorId: { type: String, default: "", trim: true },
+          authorName: { type: String, default: "", trim: true },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

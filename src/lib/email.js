@@ -1,4 +1,5 @@
 import { getTransporter } from "@/lib/email-transport";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
@@ -106,7 +107,7 @@ export async function sendDemoRequestThankYou(toName, toEmail) {
   const html = `
     <p>Hi${name},</p>
     <p>Thank you for requesting a demo of MotorsWinding.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
-    <p>In the meantime, feel free to explore our <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/features">our features</a>.</p>
+    <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
     <p>— The MotorsWinding.com team</p>
   `;
   return sendEmail(toEmail, subject, html);
@@ -139,7 +140,7 @@ export async function sendNewListingSubmittedToAdmin(doc) {
     .join("");
   const html = `
     <p>A new repair center listing was submitted from the <strong>List your electric motor services</strong> page.</p>
-    <p>Review and approve or reject in the admin: <a href="${(process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "")}/admin/listings">Admin → Listings</a></p>
+    <p>Review and approve or reject in the admin: <a href="${getPublicSiteUrl()}/admin/listings">Admin → Listings</a></p>
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
@@ -152,7 +153,7 @@ export async function sendNewListingSubmittedToAdmin(doc) {
 export async function sendShopListedNotificationToAdmin(doc) {
   const to = listingNotifyEmail();
   if (!to) return { ok: true };
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "");
+  const siteUrl = getPublicSiteUrl();
   const html = `
     <p>A repair center has been <strong>approved</strong> and is now listed on the website.</p>
     <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />

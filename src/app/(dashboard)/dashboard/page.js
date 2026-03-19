@@ -22,6 +22,7 @@ import { normalizeInvoiceStatusSlug, INVOICE_STATUS_OPTIONS } from "@/lib/invoic
 import DashboardPeriodFilter from "@/components/dashboard/dashboard-period-filter";
 import { isOpenInvoiceOverdueForTerms } from "@/lib/accounts-payment-terms";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { poBalanceDue, latestVendorInvoiceDate, daysSinceApAnchor } from "@/lib/po-payable";
 
 const LEAD_STATUS_LABELS = { new: "New", contacted: "Contacted", quoted: "Quoted", won: "Won", lost: "Lost" };
 const QUOTE_STATUS_LABELS = { draft: "Draft", sent: "Sent", approved: "Approved", rejected: "Rejected", rnr: "RNR" };
@@ -85,7 +86,9 @@ function workOrderStatusBreakdown(items) {
 }
 
 function accountsPayableFromPOs(poList) {
-  if (!Array.isArray(poList)) return { openCount: 0, lines: [] };
+  if (!Array.isArray(poList)) {
+    return { openCount: 0, lines: [], outstanding: 0, overdueCount: 0, outstandingCount: 0 };
+  }
   const open = poList.filter((po) => String(po.status || "").toLowerCase() !== "closed");
   const by = new Map();
   for (const po of open) {
@@ -96,13 +99,33 @@ function accountsPayableFromPOs(poList) {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([label, n]) => ({ label, value: n }));
-  return { openCount: open.length, lines };
+
+  let outstanding = 0;
+  let overdueCount = 0;
+  let outstandingCount = 0;
+  for (const po of poList) {
+    const bal = poBalanceDue(po);
+    if (bal > 0.009) {
+      outstandingCount++;
+      outstanding += bal;
+      const invDate = latestVendorInvoiceDate(po);
+      const days = daysSinceApAnchor(invDate, po.createdAt);
+      if (days != null && days > 30) overdueCount++;
+    }
+  }
+  outstanding = Math.round(outstanding * 100) / 100;
+
+  return { openCount: open.length, lines, outstanding, overdueCount, outstandingCount };
 }
 
 function StatCard({
   href,
   label,
   count,
+  /** When set, shown as the large headline instead of numeric `count` (e.g. formatted currency). */
+  primaryValue,
+  /** Small line under the headline (e.g. outstanding item count). */
+  primaryHint,
   icon: Icon,
   placeholder,
   byStatus,
@@ -116,6 +139,7 @@ function StatCard({
   }, [byStatus, statusLabels]);
 
   const showMain = !placeholder && count != null && !loading;
+  const showPrimary = !placeholder && primaryValue != null && String(primaryValue).length > 0 && !loading;
   const showLoading = loading && !placeholder;
 
   return (
@@ -127,9 +151,20 @@ function StatCard({
         <span className="text-sm font-medium text-secondary">{label}</span>
         <Icon className="h-5 w-5 shrink-0 text-secondary" aria-hidden />
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-title">
-        {placeholder ? "—" : showLoading ? "…" : showMain ? Number(count) : "—"}
+      <p className="mt-2 text-2xl font-semibold tabular-nums text-title leading-tight">
+        {placeholder
+          ? "—"
+          : showLoading
+            ? "…"
+            : showPrimary
+              ? primaryValue
+              : showMain
+                ? Number(count)
+                : "—"}
       </p>
+      {primaryHint && !placeholder && !showLoading && (showPrimary || showMain) && (
+        <p className="mt-1 text-xs font-medium text-secondary">{primaryHint}</p>
+      )}
       {extraLines && extraLines.length > 0 && (
         <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
           {extraLines.map((row) => (
@@ -246,7 +281,7 @@ export default function DashboardPage() {
           workOrders: { total: 0, lines: [] },
           invoices: { total: 0, bySlug: {} },
           ar: { openCount: 0, outstanding: 0, overdue: 0 },
-          ap: { openCount: 0, lines: [] },
+          ap: { openCount: 0, lines: [], outstanding: 0, overdueCount: 0, outstandingCount: 0 },
         },
       };
     }
@@ -391,10 +426,15 @@ export default function DashboardPage() {
               href="/dashboard/accounts-receivable"
               label="Accounts receivable"
               count={loading ? undefined : extra.ar.openCount}
+              primaryValue={loading ? undefined : fmt(extra.ar.outstanding)}
+              primaryHint={
+                loading
+                  ? undefined
+                  : `${extra.ar.openCount} invoice${extra.ar.openCount === 1 ? "" : "s"} with balance`
+              }
               icon={FiTrendingUp}
               placeholder={false}
               extraLines={[
-                { label: "Outstanding", value: fmt(extra.ar.outstanding) },
                 {
                   label: `Overdue (past ${arTermsDisplay})`,
                   value: String(extra.ar.overdue),
@@ -405,20 +445,40 @@ export default function DashboardPage() {
             <StatCard
               href="/dashboard/accounts-payable"
               label="Accounts payable"
-              count={loading ? undefined : extra.ap.openCount}
+              count={loading ? undefined : extra.ap.outstandingCount}
+              primaryValue={loading ? undefined : fmt(extra.ap.outstanding)}
+              primaryHint={
+                loading
+                  ? undefined
+                  : `${extra.ap.outstandingCount} PO${extra.ap.outstandingCount === 1 ? "" : "s"} with balance due`
+              }
               icon={FiCreditCard}
               placeholder={false}
-              extraLines={
-                extra.ap.openCount === 0
-                  ? [{ label: "All POs closed", value: "—" }]
-                  : extra.ap.lines.map((r) => ({ label: r.label, value: r.value }))
-              }
+              extraLines={(() => {
+                const rows = [];
+                if (extra.ap.overdueCount > 0) {
+                  rows.push({
+                    label: "Overdue (30+ days)",
+                    value: String(extra.ap.overdueCount),
+                  });
+                }
+                rows.push({
+                  label: "Open POs (not closed)",
+                  value: extra.ap.openCount === 0 ? "—" : String(extra.ap.openCount),
+                });
+                if (extra.ap.openCount > 0) {
+                  rows.push(...extra.ap.lines.map((r) => ({ label: r.label, value: r.value })));
+                }
+                return rows;
+              })()}
               loading={loading}
             />
           </div>
           <p className="mt-3 text-xs text-secondary">
-            Payable counts are from purchase orders (in period) not in Closed status. Full AP tracking can be
-            added later.
+            Accounts receivable: headline is amount outstanding; subtitle is count of open invoices with a balance.
+            Accounts payable: headline is balance due; subtitle is count of POs with vendor balance due. Open POs /
+            status rows are POs not in Closed status (created in period). Overdue AP uses 30+ days since latest vendor
+            invoice (or PO created date if none).
           </p>
         </section>
 

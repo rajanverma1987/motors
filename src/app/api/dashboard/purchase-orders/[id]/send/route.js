@@ -5,6 +5,7 @@ import PurchaseOrder from "@/models/PurchaseOrder";
 import Vendor from "@/models/Vendor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendPoToVendor } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
@@ -63,12 +64,7 @@ export async function POST(request, context) {
       await doc.save();
     }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (request.headers.get("x-forwarded-proto") && request.headers.get("host")
-        ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("host")}`
-        : "") ||
-      "https://motorswinding.com";
+    const baseUrl = getPublicSiteUrl(request);
     const viewUrl = `${baseUrl.replace(/\/$/, "")}/po/${doc.vendorShareToken}`;
     const shopCompanyName =
       (user.shopName && String(user.shopName).trim()) ||

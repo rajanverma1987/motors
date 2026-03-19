@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { randomBytes } from "crypto";
 
 async function uniqueToken(excludeOwnerEmail) {
@@ -46,11 +47,7 @@ export async function GET(request) {
       }
     }
 
-    const baseUrl = (
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
-      "http://localhost:3000"
-    ).replace(/\/$/, "");
+    const baseUrl = getPublicSiteUrl(request).replace(/\/$/, "");
     const url = `${baseUrl}/job-board?token=${encodeURIComponent(token)}`;
     return NextResponse.json({ url, token });
   } catch (err) {

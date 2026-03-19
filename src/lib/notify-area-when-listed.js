@@ -2,8 +2,7 @@ import { connectDB } from "@/lib/db";
 import AreaNotifyRequest from "@/models/AreaNotifyRequest";
 import { matchesLocation } from "@/lib/location-filter";
 import { sendAreaListedNotification } from "@/lib/email";
-
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 /**
  * When a listing is approved, find users who asked to be notified for this area
@@ -18,7 +17,7 @@ export async function notifyAreaRequestsForListing(listing) {
     const requests = await AreaNotifyRequest.find({}).lean();
     const listingObj = listing.toObject ? listing.toObject() : listing;
     const locationLabel = [listingObj.city, listingObj.state, listingObj.zipCode].filter(Boolean).join(", ") || "your area";
-    const shopListingsUrl = `${baseUrl.replace(/\/$/, "")}/electric-motor-reapir-near-me`;
+    const shopListingsUrl = `${getPublicSiteUrl()}/electric-motor-reapir-near-me`;
 
     const toNotify = requests.filter((req) =>
       matchesLocation(listingObj, req.state, req.city, req.zip)

@@ -5,6 +5,7 @@ import MarketingContact from "@/models/MarketingContact";
 import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendMarketingEmail } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const FOLLOW_UP_DAYS = 5;
 const MAX_BATCH = 50;
@@ -61,7 +62,7 @@ export async function POST(request) {
     const followupSubject = (followupDoc?.subject || "Quick follow-up – list your motor repair shop").trim();
     const followupBody = (followupDoc?.body || "").trim();
 
-    const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com").replace(/\/$/, "");
+    const baseUrl = getPublicSiteUrl();
     const linkReplacer = (html) => html.replace(/https:\/\/motorswinding\.com\//g, baseUrl + "/");
 
     let sent = 0;

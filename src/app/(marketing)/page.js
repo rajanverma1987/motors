@@ -59,6 +59,11 @@ const managementFeatures = [
     title: "Upload your existing data",
     detail: "Bring your existing customers, motors, and job history into the platform. Upload your data so you can switch without starting from scratch—we support common formats and can help you migrate from spreadsheets or other systems so your records and history stay in one place.",
   },
+  {
+    title: "Public marketplace listings",
+    detail:
+      "Publish spare parts, surplus motors, and tools to the MotorsWinding.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your CRM alongside work orders and invoices.",
+  },
 ];
 
 const leadFeatures = [
@@ -104,6 +109,7 @@ const plans = [
     features: [
       "Everything in Starter",
       "Lead generation network",
+      "Public marketplace listings",
       "Vendor & PO management",
       "Receiving & shipping",
       "Reports & analytics",
@@ -152,7 +158,12 @@ export default function HomePage() {
                 <span className="text-primary">More motors.</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
-                One platform to run the center and fill the pipeline—work orders, job board, invoicing, and qualified repair leads in one place.
+                One platform to run the center and fill the pipeline—work orders, job board, invoicing, qualified repair
+                leads, and a{" "}
+                <Link href="/marketplace" className="font-medium text-primary hover:underline">
+                  public marketplace
+                </Link>{" "}
+                for parts and equipment in one place.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Link href="/contact">
@@ -178,6 +189,12 @@ export default function HomePage() {
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
                   Repair leads built in
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                  <Link href="/marketplace" className="hover:text-primary hover:underline">
+                    Marketplace for parts & surplus
+                  </Link>
                 </li>
               </ul>
             </div>
@@ -299,7 +316,11 @@ export default function HomePage() {
               Features
             </h2>
             <p className="mt-4 text-lg text-secondary">
-              Everything you need to run and grow your motor repair center—workflow, operations, and leads in one place.
+              Everything you need to run and grow your motor repair center—workflow, operations, leads, and a{" "}
+              <Link href="/marketplace" className="font-medium text-primary hover:underline">
+                public marketplace
+              </Link>{" "}
+              for inventory you want to sell.
             </p>
           </div>
 
@@ -394,6 +415,48 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* Public marketplace highlight */}
+          <div className="mt-12 rounded-2xl border border-primary/25 bg-gradient-to-br from-primary/[0.07] to-card p-8 shadow-sm sm:p-10 lg:p-12">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+                      />
+                    </svg>
+                  </span>
+                  <span className="text-sm font-semibold uppercase tracking-wide text-primary">Marketplace</span>
+                </div>
+                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">List inventory on the public site</h3>
+                <p className="mt-3 max-w-2xl text-secondary">
+                  Publish parts, motors, tools, and surplus from your CRM. Each listing gets its own SEO-friendly URL.
+                  Buyers search and filter on{" "}
+                  <Link href="/marketplace" className="font-medium text-primary hover:underline">
+                    the marketplace
+                  </Link>
+                  , then send a request—no payment on our portal. You handle follow-up and fulfillment; orders stay in
+                  your dashboard.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+                <Link href="/marketplace">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto lg:w-full">
+                    Browse marketplace
+                  </Button>
+                </Link>
+                <Link href="/motor-repair-marketplace">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto lg:w-full">
+                    Why shops use it
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>

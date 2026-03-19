@@ -6,6 +6,7 @@ import Customer from "@/models/Customer";
 import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendInvoiceToCustomer } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
@@ -38,12 +39,7 @@ export async function POST(request, context) {
       );
     }
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ||
-      (request.headers.get("x-forwarded-proto") && request.headers.get("host")
-        ? `${request.headers.get("x-forwarded-proto")}://${request.headers.get("host")}`
-        : "") ||
-      "";
+    const baseUrl = getPublicSiteUrl(request);
     const shopCompanyName =
       (user.shopName && String(user.shopName).trim()) ||
       process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
@@ -70,14 +66,7 @@ export async function POST(request, context) {
       }
     }
 
-    let siteBase = baseUrl.replace(/\/$/, "");
-    if (!siteBase) {
-      try {
-        siteBase = new URL(request.url).origin;
-      } catch {
-        /* ignore */
-      }
-    }
+    const siteBase = baseUrl.replace(/\/$/, "");
     const viewUrl = `${siteBase}/invoice/view/${inv.customerViewToken}`;
 
     const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({

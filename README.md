@@ -34,3 +34,8 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Production URL for emails and links
+
+Set **`NEXT_PUBLIC_SITE_URL`** (and optionally server-only **`SITE_URL`**) to your live site origin, e.g. `https://motorswinding.com` (no trailing slash).  
+If these are missing or point at **localhost**, outbound emails and share links use **`https://motorswinding.com`** by default, or **`https://$VERCEL_URL`** on Vercel, or the request’s **`Host`** header when it is not localhost (see `src/lib/public-site-url.js`).

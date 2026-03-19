@@ -22,6 +22,7 @@ import {
   FiGlobe,
   FiSettings,
   FiLayout,
+  FiShoppingBag,
 } from "react-icons/fi";
 
 const CUSTOMERS_NAV = [
@@ -59,6 +60,7 @@ const PEOPLE_NAV = [
 const TOOLS_NAV = [
   { href: "/dashboard/calculators", label: "Calculators", icon: FiSliders },
   { href: "/dashboard/reports", label: "Reports", icon: FiBarChart2 },
+  { href: "/dashboard/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/dashboard/customer-portal", label: "Customer portal", icon: FiGlobe },
 ];
 

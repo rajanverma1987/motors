@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -28,6 +28,7 @@ const INITIAL_FORM = {
   role: "",
   phone: "",
   canLogin: false,
+  technicianAppAccess: false,
   password: "",
 };
 
@@ -39,6 +40,7 @@ function buildEmployeePayload(form) {
     role: f.role ?? "",
     phone: f.phone ?? "",
     canLogin: Boolean(f.canLogin),
+    technicianAppAccess: Boolean(f.technicianAppAccess),
     password: f.password ?? "",
   };
 }
@@ -54,8 +56,6 @@ export default function DashboardEmployeesPage() {
   const [viewLoadingEmployeeId, setViewLoadingEmployeeId] = useState(null);
   const [savingEmployee, setSavingEmployee] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
-  const formRef = useRef(form);
-  formRef.current = form;
 
   const roleOptions = useMemo(() => {
     const values = new Set(ROLE_OPTIONS.map((o) => o.value));
@@ -152,6 +152,7 @@ export default function DashboardEmployeesPage() {
       role: dataToUse.role ?? "",
       phone: dataToUse.phone ?? "",
       canLogin: Boolean(dataToUse.canLogin),
+      technicianAppAccess: Boolean(dataToUse.technicianAppAccess),
       password: "",
     });
     setViewingEmployee(dataToUse);
@@ -171,7 +172,7 @@ export default function DashboardEmployeesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(buildEmployeePayload(formRef.current)),
+        body: JSON.stringify(buildEmployeePayload(form)),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create employee");
@@ -194,7 +195,7 @@ export default function DashboardEmployeesPage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(buildEmployeePayload(formRef.current)),
+        body: JSON.stringify(buildEmployeePayload(form)),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update employee");
@@ -260,10 +261,19 @@ export default function DashboardEmployeesPage() {
       { key: "phone", label: "Phone" },
       {
         key: "canLogin",
-        label: "Login status",
+        label: "CRM login",
         render: (_, row) => (
           <Badge variant={row.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
-            {row.canLogin ? "Can login" : "No access"}
+            {row.canLogin ? "Yes" : "No"}
+          </Badge>
+        ),
+      },
+      {
+        key: "technicianAppAccess",
+        label: "Technician app",
+        render: (_, row) => (
+          <Badge variant={row.technicianAppAccess ? "primary" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
+            {row.technicianAppAccess ? "Allowed" : "Off"}
           </Badge>
         ),
       },
@@ -354,14 +364,26 @@ export default function DashboardEmployeesPage() {
               placeholder="For employee login (optional, 6–128 characters)"
               autoComplete="new-password"
             />
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 space-y-3 rounded-lg border border-border bg-form-bg/50 p-3">
               <Checkbox
                 label="Can login to CRM"
                 name="canLogin"
                 checked={form.canLogin}
                 onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
               />
-              <p className="mt-1 text-xs text-secondary">When enabled, this employee can be granted access to log in and use all dashboard pages.</p>
+              <p className="text-xs text-secondary -mt-1 pl-7">
+                Full dashboard access in the browser. Uses the password below when set.
+              </p>
+              <Checkbox
+                label="Technician App access"
+                name="technicianAppAccess"
+                checked={form.technicianAppAccess}
+                onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
+              />
+              <p className="text-xs text-secondary -mt-1 pl-7">
+                Allow this employee to sign in to the mobile Technician App. Turn off to revoke access without deleting
+                the employee. Uses the same password when one is set.
+              </p>
             </div>
           </div>
         </Form>
@@ -390,10 +412,18 @@ export default function DashboardEmployeesPage() {
             <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingEmployee.email || "—"}</dd></div>
             <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingEmployee.phone || "—"}</dd></div>
             <div className="sm:col-span-2">
-              <dt className="text-secondary">Login status</dt>
+              <dt className="text-secondary">CRM login</dt>
               <dd className="mt-0.5">
                 <Badge variant={viewingEmployee.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
-                  {viewingEmployee.canLogin ? "Can login to CRM" : "No access"}
+                  {viewingEmployee.canLogin ? "Enabled" : "Off"}
+                </Badge>
+              </dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-secondary">Technician App</dt>
+              <dd className="mt-0.5">
+                <Badge variant={viewingEmployee.technicianAppAccess ? "primary" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
+                  {viewingEmployee.technicianAppAccess ? "Access allowed" : "Access off"}
                 </Badge>
               </dd>
             </div>
@@ -455,14 +485,26 @@ export default function DashboardEmployeesPage() {
               placeholder="Leave blank to keep current (6–128 characters to change)"
               autoComplete="new-password"
             />
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-2 space-y-3 rounded-lg border border-border bg-form-bg/50 p-3">
               <Checkbox
                 label="Can login to CRM"
                 name="canLogin"
                 checked={form.canLogin}
                 onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
               />
-              <p className="mt-1 text-xs text-secondary">When enabled, this employee can be granted access to log in and use all dashboard pages.</p>
+              <p className="text-xs text-secondary -mt-1 pl-7">
+                Full dashboard access in the browser. Uses the password below when set.
+              </p>
+              <Checkbox
+                label="Technician App access"
+                name="technicianAppAccess"
+                checked={form.technicianAppAccess}
+                onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
+              />
+              <p className="text-xs text-secondary -mt-1 pl-7">
+                Allow this employee to sign in to the mobile Technician App. Turn off to revoke access without deleting
+                the employee. Uses the same password when one is set.
+              </p>
             </div>
           </div>
         </Form>

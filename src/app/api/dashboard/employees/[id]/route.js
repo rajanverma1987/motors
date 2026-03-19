@@ -20,6 +20,7 @@ function toEmployeeJson(doc) {
     role: e.role ?? "",
     phone: e.phone ?? "",
     canLogin: Boolean(e.canLogin),
+    technicianAppAccess: Boolean(e.technicianAppAccess),
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
   };
@@ -71,7 +72,7 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const body = await request.json();
-    const { name, email, role, phone, canLogin, password } = body;
+    const { name, email, role, phone, canLogin, technicianAppAccess, password } = body;
     if (name !== undefined) {
       if (!String(name).trim()) {
         return NextResponse.json({ error: "Employee name is required" }, { status: 400 });
@@ -87,6 +88,7 @@ export async function PATCH(request, context) {
     if (role !== undefined) doc.role = clampString(role, LIMITS.shortText.max);
     if (phone !== undefined) doc.phone = clampString(phone, 30);
     if (canLogin !== undefined) doc.canLogin = Boolean(canLogin);
+    if (technicianAppAccess !== undefined) doc.technicianAppAccess = Boolean(technicianAppAccess);
     const rawPassword = typeof password === "string" ? password.trim() : "";
     if (rawPassword.length > 0) {
       if (rawPassword.length < LIMITS.password.min || rawPassword.length > LIMITS.password.max) {
