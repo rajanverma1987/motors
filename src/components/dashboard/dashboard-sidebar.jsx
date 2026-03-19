@@ -25,6 +25,8 @@ import {
   FiShoppingBag,
   FiLifeBuoy,
   FiMapPin,
+  FiRepeat,
+  FiKey,
 } from "react-icons/fi";
 
 const CUSTOMERS_NAV = [
@@ -62,7 +64,9 @@ const PEOPLE_NAV = [
 
 const TOOLS_NAV = [
   { href: "/dashboard/calculators", label: "Calculators", icon: FiSliders },
+  { href: "/dashboard/subscription", label: "Subscription", icon: FiRepeat },
   { href: "/dashboard/reports", label: "Reports", icon: FiBarChart2 },
+  { href: "/dashboard/integrations", label: "API integrations", icon: FiKey },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/dashboard/directory-listing", label: "Directory listing", icon: FiMapPin },
   { href: "/dashboard/customer-portal", label: "Customer portal", icon: FiGlobe },

@@ -31,6 +31,7 @@ export const PAGES = [
   { id: "support", label: "Support" },
   { id: "inventory", label: "Inventory" },
   { id: "marketplace", label: "Marketplace (CRM)" },
+  { id: "integrations", label: "API integrations" },
 ];
 
 const PAGE_IDS = new Set(PAGES.map((p) => p.id));

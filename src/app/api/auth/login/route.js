@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { verifyPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { getLoginBlockReason } from "@/lib/subscription-access";
+import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -41,7 +43,19 @@ export async function POST(request) {
 
     if (user.canLogin === false) {
       return NextResponse.json(
-        { error: "Login access has been revoked. Please contact support." },
+        { error: "Login access has been revoked. Please contact support.", code: "LOGIN_REVOKED" },
+        { status: 403 }
+      );
+    }
+
+    try {
+      await ensureShopSubscriptionOnRegister(user.email);
+    } catch (_) { /* ignore */ }
+
+    const subRevokeReason = await getLoginBlockReason(user.email);
+    if (subRevokeReason) {
+      return NextResponse.json(
+        { error: subRevokeReason, code: "SUBSCRIPTION_REVOKED" },
         { status: 403 }
       );
     }

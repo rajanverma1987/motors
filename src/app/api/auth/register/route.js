@@ -5,6 +5,7 @@ import User from "@/models/User";
 import { hashPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -57,6 +58,12 @@ export async function POST(request) {
       shopName: clampString(shopName, LIMITS.name.max),
       contactName: clampString(contactName, LIMITS.name.max),
     });
+
+    try {
+      await ensureShopSubscriptionOnRegister(user.email);
+    } catch (subErr) {
+      console.error("Subscription bootstrap on register:", subErr);
+    }
 
     const token = await createPortalToken({
       email: user.email,
