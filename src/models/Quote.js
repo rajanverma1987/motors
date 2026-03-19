@@ -33,6 +33,8 @@ const quoteSchema = new mongoose.Schema(
       qty: { type: String, default: "1", trim: true },
       uom: { type: String, default: "", trim: true },
       price: { type: String, default: "", trim: true },
+      /** Dashboard inventory row id when line is tied to stock */
+      inventoryItemId: { type: String, default: "", trim: true },
     }],
     estimatedCompletion: { type: String, default: "", trim: true },
     /** Client-facing notes: shown on proposal and invoice sent to customer */

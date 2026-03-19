@@ -122,15 +122,15 @@ export default function RegisterPage() {
       </div>
       <p className="mt-5 text-base text-secondary">
         Create your MotorsWinding.com account to log in to your portal, manage work orders,
-        and see new repair leads in one place.
+        track shop parts inventory, and see new repair leads in one place.
       </p>
       <ul className="mt-6 space-y-3 text-sm text-secondary">
         <li className="flex gap-2">
           <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
           <span>
             One login for{" "}
-            <span className="font-medium text-title">work orders, quotes, and invoicing</span> so your team
-            always works from the same system.
+            <span className="font-medium text-title">work orders, quotes, invoicing, and parts inventory</span> so your
+            team always works from the same system.
           </span>
         </li>
         <li className="flex gap-2">
@@ -169,7 +169,7 @@ export default function RegisterPage() {
             Register your center
           </h1>
           <p className="mt-4 max-w-2xl text-lg text-secondary">
-            Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal—work orders, quotes, customers, and repair leads in one place.
+            Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal—work orders, quotes, customers, shop inventory, and repair leads in one place.
           </p>
         </div>
       </section>

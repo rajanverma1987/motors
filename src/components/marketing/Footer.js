@@ -19,6 +19,8 @@ const footerLinks = {
     { href: "/cost-of-motor-repair-and-rewinding", label: "Repair costs" },
   ],
   Company: [
+    { href: "/#features", label: "Features & inventory" },
+    { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
     { href: "/contact", label: "About" },
   ],
@@ -40,7 +42,7 @@ export default function Footer() {
               MotorsWinding.com
             </Link>
             <p className="mt-2 text-sm text-secondary">
-              Job management and lead generation for motor repair businesses.
+              Job management, shop parts inventory, and lead generation for motor repair businesses.
             </p>
           </div>
           {Object.entries(footerLinks).map(([title, links]) => (

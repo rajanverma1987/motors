@@ -28,6 +28,15 @@ export function clampString(value, max) {
   return value.trim().slice(0, max);
 }
 
+/**
+ * Like clampString but coerces non-strings (e.g. JSON numbers) so API fields like UOM are not dropped.
+ */
+export function clampStringCoerced(value, max) {
+  if (value == null) return "";
+  const s = typeof value === "string" ? value : String(value);
+  return s.trim().slice(0, max);
+}
+
 export function clampArray(arr, max = LIMITS.arrayMaxLength) {
   if (!Array.isArray(arr)) return [];
   return arr.filter((x) => x != null && typeof x === "string").slice(0, max).map((s) => s.trim().slice(0, LIMITS.shortText.max));

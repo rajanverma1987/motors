@@ -6,29 +6,13 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import Vendor from "@/models/Vendor";
 import { poBalanceDue } from "@/lib/po-payable";
+import {
+  normalizePurchaseOrderLineItems,
+  normalizeLineItemStatus,
+} from "@/lib/purchase-order-line-items";
 
-const MAX_LINE_ITEMS = 100;
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
-
-function normalizeLineItemStatus(row) {
-  const s = row?.status;
-  if (s === "Received") return "Received";
-  if (s === "Back Order") return "Back Order";
-  if (s === "Delivered" || s === "Dispatch") return "Dispatch";
-  return "Ordered";
-}
-
-function normalizeLineItems(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.slice(0, MAX_LINE_ITEMS).map((row) => ({
-    description: clampString(row?.description, LIMITS.shortText.max),
-    qty: clampString(String(row?.qty ?? "1"), 50),
-    uom: clampString(row?.uom, 20),
-    unitPrice: clampString(row?.unitPrice, 50),
-    status: normalizeLineItemStatus(row),
-  }));
-}
 
 function computeDeliveryStatus(lineItems) {
   const items = Array.isArray(lineItems) ? lineItems : [];
@@ -219,7 +203,7 @@ export async function PATCH(request, context) {
     if (type !== undefined) doc.type = type === "job" ? "job" : "shop";
     if (quoteId !== undefined) doc.quoteId = doc.type === "job" ? clampString(quoteId, 100) : "";
     if (lineItems !== undefined) {
-      doc.lineItems = normalizeLineItems(lineItems);
+      doc.lineItems = normalizePurchaseOrderLineItems(lineItems);
       doc.markModified("lineItems");
     }
     if (vendorInvoices !== undefined) {

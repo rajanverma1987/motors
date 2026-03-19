@@ -526,6 +526,34 @@ export default function SettingsPageClient() {
         ),
       },
       {
+        id: "inventory",
+        label: "Inventory",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Inventory locations</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Bin, shelf, or warehouse labels used when editing parts on the master inventory page (dropdown). One
+                location per line.
+              </p>
+              <Textarea
+                label="Locations (one per line)"
+                value={
+                  Array.isArray(draft.inventoryLocations) ? draft.inventoryLocations.join("\n") : ""
+                }
+                onChange={(e) => {
+                  // Keep raw lines while typing: allow newlines (incl. trailing) and spaces; trim/normalize on save via API.
+                  const lines = e.target.value.split("\n");
+                  updateDraft({ inventoryLocations: lines.slice(0, 50) });
+                }}
+                rows={10}
+                placeholder={"Shelf A1\nBin 12\nReceiving dock"}
+              />
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
         id: "more",
         label: "More",
         children: (
@@ -555,6 +583,7 @@ export default function SettingsPageClient() {
       draft.weekStartsOn,
       draft.workOrderStatuses,
       draft.shopFloorBoardOrder,
+      draft.inventoryLocations,
       logoUploading,
       user?.email,
       user?.shopName,

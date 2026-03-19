@@ -31,6 +31,8 @@ export const USER_SETTINGS_DEFAULTS = {
   invoicePaymentOptions: "",
   /** Shown below payment options on invoice (print + customer view) */
   invoiceThankYouNote: "Thank you for your business!",
+  /** Bin / shelf labels for inventory items (dropdown on master inventory) */
+  inventoryLocations: [],
 };
 
 import { isAllowedCurrency } from "@/lib/format-currency";
@@ -51,6 +53,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "accountsPaymentTerms",
   "invoicePaymentOptions",
   "invoiceThankYouNote",
+  "inventoryLocations",
 ]);
 
 const ACCOUNTS_PAYMENT_TERMS = new Set([
@@ -62,6 +65,23 @@ const ACCOUNTS_PAYMENT_TERMS = new Set([
 ]);
 
 const TABLE_PAGE_SIZES = new Set([10, 25, 50, 100]);
+
+/** @param {unknown} raw */
+export function normalizeInventoryLocations(raw) {
+  const arr = Array.isArray(raw) ? raw : [];
+  const seen = new Set();
+  const out = [];
+  for (const item of arr) {
+    const label = String(item ?? "")
+      .trim()
+      .slice(0, 80);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+    if (out.length >= 50) break;
+  }
+  return out;
+}
 
 /** @param {unknown} raw */
 export function normalizeWorkOrderStatusList(raw) {
@@ -111,6 +131,7 @@ export function mergeUserSettings(stored) {
     const rawBoard = Array.isArray(s.shopFloorBoardOrder) ? s.shopFloorBoardOrder : [];
     merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(rawBoard, merged.workOrderStatuses);
   }
+  merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
   return merged;
 }
 
@@ -174,6 +195,10 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "invoiceThankYouNote") {
       out[key] = String(body[key] ?? "").replace(/\r\n/g, " ").slice(0, 500);
+      continue;
+    }
+    if (key === "inventoryLocations") {
+      out.inventoryLocations = normalizeInventoryLocations(body[key]);
       continue;
     }
     if (typeof body[key] === "boolean") {

@@ -156,6 +156,7 @@ export const DEFAULT_WORK_ORDER_STATUSES = [
   "Waiting Parts",
   "QC",
   "Completed",
+  "Shipped",
 ];
 
 /** @param {string} motorType */

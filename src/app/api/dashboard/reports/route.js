@@ -9,6 +9,7 @@ import PurchaseOrder from "@/models/PurchaseOrder";
 import UserSettings from "@/models/UserSettings";
 import Vendor from "@/models/Vendor";
 import Employee from "@/models/Employee";
+import InventoryItem from "@/models/InventoryItem";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { fetchLeadsForShopUser } from "@/lib/dashboard-leads-scope";
 import {
@@ -92,6 +93,7 @@ export async function GET(request) {
       employeesAll,
       userSettingsDoc,
       openReceivableInvoices,
+      inventoryItemsAll,
     ] = await Promise.all([
       fetchLeadsForShopUser(user.email),
       Customer.find({ createdByEmail: email }).lean(),
@@ -107,6 +109,7 @@ export async function GET(request) {
         createdByEmail: email,
         status: { $in: ["sent", "partial_paid"] },
       }).lean(),
+      InventoryItem.find({ createdByEmail: email }).lean(),
     ]);
 
     const mergedSettings = mergeUserSettings(userSettingsDoc?.settings);
@@ -273,6 +276,28 @@ export async function GET(request) {
       .sort((a, b) => b.orderTotal - a.orderTotal)
       .slice(0, 10);
 
+    let inventorySkuCount = 0;
+    let inventoryOnHand = 0;
+    let inventoryReserved = 0;
+    let inventoryLowStock = 0;
+    let inventorySkusCreatedInPeriod = 0;
+    const invList = Array.isArray(inventoryItemsAll) ? inventoryItemsAll : [];
+    for (const row of invList) {
+      inventorySkuCount++;
+      const onHand = Number(row.onHand) || 0;
+      const res = Number(row.reserved) || 0;
+      inventoryOnHand += onHand;
+      inventoryReserved += res;
+      const avail = onHand - res;
+      const th = Number(row.threshold) || 0;
+      if (th > 0 && avail <= th) inventoryLowStock++;
+      if (!allTime) {
+        const t = new Date(row.createdAt).getTime();
+        if (Number.isFinite(t) && t >= fromMs && t <= toMs) inventorySkusCreatedInPeriod++;
+      }
+    }
+    if (allTime) inventorySkusCreatedInPeriod = inventorySkuCount;
+
     const quoteSeriesOut = quoteSeries.map((r) => ({
       ...r,
       value: Math.round((r.value || 0) * 100) / 100,
@@ -305,6 +330,7 @@ export async function GET(request) {
         purchaseOrders: purchaseOrders.length,
         vendors: vendors.length,
         employees: employees.length,
+        inventorySkus: inventorySkuCount,
       },
       leads: {
         byStatus: leadByStatus,
@@ -360,6 +386,14 @@ export async function GET(request) {
           ...r,
           orderTotal: Math.round(r.orderTotal * 100) / 100,
         })),
+      },
+      inventory: {
+        skuCount: inventorySkuCount,
+        totalOnHand: Math.round(inventoryOnHand * 1000) / 1000,
+        totalReserved: Math.round(inventoryReserved * 1000) / 1000,
+        totalAvailable: Math.round((inventoryOnHand - inventoryReserved) * 1000) / 1000,
+        lowStockCount: inventoryLowStock,
+        skusCreatedInPeriod: inventorySkusCreatedInPeriod,
       },
     });
   } catch (err) {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FiRefreshCw } from "react-icons/fi";
+import { FiRefreshCw, FiPackage } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
@@ -177,6 +177,7 @@ export default function ReportsPageClient() {
       { label: "Purchase orders", value: s.purchaseOrders, href: "/dashboard/purchase-orders" },
       { label: "Vendors", value: s.vendors, href: "/dashboard/vendors" },
       { label: "Employees", value: s.employees, href: "/dashboard/employees" },
+      { label: "Inventory SKUs", value: s.inventorySkus ?? 0, href: "/dashboard/inventory" },
     ];
   }, [data]);
 
@@ -595,6 +596,63 @@ export default function ReportsPageClient() {
             className="inline-flex text-sm font-medium text-primary hover:underline"
           >
             Accounts payable →
+          </Link>
+        </div>
+      </section>
+
+      {/* Inventory */}
+      <section className="mt-10">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-title">
+          <FiPackage className="h-5 w-5 text-secondary" aria-hidden />
+          Inventory
+        </h2>
+        <p className="mb-4 text-sm text-secondary">
+          Stock snapshot (not filtered by the report period except &ldquo;New SKUs&rdquo;). Reserved qty is tied to open
+          work orders from quotes until the job is marked Shipped.
+        </p>
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">SKUs</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-title">
+              {data?.inventory?.skuCount ?? 0}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">On hand (total units)</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-title">
+              {data?.inventory?.totalOnHand ?? 0}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Reserved</p>
+            <p className="mt-1 text-lg font-bold tabular-nums">{data?.inventory?.totalReserved ?? 0}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Available</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {data?.inventory?.totalAvailable ?? 0}
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Low stock (at/below threshold)</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">
+              {data?.inventory?.lowStockCount ?? 0}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">
+              {data?.period?.allTime ? "Total SKUs (all time)" : "New SKUs in period"}
+            </p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-title">
+              {data?.inventory?.skusCreatedInPeriod ?? 0}
+            </p>
+          </div>
+        </div>
+        <div className="mt-4">
+          <Link href="/dashboard/inventory" className="inline-flex text-sm font-medium text-primary hover:underline">
+            Open inventory →
           </Link>
         </div>
       </section>

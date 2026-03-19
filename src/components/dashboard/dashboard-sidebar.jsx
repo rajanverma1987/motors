@@ -34,6 +34,7 @@ const CUSTOMERS_NAV = [
 const JOBS_NAV = [
   { href: "/dashboard/quotes", label: "Quotes", icon: FiFileText },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
+  { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
 ];
 
 const ACCOUNTING_NAV = [

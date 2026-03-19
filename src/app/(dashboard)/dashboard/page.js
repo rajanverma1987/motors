@@ -15,6 +15,7 @@ import {
   FiShoppingCart,
   FiUserPlus,
   FiExternalLink,
+  FiLayers,
 } from "react-icons/fi";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
@@ -240,11 +241,22 @@ export default function DashboardPage() {
           credentials: "include",
           cache: "no-store",
         }).then(async (res) => ({ kind: "ar", ok: res.ok, data: await res.json() })),
+        fetch("/api/dashboard/inventory/summary", {
+          credentials: "include",
+          cache: "no-store",
+        }).then(async (res) => ({ kind: "invSum", ok: res.ok, data: await res.json() })),
       ]);
 
       let woData = [];
       let invData = [];
       let arPayload = { rows: [], summary: {} };
+      let invSummary = {
+        totalSkus: 0,
+        totalOnHand: 0,
+        totalReserved: 0,
+        totalAvailable: 0,
+        lowStockCount: 0,
+      };
 
       for (const r of results) {
         if (r.ep) {
@@ -257,10 +269,18 @@ export default function DashboardPage() {
             rows: Array.isArray(r.data.rows) ? r.data.rows : [],
             summary: r.data.summary || {},
           };
+        } else if (r.kind === "invSum" && r.ok && r.data && typeof r.data === "object") {
+          invSummary = {
+            totalSkus: Number(r.data.totalSkus) || 0,
+            totalOnHand: Number(r.data.totalOnHand) || 0,
+            totalReserved: Number(r.data.totalReserved) || 0,
+            totalAvailable: Number(r.data.totalAvailable) || 0,
+            lowStockCount: Number(r.data.lowStockCount) || 0,
+          };
         }
       }
 
-      setRaw({ epData, woData, invData, arPayload });
+      setRaw({ epData, woData, invData, arPayload, invSummary });
     } catch {
       setRaw(null);
     } finally {
@@ -282,6 +302,13 @@ export default function DashboardPage() {
           invoices: { total: 0, bySlug: {} },
           ar: { openCount: 0, outstanding: 0, overdue: 0 },
           ap: { openCount: 0, lines: [], outstanding: 0, overdueCount: 0, outstandingCount: 0 },
+          inventory: {
+            totalSkus: 0,
+            totalOnHand: 0,
+            totalReserved: 0,
+            totalAvailable: 0,
+            lowStockCount: 0,
+          },
         },
       };
     }
@@ -337,6 +364,13 @@ export default function DashboardPage() {
         },
         ar: arBlock,
         ap: accountsPayableFromPOs(poList),
+        inventory: raw.invSummary || {
+          totalSkus: 0,
+          totalOnHand: 0,
+          totalReserved: 0,
+          totalAvailable: 0,
+          lowStockCount: 0,
+        },
       },
     };
   }, [raw, periodRange, arTermsSlug]);
@@ -473,6 +507,26 @@ export default function DashboardPage() {
               })()}
               loading={loading}
             />
+            <StatCard
+              href="/dashboard/inventory"
+              label="Inventory"
+              primaryValue={loading ? undefined : String(extra.inventory.totalAvailable)}
+              primaryHint={
+                loading
+                  ? undefined
+                  : `${extra.inventory.totalSkus} SKU(s) · on hand ${extra.inventory.totalOnHand}`
+              }
+              icon={FiLayers}
+              placeholder={false}
+              extraLines={[
+                { label: "Reserved (open WOs)", value: String(extra.inventory.totalReserved) },
+                {
+                  label: "Low stock (≤ threshold)",
+                  value: String(extra.inventory.lowStockCount),
+                },
+              ]}
+              loading={loading}
+            />
           </div>
           <p className="mt-3 text-xs text-secondary">
             Accounts receivable: headline is amount outstanding; subtitle is count of open invoices with a balance.
@@ -528,6 +582,13 @@ export default function DashboardPage() {
             >
               <FiDollarSign className="h-4 w-4" aria-hidden />
               Invoices
+            </Link>
+            <Link
+              href="/dashboard/inventory"
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
+            >
+              <FiLayers className="h-4 w-4" aria-hidden />
+              Inventory
             </Link>
           </div>
         </section>

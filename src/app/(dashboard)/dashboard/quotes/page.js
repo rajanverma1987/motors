@@ -33,6 +33,7 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import MotorAssetReadonlyDetail from "@/components/motor-asset-readonly-detail";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 
 /** Quote modal header: one row, smaller type (see Modal toolbar overflow-x). */
@@ -637,6 +638,7 @@ export default function DashboardQuotesPage() {
   };
 
   const openCreateModal = () => {
+    setViewingQuote(null);
     setForm({ ...INITIAL_FORM, date: todayString() });
     setCreateModalOpen(true);
   };
@@ -1248,6 +1250,12 @@ export default function DashboardQuotesPage() {
               </div>
               <div className="lg:col-span-3">
                 <div className="mb-1 text-xs font-medium text-secondary">Other Cost (item, Qty, UOM, price)</div>
+                <QuoteInventoryPartsControls
+                  partsLines={form.partsLines}
+                  onChangePartsLines={(rows) => setForm((f) => ({ ...f, partsLines: rows }))}
+                  quoteId={viewingQuote?.id ?? null}
+                  fmtPrice={fmt}
+                />
                 <DataTable
                   columns={PARTS_COLUMNS}
                   data={form.partsLines}
@@ -1925,6 +1933,12 @@ export default function DashboardQuotesPage() {
               </div>
               <div className="lg:col-span-3">
                 <div className="mb-1 text-xs font-medium text-secondary">Other Cost (item, Qty, UOM, price)</div>
+                <QuoteInventoryPartsControls
+                  partsLines={form.partsLines}
+                  onChangePartsLines={(rows) => setForm((f) => ({ ...f, partsLines: rows }))}
+                  quoteId={viewingQuote?.id ?? null}
+                  fmtPrice={fmt}
+                />
                 <DataTable
                   columns={PARTS_COLUMNS}
                   data={form.partsLines}

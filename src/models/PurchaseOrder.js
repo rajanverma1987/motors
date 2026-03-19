@@ -17,6 +17,8 @@ const purchaseOrderSchema = new mongoose.Schema(
         qty: { type: String, default: "1", trim: true },
         uom: { type: String, default: "", trim: true },
         unitPrice: { type: String, default: "", trim: true },
+        /** When set, logistics receiving this line adds qty to this inventory SKU */
+        inventoryItemId: { type: String, default: "", trim: true },
         status: {
           type: String,
           enum: ["Ordered", "Dispatch", "Received", "Back Order"],

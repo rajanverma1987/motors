@@ -12,6 +12,11 @@ import {
   notifyWorkOrderBoardDeleted,
 } from "@/lib/job-board-emit";
 import { notifyTechnicianWorkOrderAssigned } from "@/lib/notify-technician-work-order";
+import {
+  isShippedStatus,
+  consumeInventoryForQuoteOnShipped,
+  releaseInventoryReservationsForQuote,
+} from "@/lib/inventory-service";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -91,6 +96,7 @@ export async function PATCH(request, context) {
     const body = await request.json().catch(() => ({}));
 
     const previousTechnicianId = String(doc.technicianEmployeeId || "").trim();
+    const previousStatus = String(doc.status || "").trim();
 
     if (body.date !== undefined) doc.date = String(body.date || "").slice(0, 20);
     if (body.technicianEmployeeId !== undefined) {
@@ -111,6 +117,19 @@ export async function PATCH(request, context) {
       doc.armatureSpecs = sanitizeSpecs(body.armatureSpecs);
     }
     await doc.save();
+
+    const newStatus = String(doc.status || "").trim();
+    if (
+      doc.quoteId &&
+      isShippedStatus(newStatus) &&
+      !isShippedStatus(previousStatus)
+    ) {
+      try {
+        await consumeInventoryForQuoteOnShipped(email, String(doc.quoteId));
+      } catch (invErr) {
+        console.error("Consume inventory on shipped:", invErr);
+      }
+    }
 
     const customer = await Customer.findOne({
       _id: doc.customerId,
@@ -198,12 +217,32 @@ export async function DELETE(request, context) {
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const existing = await WorkOrder.findOne({ _id: id, createdByEmail: email })
+      .select("quoteId")
+      .lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const quoteIdForInv = String(existing.quoteId || "").trim();
     const r = await WorkOrder.deleteOne({
       _id: id,
       createdByEmail: email,
     });
     if (r.deletedCount === 0) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (quoteIdForInv) {
+      const remaining = await WorkOrder.countDocuments({
+        createdByEmail: email,
+        quoteId: quoteIdForInv,
+      });
+      if (remaining === 0) {
+        try {
+          await releaseInventoryReservationsForQuote(email, quoteIdForInv);
+        } catch (invErr) {
+          console.error("Release inventory on WO delete:", invErr);
+        }
+      }
     }
     notifyWorkOrderBoardDeleted(email, id).catch(() => {});
     return NextResponse.json({ ok: true });

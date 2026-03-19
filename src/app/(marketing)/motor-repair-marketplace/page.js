@@ -6,7 +6,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const title = "Motor repair marketplace for your shop — list parts & equipment | MotorsWinding.com";
   const description =
-    "Sell spare parts, surplus motors, and tools on our public marketplace from your CRM. Reach buyers without handling payments on the site—we help you grow with lead-style orders and optional platform listings.";
+    "Sell spare parts, surplus motors, and tools on our public marketplace from your CRM—separate from internal shop inventory for jobs. Reach buyers without handling payments on the site—we help you grow with lead-style orders and optional platform listings.";
   return {
     title,
     description,
@@ -54,6 +54,12 @@ export default function MotorRepairMarketplaceMarketingPage() {
       <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
         <h2 className="text-xl font-semibold text-title">Why shops use it</h2>
         <ul className="mt-4 list-inside list-disc space-y-3 text-secondary">
+          <li>
+            <strong className="text-title">Not the same as job-stock inventory</strong> — Your{" "}
+            <strong className="text-title">shop parts catalog</strong> (on-hand, reserved for work orders, receiving
+            from vendor POs) lives under <strong className="text-title">Inventory</strong> in the dashboard. The
+            marketplace is for <strong className="text-title">public listings</strong> you choose to promote to buyers.
+          </li>
           <li>
             <strong className="text-title">List from the CRM</strong> — Add title, description, category, price note,
             and image URLs. Publish when ready; drafts stay private.

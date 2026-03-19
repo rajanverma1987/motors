@@ -3,24 +3,14 @@ import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
+import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 
 const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
-const MAX_LINE_ITEMS = 100;
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
-  return arr.slice(0, MAX_LINE_ITEMS).map((row) => ({
+  return arr.slice(0, MAX_QUOTE_PARTS_LINES).map((row) => ({
     scope: clampString(row?.scope, LIMITS.message.max),
-    price: clampString(row?.price, 50),
-  }));
-}
-
-function normalizePartsLines(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.slice(0, MAX_LINE_ITEMS).map((row) => ({
-    item: clampString(row?.item, 200),
-    qty: clampString(String(row?.qty ?? "1"), 50),
-    uom: clampString(row?.uom, 50),
     price: clampString(row?.price, 50),
   }));
 }
@@ -110,7 +100,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Motor is required" }, { status: 400 });
     }
     const scopeLines = normalizeScopeLines(bodyScopeLines);
-    const partsLines = normalizePartsLines(bodyPartsLines);
+    const partsLines = normalizeQuotePartsLines(bodyPartsLines);
     const laborFromLines = scopeLines.length ? sumPrices(scopeLines) : "";
     const partsFromLines = partsLines.length ? sumPartsLines(partsLines) : "";
     const email = user.email.trim().toLowerCase();

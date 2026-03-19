@@ -3,21 +3,11 @@ import { connectDB } from "@/lib/db";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
+import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items";
+import { getNextPoNumber } from "@/lib/purchase-order-numbers";
 
-const MAX_LINE_ITEMS = 100;
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
-
-function normalizeLineItems(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.slice(0, MAX_LINE_ITEMS).map((row) => ({
-    description: clampString(row?.description, LIMITS.shortText.max),
-    qty: clampString(String(row?.qty ?? "1"), 50),
-    uom: clampString(row?.uom, 20),
-    unitPrice: clampString(row?.unitPrice, 50),
-    status: row?.status === "Received" ? "Received" : (row?.status === "Delivered" || row?.status === "Dispatch") ? "Dispatch" : "Ordered",
-  }));
-}
 
 function normalizeVendorInvoices(arr) {
   if (!Array.isArray(arr)) return [];
@@ -167,26 +157,6 @@ export async function GET(request) {
   }
 }
 
-/** Get next PO number for this user (e.g. P00001, P00002). */
-async function getNextPoNumber(createdByEmail) {
-  const list = await PurchaseOrder.find({
-    createdByEmail,
-    poNumber: { $regex: /^P\d+$/, $options: "i" },
-  })
-    .select("poNumber")
-    .lean();
-  let maxN = 0;
-  for (const po of list) {
-    const m = (po.poNumber || "").match(/^P(\d+)$/i);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      if (n > maxN) maxN = n;
-    }
-  }
-  const next = maxN + 1;
-  return "P" + String(next).padStart(5, "0");
-}
-
 export async function POST(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -207,7 +177,7 @@ export async function POST(request) {
       vendorId: vendorId.trim(),
       type: typeVal,
       quoteId: typeVal === "job" ? clampString(quoteId, 100) : "",
-      lineItems: normalizeLineItems(lineItems),
+      lineItems: normalizePurchaseOrderLineItems(lineItems),
       vendorInvoices: normalizeVendorInvoices(vendorInvoices ?? []),
       payments: normalizePayments(payments ?? []),
       notes: clampString(notes, LIMITS.message.max),

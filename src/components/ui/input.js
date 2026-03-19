@@ -14,6 +14,7 @@ export default function Input({
   disabled = false,
   required = false,
   maxLength,
+  autoComplete,
 }) {
   const id = idProp ?? name;
   return (
@@ -35,6 +36,7 @@ export default function Input({
         disabled={disabled}
         required={required}
         maxLength={maxLength}
+        autoComplete={autoComplete}
         className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-gray-800/70 !border-border dark:!border-gray-600 select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-gray-800/70 !border-border dark:!border-gray-600 select-none" : ""}`}
       />
     </div>

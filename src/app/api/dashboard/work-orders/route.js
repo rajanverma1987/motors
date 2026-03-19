@@ -17,6 +17,7 @@ import {
   DC_ARMATURE_FIELDS,
   DEFAULT_WORK_ORDER_STATUSES,
 } from "@/lib/work-order-fields";
+import { reserveInventoryForQuoteIfFirstWorkOrder } from "@/lib/inventory-service";
 
 function initialStatusFromSettings(settingsDoc) {
   const u = mergeUserSettings(settingsDoc?.settings);
@@ -185,6 +186,11 @@ export async function POST(request) {
             companyName: o.companyName,
             quoteRfqNumber: rfq,
           }).catch(() => {});
+        }
+        try {
+          await reserveInventoryForQuoteIfFirstWorkOrder(email, quoteId, doc._id.toString());
+        } catch (invErr) {
+          console.error("Reserve inventory for quote:", invErr);
         }
         return NextResponse.json({
           ok: true,

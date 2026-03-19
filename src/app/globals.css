@@ -2,7 +2,7 @@
 
 /* Base font size 90% of browser default (16px → ~14.4px) */
 html {
-  font-size: 90%;
+  font-size: 95%;
 }
 
 /* Design system theme tokens (HSL values without hsl()) */

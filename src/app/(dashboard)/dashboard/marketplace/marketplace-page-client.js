@@ -14,6 +14,7 @@ import { useConfirm } from "@/components/confirm-provider";
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft (not public)" },
   { value: "published", label: "Published" },
+  { value: "sold", label: "Sold" },
 ];
 
 const CAT_OPTIONS = [
@@ -341,18 +342,16 @@ export default function MarketplacePageClient() {
         <button
           type="button"
           onClick={() => setTab("items")}
-          className={`rounded-lg px-3 py-2 text-sm font-medium ${
-            tab === "items" ? "bg-primary text-white" : "bg-card text-secondary hover:bg-muted/50"
-          }`}
+          className={`rounded-lg px-3 py-2 text-sm font-medium ${tab === "items" ? "bg-primary text-white" : "bg-card text-secondary hover:bg-muted/50"
+            }`}
         >
           My listings
         </button>
         <button
           type="button"
           onClick={() => setTab("orders")}
-          className={`rounded-lg px-3 py-2 text-sm font-medium ${
-            tab === "orders" ? "bg-primary text-white" : "bg-card text-secondary hover:bg-muted/50"
-          }`}
+          className={`rounded-lg px-3 py-2 text-sm font-medium ${tab === "orders" ? "bg-primary text-white" : "bg-card text-secondary hover:bg-muted/50"
+            }`}
         >
           Buyer requests
         </button>

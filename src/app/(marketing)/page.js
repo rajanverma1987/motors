@@ -24,6 +24,10 @@ const workflowFeatures = [
     title: "Quotes system and approval tracking",
     detail: "A full quotes system: build quotes with labor and parts, attach to customers and motors, and send for approval. Track when the customer approves and convert to a work order with one click. Approval status is visible to the whole team, so you know which jobs are confirmed and which are still pending—no more duplicate data or lost follow-ups.",
   },
+  {
+    title: "Quote parts from shop inventory",
+    detail: "Add line items from your master parts catalog directly on the quote: see available quantity (on hand minus what’s reserved for other active jobs), order shortfalls with vendor POs when needed, and let reservations hold stock for the job until delivery. When the work order ships, consumed quantities come off inventory automatically so your books match the floor.",
+  },
 ];
 
 const managementFeatures = [
@@ -42,6 +46,10 @@ const managementFeatures = [
   {
     title: "Vendor management and purchase orders",
     detail: "Manage suppliers with contact and terms in one list. Create purchase orders for parts and materials, attach vendor invoices when they arrive, and track PO status (open, invoiced, paid). You always know what’s on order and what’s been paid—reducing duplicate orders and missed bills.",
+  },
+  {
+    title: "Shop parts inventory and stock control",
+    detail: "Run a parts catalog with SKU, unit of measure, on-hand and reserved counts, low-stock alerts, and optional locations (bins or aisles from settings). Manual adds and adjustments keep day-to-day accurate; receiving against vendor POs in logistics bumps stock without double entry. Dashboard reports highlight low inventory so you reorder before jobs wait on parts.",
   },
   {
     title: "Receiving and shipping logistics",
@@ -111,6 +119,7 @@ const plans = [
       "Lead generation network",
       "Public marketplace listings",
       "Vendor & PO management",
+      "Shop parts inventory & low-stock alerts",
       "Receiving & shipping",
       "Reports & analytics",
       "Unlimited users",
@@ -158,12 +167,12 @@ export default function HomePage() {
                 <span className="text-primary">More motors.</span>
               </h1>
               <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
-                One platform to run the center and fill the pipeline—work orders, job board, invoicing, qualified repair
-                leads, and a{" "}
+                One platform to run the center and fill the pipeline—work orders, job board, shop parts inventory with
+                reservations, invoicing, qualified repair leads, and a{" "}
                 <Link href="/marketplace" className="font-medium text-primary hover:underline">
                   public marketplace
                 </Link>{" "}
-                for parts and equipment in one place.
+                for surplus parts and equipment in one place.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Link href="/contact">
@@ -195,6 +204,10 @@ export default function HomePage() {
                   <Link href="/marketplace" className="hover:text-primary hover:underline">
                     Marketplace for parts & surplus
                   </Link>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                  Shop inventory, reservations &amp; low-stock alerts
                 </li>
               </ul>
             </div>
@@ -298,7 +311,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">Less admin, more repair work</h3>
               <p className="mt-2 text-sm text-secondary">
-                Invoicing, AR, vendors, and receiving live in one place instead of scattered across spreadsheets and other apps. You spend less time switching tools and re-keying data, and more time on the repair work and customer service that actually drive revenue.
+                Invoicing, AR, vendors, shop parts inventory, and receiving live in one place instead of scattered across spreadsheets and other apps. You spend less time switching tools and re-keying data, and more time on the repair work and customer service that actually drive revenue.
               </p>
             </div>
           </div>
@@ -316,11 +329,13 @@ export default function HomePage() {
               Features
             </h2>
             <p className="mt-4 text-lg text-secondary">
-              Everything you need to run and grow your motor repair center—workflow, operations, leads, and a{" "}
+              Everything you need to run and grow your motor repair center—workflow, operations,{" "}
+              <strong className="font-medium text-title">shop parts inventory</strong> (on-hand, reserved, locations,
+              low-stock), leads, and a separate{" "}
               <Link href="/marketplace" className="font-medium text-primary hover:underline">
                 public marketplace
               </Link>{" "}
-              for inventory you want to sell.
+              for surplus and equipment you want to advertise to buyers.
             </p>
           </div>
 
@@ -369,7 +384,7 @@ export default function HomePage() {
               Job management tools
             </h3>
             <p className="mt-3 max-w-2xl text-secondary">
-              One system for customers, the quotes system, invoicing, vendors, and logistics. Create invoices from completed work orders, track payments, and manage receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, and physical flow in sync without leaving the platform.
+              One system for customers, the quotes system, invoicing, vendors, shop inventory, and logistics. Create invoices from completed work orders, track payments, manage parts on hand and reservations, and handle receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, stock, and physical flow in sync without leaving the platform.
             </p>
             <ul className="mt-8 space-y-6">
               {managementFeatures.map((item) => (
@@ -552,7 +567,7 @@ export default function HomePage() {
             Ready to streamline your center?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-secondary">
-            Contact us for a demo and see how MotorsWinding.com can help you manage jobs and grow with leads.
+            Contact us for a demo and see how MotorsWinding.com can help you manage jobs, stock, and grow with leads.
           </p>
           <div className="mt-10">
             <Link href="/contact">
