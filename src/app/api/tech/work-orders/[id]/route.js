@@ -19,6 +19,20 @@ import {
 
 const LIMITS_SHORT = 200;
 
+function mapTechPhoto(p) {
+  if (!p || !p.url) return null;
+  return {
+    url: String(p.url).trim(),
+    uploadedAt: p.uploadedAt ? new Date(p.uploadedAt).toISOString() : null,
+    authorName: String(p.authorName || "").trim(),
+  };
+}
+
+function mapTechPhotoList(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(mapTechPhoto).filter(Boolean);
+}
+
 function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
@@ -123,6 +137,8 @@ export async function GET(request, context) {
           }
         : null,
       technicianAppNotes: notes,
+      technicianBeforePhotos: mapTechPhotoList(doc.technicianBeforePhotos),
+      technicianAfterPhotos: mapTechPhotoList(doc.technicianAfterPhotos),
     });
   } catch (err) {
     console.error("Tech get work order:", err);

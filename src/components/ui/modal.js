@@ -146,26 +146,32 @@ export default function Modal({
       >
         {(title != null || showClose || actions) && (
           <div
-            className={`flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-2 select-none sm:gap-3 ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
+            className={`flex min-h-11 min-w-0 flex-nowrap items-center gap-2 border-b border-border px-4 py-2 select-none sm:gap-3 ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
             onMouseDown={handleHeaderMouseDown}
           >
             {title != null && (
-              <h2 id="modal-title" className="text-lg font-semibold text-title pointer-events-none">
+              <h2
+                id="modal-title"
+                className="pointer-events-none max-w-[min(12rem,36vw)] shrink-0 self-center truncate text-lg font-semibold leading-snug text-title sm:max-w-[14rem] md:max-w-xs lg:max-w-sm"
+              >
                 {title}
               </h2>
             )}
-            <span className="flex-1 min-w-0" />
-            {actions != null && (
-              <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-1.5 sm:gap-2 pointer-events-auto">
-                {actions}
+            {actions != null ? (
+              <div className="pointer-events-auto flex min-h-0 min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
+                <div className="flex min-h-0 w-full min-w-0 flex-nowrap items-center justify-end gap-1 pr-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:items-center">
+                  {actions}
+                </div>
               </div>
+            ) : (
+              <span className="min-w-0 flex-1" aria-hidden />
             )}
             {showClose && (
               <button
                 type="button"
                 onClick={onClose}
                 onMouseDown={(e) => e.stopPropagation()}
-                className="rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer shrink-0"
+                className="inline-flex shrink-0 cursor-pointer items-center justify-center self-center rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Close"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

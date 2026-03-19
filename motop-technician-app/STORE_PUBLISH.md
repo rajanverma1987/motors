@@ -149,7 +149,8 @@ Follow prompts; commit changes.
 eas update --channel production --message "Fix work order save"
 ```
 
-Or: `npm run release:ota -- --message "…"` / `./scripts/release.sh ota "…"` from `motop-technician-app/`.
+Or: `npm run release:ota -- --message "…"` / `./scripts/release.sh ota "…"` from `motop-technician-app/`.  
+**Important:** plain `eas update` uses your local `.env` — if that is `localhost`, the OTA cannot log in on a phone. `npm run release:ota` injects the URL from `eas.json` `build.production.env` first.
 
 (Exact flags depend on your channel setup; `eas update --help` and [EAS Update docs](https://docs.expo.dev/eas-update/introduction/).)
 

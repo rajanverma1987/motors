@@ -30,7 +30,7 @@ case "${1:-}" in
   ota)
     shift
     MSG="${*:-Update}"
-    eas update --channel production --message "$MSG"
+    node scripts/eas-update-with-prod-api-url.js --channel production --message "$MSG"
     ;;
   ""|-h|--help) usage ;;
   *) echo "Unknown command: $1"; usage ;;

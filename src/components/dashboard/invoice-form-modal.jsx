@@ -448,7 +448,6 @@ export default function InvoiceFormModal({
       size="full"
       width="min(1344px, 78.4vw)"
       zIndex={zIndex}
-      headerClassName="!items-start sm:!items-center"
       actions={
         <>
           {canUseRecordActions && (

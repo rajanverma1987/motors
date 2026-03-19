@@ -22,6 +22,24 @@ The app calls your Next.js server. Set the base URL in **`.env`** in this folder
 
 If login **spins forever**, the request was hanging with no timeout before; now it errors after 20s. Fix the URL above and restart Expo.
 
+### EAS Update (`eas update`) — sign-in broken in Expo Go / store app?
+
+`eas update` bundles your JS **on your computer**. When Expo evaluates `app.config.js`, it uses **`EXPO_PUBLIC_API_URL` from your environment** (usually **`.env`**). If that is `http://127.0.0.1:3000`, the **published OTA** embeds that URL — your **phone cannot reach your laptop’s localhost**, so login fails.
+
+**Fix:** publish OTAs with your **production** HTTPS URL. This repo wires that for you:
+
+- Run **`npm run release:ota`** (or `./scripts/release.sh ota "message"`) — it sets `EXPO_PUBLIC_API_URL` from **`eas.json` → `build.production.env`** before `eas update`.
+- Or run manually:  
+  `EXPO_PUBLIC_API_URL=https://your-domain.com npx eas update --channel production`
+
+Avoid `npm run release:ota:raw` for production unless you already exported the correct URL in the shell.
+
+**Expo Go QR after `eas update`:** you’re loading the OTA bundle inside Expo Go; it still must use a **public HTTPS** API. For day-to-day testing, **`eas build`** + install the binary (or TestFlight / internal track) matches what technicians use in production.
+
+## Android package & iOS bundle ID
+
+Set in **`app.config.js`** (`android.package`, `ios.bundleIdentifier`). Current value: **`com.motorswinding.motoptechnician`**. Change only if you use a different app ID in Play Console / App Store Connect — **do not change** after publishing without understanding store migration.
+
 ## Expo Go vs SDK
 
 This project targets **Expo SDK 54** so it opens in **Expo Go 54.x** from the App Store / Play Store. If you upgrade the repo to SDK 55+, you must use a **development build** (`eas build --profile development`) until the store version of Expo Go catches up.
@@ -39,8 +57,8 @@ Then open in **Expo Go** (same major SDK as this project) or a dev build. Camera
 ## Backend routes (main repo)
 
 - `POST /api/tech/auth/login` — employee login; returns JWT + `workOrderStatuses`.
-- `GET /api/tech/rfq/:rfq/work-orders` — list work orders for that RFQ (Bearer token).
-- `GET /api/tech/motor-serial/:serial/work-orders` — **open** work orders for motors matching that serial (Bearer).
+- `GET /api/tech/rfq/:rfq/work-orders` — work orders for that RFQ **assigned to you** (`technicianEmployeeId` = logged-in employee) (Bearer).
+- `GET /api/tech/motor-serial/:serial/work-orders` — **open** work orders for that serial **assigned to you** (Bearer).
 - `GET /api/tech/work-orders/:id` — work order detail.
 - `PATCH /api/tech/work-orders/:id` — body: `{ status }` and/or `{ appendNote: "text" }`.
 

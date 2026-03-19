@@ -1,18 +1,25 @@
-import React, { useEffect, useState, useCallback, useLayoutEffect } from "react";
+import React, { useEffect, useState, useCallback, useLayoutEffect, useRef } from "react";
 import {
   View,
   Text,
-  ScrollView,
   TextInput,
   Pressable,
   StyleSheet,
   ActivityIndicator,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+  Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useHeaderHeight } from "@react-navigation/elements";
 import { useTechAuth } from "../TechAuthContext";
 import { useBookmarks } from "../BookmarksContext";
-import { techFetch } from "../api";
+import { techFetch, techFetchForm, getMediaUrl } from "../api";
+import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
 import { colors, spacing } from "../theme";
 
 const DEFAULT_JOB_TYPES = [
@@ -43,17 +50,26 @@ function WorkOrderBookmarkControl({ woId, wo }) {
   );
 }
 
-function SpecFieldGrid({ fields, values, onChange }) {
+function SpecFieldGrid({ fields, values, onChange, onFieldFocus }) {
+  const rowRefs = useRef({});
   if (!fields || fields.length === 0) return null;
   return (
     <View>
       {fields.map(({ key, label }) => (
-        <View key={key} style={styles.fieldRow}>
+        <View
+          key={key}
+          style={styles.fieldRow}
+          collapsable={false}
+          ref={(el) => {
+            rowRefs.current[key] = el;
+          }}
+        >
           <Text style={styles.fieldLabel}>{label}</Text>
           <TextInput
             style={styles.fieldInput}
             value={String(values[key] ?? "")}
             onChangeText={(t) => onChange(key, t)}
+            onFocus={() => onFieldFocus?.(rowRefs.current[key])}
             placeholder="—"
             placeholderTextColor={colors.secondary}
           />
@@ -64,8 +80,9 @@ function SpecFieldGrid({ fields, values, onChange }) {
 }
 
 export default function WorkOrderDetailScreen({ route, navigation }) {
+  const headerHeight = useHeaderHeight();
   const { id } = route.params || {};
-  const { token, workOrderStatuses } = useTechAuth();
+  const { token, workOrderStatuses, employee } = useTechAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [wo, setWo] = useState(null);
@@ -77,6 +94,11 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   const [dcSpecs, setDcSpecs] = useState({});
   const [armatureSpecs, setArmatureSpecs] = useState({});
   const [dcSection, setDcSection] = useState("dc");
+  const [uploadingKind, setUploadingKind] = useState(null);
+  const [photoPreviewUri, setPhotoPreviewUri] = useState(null);
+  const commentFieldWrapRef = useRef(null);
+
+  const { scrollRef, onScroll, scrollFieldToCenter } = useCenterFieldInScroll(headerHeight);
 
   const woId = wo?.id || id;
 
@@ -140,6 +162,73 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   };
 
   /** Single save: motor specs + optional comment. Status still updates via its own control. */
+  const uploadPhotoForKind = useCallback(
+    async (kind, source) => {
+      if (!token || !id) return;
+      try {
+        let result;
+        if (source === "camera") {
+          const perm = await ImagePicker.requestCameraPermissionsAsync();
+          if (!perm.granted) {
+            Alert.alert("Camera", "Camera access is needed to take a photo.");
+            return;
+          }
+          result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.85,
+            allowsEditing: false,
+          });
+        } else {
+          const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+          if (!perm.granted) {
+            Alert.alert("Photos", "Photo library access is needed to attach an image.");
+            return;
+          }
+          result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.85,
+            allowsEditing: false,
+          });
+        }
+        if (result.canceled || !result.assets?.[0]) return;
+        const asset = result.assets[0];
+        setUploadingKind(kind);
+        setError("");
+        const formData = new FormData();
+        const uri = asset.uri;
+        const nameGuess = uri.split("/").pop() || "photo.jpg";
+        const name = nameGuess.includes(".") ? nameGuess : `${nameGuess}.jpg`;
+        const mime = asset.mimeType || "image/jpeg";
+        formData.append("file", { uri, name, type: mime });
+        formData.append("kind", kind);
+        const out = await techFetchForm(`/api/tech/work-orders/${id}/photos`, { token, formData });
+        setWo((prev) =>
+          prev
+            ? {
+                ...prev,
+                technicianBeforePhotos: out.technicianBeforePhotos || prev.technicianBeforePhotos,
+                technicianAfterPhotos: out.technicianAfterPhotos || prev.technicianAfterPhotos,
+              }
+            : prev
+        );
+      } catch (e) {
+        setError(e.message || "Upload failed");
+      } finally {
+        setUploadingKind(null);
+      }
+    },
+    [token, id]
+  );
+
+  const offerAddPhoto = (kind) => {
+    const title = kind === "before" ? "Before photo" : "After photo";
+    Alert.alert(title, "Choose a source", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Take photo", onPress: () => uploadPhotoForKind(kind, "camera") },
+      { text: "Photo library", onPress: () => uploadPhotoForKind(kind, "library") },
+    ]);
+  };
+
   const saveWorkOrder = async () => {
     if (!token || !id || !wo) return;
     const noteText = comment.trim();
@@ -216,8 +305,27 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     (r) => (r.item || "").trim() || (r.qty || "").trim() || (r.uom || "").trim()
   );
 
+  const beforePhotos = Array.isArray(wo?.technicianBeforePhotos) ? wo.technicianBeforePhotos : [];
+  const afterPhotos = Array.isArray(wo?.technicianAfterPhotos) ? wo.technicianAfterPhotos : [];
+  const assigneeId = String(wo?.technicianEmployeeId || "").trim();
+  const meId = String(employee?.id || "").trim();
+  const canUploadPhotos = Boolean(meId && assigneeId && meId === assigneeId);
+
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView
+      style={styles.kav}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      keyboardVerticalOffset={Platform.OS === "ios" ? headerHeight : 0}
+    >
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+        contentContainerStyle={styles.scrollContent}
+      >
       {error ? <Text style={styles.bannerError}>{error}</Text> : null}
 
       <View style={styles.section}>
@@ -248,10 +356,6 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           <Text style={styles.readValue}>{wo?.customerCompany || wo?.companyName || "—"}</Text>
         </View>
         <View style={styles.readRow}>
-          <Text style={styles.readLabel}>Technician (employee id)</Text>
-          <Text style={styles.readValue}>{wo?.technicianEmployeeId || "—"}</Text>
-        </View>
-        <View style={styles.readRow}>
           <Text style={styles.readLabel}>Job type</Text>
           <Text style={styles.readValue}>{jobTypeLabel}</Text>
         </View>
@@ -267,6 +371,84 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           <Text style={styles.statusBtnText}>{pendingStatus || wo?.status || "—"}</Text>
           <Text style={styles.statusChevron}>Change</Text>
         </Pressable>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Before photos</Text>
+        <Text style={styles.photoHelp}>
+          Condition before repair. {canUploadPhotos ? "Tap + Add to upload." : "Only the assigned technician can add photos."}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.photoStrip}
+          keyboardShouldPersistTaps="handled"
+        >
+          {beforePhotos.map((p, i) => (
+            <Pressable
+              key={`b-${p.url}-${i}`}
+              onPress={() => setPhotoPreviewUri(getMediaUrl(p.url))}
+              style={styles.photoThumbWrap}
+            >
+              <Image source={{ uri: getMediaUrl(p.url) }} style={styles.photoThumb} />
+            </Pressable>
+          ))}
+          {canUploadPhotos ? (
+            <Pressable
+              style={[styles.addPhotoTile, uploadingKind === "before" && styles.addPhotoTileBusy]}
+              onPress={() => offerAddPhoto("before")}
+              disabled={uploadingKind !== null}
+            >
+              {uploadingKind === "before" ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={styles.addPhotoText}>+ Add</Text>
+              )}
+            </Pressable>
+          ) : null}
+        </ScrollView>
+        {!canUploadPhotos && beforePhotos.length === 0 ? (
+          <Text style={styles.photoEmpty}>No before photos yet.</Text>
+        ) : null}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>After photos</Text>
+        <Text style={styles.photoHelp}>
+          Condition after repair. {canUploadPhotos ? "Tap + Add to upload." : "Only the assigned technician can add photos."}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.photoStrip}
+          keyboardShouldPersistTaps="handled"
+        >
+          {afterPhotos.map((p, i) => (
+            <Pressable
+              key={`a-${p.url}-${i}`}
+              onPress={() => setPhotoPreviewUri(getMediaUrl(p.url))}
+              style={styles.photoThumbWrap}
+            >
+              <Image source={{ uri: getMediaUrl(p.url) }} style={styles.photoThumb} />
+            </Pressable>
+          ))}
+          {canUploadPhotos ? (
+            <Pressable
+              style={[styles.addPhotoTile, uploadingKind === "after" && styles.addPhotoTileBusy]}
+              onPress={() => offerAddPhoto("after")}
+              disabled={uploadingKind !== null}
+            >
+              {uploadingKind === "after" ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={styles.addPhotoText}>+ Add</Text>
+              )}
+            </Pressable>
+          ) : null}
+        </ScrollView>
+        {!canUploadPhotos && afterPhotos.length === 0 ? (
+          <Text style={styles.photoEmpty}>No after photos yet.</Text>
+        ) : null}
       </View>
 
       {motor ? (
@@ -323,6 +505,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
             fields={acFields}
             values={acSpecs}
             onChange={(k, v) => setAcSpecs((prev) => ({ ...prev, [k]: v }))}
+            onFieldFocus={scrollFieldToCenter}
           />
         </View>
       )}
@@ -355,12 +538,14 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
               fields={dcMotorFields}
               values={dcSpecs}
               onChange={(k, v) => setDcSpecs((prev) => ({ ...prev, [k]: v }))}
+              onFieldFocus={scrollFieldToCenter}
             />
           ) : (
             <SpecFieldGrid
               fields={armatureFields}
               values={armatureSpecs}
               onChange={(k, v) => setArmatureSpecs((prev) => ({ ...prev, [k]: v }))}
+              onFieldFocus={scrollFieldToCenter}
             />
           )}
         </View>
@@ -368,14 +553,17 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notes (optional)</Text>
-        <TextInput
-          style={styles.textArea}
-          value={comment}
-          onChangeText={setComment}
-          placeholder="Notes from the floor…"
-          placeholderTextColor={colors.secondary}
-          multiline
-        />
+        <View collapsable={false} ref={commentFieldWrapRef}>
+          <TextInput
+            style={styles.textArea}
+            value={comment}
+            onChangeText={setComment}
+            onFocus={() => scrollFieldToCenter(commentFieldWrapRef.current)}
+            placeholder="Notes from the floor…"
+            placeholderTextColor={colors.secondary}
+            multiline
+          />
+        </View>
         <Pressable
           style={[styles.btn, saving && styles.btnDisabled]}
           onPress={saveWorkOrder}
@@ -402,6 +590,27 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
         </View>
       ) : null}
 
+      <Modal
+        visible={!!photoPreviewUri}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoPreviewUri(null)}
+      >
+        <Pressable style={styles.previewBackdrop} onPress={() => setPhotoPreviewUri(null)}>
+          {photoPreviewUri ? (
+            <Image
+              pointerEvents="none"
+              source={{ uri: photoPreviewUri }}
+              style={styles.previewImage}
+              resizeMode="contain"
+            />
+          ) : null}
+          <Text style={styles.previewHint} pointerEvents="none">
+            Tap anywhere to close
+          </Text>
+        </Pressable>
+      </Modal>
+
       <Modal visible={statusPickerOpen} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <Pressable style={StyleSheet.absoluteFill} onPress={() => setStatusPickerOpen(false)} />
@@ -426,18 +635,22 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: {
+  kav: {
     flex: 1,
     backgroundColor: colors.bg,
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContent: {
     padding: spacing.lg,
-    paddingBottom: 48,
+    paddingBottom: 320,
   },
   center: {
     flex: 1,
@@ -706,5 +919,70 @@ const styles = StyleSheet.create({
   modalCancelText: {
     color: colors.secondary,
     fontSize: 16,
+  },
+  photoHelp: {
+    fontSize: 13,
+    color: colors.secondary,
+    marginBottom: spacing.md,
+    lineHeight: 18,
+  },
+  photoStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  photoThumbWrap: {
+    marginRight: 10,
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  photoThumb: {
+    width: 88,
+    height: 88,
+    backgroundColor: colors.formBg,
+  },
+  addPhotoTile: {
+    marginRight: 10,
+    width: 88,
+    height: 88,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderStyle: "dashed",
+    borderColor: colors.primary,
+    backgroundColor: "hsl(214, 72%, 97%)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addPhotoTileBusy: {
+    opacity: 0.85,
+  },
+  addPhotoText: {
+    color: colors.primary,
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  photoEmpty: {
+    marginTop: spacing.sm,
+    fontSize: 13,
+    color: colors.secondary,
+    fontStyle: "italic",
+  },
+  previewBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  previewImage: {
+    width: "100%",
+    height: "72%",
+  },
+  previewHint: {
+    marginTop: spacing.lg,
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 14,
   },
 });

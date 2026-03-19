@@ -14,6 +14,22 @@ export function categoryLabel(value) {
   return MARKETPLACE_CATEGORIES.find((c) => c.value === value)?.label || "Other";
 }
 
+/**
+ * Absolute URL for OG / SSR when `images` store site-relative paths (/uploads/...).
+ * @param {string} url
+ * @param {string} siteBase - no trailing slash, e.g. from getPublicSiteUrl()
+ */
+export function absoluteMarketplaceImageUrl(url, siteBase) {
+  if (!url || typeof url !== "string") return "";
+  const u = url.trim();
+  if (!u) return "";
+  if (/^https?:\/\//i.test(u)) return u;
+  const base = String(siteBase || "").replace(/\/+$/, "");
+  if (!base) return u;
+  if (u.startsWith("/")) return `${base}${u}`;
+  return `${base}/${u}`;
+}
+
 function slugifyBase(title) {
   const s = String(title || "")
     .toLowerCase()

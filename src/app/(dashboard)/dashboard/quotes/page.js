@@ -35,6 +35,10 @@ import MotorAssetReadonlyDetail from "@/components/motor-asset-readonly-detail";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 
+/** Quote modal header: one row, smaller type (see Modal toolbar overflow-x). */
+const QH_BTN = "!px-2 !py-0.5 !text-xs whitespace-nowrap";
+const QH_IC = "mr-1 h-3.5 w-3.5 shrink-0 inline";
+
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "sent", label: "Sent" },
@@ -1078,22 +1082,21 @@ export default function DashboardQuotesPage() {
         title="Create Quote"
         size="full"
         width="55vw"
-        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
-            <span title="Save the RFQ prior to attach documents" className="inline-block">
-              <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
-                <FiPaperclip className="mr-1.5 h-4 w-4 inline" />Attachments
+            <span title="Save the RFQ prior to attach documents" className="inline-block shrink-0">
+              <Button type="button" variant="outline" size="sm" className={QH_BTN} disabled onClick={() => {}}>
+                <FiPaperclip className={QH_IC} />Attachments
               </Button>
             </span>
-            <span title="Save the RFQ prior to send to customer" className="inline-block">
-              <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
-                <FiSend className="mr-1.5 h-4 w-4 inline" />Send to Customer
+            <span title="Save the RFQ prior to send to customer" className="inline-block shrink-0">
+              <Button type="button" variant="outline" size="sm" className={QH_BTN} disabled onClick={() => {}}>
+                <FiSend className={QH_IC} />Send to Customer
               </Button>
             </span>
-            <span title="Save the RFQ prior to print" className="inline-block">
-              <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
-                <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
+            <span title="Save the RFQ prior to print" className="inline-block shrink-0">
+              <Button type="button" variant="outline" size="sm" className={QH_BTN} disabled onClick={() => {}}>
+                <FiPrinter className={QH_IC} />Print
               </Button>
             </span>
             <span
@@ -1102,14 +1105,14 @@ export default function DashboardQuotesPage() {
                   ? "Print QR label (quote #) for shop floor"
                   : "RFQ number not assigned yet"
               }
-              className="inline-block"
+              className="inline-block shrink-0"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={!nextRfqNumber?.trim()}
-                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                className={`${QH_BTN} inline-flex min-w-0 items-center gap-0.5`}
                 aria-label="Print motor tag QR"
                 onClick={() =>
                   handlePrintMotorTagQr(nextRfqNumber, {
@@ -1121,17 +1124,24 @@ export default function DashboardQuotesPage() {
                   })
                 }
               >
-                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+                <LuQrCode className="mr-0.5 h-3.5 w-3.5 shrink-0 inline" aria-hidden />
+                Tag QR
               </Button>
             </span>
-            <span title="Save the RFQ prior to create work order" className="inline-block">
-              <Button type="button" variant="outline" size="sm" disabled onClick={() => {}}>
-                <FiClipboard className="mr-1.5 h-4 w-4 inline" />Create work order
+            <span title="Save the RFQ prior to create work order" className="inline-block shrink-0">
+              <Button type="button" variant="outline" size="sm" className={QH_BTN} disabled onClick={() => {}}>
+                <FiClipboard className={QH_IC} />Create work order
               </Button>
             </span>
-            <Button type="submit" form="create-quote-form" variant="primary" size="sm" disabled={savingQuote}>
-              {savingQuote ? "Saving…" : <><FiSave className="mr-1.5 h-4 w-4 inline" />Save</>}
+            <Button
+              type="submit"
+              form="create-quote-form"
+              variant="primary"
+              size="sm"
+              className={`${QH_BTN} shrink-0`}
+              disabled={savingQuote}
+            >
+              {savingQuote ? "Saving…" : <><FiSave className={QH_IC} />Save</>}
             </Button>
           </>
         }
@@ -1419,40 +1429,42 @@ export default function DashboardQuotesPage() {
         title="Quote details"
         size="full"
         width="55vw"
-        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => openAttachmentModal(viewingQuote?.id, viewingQuote?.rfqNumber, viewingQuote?.attachments)}
               >
-                <FiPaperclip className="mr-1.5 h-4 w-4 inline" />Attachments
+                <FiPaperclip className={QH_IC} />Attachments
               </Button>
             </span>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to send to customer" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to send to customer" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id || sendingQuote}
                 onClick={handleSendToCustomer}
               >
-                {sendingQuote ? <><FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />Sending…</> : <><FiSend className="mr-1.5 h-4 w-4 inline" />Send to Customer</>}
+                {sendingQuote ? <><FiRotateCw className={`${QH_IC} animate-spin`} aria-hidden />Sending…</> : <><FiSend className={QH_IC} />Send to Customer</>}
               </Button>
             </span>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to print" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to print" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => handlePrintQuote(viewingQuote)}
               >
-                <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
+                <FiPrinter className={QH_IC} />Print
               </Button>
             </span>
             <span
@@ -1461,14 +1473,14 @@ export default function DashboardQuotesPage() {
                   ? "Print QR motor tag (encodes this quote #)"
                   : "No quote number"
               }
-              className="inline-block"
+              className="inline-block shrink-0"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={!viewingQuote?.rfqNumber?.trim()}
-                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                className={`${QH_BTN} inline-flex min-w-0 items-center gap-0.5`}
                 aria-label="Print motor tag QR"
                 onClick={() =>
                   handlePrintMotorTagQr(viewingQuote.rfqNumber, {
@@ -1478,8 +1490,8 @@ export default function DashboardQuotesPage() {
                   })
                 }
               >
-                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+                <LuQrCode className="mr-0.5 h-3.5 w-3.5 shrink-0 inline" aria-hidden />
+                Tag QR
               </Button>
             </span>
             <span
@@ -1488,16 +1500,17 @@ export default function DashboardQuotesPage() {
                   ? "Save the RFQ first"
                   : "Open work order form — saved to database when you click Save on that form"
               }
-              className="inline-block"
+              className="inline-block shrink-0"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => handleCreateWorkOrder(viewingQuote?.id)}
               >
-                <FiClipboard className="mr-1.5 h-4 w-4 inline" />
+                <FiClipboard className={QH_IC} />
                 Create work order
               </Button>
             </span>
@@ -1505,13 +1518,14 @@ export default function DashboardQuotesPage() {
               type="button"
               variant="outline"
               size="sm"
+              className={`${QH_BTN} shrink-0`}
               disabled={!viewingQuote?.id || workOrderLookupLoading}
               onClick={() => handleViewWorkOrder(viewingQuote?.id)}
             >
               {workOrderLookupLoading ? (
-                <FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />
+                <FiRotateCw className={`${QH_IC} animate-spin`} aria-hidden />
               ) : (
-                <FiEye className="mr-1.5 h-4 w-4 inline" />
+                <FiEye className={QH_IC} />
               )}
               View work order
             </Button>
@@ -1519,13 +1533,25 @@ export default function DashboardQuotesPage() {
               type="button"
               variant="outline"
               size="sm"
+              className={`${QH_BTN} shrink-0`}
               disabled={!viewingQuote?.id}
               onClick={() => handleCreateInvoiceFromQuote(viewingQuote?.id)}
             >
-              <FiFileText className="mr-1.5 h-4 w-4 inline" />
+              <FiFileText className={QH_IC} />
               Create invoice
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => { closeViewModal(); openEditModal(viewingQuote); }}>Edit</Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={`${QH_BTN} shrink-0`}
+              onClick={() => {
+                closeViewModal();
+                openEditModal(viewingQuote);
+              }}
+            >
+              Edit
+            </Button>
           </>
         }
       >
@@ -1661,36 +1687,38 @@ export default function DashboardQuotesPage() {
         title="Edit quote"
         size="full"
         width="55vw"
-        headerClassName="!flex-wrap gap-y-2"
         actions={
           <>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to attach documents" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => openAttachmentModal(viewingQuote?.id, viewingQuote?.rfqNumber ?? form.rfqNumber, viewingQuote?.attachments)}
               >
-                <FiPaperclip className="mr-1.5 h-4 w-4 inline" />Attachments
+                <FiPaperclip className={QH_IC} />Attachments
               </Button>
             </span>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to send to customer" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to send to customer" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id || sendingQuote}
                 onClick={handleSendToCustomer}
               >
-                {sendingQuote ? <><FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />Sending…</> : <><FiSend className="mr-1.5 h-4 w-4 inline" />Send to Customer</>}
+                {sendingQuote ? <><FiRotateCw className={`${QH_IC} animate-spin`} aria-hidden />Sending…</> : <><FiSend className={QH_IC} />Send to Customer</>}
               </Button>
             </span>
-            <span title={!viewingQuote?.id ? "Save the RFQ prior to print" : undefined} className="inline-block">
+            <span title={!viewingQuote?.id ? "Save the RFQ prior to print" : undefined} className="inline-block shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => handlePrintQuote({
                   ...viewingQuote,
@@ -1699,7 +1727,7 @@ export default function DashboardQuotesPage() {
                   partsLines: Array.isArray(form.partsLines) ? form.partsLines : (viewingQuote?.partsLines ?? []),
                 })}
               >
-                <FiPrinter className="mr-1.5 h-4 w-4 inline" />Print
+                <FiPrinter className={QH_IC} />Print
               </Button>
             </span>
             <span
@@ -1708,14 +1736,14 @@ export default function DashboardQuotesPage() {
                   ? "Print QR motor tag (encodes this quote #)"
                   : "No quote number"
               }
-              className="inline-block"
+              className="inline-block shrink-0"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={!(form.rfqNumber || viewingQuote?.rfqNumber || "").trim()}
-                className="inline-flex min-w-0 items-center gap-0.5 px-2 sm:gap-1 sm:px-2.5"
+                className={`${QH_BTN} inline-flex min-w-0 items-center gap-0.5`}
                 aria-label="Print motor tag QR"
                 onClick={() => {
                   const mid = form.motorId || viewingQuote?.motorId;
@@ -1727,8 +1755,8 @@ export default function DashboardQuotesPage() {
                   });
                 }}
               >
-                <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
-                <span className="max-[680px]:sr-only text-xs">Tag QR</span>
+                <LuQrCode className="mr-0.5 h-3.5 w-3.5 shrink-0 inline" aria-hidden />
+                Tag QR
               </Button>
             </span>
             <span
@@ -1737,16 +1765,17 @@ export default function DashboardQuotesPage() {
                   ? "Save the RFQ first"
                   : "Open work order form — saved to database when you click Save on that form"
               }
-              className="inline-block"
+              className="inline-block shrink-0"
             >
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className={QH_BTN}
                 disabled={!viewingQuote?.id}
                 onClick={() => handleCreateWorkOrder(viewingQuote?.id)}
               >
-                <FiClipboard className="mr-1.5 h-4 w-4 inline" />
+                <FiClipboard className={QH_IC} />
                 Create work order
               </Button>
             </span>
@@ -1754,13 +1783,14 @@ export default function DashboardQuotesPage() {
               type="button"
               variant="outline"
               size="sm"
+              className={`${QH_BTN} shrink-0`}
               disabled={!viewingQuote?.id || workOrderLookupLoading}
               onClick={() => handleViewWorkOrder(viewingQuote?.id)}
             >
               {workOrderLookupLoading ? (
-                <FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />
+                <FiRotateCw className={`${QH_IC} animate-spin`} aria-hidden />
               ) : (
-                <FiEye className="mr-1.5 h-4 w-4 inline" />
+                <FiEye className={QH_IC} />
               )}
               View work order
             </Button>
@@ -1768,14 +1798,22 @@ export default function DashboardQuotesPage() {
               type="button"
               variant="outline"
               size="sm"
+              className={`${QH_BTN} shrink-0`}
               disabled={!viewingQuote?.id}
               onClick={() => handleCreateInvoiceFromQuote(viewingQuote?.id)}
             >
-              <FiFileText className="mr-1.5 h-4 w-4 inline" />
+              <FiFileText className={QH_IC} />
               Create invoice
             </Button>
-            <Button type="submit" form="edit-quote-form" variant="primary" size="sm" disabled={savingQuote}>
-              {savingQuote ? "Saving…" : <><FiSave className="mr-1.5 h-4 w-4 inline" />Save</>}
+            <Button
+              type="submit"
+              form="edit-quote-form"
+              variant="primary"
+              size="sm"
+              className={`${QH_BTN} shrink-0`}
+              disabled={savingQuote}
+            >
+              {savingQuote ? "Saving…" : <><FiSave className={QH_IC} />Save</>}
             </Button>
           </>
         }

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPublishedItemBySlug, getAllPublishedSlugs, categoryLabel } from "@/lib/marketplace";
+import {
+  getPublishedItemBySlug,
+  getAllPublishedSlugs,
+  categoryLabel,
+  absoluteMarketplaceImageUrl,
+} from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import MarketplaceOrderForm from "../marketplace-order-form";
 
@@ -29,7 +34,8 @@ export async function generateMetadata({ params }) {
     160
   );
   const url = `${base}/marketplace/${item.slug}`;
-  const ogImage = Array.isArray(item.images) && item.images[0] ? item.images[0] : null;
+  const rawFirst = Array.isArray(item.images) && item.images[0] ? String(item.images[0]).trim() : "";
+  const ogImage = rawFirst ? absoluteMarketplaceImageUrl(rawFirst, base) : null;
   return {
     title,
     description: desc,
@@ -52,8 +58,14 @@ export async function generateMetadata({ params }) {
   };
 }
 
-function productJsonLd(item, canonicalUrl) {
-  const images = Array.isArray(item.images) ? item.images.filter(Boolean).slice(0, 10) : [];
+function productJsonLd(item, canonicalUrl, siteBase) {
+  const images = Array.isArray(item.images)
+    ? item.images
+        .filter(Boolean)
+        .slice(0, 10)
+        .map((u) => absoluteMarketplaceImageUrl(String(u), siteBase))
+        .filter(Boolean)
+    : [];
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -83,8 +95,10 @@ export default async function MarketplaceItemPage({ params }) {
 
   const base = getPublicSiteUrl();
   const canonicalUrl = `${base}/marketplace/${item.slug}`;
-  const jsonLd = productJsonLd(item, canonicalUrl);
-  const images = Array.isArray(item.images) ? item.images.filter(Boolean) : [];
+  const jsonLd = productJsonLd(item, canonicalUrl, base);
+  const images = Array.isArray(item.images)
+    ? item.images.filter(Boolean).map((u) => absoluteMarketplaceImageUrl(String(u), base))
+    : [];
 
   return (
     <>

@@ -18,7 +18,13 @@ function navigateToWorkOrderIfPossible(workOrderId) {
   if (!id) return;
   const go = () => {
     if (navigationRef.isReady()) {
-      navigationRef.navigate("WorkOrderDetail", { id });
+      navigationRef.navigate("MainTabs", {
+        screen: "Jobs",
+        params: {
+          screen: "WorkOrderDetail",
+          params: { id },
+        },
+      });
     }
   };
   go();

@@ -31,6 +31,30 @@ const workOrderSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    /** Before photos from technician app (shop-floor condition). */
+    technicianBeforePhotos: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true },
+          uploadedAt: { type: Date, default: Date.now },
+          authorId: { type: String, default: "", trim: true },
+          authorName: { type: String, default: "", trim: true },
+        },
+      ],
+      default: [],
+    },
+    /** After photos from technician app (post-repair). */
+    technicianAfterPhotos: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true },
+          uploadedAt: { type: Date, default: Date.now },
+          authorId: { type: String, default: "", trim: true },
+          authorName: { type: String, default: "", trim: true },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
@@ -38,5 +62,6 @@ const workOrderSchema = new mongoose.Schema(
 workOrderSchema.index({ createdByEmail: 1, createdAt: -1 });
 workOrderSchema.index({ createdByEmail: 1, quoteId: 1 });
 workOrderSchema.index({ createdByEmail: 1, workOrderNumber: 1 }, { unique: true });
+workOrderSchema.index({ createdByEmail: 1, technicianEmployeeId: 1, updatedAt: -1 });
 
 export default mongoose.models.WorkOrder || mongoose.model("WorkOrder", workOrderSchema);

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { FiEdit2, FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -25,13 +25,21 @@ const CAT_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
+function parseImagesText(text) {
+  return String(text || "")
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+}
+
 const EMPTY_ITEM = {
   title: "",
   description: "",
   category: "other",
   priceDisplay: "",
   condition: "",
-  imagesText: "",
+  images: [],
   status: "draft",
   shopNameSnapshot: "MotorsWinding.com",
 };
@@ -53,6 +61,8 @@ export default function AdminMarketplacePage() {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_ITEM);
   const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -97,7 +107,7 @@ export default function AdminMarketplacePage() {
       category: row.category || "other",
       priceDisplay: row.priceDisplay || "",
       condition: row.condition || "",
-      imagesText: Array.isArray(row.images) ? row.images.join("\n") : "",
+      images: Array.isArray(row.images) ? row.images.filter(Boolean).slice(0, 10) : [],
       status: row.status || "draft",
       shopNameSnapshot: row.shopNameSnapshot || "MotorsWinding.com",
     });
@@ -115,11 +125,7 @@ export default function AdminMarketplacePage() {
       toast.error("Title is required.");
       return;
     }
-    const images = form.imagesText
-      .split(/[\n,]+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 10);
+    const images = (Array.isArray(form.images) ? form.images : []).filter(Boolean).slice(0, 10);
     const payload = {
       title: form.title.trim(),
       description: form.description.trim(),
@@ -181,6 +187,35 @@ export default function AdminMarketplacePage() {
       load();
     } catch (e) {
       toast.error(e.message || "Could not delete");
+    }
+  };
+
+  const onImageFiles = async (e) => {
+    const input = e.target;
+    const files = input.files;
+    if (!files?.length) return;
+    setUploadingImage(true);
+    try {
+      let acc = [...(Array.isArray(form.images) ? form.images : [])];
+      for (const file of Array.from(files)) {
+        if (acc.length >= 10) break;
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/admin/marketplace/upload-image", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        if (data.url) acc = [...acc, data.url].slice(0, 10);
+      }
+      setForm((f) => ({ ...f, images: acc }));
+    } catch (err) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setUploadingImage(false);
+      input.value = "";
     }
   };
 
@@ -297,9 +332,10 @@ export default function AdminMarketplacePage() {
   );
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold text-title">Marketplace (platform)</h1>
-      <p className="mt-1 text-sm text-secondary">
+    <div className="flex w-full flex-1 justify-center">
+      <div className="w-full max-w-7xl p-6">
+      <h1 className="text-center text-2xl font-bold text-title">Marketplace (platform)</h1>
+      <p className="mt-1 text-center text-sm text-secondary">
         List items on the public marketplace as MotorsWinding.com. Orders appear here for your team to fulfill—no
         payment is collected on the site.
       </p>
@@ -418,14 +454,76 @@ export default function AdminMarketplacePage() {
               onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
             />
           </div>
-          <Textarea
-            label="Image URLs (one per line)"
-            value={form.imagesText}
-            onChange={(e) => setForm((f) => ({ ...f, imagesText: e.target.value }))}
-            rows={3}
-          />
+          <div>
+            <p className="mb-1 text-xs font-medium text-secondary">Photos</p>
+            <p className="mb-2 text-xs text-secondary">
+              Up to 10 images. Upload files or paste URLs — they appear on the public marketplace listing.
+            </p>
+            {form.images.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {form.images.map((url, i) => (
+                  <div
+                    key={`${url}-${i}`}
+                    className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 rounded bg-card/95 p-1 text-danger shadow-sm ring-1 ring-border hover:bg-card"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          images: f.images.filter((_, j) => j !== i),
+                        }))
+                      }
+                      aria-label="Remove photo"
+                    >
+                      <FiX className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                multiple
+                className="hidden"
+                onChange={onImageFiles}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploadingImage || form.images.length >= 10}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5"
+              >
+                {uploadingImage ? (
+                  "Uploading…"
+                ) : (
+                  <>
+                    <FiUpload className="h-4 w-4" />
+                    Upload photos
+                  </>
+                )}
+              </Button>
+              <span className="text-xs text-secondary">{form.images.length}/10</span>
+            </div>
+            <Textarea
+              label="Image URLs (optional, one per line)"
+              value={form.images.join("\n")}
+              onChange={(e) => setForm((f) => ({ ...f, images: parseImagesText(e.target.value) }))}
+              rows={3}
+              placeholder="https://… or leave blank if you only use uploads"
+            />
+          </div>
         </Form>
       </Modal>
+      </div>
     </div>
   );
 }

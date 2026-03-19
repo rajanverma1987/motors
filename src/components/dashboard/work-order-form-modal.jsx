@@ -333,7 +333,7 @@ export default function WorkOrderFormModal({
             ? `Work order ${editing.workOrderNumber}`
             : "Work order"
       }
-      width="min(1600px, 96vw)"
+      width="min(1280px, 76.8vw)"
       zIndex={zIndex}
       actions={
         showForm ? (

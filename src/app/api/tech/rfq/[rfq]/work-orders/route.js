@@ -36,12 +36,16 @@ export async function GET(request, context) {
     }
 
     const quoteId = quote._id.toString();
-    const list = await WorkOrder.find({
-      createdByEmail: tech.shopEmail,
-      quoteId,
-    })
-      .sort({ workOrderNumber: 1 })
-      .lean();
+    const assigneeId = String(tech.employeeId || "").trim();
+    const list = assigneeId
+      ? await WorkOrder.find({
+          createdByEmail: tech.shopEmail,
+          quoteId,
+          technicianEmployeeId: assigneeId,
+        })
+          .sort({ workOrderNumber: 1 })
+          .lean()
+      : [];
 
     const workOrders = list.map((w) => ({
       id: w._id.toString(),

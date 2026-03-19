@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getPublishedMarketplaceItems, categoryLabel, MARKETPLACE_CATEGORIES } from "@/lib/marketplace";
+import {
+  getPublishedMarketplaceItems,
+  categoryLabel,
+  MARKETPLACE_CATEGORIES,
+  absoluteMarketplaceImageUrl,
+} from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 export async function generateMetadata({ searchParams }) {
@@ -31,6 +36,7 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
   const sp = await searchParams;
   const q = typeof sp?.q === "string" ? sp.q : "";
   const category = typeof sp?.category === "string" ? sp.category : "all";
+  const siteBase = getPublicSiteUrl();
   const items = await getPublishedMarketplaceItems({
     q: q.trim() || undefined,
     category: category === "all" ? undefined : category,
@@ -99,7 +105,8 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
         ) : (
           <ul className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((item) => {
-              const img = Array.isArray(item.images) && item.images[0] ? item.images[0] : null;
+              const raw = Array.isArray(item.images) && item.images[0] ? String(item.images[0]).trim() : "";
+              const img = raw ? absoluteMarketplaceImageUrl(raw, siteBase) : null;
               return (
                 <li key={String(item._id)}>
                   <Link

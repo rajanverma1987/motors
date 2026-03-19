@@ -22,15 +22,21 @@ module.exports = {
       backgroundColor: "#f5f7fa",
     },
     ios: {
+      bundleIdentifier: "com.motorswinding.motoptechnician",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
           "Motop Technician uses the camera to scan RFQ QR codes printed from the CRM motor tags.",
         NSUserNotificationsUsageDescription:
           "Motop Technician sends alerts when a work order is assigned to you.",
+        NSPhotoLibraryUsageDescription:
+          "Motop Technician attaches before and after photos to your work orders.",
       },
     },
     android: {
+      package: "com.motorswinding.motoptechnician",
+      /** Resize window when keyboard opens so inputs stay visible (not covered). */
+      softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
         foregroundImage: "./assets/android-icon-foreground.png",
@@ -44,6 +50,13 @@ module.exports = {
         "expo-camera",
         {
           cameraPermission: "Allow Motop Technician to scan RFQ QR codes from motor tags.",
+        },
+      ],
+      [
+        "expo-image-picker",
+        {
+          photosPermission: "Motop Technician saves before and after photos on work orders.",
+          cameraPermission: "Motop Technician can take before and after photos on the shop floor.",
         },
       ],
       [

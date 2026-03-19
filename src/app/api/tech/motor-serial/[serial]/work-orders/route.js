@@ -44,12 +44,16 @@ export async function GET(request, context) {
     }
 
     const motorIds = motors.map((m) => m._id.toString());
-    const list = await WorkOrder.find({
-      createdByEmail: tech.shopEmail,
-      motorId: { $in: motorIds },
-    })
-      .sort({ workOrderNumber: 1 })
-      .lean();
+    const assigneeId = String(tech.employeeId || "").trim();
+    const list = assigneeId
+      ? await WorkOrder.find({
+          createdByEmail: tech.shopEmail,
+          motorId: { $in: motorIds },
+          technicianEmployeeId: assigneeId,
+        })
+          .sort({ workOrderNumber: 1 })
+          .lean()
+      : [];
 
     const openOnly = list.filter((w) => isWorkOrderOpenStatus(w.status));
 
