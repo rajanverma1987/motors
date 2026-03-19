@@ -20,5 +20,17 @@ export function middleware(request) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/listings/:path*", "/admin/leads/:path*", "/admin/clients/:path*", "/admin/location-pages/:path*", "/admin/marketing/:path*", "/dashboard", "/dashboard/:path*"],
+  matcher: [
+    "/admin",
+    "/admin/listings/:path*",
+    "/admin/leads/:path*",
+    "/admin/clients/:path*",
+    "/admin/location-pages/:path*",
+    "/admin/marketing/:path*",
+    "/admin/marketplace/:path*",
+    "/admin/support",
+    "/admin/support/:path*",
+    "/dashboard",
+    "/dashboard/:path*",
+  ],
 };

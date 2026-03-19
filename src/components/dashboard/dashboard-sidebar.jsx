@@ -23,6 +23,8 @@ import {
   FiSettings,
   FiLayout,
   FiShoppingBag,
+  FiLifeBuoy,
+  FiMapPin,
 } from "react-icons/fi";
 
 const CUSTOMERS_NAV = [
@@ -62,7 +64,9 @@ const TOOLS_NAV = [
   { href: "/dashboard/calculators", label: "Calculators", icon: FiSliders },
   { href: "/dashboard/reports", label: "Reports", icon: FiBarChart2 },
   { href: "/dashboard/marketplace", label: "Marketplace", icon: FiShoppingBag },
+  { href: "/dashboard/directory-listing", label: "Directory listing", icon: FiMapPin },
   { href: "/dashboard/customer-portal", label: "Customer portal", icon: FiGlobe },
+  { href: "/dashboard/support", label: "Support", icon: FiLifeBuoy },
 ];
 
 const NAV_GROUPS = [

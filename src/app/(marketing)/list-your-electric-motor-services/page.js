@@ -4,146 +4,13 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
-import Checkbox from "@/components/ui/checkbox";
 import {
   FormContainer,
   FormSectionTitle,
 } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
-
-// Checkbox option groups per 2.3
-const SERVICES_OFFERED = [
-  { key: "acMotorRepair", label: "AC Motor Repair" },
-  { key: "dcMotorRepair", label: "DC Motor Repair" },
-  { key: "motorRewinding", label: "Motor Rewinding" },
-  { key: "pumpRepair", label: "Pump Repair" },
-  { key: "generatorRepair", label: "Generator Repair" },
-  { key: "servoMotorRepair", label: "Servo Motor Repair" },
-  { key: "spindleRepair", label: "Spindle Repair" },
-  { key: "vfdRepair", label: "VFD Repair" },
-  { key: "fieldService", label: "Field Service" },
-  { key: "emergencyRepair", label: "Emergency Repair (24/7)" },
-  { key: "onSiteTroubleshooting", label: "On-site Troubleshooting" },
-];
-
-const MOTOR_CAPABILITIES = [
-  { key: "lowVoltage", label: "Low Voltage Motor Repair" },
-  { key: "mediumVoltage", label: "Medium Voltage Motor Repair" },
-  { key: "highVoltage", label: "High Voltage Motor Repair" },
-  { key: "explosionProof", label: "Explosion Proof Motors" },
-  { key: "hazardousLocation", label: "Hazardous Location Motors" },
-  { key: "submersible", label: "Submersible Motors" },
-];
-
-const EQUIPMENT_TESTING = [
-  { key: "dynamometer", label: "Dynamometer Testing" },
-  { key: "surge", label: "Surge Testing" },
-  { key: "vibration", label: "Vibration Analysis" },
-  { key: "balancing", label: "Balancing Equipment" },
-  { key: "laserAlignment", label: "Laser Alignment" },
-  { key: "infrared", label: "Infrared Thermography" },
-  { key: "loadTesting", label: "Load Testing" },
-  { key: "highVoltageTesting", label: "High Voltage Testing" },
-];
-
-const REWINDING_CAPABILITIES = [
-  { key: "acMotorRewinding", label: "AC Motor Rewinding" },
-  { key: "dcArmatureRewinding", label: "DC Armature Rewinding" },
-  { key: "fieldCoilRewinding", label: "Field Coil Rewinding" },
-  { key: "coilManufacturing", label: "Coil Manufacturing" },
-  { key: "vpi", label: "Vacuum Pressure Impregnation (VPI)" },
-  { key: "insulationUpgrades", label: "Insulation System Upgrades" },
-];
-
-const INDUSTRIES_SERVED = [
-  { key: "manufacturing", label: "Manufacturing" },
-  { key: "oilGas", label: "Oil & Gas" },
-  { key: "waterTreatment", label: "Water Treatment" },
-  { key: "powerPlants", label: "Power Plants" },
-  { key: "mining", label: "Mining" },
-  { key: "hvac", label: "HVAC" },
-  { key: "foodProcessing", label: "Food Processing" },
-  { key: "agriculture", label: "Agriculture" },
-];
-
-const CERTIFICATIONS = [
-  { key: "easaMember", label: "EASA Member" },
-  { key: "isoCertification", label: "ISO Certification" },
-  { key: "ulCertified", label: "UL Certified" },
-  { key: "factoryAuthorizedRepair", label: "Factory Authorized Repair" },
-  { key: "insuranceCoverage", label: "Insurance Coverage" },
-];
-
-const US_STATES = [
-  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado", "Connecticut",
-  "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa",
-  "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan",
-  "Minnesota", "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
-  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota", "Ohio",
-  "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota",
-  "Tennessee", "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
-  "Wisconsin", "Wyoming",
-];
-
-const defaultFormData = () => ({
-  companyName: "",
-  shortDescription: "",
-  yearsInBusiness: "",
-  phone: "",
-  website: "",
-  primaryContactPerson: "",
-  address: "",
-  city: "",
-  state: "",
-  zipCode: "",
-  country: "United States",
-  // Services (keys)
-  services: [],
-  maxMotorSizeHP: "",
-  maxVoltage: "",
-  maxWeightHandled: "",
-  motorCapabilities: [],
-  equipmentTesting: [],
-  rewindingCapabilities: [],
-  industriesServed: [],
-  pickupDeliveryAvailable: false,
-  craneCapacity: "",
-  forkliftCapacity: "",
-  rushRepairAvailable: false,
-  turnaroundTime: "",
-  certifications: [],
-  shopSizeSqft: "",
-  numTechnicians: "",
-  numEngineers: "",
-  yearsCombinedExperience: "",
-  galleryPhotos: [], // File[] for listing gallery page
-  serviceZipCode: "",
-  serviceRadiusMiles: "",
-  statesServed: "",
-  citiesOrMetrosServed: "",
-  areaCoveredFrom: "",
-});
-
-function CheckboxGroup({ options, selected, onChange, name }) {
-  const toggle = (key) => {
-    const next = selected.includes(key) ? selected.filter((k) => k !== key) : [...selected, key];
-    onChange({ target: { name, value: next } });
-  };
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {options.map(({ key, label }) => (
-        <Checkbox
-          key={key}
-          name={key}
-          label={label}
-          checked={selected.includes(key)}
-          onChange={() => toggle(key)}
-        />
-      ))}
-    </div>
-  );
-}
+import DirectoryListingFormFields from "@/components/directory-listing/DirectoryListingFormFields";
+import { defaultFormData, buildListingPayloadFromForm } from "@/lib/directory-listing-constants";
 
 function getInitialStepAndEmail() {
   if (typeof sessionStorage === "undefined") return { step: "email", email: "" };
@@ -307,44 +174,7 @@ export default function ListYourCenterPage() {
     setSubmitError("");
     setSubmitting(true);
     try {
-      const payload = {
-        email: formData.email,
-        companyName: formData.companyName,
-        shortDescription: formData.shortDescription,
-        yearsInBusiness: formData.yearsInBusiness,
-        phone: formData.phone,
-        website: formData.website,
-        primaryContactPerson: formData.primaryContactPerson,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        zipCode: formData.zipCode,
-        country: formData.country,
-        services: formData.services,
-        maxMotorSizeHP: formData.maxMotorSizeHP,
-        maxVoltage: formData.maxVoltage,
-        maxWeightHandled: formData.maxWeightHandled,
-        motorCapabilities: formData.motorCapabilities,
-        equipmentTesting: formData.equipmentTesting,
-        rewindingCapabilities: formData.rewindingCapabilities,
-        industriesServed: formData.industriesServed,
-        pickupDeliveryAvailable: formData.pickupDeliveryAvailable,
-        craneCapacity: formData.craneCapacity,
-        forkliftCapacity: formData.forkliftCapacity,
-        rushRepairAvailable: formData.rushRepairAvailable,
-        turnaroundTime: formData.turnaroundTime,
-        certifications: formData.certifications,
-        shopSizeSqft: formData.shopSizeSqft,
-        numTechnicians: formData.numTechnicians,
-        numEngineers: formData.numEngineers,
-        yearsCombinedExperience: formData.yearsCombinedExperience,
-        galleryPhotoUrls: [], // File upload can be added later
-        serviceZipCode: formData.serviceZipCode,
-        serviceRadiusMiles: formData.serviceRadiusMiles,
-        statesServed: formData.statesServed,
-        citiesOrMetrosServed: formData.citiesOrMetrosServed,
-        areaCoveredFrom: formData.areaCoveredFrom,
-      };
+      const payload = buildListingPayloadFromForm(formData);
       const fd = new FormData();
       fd.append("data", JSON.stringify(payload));
       if (logoFile) fd.append("logo", logoFile);
@@ -580,207 +410,19 @@ export default function ListYourCenterPage() {
 
       <form onSubmit={handleSubmitListing} className="py-10 sm:py-16">
         <div className="mx-auto max-w-3xl space-y-10 px-4 sm:px-6">
-          {/* Basic & Contact */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Company & contact</FormSectionTitle>
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_8rem]">
-                <Input label="Company name" name="companyName" value={formData.companyName} onChange={updateForm} required />
-                <Input label="Years in business" name="yearsInBusiness" type="number" min="0" placeholder="e.g. 25" value={formData.yearsInBusiness} onChange={updateForm} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-title">Company logo (optional)</label>
-                  <p className="mb-2 text-xs text-secondary">
-                    Upload a logo image — it is stored on our servers and shown on your listing. JPEG, PNG, GIF or WebP, max 2MB. Submitted with your listing.
-                  </p>
-                  {logoPreviewUrl ? (
-                    <div className="flex items-center gap-3">
-                      <img src={logoPreviewUrl} alt="Logo preview" className="h-16 w-16 rounded border border-border object-cover" />
-                      <div>
-                        <button type="button" onClick={clearLogo} className="text-sm text-primary hover:underline">
-                          Remove logo
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/gif,image/webp"
-                      onChange={handleLogoFileChange}
-                      className="block w-full text-sm text-secondary file:mr-3 file:rounded file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-white file:transition-opacity hover:file:opacity-90"
-                    />
-                  )}
-                  {logoError && <p className="mt-1 text-sm text-danger">{logoError}</p>}
-                </div>
-                <Input label="Website" name="website" type="url" placeholder="https://..." value={formData.website} onChange={updateForm} />
-              </div>
-              <Textarea label="Short description" name="shortDescription" placeholder="Brief description of your center for the listing" value={formData.shortDescription} onChange={updateForm} rows={2} />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Input label="Phone" name="phone" type="tel" value={formData.phone} onChange={updateForm} required />
-                <Input label="Email (verified)" name="email" type="email" value={formData.email} onChange={updateForm} required readOnly />
-                <Input label="Primary contact person" name="primaryContactPerson" value={formData.primaryContactPerson} onChange={updateForm} required />
-              </div>
-            </div>
-            <FormSectionTitle as="h3" className="mt-6">Address</FormSectionTitle>
-            <div className="mt-2 space-y-4">
-              <Input label="Street address" name="address" value={formData.address} onChange={updateForm} required />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Input label="City" name="city" value={formData.city} onChange={updateForm} required />
-                <Input label="State" name="state" value={formData.state} onChange={updateForm} />
-                <Input label="ZIP code" name="zipCode" value={formData.zipCode} onChange={updateForm} required />
-                <Input label="Country" name="country" value={formData.country} onChange={updateForm} required />
-              </div>
-            </div>
-          </FormContainer>
-
-          {/* Services offered */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Services offered</FormSectionTitle>
-            <CheckboxGroup name="services" options={SERVICES_OFFERED} selected={formData.services} onChange={updateForm} />
-          </FormContainer>
-
-          {/* Motor capabilities */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Motor capabilities</FormSectionTitle>
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <Input label="Max motor size (HP)" name="maxMotorSizeHP" type="number" min="0" value={formData.maxMotorSizeHP} onChange={updateForm} />
-                <Input label="Max voltage" name="maxVoltage" placeholder="e.g. 13.8 kV" value={formData.maxVoltage} onChange={updateForm} />
-                <Input label="Max weight handled" name="maxWeightHandled" placeholder="e.g. 10,000 lbs" value={formData.maxWeightHandled} onChange={updateForm} />
-              </div>
-              <CheckboxGroup name="motorCapabilities" options={MOTOR_CAPABILITIES} selected={formData.motorCapabilities} onChange={updateForm} />
-            </div>
-          </FormContainer>
-
-          {/* Equipment & testing */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Equipment & testing capabilities</FormSectionTitle>
-            <CheckboxGroup name="equipmentTesting" options={EQUIPMENT_TESTING} selected={formData.equipmentTesting} onChange={updateForm} />
-          </FormContainer>
-
-          {/* Rewinding */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Rewinding capabilities</FormSectionTitle>
-            <CheckboxGroup name="rewindingCapabilities" options={REWINDING_CAPABILITIES} selected={formData.rewindingCapabilities} onChange={updateForm} />
-          </FormContainer>
-
-          {/* Industries served */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Industries served</FormSectionTitle>
-            <CheckboxGroup name="industriesServed" options={INDUSTRIES_SERVED} selected={formData.industriesServed} onChange={updateForm} />
-          </FormContainer>
-
-          {/* Logistics & handling */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Logistics & handling</FormSectionTitle>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-6">
-                <Checkbox name="pickupDeliveryAvailable" label="Pickup and delivery available" checked={formData.pickupDeliveryAvailable} onChange={(e) => updateFormBool("pickupDeliveryAvailable", e.target.checked)} />
-                <Checkbox name="rushRepairAvailable" label="Rush repair available" checked={formData.rushRepairAvailable} onChange={(e) => updateFormBool("rushRepairAvailable", e.target.checked)} />
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input label="Crane capacity" name="craneCapacity" placeholder="e.g. 5 tons" value={formData.craneCapacity} onChange={updateForm} />
-                <Input label="Forklift capacity" name="forkliftCapacity" placeholder="e.g. 10,000 lbs" value={formData.forkliftCapacity} onChange={updateForm} />
-              </div>
-              <Input label="Typical turnaround time" name="turnaroundTime" placeholder="e.g. 5–7 business days" value={formData.turnaroundTime} onChange={updateForm} />
-            </div>
-          </FormContainer>
-
-          {/* Certifications */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Certifications</FormSectionTitle>
-            <CheckboxGroup name="certifications" options={CERTIFICATIONS} selected={formData.certifications} onChange={updateForm} />
-          </FormContainer>
-
-          {/* Shop facilities */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Shop facilities</FormSectionTitle>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Input label="Shop size (sq ft)" name="shopSizeSqft" type="number" min="0" value={formData.shopSizeSqft} onChange={updateForm} />
-              <Input label="Number of technicians" name="numTechnicians" type="number" min="0" value={formData.numTechnicians} onChange={updateForm} />
-              <Input label="Number of engineers" name="numEngineers" type="number" min="0" value={formData.numEngineers} onChange={updateForm} />
-            </div>
-            <div className="mt-4 max-w-xs">
-              <Input label="Years of combined experience" name="yearsCombinedExperience" type="number" min="0" value={formData.yearsCombinedExperience} onChange={updateForm} />
-            </div>
-          </FormContainer>
-
-          {/* Media */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Gallery photos (optional)</FormSectionTitle>
-            <p className="mb-4 text-sm text-secondary">
-              Upload photos for your listing gallery. These will appear on your public listing page and help customers see your facility and work.
-            </p>
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-title">
-                Upload photos
-              </label>
-              <input
-                type="file"
-                name="galleryPhotos"
-                accept="image/*"
-                multiple
-                onChange={handleGalleryPhotosChange}
-                className="block w-full text-sm text-secondary file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-medium file:text-white file:cursor-pointer hover:file:opacity-90"
-              />
-              {formData.galleryPhotos.length > 0 && (
-                <p className="text-sm text-secondary">
-                  {formData.galleryPhotos.length} photo{formData.galleryPhotos.length !== 1 ? "s" : ""} selected
-                </p>
-              )}
-            </div>
-          </FormContainer>
-
-          {/* Service regions */}
-          <FormContainer>
-            <FormSectionTitle as="h2">Where do you serve customers?</FormSectionTitle>
-            <p className="mb-4 text-sm text-secondary">
-              Customers look for repair centers by location. Tell us where you’re based and which areas you cover so they can find your listing when they search.
-            </p>
-            <div className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  label="Primary service ZIP code"
-                  name="serviceZipCode"
-                  placeholder="e.g. 77001"
-                  value={formData.serviceZipCode}
-                  onChange={updateForm}
-                />
-                <Input
-                  label="Service radius (miles)"
-                  name="serviceRadiusMiles"
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 50"
-                  value={formData.serviceRadiusMiles}
-                  onChange={updateForm}
-                />
-              </div>
-              <Input
-                label="States served"
-                name="statesServed"
-                placeholder="e.g. Texas, Oklahoma, Louisiana"
-                value={formData.statesServed}
-                onChange={updateForm}
-              />
-              <Input
-                label="Cities or metro areas"
-                name="citiesOrMetrosServed"
-                placeholder="e.g. Houston, Dallas–Fort Worth, San Antonio"
-                value={formData.citiesOrMetrosServed}
-                onChange={updateForm}
-              />
-              <Textarea
-                label="Other areas or regions you cover"
-                name="areaCoveredFrom"
-                placeholder="e.g. Gulf Coast, West Texas, industrial parks in Pasadena"
-                value={formData.areaCoveredFrom}
-                onChange={updateForm}
-                rows={2}
-              />
-            </div>
-          </FormContainer>
+          <DirectoryListingFormFields
+            formData={formData}
+            updateForm={updateForm}
+            updateFormBool={updateFormBool}
+            handleLogoFileChange={handleLogoFileChange}
+            logoPreviewUrl={logoPreviewUrl}
+            existingLogoUrl=""
+            clearLogo={clearLogo}
+            logoError={logoError}
+            handleGalleryPhotosChange={handleGalleryPhotosChange}
+            emailReadOnly
+            emailLabel="Email (verified)"
+          />
 
           {submitError && <p className="text-sm text-danger">{submitError}</p>}
           <div className="flex flex-wrap gap-4">

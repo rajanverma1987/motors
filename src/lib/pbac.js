@@ -28,6 +28,9 @@ export const PAGES = [
   { id: "customer-portal", label: "Customer portal" },
   { id: "access-control", label: "Access control" },
   { id: "settings", label: "Settings" },
+  { id: "support", label: "Support" },
+  { id: "inventory", label: "Inventory" },
+  { id: "marketplace", label: "Marketplace (CRM)" },
 ];
 
 const PAGE_IDS = new Set(PAGES.map((p) => p.id));

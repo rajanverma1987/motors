@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FiList, FiInbox, FiUsers, FiMapPin, FiMail, FiLogOut, FiShoppingBag } from "react-icons/fi";
+import { FiList, FiInbox, FiUsers, FiMapPin, FiMail, FiLogOut, FiShoppingBag, FiLifeBuoy } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
 const NAV_ITEMS = [
@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },
   { href: "/admin/marketing", label: "Marketing", icon: FiMail },
+  { href: "/admin/support", label: "Support", icon: FiLifeBuoy },
 ];
 
 export default function AdminSidebar() {
