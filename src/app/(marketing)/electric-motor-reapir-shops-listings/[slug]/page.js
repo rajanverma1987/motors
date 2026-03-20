@@ -275,33 +275,35 @@ export default async function ListingDetailPage({ params }) {
                 </div>
               )}
 
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Capabilities</h2>
-              <ul className="mt-3 space-y-1.5 text-sm text-secondary">
-                {listing.maxMotorSizeHP && (
-                  <li>Max motor size: {listing.maxMotorSizeHP} HP</li>
-                )}
-                {listing.maxVoltage && (
-                  <li>Max voltage: {listing.maxVoltage}</li>
-                )}
-                {listing.maxWeightHandled && (
-                  <li>Max weight handled: {listing.maxWeightHandled}</li>
-                )}
-                {listing.turnaroundTime && (
-                  <li>Turnaround: {listing.turnaroundTime}</li>
-                )}
-                {listing.pickupDeliveryAvailable && (
-                  <li>Pickup & delivery available</li>
-                )}
-                {listing.rushRepairAvailable && (
-                  <li>Rush repair available</li>
-                )}
-                {listing.craneCapacity && (
-                  <li>Crane capacity: {listing.craneCapacity}</li>
-                )}
-                {listing.forkliftCapacity && (
-                  <li>Forklift capacity: {listing.forkliftCapacity}</li>
-                )}
-              </ul>
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Capabilities</h2>
+                <ul className="mt-3 space-y-1.5 text-sm text-secondary">
+                  {listing.maxMotorSizeHP && (
+                    <li>Max motor size: {listing.maxMotorSizeHP} HP</li>
+                  )}
+                  {listing.maxVoltage && (
+                    <li>Max voltage: {listing.maxVoltage}</li>
+                  )}
+                  {listing.maxWeightHandled && (
+                    <li>Max weight handled: {listing.maxWeightHandled}</li>
+                  )}
+                  {listing.turnaroundTime && (
+                    <li>Turnaround: {listing.turnaroundTime}</li>
+                  )}
+                  {listing.pickupDeliveryAvailable && (
+                    <li>Pickup & delivery available</li>
+                  )}
+                  {listing.rushRepairAvailable && (
+                    <li>Rush repair available</li>
+                  )}
+                  {listing.craneCapacity && (
+                    <li>Crane capacity: {listing.craneCapacity}</li>
+                  )}
+                  {listing.forkliftCapacity && (
+                    <li>Forklift capacity: {listing.forkliftCapacity}</li>
+                  )}
+                </ul>
+              </div>
             </div>
 
             {(listing.shopSizeSqft || listing.numTechnicians || listing.numEngineers || listing.yearsCombinedExperience) && (
