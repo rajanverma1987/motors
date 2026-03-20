@@ -82,9 +82,82 @@ export async function generateMetadata({ params }) {
   const slug = resolvedParams?.slug;
   const { listing } = await resolvePublicListingFromSlugParam(slug);
   if (!listing) return { title: "Repair center not found" };
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com").replace(/\/$/, "");
+  const canonicalSlug = getListingPublicPathSegment(listing);
+  const canonicalUrl = `${siteUrl}/electric-motor-reapir-shops-listings/${canonicalSlug}`;
+
+  const city = String(listing.city || "").trim();
+  const state = String(listing.state || "").trim();
+  const zip = String(listing.zipCode || "").trim();
+  const locationBits = [city, state, zip].filter(Boolean);
+  const locationLabel = locationBits.join(", ");
+  const serviceRegionBits = [
+    listing.serviceZipCode ? `ZIP ${listing.serviceZipCode}` : "",
+    listing.serviceRadiusMiles ? `${listing.serviceRadiusMiles} mile radius` : "",
+    listing.statesServed ? String(listing.statesServed) : "",
+    listing.citiesOrMetrosServed ? String(listing.citiesOrMetrosServed) : "",
+    listing.areaCoveredFrom ? String(listing.areaCoveredFrom) : "",
+  ].filter(Boolean);
+
+  const capabilities = [
+    ...formatListAsReadableArray(listing.services).slice(0, 6),
+    ...formatListAsReadableArray(listing.motorCapabilities).slice(0, 4),
+    ...formatListAsReadableArray(listing.rewindingCapabilities).slice(0, 3),
+  ];
+  const uniqueCaps = [...new Set(capabilities)].slice(0, 8);
+  const capabilitiesText = uniqueCaps.length ? uniqueCaps.join(", ") : "";
+
+  const titleParts = [
+    listing.companyName,
+    locationLabel ? `- Electric Motor Repair in ${locationLabel}` : " - Electric Motor Repair Center",
+  ];
+  const title = titleParts.join(" ").replace(/\s+/g, " ").trim();
+
+  const descriptionParts = [
+    listing.shortDescription ? String(listing.shortDescription).trim() : "",
+    capabilitiesText ? `Capabilities: ${capabilitiesText}.` : "",
+    serviceRegionBits.length ? `Service region: ${serviceRegionBits.slice(0, 2).join(" · ")}.` : "",
+  ].filter(Boolean);
+  const description = (descriptionParts.join(" ") || `Electric motor repair services by ${listing.companyName}.`).slice(0, 160);
+
+  const logoUrl = String(listing.logoUrl || "").trim();
+  const firstGallery = Array.isArray(listing.galleryPhotoUrls) ? listing.galleryPhotoUrls.find(Boolean) : "";
+  const imageCandidate = logoUrl || firstGallery || "";
+  const ogImage = imageCandidate
+    ? imageCandidate.startsWith("http")
+      ? imageCandidate
+      : `${siteUrl}${imageCandidate.startsWith("/") ? imageCandidate : `/${imageCandidate}`}`
+    : null;
+
+  const keywordSet = new Set([
+    "electric motor repair",
+    "motor rewinding",
+    "industrial motor repair",
+    city && `motor repair ${city}`,
+    state && `motor rewinding ${state}`,
+    ...uniqueCaps.slice(0, 5),
+    ...serviceRegionBits.slice(0, 3),
+    String(listing.companyName || "").trim(),
+  ].filter(Boolean));
+
   return {
-    title: `${listing.companyName} | Motor Repair Center`,
-    description: listing.shortDescription || `Electric motor repair services by ${listing.companyName}.`,
+    title,
+    description,
+    keywords: [...keywordSet],
+    alternates: { canonical: canonicalUrl },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: canonicalUrl,
+      images: ogImage ? [{ url: ogImage }] : undefined,
+    },
+    twitter: {
+      card: ogImage ? "summary_large_image" : "summary",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
   };
 }
 
