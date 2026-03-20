@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
 import Checkbox from "@/components/ui/checkbox";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
@@ -44,7 +43,7 @@ export default function IntegrationsPageClient() {
   const [hookName, setHookName] = useState("Main webhook");
   const [hookUrl, setHookUrl] = useState("");
   const [hookAllEvents, setHookAllEvents] = useState(true);
-  const [hookEventsText, setHookEventsText] = useState(EVENT_TEMPLATES.join("\n"));
+  const [selectedEvents, setSelectedEvents] = useState(EVENT_TEMPLATES);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -121,12 +120,11 @@ export default function IntegrationsPageClient() {
 
   const createWebhook = async () => {
     try {
-      const events = hookAllEvents
-        ? ["*"]
-        : hookEventsText
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean);
+      const events = hookAllEvents ? ["*"] : selectedEvents;
+      if (!hookAllEvents && events.length === 0) {
+        toast.error("Select at least one event.");
+        return;
+      }
       const res = await fetch("/api/dashboard/integrations/webhooks", {
         method: "POST",
         credentials: "include",
@@ -142,10 +140,19 @@ export default function IntegrationsPageClient() {
       toast.success("Webhook created.");
       if (data.secret) toast.info(`Signing secret: ${data.secret}`);
       setHookUrl("");
+      if (!hookAllEvents) setSelectedEvents(EVENT_TEMPLATES);
       await load();
     } catch (e) {
       toast.error(e.message || "Failed to create webhook");
     }
+  };
+
+  const toggleEvent = (eventName) => {
+    setSelectedEvents((prev) =>
+      prev.includes(eventName)
+        ? prev.filter((e) => e !== eventName)
+        : [...prev, eventName]
+    );
   };
 
   const toggleWebhook = async (id, active) => {
@@ -301,12 +308,20 @@ export default function IntegrationsPageClient() {
             onChange={(e) => setHookAllEvents(e.target.checked)}
           />
           {!hookAllEvents ? (
-            <Textarea
-              label="Events (one per line)"
-              value={hookEventsText}
-              onChange={(e) => setHookEventsText(e.target.value)}
-              rows={8}
-            />
+            <div className="rounded-md border border-border p-3">
+              <p className="mb-2 text-sm font-medium text-title">Select events</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {EVENT_TEMPLATES.map((ev) => (
+                  <Checkbox
+                    key={ev}
+                    name={ev}
+                    label={ev}
+                    checked={selectedEvents.includes(ev)}
+                    onChange={() => toggleEvent(ev)}
+                  />
+                ))}
+              </div>
+            </div>
           ) : null}
           <Button onClick={createWebhook}>Create webhook</Button>
           <Table columns={webhookColumns} data={webhooks} rowKey="id" emptyMessage="No webhooks yet." responsive />
