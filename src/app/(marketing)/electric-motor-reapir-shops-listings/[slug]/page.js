@@ -265,7 +265,16 @@ export default async function ListingDetailPage({ params }) {
               <p className="mt-6 text-secondary">{listing.shortDescription}</p>
             )}
 
-            <div className="mt-8">
+            <div className="mt-8 grid gap-8 sm:grid-cols-2">
+              {fullAddress.length > 0 && (
+                <div>
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Address</h2>
+                  <ul className="mt-3 space-y-1.5 text-sm text-secondary">
+                    <li>{fullAddress.join(", ")}</li>
+                  </ul>
+                </div>
+              )}
+
               <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Capabilities</h2>
               <ul className="mt-3 space-y-1.5 text-sm text-secondary">
                 {listing.maxMotorSizeHP && (
