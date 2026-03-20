@@ -273,18 +273,6 @@ export default async function ListingDetailPage({ params }) {
                     {listing.primaryContactPerson && (
                       <li>Primary contact: {listing.primaryContactPerson}</li>
                     )}
-                    {listing.website && (
-                      <li>
-                        <a
-                          href={listing.website.startsWith("http") ? listing.website : `https://${listing.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          Website
-                        </a>
-                      </li>
-                    )}
                     {fullAddress.length > 0 && (
                       <li>{fullAddress.join(", ")}</li>
                     )}
