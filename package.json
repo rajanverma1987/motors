@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/write-indexnow-key.mjs",
     "build": "next build",
+    "postbuild": "node scripts/indexnow-submit.mjs",
     "start": "next start -p 5066",
     "lint": "eslint",
     "sitemap": "node scripts/generate-sitemap.js",
@@ -28,6 +30,7 @@
     "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "jiti": "^2.6.1",
     "tailwindcss": "^4"
   }
 }

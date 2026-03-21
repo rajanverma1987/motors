@@ -39,3 +39,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 Set **`NEXT_PUBLIC_SITE_URL`** (and optionally server-only **`SITE_URL`**) to your live site origin, e.g. `https://motorswinding.com` (no trailing slash).  
 If these are missing or point at **localhost**, outbound emails and share links use **`https://motorswinding.com`** by default, or **`https://$VERCEL_URL`** on Vercel, or the request’s **`Host`** header when it is not localhost (see `src/lib/public-site-url.js`).
+
+## IndexNow (search engines, post-build)
+
+When **`INDEXNOW_KEY`** is set, `npm run build` writes `public/{INDEXNOW_KEY}.txt` (prebuild) and submits all sitemap URLs to IndexNow (postbuild). Requires **`NEXT_PUBLIC_SITE_URL`** / **`SITE_URL`** (production origin, not localhost) and **`MONGODB_URI`** for the same URL list as `/sitemap.xml`. See **`scripts/README-INDEXNOW.md`**.
