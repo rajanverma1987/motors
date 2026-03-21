@@ -1,6 +1,7 @@
 import { getActiveLocationPagesForSitemap } from "@/lib/location-pages-public";
 import { getAllPublishedSlugs } from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { SEO_USA_HUB_PATH, SEO_USA_STATES, getAllSeoCityEntries } from "@/lib/seo-usa-config";
 
 /** @type {import('next').MetadataRoute.Sitemap} */
 export default async function sitemap() {
@@ -25,7 +26,30 @@ export default async function sitemap() {
     { url: `${baseUrl}/cost-of-motor-repair-and-rewinding`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/electric-motor-reapir-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/electric-motor-reapir-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}${SEO_USA_HUB_PATH}`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.92 },
+    { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.82 },
+    { url: `${baseUrl}/motor-repair-shop-management-software`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
+    { url: `${baseUrl}/job-card-system-for-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
+    { url: `${baseUrl}/track-motor-repair-jobs`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
+    { url: `${baseUrl}/blog/how-to-get-more-customers-for-motor-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/blog/motor-rewinding-business-marketing-usa`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/blog/best-software-for-repair-shop-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/blog/how-to-manage-repair-jobs-efficiently`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   ];
+
+  const seoUsaStatePages = SEO_USA_STATES.map((s) => ({
+    url: `${baseUrl}/usa/${s.slug}/motor-repair-business-listing`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.88,
+  }));
+
+  const seoUsaCityPages = getAllSeoCityEntries().map((row) => ({
+    url: `${baseUrl}${row.path}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 0.85,
+  }));
 
   let locationPages = [];
   try {
@@ -53,5 +77,5 @@ export default async function sitemap() {
     console.error("Sitemap marketplace items error:", err);
   }
 
-  return [...staticPages, ...locationPages, ...marketplaceItems];
+  return [...staticPages, ...seoUsaStatePages, ...seoUsaCityPages, ...locationPages, ...marketplaceItems];
 }

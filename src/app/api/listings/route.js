@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { sendNewListingSubmittedToAdmin } from "@/lib/email";
@@ -178,11 +179,16 @@ export async function GET(request) {
       q = { status };
     }
     const list = await Listing.find(q).sort({ submittedAt: -1 }).lean();
-    const listWithId = list.map((l) => ({
-      ...l,
-      id: l._id.toString(),
-      _id: undefined,
-    }));
+    const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
+    const listWithId = list.map((l) => {
+      const resolved = resolveListingCrmUserId(l, emailMap);
+      return {
+        ...l,
+        id: l._id.toString(),
+        _id: undefined,
+        crmUserId: resolved,
+      };
+    });
     return NextResponse.json(listWithId);
   } catch (err) {
     console.error("List listings error:", err);

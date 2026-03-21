@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Employee from "@/models/Employee";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 
 export async function PATCH(request, context) {
@@ -23,13 +24,22 @@ export async function PATCH(request, context) {
       );
     }
     await connectDB();
+    const existing = await User.findById(id).select("email");
+    if (!existing) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const user = await User.findByIdAndUpdate(
       id,
       { canLogin },
       { new: true }
     ).select("_id email shopName contactName canLogin");
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+    if (canLogin === false && existing.email) {
+      await Employee.updateMany(
+        { createdByEmail: existing.email },
+        { $set: { canLogin: false, technicianAppAccess: false } }
+      );
     }
     return NextResponse.json({
       user: {

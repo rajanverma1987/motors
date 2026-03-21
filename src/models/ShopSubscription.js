@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+/** Ensures SubscriptionPlan is registered before populate("planId") / pendingPlanId. */
+import "@/models/SubscriptionPlan";
 
 /**
  * Internal subscription state (source of truth for access). PayPal webhooks keep this in sync.

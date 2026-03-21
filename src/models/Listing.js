@@ -50,6 +50,9 @@ const listingSchema = new mongoose.Schema(
     isSeed: { type: Boolean, default: false },
     /** Public directory URL segment (no Mongo id): e.g. clearwater-electric-motor-repair-llc */
     urlSlug: { type: String, default: "" },
+    /** Portal User created via Admin → Onboard to CRM */
+    crmUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    crmOnboardedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

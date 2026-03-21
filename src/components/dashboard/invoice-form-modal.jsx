@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
@@ -368,13 +368,18 @@ export default function InvoiceFormModal({
     });
   };
 
-  const applyLineTotals = useCallback(() => {
-    setForm((f) => ({
-      ...f,
-      laborTotal: sumLinePrices(f.scopeLines).toFixed(2),
-      partsTotal: sumPartsLineTotals(f.partsLines).toFixed(2),
-    }));
-  }, []);
+  // Keep totals in sync with the tables automatically.
+  useEffect(() => {
+    if (!open) return;
+    const nextLabor = Number(scopeTotal).toFixed(2);
+    const nextParts = Number(partsTotalSum).toFixed(2);
+    setForm((prev) => {
+      const curLabor = prev.laborTotal != null && prev.laborTotal !== "" ? String(prev.laborTotal) : "";
+      const curParts = prev.partsTotal != null && prev.partsTotal !== "" ? String(prev.partsTotal) : "";
+      if (curLabor === nextLabor && curParts === nextParts) return prev;
+      return { ...prev, laborTotal: nextLabor, partsTotal: nextParts };
+    });
+  }, [open, scopeTotal, partsTotalSum]);
 
   const handleSave = async () => {
     if (!form.quoteId) {
@@ -618,9 +623,6 @@ export default function InvoiceFormModal({
             <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
               <span className="text-sm text-secondary">Scope sum (lines): {fmt(scopeTotal)}</span>
               <span className="text-sm text-secondary">Other cost sum: {fmt(partsTotalSum)}</span>
-              <Button type="button" variant="outline" size="sm" onClick={applyLineTotals}>
-                Set totals from lines
-              </Button>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input

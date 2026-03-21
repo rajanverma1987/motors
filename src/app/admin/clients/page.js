@@ -488,6 +488,19 @@ export default function AdminClientsPage() {
         _onManageSub: () => openSubModal(u),
       }));
       setUsers(list);
+
+      const pending =
+        typeof sessionStorage !== "undefined" ? sessionStorage.getItem("adminOpenSubUserId") : null;
+      if (pending) {
+        const row = list.find((x) => x.id === pending);
+        if (row) {
+          sessionStorage.removeItem("adminOpenSubUserId");
+          setSubClient(row);
+          setSubModalOpen(true);
+        } else {
+          sessionStorage.removeItem("adminOpenSubUserId");
+        }
+      }
     } catch (e) {
       toast.error(e.message || "Failed to load clients");
       setUsers([]);

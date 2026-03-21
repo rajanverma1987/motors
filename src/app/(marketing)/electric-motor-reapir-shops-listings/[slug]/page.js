@@ -6,6 +6,12 @@ import { getLocationPageForArea } from "@/lib/location-pages-public";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
+import {
+  ListingHeroImage,
+  ListingInlineLogo,
+  ListingLogoImage,
+  ListingGalleryThumb,
+} from "@/components/listings/listing-optimized-images";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
@@ -214,24 +220,16 @@ export default async function ListingDetailPage({ params }) {
           <div className="min-w-0">
         <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           {heroImage && (
-            <div className="aspect-[21/9] w-full bg-bg">
-              <img
-                src={heroImage.startsWith("http") ? heroImage : heroImage.startsWith("/") ? heroImage : `/${heroImage}`}
-                alt=""
-                className="h-full w-full object-cover"
-              />
+            <div className="relative aspect-[21/9] w-full bg-muted/30">
+              <ListingHeroImage src={heroImage} />
             </div>
           )}
           <div className="p-6 sm:p-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
                 {logoUrl && (
-                  <div className="flex-shrink-0">
-                    <img
-                      src={logoUrl.startsWith("http") ? logoUrl : logoUrl.startsWith("/") ? logoUrl : `/${logoUrl}`}
-                      alt=""
-                      className="h-20 w-20 rounded-lg border border-border object-contain bg-bg sm:h-24 sm:w-24"
-                    />
+                  <div className="shrink-0">
+                    <ListingInlineLogo src={logoUrl} />
                   </div>
                 )}
                 <div>
@@ -404,11 +402,7 @@ export default async function ListingDetailPage({ params }) {
                   {logoUrl && (
                     <div>
                       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Company logo</h3>
-                      <img
-                        src={logoUrl.startsWith("http") ? logoUrl : logoUrl.startsWith("/") ? logoUrl : `/${logoUrl}`}
-                        alt="Company logo"
-                        className="h-28 w-auto max-w-[200px] rounded-lg border border-border object-contain bg-bg p-2 sm:h-32"
-                      />
+                      <ListingLogoImage src={logoUrl} alt="Company logo" />
                     </div>
                   )}
                   {gallery.length > 0 && (
@@ -416,12 +410,11 @@ export default async function ListingDetailPage({ params }) {
                       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Gallery</h3>
                       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                         {gallery.map((url, i) => (
-                          <div key={i} className="aspect-square overflow-hidden rounded-lg bg-bg border border-border">
-                            <img
-                              src={url.startsWith("http") ? url : url.startsWith("/") ? url : `/${url}`}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
+                          <div
+                            key={i}
+                            className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/30"
+                          >
+                            <ListingGalleryThumb src={url} />
                           </div>
                         ))}
                       </div>

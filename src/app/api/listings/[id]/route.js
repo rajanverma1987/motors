@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { revalidatePath } from "next/cache";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
 import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
 import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { ensureLocationPageForArea } from "@/lib/location-pages-public";
@@ -24,10 +26,13 @@ export async function GET(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    const emailMap = await buildEmailToCrmUserIdMap([doc.email]);
+    const resolvedCrmUserId = resolveListingCrmUserId(doc, emailMap);
     return NextResponse.json({
       ...doc,
       id: doc._id.toString(),
       _id: undefined,
+      crmUserId: resolvedCrmUserId,
     });
   } catch (err) {
     console.error("Get listing error:", err);
@@ -157,6 +162,42 @@ export async function PATCH(request, context) {
     console.error("Update listing error:", err);
     return NextResponse.json(
       { error: err.message || "Failed to update" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = typeof context.params?.then === "function" ? await context.params : context.params;
+    const id = params?.id;
+    if (!id || !mongoose.isValidObjectId(id)) {
+      return NextResponse.json({ error: "Invalid listing ID" }, { status: 400 });
+    }
+
+    await connectDB();
+    const existing = await Listing.findById(id).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const pathSlug = (existing.urlSlug || "").trim();
+    await Listing.findByIdAndDelete(id);
+
+    revalidatePath("/electric-motor-reapir-shops-listings");
+    if (pathSlug) {
+      revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+    }
+
+    return NextResponse.json({ ok: true, id: String(existing._id) });
+  } catch (err) {
+    console.error("Delete listing error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to delete" },
       { status: 500 }
     );
   }

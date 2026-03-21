@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Employee from "@/models/Employee";
+import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { verifyPassword, createTechnicianToken } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -43,6 +44,18 @@ export async function POST(request) {
     const shopEmail = String(employee.createdByEmail || "")
       .trim()
       .toLowerCase();
+
+    const owner = await User.findOne({ email: shopEmail }).select("canLogin").lean();
+    if (!owner || owner.canLogin === false) {
+      return NextResponse.json(
+        {
+          error: "Login access has been revoked for this shop. Please contact support.",
+          code: "LOGIN_REVOKED",
+        },
+        { status: 403 }
+      );
+    }
+
     const us = await UserSettings.findOne({ ownerEmail: shopEmail }).lean();
     const merged = mergeUserSettings(us?.settings || {});
 

@@ -1,12 +1,36 @@
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import sharp from "sharp";
 
 const UPLOAD_DIR = "public/uploads/logos";
 const MAX_SIZE_MB = 2;
+/** Max dimension for stored logos — keeps directory listings fast; Next/Image also optimizes on the fly. */
+const LOGO_MAX_EDGE_PX = 1200;
 export const LOGO_ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 /**
- * Save an uploaded logo file to public/uploads/logos. Returns path e.g. /uploads/logos/xxx.png
+ * Resize and encode as WebP for smaller files and faster loads (keeps transparency where applicable).
+ * Falls back to original buffer on failure.
+ */
+async function optimizeLogoBuffer(buffer) {
+  try {
+    const out = await sharp(buffer)
+      .rotate()
+      .resize(LOGO_MAX_EDGE_PX, LOGO_MAX_EDGE_PX, {
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 82, effort: 4 })
+      .toBuffer();
+    if (out && out.length > 0) return out;
+  } catch (e) {
+    console.warn("Logo optimization (sharp) failed, saving original:", e?.message || e);
+  }
+  return null;
+}
+
+/**
+ * Save an uploaded logo file to public/uploads/logos. Returns path e.g. /uploads/logos/xxx.webp
  * @param {File} file - Web API File from FormData
  * @returns {Promise<string>}
  */
@@ -24,12 +48,15 @@ export async function saveUploadedLogoFile(file) {
   }
   const dir = path.join(process.cwd(), UPLOAD_DIR);
   mkdirSync(dir, { recursive: true });
-  const ext =
-    path.extname(file.name || "") ||
+
+  const optimized = await optimizeLogoBuffer(buffer);
+  const useBuffer = optimized || buffer;
+  const useExt = optimized ? ".webp" : path.extname(file.name || "") ||
     (type.includes("png") ? ".png" : type.includes("gif") ? ".gif" : type.includes("webp") ? ".webp" : ".jpg");
-  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
+
+  const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${useExt}`.replace(/[^a-zA-Z0-9._-]/g, "_");
   const filePath = path.join(dir, safeName);
-  writeFileSync(filePath, buffer);
+  writeFileSync(filePath, useBuffer);
   return `/uploads/logos/${safeName}`;
 }
 

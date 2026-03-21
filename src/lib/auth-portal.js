@@ -1,5 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 
 let _portalSecret = null;
 function getPortalJwtSecret() {
@@ -93,10 +95,26 @@ export async function verifyTechnicianToken(token) {
   }
 }
 
+/**
+ * Shop owner (User) must exist and have canLogin !== false, or employees cannot use the tech app.
+ */
+export async function isShopOwnerLoginAllowed(shopEmail) {
+  const email = String(shopEmail || "").trim().toLowerCase();
+  if (!email) return false;
+  await connectDB();
+  const owner = await User.findOne({ email }).select("canLogin").lean();
+  if (!owner) return false;
+  return owner.canLogin !== false;
+}
+
 export async function getTechnicianFromRequest(request) {
   const auth = request.headers.get("authorization") || "";
   const m = auth.match(/^Bearer\s+(.+)$/i);
   const token = m ? m[1].trim() : "";
   if (!token) return null;
-  return verifyTechnicianToken(token);
+  const tech = await verifyTechnicianToken(token);
+  if (!tech) return null;
+  const allowed = await isShopOwnerLoginAllowed(tech.shopEmail);
+  if (!allowed) return null;
+  return tech;
 }

@@ -5,6 +5,7 @@ import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
+import Input from "@/components/ui/input";
 import Tabs from "@/components/ui/tabs";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { FiChevronDown, FiChevronUp } from "react-icons/fi";
@@ -46,6 +47,10 @@ export default function SettingsPageClient() {
   const [draft, setDraft] = useState(() => ({ ...USER_SETTINGS_DEFAULTS }));
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef(null);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwSaving, setPwSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -68,6 +73,40 @@ export default function SettingsPageClient() {
   }, [load]);
 
   const updateDraft = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
+
+  async function handlePasswordChange(e) {
+    e?.preventDefault?.();
+    if (pwNew !== pwConfirm) {
+      toast.error("New password and confirmation do not match.");
+      return;
+    }
+    if ((pwNew || "").length < 6) {
+      toast.error("New password must be at least 6 characters.");
+      return;
+    }
+    setPwSaving(true);
+    try {
+      const r = await fetch("/api/dashboard/account/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          currentPassword: pwCurrent,
+          newPassword: pwNew,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Could not update password.");
+      setPwCurrent("");
+      setPwNew("");
+      setPwConfirm("");
+      toast.success("Password updated.");
+    } catch (err) {
+      toast.error(err.message || "Could not update password.");
+    } finally {
+      setPwSaving(false);
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -174,6 +213,43 @@ export default function SettingsPageClient() {
                   onChange={(e) => updateDraft({ leadEmailAlerts: e.target.checked })}
                 />
               </div>
+            </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Password</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                If your account was created by our team, you received a temporary password by email—change it here
+                after you sign in. This does not affect the sticky <strong className="text-title">Save changes</strong>{" "}
+                bar for other settings (save those separately).
+              </p>
+              <form className="flex max-w-md flex-col gap-4" onSubmit={handlePasswordChange}>
+                <Input
+                  type="password"
+                  label="Current password"
+                  name="currentPassword"
+                  autoComplete="current-password"
+                  value={pwCurrent}
+                  onChange={(e) => setPwCurrent(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  label="New password"
+                  name="newPassword"
+                  autoComplete="new-password"
+                  value={pwNew}
+                  onChange={(e) => setPwNew(e.target.value)}
+                />
+                <Input
+                  type="password"
+                  label="Confirm new password"
+                  name="confirmPassword"
+                  autoComplete="new-password"
+                  value={pwConfirm}
+                  onChange={(e) => setPwConfirm(e.target.value)}
+                />
+                <Button type="submit" variant="secondary" disabled={pwSaving}>
+                  {pwSaving ? "Updating…" : "Update password"}
+                </Button>
+              </form>
             </FormContainer>
           </div>
         ),
@@ -587,6 +663,10 @@ export default function SettingsPageClient() {
       logoUploading,
       user?.email,
       user?.shopName,
+      pwCurrent,
+      pwNew,
+      pwConfirm,
+      pwSaving,
     ]
   );
 

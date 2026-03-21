@@ -83,6 +83,10 @@ export async function sendDemoRequestToAdmin(fields) {
     ["Name", fields.name],
     ["Email", fields.email],
     ["Phone", fields.phone],
+    ["Business / shop", fields.businessName],
+    ["City", fields.city],
+    ["State", fields.state],
+    ["Source page", fields.sourcePage],
     ["Date", fields.preferDate],
     ["Time", fields.preferTime],
     ["Timezone", fields.timezone],
@@ -91,7 +95,7 @@ export async function sendDemoRequestToAdmin(fields) {
     .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
     .join("");
   const html = `
-    <p>A visitor requested a CRM demo via the contact page.</p>
+    <p>A visitor requested a CRM demo${fields.sourcePage ? ` (source: ${esc(fields.sourcePage)})` : ""}.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
@@ -172,6 +176,89 @@ export async function sendVerificationCodeEmail(to, code) {
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
     <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
     <p>If you didn't request this, you can ignore this email.</p>
+    <p>— MotorsWinding.com</p>
+  `;
+  return sendEmail(to, subject, html);
+}
+
+/**
+ * Welcome email after admin onboards a listing to CRM (includes temp password; instruct to change in Settings).
+ */
+export async function sendCrmWelcomeEmail({
+  to,
+  shopName,
+  contactName,
+  userId,
+  plainPassword,
+}) {
+  const site = getPublicSiteUrl();
+  const loginUrl = `${site}/login`;
+  const settingsUrl = `${site}/dashboard/settings`;
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const greet = contactName ? ` ${esc(contactName)}` : "";
+  const subject = "Your MotorsWinding.com CRM account is ready";
+  const html = `
+    <p>Hi${greet},</p>
+    <p>Your shop portal account has been created for <strong>${esc(shopName || "your shop")}</strong>.</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Login email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(to)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Account ID</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${esc(userId)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Password</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;">${esc(plainPassword)}</td></tr>
+      </tbody>
+    </table>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
+    <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
+    <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
+    <p>— MotorsWinding.com</p>
+  `;
+  return sendEmail(to, subject, html);
+}
+
+/**
+ * Notify client when an admin attaches or changes their subscription plan (PayPal approval link or Free Ultimate).
+ */
+export async function sendSubscriptionPlanAttachedEmail({
+  to,
+  shopName,
+  planName,
+  planType,
+  billingCycle,
+  customPrice,
+  currency,
+  approvalUrl,
+}) {
+  const site = getPublicSiteUrl();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subUrl = `${site}/dashboard/subscription`;
+  const isPaypal = String(planType || "").toLowerCase() === "paypal";
+  const priceLine =
+    customPrice != null && !Number.isNaN(Number(customPrice))
+      ? `${esc(currency || "USD")} ${Number(customPrice).toFixed(2)}`
+      : "";
+  const subject = isPaypal
+    ? `Subscription plan attached — ${esc(planName || "MotorsWinding")}`
+    : `Your MotorsWinding.com plan: ${esc(planName || "Free Ultimate")}`;
+  const approvalBlock =
+    isPaypal && approvalUrl
+      ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">CRM → Subscription</a>):</p>
+         <p><a href="${esc(approvalUrl)}" style="word-break:break-all;">${esc(approvalUrl)}</a></p>`
+      : "";
+  const html = `
+    <p>Hello${shopName ? ` from <strong>${esc(shopName)}</strong>` : ""},</p>
+    <p>A subscription plan has been attached to your MotorsWinding.com account.</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || "—")}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planType || "—")}</td></tr>
+        ${billingCycle ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Billing</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(billingCycle)}</td></tr>` : ""}
+        ${priceLine ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Amount</td><td style="padding:8px 12px;border:1px solid #ddd;">${priceLine}</td></tr>` : ""}
+      </tbody>
+    </table>
+    ${approvalBlock}
+    <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
     <p>— MotorsWinding.com</p>
   `;
   return sendEmail(to, subject, html);

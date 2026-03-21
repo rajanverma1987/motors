@@ -1,7 +1,9 @@
 import { connectDB } from "@/lib/db";
+import User from "@/models/User";
 import SubscriptionPlan from "@/models/SubscriptionPlan";
 import ShopSubscription from "@/models/ShopSubscription";
 import SubscriptionTransaction from "@/models/SubscriptionTransaction";
+import { sendSubscriptionPlanAttachedEmail } from "@/lib/email";
 import { createPaypalProductAndPlan, createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
 import { gracePeriodAfterFailure } from "@/lib/subscription-access";
 
@@ -269,6 +271,22 @@ export async function assignPaypalPlanToShop({
     status: "pending_approval",
   });
 
+  try {
+    const u = await User.findOne({ email }).select("shopName").lean();
+    await sendSubscriptionPlanAttachedEmail({
+      to: email,
+      shopName: u?.shopName || "",
+      planName: plan.name,
+      planType: plan.planType,
+      billingCycle: plan.billingCycle,
+      customPrice: plan.customPrice,
+      currency: plan.currency || "USD",
+      approvalUrl,
+    });
+  } catch (e) {
+    console.warn("sendSubscriptionPlanAttachedEmail (PayPal):", e?.message || e);
+  }
+
   return { subscription: sub, approvalUrl };
 }
 
@@ -313,6 +331,23 @@ export async function assignInternalFreeUltimateToShop(ownerEmail, adminEmail) {
     performedBy: adminEmail || "",
     status: "ok",
   });
+
+  try {
+    const u = await User.findOne({ email }).select("shopName").lean();
+    await sendSubscriptionPlanAttachedEmail({
+      to: email,
+      shopName: u?.shopName || "",
+      planName: plan.name,
+      planType: plan.planType,
+      billingCycle: plan.billingCycle,
+      customPrice: plan.customPrice,
+      currency: plan.currency || "USD",
+      approvalUrl: "",
+    });
+  } catch (e) {
+    console.warn("sendSubscriptionPlanAttachedEmail (Free Ultimate):", e?.message || e);
+  }
+
   return sub;
 }
 

@@ -2,6 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  images: {
+    formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [64, 96, 128, 192, 256, 384, 512],
+    minimumCacheTTL: 60 * 60 * 24 * 30,
+  },
   async headers() {
     // CSP: allow Microsoft Clarity (https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp),
     // Google Analytics, and required Next.js / app sources. If you add stricter rules elsewhere, ensure Clarity stays allowed.

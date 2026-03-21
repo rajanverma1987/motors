@@ -4,14 +4,17 @@ import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import { FormContainer } from "@/components/ui/form-layout";
 import ListingsHeroCta from "./listings-hero-cta";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { ListingCardImage } from "@/components/listings/listing-optimized-images";
 
-function ListingCard({ listing }) {
+function ListingCard({ listing, imagePriority }) {
   const location = [listing.city, listing.state].filter(Boolean).join(", ");
   const logoUrl = listing.logoUrl?.trim();
   const firstPhoto = Array.isArray(listing.galleryPhotoUrls) && listing.galleryPhotoUrls[0]
     ? listing.galleryPhotoUrls[0]
     : null;
-  const imageUrl = logoUrl || (firstPhoto?.startsWith("http") ? firstPhoto : firstPhoto?.startsWith("/") ? firstPhoto : null);
+  const imageUrl =
+    logoUrl ||
+    (firstPhoto?.startsWith("http") ? firstPhoto : firstPhoto?.startsWith("/") ? firstPhoto : firstPhoto ? `/${firstPhoto}` : null);
   const slug = getListingPublicPathSegment(listing);
 
   return (
@@ -20,12 +23,8 @@ function ListingCard({ listing }) {
       className="flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-lg hover:border-primary/30"
     >
       {imageUrl && (
-        <div className="aspect-video w-full bg-bg">
-          <img
-            src={imageUrl}
-            alt=""
-            className="h-full w-full object-cover object-center"
-          />
+        <div className="relative aspect-video w-full bg-muted/30">
+          <ListingCardImage src={imageUrl} priority={imagePriority} />
         </div>
       )}
       <div className="flex flex-1 flex-col p-5">
@@ -127,8 +126,12 @@ export default async function ListingsPage({ searchParams }) {
             </FormContainer>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} />
+              {filtered.map((listing, index) => (
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  imagePriority={index < 6}
+                />
               ))}
             </div>
           )}
