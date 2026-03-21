@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import GetQuoteCta from "@/components/marketing/GetQuoteCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 
 const path = "/types-of-electric-motor-repair-services";
 
@@ -88,9 +89,15 @@ export default function TypesOfElectricMotorRepairServicesPage() {
             Field service and emergency repair
           </h2>
           <p className="mt-4 text-secondary">
-            Some shops offer on-site troubleshooting, bearing replacement, or emergency call-out. That can reduce downtime when the motor can’t be easily removed or when you need a quick diagnosis. Not every shop offers field service—check the directory or ask when requesting a quote.
+            Some shops offer on-site troubleshooting, bearing replacement, or emergency call-out. That can reduce downtime when the motor can’t be easily removed or when you need a quick diagnosis.             Not every shop offers field service—check the directory or ask when requesting a quote. For urgent failures, start with{" "}
+            <Link href="/emergency-motor-repair-what-to-do" className="text-primary font-medium hover:underline">
+              emergency motor repair: what to do
+            </Link>
+            .
           </p>
         </section>
+
+        <MarketingRelatedGuides excludeHref={path} className="mt-12" />
 
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">

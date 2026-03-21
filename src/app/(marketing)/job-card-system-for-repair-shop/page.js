@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import ListYourShopCta from "@/components/marketing/ListYourShopCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
 const path = "/job-card-system-for-repair-shop";
@@ -92,21 +93,14 @@ export default function JobCardSystemForRepairShopPage() {
           </p>
         </section>
 
-        <section className="border-t border-border pt-10 mt-10">
-          <h2 className="text-xl font-bold text-title sm:text-2xl">See also</h2>
-          <ul className="mt-4 space-y-2 text-secondary">
-            <li>
-              <Link href="/track-motor-repair-jobs" className="text-primary font-medium hover:underline">
-                Track motor repair jobs
-              </Link>
-            </li>
-            <li>
-              <Link href="/blog/how-to-manage-repair-jobs-efficiently" className="text-primary font-medium hover:underline">
-                How to manage repair jobs efficiently
-              </Link>
-            </li>
-          </ul>
-        </section>
+        <MarketingRelatedGuides audience="shop" excludeHref={path} className="mt-12 border-t border-border pt-10" />
+        <p className="mt-6 text-sm text-secondary">
+          Read:{" "}
+          <Link href="/blog/how-to-manage-repair-jobs-efficiently" className="text-primary font-medium hover:underline">
+            how to manage repair jobs efficiently
+          </Link>
+          .
+        </p>
       </article>
     </BlogPageLayout>
   );

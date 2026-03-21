@@ -44,14 +44,17 @@ export function HomePageJsonLd() {
   return (
     <>
       <script
+        id="schema-jsonld-website"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webSite) }}
       />
       <script
+        id="schema-jsonld-software-application"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplication) }}
       />
       <script
+        id="schema-jsonld-organization"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
       />

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import ListYourShopCta from "@/components/marketing/ListYourShopCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
 const path = "/motor-repair-shop-management-software";
@@ -120,26 +121,14 @@ export default function MotorRepairShopManagementSoftwarePage() {
           </p>
         </section>
 
-        <section className="border-t border-border pt-10 mt-10">
-          <h2 className="text-xl font-bold text-title sm:text-2xl">Related guides</h2>
-          <ul className="mt-4 space-y-2 text-secondary">
-            <li>
-              <Link href="/track-motor-repair-jobs" className="text-primary font-medium hover:underline">
-                Track motor repair jobs end-to-end
-              </Link>
-            </li>
-            <li>
-              <Link href="/blog/best-software-for-repair-shop-2026" className="text-primary font-medium hover:underline">
-                Best software for repair shops in 2026
-              </Link>
-            </li>
-            <li>
-              <Link href="/features" className="text-primary font-medium hover:underline">
-                MotorsWinding.com features
-              </Link>
-            </li>
-          </ul>
-        </section>
+        <MarketingRelatedGuides audience="shop" excludeHref={path} className="mt-12 border-t border-border pt-10" />
+        <p className="mt-6 text-sm text-secondary">
+          Deep dive:{" "}
+          <Link href="/blog/best-software-for-repair-shop-2026" className="text-primary font-medium hover:underline">
+            best software for repair shops in 2026
+          </Link>
+          .
+        </p>
       </article>
     </BlogPageLayout>
   );

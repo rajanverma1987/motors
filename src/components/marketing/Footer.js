@@ -14,6 +14,7 @@ const footerLinks = {
     { href: "/benefits-of-motor-repair-directory", label: "Directory benefits" },
   ],
   "For buyers": [
+    { href: "/electric-motor-repair", label: "Electric motor repair hub" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
     { href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" },
     { href: "/electric-motor-reapir-near-me", label: "Repair shops near me" },

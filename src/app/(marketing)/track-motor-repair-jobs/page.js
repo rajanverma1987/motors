@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import ListYourShopCta from "@/components/marketing/ListYourShopCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
 const path = "/track-motor-repair-jobs";
@@ -93,21 +94,7 @@ export default function TrackMotorRepairJobsPage() {
           </p>
         </section>
 
-        <section className="border-t border-border pt-10 mt-10">
-          <h2 className="text-xl font-bold text-title sm:text-2xl">Related</h2>
-          <ul className="mt-4 space-y-2 text-secondary">
-            <li>
-              <Link href="/motor-repair-shop-management-software" className="text-primary font-medium hover:underline">
-                Motor repair shop management software
-              </Link>
-            </li>
-            <li>
-              <Link href="/features" className="text-primary font-medium hover:underline">
-                Platform features
-              </Link>
-            </li>
-          </ul>
-        </section>
+        <MarketingRelatedGuides audience="shop" excludeHref={path} className="mt-12 border-t border-border pt-10" />
       </article>
     </BlogPageLayout>
   );

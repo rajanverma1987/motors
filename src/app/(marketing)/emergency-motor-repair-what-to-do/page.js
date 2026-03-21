@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import GetQuoteCta from "@/components/marketing/GetQuoteCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 
 const path = "/emergency-motor-repair-what-to-do";
 
@@ -88,9 +89,19 @@ export default function EmergencyMotorRepairWhatToDoPage() {
             Plan for the next time
           </h2>
           <p className="mt-4 text-secondary">
-            After the emergency is resolved, review why the motor failed (bearing, burnout, overload, etc.) and whether maintenance or operating changes could reduce the chance of recurrence. For critical equipment, consider keeping a spare motor or a standing agreement with a repair shop for priority service. A little planning can cut stress and cost the next time something fails.
+            After the emergency is resolved, review why the motor failed (bearing, burnout, overload, etc.) and whether maintenance or operating changes could reduce the chance of recurrence. For critical equipment, consider keeping a spare motor or a standing agreement with a repair shop for priority service. A little planning can cut stress and cost the next time something fails. When the dust settles, use{" "}
+            <Link href="/when-to-repair-or-replace-electric-motor" className="text-primary font-medium hover:underline">
+              repair vs. replace
+            </Link>{" "}
+            and{" "}
+            <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
+              typical repair costs
+            </Link>{" "}
+            to plan the next decision with numbers.
           </p>
         </section>
+
+        <MarketingRelatedGuides excludeHref={path} className="mt-12" />
 
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">

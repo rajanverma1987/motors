@@ -1,7 +1,6 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
-import Button from "@/components/ui/button";
 import { FiMessageCircle } from "react-icons/fi";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
@@ -17,11 +16,14 @@ function WaButton() {
   const href = waHref();
   const isWa = href.startsWith("https://wa.me/");
   return (
-    <Link href={href} className="block" target={isWa ? "_blank" : undefined} rel={isWa ? "noopener noreferrer" : undefined}>
-      <Button variant="outline" size="lg" className="w-full gap-2 border-emerald-600/50 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40">
-        <FiMessageCircle className="h-5 w-5" aria-hidden />
-        {isWa ? "WhatsApp us" : "Message us (contact)"}
-      </Button>
+    <Link
+      href={href}
+      target={isWa ? "_blank" : undefined}
+      rel={isWa ? "noopener noreferrer" : undefined}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-md border-[0.5px] border-emerald-600/50 bg-transparent px-6 py-3 text-lg text-emerald-700 transition-opacity hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+    >
+      <FiMessageCircle className="h-5 w-5 shrink-0" aria-hidden />
+      {isWa ? "WhatsApp us" : "Message us (contact)"}
     </Link>
   );
 }

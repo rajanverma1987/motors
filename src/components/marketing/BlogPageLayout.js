@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
 
@@ -26,14 +27,30 @@ export default function BlogPageLayout({
         headline: title,
         description: description || undefined,
         url: articleUrl,
-        publisher: { "@type": "Organization", name: "MotorsWinding.com" },
+        mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
+        dateModified: MARKETING_CONTENT_DATE,
+        author: { "@type": "Organization", name: "MotorsWinding.com", url: siteUrl.replace(/\/$/, "") },
+        publisher: {
+          "@type": "Organization",
+          name: "MotorsWinding.com",
+          url: siteUrl.replace(/\/$/, ""),
+          logo: {
+            "@type": "ImageObject",
+            url: `${siteUrl.replace(/\/$/, "")}/og-image.png`,
+          },
+        },
       }
     : null;
+
+  const schemaScriptId = canonicalPath
+    ? `schema-article-${canonicalPath.replace(/^\//, "").replace(/\//g, "-") || "page"}`
+    : "schema-article";
 
   return (
     <>
       {jsonLd && (
         <script
+          id={schemaScriptId}
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />

@@ -1,13 +1,14 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import GetQuoteCta from "@/components/marketing/GetQuoteCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 
 const path = "/when-to-repair-or-replace-electric-motor";
 
 export const metadata = {
   title: "When to Repair or Replace an Electric Motor | Decision Guide",
   description:
-    "Deciding whether to repair or replace an electric motor? Consider cost, age, availability, efficiency, and downtime. Get quotes from qualified repair centers.",
+    "Repair or replace an electric motor? Compare rewind and repair quotes to replacement cost, lead time, efficiency, and failure history. Use MotorsWinding.com to find shops and read our cost guide before you decide.",
   keywords: [
     "repair or replace electric motor",
     "motor repair vs replace",
@@ -52,7 +53,11 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Start with a repair quote
           </h2>
           <p className="mt-4 text-secondary">
-            You don’t have to decide in a vacuum. Send the motor (or its nameplate and failure description) to a qualified repair shop for inspection and a written quote. The quote will tell you whether it’s a simple repair (bearings, cleaning, minor electrical) or a full rewind—and what it will cost. That number is the baseline for comparing against the cost and lead time of a new motor.
+            You don’t have to decide in a vacuum. Send the motor (or its nameplate and failure description) to a qualified repair shop for inspection and a written quote. The quote will tell you whether it’s a simple repair (bearings, cleaning, minor electrical) or a full rewind—and what it will cost. That number is the baseline for comparing against the cost and lead time of a new motor. See{" "}
+            <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
+              what drives motor repair and rewinding cost
+            </Link>{" "}
+            so the quote lines up with what you expected.
           </p>
         </section>
 
@@ -101,6 +106,8 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
           </p>
         </section>
 
+        <MarketingRelatedGuides excludeHref={path} className="mt-12" />
+
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">
             Get a quote and decide with real numbers
@@ -109,7 +116,15 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
               Find electric motor repair shops
             </Link>{" "}
-            in our directory, or submit your motor details for a quote. Many shops offer free or low-cost inspection so you can compare repair cost to replacement before committing.
+            in our directory, or{" "}
+            <Link href="/contact" className="text-primary font-medium hover:underline">
+              submit your motor details for a quote
+            </Link>
+            . Many shops offer free or low-cost inspection so you can compare repair cost to replacement before committing. If downtime is expensive, read{" "}
+            <Link href="/emergency-motor-repair-what-to-do" className="text-primary font-medium hover:underline">
+              emergency motor repair
+            </Link>{" "}
+            for rush options.
           </p>
         </section>
       </article>

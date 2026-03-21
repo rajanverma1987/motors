@@ -1,13 +1,14 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import GetQuoteCta from "@/components/marketing/GetQuoteCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 
 const path = "/how-to-choose-electric-motor-repair-shop";
 
 export const metadata = {
   title: "How to Choose an Electric Motor Repair Shop | Buyer's Guide",
   description:
-    "What to look for when choosing an electric motor repair or rewinding shop: capabilities, certifications, turnaround, and how to get and compare quotes.",
+    "Choose a qualified electric motor repair or rewinding shop: match capabilities to your motor, compare written quotes and testing scope, check certifications (EASA, ISO), and use MotorsWinding.com’s directory plus cost guide to shortlist shops.",
   keywords: [
     "choose motor repair shop",
     "electric motor repair shop",
@@ -52,7 +53,11 @@ export default function HowToChooseElectricMotorRepairShopPage() {
             Match the shop to your motor and application
           </h2>
           <p className="mt-4 text-secondary">
-            Not every shop handles every type of motor. Check whether they work on your voltage (low, medium, high), motor type (AC, DC, servo, pump, etc.), and size (HP and frame). Specialty work—explosion-proof, hazardous location, submersible, or OEM-authorized repair—may require a shop with specific experience and certifications. Confirm capabilities before sending the motor.
+            Not every shop handles every type of motor. Check whether they work on your voltage (low, medium, high), motor type (AC, DC, servo, pump, etc.), and size (HP and frame). Specialty work—explosion-proof, hazardous location, submersible, or OEM-authorized repair—may require a shop with specific experience and certifications. Confirm capabilities before sending the motor. For a refresher on service categories, see{" "}
+            <Link href="/types-of-electric-motor-repair-services" className="text-primary font-medium hover:underline">
+              types of electric motor repair services
+            </Link>
+            .
           </p>
         </section>
 
@@ -88,9 +93,15 @@ export default function HowToChooseElectricMotorRepairShopPage() {
             Get more than one quote
           </h2>
           <p className="mt-4 text-secondary">
-            Comparing two or three quotes helps you balance price, turnaround, and scope. Make sure quotes are for the same work (e.g., full rewind, same testing) so you’re comparing apples to apples. The lowest price isn’t always the best value if quality or turnaround doesn’t meet your needs.
+            Comparing two or three quotes helps you balance price, turnaround, and scope. Make sure quotes are for the same work (e.g., full rewind, same testing) so you’re comparing apples to apples. The lowest price isn’t always the best value if quality or turnaround doesn’t meet your needs. Pair this with our{" "}
+            <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
+              motor repair cost guide
+            </Link>{" "}
+            so you know which line items usually move the total.
           </p>
         </section>
+
+        <MarketingRelatedGuides excludeHref={path} className="mt-12" />
 
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">

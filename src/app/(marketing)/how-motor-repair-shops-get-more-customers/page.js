@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import ListYourShopCta from "@/components/marketing/ListYourShopCta";
+import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 
 const path = "/how-motor-repair-shops-get-more-customers";
 
@@ -88,9 +89,15 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
             Combine directory presence with your own site
           </h2>
           <p className="mt-4 text-secondary">
-            Directory listings and your own website reinforce each other. Listings send traffic and links to your site; your site gives depth (case studies, capabilities, contact). Together they improve visibility in search and give buyers multiple ways to find and trust you.
+            Directory listings and your own website reinforce each other. Listings send traffic and links to your site; your site gives depth (case studies, capabilities, contact). Together they improve visibility in search and give buyers multiple ways to find and trust you. Buyers comparing shops often read{" "}
+            <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
+              motor repair cost guides
+            </Link>{" "}
+            first—being findable when they search “motor repair near me” or “rewinding cost” matters.
           </p>
         </section>
+
+        <MarketingRelatedGuides audience="shop" excludeHref={path} className="mt-12" />
 
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">

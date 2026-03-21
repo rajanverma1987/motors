@@ -3,8 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { FiMenu, FiX } from "react-icons/fi";
-import Button from "@/components/ui/button";
 import ThemeToggle from "@/components/theme-toggle";
+
+const navBtnPrimary =
+  "inline-flex items-center justify-center rounded-md bg-primary px-3 py-1 text-sm text-white transition-opacity hover:opacity-90";
+const navBtnOutline =
+  "inline-flex items-center justify-center rounded-md border-[0.5px] border-border bg-transparent px-3 py-1 text-sm text-text transition-opacity hover:bg-card hover:border-primary/20";
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -22,15 +26,11 @@ export default function Navbar() {
           <Link href="/login" className="hidden text-sm font-medium text-secondary hover:text-text sm:inline-block">
             Log in
           </Link>
-          <Link href="/register" className="hidden sm:inline-block">
-            <Button variant="outline" size="sm">
-              Register
-            </Button>
+          <Link href="/register" className={`hidden sm:inline-block ${navBtnOutline}`}>
+            Register
           </Link>
-          <Link href="/contact" className="hidden sm:inline-block">
-            <Button variant="primary" size="sm">
-              Contact for demo
-            </Button>
+          <Link href="/contact" className={`hidden sm:inline-block ${navBtnPrimary}`}>
+            Contact for demo
           </Link>
           <ThemeToggle />
           <button
@@ -47,20 +47,26 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="border-t border-border bg-card px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-2" aria-label="Account">
-            <Link href="/login" onClick={() => setMobileOpen(false)} className="block">
-              <Button variant="outline" size="sm" className="w-full justify-center">
-                Log in
-              </Button>
+            <Link
+              href="/login"
+              onClick={() => setMobileOpen(false)}
+              className={`w-full justify-center ${navBtnOutline}`}
+            >
+              Log in
             </Link>
-            <Link href="/register" onClick={() => setMobileOpen(false)} className="block">
-              <Button variant="primary" size="sm" className="w-full justify-center">
-                Register
-              </Button>
+            <Link
+              href="/register"
+              onClick={() => setMobileOpen(false)}
+              className={`w-full justify-center ${navBtnPrimary}`}
+            >
+              Register
             </Link>
-            <Link href="/contact" onClick={() => setMobileOpen(false)} className="block">
-              <Button variant="outline" size="sm" className="w-full justify-center">
-                Contact for demo
-              </Button>
+            <Link
+              href="/contact"
+              onClick={() => setMobileOpen(false)}
+              className={`w-full justify-center ${navBtnOutline}`}
+            >
+              Contact for demo
             </Link>
           </nav>
         </div>
