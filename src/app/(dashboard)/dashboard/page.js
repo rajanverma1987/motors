@@ -119,6 +119,22 @@ function accountsPayableFromPOs(poList) {
   return { openCount: open.length, lines, outstanding, overdueCount, outstandingCount };
 }
 
+function CardLoadingBody() {
+  return (
+    <div className="mt-3 flex min-h-[4.5rem] items-start gap-3" role="status" aria-live="polite" aria-label="Loading">
+      <span
+        className="inline-block h-9 w-9 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+        aria-hidden
+      />
+      <div className="min-w-0 flex-1 space-y-2 pt-0.5">
+        <div className="h-7 w-3/5 max-w-[7rem] animate-pulse rounded-md bg-muted" />
+        <div className="h-3 w-4/5 max-w-[9rem] animate-pulse rounded bg-muted/70" />
+        <div className="h-3 w-2/5 max-w-[5rem] animate-pulse rounded bg-muted/50" />
+      </div>
+    </div>
+  );
+}
+
 function StatCard({
   href,
   label,
@@ -146,47 +162,46 @@ function StatCard({
   return (
     <Link
       href={href}
+      aria-busy={showLoading || undefined}
       className="flex flex-col rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
     >
       <div className="flex items-start justify-between gap-2">
         <span className="text-sm font-medium text-secondary">{label}</span>
-        <Icon className="h-5 w-5 shrink-0 text-secondary" aria-hidden />
+        <Icon className={`h-5 w-5 shrink-0 text-secondary ${showLoading ? "opacity-40" : ""}`} aria-hidden />
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums text-title leading-tight">
-        {placeholder
-          ? "—"
-          : showLoading
-            ? "…"
-            : showPrimary
-              ? primaryValue
-              : showMain
-                ? Number(count)
-                : "—"}
-      </p>
-      {primaryHint && !placeholder && !showLoading && (showPrimary || showMain) && (
-        <p className="mt-1 text-xs font-medium text-secondary">{primaryHint}</p>
+      {showLoading ? (
+        <CardLoadingBody />
+      ) : (
+        <>
+          <p className="mt-2 text-2xl font-semibold tabular-nums text-title leading-tight">
+            {placeholder ? "—" : showPrimary ? primaryValue : showMain ? Number(count) : "—"}
+          </p>
+          {primaryHint && !placeholder && (showPrimary || showMain) && (
+            <p className="mt-1 text-xs font-medium text-secondary">{primaryHint}</p>
+          )}
+          {extraLines && extraLines.length > 0 && (
+            <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
+              {extraLines.map((row) => (
+                <li key={row.label} className="flex justify-between gap-2 text-xs text-secondary">
+                  <span>{row.label}</span>
+                  <span className="shrink-0 tabular-nums text-title">{row.value}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {statusEntries.length > 0 && (
+            <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
+              {statusEntries.map(([statusLabel, n]) => (
+                <li key={statusLabel} className="flex justify-between gap-2 text-xs text-secondary">
+                  <span>{statusLabel}</span>
+                  <span className="tabular-nums text-title">{n}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
       )}
-      {extraLines && extraLines.length > 0 && (
-        <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
-          {extraLines.map((row) => (
-            <li key={row.label} className="flex justify-between gap-2 text-xs text-secondary">
-              <span>{row.label}</span>
-              <span className="shrink-0 tabular-nums text-title">{row.value}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      {statusEntries.length > 0 && (
-        <ul className="mt-2 space-y-0.5 border-t border-border pt-2">
-          {statusEntries.map(([statusLabel, n]) => (
-            <li key={statusLabel} className="flex justify-between gap-2 text-xs text-secondary">
-              <span>{statusLabel}</span>
-              <span className="tabular-nums text-title">{n}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <span className="mt-2 inline-flex items-center gap-1 text-xs text-primary">
+      <span className="mt-auto pt-2 inline-flex items-center gap-1 text-xs text-primary">
         {placeholder && <span className="text-secondary">Coming soon · </span>}
         View
         <FiExternalLink className="h-3 w-3" aria-hidden />

@@ -8,33 +8,33 @@ import { useToast } from "@/components/toast-provider";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 
 /**
- * Status pills: light = soft grey chip + text in that status hue; dark = unchanged soft tint.
+ * Status pills: light = pastel bg + black label (globals.css); dark = soft tint + white label.
  */
 const STATUS_TITLE_PALETTE = [
-  "bg-neutral-200 text-sky-700 ring-1 ring-neutral-300/90 dark:bg-sky-400/15 dark:text-sky-100 dark:ring-sky-400/30",
-  "bg-neutral-200 text-violet-700 ring-1 ring-neutral-300/90 dark:bg-violet-400/15 dark:text-violet-100 dark:ring-violet-400/30",
-  "bg-neutral-200 text-emerald-700 ring-1 ring-neutral-300/90 dark:bg-emerald-400/15 dark:text-emerald-100 dark:ring-emerald-400/30",
-  "bg-neutral-200 text-rose-700 ring-1 ring-neutral-300/90 dark:bg-rose-400/15 dark:text-rose-100 dark:ring-rose-400/30",
-  "bg-neutral-200 text-amber-800 ring-1 ring-neutral-300/90 dark:bg-amber-400/15 dark:text-amber-50 dark:ring-amber-400/30",
-  "bg-neutral-200 text-cyan-700 ring-1 ring-neutral-300/90 dark:bg-cyan-400/15 dark:text-cyan-100 dark:ring-cyan-400/30",
-  "bg-neutral-200 text-fuchsia-700 ring-1 ring-neutral-300/90 dark:bg-fuchsia-400/15 dark:text-fuchsia-100 dark:ring-fuchsia-400/30",
-  "bg-neutral-200 text-lime-800 ring-1 ring-neutral-300/90 dark:bg-lime-400/15 dark:text-lime-50 dark:ring-lime-400/30",
-  "bg-neutral-200 text-teal-700 ring-1 ring-neutral-300/90 dark:bg-teal-400/15 dark:text-teal-100 dark:ring-teal-400/30",
-  "bg-neutral-200 text-indigo-700 ring-1 ring-neutral-300/90 dark:bg-indigo-400/15 dark:text-indigo-100 dark:ring-indigo-400/30",
-  "bg-neutral-200 text-orange-700 ring-1 ring-neutral-300/90 dark:bg-orange-400/15 dark:text-orange-100 dark:ring-orange-400/30",
-  "bg-neutral-200 text-pink-700 ring-1 ring-neutral-300/90 dark:bg-pink-400/15 dark:text-pink-100 dark:ring-pink-400/30",
-  "bg-neutral-200 text-blue-700 ring-1 ring-neutral-300/90 dark:bg-blue-400/15 dark:text-blue-100 dark:ring-blue-400/30",
-  "bg-neutral-200 text-green-700 ring-1 ring-neutral-300/90 dark:bg-green-400/15 dark:text-green-100 dark:ring-green-400/30",
-  "bg-neutral-200 text-red-700 ring-1 ring-neutral-300/90 dark:bg-red-400/15 dark:text-red-100 dark:ring-red-400/30",
-  "bg-neutral-200 text-purple-700 ring-1 ring-neutral-300/90 dark:bg-purple-400/15 dark:text-purple-100 dark:ring-purple-400/30",
-  "bg-neutral-200 text-yellow-800 ring-1 ring-neutral-300/90 dark:bg-yellow-400/15 dark:text-yellow-50 dark:ring-yellow-400/30",
-  "bg-neutral-200 text-stone-700 ring-1 ring-neutral-300/90 dark:bg-stone-400/15 dark:text-stone-100 dark:ring-stone-400/30",
-  "bg-neutral-200 text-slate-700 ring-1 ring-neutral-300/90 dark:bg-slate-400/15 dark:text-slate-100 dark:ring-slate-400/30",
-  "bg-neutral-200 text-rose-800 ring-1 ring-neutral-300/90 dark:bg-rose-500/12 dark:text-rose-100 dark:ring-rose-500/25",
-  "bg-neutral-200 text-sky-800 ring-1 ring-neutral-300/90 dark:bg-sky-500/12 dark:text-sky-100 dark:ring-sky-500/25",
-  "bg-neutral-200 text-teal-800 ring-1 ring-neutral-300/90 dark:bg-teal-500/12 dark:text-teal-100 dark:ring-teal-500/25",
-  "bg-neutral-200 text-purple-800 ring-1 ring-neutral-300/90 dark:bg-purple-500/12 dark:text-purple-100 dark:ring-purple-500/25",
-  "bg-neutral-200 text-orange-800 ring-1 ring-neutral-300/90 dark:bg-orange-500/12 dark:text-orange-100 dark:ring-orange-500/25",
+  "bg-sky-100 ring-1 ring-sky-300/90 shadow-sm dark:bg-sky-400/15 dark:shadow-none dark:ring-sky-400/30",
+  "bg-violet-100 ring-1 ring-violet-300/90 shadow-sm dark:bg-violet-400/15 dark:shadow-none dark:ring-violet-400/30",
+  "bg-emerald-100 ring-1 ring-emerald-300/90 shadow-sm dark:bg-emerald-400/15 dark:shadow-none dark:ring-emerald-400/30",
+  "bg-rose-100 ring-1 ring-rose-300/90 shadow-sm dark:bg-rose-400/15 dark:shadow-none dark:ring-rose-400/30",
+  "bg-amber-100 ring-1 ring-amber-300/90 shadow-sm dark:bg-amber-400/15 dark:shadow-none dark:ring-amber-400/30",
+  "bg-cyan-100 ring-1 ring-cyan-300/90 shadow-sm dark:bg-cyan-400/15 dark:shadow-none dark:ring-cyan-400/30",
+  "bg-fuchsia-100 ring-1 ring-fuchsia-300/90 shadow-sm dark:bg-fuchsia-400/15 dark:shadow-none dark:ring-fuchsia-400/30",
+  "bg-lime-100 ring-1 ring-lime-300/90 shadow-sm dark:bg-lime-400/15 dark:shadow-none dark:ring-lime-400/30",
+  "bg-teal-100 ring-1 ring-teal-300/90 shadow-sm dark:bg-teal-400/15 dark:shadow-none dark:ring-teal-400/30",
+  "bg-indigo-100 ring-1 ring-indigo-300/90 shadow-sm dark:bg-indigo-400/15 dark:shadow-none dark:ring-indigo-400/30",
+  "bg-orange-100 ring-1 ring-orange-300/90 shadow-sm dark:bg-orange-400/15 dark:shadow-none dark:ring-orange-400/30",
+  "bg-pink-100 ring-1 ring-pink-300/90 shadow-sm dark:bg-pink-400/15 dark:shadow-none dark:ring-pink-400/30",
+  "bg-blue-100 ring-1 ring-blue-300/90 shadow-sm dark:bg-blue-400/15 dark:shadow-none dark:ring-blue-400/30",
+  "bg-green-100 ring-1 ring-green-300/90 shadow-sm dark:bg-green-400/15 dark:shadow-none dark:ring-green-400/30",
+  "bg-red-100 ring-1 ring-red-300/90 shadow-sm dark:bg-red-400/15 dark:shadow-none dark:ring-red-400/30",
+  "bg-purple-100 ring-1 ring-purple-300/90 shadow-sm dark:bg-purple-400/15 dark:shadow-none dark:ring-purple-400/30",
+  "bg-yellow-100 ring-1 ring-yellow-300/90 shadow-sm dark:bg-yellow-400/15 dark:shadow-none dark:ring-yellow-400/30",
+  "bg-stone-200 ring-1 ring-stone-400/80 shadow-sm dark:bg-stone-400/15 dark:shadow-none dark:ring-stone-400/30",
+  "bg-slate-200 ring-1 ring-slate-400/80 shadow-sm dark:bg-slate-400/15 dark:shadow-none dark:ring-slate-400/30",
+  "bg-rose-100 ring-1 ring-rose-300/90 shadow-sm dark:bg-rose-500/12 dark:shadow-none dark:ring-rose-500/25",
+  "bg-sky-100 ring-1 ring-sky-300/90 shadow-sm dark:bg-sky-500/12 dark:shadow-none dark:ring-sky-500/25",
+  "bg-teal-100 ring-1 ring-teal-300/90 shadow-sm dark:bg-teal-500/12 dark:shadow-none dark:ring-teal-500/25",
+  "bg-purple-100 ring-1 ring-purple-300/90 shadow-sm dark:bg-purple-500/12 dark:shadow-none dark:ring-purple-500/25",
+  "bg-orange-100 ring-1 ring-orange-300/90 shadow-sm dark:bg-orange-500/12 dark:shadow-none dark:ring-orange-500/25",
 ];
 
 function statusTitleColorClass(columnIndexInOrder) {
@@ -290,7 +290,7 @@ export default function JobBoardClient({
               >
                 <div className="shrink-0 border-b border-border px-3 py-2 flex items-center justify-between gap-2">
                   <span
-                    className={`inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset sm:max-w-[min(100%,260px)] ${statusTitleColorClass(colorIdx >= 0 ? colorIdx : 0)}`}
+                    className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset sm:max-w-[min(100%,260px)] ${statusTitleColorClass(colorIdx >= 0 ? colorIdx : 0)}`}
                     title={status}
                   >
                     {status}

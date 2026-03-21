@@ -14,7 +14,8 @@ const marketplaceItemSchema = new mongoose.Schema(
     /** Display name for shop sellers on public pages */
     shopNameSnapshot: { type: String, default: "", trim: true },
     title: { type: String, required: true, trim: true },
-    slug: { type: String, required: true, trim: true, index: true },
+    /* unique index below — not index: true + index() */
+    slug: { type: String, required: true, trim: true },
     description: { type: String, default: "", trim: true },
     category: {
       type: String,

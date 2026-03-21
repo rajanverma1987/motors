@@ -13,7 +13,7 @@ const locationPageSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-locationPageSchema.index({ slug: 1 });
+/* slug: unique: true already creates an index — do not add schema.index({ slug }) */
 locationPageSchema.index({ status: 1 });
 locationPageSchema.index({ city: 1, state: 1, status: 1 });
 

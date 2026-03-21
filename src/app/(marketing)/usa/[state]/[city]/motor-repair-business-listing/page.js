@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import SeoLeadLandingPage from "@/components/marketing/SeoLeadLandingPage";
+
+/** Pre-render all paths from generateStaticParams; HTML is built on the server (RSC), not client-only. */
+export const dynamic = "force-static";
 import {
   SEO_USA_HUB_PATH,
   getCityBySlugs,

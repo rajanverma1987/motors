@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
 import SeoLeadLandingPage from "@/components/marketing/SeoLeadLandingPage";
+
+/** Pre-render all state paths from generateStaticParams; server-rendered HTML (RSC). */
+export const dynamic = "force-static";
 import {
   SEO_USA_HUB_PATH,
   SEO_USA_STATES,

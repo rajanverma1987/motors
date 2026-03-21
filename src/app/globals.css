@@ -62,6 +62,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Shop floor job board: status pills — black label in light theme, white in dark (beats inherited body color). */
+html:not(.dark) .job-board-status-pill {
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000;
+}
+html.dark .job-board-status-pill {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+}
+
 /* Tabular numbers for tables (aligns numbers in columns) */
 .tabular {
   font-variant-numeric: tabular-nums;
