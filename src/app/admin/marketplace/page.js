@@ -50,12 +50,26 @@ const ORDER_STATUS_OPTS = [
   { value: "closed", label: "Closed" },
 ];
 
+const WANT_STATUS_OPTS = [
+  { value: "new", label: "New" },
+  { value: "reviewing", label: "Reviewing" },
+  { value: "contacted", label: "Contacted" },
+  { value: "closed", label: "Closed" },
+];
+
+function categoryFilterLabel(value) {
+  if (!value) return "—";
+  const o = CAT_OPTIONS.find((c) => c.value === value);
+  return o ? o.label : value;
+}
+
 export default function AdminMarketplacePage() {
   const toast = useToast();
   const confirm = useConfirm();
   const [tab, setTab] = useState("items");
   const [items, setItems] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [wantRequests, setWantRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -67,12 +81,14 @@ export default function AdminMarketplacePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [iRes, oRes] = await Promise.all([
+      const [iRes, oRes, wRes] = await Promise.all([
         fetch("/api/admin/marketplace/items", { credentials: "include", cache: "no-store" }),
         fetch("/api/admin/marketplace/orders", { credentials: "include", cache: "no-store" }),
+        fetch("/api/admin/marketplace/want-requests", { credentials: "include", cache: "no-store" }),
       ]);
       const iData = await iRes.json();
       const oData = await oRes.json();
+      const wData = await wRes.json();
       if (iRes.ok) setItems(Array.isArray(iData) ? iData : []);
       else {
         setItems([]);
@@ -80,10 +96,13 @@ export default function AdminMarketplacePage() {
       }
       if (oRes.ok) setOrders(Array.isArray(oData) ? oData : []);
       else setOrders([]);
+      if (wRes.ok) setWantRequests(Array.isArray(wData) ? wData : []);
+      else setWantRequests([]);
     } catch {
       toast.error("Could not load marketplace");
       setItems([]);
       setOrders([]);
+      setWantRequests([]);
     } finally {
       setLoading(false);
     }
@@ -236,6 +255,23 @@ export default function AdminMarketplacePage() {
     }
   };
 
+  const patchWantStatus = async (row, status) => {
+    try {
+      const res = await fetch(`/api/admin/marketplace/want-requests/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Update failed");
+      toast.success("Request updated.");
+      load();
+    } catch (e) {
+      toast.error(e.message || "Failed");
+    }
+  };
+
   const itemColumns = useMemo(
     () => [
       {
@@ -331,6 +367,57 @@ export default function AdminMarketplacePage() {
     []
   );
 
+  const wantColumns = useMemo(
+    () => [
+      { key: "buyerName", label: "Name" },
+      { key: "buyerEmail", label: "Email" },
+      { key: "buyerPhone", label: "Phone", render: (v) => v || "—" },
+      {
+        key: "searchQuery",
+        label: "Search (snapshot)",
+        render: (v) => (
+          <span className="line-clamp-2 max-w-[140px]" title={v}>
+            {v || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "categoryFilter",
+        label: "Category",
+        render: (v) => categoryFilterLabel(v),
+      },
+      {
+        key: "requirements",
+        label: "Requirements",
+        render: (v) => (
+          <span className="line-clamp-3 max-w-[260px] whitespace-pre-wrap" title={v}>
+            {v || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (v, row) => (
+          <select
+            className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-title"
+            value={v || "new"}
+            onChange={(e) => patchWantStatus(row, e.target.value)}
+            aria-label="Want request status"
+          >
+            {WANT_STATUS_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ),
+      },
+      { key: "createdAt", label: "Date", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
+    ],
+    []
+  );
+
   return (
     <div className="flex w-full flex-1 justify-center">
       <div className="w-full max-w-7xl p-6">
@@ -359,6 +446,15 @@ export default function AdminMarketplacePage() {
         >
           Orders
         </button>
+        <button
+          type="button"
+          onClick={() => setTab("wants")}
+          className={`rounded-lg px-3 py-2 text-sm font-medium ${
+            tab === "wants" ? "bg-primary text-white" : "bg-card text-secondary hover:bg-muted/50"
+          }`}
+        >
+          Want requests
+        </button>
         {tab === "items" && (
           <div className="ml-auto">
             <Button type="button" variant="primary" size="sm" onClick={openCreate} className="inline-flex items-center gap-1.5">
@@ -380,13 +476,23 @@ export default function AdminMarketplacePage() {
             onRefresh={load}
             responsive
           />
-        ) : (
+        ) : tab === "orders" ? (
           <Table
             columns={orderColumns}
             data={orders}
             rowKey="id"
             loading={loading}
             emptyMessage="No orders yet."
+            onRefresh={load}
+            responsive
+          />
+        ) : (
+          <Table
+            columns={wantColumns}
+            data={wantRequests}
+            rowKey="id"
+            loading={loading}
+            emptyMessage="No want requests yet. They appear when visitors submit from an empty marketplace search."
             onRefresh={load}
             responsive
           />
