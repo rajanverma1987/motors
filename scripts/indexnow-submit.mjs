@@ -13,6 +13,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import { createJiti } from "jiti";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -109,7 +110,18 @@ async function main() {
   console.log("[indexnow] Done.");
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.disconnect();
+      }
+    } catch {
+      /* ignore */
+    }
+    if (process.exitCode) process.exit(process.exitCode);
+  });
