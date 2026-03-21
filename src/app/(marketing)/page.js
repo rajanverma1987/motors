@@ -72,6 +72,11 @@ const managementFeatures = [
     detail:
       "Publish spare parts, surplus motors, and tools to the MotorsWinding.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your CRM alongside work orders and invoices.",
   },
+  {
+    title: "Employee job postings (public careers)",
+    detail:
+      "Post open roles for technicians, winders, and shop staff from your CRM. Listings appear on the public Careers page with your shop name and location, and each job gets its own SEO-friendly URL. Candidates apply online; you review applications in the dashboard—so hiring stays in the same system as work orders and customers.",
+  },
 ];
 
 const leadFeatures = [
@@ -118,6 +123,7 @@ const plans = [
       "Everything in Starter",
       "Lead generation network",
       "Public marketplace listings",
+      "Careers page job postings & applications",
       "Vendor & PO management",
       "Shop parts inventory & low-stock alerts",
       "Receiving & shipping",
@@ -168,7 +174,11 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
                 One platform to run the center and fill the pipeline—work orders, job board, shop parts inventory with
-                reservations, invoicing, qualified repair leads, and a{" "}
+                reservations, invoicing, qualified repair leads,{" "}
+                <Link href="/careers" className="font-medium text-primary hover:underline">
+                  public job postings
+                </Link>{" "}
+                for hiring technicians, and a{" "}
                 <Link href="/marketplace" className="font-medium text-primary hover:underline">
                   public marketplace
                 </Link>{" "}
@@ -198,6 +208,12 @@ export default function HomePage() {
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
                   Repair leads built in
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                  <Link href="/careers" className="hover:text-primary hover:underline">
+                    Careers &amp; job postings for shops
+                  </Link>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
@@ -331,7 +347,11 @@ export default function HomePage() {
             <p className="mt-4 text-lg text-secondary">
               Everything you need to run and grow your motor repair center—workflow, operations,{" "}
               <strong className="font-medium text-title">shop parts inventory</strong> (on-hand, reserved, locations,
-              low-stock), leads, and a separate{" "}
+              low-stock), leads,{" "}
+              <Link href="/careers" className="font-medium text-primary hover:underline">
+                employee job postings
+              </Link>{" "}
+              on the public Careers page, and a separate{" "}
               <Link href="/marketplace" className="font-medium text-primary hover:underline">
                 public marketplace
               </Link>{" "}
@@ -473,6 +493,47 @@ export default function HomePage() {
               </div>
             </div>
           </div>
+
+          {/* Careers / hiring highlight */}
+          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+            <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.051.282-4.126.424-6.378.424s-4.327-.142-6.378-.424c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006a2.18 2.18 0 00-.75-1.661V6.25l-6-1.036-6 1.036v4.348a2.18 2.18 0 00.75 1.662m4.5 0a2.18 2.18 0 01-.75-1.662V6.25l6 1.036v4.348zM3.75 14.25v4.125c0 1.036.84 1.875 1.875 1.875h4.5c1.036 0 1.875-.84 1.875-1.875V14.25m-9.75 0h9.75"
+                      />
+                    </svg>
+                  </span>
+                  <span className="text-sm font-semibold uppercase tracking-wide text-primary">Hiring</span>
+                </div>
+                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">Post jobs; candidates apply on the site</h3>
+                <p className="mt-3 max-w-2xl text-secondary">
+                  Shops using the CRM can publish employee job postings that appear on the public{" "}
+                  <Link href="/careers" className="font-medium text-primary hover:underline">
+                    Careers
+                  </Link>{" "}
+                  page—technicians, winders, and other roles with your business name, location, and an apply flow. You
+                  manage listings and applications from the dashboard alongside work orders.
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+                <Link href="/careers">
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto lg:w-full">
+                    Browse open roles
+                  </Button>
+                </Link>
+                <Link href="/contact">
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto lg:w-full">
+                    Get CRM access to post jobs
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -547,7 +608,11 @@ export default function HomePage() {
                   List your repair company in the directory
                 </h2>
                 <p className="mt-3 max-w-xl text-secondary">
-                  Add your company to the MotorsWinding.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing.
+                  Add your company to the MotorsWinding.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}
+                  <Link href="/careers" className="font-medium text-primary hover:underline">
+                    post employee job openings
+                  </Link>{" "}
+                  on our public Careers page.
                 </p>
               </div>
               <Link href="/list-your-electric-motor-services" className="shrink-0">
@@ -567,7 +632,8 @@ export default function HomePage() {
             Ready to streamline your center?
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-lg text-secondary">
-            Contact us for a demo and see how MotorsWinding.com can help you manage jobs, stock, and grow with leads.
+            Contact us for a demo and see how MotorsWinding.com can help you manage jobs, stock, grow with leads, and hire
+            through public job postings.
           </p>
           <div className="mt-10">
             <Link href="/contact">

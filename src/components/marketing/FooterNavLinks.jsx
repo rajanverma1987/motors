@@ -25,7 +25,7 @@ export default function FooterNavLinks() {
   return (
     <nav
       className="flex flex-wrap items-center justify-center gap-1"
-      aria-label="Marketplace, shops, and careers"
+      aria-label="Marketplace, shops, careers, and job postings"
     >
       {NAV_LINKS.map(({ href, label }) => (
         <Link key={href} href={href} className={navLinkClass(pathname, href)}>

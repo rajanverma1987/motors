@@ -4,6 +4,7 @@ import FooterNavLinks from "./FooterNavLinks";
 const footerLinks = {
   "For repair shops": [
     { href: "/usa/motor-repair-business-listing", label: "USA — list + CRM (SEO hub)" },
+    { href: "/careers", label: "Careers — hire technicians (public job posts)" },
     { href: "/blog", label: "Shop owner blog" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-marketplace", label: "Marketplace for shops" },
@@ -24,6 +25,7 @@ const footerLinks = {
   ],
   Company: [
     { href: "/#features", label: "Features & inventory" },
+    { href: "/careers", label: "Careers & job postings" },
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
     { href: "/contact", label: "About" },
@@ -46,7 +48,8 @@ export default function Footer() {
               MotorsWinding.com
             </Link>
             <p className="mt-2 text-sm text-secondary">
-              Job management, shop parts inventory, and lead generation for motor repair businesses.
+              Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
+              businesses.
             </p>
           </div>
           {Object.entries(footerLinks).map(([title, links]) => (

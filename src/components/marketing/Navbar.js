@@ -19,6 +19,12 @@ export default function Navbar() {
           MotorsWinding.com
         </Link>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <Link
+            href="/careers"
+            className="hidden text-sm font-medium text-secondary hover:text-text sm:inline-block"
+          >
+            Careers
+          </Link>
           <Link href="/login" className="hidden text-sm font-medium text-secondary hover:text-text sm:inline-block">
             Log in
           </Link>
@@ -47,6 +53,13 @@ export default function Navbar() {
       {mobileOpen && (
         <div className="border-t border-border bg-card px-4 py-4 md:hidden">
           <nav className="flex flex-col gap-2" aria-label="Account">
+            <Link
+              href="/careers"
+              onClick={() => setMobileOpen(false)}
+              className="block rounded-md px-3 py-2 text-center text-sm font-medium text-secondary hover:bg-bg"
+            >
+              Careers
+            </Link>
             <Link href="/login" onClick={() => setMobileOpen(false)} className="block">
               <Button variant="outline" size="sm" className="w-full justify-center">
                 Log in

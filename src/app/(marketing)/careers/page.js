@@ -8,11 +8,12 @@ export const revalidate = 300;
 export const metadata = {
   title: "Careers — Motor repair & rewinding jobs",
   description:
-    "Open roles at motor repair and rewinding shops using MotorsWinding.com. Apply online with your experience.",
+    "Open roles posted by motor repair shops on MotorsWinding.com. Shops publish jobs from the CRM; apply online. Technicians, winders, and shop staff.",
   alternates: { canonical: "/careers" },
   openGraph: {
     title: "Careers | MotorsWinding.com",
-    description: "Find technician, winder, and shop roles at qualified motor repair centers.",
+    description:
+      "Technician, winder, and shop roles posted by motor repair centers. Shops publish jobs from the CRM; apply online.",
     url: "/careers",
     type: "website",
   },
@@ -27,8 +28,9 @@ export default async function CareersPage() {
       <div className="border-b border-border pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
-          Open positions posted by motor repair and rewinding shops on MotorsWinding.com. Select a role to read details
-          and apply with your contact information and experience.
+          Open positions posted by motor repair and rewinding shops on MotorsWinding.com. Shop owners create and manage
+          listings in the CRM—each role appears here with an SEO-friendly page; candidates select a job to read details and
+          apply with contact information and experience.
         </p>
       </div>
 
@@ -39,7 +41,7 @@ export default async function CareersPage() {
             <Link href="/list-your-electric-motor-services" className="text-primary font-medium hover:underline">
               list your shop
             </Link>{" "}
-            to hire through the CRM.
+            and use CRM access to post employee job openings on this Careers page.
           </li>
         ) : (
           jobs.map((job) => (
