@@ -2,6 +2,7 @@ import { getActiveLocationPagesForSitemap } from "@/lib/location-pages-public";
 import { getAllPublishedSlugs } from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { SEO_USA_HUB_PATH, SEO_USA_STATES, getAllSeoCityEntries } from "@/lib/seo-usa-config";
+import { getPublicJobPostingSlugs } from "@/lib/job-postings-public";
 
 /** @type {import('next').MetadataRoute.Sitemap} */
 export default async function sitemap() {
@@ -11,6 +12,8 @@ export default async function sitemap() {
     { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
     { url: `${baseUrl}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
+    { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
     { url: `${baseUrl}/marketplace`, lastModified: new Date(), changeFrequency: "daily", priority: 0.85 },
     {
       url: `${baseUrl}/motor-repair-marketplace`,
@@ -35,6 +38,7 @@ export default async function sitemap() {
     { url: `${baseUrl}/blog/motor-rewinding-business-marketing-usa`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/blog/best-software-for-repair-shop-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/blog/how-to-manage-repair-jobs-efficiently`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/careers`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.75 },
   ];
 
   const seoUsaStatePages = SEO_USA_STATES.map((s) => ({
@@ -77,5 +81,18 @@ export default async function sitemap() {
     console.error("Sitemap marketplace items error:", err);
   }
 
-  return [...staticPages, ...seoUsaStatePages, ...seoUsaCityPages, ...locationPages, ...marketplaceItems];
+  let careerJobs = [];
+  try {
+    const jobSlugs = await getPublicJobPostingSlugs();
+    careerJobs = jobSlugs.map((slug) => ({
+      url: `${baseUrl}/careers/${slug}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.72,
+    }));
+  } catch (err) {
+    console.error("Sitemap careers jobs error:", err);
+  }
+
+  return [...staticPages, ...seoUsaStatePages, ...seoUsaCityPages, ...locationPages, ...marketplaceItems, ...careerJobs];
 }

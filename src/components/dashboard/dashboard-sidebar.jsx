@@ -16,6 +16,7 @@ import {
   FiShoppingCart,
   FiPackage as FiBox,
   FiUserPlus,
+  FiBriefcase,
   FiShield,
   FiSliders,
   FiBarChart2,
@@ -59,6 +60,7 @@ const OPERATIONS_NAV = [
 
 const PEOPLE_NAV = [
   { href: "/dashboard/employees", label: "Employees", icon: FiUserPlus },
+  { href: "/dashboard/job-postings", label: "Job postings", icon: FiBriefcase },
   { href: "/dashboard/access-control", label: "Access control", icon: FiShield },
 ];
 

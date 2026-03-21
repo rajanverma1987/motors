@@ -1,4 +1,5 @@
 import Link from "next/link";
+import FooterNavLinks from "./FooterNavLinks";
 
 const footerLinks = {
   "For repair shops": [
@@ -28,8 +29,8 @@ const footerLinks = {
     { href: "/contact", label: "About" },
   ],
   Legal: [
-    { href: "#", label: "Privacy" },
-    { href: "#", label: "Terms" },
+    { href: "/privacy", label: "Privacy Policy" },
+    { href: "/terms", label: "Terms of Service" },
   ],
 };
 
@@ -66,7 +67,10 @@ export default function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-10 border-t border-border pt-8 text-center text-sm text-secondary">
+        <div className="mt-10 border-t border-border pt-8">
+          <FooterNavLinks />
+        </div>
+        <div className="mt-8 text-center text-sm text-secondary">
           © {year} MotorsWinding.com. All rights reserved.
         </div>
       </div>

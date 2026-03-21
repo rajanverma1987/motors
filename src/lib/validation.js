@@ -7,6 +7,8 @@ export const LIMITS = {
   name: { max: 200 },
   companyName: { max: 300 },
   message: { max: 2000 },
+  /** Job descriptions, experience narratives */
+  longText: { max: 20000 },
   shortText: { max: 300 },
   city: { max: 100 },
   state: { max: 100 },
