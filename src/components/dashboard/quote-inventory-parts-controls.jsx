@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
@@ -277,9 +279,16 @@ export default function QuoteInventoryPartsControls({
         size="lg"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setInventoryOpen(false)}>
-              Cancel
-            </Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: () => setInventoryOpen(false),
+                },
+              ]}
+            />
             <Button type="button" variant="primary" size="sm" onClick={handleAddFromInventory}>
               Add to quote
             </Button>
@@ -353,9 +362,16 @@ export default function QuoteInventoryPartsControls({
         size="lg"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setPoOpen(false)}>
-              Cancel
-            </Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: () => setPoOpen(false),
+                },
+              ]}
+            />
             <Button
               type="button"
               variant="primary"

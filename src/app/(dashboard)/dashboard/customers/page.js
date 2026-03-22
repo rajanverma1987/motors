@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEdit2 } from "react-icons/fi";
+import { FiEdit2, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -796,8 +797,27 @@ export default function DashboardCustomersPage() {
         size="4xl"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => { closeViewModal(); openEditModal(viewingCustomer); }}>Edit</Button>
-            <Button type="button" variant="outline" size="sm" onClick={closeViewModal}>Close</Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "close",
+                  label: "Close",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: closeViewModal,
+                },
+              ]}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                closeViewModal();
+                openEditModal(viewingCustomer);
+              }}
+            >
+              Edit
+            </Button>
           </>
         }
       >
@@ -944,7 +964,16 @@ export default function DashboardCustomersPage() {
         size="4xl"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={closeAddMotorModal}>Cancel</Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: closeAddMotorModal,
+                },
+              ]}
+            />
             <Button type="submit" form="add-motor-form" variant="primary" size="sm" disabled={savingMotor}>
               {savingMotor ? "Saving…" : "Save"}
             </Button>

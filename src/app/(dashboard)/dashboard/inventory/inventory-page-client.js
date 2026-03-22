@@ -11,7 +11,8 @@ import { FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import { FiRefreshCw, FiPlus } from "react-icons/fi";
+import { FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 
 export default function InventoryPageClient() {
   const toast = useToast();
@@ -453,9 +454,16 @@ export default function InventoryPageClient() {
         title={adjustItem ? `Adjust stock — ${adjustItem.name}` : "Adjust"}
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAdjustItem(null)}>
-              Cancel
-            </Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: () => setAdjustItem(null),
+                },
+              ]}
+            />
             <Button type="button" variant="primary" size="sm" disabled={saving} onClick={applyAdjust}>
               Apply
             </Button>

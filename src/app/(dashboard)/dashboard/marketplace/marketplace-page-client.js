@@ -5,6 +5,7 @@ import { FiEdit2, FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -396,9 +397,16 @@ export default function MarketplacePageClient() {
         size="2xl"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={closeModal}>
-              Cancel
-            </Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: closeModal,
+                },
+              ]}
+            />
             <Button type="submit" form="mp-item-form" variant="primary" size="sm" disabled={saving}>
               {saving ? "Saving…" : editingId ? "Update" : "Save"}
             </Button>

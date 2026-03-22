@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { FiEye, FiUserPlus } from "react-icons/fi";
+import { FiEye, FiUserPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
 
@@ -178,8 +179,27 @@ export default function AdminLeadsPage() {
         size="lg"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={closeViewModal}>Close</Button>
-            <Button type="button" variant="primary" size="sm" onClick={() => { closeViewModal(); openAssignModal(viewingLead); }}>Assign</Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "close",
+                  label: "Close",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: closeViewModal,
+                },
+              ]}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                closeViewModal();
+                openAssignModal(viewingLead);
+              }}
+            >
+              Assign
+            </Button>
           </>
         }
       >
@@ -246,8 +266,23 @@ export default function AdminLeadsPage() {
         size="md"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={closeAssignModal}>Cancel</Button>
-            <Button type="button" variant="primary" size="sm" onClick={handleSaveAssignments} disabled={saving || assignIds.length > MAX_ASSIGNMENTS}>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: closeAssignModal,
+                },
+              ]}
+            />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={handleSaveAssignments}
+              disabled={saving || assignIds.length > MAX_ASSIGNMENTS}
+            >
               {saving ? "Saving…" : "Save"}
             </Button>
           </>

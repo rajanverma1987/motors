@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -88,7 +89,16 @@ function EditContactModal({ contact, open, onClose, onSaved }) {
       size="md"
       actions={
         <>
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+          <ModalActionsDropdown
+            items={[
+              {
+                key: "cancel",
+                label: "Cancel",
+                icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                onClick: onClose,
+              },
+            ]}
+          />
           <Button type="button" variant="primary" size="sm" onClick={handleSave} disabled={saving}>
             {saving ? "Saving…" : "Save"}
           </Button>
@@ -371,7 +381,16 @@ export default function AdminMarketingPage() {
         size="md"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAddContactsOpen(false)}>Cancel</Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "cancel",
+                  label: "Cancel",
+                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
+                  onClick: () => setAddContactsOpen(false),
+                },
+              ]}
+            />
             <Button
               type="button"
               variant="primary"

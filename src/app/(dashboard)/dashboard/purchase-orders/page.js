@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2, FiRotateCw, FiSend } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiRotateCw, FiSend } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -674,6 +675,8 @@ export default function DashboardPurchaseOrdersPage() {
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   };
 
+  const PO_MENU_IC = "h-4 w-4 shrink-0 text-secondary";
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="shrink-0 border-b border-border pb-4">
@@ -711,18 +714,22 @@ export default function DashboardPurchaseOrdersPage() {
         size="4xl"
         actions={
           <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled
-              title="Save the PO first to send to vendor"
-            >
-              Send To Vendor
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={openAddVendorModal}>
-              Add New Vendor
-            </Button>
+            <ModalActionsDropdown
+              items={[
+                {
+                  key: "send",
+                  label: "Send To Vendor",
+                  disabled: true,
+                  title: "Save the PO first to send to vendor",
+                },
+                {
+                  key: "vendor",
+                  label: "Add New Vendor",
+                  icon: <FiPlus className={PO_MENU_IC} />,
+                  onClick: openAddVendorModal,
+                },
+              ]}
+            />
             <Button type="submit" form="create-po-form" variant="primary" size="sm" disabled={savingPo}>
               {savingPo ? "Saving…" : "Save"}
             </Button>
@@ -905,42 +912,47 @@ export default function DashboardPurchaseOrdersPage() {
         title={viewingPo?.poNumber ? `Purchase order ${viewingPo.poNumber}` : "Purchase order"}
         size="4xl"
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setInvoiceForm((f) => ({ ...f, date: todayString() }));
-                setAttachInvoiceOpen(true);
-              }}
-            >
-              Attach Vendor Invoice
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPaymentForm((f) => ({ ...f, date: todayString() }));
-                setRecordPaymentOpen(true);
-              }}
-            >
-              Record Payment
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => handleSendToVendor(viewingPo)}
-              disabled={!viewingPo?.id || sendingVendor}
-            >
-              {sendingVendor ? <><FiRotateCw className="mr-1.5 h-4 w-4 inline animate-spin" aria-hidden />Sending…</> : <><FiSend className="mr-1.5 h-4 w-4 inline" />Send To Vendor</>}
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => { closeViewModal(); openEditModal(viewingPo); }}>
-              Edit
-            </Button>
-          </>
+          <ModalActionsDropdown
+            items={[
+              {
+                key: "attachInv",
+                label: "Attach Vendor Invoice",
+                onClick: () => {
+                  setInvoiceForm((f) => ({ ...f, date: todayString() }));
+                  setAttachInvoiceOpen(true);
+                },
+              },
+              {
+                key: "pay",
+                label: "Record Payment",
+                onClick: () => {
+                  setPaymentForm((f) => ({ ...f, date: todayString() }));
+                  setRecordPaymentOpen(true);
+                },
+              },
+              {
+                key: "send",
+                label: sendingVendor ? "Sending…" : "Send To Vendor",
+                icon: sendingVendor ? (
+                  <FiRotateCw className={`${PO_MENU_IC} animate-spin`} aria-hidden />
+                ) : (
+                  <FiSend className={PO_MENU_IC} />
+                ),
+                disabled: !viewingPo?.id || sendingVendor,
+                onClick: () => handleSendToVendor(viewingPo),
+              },
+              { key: "d1", type: "divider" },
+              {
+                key: "edit",
+                label: "Edit",
+                icon: <FiEdit2 className={PO_MENU_IC} />,
+                onClick: () => {
+                  closeViewModal();
+                  openEditModal(viewingPo);
+                },
+              },
+            ]}
+          />
         }
       >
         {viewLoadingPoId ? (

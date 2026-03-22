@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import Modal from "@/components/ui/modal";
+import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -18,6 +19,8 @@ import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print"
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import { FiSave, FiEdit2, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
 import { INVOICE_STATUS_OPTIONS, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+
+const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
 const SCOPE_COLUMNS = [
   { key: "scope", label: "Scope", width: "75%" },
@@ -444,6 +447,64 @@ export default function InvoiceFormModal({
   const title = savedId || invoiceId ? `Edit invoice #${form.invoiceNumber || "—"}` : "New invoice";
   const headerDisabled = saving || loading || headerBusy;
 
+  const invoiceActionsMenuItems = useMemo(() => {
+    if (!canUseRecordActions) return [];
+    return [
+      {
+        key: "scroll",
+        label: "Scroll to form",
+        icon: <FiEdit2 className={MENU_IC} />,
+        disabled: headerDisabled,
+        title: "Scroll to form",
+        onClick: scrollToForm,
+      },
+      {
+        key: "send",
+        label: isSendingToClient ? "Sending…" : "Send to client",
+        icon: isSendingToClient ? (
+          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
+        ) : (
+          <FiSend className={MENU_IC} />
+        ),
+        disabled: headerDisabled,
+        onClick: handleHeaderSend,
+      },
+      {
+        key: "print",
+        label: "Print",
+        icon: <FiPrinter className={MENU_IC} />,
+        disabled: headerDisabled,
+        onClick: handleHeaderPrint,
+      },
+      { key: "d1", type: "divider" },
+      {
+        key: "delete",
+        label: "Delete",
+        icon: <FiTrash2 className={MENU_IC} />,
+        disabled: headerDisabled,
+        danger: true,
+        title: "Delete",
+        onClick: handleHeaderDelete,
+      },
+      { key: "d2", type: "divider" },
+      {
+        key: "cancel",
+        label: "Cancel",
+        disabled: headerDisabled,
+        onClick: () => onClose?.(),
+      },
+    ];
+  }, [
+    canUseRecordActions,
+    headerDisabled,
+    isSendingToClient,
+    scrollToForm,
+    handleHeaderSend,
+    handleHeaderPrint,
+    handleHeaderDelete,
+    onClose,
+  ]);
+
   return (
     <>
     <Modal
@@ -455,73 +516,20 @@ export default function InvoiceFormModal({
       zIndex={zIndex}
       actions={
         <>
-          {canUseRecordActions && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={headerDisabled}
-                onClick={scrollToForm}
-                title="Scroll to form"
-                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              >
-                <FiEdit2 className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Edit</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={headerDisabled}
-                onClick={handleHeaderSend}
-                title={isSendingToClient ? "Sending…" : "Send to client"}
-                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              >
-                {isSendingToClient ? (
-                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                <span className="hidden sm:inline">{isSendingToClient ? "Sending…" : "Send"}</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={headerDisabled}
-                onClick={handleHeaderPrint}
-                title="Print"
-                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              >
-                <FiPrinter className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Print</span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={headerDisabled}
-                onClick={handleHeaderDelete}
-                title="Delete"
-                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap text-danger hover:text-danger"
-              >
-                <FiTrash2 className="h-4 w-4 shrink-0" />
-                <span className="hidden sm:inline">Delete</span>
-              </Button>
-              <span className="hidden h-6 w-px shrink-0 bg-border sm:inline-block" aria-hidden />
-            </>
+          {canUseRecordActions ? (
+            <ModalActionsDropdown items={invoiceActionsMenuItems} menuZIndex={zIndex + 25} />
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={headerDisabled}
+              onClick={onClose}
+              className="inline-flex shrink-0 items-center whitespace-nowrap"
+            >
+              Cancel
+            </Button>
           )}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={headerDisabled}
-            onClick={onClose}
-            className="inline-flex shrink-0 items-center whitespace-nowrap"
-          >
-            Cancel
-          </Button>
           <Button
             type="button"
             variant="primary"
