@@ -26,11 +26,13 @@ export async function getSitemapEntries() {
       changeFrequency: "monthly",
       priority: 0.75,
     },
-    { url: `${baseUrl}/motor-repair-software`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.9 },
     { url: `${baseUrl}/electric-motor-repair`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/motor-repair-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/motor-repair-shops`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/emergency-motor-repair`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
+    {
+      url: `${baseUrl}/emergency-motor-repair-what-to-do`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
     {
       url: `${baseUrl}/cost-of-motor-repair-and-rewinding`,
       lastModified: new Date(),

@@ -154,7 +154,7 @@ export default function CostOfMotorRepairPage() {
                 <span className="text-secondary"> — hub for buyers</span>
               </li>
               <li>
-                <Link href="/motor-repair-near-me" className="text-primary hover:underline">
+                <Link href="/electric-motor-reapir-near-me" className="text-primary hover:underline">
                   Motor repair near me
                 </Link>
                 <span className="text-secondary"> — local intent</span>

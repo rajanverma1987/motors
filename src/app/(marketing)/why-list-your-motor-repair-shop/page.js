@@ -62,8 +62,8 @@ const faqItems = [
     a: "Use accurate business name and address, service radius or states served, core services (repair, rewind, balancing, machining), industries (HVAC, wastewater, OEM), certifications, hours, and a direct phone or quote path. Photos of your shop floor and test equipment increase confidence.",
   },
   {
-    q: "Is listing affordable compared to paid ads?",
-    a: "Directory presence is typically a small ongoing investment compared to always-on paid search. It compounds as the directory earns authority for industry terms—you benefit from that growth without paying per click for every visit.",
+    q: "Is directory listing free?",
+    a: "Yes. Listing your motor repair shop with us is always free. You still get long-term visibility while avoiding the per-click cost of always-on paid search. As the directory earns authority for industry terms, your listing benefits from that growth with no listing fee.",
   },
   {
     q: "Does a listing help SEO for my own domain?",
@@ -215,13 +215,13 @@ export default function WhyListYourMotorRepairShopPage() {
 
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">
-              Low cost, long-term visibility
+              It is always free
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Listing in a focused directory is typically a fraction of the cost of broad paid ads or heavy SEO work. You
-              get a persistent presence that works for you over time. As the directory gains authority and ranks for
-              terms like &quot;motor repair shops&quot; or &quot;rewinding services,&quot; your listing benefits from
-              that visibility.
+              Listing your shop in our directory is <strong className="text-title">always free</strong>—no listing
+              fees. You get a persistent presence that works for you over time, without the per-click cost of broad paid
+              ads or heavy SEO spend. As the directory gains authority and ranks for terms like &quot;motor repair
+              shops&quot; or &quot;rewinding services,&quot; your listing benefits from that visibility at no charge.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Think of it as <strong className="text-title">always-on discovery</strong>: not a replacement for your

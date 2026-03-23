@@ -2,6 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  async redirects() {
+    return [
+      { source: "/motor-repair-near-me", destination: "/electric-motor-reapir-near-me", permanent: true },
+      { source: "/motor-repair-software", destination: "/motor-repair-shop-management-software", permanent: true },
+      { source: "/motor-repair-shops", destination: "/electric-motor-reapir-shops-listings", permanent: true },
+      { source: "/emergency-motor-repair", destination: "/emergency-motor-repair-what-to-do", permanent: true },
+    ];
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],

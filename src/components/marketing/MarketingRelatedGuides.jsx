@@ -42,11 +42,6 @@ const BUYER_LINKS = [
     hint: "Local search intent",
   },
   {
-    href: "/motor-repair-near-me",
-    label: "Motor repair near me",
-    hint: "Broader local intent",
-  },
-  {
     href: "/marketplace",
     label: "Parts & equipment marketplace",
     hint: "Surplus motors and parts",
