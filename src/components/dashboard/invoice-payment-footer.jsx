@@ -17,9 +17,7 @@ export function InvoicePaymentFooterPrint({
   const label = isCustomer ? "text-gray-500" : "text-secondary";
   const body = isCustomer ? "text-gray-900" : "text-title";
   const thanksClass = isCustomer ? "text-gray-700" : "text-secondary";
-  const linkClass = isCustomer
-    ? "break-all text-blue-600 underline hover:text-blue-800"
-    : "break-all text-primary underline hover:opacity-90";
+  const linkClass = "break-all text-primary underline hover:opacity-90";
 
   return (
     <footer className={`mt-8 border-t pt-6 ${border}`}>

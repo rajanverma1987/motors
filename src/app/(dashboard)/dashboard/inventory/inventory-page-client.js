@@ -11,8 +11,7 @@ import { FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import { FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
+import { FiRefreshCw, FiPlus } from "react-icons/fi";
 
 export default function InventoryPageClient() {
   const toast = useToast();
@@ -381,9 +380,6 @@ export default function InventoryPageClient() {
             searchable
           />
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(false)}>
-              Cancel
-            </Button>
             <Button type="submit" variant="primary" size="sm" disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -435,9 +431,6 @@ export default function InventoryPageClient() {
             on-hand here to an absolute quantity.
           </p>
           <div className="flex flex-wrap justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={closeEdit}>
-              Cancel
-            </Button>
             <Button type="submit" variant="primary" size="sm" disabled={saving}>
               {saving ? "Saving…" : "Save changes"}
             </Button>
@@ -454,16 +447,6 @@ export default function InventoryPageClient() {
         title={adjustItem ? `Adjust stock — ${adjustItem.name}` : "Adjust"}
         actions={
           <>
-            <ModalActionsDropdown
-              items={[
-                {
-                  key: "cancel",
-                  label: "Cancel",
-                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
-                  onClick: () => setAdjustItem(null),
-                },
-              ]}
-            />
             <Button type="button" variant="primary" size="sm" disabled={saving} onClick={applyAdjust}>
               Apply
             </Button>

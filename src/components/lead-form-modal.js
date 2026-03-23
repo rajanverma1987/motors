@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 
@@ -99,33 +97,10 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
       title="Send your requirement"
       size="4xl"
       actions={
-        submitted ? (
-          <ModalActionsDropdown
-            items={[
-              {
-                key: "close",
-                label: "Close",
-                icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
-                onClick: handleClose,
-              },
-            ]}
-          />
-        ) : (
-          <>
-            <ModalActionsDropdown
-              items={[
-                {
-                  key: "cancel",
-                  label: "Cancel",
-                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
-                  onClick: handleClose,
-                },
-              ]}
-            />
-            <Button type="submit" form="lead-form-modal-form" variant="primary" size="sm" disabled={submitting}>
-              {submitting ? "Sending…" : "Submit"}
-            </Button>
-          </>
+        submitted ? null : (
+          <Button type="submit" form="lead-form-modal-form" variant="primary" size="sm" disabled={submitting}>
+            {submitting ? "Sending…" : "Submit"}
+          </Button>
         )
       }
     >

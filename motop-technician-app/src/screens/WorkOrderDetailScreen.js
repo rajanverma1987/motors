@@ -803,7 +803,7 @@ const styles = StyleSheet.create({
   },
   tabBtnActive: {
     borderColor: colors.primary,
-    backgroundColor: "hsl(214, 72%, 96%)",
+    backgroundColor: "hsl(26, 45%, 95%)",
   },
   tabBtnText: {
     fontSize: 14,
@@ -951,7 +951,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderStyle: "dashed",
     borderColor: colors.primary,
-    backgroundColor: "hsl(214, 72%, 97%)",
+    backgroundColor: "hsl(26, 40%, 96%)",
     alignItems: "center",
     justifyContent: "center",
   },

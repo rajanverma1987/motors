@@ -3,11 +3,10 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiEdit2, FiX } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -697,16 +696,6 @@ export default function DashboardMotorsPage() {
         width="min(1600px, 96vw)"
         actions={
           <>
-            <ModalActionsDropdown
-              items={[
-                {
-                  key: "close",
-                  label: "Close",
-                  icon: <FiX className="h-4 w-4 shrink-0 text-secondary" />,
-                  onClick: closeViewModal,
-                },
-              ]}
-            />
             <Button
               type="button"
               variant="primary"

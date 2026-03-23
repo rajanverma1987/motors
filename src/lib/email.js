@@ -208,7 +208,7 @@ export async function sendCrmWelcomeEmail({
         <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Password</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;">${esc(plainPassword)}</td></tr>
       </tbody>
     </table>
-    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
     <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
     <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
     <p>— MotorsWinding.com</p>
@@ -316,7 +316,7 @@ export async function sendQuoteToCustomer(
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
     <p>Your service quote ${rfqNumber ? `(RFQ# ${esc(rfqNumber)})` : ""} is ready for your review.</p>
     <p><strong>View your quote and approve or reject it here:</strong></p>
-    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
+    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
     <p>You can also print or save the quote as PDF from that page.</p>
     ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
     ${logoBlock}
@@ -356,7 +356,7 @@ export async function sendInvoiceToCustomer(
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
     <p>Your invoice <strong>#${invNo}</strong> from ${signature} is ready.</p>
     <p><strong>View and print your invoice here:</strong></p>
-    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View invoice</a></p>
+    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View invoice</a></p>
     <p>You can print or save the invoice as PDF from that page.</p>
     ${accountsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
@@ -395,7 +395,7 @@ export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, sho
     <p>Hi${vendorName ? ` ${esc(vendorName)}` : ""},</p>
     <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${signature}.</p>
     <p><strong>View, print, and update delivery status for each line item here:</strong></p>
-    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
+    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
     <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
     ${typeof options.poVendorAddressesHtml === "string" && options.poVendorAddressesHtml.trim() ? options.poVendorAddressesHtml : ""}
     ${logoBlock}

@@ -386,9 +386,6 @@ export default function JobPostingsClient() {
         <Form onSubmit={handleCreate} className="flex max-h-[80vh] flex-col gap-4 overflow-y-auto">
           <JobPostingFormFields form={form} setForm={setForm} />
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>
-              Cancel
-            </Button>
             <Button type="submit" variant="primary" disabled={saving}>
               {saving ? "Saving…" : "Create posting"}
             </Button>
@@ -425,9 +422,6 @@ export default function JobPostingsClient() {
                 Delete posting
               </Button>
               <div className="flex justify-end gap-2 order-1 sm:order-2">
-                <Button type="button" variant="outline" onClick={closeEditModal}>
-                  Cancel
-                </Button>
                 <Button type="submit" variant="primary" disabled={editSaving}>
                   {editSaving ? "Saving…" : "Save changes"}
                 </Button>

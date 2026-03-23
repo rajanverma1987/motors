@@ -486,13 +486,6 @@ export default function InvoiceFormModal({
         title: "Delete",
         onClick: handleHeaderDelete,
       },
-      { key: "d2", type: "divider" },
-      {
-        key: "cancel",
-        label: "Cancel",
-        disabled: headerDisabled,
-        onClick: () => onClose?.(),
-      },
     ];
   }, [
     canUseRecordActions,
@@ -502,7 +495,6 @@ export default function InvoiceFormModal({
     handleHeaderSend,
     handleHeaderPrint,
     handleHeaderDelete,
-    onClose,
   ]);
 
   return (
@@ -518,18 +510,7 @@ export default function InvoiceFormModal({
         <>
           {canUseRecordActions ? (
             <ModalActionsDropdown items={invoiceActionsMenuItems} menuZIndex={zIndex + 25} />
-          ) : (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={headerDisabled}
-              onClick={onClose}
-              className="inline-flex shrink-0 items-center whitespace-nowrap"
-            >
-              Cancel
-            </Button>
-          )}
+          ) : null}
           <Button
             type="button"
             variant="primary"

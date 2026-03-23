@@ -576,9 +576,6 @@ export default function AccountsReceivablePageClient() {
             />
             <Textarea label="Notes" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} rows={2} />
             <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="outline" disabled={paySubmitting} onClick={() => setPaymentForId(null)}>
-                Cancel
-              </Button>
               <Button type="button" variant="primary" disabled={paySubmitting} onClick={submitPayment}>
                 {paySubmitting ? "Saving…" : "Record payment"}
               </Button>

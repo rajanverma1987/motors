@@ -7,14 +7,15 @@ html {
 
 /* Design system theme tokens (HSL values without hsl()) */
 :root {
-  --bg: 210 25% 99%;
-  --card: 210 22% 98%;
-  --form-bg: 210 12% 96%;
-  --text: 222 47% 11%;
-  --title: 218 44% 8%;
-  --primary: 214 72% 38%;
-  --secondary: 215 25% 42%;
-  --border: 214 18% 94%;
+  /* Warm paper / copper metal palette (replaces cool blue) */
+  --bg: 32 22% 99%;
+  --card: 30 18% 98%;
+  --form-bg: 28 12% 96%;
+  --text: 25 35% 12%;
+  --title: 22 40% 9%;
+  --primary: 26 52% 38%;
+  --secondary: 24 14% 40%;
+  --border: 28 14% 91%;
   --accent: 24 95% 53%;
   --success: 142 71% 45%;
   --warning: 38 92% 50%;
@@ -23,18 +24,24 @@ html {
 
 /* Dark theme: next-themes adds class="dark" to <html> */
 html.dark {
-  --bg: 222 40% 12%;
-  --card: 222 36% 16%;
-  --form-bg: 222 36% 16%;
-  --text: 210 38% 98%;
-  --title: 0 0% 100%;
-  --primary: 213 85% 62%;
-  --secondary: 215 22% 68%;
-  --border: 217 22% 28%;
-  --accent: 24 95% 53%;
-  --success: 142 71% 45%;
-  --warning: 38 92% 50%;
-  --danger: 0 72% 51%;
+  /* Deeper base + clearer lift: cards read as surfaces, not mush with bg */
+  --bg: 22 14% 7%;
+  --card: 24 12% 12%;
+  --form-bg: 23 11% 10%;
+  /* Body: warm off-white (easier long sessions than pure #fff-tint) */
+  --text: 35 12% 86%;
+  --title: 40 20% 96%;
+  /* Copper: saturated enough to pop, light enough for AA on buttons */
+  --primary: 27 62% 52%;
+  /* Muted labels / hints — visible on 7% bg without competing with body */
+  --secondary: 28 6% 58%;
+  /* Separators: visible but not harsh */
+  --border: 25 10% 22%;
+  --accent: 26 88% 56%;
+  /* Semantics: slightly lifted L for dark surfaces */
+  --success: 145 50% 50%;
+  --warning: 40 90% 56%;
+  --danger: 0 70% 58%;
 }
 
 @theme inline {
@@ -60,6 +67,12 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+html.dark body {
+  color-scheme: dark;
+  /* Slightly softer rendering on OLED / long reads */
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Shop floor job board: status pills — black label in light theme, white in dark (beats inherited body color). */

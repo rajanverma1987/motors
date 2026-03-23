@@ -15,7 +15,7 @@ const DEFAULT_INITIAL = {
 <li>Manage your presence in one place</li>
 </ul>
 <p style="margin: 1.25em 0;">
-<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
+<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
 </p>
 <p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— MotorsWinding.com</p>
 <hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />
@@ -31,7 +31,7 @@ const DEFAULT_FOLLOWUP = {
 <p style="margin: 0 0 1em 0;">Just following up on our previous message about listing your shop on <strong>MotorsWinding.com</strong>.</p>
 <p style="margin: 0 0 1em 0;">If you have a moment, you can add your shop here—it’s free and only takes a few minutes.</p>
 <p style="margin: 1.25em 0;">
-<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #2563eb; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
+<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
 </p>
 <p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— MotorsWinding.com</p>
 <hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />

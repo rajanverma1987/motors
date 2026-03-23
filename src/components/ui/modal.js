@@ -35,7 +35,7 @@ export default function Modal({
   width,
   height,
   className = "",
-  /** Actions (e.g. Save, Cancel) rendered in header right, before close. Use size="sm" buttons. */
+  /** Actions (e.g. Save) rendered in header right, before close. Use size="sm" buttons. */
   actions,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
@@ -135,13 +135,13 @@ export default function Modal({
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 dark:bg-black/70"
         onClick={onClose}
       />
       <div
         ref={dialogRef}
         style={dialogStyle}
-        className={`absolute left-1/2 top-1/2 w-full rounded-lg border border-border bg-card shadow-xl flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
+        className={`absolute left-1/2 top-1/2 w-full rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title != null || showClose || actions) && (

@@ -359,9 +359,6 @@ export default function SupportPageClient() {
             ) : null}
           </div>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" size="sm" onClick={closeCreateModal}>
-              Cancel
-            </Button>
             <Button type="submit" variant="primary" size="sm" disabled={saving || uploadingPhoto}>
               {saving ? "Sending…" : "Submit ticket"}
             </Button>

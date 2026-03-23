@@ -1966,7 +1966,7 @@ export default function DashboardQuotesPage() {
         title={`Attachments — RFQ# ${attachmentRfqNumber || "—"}`}
         size="lg"
         zIndex={100}
-        actions={<Button type="button" variant="outline" size="sm" onClick={closeAttachmentModal}>Close</Button>}
+        actions={null}
       >
         <div className="space-y-4">
           <div>
@@ -2238,7 +2238,7 @@ export default function DashboardQuotesPage() {
         onClose={() => { setViewMotorDetailOpen(false); setViewingMotorDetail(null); setLoadingMotorDetailId(null); }}
         title="Motor details"
         width="min(1600px, 96vw)"
-        actions={<Button type="button" variant="outline" size="sm" onClick={() => { setViewMotorDetailOpen(false); setViewingMotorDetail(null); setLoadingMotorDetailId(null); }}>Close</Button>}
+        actions={null}
       >
         {loadingMotorDetailId ? (
           <div className="flex items-center justify-center py-12"><span className="text-secondary">Loading…</span></div>

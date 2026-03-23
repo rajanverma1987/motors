@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { FiChevronDown } from "react-icons/fi";
 import Button from "@/components/ui/button";
 
 /**
  * Compact “Actions” control for modal headers: replaces a row of outline buttons with a dropdown menu.
+ * If there is exactly one actionable item (ignoring dividers), renders that item as a plain outline button instead of a dropdown.
  * Menu is portaled to `document.body` with a high z-index so it stacks above modal chrome.
  *
  * @param {Object} props
@@ -23,13 +24,19 @@ export default function ModalActionsDropdown({
   className = "",
   triggerClassName = "",
 }) {
+  const actionableItems = useMemo(
+    () => items.filter((i) => i.type !== "divider"),
+    [items]
+  );
+  const menuMode = actionableItems.length > 1;
+
   const [open, setOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0, minW: 200 });
   const triggerWrapRef = useRef(null);
   const menuRef = useRef(null);
 
   useLayoutEffect(() => {
-    if (!open || !triggerWrapRef.current) return;
+    if (!menuMode || !open || !triggerWrapRef.current) return;
     const r = triggerWrapRef.current.getBoundingClientRect();
     const minW = Math.max(200, r.width);
     let left = align === "end" ? r.right - minW : r.left;
@@ -37,10 +44,10 @@ export default function ModalActionsDropdown({
     if (left < 8) left = 8;
     const top = r.bottom + 4;
     setCoords({ top, left, minW });
-  }, [open, align]);
+  }, [open, align, menuMode]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!menuMode || !open) return;
     const onDoc = (e) => {
       if (triggerWrapRef.current?.contains(e.target)) return;
       if (menuRef.current?.contains(e.target)) return;
@@ -55,7 +62,41 @@ export default function ModalActionsDropdown({
       document.removeEventListener("mousedown", onDoc);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, menuMode]);
+
+  if (actionableItems.length === 0) {
+    return null;
+  }
+
+  /** One action → show a normal header button (no extra dropdown click). */
+  if (actionableItems.length === 1) {
+    const item = actionableItems[0];
+    const labelText = typeof item.label === "string" ? item.label : undefined;
+    return (
+      <div className={`inline-flex shrink-0 ${className}`.trim()}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={`!px-2 !py-0.5 !text-xs whitespace-nowrap inline-flex items-center gap-1.5 ${
+            item.danger ? "!text-danger hover:!border-danger/50" : ""
+          } ${triggerClassName}`.trim()}
+          disabled={item.disabled}
+          title={item.title}
+          aria-label={labelText}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (item.disabled) return;
+            item.onClick?.();
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {item.icon ? <span className="shrink-0 inline-flex items-center">{item.icon}</span> : null}
+          <span className="min-w-0">{item.label}</span>
+        </Button>
+      </div>
+    );
+  }
 
   const menu =
     open && typeof document !== "undefined"
