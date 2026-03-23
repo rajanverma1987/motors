@@ -1,6 +1,6 @@
 # Motop Technician (Expo)
 
-Mobile app for shop technicians: sign in with **employee email + password** (same as configured in CRM), scan **RFQ QR tags** printed from the Quotes screen, open work orders, update **status**, and add **comments**.
+Mobile app for shop technicians: sign in with **employee email + password** (same as configured in CRM), scan **RFQ QR tags** printed from the Quotes screen, open work orders, update **status**, add **comments**, and use **Calculators** (same tools as the CRM Calculators page, including **CM Best Match** with the shop wire catalog via `GET /api/tech/wire-sizes`).
 
 - **JavaScript only** (no TypeScript).
 - **Theme** colors match the MotorsWinding CRM light theme (`src/theme.js` → same HSL tokens as web `globals.css`).

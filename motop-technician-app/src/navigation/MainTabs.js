@@ -12,6 +12,12 @@ import RfqWorkOrdersScreen from "../screens/RfqWorkOrdersScreen";
 import MyWorkOrdersScreen from "../screens/MyWorkOrdersScreen";
 import WorkOrderDetailScreen from "../screens/WorkOrderDetailScreen";
 import BookmarksScreen from "../screens/BookmarksScreen";
+import CalculatorsHomeScreen from "../screens/calculators/CalculatorsHomeScreen";
+import CmBestMatchScreen from "../screens/calculators/CmBestMatchScreen";
+import PowerCurrentScreen from "../screens/calculators/PowerCurrentScreen";
+import SpeedDrivesScreen from "../screens/calculators/SpeedDrivesScreen";
+import TorqueScreen from "../screens/calculators/TorqueScreen";
+import BenchElectricalScreen from "../screens/calculators/BenchElectricalScreen";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -102,6 +108,26 @@ function BookmarksStackNavigator() {
   );
 }
 
+function CalculatorsStackNavigator() {
+  return (
+    <Stack.Navigator screenOptions={stackScreenOptions}>
+      <Stack.Screen
+        name="CalculatorsHome"
+        component={CalculatorsHomeScreen}
+        options={{
+          title: "Calculators",
+          headerRight: () => <HeaderSignOut />,
+        }}
+      />
+      <Stack.Screen name="CmBestMatch" component={CmBestMatchScreen} options={{ title: "CM Best Match" }} />
+      <Stack.Screen name="PowerCurrent" component={PowerCurrentScreen} options={{ title: "Power & current" }} />
+      <Stack.Screen name="SpeedDrives" component={SpeedDrivesScreen} options={{ title: "Speed & drives" }} />
+      <Stack.Screen name="Torque" component={TorqueScreen} options={{ title: "Torque" }} />
+      <Stack.Screen name="BenchElectrical" component={BenchElectricalScreen} options={{ title: "Bench electrical" }} />
+    </Stack.Navigator>
+  );
+}
+
 export default function MainTabs() {
   return (
     <Tab.Navigator
@@ -152,6 +178,17 @@ export default function MainTabs() {
             />
           ),
           tabBarStyle: tabBarStyleForRoute(route, "BookmarksHome"),
+        })}
+      />
+      <Tab.Screen
+        name="Calculators"
+        component={CalculatorsStackNavigator}
+        options={({ route }) => ({
+          tabBarLabel: "Calc",
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons name={focused ? "calculator" : "calculator-outline"} size={size ?? 24} color={color} />
+          ),
+          tabBarStyle: tabBarStyleForRoute(route, "CalculatorsHome"),
         })}
       />
     </Tab.Navigator>

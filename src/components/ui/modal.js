@@ -41,6 +41,8 @@ export default function Modal({
   headerClassName = "",
   /** Optional override so this modal appears above others (e.g. when opening a modal from another modal). */
   zIndex: zIndexOverride,
+  /** Optional id on the outer portal wrapper (e.g. for print CSS targeting). */
+  hostId,
 }) {
   const stackContext = useModalStack();
   const { addModal, removeModal } = stackContext || {};
@@ -95,10 +97,11 @@ export default function Modal({
     if (!open) return;
     if (addModal && removeModal) {
       const id = addModal(onClose);
-      setModalId(id);
+      // Defer so we don't sync-setState in the effect body (react-hooks/set-state-in-effect).
+      queueMicrotask(() => setModalId(id));
       return () => {
         removeModal(id);
-        setModalId(null);
+        queueMicrotask(() => setModalId(null));
       };
     }
     const handler = (e) => e.key === "Escape" && onClose();
@@ -128,6 +131,7 @@ export default function Modal({
 
   const modalContent = (
     <div
+      id={hostId ?? undefined}
       className="fixed inset-0 p-4"
       style={{ zIndex }}
       role="dialog"
