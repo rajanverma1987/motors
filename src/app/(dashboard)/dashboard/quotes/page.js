@@ -766,10 +766,16 @@ export default function DashboardQuotesPage() {
           // use row data as-is
         }
       }
+      const preparedById = quoteToPrint.preparedBy;
+      const preparedByName =
+        preparedById != null && preparedById !== ""
+          ? employees.find((e) => String(e.id) === String(preparedById))?.name || ""
+          : "";
       setPrintPreviewData({
         quote: quoteToPrint,
         customerName: customerNameMap[quoteToPrint.customerId] || "",
         motorLabel: motorLabelMap[quoteToPrint.motorId] || "",
+        preparedByName,
         shop: {
           name: user?.shopName || "",
           address: "",
@@ -780,7 +786,7 @@ export default function DashboardQuotesPage() {
       });
       setPrintPreviewOpen(true);
     },
-    [viewingQuote, customerNameMap, motorLabelMap, user, accountSettings]
+    [viewingQuote, customerNameMap, motorLabelMap, employees, user, accountSettings]
   );
 
   const handlePrintMotorTagQr = useCallback(
@@ -1064,16 +1070,8 @@ export default function DashboardQuotesPage() {
         key: "tagQr",
         label: "Tag QR",
         icon: <LuQrCode className={MENU_IC} aria-hidden />,
-        disabled: !nextRfqNumber?.trim(),
-        title: nextRfqNumber?.trim()
-          ? "Print QR label (quote #) for shop floor"
-          : "RFQ number not assigned yet",
-        onClick: () =>
-          handlePrintMotorTagQr(nextRfqNumber, {
-            customerName: selectedCustomer?.companyName || "",
-            motor: selectedMotor || null,
-            motorFallbackLine: form.motorId ? motorLabelMap[form.motorId] || "" : "",
-          }),
+        disabled: true,
+        title: "Save the RFQ prior to print QR tag",
       },
       {
         key: "wo",
@@ -1083,7 +1081,7 @@ export default function DashboardQuotesPage() {
         title: "Save the RFQ prior to create work order",
       },
     ],
-    [nextRfqNumber, selectedCustomer, selectedMotor, form.motorId, motorLabelMap, handlePrintMotorTagQr]
+    []
   );
 
   const viewQuoteToolbarMenuItems = useMemo(() => {
@@ -1121,10 +1119,12 @@ export default function DashboardQuotesPage() {
         key: "tagQr",
         label: "Tag QR",
         icon: <LuQrCode className={MENU_IC} aria-hidden />,
-        disabled: !vq?.rfqNumber?.trim(),
-        title: vq?.rfqNumber?.trim()
-          ? "Print QR motor tag (encodes this quote #)"
-          : "No quote number",
+        disabled: !vq?.id || !vq?.rfqNumber?.trim(),
+        title: !vq?.id
+          ? "Save the RFQ prior to print QR tag"
+          : !vq?.rfqNumber?.trim()
+            ? "No quote number"
+            : "Print QR motor tag (encodes this quote #)",
         onClick: () =>
           handlePrintMotorTagQr(vq.rfqNumber, {
             customerName: customerNameMap[vq.customerId] || "",
@@ -1232,8 +1232,12 @@ export default function DashboardQuotesPage() {
         key: "tagQr",
         label: "Tag QR",
         icon: <LuQrCode className={MENU_IC} aria-hidden />,
-        disabled: !rfq,
-        title: rfq ? "Print QR motor tag (encodes this quote #)" : "No quote number",
+        disabled: !vq?.id || !rfq,
+        title: !vq?.id
+          ? "Save the RFQ prior to print QR tag"
+          : !rfq
+            ? "No quote number"
+            : "Print QR motor tag (encodes this quote #)",
         onClick: () => {
           const mid = form.motorId || vq?.motorId;
           const cid = form.customerId || vq?.customerId;
@@ -2078,7 +2082,10 @@ export default function DashboardQuotesPage() {
                       <div><dt className="text-secondary">RFQ#</dt><dd className="font-medium">{q.rfqNumber || "—"}</dd></div>
                       <div><dt className="text-secondary">Customer PO#</dt><dd>{q.customerPo || "—"}</dd></div>
                       <div><dt className="text-secondary">Date</dt><dd>{q.date || "—"}</dd></div>
-                      <div><dt className="text-secondary">Prepared by</dt><dd>{q.preparedBy || "—"}</dd></div>
+                      <div>
+                        <dt className="text-secondary">Prepared by</dt>
+                        <dd>{printPreviewData.preparedByName || q.preparedBy || "—"}</dd>
+                      </div>
                     </dl>
                   </section>
                   <section className="mb-6">

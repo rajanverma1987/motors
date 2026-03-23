@@ -16,6 +16,7 @@ export default function QuotePrintPage() {
   const [quote, setQuote] = useState(null);
   const [customerName, setCustomerName] = useState("");
   const [motorLabel, setMotorLabel] = useState("");
+  const [preparedByName, setPreparedByName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -49,6 +50,15 @@ export default function QuotePrintPage() {
             const motors = await motorRes.json();
             const m = (Array.isArray(motors) ? motors : []).find((x) => x.id === data.motorId);
             if (m && !cancelled) setMotorLabel([m.serialNumber, m.manufacturer, m.model].filter(Boolean).join(" · ") || m.id);
+          }
+        }
+        if (data.preparedBy != null && String(data.preparedBy).trim() !== "") {
+          const empRes = await fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" });
+          if (empRes.ok) {
+            const emps = await empRes.json();
+            const list = Array.isArray(emps) ? emps : [];
+            const match = list.find((e) => String(e.id) === String(data.preparedBy));
+            if (!cancelled) setPreparedByName(match?.name || "");
           }
         }
       } catch {
@@ -106,7 +116,7 @@ export default function QuotePrintPage() {
           <div><dt className="text-secondary">RFQ#</dt><dd className="font-medium">{quote.rfqNumber || "—"}</dd></div>
           <div><dt className="text-secondary">Customer PO#</dt><dd>{quote.customerPo || "—"}</dd></div>
           <div><dt className="text-secondary">Date</dt><dd>{quote.date || "—"}</dd></div>
-          <div><dt className="text-secondary">Prepared by</dt><dd>{quote.preparedBy || "—"}</dd></div>
+          <div><dt className="text-secondary">Prepared by</dt><dd>{preparedByName || quote.preparedBy || "—"}</dd></div>
         </dl>
       </section>
 
