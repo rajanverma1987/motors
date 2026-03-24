@@ -133,11 +133,14 @@ export async function releaseInventoryReservationsForQuote(email, quoteId) {
  *
  * @param {string} email
  * @param {string} quoteId
+ * @param {string} [consumingWorkOrderId] - WO that moved to Shipped (stored for usage history)
  */
-export async function consumeInventoryForQuoteOnShipped(email, quoteId) {
+export async function consumeInventoryForQuoteOnShipped(email, quoteId, consumingWorkOrderId) {
   const e = email.trim().toLowerCase();
   const qid = String(quoteId || "").trim();
   if (!qid) return { ok: true, skipped: true };
+
+  const woId = String(consumingWorkOrderId || "").trim();
 
   const reservations = await InventoryReservation.find({
     createdByEmail: e,
@@ -152,6 +155,7 @@ export async function consumeInventoryForQuoteOnShipped(email, quoteId) {
       { $inc: { onHand: -r.qty, reserved: -r.qty } }
     );
     r.status = "consumed";
+    if (woId) r.consumedByWorkOrderId = woId;
     await r.save();
   }
   return { ok: true };

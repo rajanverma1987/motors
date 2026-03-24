@@ -5,6 +5,8 @@ const inventoryReservationSchema = new mongoose.Schema(
     createdByEmail: { type: String, required: true, trim: true },
     quoteId: { type: String, required: true, trim: true },
     workOrderId: { type: String, default: "", trim: true },
+    /** Work order that triggered consumption (when status → consumed); may differ from workOrderId (first WO on quote). */
+    consumedByWorkOrderId: { type: String, default: "", trim: true },
     inventoryItemId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "InventoryItem",
@@ -23,6 +25,7 @@ const inventoryReservationSchema = new mongoose.Schema(
 
 inventoryReservationSchema.index({ createdByEmail: 1, quoteId: 1, status: 1 });
 inventoryReservationSchema.index({ createdByEmail: 1, inventoryItemId: 1, status: 1 });
+inventoryReservationSchema.index({ createdByEmail: 1, inventoryItemId: 1, updatedAt: -1 });
 
 export default mongoose.models.InventoryReservation ||
   mongoose.model("InventoryReservation", inventoryReservationSchema);

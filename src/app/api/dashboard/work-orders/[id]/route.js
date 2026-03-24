@@ -125,7 +125,7 @@ export async function PATCH(request, context) {
       !isShippedStatus(previousStatus)
     ) {
       try {
-        await consumeInventoryForQuoteOnShipped(email, String(doc.quoteId));
+        await consumeInventoryForQuoteOnShipped(email, String(doc.quoteId), doc._id.toString());
       } catch (invErr) {
         console.error("Consume inventory on shipped:", invErr);
       }

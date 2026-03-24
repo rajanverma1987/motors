@@ -7,6 +7,7 @@ import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
+import Badge from "@/components/ui/badge";
 import { FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
@@ -26,6 +27,9 @@ export default function InventoryPageClient() {
   const [adjustItem, setAdjustItem] = useState(null);
   const [adjustDelta, setAdjustDelta] = useState("");
   const [saving, setSaving] = useState(false);
+  const [usageFor, setUsageFor] = useState(null);
+  const [usageLoading, setUsageLoading] = useState(false);
+  const [usagePayload, setUsagePayload] = useState(null);
 
   const [newName, setNewName] = useState("");
   const [newSku, setNewSku] = useState("");
@@ -78,6 +82,35 @@ export default function InventoryPageClient() {
       return hay.includes(q);
     });
   }, [items, searchQuery]);
+
+  const closeUsage = useCallback(() => {
+    setUsageFor(null);
+    setUsagePayload(null);
+    setUsageLoading(false);
+  }, []);
+
+  const openUsage = useCallback(
+    async (row) => {
+      setUsageFor(row);
+      setUsagePayload(null);
+      setUsageLoading(true);
+      try {
+        const res = await fetch(`/api/dashboard/inventory/items/${row.id}/usage`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to load usage");
+        setUsagePayload(data);
+      } catch (e) {
+        toast.error(e.message || "Could not load usage");
+        closeUsage();
+      } finally {
+        setUsageLoading(false);
+      }
+    },
+    [toast, closeUsage]
+  );
 
   const openEdit = useCallback((row) => {
     setEditingId(row.id);
@@ -236,7 +269,23 @@ export default function InventoryPageClient() {
 
   const columns = useMemo(
     () => [
-      { key: "name", label: "Part" },
+      {
+        key: "name",
+        label: "Part",
+        render: (v, row) => (
+          <button
+            type="button"
+            className="max-w-[220px] truncate text-left font-medium text-primary hover:underline"
+            title={v ? String(v) : ""}
+            onClick={(e) => {
+              e.stopPropagation();
+              openUsage(row);
+            }}
+          >
+            {v || "—"}
+          </button>
+        ),
+      },
       { key: "sku", label: "SKU" },
       { key: "uom", label: "UOM", render: (v) => v || "ea" },
       {
@@ -290,8 +339,21 @@ export default function InventoryPageClient() {
       },
       { key: "location", label: "Location" },
     ],
-    []
+    [openUsage]
   );
+
+  function usageStatusVariant(status) {
+    if (status === "consumed") return "success";
+    if (status === "active") return "warning";
+    return "default";
+  }
+
+  function usageStatusLabel(status) {
+    if (status === "consumed") return "Consumed";
+    if (status === "active") return "Reserved";
+    if (status === "released") return "Released";
+    return String(status || "—");
+  }
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
@@ -436,6 +498,77 @@ export default function InventoryPageClient() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!usageFor}
+        onClose={closeUsage}
+        title={usageFor ? `Work order usage — ${usageFor.name}` : "Usage"}
+        size="4xl"
+        headerClassName="min-w-0"
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={closeUsage}>
+            Close
+          </Button>
+        }
+      >
+        {usageLoading ? (
+          <p className="text-sm text-secondary">Loading…</p>
+        ) : usagePayload?.rows?.length ? (
+          <div className="overflow-x-auto rounded-md border border-border">
+            <table className="w-full min-w-[640px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30 text-left dark:bg-muted/15">
+                  <th className="px-3 py-2 font-semibold text-title">Work order</th>
+                  <th className="px-3 py-2 font-semibold text-title">RFQ</th>
+                  <th className="px-3 py-2 text-right font-semibold text-title">Qty</th>
+                  <th className="px-3 py-2 font-semibold text-title">Status</th>
+                  <th className="px-3 py-2 font-semibold text-title">Reserved</th>
+                  <th className="px-3 py-2 font-semibold text-title">Used (consumed)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {usagePayload.rows.map((r) => (
+                  <tr key={r.reservationId} className="border-b border-border last:border-b-0">
+                    <td className="px-3 py-2 text-title">
+                      {r.workOrderId ? (
+                        <Link
+                          href={`/dashboard/work-orders?open=${encodeURIComponent(r.workOrderId)}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {r.workOrderNumber || r.workOrderId}
+                        </Link>
+                      ) : (
+                        <span className="text-secondary">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 tabular-nums text-secondary">{r.quoteRfqNumber || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums font-medium text-title">{r.qty}</td>
+                    <td className="px-3 py-2">
+                      <Badge
+                        variant={usageStatusVariant(r.status)}
+                        className="rounded-full px-2.5 py-0.5 text-xs"
+                      >
+                        {usageStatusLabel(r.status)}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-secondary">
+                      {r.reservedAt ? new Date(r.reservedAt).toLocaleString() : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-secondary">
+                      {r.usedAt ? new Date(r.usedAt).toLocaleString() : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : usagePayload ? (
+          <p className="text-sm text-secondary">
+            No work order usage for this part yet. Link the part on a quote, create a work order to reserve stock, then
+            mark an order <strong className="text-title">Shipped</strong> to record consumption here.
+          </p>
+        ) : null}
       </Modal>
 
       <Modal
