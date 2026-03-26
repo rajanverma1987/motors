@@ -139,6 +139,7 @@ export default function ReportsPageClient() {
   const toast = useToast();
   const fmt = useFormatMoney();
   const [data, setData] = useState(null);
+  const [commissionRows, setCommissionRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [periodQs, setPeriodQs] = useState("");
 
@@ -148,13 +149,19 @@ export default function ReportsPageClient() {
       const url = periodQs
         ? `/api/dashboard/reports?${periodQs}`
         : "/api/dashboard/reports";
-      const res = await fetch(url, { credentials: "include", cache: "no-store" });
+      const [res, commRes] = await Promise.all([
+        fetch(url, { credentials: "include", cache: "no-store" }),
+        fetch("/api/dashboard/sales-commissions", { credentials: "include", cache: "no-store" }),
+      ]);
       const d = await res.json();
+      const commData = await commRes.json();
       if (!res.ok) throw new Error(d.error || "Failed to load reports");
       setData(d);
+      setCommissionRows(Array.isArray(commData?.commissions) ? commData.commissions : []);
     } catch (e) {
       toast.error(e.message || "Could not load reports");
       setData(null);
+      setCommissionRows([]);
     } finally {
       setLoading(false);
     }
@@ -198,6 +205,27 @@ export default function ReportsPageClient() {
       .filter(([, c]) => c > 0)
       .map(([k, count]) => ({ key: k, label: QUOTE_STATUS_LABELS[k] || k, count }));
   }, [data]);
+
+  const commissionUnpaidRows = useMemo(
+    () => commissionRows.filter((r) => String(r.status || "").toLowerCase() !== "paid"),
+    [commissionRows]
+  );
+  const commissionPaidRows = useMemo(
+    () => commissionRows.filter((r) => String(r.status || "").toLowerCase() === "paid"),
+    [commissionRows]
+  );
+  const commissionTotalAmount = useMemo(
+    () => commissionRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+    [commissionRows]
+  );
+  const commissionUnpaidAmount = useMemo(
+    () => commissionUnpaidRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+    [commissionUnpaidRows]
+  );
+  const commissionPaidAmount = useMemo(
+    () => commissionPaidRows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0),
+    [commissionPaidRows]
+  );
 
   if (loading && !data) {
     return (
@@ -654,6 +682,66 @@ export default function ReportsPageClient() {
           <Link href="/dashboard/inventory" className="inline-flex text-sm font-medium text-primary hover:underline">
             Open inventory →
           </Link>
+        </div>
+      </section>
+
+      {/* Sales commission */}
+      <section className="mt-10">
+        <h2 className="mb-3 text-lg font-semibold text-title">Sales commission</h2>
+        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Total commission amount</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-title">{fmt(commissionTotalAmount)}</p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Unpaid amount</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-amber-700 dark:text-amber-400">
+              {fmt(commissionUnpaidAmount)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <p className="text-xs text-secondary">Paid amount</p>
+            <p className="mt-1 text-lg font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+              {fmt(commissionPaidAmount)}
+            </p>
+          </div>
+          <Link
+            href="/dashboard/sales-commission"
+            className="flex min-h-[88px] items-center rounded-lg border border-primary/30 bg-primary/5 p-4 text-sm font-medium text-primary hover:bg-primary/10"
+          >
+            Open sales commission →
+          </Link>
+        </div>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="mb-3 text-sm font-semibold text-title">Unpaid records</h3>
+            <ReportTable
+              columns={[
+                { key: "rfqNumber", label: "RFQ#" },
+                { key: "salesPersonName", label: "Sales person" },
+                { key: "amount", label: "Amount", align: "right", render: (v) => fmt(v || 0) },
+              ]}
+              rows={commissionUnpaidRows}
+              empty="No unpaid commission records."
+            />
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="mb-3 text-sm font-semibold text-title">Paid records</h3>
+            <ReportTable
+              columns={[
+                { key: "rfqNumber", label: "RFQ#" },
+                { key: "salesPersonName", label: "Sales person" },
+                { key: "amount", label: "Amount", align: "right", render: (v) => fmt(v || 0) },
+                {
+                  key: "paidAt",
+                  label: "Paid date",
+                  render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
+                },
+              ]}
+              rows={commissionPaidRows}
+              empty="No paid commission records."
+            />
+          </div>
         </div>
       </section>
     </div>

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   FiInbox,
   FiUsers,
+  FiUser,
   FiPackage,
   FiFileText,
   FiClipboard,
@@ -51,6 +52,7 @@ const PROCUREMENT_NAV = [
   { href: "/dashboard/vendors", label: "Vendors", icon: FiTruck },
   { href: "/dashboard/purchase-orders", label: "Purchase orders", icon: FiShoppingCart },
   { href: "/dashboard/accounts-payable", label: "Accounts payable", icon: FiCreditCard },
+  { href: "/dashboard/sales-commission", label: "Sales commission", icon: FiDollarSign },
 ];
 
 const OPERATIONS_NAV = [
@@ -60,6 +62,7 @@ const OPERATIONS_NAV = [
 
 const PEOPLE_NAV = [
   { href: "/dashboard/employees", label: "Employees", icon: FiUserPlus },
+  { href: "/dashboard/sales-person", label: "Sales Person", icon: FiUser },
   { href: "/dashboard/job-postings", label: "Job postings", icon: FiBriefcase },
   { href: "/dashboard/access-control", label: "Access control", icon: FiShield },
 ];

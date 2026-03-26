@@ -231,6 +231,24 @@ export default function DashboardPage() {
   const arTermsDisplay = accountsPaymentTermsLabel(arTermsSlug);
   const currency = settings?.currency || "USD";
   const fmt = (n) => formatMoney(n, currency);
+  const fmtK = (n) => {
+    const num = Number(n);
+    if (!Number.isFinite(num)) return "—";
+    const locale = currency === "INR" ? "en-IN" : undefined;
+    try {
+      return (
+        new Intl.NumberFormat(locale, {
+          style: "currency",
+          currency,
+          currencyDisplay: "narrowSymbol",
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 1,
+        }).format(num / 1000) + "K"
+      );
+    } catch {
+      return fmt(num);
+    }
+  };
 
   const [raw, setRaw] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -260,6 +278,10 @@ export default function DashboardPage() {
           credentials: "include",
           cache: "no-store",
         }).then(async (res) => ({ kind: "invSum", ok: res.ok, data: await res.json() })),
+        fetch("/api/dashboard/sales-commissions", {
+          credentials: "include",
+          cache: "no-store",
+        }).then(async (res) => ({ kind: "comm", ok: res.ok, data: await res.json() })),
       ]);
 
       let woData = [];
@@ -272,6 +294,7 @@ export default function DashboardPage() {
         totalAvailable: 0,
         lowStockCount: 0,
       };
+      let commList = [];
 
       for (const r of results) {
         if (r.ep) {
@@ -292,10 +315,12 @@ export default function DashboardPage() {
             totalAvailable: Number(r.data.totalAvailable) || 0,
             lowStockCount: Number(r.data.lowStockCount) || 0,
           };
+        } else if (r.kind === "comm" && r.ok && r.data && typeof r.data === "object") {
+          commList = Array.isArray(r.data.commissions) ? r.data.commissions : [];
         }
       }
 
-      setRaw({ epData, woData, invData, arPayload, invSummary });
+      setRaw({ epData, woData, invData, arPayload, invSummary, commList });
     } catch {
       setRaw(null);
     } finally {
@@ -324,6 +349,16 @@ export default function DashboardPage() {
             totalAvailable: 0,
             lowStockCount: 0,
           },
+          commissions: {
+            total: 0,
+            paidCount: 0,
+            unpaidCount: 0,
+            totalAmount: 0,
+            unpaidAmount: 0,
+          },
+          quotes: {
+            totalAmount: 0,
+          },
         },
       };
     }
@@ -340,9 +375,20 @@ export default function DashboardPage() {
         nextByStatus[ep.key] = countByStatus(arr, ep.statusKey, ep.statusLabels);
       }
     }
+    const quotesAmount =
+      Math.round(
+        ((raw.epData.quotes || [])
+          .filter((x) => itemInCreatedRange(x, range))
+          .reduce((sum, q) => {
+            const labor = Number(q?.laborTotal) || 0;
+            const parts = Number(q?.partsTotal) || 0;
+            return sum + labor + parts;
+          }, 0)) * 100
+      ) / 100;
 
     const woList = raw.woData.filter((x) => itemInCreatedRange(x, range));
     const invList = raw.invData.filter((x) => itemInCreatedRange(x, range));
+    const commList = (raw.commList || []).filter((x) => itemInCreatedRange(x, range));
 
     let arBlock;
     if (range) {
@@ -385,6 +431,23 @@ export default function DashboardPage() {
           totalReserved: 0,
           totalAvailable: 0,
           lowStockCount: 0,
+        },
+        commissions: {
+          total: commList.length,
+          paidCount: commList.filter((r) => String(r.status || "").toLowerCase() === "paid").length,
+          unpaidCount: commList.filter((r) => String(r.status || "").toLowerCase() !== "paid").length,
+          totalAmount: Math.round(
+            commList.reduce((sum, r) => sum + (Number(r.amount) || 0), 0) * 100
+          ) / 100,
+          unpaidAmount:
+            Math.round(
+              commList
+                .filter((r) => String(r.status || "").toLowerCase() !== "paid")
+                .reduce((sum, r) => sum + (Number(r.amount) || 0), 0) * 100
+            ) / 100,
+        },
+        quotes: {
+          totalAmount: quotesAmount,
         },
       },
     };
@@ -440,6 +503,14 @@ export default function DashboardPage() {
                 href={href}
                 label={label}
                 count={loading ? undefined : counts[key]}
+                primaryValue={
+                  key === "quotes" && !loading ? fmtK(extra.quotes.totalAmount) : undefined
+                }
+                primaryHint={
+                  key === "quotes" && !loading
+                    ? `${counts[key] || 0} quote${(counts[key] || 0) === 1 ? "" : "s"}`
+                    : undefined
+                }
                 icon={icon}
                 placeholder={false}
                 byStatus={byStatus[key]}
@@ -520,6 +591,24 @@ export default function DashboardPage() {
                 }
                 return rows;
               })()}
+              loading={loading}
+            />
+            <StatCard
+              href="/dashboard/sales-commission"
+              label="Sales commission"
+              count={loading ? undefined : extra.commissions.total}
+              primaryValue={loading ? undefined : fmt(extra.commissions.unpaidAmount)}
+              primaryHint={
+                loading
+                  ? undefined
+                  : `${extra.commissions.unpaidCount} unpaid entr${extra.commissions.unpaidCount === 1 ? "y" : "ies"}`
+              }
+              icon={FiDollarSign}
+              placeholder={false}
+              extraLines={[
+                { label: "Unpaid", value: String(extra.commissions.unpaidCount) },
+                { label: "Paid", value: String(extra.commissions.paidCount) },
+              ]}
               loading={loading}
             />
             <StatCard
