@@ -61,6 +61,10 @@ const faqItems = [
     q: "What about platform-managed listings?",
     a: "MotorsWinding.com may also surface select listings with coordinated fulfillment and agreed commercial terms. That path is optional and does not require public checkout on the marketing site.",
   },
+  {
+    q: "How is buyer and seller data handled for privacy?",
+    a: "Buyer requests are shared with the listing shop so they can quote and fulfill the request. Data is used for transaction communication and CRM tracking, not sold as a standalone contact list. Shops should limit access to authorized team members and follow their own privacy/compliance policies.",
+  },
 ];
 
 function JsonLd({ baseUrl }) {

@@ -82,6 +82,58 @@ export default function BlogBestSoftware2026Page() {
         </section>
 
         <section className="border-t border-border pt-10 mt-10">
+          <h2 className="text-xl font-bold text-title sm:text-2xl">FAQ</h2>
+          <dl className="mt-6 space-y-6">
+            <div>
+              <dt className="font-semibold text-title">
+                What is the most important feature for a motor repair shop?
+              </dt>
+              <dd className="mt-2 text-secondary leading-relaxed">
+                Continuity from quote to work order to invoice is usually the biggest win. When scope, labor, and
+                parts data flow through without re-entry, you reduce errors and protect margin.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-title">
+                Do small repair shops need full ERP software?
+              </dt>
+              <dd className="mt-2 text-secondary leading-relaxed">
+                Not always. Most small and mid-size shops need practical job tracking, invoicing, and enough inventory
+                visibility to quote accurately, not enterprise-level complexity.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-title">
+                Should software include lead generation too?
+              </dt>
+              <dd className="mt-2 text-secondary leading-relaxed">
+                Ideally yes. A system that combines online visibility with operational workflow helps you capture new
+                demand and convert it faster, instead of managing leads in disconnected tools.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-title">
+                How do we avoid getting locked into the wrong system?
+              </dt>
+              <dd className="mt-2 text-secondary leading-relaxed">
+                Verify export options before signing: customers, jobs, and invoices should be portable. Ask for a
+                real trial with your own workflow data, not a generic demo.
+              </dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-title">
+                What should we ask about data privacy before buying?
+              </dt>
+              <dd className="mt-2 text-secondary leading-relaxed">
+                Ask how customer, quote, and operational data is stored, who can access it, and how permissions are
+                managed for your team. Confirm export options and privacy commitments in writing so you can maintain
+                control over sensitive business information.
+              </dd>
+            </div>
+          </dl>
+        </section>
+
+        <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">Keep reading</h2>
           <ul className="mt-4 space-y-2 text-secondary">
             <li>

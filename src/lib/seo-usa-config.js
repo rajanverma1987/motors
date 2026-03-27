@@ -376,6 +376,10 @@ export function buildSeoLeadFaq(placeLabel) {
       q: "How fast can we go live?",
       a: "Many shops register, complete their listing, and start logging jobs the same week. If you want migration help from paper or another tool, contact us and we’ll align onboarding to your volume.",
     },
+    {
+      q: "How does MotorsWinding.com handle data privacy?",
+      a: "Business and contact details submitted through listings and forms are used to deliver inquiries, quote follow-up, and CRM workflows. We do not sell your private contact data as a standalone data product. Access should be limited to authorized users in your team, and we recommend role-based access controls and strong passwords for your account.",
+    },
   ];
 }
 

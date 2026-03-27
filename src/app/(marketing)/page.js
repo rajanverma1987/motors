@@ -32,6 +32,11 @@ const workflowFeatures = [
 
 const managementFeatures = [
   {
+    title: "Technician mobile app (shop-floor first)",
+    href: "/technician-mobile-app-shop-floor-first",
+    detail: "Give technicians a dedicated mobile app to run jobs from the floor: scan motor QR tags, open assigned work orders, post live status updates, and record motor testing notes/values as work happens. This is a core workflow advantage—office and floor stay in sync in real time without extra calls, paper notes, or desk-only updates.",
+  },
+  {
     title: "Customer database and contacts",
     detail: "Store company names, primary and secondary contacts, addresses, and billing details in one place. View full job history and motor records per customer so you can answer questions quickly, spot repeat work, and tailor service—without digging through spreadsheets or old paperwork.",
   },
@@ -98,59 +103,6 @@ const leadFeatures = [
   },
 ];
 
-const plans = [
-  {
-    name: "Starter",
-    description: "For small centers getting started",
-    price: "Contact",
-    period: "for pricing",
-    features: [
-      "Work orders & job board",
-      "Customer & motor registry",
-      "Quotes & basic invoicing",
-      "Up to 3 users",
-    ],
-    cta: "Contact for demo",
-    href: "/contact",
-    highlighted: false,
-  },
-  {
-    name: "Professional",
-    description: "Full Job management + leads",
-    price: "Custom",
-    period: "per month",
-    features: [
-      "Everything in Starter",
-      "Lead generation network",
-      "Public marketplace listings",
-      "Careers page job postings & applications",
-      "Vendor & PO management",
-      "Shop parts inventory & low-stock alerts",
-      "Receiving & shipping",
-      "Reports & analytics",
-      "Unlimited users",
-    ],
-    cta: "Contact for demo",
-    href: "/contact",
-    highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    description: "For multi-location or custom needs",
-    price: "Custom",
-    period: "",
-    features: [
-      "Everything in Professional",
-      "Dedicated support",
-      "Custom integrations",
-      "SLA & training",
-    ],
-    cta: "Contact Sales",
-    href: "/contact",
-    highlighted: false,
-  },
-];
-
 export default function HomePage() {
   return (
     <>
@@ -169,20 +121,23 @@ export default function HomePage() {
                 Built for motor repair centers
               </span>
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
-                Less paperwork.{" "}
-                <span className="text-primary">More motors.</span>
+                A system that manages{" "}
+                <span className="text-primary underline decoration-primary/40 decoration-2 underline-offset-4">
+                  everything
+                </span>{" "}
+                for your electric motor repair company.
               </h1>
               <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
-                One platform to run the center and fill the pipeline—work orders, job board, shop parts inventory with
-                reservations, invoicing, qualified repair leads,{" "}
+                From first lead through cash collection, vendor buying, payables, and sales commissions—one connected
+                workflow instead of scattered spreadsheets and apps. Job board, inventory, invoicing, repair leads,{" "}
                 <Link href="/careers" className="font-medium text-primary hover:underline">
-                  public job postings
-                </Link>{" "}
-                for hiring technicians, and a{" "}
+                  hiring
+                </Link>
+                , and the{" "}
                 <Link href="/marketplace" className="font-medium text-primary hover:underline">
-                  public marketplace
+                  marketplace
                 </Link>{" "}
-                for surplus parts and equipment in one place.
+                are built in too.
               </p>
               <div className="mt-10 flex flex-wrap items-center gap-4">
                 <Link href="/contact">
@@ -203,7 +158,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Center floor & office in sync
+                  Floor & office in sync
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
@@ -227,46 +182,53 @@ export default function HomePage() {
                 </li>
               </ul>
             </div>
-            {/* Right: visual block */}
-            <div className="relative hidden lg:block">
-              <div className="relative rounded-2xl border border-border bg-card p-8 shadow-lg shadow-primary/5">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 rounded-xl border border-border bg-bg/80 px-4 py-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-title">Work order #2847</p>
-                      <p className="text-xs text-secondary">Inspection → Rewinding</p>
+            {/* Right: business pipeline (see documents/hero.md) */}
+            <div className="relative">
+              <div className="rounded-2xl border border-border bg-card p-7 shadow-lg shadow-primary/10 sm:p-10">
+                <p className="text-center text-sm font-semibold uppercase tracking-[0.16em] text-secondary">
+                  Platform features
+                </p>
+                <p className="mt-1.5 text-center text-xs text-secondary">
+                  Compact, connected workflow
+                </p>
+                <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {[
+                    "Leads",
+                    "Customers",
+                    "Quotes",
+                    "Work Order and Motor Testing Data",
+                    "Accounts receivable",
+                    "Vendor PO",
+                    "Accounts payable",
+                    "Sales commissions",
+                    "... and many more",
+                  ].map((label, i) => (
+                    <div
+                      key={label}
+                      className="flex items-center gap-2.5 rounded-lg border border-border bg-bg/80 px-3.5 py-3"
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold tabular-nums text-primary">
+                        {i + 1}
+                      </span>
+                      <p className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-title">{label}</p>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-xl border border-border bg-bg/80 px-4 py-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.008 1.5 1.908v2.388c0 1.024-.921 1.832-1.95 1.918a25.09 25.09 0 01-3.813.475.585.585 0 01-.426-.17L10.5 11.5l-4.461 4.462a.585.585 0 01-.426.17 25.09 25.09 0 01-3.813-.475C1.92 12.756 1 11.948 1 10.924V8.536c0-.9.616-1.624 1.5-1.908V6.75A2.25 2.25 0 014.5 4.5h15A2.25 2.25 0 0121 6.75v1.761z" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-title">New repair lead</p>
-                      <p className="text-xs text-secondary">Industrial motor · Houston</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-xl border border-border bg-bg/80 px-4 py-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75V5.25c0-1.5 1.235-2.25 2.25-2.25h15a2.25 2.25 0 012.25 2.25v13.5c0 1.5-1.235 2.25-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25z" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-title">Invoice ready</p>
-                      <p className="text-xs text-secondary">Acme Corp · $2,840</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-                <p className="mt-6 text-center text-xs text-secondary">
-                  All in one place — no switching apps
+                <div className="mt-5 rounded-xl border border-border bg-bg/70 p-4">
+                  <Link
+                    href="/technician-mobile-app-shop-floor-first"
+                    className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline"
+                  >
+                    Mobile App For Technician on the floor
+                  </Link>
+                  <p className="mt-2 text-sm text-secondary">
+                    Give technicians mobile access to assigned jobs on the shop floor. They can scan motor QR tags,
+                    update work status in real time, and add testing notes without going back to a desk. This keeps the
+                    office and floor synced throughout the repair process.
+                  </p>
+                </div>
+                <p className="mt-6 text-center text-sm text-secondary">
+                  Everything linked in one system
                 </p>
               </div>
             </div>
@@ -279,7 +241,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-[82.8rem] px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
-              Why one platform beats the patchwork
+              No more paperwork, more time for your business
             </h2>
             <p className="mt-4 text-lg text-secondary">
               Spreadsheets, sticky notes, and separate tools don&apos;t scale. Here&apos;s why repair centers run on a single system.
@@ -303,9 +265,9 @@ export default function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </span>
-              <h3 className="mt-4 font-semibold text-title">Center floor and office in sync</h3>
+              <h3 className="mt-4 font-semibold text-title"> Floor and office in sync</h3>
               <p className="mt-2 text-sm text-secondary">
-                Technicians update status from the floor; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is—the system stays current so scheduling and customer updates are accurate.
+                Technicians update status from the floor using mobile app; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is—the system stays current so scheduling and customer updates are accurate.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
@@ -382,7 +344,16 @@ export default function HomePage() {
                     <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
                   </span>
                   <div>
-                    <span className="font-medium text-title">{item.title}</span>
+                    {item.href ? (
+                      <Link
+                        href={item.href}
+                        className="font-medium text-primary underline decoration-primary/50 underline-offset-2 hover:decoration-primary"
+                      >
+                        {item.title}
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-title">{item.title}</span>
+                    )}
                     <p className="mt-0.5 text-sm text-secondary">{item.detail}</p>
                   </div>
                 </li>
@@ -450,6 +421,13 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
+            <div className="mt-8">
+              <Link href="/list-your-electric-motor-services">
+                <Button variant="primary" size="lg">
+                  List your repair center on the public directory
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Public marketplace highlight */}
@@ -468,7 +446,7 @@ export default function HomePage() {
                   </span>
                   <span className="text-sm font-semibold uppercase tracking-wide text-primary">Marketplace</span>
                 </div>
-                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">List inventory on the public site</h3>
+                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">List excess inventory on the public site</h3>
                 <p className="mt-3 max-w-2xl text-secondary">
                   Publish parts, motors, tools, and surplus from your CRM. Each listing gets its own SEO-friendly URL.
                   Buyers search and filter on{" "}
@@ -510,7 +488,7 @@ export default function HomePage() {
                   </span>
                   <span className="text-sm font-semibold uppercase tracking-wide text-primary">Hiring</span>
                 </div>
-                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">Post jobs; candidates apply on the site</h3>
+                <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">Post jobs, candidates apply on the site</h3>
                 <p className="mt-3 max-w-2xl text-secondary">
                   Shops using the CRM can publish employee job postings that appear on the public{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
@@ -534,67 +512,34 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="border-t border-border bg-bg py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
-              Pricing
-            </h2>
-            <p className="mt-4 text-lg text-secondary">
-              Simple plans for repair centers. Lead credits and add-ons available.
-            </p>
-          </div>
-          <div className="mt-14 grid gap-8 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative flex flex-col rounded-2xl border p-8 ${plan.highlighted
-                  ? "border-primary bg-card shadow-lg ring-1 ring-primary/20"
-                  : "border-border bg-card"
-                  }`}
-              >
-                {plan.highlighted && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-white">
-                    Popular
-                  </span>
-                )}
-                <h3 className="text-xl font-semibold text-title">{plan.name}</h3>
-                <p className="mt-1 text-sm text-secondary">{plan.description}</p>
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-title">{plan.price}</span>
-                  {plan.period && (
-                    <span className="text-secondary">{plan.period}</span>
-                  )}
-                </div>
-                <ul className="mt-8 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3 text-sm text-secondary">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-8">
-                  <Link href={plan.href}>
-                    <Button
-                      variant={plan.highlighted ? "primary" : "outline"}
-                      size="lg"
-                      className="w-full"
-                    >
-                      {plan.cta}
-                    </Button>
-                  </Link>
-                </div>
+          {/* Custom pricing */}
+          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <span className="text-sm font-semibold uppercase tracking-wide text-primary">Custom pricing</span>
+                <h3 className="mt-3 text-2xl font-bold text-title sm:text-3xl">
+                  Pricing tailored to your workflow
+                </h3>
+                <p className="mt-3 max-w-2xl text-secondary">
+                  Every business is different. We analyze your process and offer the best pricing model - monthly,
+                  yearly, or one-time.
+                </p>
               </div>
-            ))}
+              <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
+                <Link href="/pricing">
+                  <Button variant="primary" size="sm" className="w-full sm:w-auto lg:w-full">
+                    Get pricing
+                  </Button>
+                </Link>
+                <Link href="/pricing">
+                  <Button variant="outline" size="sm" className="w-full sm:w-auto lg:w-full">
+                    Book a demo
+                  </Button>
+                </Link>
+              </div>
+            </div>
           </div>
-          <p className="mt-12 text-center text-sm text-secondary">
-            Lead credits are billed separately based on usage. Contact us for a custom quote.
-          </p>
         </div>
       </section>
 
@@ -605,7 +550,7 @@ export default function HomePage() {
             <div className="flex flex-col items-center gap-6 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-                  List your repair company in the directory
+                  List your repair company in the directory - Free to list
                 </h2>
                 <p className="mt-3 max-w-xl text-secondary">
                   Add your company to the MotorsWinding.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}

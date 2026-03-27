@@ -1,6 +1,6 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
-import ListYourShopCta from "@/components/marketing/ListYourShopCta";
+import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
 import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
@@ -41,9 +41,9 @@ export default function MotorRepairShopManagementSoftwarePage() {
       description="Generic field-service tools treat every job like a truck roll. Motor repair shops need winding specs, test data, parts compatibility, and clear WIP—here’s how to evaluate software without drowning in features you’ll never use."
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
-      sidebarTitle="List + manage in one system"
-      sidebarDescription="Get found by buyers and run the job from quote to invoice on MotorsWinding.com."
-      sidebarCta={<ListYourShopCta />}
+      sidebarTitle="A System that manages everything..."
+      sidebarDescription="Request info and CRM access for your repair center."
+      sidebarCta={<SeoLeadMiniForm sourcePage={path} />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <section>

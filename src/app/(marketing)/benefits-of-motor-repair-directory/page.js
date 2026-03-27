@@ -77,6 +77,10 @@ const faqItems = [
     q: "How do I list my motor repair shop?",
     a: "Submit your business through our listing flow, verify contact details, and complete your profile. You can register for an account to manage updates and respond to inquiries centrally.",
   },
+  {
+    q: "How is shop and inquiry data handled for privacy?",
+    a: "Directory and inquiry information is used to help buyers reach relevant repair shops and to support your follow-up workflow. It is not positioned as a standalone data-sale product. Keep account access limited to authorized staff and follow your internal privacy/compliance process.",
+  },
 ];
 
 function ExtraJsonLd({ baseUrl }) {

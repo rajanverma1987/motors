@@ -2,8 +2,10 @@
 
 import { Suspense, useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import JobBoardClient from "@/app/(dashboard)/dashboard/job-board/job-board-client";
 import ThemeToggle from "@/components/theme-toggle";
+import Button from "@/components/ui/button";
 
 function ShareBoardThemeCorner() {
   return (
@@ -25,6 +27,10 @@ function JobBoardSharePageInner() {
   useEffect(() => {
     const t = searchParams.get("token") || "";
     setToken(t);
+    if (!t) {
+      setError("Protected page");
+      setLoading(false);
+    }
   }, [searchParams]);
 
   const load = useCallback(
@@ -73,14 +79,32 @@ function JobBoardSharePageInner() {
   }
 
   if (error || !data) {
+    const isProtected = error === "Protected page";
     return (
       <div className="relative min-h-screen bg-bg flex items-center justify-center p-6">
         <ShareBoardThemeCorner />
-        <div className="text-center max-w-md">
-          <p className="font-medium text-danger">{error || "Job board not found"}</p>
-          <p className="mt-2 text-sm text-secondary">
-            This link may be invalid or expired. Ask your shop to send a new job board link.
+        <div className="max-w-xl rounded-2xl border border-border bg-card p-6 text-left shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
+          <h1 className="mt-2 text-xl font-semibold text-title">
+            {isProtected ? "This job board is private to CRM users." : error || "Job board not found"}
+          </h1>
+          <p className="mt-3 text-sm text-secondary">
+            This page shows live shop-floor work orders with status columns, customer references, and active job flow for
+            a repair center. Access is restricted to shared secure links or authenticated CRM users.
           </p>
+          <p className="mt-2 text-sm text-secondary">
+            {isProtected
+              ? "If you run a motor repair or rewinding business, request CRM access to manage leads, quotes, work orders, technician workflows, and billing in one system."
+              : "This link may be invalid or expired. Ask your shop to send a new job board link."}
+          </p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <Link href="/contact">
+              <Button size="sm" variant="primary">Get CRM access</Button>
+            </Link>
+            <Link href="/">
+              <Button size="sm" variant="outline">Go to home</Button>
+            </Link>
+          </div>
         </div>
       </div>
     );

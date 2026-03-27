@@ -1,69 +1,17 @@
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import PricingInquiryForm from "@/components/marketing/PricingInquiryForm";
 
 export const metadata = {
-  title: "Pricing",
+  title: "Custom Pricing",
   description:
-    "Plans and pricing for motor repair center software, shop parts inventory, lead generation, public Careers job postings, and marketplace listings. Starter, Professional, and Enterprise. Contact for demo.",
+    "Pricing tailored to your workflow. Monthly, yearly, one-time, and hybrid models based on your process complexity.",
   openGraph: {
-    title: "Pricing | MotorsWinding.com",
-    description: "Plans and pricing for motor repair center software and lead generation.",
+    title: "Custom Pricing | MotorsWinding.com",
+    description: "Not a generic SaaS. Built around your workflow.",
   },
 };
-
-const plans = [
-  {
-    name: "Starter",
-    description: "For small centers getting started",
-    price: "Contact",
-    period: "for pricing",
-    features: [
-      "Work orders & job board",
-      "Customer & motor registry",
-      "Quotes & basic invoicing",
-      "Up to 3 users",
-    ],
-    cta: "Contact for demo",
-    href: "/contact",
-    highlighted: false,
-  },
-  {
-    name: "Professional",
-    description: "Full Job management + leads",
-    price: "Custom",
-    period: "per month",
-    features: [
-      "Everything in Starter",
-      "Lead generation network",
-      "Public marketplace listings",
-      "Careers page job postings & applications",
-      "Vendor & PO management",
-      "Shop parts inventory & low-stock alerts",
-      "Receiving & shipping",
-      "Reports & analytics",
-      "Unlimited users",
-    ],
-    cta: "Contact for demo",
-    href: "/contact",
-    highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    description: "For multi-location or custom needs",
-    price: "Custom",
-    period: "",
-    features: [
-      "Everything in Professional",
-      "Dedicated support",
-      "Custom integrations",
-      "SLA & training",
-    ],
-    cta: "Contact Sales",
-    href: "/contact",
-    highlighted: false,
-  },
-];
 
 export default function PricingPage() {
   return (
@@ -73,10 +21,21 @@ export default function PricingPage() {
         <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-title sm:text-5xl">
-              Pricing
+              Pricing tailored to your workflow
             </h1>
             <p className="mt-4 text-lg text-secondary">
-              Simple plans for repair centers. Lead credits and add-ons available.
+              Every business is different. We analyze your process and offer the best pricing model - monthly, yearly, or one-time.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <Link href="/contact">
+                <Button variant="primary" size="sm">Book a Demo</Button>
+              </Link>
+              <Link href="/contact">
+                <Button variant="outline" size="sm">Get Pricing</Button>
+              </Link>
+            </div>
+            <p className="mt-4 text-sm font-medium text-primary">
+              Not a generic SaaS. Built around your workflow.
             </p>
           </div>
         </div>
@@ -85,62 +44,51 @@ export default function PricingPage() {
       <section className="py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative flex flex-col rounded-2xl border p-8 ${plan.highlighted
-                    ? "border-primary bg-card shadow-lg ring-1 ring-primary/20"
-                    : "border-border bg-card"
-                  }`}
-              >
-                {plan.highlighted && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-white">
-                    Popular
-                  </span>
-                )}
-                <h2 className="text-xl font-semibold text-title">{plan.name}</h2>
-                <p className="mt-1 text-sm text-secondary">{plan.description}</p>
-                <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-title">{plan.price}</span>
-                  {plan.period && (
-                    <span className="text-secondary">{plan.period}</span>
-                  )}
-                </div>
-                <ul className="mt-8 flex-1 space-y-3">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-3 text-sm text-secondary">
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-8">
-                  <Link href={plan.href}>
-                    <Button
-                      variant={plan.highlighted ? "primary" : "outline"}
-                      size="lg"
-                      className="w-full"
-                    >
-                      {plan.cta}
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
+              <h2 className="text-xl font-semibold text-title">Available pricing models</h2>
+              <ul className="mt-5 space-y-3 text-sm text-secondary">
+                <li className="flex items-start gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                  Subscription (Monthly / Yearly)
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                  One-time license (On-premise)
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                  Hybrid (Setup + lower recurring)
+                </li>
+              </ul>
+              <p className="mt-6 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
+                Optional anchor: <span className="font-medium text-title">Projects typically start from custom monthly tiers.</span>
+              </p>
+            </div>
 
-      <section className="border-t border-border bg-card py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
-          <p className="text-secondary">
-            Lead credits are billed separately based on usage. Contact us for a custom quote.
-          </p>
-          <div className="mt-6">
-            <Link href="/contact">
-              <Button variant="outline">Contact Us</Button>
-            </Link>
+            <div className="rounded-2xl border border-border bg-card p-7 shadow-sm lg:col-span-2">
+              <h2 className="text-xl font-semibold text-title">Tell us about your workflow</h2>
+              <p className="mt-2 text-sm text-secondary">
+                We use this to prepare the right demo and proposal.
+              </p>
+              <PricingInquiryForm sourcePage="/pricing" />
+            </div>
           </div>
+
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-semibold text-title">Reduce manual work</p>
+              <p className="mt-2 text-sm text-secondary">Automate repetitive status updates, quote handoffs, and follow-up tasks across teams.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-semibold text-title">Replace Excel dependency</p>
+              <p className="mt-2 text-sm text-secondary">Move from spreadsheets and scattered chats to one controlled workflow with live visibility.</p>
+            </div>
+            <div className="rounded-xl border border-border bg-card p-5">
+              <p className="text-sm font-semibold text-title">Custom-fit to your process</p>
+              <p className="mt-2 text-sm text-secondary">Configure around your floor, approvals, and billing model instead of forcing your team into generic templates.</p>
+            </div>
+          </div>
+
         </div>
       </section>
     </>

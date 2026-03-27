@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
 import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
 const path = "/blog";
@@ -54,39 +55,76 @@ export default function BlogIndexPage() {
           </p>
         </div>
       </section>
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-        <ul className="space-y-8">
-          {POSTS.map((p) => (
-            <li key={p.href} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <Link href={p.href} className="text-xl font-semibold text-title hover:text-primary">
-                {p.title}
+      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+        <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
+          <article className="min-w-0">
+            <ul className="space-y-8">
+              {POSTS.map((p) => (
+                <li key={p.href} className="rounded-xl border border-border bg-card p-6 shadow-sm">
+                  <Link href={p.href} className="text-xl font-semibold text-title hover:text-primary">
+                    {p.title}
+                  </Link>
+                  <p className="mt-2 text-secondary">{p.excerpt}</p>
+                  <Link href={p.href} className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
+                    Read article →
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </article>
+
+          <aside className="space-y-4 lg:sticky lg:top-24">
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+                Built for motor repair centers
+              </span>
+              <h2 className="mt-3 text-lg font-bold tracking-tight text-title">
+                Blog for motor repair shop owners
+              </h2>
+              <p className="mt-2 text-sm text-secondary">
+                Request info and CRM access for your shop.
+              </p>
+              <div className="mt-4">
+                <SeoLeadMiniForm sourcePage={path} />
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+              <h2 className="text-lg font-semibold text-title">Also explore</h2>
+              <ul className="mt-3 space-y-2 text-sm text-secondary">
+                <li>
+                  <Link href="/motor-repair-shop-management-software" className="text-primary hover:underline">
+                    Motor repair shop management software
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/track-motor-repair-jobs" className="text-primary hover:underline">
+                    Track motor repair jobs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/technician-mobile-app-shop-floor-first" className="text-primary hover:underline">
+                    Technician mobile app (shop-floor first)
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/list-your-electric-motor-services" className="text-primary hover:underline">
+                    List your electric motor services
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-border bg-bg/80 p-5">
+              <p className="text-sm font-medium text-title">Need more repair leads?</p>
+              <p className="mt-2 text-sm text-secondary">
+                List your shop and connect blog learnings with real lead flow in one system.
+              </p>
+              <Link href="/list-your-electric-motor-services" className="mt-3 inline-block text-sm font-semibold text-primary hover:underline">
+                Start your listing →
               </Link>
-              <p className="mt-2 text-secondary">{p.excerpt}</p>
-              <Link href={p.href} className="mt-3 inline-block text-sm font-medium text-primary hover:underline">
-                Read article →
-              </Link>
-            </li>
-          ))}
-        </ul>
-        <div className="mt-12 rounded-xl border border-dashed border-border p-6">
-          <p className="font-medium text-title">Also explore</p>
-          <ul className="mt-3 space-y-2 text-sm text-secondary">
-            <li>
-              <Link href="/motor-repair-shop-management-software" className="text-primary hover:underline">
-                Motor repair shop management software
-              </Link>
-            </li>
-            <li>
-              <Link href="/track-motor-repair-jobs" className="text-primary hover:underline">
-                Track motor repair jobs
-              </Link>
-            </li>
-            <li>
-              <Link href="/list-your-electric-motor-services" className="text-primary hover:underline">
-                List your electric motor services
-              </Link>
-            </li>
-          </ul>
+            </div>
+          </aside>
         </div>
       </div>
     </>

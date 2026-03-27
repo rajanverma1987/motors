@@ -19,6 +19,10 @@ export async function POST(request) {
     const businessName = clampString(body?.businessName, 200);
     const city = clampString(body?.city, 120);
     const state = clampString(body?.state, 80);
+    const businessType = clampString(body?.businessType, 120);
+    const teamSize = clampString(body?.teamSize, 120);
+    const currentTools = clampString(body?.currentTools, 400);
+    const mainProblem = clampString(body?.mainProblem, 400);
     const sourcePage = clampString(body?.sourcePage, 500);
 
     if (!name) {
@@ -31,7 +35,22 @@ export async function POST(request) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
 
-    const fields = { name, email, phone, preferDate, preferTime, timezone, businessName, city, state, sourcePage };
+    const fields = {
+      name,
+      email,
+      phone,
+      preferDate,
+      preferTime,
+      timezone,
+      businessName,
+      city,
+      state,
+      businessType,
+      teamSize,
+      currentTools,
+      mainProblem,
+      sourcePage,
+    };
 
     const adminResult = await sendDemoRequestToAdmin(fields);
     if (!adminResult.ok) {

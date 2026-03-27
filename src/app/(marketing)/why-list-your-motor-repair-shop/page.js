@@ -77,6 +77,10 @@ const faqItems = [
     q: "How do I get started?",
     a: "Submit your shop through the list-your-business flow, verify contact details, and complete your profile. You can also create an account to manage updates and respond to inquiries centrally.",
   },
+  {
+    q: "How is my business and lead data handled for privacy?",
+    a: "Your listing and inquiry data is used to connect buyers with your services and help you manage follow-up in the CRM workflow. It is not intended to be sold as a standalone contact list. You should also restrict account access to authorized team members and maintain internal privacy controls.",
+  },
 ];
 
 function ExtraJsonLd({ baseUrl }) {

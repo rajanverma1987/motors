@@ -63,6 +63,11 @@ const faqItems = [
     answer:
       "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use MotorsWinding.com to request quotes or browse repair centers by location and contact shops directly.",
   },
+  {
+    question: "What happens to the information I submit in quote requests?",
+    answer:
+      "Contact and motor details are used to route your request and support quote follow-up between you and relevant repair centers. Information is handled for service delivery and communication, not sold as a standalone contact database.",
+  },
 ];
 
 function CostPageFaqJsonLd() {
