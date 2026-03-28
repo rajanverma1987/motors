@@ -5,6 +5,7 @@ import Listing from "@/models/Listing";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { sendNewListingSubmittedToAdmin } from "@/lib/email";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
@@ -208,6 +209,12 @@ export async function POST(request) {
       await sendNewListingSubmittedToAdmin(doc);
     } catch (e) {
       console.warn("New listing notification email failed:", e);
+    }
+
+    try {
+      await applyListingOnlySubscriptionToShop(email);
+    } catch (e) {
+      console.warn("applyListingOnlySubscriptionToShop (dashboard new listing):", e);
     }
 
     return NextResponse.json({ ok: true, listing: serializeListing(doc.toObject()) });

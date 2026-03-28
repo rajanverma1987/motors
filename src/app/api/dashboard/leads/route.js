@@ -4,6 +4,7 @@ import Lead from "@/models/Lead";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { getListingIdsForUser, leadBelongsToShop } from "@/lib/dashboard-leads-scope";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+import { enrichLeadsForDashboard, maskLeadForListingOnly } from "@/lib/listing-account-restrictions";
 
 export async function GET(request) {
   try {
@@ -32,7 +33,9 @@ export async function GET(request) {
         source,
       };
     });
-    return NextResponse.json(listWithId);
+    const { scoped, visibleIds } = await enrichLeadsForDashboard(user.email, listingIds, listWithId);
+    const out = scoped.map((l) => maskLeadForListingOnly(l, visibleIds));
+    return NextResponse.json(out);
   } catch (err) {
     console.error("Dashboard list leads error:", err);
     return NextResponse.json({ error: "Failed to list leads" }, { status: 500 });

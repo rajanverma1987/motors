@@ -3,6 +3,11 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import {
+  LISTING_ONLY_UPGRADE_MESSAGE,
+  LISTING_ONLY_MAX_CUSTOMERS,
+} from "@/lib/listing-account-messages";
+import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listing-account-restrictions";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 function sanitizeAdditionalContacts(arr) {
@@ -59,6 +64,16 @@ export async function POST(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await connectDB();
+    const ownerEmail = user.email.trim().toLowerCase();
+    if (await userIsListingOnlyAccount(ownerEmail)) {
+      const n = await listingOnlyCustomerCount(ownerEmail);
+      if (n >= LISTING_ONLY_MAX_CUSTOMERS) {
+        return NextResponse.json(
+          { error: LISTING_ONLY_UPGRADE_MESSAGE, code: "LISTING_ONLY_CUSTOMER_CAP" },
+          { status: 403 }
+        );
+      }
+    }
     const body = await request.json();
     const {
       companyName,

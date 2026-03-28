@@ -172,6 +172,35 @@ export async function sendShopListedNotificationToAdmin(doc) {
   return sendEmail(to, "Shop listed on website – MotorsWinding.com", html);
 }
 
+/**
+ * Notify a listed repair center when a visitor submits an RFQ from their public listing page.
+ */
+export async function sendNewWebsiteLeadNotificationToShop({
+  to,
+  listingCompanyName,
+  leadContactName,
+  leadContactCompany,
+  siteUrl,
+}) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
+  const leadsUrl = `${base}/dashboard/leads`;
+  const loginUrl = `${base}/login`;
+  const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
+  const subject = `New lead for ${listingCompanyName || "your shop"} – MotorsWinding.com`;
+  const html = `
+    <p>Hello,</p>
+    <p>You received a new repair inquiry (RFQ) from your <strong>MotorsWinding.com</strong> directory listing.</p>
+    <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
+    <p>Log in to your shop dashboard to view full contact details and respond in your CRM:</p>
+    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in CRM</a></p>
+    <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
+    <p>— MotorsWinding.com</p>
+  `;
+  return sendEmail(to, subject, html);
+}
+
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
   const subject = "Your MotorsWinding.com verification code";
@@ -215,6 +244,47 @@ export async function sendCrmWelcomeEmail({
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
     <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
     <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
+    <p>— MotorsWinding.com</p>
+  `;
+  return sendEmail(to, subject, html);
+}
+
+/**
+ * Admin seeds a directory listing: notify the business they are featured + CRM login (listing-only tier).
+ */
+export async function sendListingFeaturedAccountEmail({
+  to,
+  shopName,
+  userId,
+  plainPassword,
+  publicListingUrl,
+}) {
+  const site = getPublicSiteUrl();
+  const loginUrl = `${site}/login`;
+  const leadsUrl = `${site}/dashboard/leads`;
+  const directoryUrl = `${site}/dashboard/directory-listing`;
+  const contactUrl = `${site}/contact`;
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const company = (shopName && String(shopName).trim()) || "";
+  const greet = company ? ` ${esc(company)}` : "";
+  const subject = "Your repair center is featured on MotorsWinding.com";
+  const html = `
+    <p>Hi${greet},</p>
+    <p>We have added <strong>${esc(shopName || "your business")}</strong> to the MotorsWinding.com public repair shop directory so customers can find you when they search for motor repair services.</p>
+    <p><strong>What you get:</strong> visibility in our directory, incoming leads from the website routed to your account, and a dashboard to review inquiries and manage how your listing appears.</p>
+    ${publicListingUrl ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>` : ""}
+    <p>Use the credentials below to log in to your shop dashboard. There you can view <a href="${esc(leadsUrl)}">Leads</a> and edit your profile on <a href="${esc(directoryUrl)}">Directory listing</a>.</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Login email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(to)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Account ID</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${esc(userId)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Temporary password</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;">${esc(plainPassword)}</td></tr>
+      </tbody>
+    </table>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
+    <p><strong>Security:</strong> Change your password after you sign in under <strong>Settings</strong> → <strong>Account</strong>.</p>
+    <p>To unlock the full CRM (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
     <p>— MotorsWinding.com</p>
   `;
   return sendEmail(to, subject, html);

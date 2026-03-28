@@ -6,6 +6,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
 import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 
 export async function POST(request) {
   try {
@@ -43,6 +44,11 @@ export async function POST(request) {
       await doc.save();
       if (newStatus === "approved") {
         await sendListingApproved(doc.email, doc.companyName);
+        try {
+          await applyListingOnlySubscriptionToShop(doc.email);
+        } catch (e) {
+          console.warn("applyListingOnlySubscriptionToShop (bulk approved):", e);
+        }
         try {
           await sendShopListedNotificationToAdmin(doc);
         } catch (e) {

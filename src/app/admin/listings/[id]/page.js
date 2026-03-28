@@ -195,6 +195,7 @@ export default function AdminListingDetailPage() {
       // Build payload with all editable fields so nothing is omitted (JSON.stringify drops undefined)
       const payload = {
         companyName: current.companyName ?? "",
+        email: (current.email ?? "").trim(),
         logoUrl: current.logoUrl ?? "",
         shortDescription: current.shortDescription ?? "",
         yearsInBusiness: current.yearsInBusiness ?? "",

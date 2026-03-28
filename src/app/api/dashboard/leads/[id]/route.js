@@ -1,45 +1,37 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Lead from "@/models/Lead";
-import Listing from "@/models/Listing";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
+import { getListingIdsForUser, leadBelongsToShop } from "@/lib/dashboard-leads-scope";
+import {
+  enrichLeadsForDashboard,
+  maskLeadForListingOnly,
+  userIsListingOnlyAccount,
+} from "@/lib/listing-account-restrictions";
 
 const STATUS_VALUES = ["new", "contacted", "quoted", "won", "lost"];
 
-async function getListingIdsForUser(email) {
-  if (!email) return [];
-  const listings = await Listing.find({ email: email.trim().toLowerCase() })
-    .select("_id")
-    .lean();
-  return listings.map((l) => l._id.toString());
-}
-
-function leadBelongsToShop(lead, listingIds, userEmail) {
-  const email = (userEmail || "").trim().toLowerCase();
-  if (lead.createdByEmail?.toLowerCase() === email) return true;
-  const listIds = lead.assignedListingIds || [];
-  if (listIds.some((id) => listingIds.includes(id))) return true;
-  if (lead.sourceListingId && listingIds.includes(lead.sourceListingId)) return true;
-  return false;
+function buildLeadRow(l, userEmail, listingIds) {
+  const em = (userEmail || "").trim().toLowerCase();
+  let source = l.leadSource;
+  if (!source) {
+    if (l.createdByEmail?.toLowerCase() === em) source = "manual";
+    else if (l.sourceListingId && listingIds.includes(l.sourceListingId)) source = "website";
+    else source = "admin_assigned";
+  }
+  return {
+    ...l,
+    id: l._id.toString(),
+    _id: undefined,
+    source,
+  };
 }
 
 function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
     : Promise.resolve(context.params || {});
-}
-
-function toLeadResponse(doc) {
-  const source =
-    doc.leadSource ||
-    (doc.createdByEmail ? "manual" : doc.assignedListingIds?.length && !doc.sourceListingId ? "admin_assigned" : "website");
-  return {
-    ...doc.toObject(),
-    id: doc._id.toString(),
-    _id: undefined,
-    source,
-  };
 }
 
 export async function GET(request, context) {
@@ -62,19 +54,13 @@ export async function GET(request, context) {
     if (!leadBelongsToShop(doc, listingIds, user.email)) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const userEmail = user.email.trim().toLowerCase();
-    let source = doc.leadSource;
-    if (!source) {
-      if (doc.createdByEmail?.toLowerCase() === userEmail) source = "manual";
-      else if (doc.sourceListingId && listingIds.includes(doc.sourceListingId)) source = "website";
-      else source = "admin_assigned";
+    const listWithId = [buildLeadRow(doc, user.email, listingIds)];
+    const { scoped, visibleIds } = await enrichLeadsForDashboard(user.email, listingIds, listWithId);
+    const row = scoped.find((l) => l.id === id);
+    if (!row) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    return NextResponse.json({
-      ...doc,
-      id: doc._id.toString(),
-      _id: undefined,
-      source,
-    });
+    return NextResponse.json(maskLeadForListingOnly(row, visibleIds));
   } catch (err) {
     console.error("Dashboard get lead error:", err);
     return NextResponse.json({ error: "Failed to load lead" }, { status: 500 });
@@ -102,6 +88,16 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const body = await request.json();
+    const all = await Lead.find().sort({ createdAt: -1 }).lean();
+    const shopLeads = all.filter((d) => leadBelongsToShop(d, listingIds, user.email));
+    const listWithId = shopLeads.map((l) => buildLeadRow(l, user.email, listingIds));
+    const { scoped, visibleIds } = await enrichLeadsForDashboard(user.email, listingIds, listWithId);
+    const row = scoped.find((l) => l.id === id);
+    if (!row) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const contactMasked = (await userIsListingOnlyAccount(user.email)) && !visibleIds.has(id);
+
     const {
       status,
       name,
@@ -118,6 +114,34 @@ export async function PATCH(request, context) {
       urgencyLevel,
       motorPhotos,
     } = body;
+
+    if (contactMasked) {
+      const touched = [
+        name,
+        email,
+        phone,
+        message,
+        company,
+        city,
+        zipCode,
+        motorType,
+        motorHp,
+        voltage,
+        problemDescription,
+        urgencyLevel,
+        motorPhotos,
+      ].some((v) => v !== undefined);
+      if (touched) {
+        return NextResponse.json(
+          {
+            error:
+              "Contact details are hidden for this lead on the directory listing plan. Upgrade to edit full lead information.",
+            code: "LISTING_ONLY_MASKED",
+          },
+          { status: 403 }
+        );
+      }
+    }
 
     if (name !== undefined) {
       const v = clampString(name, LIMITS.name.max);
@@ -144,7 +168,17 @@ export async function PATCH(request, context) {
     if (status != null && STATUS_VALUES.includes(status)) doc.status = status;
 
     await doc.save();
-    return NextResponse.json({ ok: true, lead: toLeadResponse(doc) });
+    const fresh = await Lead.findById(id).lean();
+    const listRow = [buildLeadRow(fresh, user.email, listingIds)];
+    const enriched = await enrichLeadsForDashboard(user.email, listingIds, listRow);
+    const outRow = enriched.scoped.find((l) => l.id === id);
+    if (!outRow) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({
+      ok: true,
+      lead: maskLeadForListingOnly(outRow, enriched.visibleIds),
+    });
   } catch (err) {
     console.error("Dashboard update lead error:", err);
     return NextResponse.json({ error: "Failed to update lead" }, { status: 500 });

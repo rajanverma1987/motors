@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Listing from "@/models/Listing";
 import { hashPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
-import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
+import {
+  applyListingOnlySubscriptionToShop,
+  ensureShopSubscriptionOnRegister,
+} from "@/lib/subscription-service";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -51,16 +55,27 @@ export async function POST(request) {
       );
     }
 
+    const emailNorm = email.trim().toLowerCase().slice(0, LIMITS.email.max);
+    const approvedListing = await Listing.findOne({ email: emailNorm, status: "approved" })
+      .select("_id")
+      .lean();
+    const listingOnly = !!approvedListing;
+
     const passwordHash = await hashPassword(password);
     const user = await User.create({
-      email: email.trim().toLowerCase().slice(0, LIMITS.email.max),
+      email: emailNorm,
       passwordHash,
       shopName: clampString(shopName, LIMITS.name.max),
       contactName: clampString(contactName, LIMITS.name.max),
+      listingOnlyAccount: listingOnly,
     });
 
     try {
-      await ensureShopSubscriptionOnRegister(user.email);
+      if (listingOnly) {
+        await applyListingOnlySubscriptionToShop(user.email);
+      } else {
+        await ensureShopSubscriptionOnRegister(user.email);
+      }
     } catch (subErr) {
       console.error("Subscription bootstrap on register:", subErr);
     }
@@ -85,6 +100,7 @@ export async function POST(request) {
         email: user.email,
         shopName: user.shopName,
         contactName: user.contactName,
+        listingOnlyAccount: listingOnly,
       },
     });
   } catch (err) {

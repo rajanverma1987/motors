@@ -5,7 +5,8 @@ import User from "@/models/User";
 import { verifyPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getLoginBlockReason } from "@/lib/subscription-access";
-import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
+import { syncSubscriptionWithAccountTier } from "@/lib/subscription-service";
+import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
@@ -49,8 +50,10 @@ export async function POST(request) {
     }
 
     try {
-      await ensureShopSubscriptionOnRegister(user.email);
-    } catch (_) { /* ignore */ }
+      await syncSubscriptionWithAccountTier(user.email);
+    } catch (_) {
+      /* ignore */
+    }
 
     const subRevokeReason = await getLoginBlockReason(user.email);
     if (subRevokeReason) {
@@ -74,12 +77,15 @@ export async function POST(request) {
       path: "/",
     });
 
+    const listingOnly = await userIsListingOnlyAccount(user.email);
+
     return NextResponse.json({
       ok: true,
       user: {
         email: user.email,
         shopName: user.shopName,
         contactName: user.contactName,
+        listingOnlyAccount: listingOnly,
       },
     });
   } catch (err) {

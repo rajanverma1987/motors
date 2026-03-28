@@ -11,3 +11,5 @@ Tables: Put the actions column (View, Edit, Delete, Assign, etc.) as the first c
 Table - if table have action buttos, make this field the first fields. and use colored icons instead of buttons wherever possible.
 
 Status display: Wherever we show status (e.g. PO status, quote status, order status, line item status), use a colored label so it is clearly visible. Use the existing Badge component with an appropriate variant (default, primary, success, warning, danger) so the label is formatted correctly for both light and dark theme. Do not show status as plain text; use <Badge variant="…" className="rounded-full px-2.5 py-0.5 text-xs">…</Badge> or equivalent. Map status values to semantic variants (e.g. success for "Delivered"/"Closed"/"Paid", warning for "Partially…", default for "Open"/"Ordered").
+
+Buttons (icon + text): The shared Button component uses inline-flex, items-center, gap, and whitespace-nowrap so labels do not wrap under icons. Put icons first or after text with shrink-0 on the icon (e.g. className="h-4 w-4 shrink-0"). For a single-line label that must wrap (rare), override with className whitespace-normal on that Button.

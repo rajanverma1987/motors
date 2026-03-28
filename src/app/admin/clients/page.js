@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FiEye, FiLock, FiUnlock, FiCreditCard } from "react-icons/fi";
+import { FiEye, FiLock, FiUnlock, FiCreditCard, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -10,6 +10,64 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
+
+function DeleteClientModal({ client, open, onClose, onDeleted }) {
+  const toast = useToast();
+  const [loading, setLoading] = useState(false);
+
+  async function handleDelete() {
+    if (!client?.id) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/admin/users/${client.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Delete failed");
+      toast.success("Client and all related data were removed.");
+      onDeleted?.();
+      onClose();
+    } catch (e) {
+      toast.error(e.message || "Delete failed");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Modal
+      open={open}
+      onClose={() => !loading && onClose()}
+      showClose={!loading}
+      title="Delete client permanently?"
+      size="3xl"
+      actions={
+        <>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={loading}>
+            {loading ? "Deleting…" : "Delete permanently"}
+          </Button>
+        </>
+      }
+    >
+      <p className="text-sm text-secondary">
+        This will permanently delete{" "}
+        <strong className="text-title">{client?.email || "—"}</strong>
+        {client?.shopName ? ` (${client.shopName})` : ""} and all related CRM data for this shop: customers,
+        leads, quotes, motors, work orders, invoices, purchase orders, employees, inventory, vendors,
+        policies, subscriptions, directory listings, marketplace listings, integrations, and settings. This
+        cannot be undone.
+      </p>
+      <p className="mt-3 text-sm text-secondary">
+        Active PayPal subscriptions are cancelled automatically when possible. If PayPal credentials are missing or
+        PayPal returns an error (for example already cancelled), check the PayPal dashboard for the merchant account.
+      </p>
+    </Modal>
+  );
+}
 
 function ClientDetailModal({ client, open, onClose }) {
   if (!client) return null;
@@ -325,6 +383,21 @@ function SubscriptionManageModal({ client, open, onClose, onSaved }) {
 
 const BASE_COLUMNS = [
   {
+    key: "delete",
+    label: "",
+    render: (_, row) => (
+      <button
+        type="button"
+        onClick={() => row._onDelete?.()}
+        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+        aria-label="Delete client"
+        title="Delete client"
+      >
+        <FiTrash2 className="h-4 w-4" />
+      </button>
+    ),
+  },
+  {
     key: "view",
     label: "",
     render: (_, row) => (
@@ -454,6 +527,7 @@ export default function AdminClientsPage() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [subClient, setSubClient] = useState(null);
   const [subModalOpen, setSubModalOpen] = useState(false);
+  const [deleteClient, setDeleteClient] = useState(null);
 
   const openViewModal = useCallback((client) => {
     setViewClient(client);
@@ -486,6 +560,7 @@ export default function AdminClientsPage() {
         _onUpdate: () => fetchUsers(),
         _onView: () => openViewModal(u),
         _onManageSub: () => openSubModal(u),
+        _onDelete: () => setDeleteClient(u),
       }));
       setUsers(list);
 
@@ -548,6 +623,13 @@ export default function AdminClientsPage() {
         open={subModalOpen}
         onClose={closeSubModal}
         onSaved={fetchUsers}
+      />
+
+      <DeleteClientModal
+        client={deleteClient}
+        open={!!deleteClient}
+        onClose={() => setDeleteClient(null)}
+        onDeleted={fetchUsers}
       />
     </div>
   );

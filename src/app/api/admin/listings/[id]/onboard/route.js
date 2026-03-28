@@ -5,13 +5,13 @@ import Listing from "@/models/Listing";
 import User from "@/models/User";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { hashPassword } from "@/lib/auth-portal";
-import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { sendCrmWelcomeEmail } from "@/lib/email";
 
 /**
  * POST: Create a portal User from a directory listing (shop name, contact from listing),
- * set password, and bootstrap Free Ultimate subscription — same path as self-registration.
+ * set password, and assign Directory listing (listing-only) subscription tier.
  */
 export async function POST(request, context) {
   try {
@@ -82,12 +82,13 @@ export async function POST(request, context) {
       shopName: finalShopName,
       contactName: finalContactName,
       canLogin: true,
+      listingOnlyAccount: true,
     });
 
     try {
-      await ensureShopSubscriptionOnRegister(user.email);
+      await applyListingOnlySubscriptionToShop(user.email);
     } catch (subErr) {
-      console.error("Subscription bootstrap on admin onboard:", subErr);
+      console.error("Listing-only subscription on admin onboard:", subErr);
     }
 
     listing.crmUserId = user._id;

@@ -4,7 +4,7 @@ import ShopSubscription from "@/models/ShopSubscription";
 import SubscriptionTransaction from "@/models/SubscriptionTransaction";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { computeSubscriptionPortalAccess } from "@/lib/subscription-access";
-import { ensureShopSubscriptionOnRegister } from "@/lib/subscription-service";
+import { syncSubscriptionWithAccountTier } from "@/lib/subscription-service";
 
 export async function GET(request) {
   try {
@@ -14,7 +14,7 @@ export async function GET(request) {
     }
     const email = user.email.trim().toLowerCase();
     await connectDB();
-    await ensureShopSubscriptionOnRegister(email).catch(() => {});
+    await syncSubscriptionWithAccountTier(email).catch(() => {});
 
     const access = await computeSubscriptionPortalAccess(email);
     const sub = await ShopSubscription.findOne({ ownerEmail: email }).populate("planId").lean();

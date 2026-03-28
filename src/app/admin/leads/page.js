@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { FiEye, FiUserPlus } from "react-icons/fi";
+import { FiDownload, FiEye, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -9,6 +9,66 @@ import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
 
 const MAX_ASSIGNMENTS = 3;
+
+function csvEscape(val) {
+  const s = val == null ? "" : String(val);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function buildLeadsCsv(leads, listingMap) {
+  const headers = [
+    "id",
+    "name",
+    "email",
+    "phone",
+    "company",
+    "city",
+    "zipCode",
+    "motorType",
+    "motorHp",
+    "voltage",
+    "urgencyLevel",
+    "problemDescription",
+    "message",
+    "sourceListingId",
+    "sourceListingName",
+    "assignedListingIds",
+    "assignedToNames",
+    "leadSource",
+    "status",
+    "createdAt",
+  ];
+  const rows = leads.map((l) => {
+    const srcId = l.sourceListingId || "";
+    const ids = l.assignedListingIds || [];
+    const assignNames = ids.map((id) => listingMap[id] || id).join("; ");
+    return [
+      l.id,
+      l.name,
+      l.email,
+      l.phone,
+      l.company,
+      l.city,
+      l.zipCode,
+      l.motorType,
+      l.motorHp,
+      l.voltage,
+      l.urgencyLevel,
+      l.problemDescription,
+      l.message,
+      srcId,
+      srcId ? listingMap[srcId] || "" : "",
+      ids.join("; "),
+      assignNames,
+      l.leadSource || "",
+      l.status || "",
+      l.createdAt ? new Date(l.createdAt).toISOString() : "",
+    ].map(csvEscape);
+  });
+  const body = [headers.map(csvEscape).join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+  return `\uFEFF${body}`;
+}
 
 export default function AdminLeadsPage() {
   const toast = useToast();
@@ -66,6 +126,26 @@ export default function AdminLeadsPage() {
     setAssignModalOpen(false);
     setAssigningLead(null);
     setAssignIds([]);
+  };
+
+  const handleDownloadCsv = () => {
+    if (!leads.length) {
+      toast.error("No leads to export.");
+      return;
+    }
+    try {
+      const csv = buildLeadsCsv(leads, listingMap);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `leads-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV downloaded.");
+    } catch (e) {
+      toast.error(e.message || "Export failed");
+    }
   };
 
   const handleSaveAssignments = async () => {
@@ -154,10 +234,26 @@ export default function AdminLeadsPage() {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Leads</h1>
-        <p className="mt-1 text-sm text-secondary">
-          Contact requests from the listing pages. Assign each lead to up to 3 repair companies.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-title">Leads</h1>
+            <p className="mt-1 text-sm text-secondary">
+              RFQs from public listing pages are tied to that listing and auto-assigned to the company. You can
+              also assign each lead to up to {MAX_ASSIGNMENTS} repair companies.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={handleDownloadCsv}
+            disabled={loading || leads.length === 0}
+          >
+            <FiDownload className="mr-1.5 h-4 w-4" aria-hidden />
+            Download CSV
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">

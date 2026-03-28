@@ -11,6 +11,8 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -104,6 +106,7 @@ function buildCustomerPayload(form) {
 }
 
 export default function DashboardCustomersPage() {
+  const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -167,6 +170,11 @@ export default function DashboardCustomersPage() {
         const customersList = await customersRes.json();
         if (cancelled || !leadRes.ok) return;
         const list = Array.isArray(customersList) ? customersList : [];
+        if (user?.listingOnlyAccount && list.length >= LISTING_ONLY_MAX_CUSTOMERS) {
+          toast.error(LISTING_ONLY_UPGRADE_MESSAGE);
+          router.replace("/dashboard/customers", { scroll: false });
+          return;
+        }
         const leadEmail = (lead.email || "").trim().toLowerCase();
         const leadCompany = (lead.company || "").trim().toLowerCase();
         const existing = list.find((c) => {
@@ -196,7 +204,7 @@ export default function DashboardCustomersPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fromLeadId, toast, router]);
+  }, [fromLeadId, toast, router, user?.listingOnlyAccount]);
 
   useEffect(() => {
     const id = openCustomerId?.trim();
@@ -207,6 +215,10 @@ export default function DashboardCustomersPage() {
   }, [openCustomerId, router]);
 
   const openEnterModal = () => {
+    if (user?.listingOnlyAccount && customers.length >= LISTING_ONLY_MAX_CUSTOMERS) {
+      toast.error(LISTING_ONLY_UPGRADE_MESSAGE);
+      return;
+    }
     setForm(INITIAL_FORM);
     setEnterModalOpen(true);
   };
@@ -540,9 +552,13 @@ export default function DashboardCustomersPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          <Button variant="primary" onClick={openEnterModal} className="shrink-0">
-            Enter New Customer
-          </Button>
+          {user?.listingOnlyAccount && customers.length >= LISTING_ONLY_MAX_CUSTOMERS ? (
+            <p className="max-w-md text-xs text-secondary">{LISTING_ONLY_UPGRADE_MESSAGE}</p>
+          ) : (
+            <Button variant="primary" onClick={openEnterModal} className="shrink-0">
+              Enter New Customer
+            </Button>
+          )}
         </div>
       </div>
 

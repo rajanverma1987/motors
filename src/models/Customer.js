@@ -25,8 +25,8 @@ const customerSchema = new mongoose.Schema(
       },
     ],
     notes: { type: String, default: "", trim: true },
-    /** Token for customer portal link (public view of motors, quotes, status). Unique. */
-    portalToken: { type: String, default: "", trim: true },
+    /** Token for customer portal link (public view of motors, quotes, status). Unique when set — do not default to "". */
+    portalToken: { type: String, trim: true },
     /** Shop that owns this customer (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
   },
@@ -35,6 +35,13 @@ const customerSchema = new mongoose.Schema(
 
 customerSchema.index({ createdByEmail: 1, createdAt: -1 });
 customerSchema.index({ createdByEmail: 1, companyName: 1 });
-customerSchema.index({ portalToken: 1 }, { sparse: true, unique: true });
+/** Unique only for non-empty tokens; empty string would collide for every new customer (E11000). */
+customerSchema.index(
+  { portalToken: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { portalToken: { $gt: "" } },
+  }
+);
 
 export default mongoose.models.Customer || mongoose.model("Customer", customerSchema);

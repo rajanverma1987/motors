@@ -8,7 +8,7 @@ import {
   assignInternalFreeUltimateToShop,
   revokeShopAccess,
   clearShopRevoke,
-  ensureShopSubscriptionOnRegister,
+  syncSubscriptionWithAccountTier,
   logSubscriptionTransaction,
 } from "@/lib/subscription-service";
 
@@ -32,7 +32,7 @@ export async function GET(request, context) {
       .populate("planId")
       .lean();
     if (!sub) {
-      await ensureShopSubscriptionOnRegister(user.email);
+      await syncSubscriptionWithAccountTier(user.email);
       sub = await ShopSubscription.findOne({ ownerEmail: user.email })
         .populate("planId")
         .lean();

@@ -6,8 +6,13 @@ import SubscriptionTransaction from "@/models/SubscriptionTransaction";
 import { sendSubscriptionPlanAttachedEmail } from "@/lib/email";
 import { createPaypalProductAndPlan, createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
 import { gracePeriodAfterFailure } from "@/lib/subscription-access";
+import { LISTING_ONLY_PLAN_SLUG } from "@/lib/listing-account-messages";
+import { planIsListingDirectoryTier } from "@/lib/listing-tier-plan";
 
 export const FREE_ULTIMATE_SLUG = "free-ultimate";
+
+/** @deprecated use LISTING_ONLY_PLAN_SLUG from listing-account-messages */
+export const LISTING_ONLY_SLUG = LISTING_ONLY_PLAN_SLUG;
 
 export async function ensureFreeUltimatePlan() {
   await connectDB();
@@ -25,6 +30,91 @@ export async function ensureFreeUltimatePlan() {
     });
   }
   return plan;
+}
+
+/** Internal plan shown on Subscription page for directory / listing-only CRM tier. */
+export async function ensureListingOnlyPlan() {
+  await connectDB();
+  let plan = await SubscriptionPlan.findOne({ slug: LISTING_ONLY_PLAN_SLUG });
+  if (!plan) {
+    plan = await SubscriptionPlan.create({
+      name: "Directory listing",
+      slug: LISTING_ONLY_PLAN_SLUG,
+      planType: "internal",
+      description:
+        "Directory listing plan: full CRM with up to 2 saved customers and full contact details for 2 website leads per calendar month.",
+      customPrice: 0,
+      billingCycle: "custom",
+      billingIntervalCount: 1,
+      active: true,
+    });
+  }
+  return plan;
+}
+
+async function shopHasActivePaypalBackedSubscription(ownerEmail) {
+  const email = (ownerEmail || "").trim().toLowerCase();
+  if (!email) return false;
+  await connectDB();
+  const sub = await ShopSubscription.findOne({ ownerEmail: email }).select("planId paypalSubscriptionId").lean();
+  if (!sub) return false;
+  const paypalId = (sub.paypalSubscriptionId || "").trim();
+  if (!paypalId) return false;
+  const plan = await SubscriptionPlan.findById(sub.planId).select("planType").lean();
+  return plan?.planType === "paypal";
+}
+
+/**
+ * Sets User.listingOnlyAccount and ShopSubscription to the Directory listing internal plan.
+ * No-op if no portal user exists for the email. Skips plan changes if the shop has an active PayPal-backed subscription (no downgrade).
+ */
+export async function applyListingOnlySubscriptionToShop(ownerEmail) {
+  const email = (ownerEmail || "").trim().toLowerCase();
+  if (!email) return { applied: false, reason: "no_email" };
+  await connectDB();
+
+  const user = await User.findOne({ email }).select("_id").lean();
+  if (!user) return { applied: false, reason: "no_user" };
+
+  if (await shopHasActivePaypalBackedSubscription(email)) {
+    return { applied: false, reason: "paypal_active" };
+  }
+
+  const plan = await ensureListingOnlyPlan();
+  await User.updateOne({ _id: user._id }, { $set: { listingOnlyAccount: true } });
+
+  await ShopSubscription.findOneAndUpdate(
+    { ownerEmail: email },
+    {
+      $set: {
+        planId: plan._id,
+        internalState: "active",
+        paymentFailureCount: 0,
+        customPriceSnapshot: plan.customPrice ?? 0,
+        currencySnapshot: plan.currency || "USD",
+      },
+      $setOnInsert: {
+        ownerEmail: email,
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  return { applied: true };
+}
+
+/**
+ * Bootstrap subscription for login / subscription GET: Free Ultimate or Directory listing from User.listingOnlyAccount.
+ */
+export async function syncSubscriptionWithAccountTier(ownerEmail) {
+  const email = (ownerEmail || "").trim().toLowerCase();
+  if (!email) return null;
+  await connectDB();
+  const u = await User.findOne({ email }).select("listingOnlyAccount").lean();
+  if (u?.listingOnlyAccount) {
+    return applyListingOnlySubscriptionToShop(email);
+  }
+  return ensureShopSubscriptionOnRegister(email);
 }
 
 /** Call after new User registration. */
@@ -113,6 +203,9 @@ export async function applySubscriptionActivated({ subscriptionId, eventId }) {
   sub.gracePeriodEndsAt = undefined;
   sub.lastWebhookEventId = eventId || sub.lastWebhookEventId;
   await sub.save();
+  const planDoc = await SubscriptionPlan.findById(sub.planId).lean();
+  const listingTier = planIsListingDirectoryTier(planDoc);
+  await User.updateOne({ email: sub.ownerEmail }, { $set: { listingOnlyAccount: listingTier } });
   await logSubscriptionTransaction({
     ownerEmail: sub.ownerEmail,
     paypalSubscriptionId: subscriptionId,
@@ -262,6 +355,9 @@ export async function assignPaypalPlanToShop({
   }
   await sub.save();
 
+  const listingTier = planIsListingDirectoryTier(plan);
+  await User.updateOne({ email }, { $set: { listingOnlyAccount: !!listingTier } });
+
   await logSubscriptionTransaction({
     ownerEmail: email,
     paypalSubscriptionId: subscriptionId,
@@ -324,6 +420,9 @@ export async function assignInternalFreeUltimateToShop(ownerEmail, adminEmail) {
     sub.paymentFailureCount = 0;
   }
   await sub.save();
+
+  await User.updateOne({ email }, { $set: { listingOnlyAccount: false } });
+
   await logSubscriptionTransaction({
     ownerEmail: email,
     type: "admin_override",

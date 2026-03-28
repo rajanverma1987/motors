@@ -13,7 +13,10 @@ export function AuthProvider({ children }) {
       const res = await fetch("/api/auth/me", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        setUser({
+          ...data.user,
+          listingOnlyAccount: !!data.user?.listingOnlyAccount,
+        });
       } else {
         setUser(null);
       }
@@ -37,7 +40,10 @@ export function AuthProvider({ children }) {
     if (!res.ok) {
       return { ok: false, error: data.error || "Login failed." };
     }
-    setUser(data.user);
+    setUser({
+      ...data.user,
+      listingOnlyAccount: !!data.user?.listingOnlyAccount,
+    });
     return { ok: true };
   }, []);
 
@@ -52,7 +58,10 @@ export function AuthProvider({ children }) {
     if (!res.ok) {
       return { ok: false, error: data.error || "Registration failed." };
     }
-    setUser(data.user);
+    setUser({
+      ...data.user,
+      listingOnlyAccount: !!data.user?.listingOnlyAccount,
+    });
     return { ok: true };
   }, []);
 

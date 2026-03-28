@@ -83,6 +83,11 @@ function formatListAsReadableArray(arr) {
   return arr.map((item) => READABLE_OPTION_LABELS[item] || item);
 }
 
+/** Plain JSON object for Client Components (no ObjectId / BSON / Mongoose toJSON). */
+function toClientListingProps(listing) {
+  return JSON.parse(JSON.stringify(listing));
+}
+
 export async function generateMetadata({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
@@ -206,6 +211,8 @@ export default async function ListingDetailPage({ params }) {
   const sameAreaPage = await getLocationPageForArea(listing.city, listing.state);
   const sameAreaLabel = [listing.city, listing.state].filter(Boolean).join(", ") || "this area";
 
+  const listingForClient = toClientListingProps(listing);
+
   return (
     <>
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
@@ -256,7 +263,7 @@ export default async function ListingDetailPage({ params }) {
                   )}
                 </div>
               </div>
-              <ListingDetailCta listing={listing} />
+              <ListingDetailCta listing={listingForClient} />
             </div>
 
             {listing.shortDescription && (

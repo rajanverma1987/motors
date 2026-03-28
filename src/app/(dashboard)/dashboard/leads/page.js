@@ -13,6 +13,7 @@ import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import Badge from "@/components/ui/badge";
+import { useAuth } from "@/contexts/auth-context";
 
 const SOURCE_LABELS = {
   website: "Website",
@@ -50,6 +51,7 @@ const URGENCY_OPTIONS = [
 ];
 
 export default function DashboardLeadsPage() {
+  const { user } = useAuth();
   const toast = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -360,6 +362,23 @@ export default function DashboardLeadsPage() {
           <p className="mt-1 text-sm text-secondary">
             Manage incoming repair inquiries from the website, admin assignment, or manual entry.
           </p>
+          {user?.listingOnlyAccount ? (
+            <p className="mt-2 max-w-2xl text-xs text-secondary">
+              <strong className="text-title">Directory listing plan:</strong> you see all leads here. Full contact
+              details for the website are shown for the first two per calendar month (oldest first); additional
+              website leads show masked contact info until you upgrade. Manual leads you add always show full
+              contact.
+            </p>
+          ) : null}
+          <p className="mt-2 text-sm text-secondary">
+            <Link
+              href="/dashboard/directory-listing"
+              className="font-medium text-primary hover:underline"
+            >
+              Directory listing
+            </Link>{" "}
+            — manage how your repair center appears on the public directory.
+          </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <Select
@@ -383,7 +402,11 @@ export default function DashboardLeadsPage() {
           data={filteredLeads}
           rowKey="id"
           loading={loading}
-          emptyMessage={leads.length === 0 ? "No leads yet. Use “Enter Lead” to add one." : "No leads match the search or filter."}
+          emptyMessage={
+            leads.length === 0
+              ? "No leads yet. Use “Enter Lead” to add one, or wait for website inquiries."
+              : "No leads match the search or filter."
+          }
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder="Search name, company, email…"

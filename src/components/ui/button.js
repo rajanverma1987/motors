@@ -28,7 +28,7 @@ export default function Button({
       onClick={onClick}
       disabled={disabled}
       form={form}
-      className={`rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
       {...rest}
     >
       {children}

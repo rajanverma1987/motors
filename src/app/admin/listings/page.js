@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FiEye, FiUserPlus, FiCreditCard, FiTrash2, FiCheckCircle } from "react-icons/fi";
+import { FiDownload, FiEye, FiUserPlus, FiCreditCard, FiTrash2, FiCheckCircle, FiPlus } from "react-icons/fi";
+import AdminFeaturedListingCreateModal from "@/components/admin/AdminFeaturedListingCreateModal";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -46,6 +47,52 @@ function matchListing(row, q) {
   return company.includes(s) || email.includes(s) || city.includes(s) || state.includes(s) || status.includes(s);
 }
 
+function csvEscape(val) {
+  const s = val == null ? "" : String(val);
+  if (/[",\r\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+/** Export rows currently shown in the table (respects status filter + search). */
+function buildListingsCsv(rows) {
+  const headers = [
+    "id",
+    "companyName",
+    "email",
+    "phone",
+    "city",
+    "state",
+    "zipCode",
+    "country",
+    "status",
+    "isSeed",
+    "urlSlug",
+    "crmUserId",
+    "submittedAt",
+    "reviewedAt",
+  ];
+  const lines = rows.map((r) =>
+    [
+      r.id,
+      r.companyName,
+      r.email,
+      r.phone,
+      r.city,
+      r.state,
+      r.zipCode,
+      r.country,
+      r.status,
+      r.isSeed ? "yes" : "no",
+      r.urlSlug,
+      r.crmUserId != null && r.crmUserId !== "" ? String(r.crmUserId) : "",
+      r.submittedAt ? new Date(r.submittedAt).toISOString() : "",
+      r.reviewedAt ? new Date(r.reviewedAt).toISOString() : "",
+    ].map(csvEscape)
+  );
+  const body = [headers.map(csvEscape).join(","), ...lines.map((l) => l.join(","))].join("\r\n");
+  return `\uFEFF${body}`;
+}
+
 export default function AdminListingsPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -64,6 +111,13 @@ export default function AdminListingsPage() {
   const [onboardContact, setOnboardContact] = useState("");
   const [onboardPassword, setOnboardPassword] = useState("");
   const [onboardSubmitting, setOnboardSubmitting] = useState(false);
+  const [newListingSearchOpen, setNewListingSearchOpen] = useState(false);
+  const [newListingCreateOpen, setNewListingCreateOpen] = useState(false);
+  const [searchEmail, setSearchEmail] = useState("");
+  const [searchPhone, setSearchPhone] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchAttempted, setSearchAttempted] = useState(false);
 
   const goManageSubscription = useCallback(
     (row) => {
@@ -283,6 +337,26 @@ export default function AdminListingsPage() {
     return searchQuery.trim() ? listings.filter((row) => matchListing(row, searchQuery.trim())) : listings;
   }, [listings, searchQuery]);
 
+  const handleDownloadCsv = useCallback(() => {
+    if (!filteredListings.length) {
+      toast.error("No listings to export.");
+      return;
+    }
+    try {
+      const csv = buildListingsCsv(filteredListings);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `listings-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("CSV downloaded.");
+    } catch (e) {
+      toast.error(e.message || "Export failed");
+    }
+  }, [filteredListings, toast]);
+
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
   }, []);
@@ -374,6 +448,39 @@ export default function AdminListingsPage() {
     fetchListings();
   }, [fetchListings]);
 
+  const runListingSearch = useCallback(async () => {
+    const e = searchEmail.trim();
+    const p = searchPhone.trim();
+    if (!e && p.replace(/\D/g, "").length < 7) {
+      toast.warning("Enter an email or a phone number (at least 7 digits).");
+      return;
+    }
+    setSearching(true);
+    setSearchResult(null);
+    try {
+      const qs = new URLSearchParams();
+      if (e) qs.set("email", e);
+      if (p) qs.set("phone", p);
+      const res = await fetch(`/api/admin/listings/search?${qs}`, { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      setSearchResult(data.listing || null);
+      setSearchAttempted(true);
+    } catch (err) {
+      toast.error(err.message || "Search failed");
+    } finally {
+      setSearching(false);
+    }
+  }, [searchEmail, searchPhone, toast]);
+
+  const openNewListingFlow = useCallback(() => {
+    setSearchEmail("");
+    setSearchPhone("");
+    setSearchResult(null);
+    setSearchAttempted(false);
+    setNewListingSearchOpen(true);
+  }, []);
+
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
@@ -384,14 +491,31 @@ export default function AdminListingsPage() {
             Free Ultimate subscription, then manage plans under Registered clients.
           </p>
         </div>
-        <Select
-          options={STATUS_OPTIONS}
-          value={filter}
-          onChange={(e) => setFilter(e.target.value ?? "")}
-          placeholder="All"
-          searchable={false}
-          className="min-w-[140px]"
-        />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Select
+            options={STATUS_OPTIONS}
+            value={filter}
+            onChange={(e) => setFilter(e.target.value ?? "")}
+            placeholder="All"
+            searchable={false}
+            className="min-w-[140px]"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDownloadCsv}
+            disabled={loading || filteredListings.length === 0}
+            className="h-10 min-h-[2.5rem] shrink-0"
+          >
+            <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
+            Download CSV
+          </Button>
+          <Button type="button" variant="primary" size="sm" onClick={openNewListingFlow} className="h-10 min-h-[2.5rem] shrink-0">
+            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+            New Listing
+          </Button>
+        </div>
       </div>
 
       {selectedRowIds.length > 0 && (
@@ -514,6 +638,72 @@ export default function AdminListingsPage() {
           </div>
         </form>
       </Modal>
+
+      <Modal
+        open={newListingSearchOpen}
+        onClose={() => setNewListingSearchOpen(false)}
+        title="Find existing listing"
+        size="md"
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={() => setNewListingSearchOpen(false)}>
+            Close
+          </Button>
+        }
+      >
+        <p className="text-sm text-secondary">
+          Search by email or phone before creating a duplicate. If you already have a listing, open it to edit.
+        </p>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Input label="Email" type="email" value={searchEmail} onChange={(e) => setSearchEmail(e.target.value)} placeholder="shop@example.com" />
+          <Input label="Phone" value={searchPhone} onChange={(e) => setSearchPhone(e.target.value)} placeholder="Digits only" />
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" variant="primary" size="sm" onClick={runListingSearch} disabled={searching}>
+            {searching ? "Searching…" : "Search"}
+          </Button>
+        </div>
+        {searchResult ? (
+          <div className="mt-4 rounded-lg border border-border bg-muted/20 p-3 text-sm">
+            <p className="font-medium text-title">{searchResult.companyName}</p>
+            <p className="text-secondary">{searchResult.email}</p>
+            <Link
+              href={`/admin/listings/${searchResult.id}`}
+              className="mt-2 inline-block text-primary hover:underline"
+              onClick={() => setNewListingSearchOpen(false)}
+            >
+              Open listing
+            </Link>
+          </div>
+        ) : null}
+        {searchAttempted && !searching && !searchResult ? (
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-sm text-secondary">No listing found for this search.</p>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="mt-2"
+              onClick={() => {
+                setNewListingSearchOpen(false);
+                setNewListingCreateOpen(true);
+              }}
+            >
+              Create new
+            </Button>
+          </div>
+        ) : null}
+      </Modal>
+
+      <AdminFeaturedListingCreateModal
+        open={newListingCreateOpen}
+        onClose={() => setNewListingCreateOpen(false)}
+        generatePassword={generateTempPassword}
+        prefillEmail={searchEmail}
+        prefillPhone={searchPhone}
+        onCreated={() => {
+          fetchListings();
+        }}
+      />
 
       <Modal
         open={rejectModalOpen}

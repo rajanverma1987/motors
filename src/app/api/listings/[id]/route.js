@@ -9,6 +9,8 @@ import { sendListingApproved, sendListingRejected, sendShopListedNotificationToA
 import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { ensureLocationPageForArea } from "@/lib/location-pages-public";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 
 export async function GET(request, context) {
   try {
@@ -78,6 +80,11 @@ export async function PATCH(request, context) {
       if (newStatus === "approved") {
         await sendListingApproved(doc.email, doc.companyName);
         try {
+          await applyListingOnlySubscriptionToShop(doc.email);
+        } catch (e) {
+          console.warn("applyListingOnlySubscriptionToShop (listing approved):", e);
+        }
+        try {
           await sendShopListedNotificationToAdmin(doc);
         } catch (e) {
           console.warn("Shop listed notification email failed:", e);
@@ -113,7 +120,7 @@ export async function PATCH(request, context) {
 
     // General update (admin editing fields) – build $set from allowed keys present in body
     const allowed = [
-      "companyName", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
+      "companyName", "email", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
       "primaryContactPerson", "address", "city", "state", "zipCode", "country",
       "services", "maxMotorSizeHP", "maxVoltage", "maxWeightHandled", "motorCapabilities",
       "equipmentTesting", "rewindingCapabilities", "industriesServed",
@@ -127,6 +134,19 @@ export async function PATCH(request, context) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         set[key] = updates[key];
       }
+    }
+    if (Object.prototype.hasOwnProperty.call(set, "email")) {
+      const raw = set.email;
+      const e = clampString(typeof raw === "string" ? raw : String(raw ?? ""), LIMITS.email.max)
+        .trim()
+        .toLowerCase();
+      if (!e) {
+        return NextResponse.json({ error: "Email is required." }, { status: 400 });
+      }
+      if (!isValidEmail(e)) {
+        return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+      }
+      set.email = e;
     }
     if (Object.keys(set).length === 0) {
       const current = await Listing.findById(id).lean();
