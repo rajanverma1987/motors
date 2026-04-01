@@ -12,6 +12,4 @@ const userSettingsSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-userSettingsSchema.index({ ownerEmail: 1 });
-
 export default mongoose.models.UserSettings || mongoose.model("UserSettings", userSettingsSchema);
