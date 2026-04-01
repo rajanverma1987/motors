@@ -70,6 +70,13 @@ export async function ensureLocationPageForArea(city, state, zip) {
     zip: (zip || "").trim(),
     status: "active",
   });
+  try {
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath(`/motor-repair-shop/${slug}`);
+    revalidatePath("/sitemap.xml");
+  } catch (e) {
+    console.warn("ensureLocationPageForArea revalidate:", e?.message || e);
+  }
   return { ...doc.toObject(), id: doc._id.toString(), _id: undefined };
 }
 

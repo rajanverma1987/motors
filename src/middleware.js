@@ -13,7 +13,10 @@ export function middleware(request) {
   }
   if (pathname.startsWith("/dashboard")) {
     if (!hasPortalCookie) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const loginUrl = new URL("/login", request.url);
+      const dest = `${pathname}${request.nextUrl.search || ""}`;
+      loginUrl.searchParams.set("next", dest);
+      return NextResponse.redirect(loginUrl);
     }
   }
   return NextResponse.next();

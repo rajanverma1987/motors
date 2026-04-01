@@ -67,6 +67,7 @@ export async function POST(request) {
       updated += 1;
     }
     revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/sitemap.xml");
     return NextResponse.json({ ok: true, updated });
   } catch (err) {
     console.error("Bulk status error:", err);

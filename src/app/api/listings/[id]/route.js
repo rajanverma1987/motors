@@ -102,10 +102,12 @@ export async function PATCH(request, context) {
         }
         const pathSlug = (doc.urlSlug || "").trim();
         revalidatePath("/electric-motor-reapir-shops-listings");
+        revalidatePath("/sitemap.xml");
         if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
       } else {
         await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
         revalidatePath("/electric-motor-reapir-shops-listings");
+        revalidatePath("/sitemap.xml");
       }
 
       return NextResponse.json({
@@ -167,6 +169,7 @@ export async function PATCH(request, context) {
     }
 
     revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/sitemap.xml");
     const pathSlug = (saved.urlSlug || "").trim();
     if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
 
@@ -209,6 +212,7 @@ export async function DELETE(request, context) {
     await Listing.findByIdAndDelete(id);
 
     revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/sitemap.xml");
     if (pathSlug) {
       revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
     }

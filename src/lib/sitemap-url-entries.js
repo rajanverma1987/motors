@@ -3,6 +3,9 @@ import { getAllPublishedSlugs } from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { SEO_USA_HUB_PATH, SEO_USA_STATES, getAllSeoCityEntries } from "@/lib/seo-usa-config";
 import { getPublicJobPostingSlugs } from "@/lib/job-postings-public";
+import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
 
 /**
  * Shared sitemap URL list (same sources as `src/app/sitemap.js`).
@@ -106,7 +109,32 @@ export async function getSitemapEntries() {
     console.error("Sitemap careers jobs error:", err);
   }
 
-  return [...staticPages, ...seoUsaStatePages, ...seoUsaCityPages, ...locationPages, ...marketplaceItems, ...careerJobs];
+  let listingPages = [];
+  try {
+    await connectDB();
+    await ensureApprovedListingsHaveUrlSlug();
+    const listings = await Listing.find({ status: "approved", urlSlug: { $ne: "" } })
+      .select("urlSlug updatedAt")
+      .lean();
+    listingPages = listings.map((l) => ({
+      url: `${baseUrl}/electric-motor-reapir-shops-listings/${l.urlSlug}`,
+      lastModified: l.updatedAt ? new Date(l.updatedAt) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.72,
+    }));
+  } catch (err) {
+    console.error("Sitemap listing pages error:", err);
+  }
+
+  return [
+    ...staticPages,
+    ...seoUsaStatePages,
+    ...seoUsaCityPages,
+    ...locationPages,
+    ...marketplaceItems,
+    ...careerJobs,
+    ...listingPages,
+  ];
 }
 
 /** Plain URL strings for IndexNow (deduped). */

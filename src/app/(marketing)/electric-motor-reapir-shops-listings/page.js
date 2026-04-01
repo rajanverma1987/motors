@@ -38,7 +38,7 @@ function ListingCard({ listing, imagePriority }) {
           </p>
         )}
         <span className="mt-4 inline-flex items-center text-sm font-medium text-primary">
-          View details →
+          View Capacity and Capabilities →
         </span>
       </div>
     </Link>

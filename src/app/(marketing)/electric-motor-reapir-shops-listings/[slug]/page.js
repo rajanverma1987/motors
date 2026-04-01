@@ -266,8 +266,26 @@ export default async function ListingDetailPage({ params }) {
               <ListingDetailCta listing={listingForClient} />
             </div>
 
+            <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
+              <p className="text-sm text-secondary">
+                <span className="font-medium text-title">Is this your business?</span>{" "}
+                Sign in to your MotorsWinding account to update this directory listing—services, service area, photos,
+                and contact details—whenever they change.{" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent("/dashboard/directory-listing")}`}
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  Sign in to edit your listing
+                </Link>
+                .
+              </p>
+            </div>
+
             {listing.shortDescription && (
-              <p className="mt-6 text-secondary">{listing.shortDescription}</p>
+              <div className="mt-8">
+                <h2 className="text-sm font-semibold tracking-wide text-title">About us</h2>
+                <p className="mt-3 text-sm text-secondary">{listing.shortDescription}</p>
+              </div>
             )}
 
             <div className="mt-8 grid gap-8 sm:grid-cols-2">
@@ -434,7 +452,10 @@ export default async function ListingDetailPage({ params }) {
         </div>
           </div>
           <div className="lg:sticky lg:top-8">
-            <ListingReviewsSidebar listingId={listing.id} />
+            <ListingReviewsSidebar
+              listingId={listing.id}
+              listingPagePath={`/electric-motor-reapir-shops-listings/${canonicalSlug}`}
+            />
           </div>
         </div>
       </div>

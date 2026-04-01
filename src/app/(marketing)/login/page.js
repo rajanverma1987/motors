@@ -1,16 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
 
+/** Open redirect safe: same-origin path only. */
+function safeNextPath(raw) {
+  if (raw == null || typeof raw !== "string") return "";
+  let s = raw.trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {
+    return "";
+  }
+  s = s.trim();
+  if (!s.startsWith("/") || s.startsWith("//")) return "";
+  if (s.includes("\\") || s.includes("\n") || s.includes("\r")) return "";
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(s)) return "";
+  return s;
+}
+
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = useMemo(
+    () => safeNextPath(searchParams.get("next")),
+    [searchParams]
+  );
+  const afterLoginPath = nextPath || "/dashboard";
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -18,8 +40,8 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (user) router.replace("/dashboard");
-  }, [mounted, user, router]);
+    if (user) router.replace(afterLoginPath);
+  }, [mounted, user, router, afterLoginPath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -34,7 +56,7 @@ export default function LoginPage() {
     try {
       const result = await login(form.email, form.password);
       if (result.ok) {
-        router.push("/dashboard");
+        router.push(afterLoginPath);
         return;
       }
       setError(result.error || "Login failed.");

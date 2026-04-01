@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { FiCopy } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -71,9 +72,11 @@ function formatReviewDate(isoString) {
   return d.toLocaleDateString();
 }
 
-export default function ListingReviewsSidebar({ listingId }) {
+export default function ListingReviewsSidebar({ listingId, listingPagePath = "" }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [copyLinkError, setCopyLinkError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -102,6 +105,35 @@ export default function ListingReviewsSidebar({ listingId }) {
     setForm((prev) => ({ ...prev, [name]: name === "rating" ? Number(value) : value }));
     setError("");
   };
+
+  const copyListingPageLink = useCallback(async () => {
+    setCopyLinkError("");
+    const path = (listingPagePath || "").trim();
+    if (!path || typeof window === "undefined") return;
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    const fullUrl = `${window.location.origin}${normalized}`;
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setLinkCopied(true);
+      window.setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = fullUrl;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setLinkCopied(true);
+        window.setTimeout(() => setLinkCopied(false), 2500);
+      } catch {
+        setCopyLinkError("Could not copy. Copy the URL from your browser's address bar instead.");
+      }
+    }
+  }, [listingPagePath]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -198,7 +230,32 @@ export default function ListingReviewsSidebar({ listingId }) {
         {loading ? (
           <p className="mt-3 text-sm text-secondary">Loading reviews…</p>
         ) : reviews.length === 0 ? (
-          <p className="mt-3 text-sm text-secondary">No reviews yet. Be the first to leave one.</p>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm text-secondary">No reviews yet. Be the first to leave one.</p>
+            {listingPagePath ? (
+              <>
+                <p className="text-sm text-secondary">
+                  <span className="font-medium text-title">Own this listing?</span> Copy the link to this page and share
+                  it with customers so they can leave a review here.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyListingPageLink}
+                  className="inline-flex w-full items-center justify-center gap-2 sm:w-auto"
+                >
+                  <FiCopy className="h-4 w-4 shrink-0" aria-hidden />
+                  {linkCopied ? "Link copied" : "Copy link to share"}
+                </Button>
+                {copyLinkError ? (
+                  <p className="text-sm text-danger" role="alert">
+                    {copyLinkError}
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+          </div>
         ) : (
           <ul className="mt-4 space-y-4">
             {reviews.map((r) => (

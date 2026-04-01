@@ -322,6 +322,7 @@ export async function PATCH(request) {
     ).lean();
 
     revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/sitemap.xml");
     const pathSlug = (saved.urlSlug || "").trim();
     if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
 

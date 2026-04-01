@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FiDownload, FiEye, FiUserPlus, FiCreditCard, FiTrash2, FiCheckCircle, FiPlus } from "react-icons/fi";
+import { FiDownload, FiEye, FiUserPlus, FiCreditCard, FiTrash2, FiCheckCircle, FiPlus, FiRefreshCw } from "react-icons/fi";
 import AdminFeaturedListingCreateModal from "@/components/admin/AdminFeaturedListingCreateModal";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -357,6 +357,12 @@ export default function AdminListingsPage() {
     }
   }, [filteredListings, toast]);
 
+  const handleRefresh = useCallback(async () => {
+    setLoading(true);
+    await fetchListings();
+    toast.success("Listings refreshed.");
+  }, [fetchListings, toast]);
+
   const handleSearch = useCallback((query) => {
     setSearchQuery(query);
   }, []);
@@ -500,6 +506,17 @@ export default function AdminListingsPage() {
             searchable={false}
             className="min-w-[140px]"
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="h-10 min-h-[2.5rem] shrink-0"
+          >
+            <FiRefreshCw className={`h-4 w-4 shrink-0 ${loading ? "animate-spin" : ""}`} aria-hidden />
+            Refresh
+          </Button>
           <Button
             type="button"
             variant="outline"
