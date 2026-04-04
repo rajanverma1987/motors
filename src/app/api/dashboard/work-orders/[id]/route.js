@@ -17,6 +17,7 @@ import {
   consumeInventoryForQuoteOnShipped,
   releaseInventoryReservationsForQuote,
 } from "@/lib/inventory-service";
+import { normalizeWorkOrderJobType } from "@/lib/work-order-fields";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -103,8 +104,7 @@ export async function PATCH(request, context) {
       doc.technicianEmployeeId = String(body.technicianEmployeeId || "").trim();
     }
     if (body.jobType !== undefined) {
-      doc.jobType =
-        body.jobType === "field_frame_only" ? "field_frame_only" : "complete_motor";
+      doc.jobType = normalizeWorkOrderJobType(body.jobType, doc.motorClass);
     }
     if (body.status !== undefined) doc.status = String(body.status || "").trim().slice(0, 80);
     if (body.acSpecs !== undefined && doc.motorClass === "AC") {

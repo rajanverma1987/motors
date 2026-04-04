@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 /**
  * @typedef {Object} MotorTagPrintOptions
  * @property {string} [customerName]
- * @property {Record<string, unknown>} [motor] - motor asset fields (serialNumber, manufacturer, model, hp, …)
+ * @property {Record<string, unknown>} [motor] - customer's motor fields (serialNumber, manufacturer, model, hp, …)
  * @property {string} [motorFallbackLine] - one-line summary if full motor object missing
  */
 

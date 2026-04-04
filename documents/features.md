@@ -8,7 +8,7 @@
 1. Lead Management - 
 2. Customer Management 
 3. Quotes 
-4. Motor Asset Registry
+4. Customer's motors registry
 4. Work Orders
 5. Shop Floor Job Board
 6. Billing

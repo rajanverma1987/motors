@@ -4,6 +4,11 @@ import Quote from "@/models/Quote";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
+import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
+import {
+  todayQuoteDateString,
+  defaultPreparedByEmployeeIdForPortalUser,
+} from "@/lib/quote-defaults-shop";
 
 const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
 
@@ -32,17 +37,6 @@ function sumPartsLines(lines) {
     if (Number.isFinite(q) && Number.isFinite(p)) sum += q * p;
   }
   return sum.toFixed(2);
-}
-
-/** Get next RFQ number for this user: A00001, A00002, ... */
-async function getNextRfqNumber(createdByEmail) {
-  const list = await Quote.find({ createdByEmail }, { rfqNumber: 1 }).lean();
-  let maxNum = 0;
-  for (const q of list) {
-    const m = (q.rfqNumber || "").match(/^A(\d+)$/);
-    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
-  }
-  return "A" + String(maxNum + 1).padStart(5, "0");
 }
 
 export async function GET(request) {
@@ -105,14 +99,19 @@ export async function POST(request) {
     const partsFromLines = partsLines.length ? sumPartsLines(partsLines) : "";
     const email = user.email.trim().toLowerCase();
     const rfqNumber = await getNextRfqNumber(email);
+    const dateStr = String(date ?? "").trim() || todayQuoteDateString();
+    let preparedByStr = String(preparedBy ?? "").trim();
+    if (!preparedByStr) {
+      preparedByStr = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    }
     const doc = await Quote.create({
       customerId: customerId.trim(),
       motorId: motorId.trim(),
       leadId: clampString(leadId, 100),
       status: status && STATUS_VALUES.includes(status) ? status : "draft",
       customerPo: clampString(customerPo, 100),
-      date: clampString(date, 20),
-      preparedBy: clampString(preparedBy, 200),
+      date: clampString(dateStr, 20),
+      preparedBy: clampString(preparedByStr, 200),
       rfqNumber,
       repairScope: clampString(repairScope, LIMITS.message.max),
       laborTotal: laborFromLines || clampString(laborTotal, 50),

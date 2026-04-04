@@ -482,7 +482,7 @@ export default function DashboardMotorsPage() {
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-title">Motor assets</h1>
+          <h1 className="text-2xl font-bold text-title">Customer's motors</h1>
           <p className="mt-1 text-sm text-secondary">
             Digital record of motors serviced. Link to customer. Create from list or from lead.
           </p>
@@ -742,13 +742,13 @@ export default function DashboardMotorsPage() {
             {String(viewingMotor.motorType || "").toUpperCase() === "DC" ? (
               <>
                 <WorkOrderSpecBlock
-                  title="DC motor — technical (motor asset)"
+                  title="DC motor — technical (customer's motor)"
                   subtitle="Stored on this motor. New work orders prefill from here; saving a work order updates these fields."
                   specs={viewingMotor.dcSpecs ?? {}}
                   fields={DC_WORK_ORDER_FIELDS}
                 />
                 <WorkOrderSpecBlock
-                  title="Armature (motor asset)"
+                  title="Armature (customer's motor)"
                   subtitle="Stored on this motor. Flows into new DC work orders."
                   specs={viewingMotor.dcArmatureSpecs ?? {}}
                   fields={DC_ARMATURE_FIELDS}
@@ -756,7 +756,7 @@ export default function DashboardMotorsPage() {
               </>
             ) : (
               <WorkOrderSpecBlock
-                title="AC winding & technical (motor asset)"
+                title="AC winding & technical (customer's motor)"
                 subtitle="Stored on this motor. New work orders prefill from here; saving a work order updates these fields."
                 specs={viewingMotor.acSpecs ?? {}}
                 fields={AC_WORK_ORDER_FIELDS}

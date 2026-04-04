@@ -29,15 +29,17 @@ import {
   FiMapPin,
   FiRepeat,
   FiKey,
+  FiGitBranch,
 } from "react-icons/fi";
 
 const CUSTOMERS_NAV = [
   { href: "/dashboard/leads", label: "Leads", icon: FiInbox },
   { href: "/dashboard/customers", label: "Customers", icon: FiUsers },
-  { href: "/dashboard/motors", label: "Motor assets", icon: FiPackage },
+  { href: "/dashboard/motors", label: "Customer's motors", icon: FiPackage },
 ];
 
 const JOBS_NAV = [
+  { href: "/dashboard/repair-flow", label: "Job Write-Up", icon: FiGitBranch },
   { href: "/dashboard/quotes", label: "Quotes", icon: FiFileText },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
   { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },

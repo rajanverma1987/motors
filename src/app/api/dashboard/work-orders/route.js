@@ -11,6 +11,7 @@ import { workOrderToBoardPayload, notifyWorkOrderBoardCreated } from "@/lib/job-
 import { notifyTechnicianWorkOrderAssigned } from "@/lib/notify-technician-work-order";
 import {
   motorClassFromMotorType,
+  normalizeWorkOrderJobType,
   prefillSpecsFromMotor,
   AC_WORK_ORDER_FIELDS,
   DC_WORK_ORDER_FIELDS,
@@ -119,8 +120,7 @@ export async function POST(request) {
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const today = new Date().toISOString().slice(0, 10);
     const technicianEmployeeId = String(body.technicianEmployeeId || "").trim();
-    const jobType =
-      body.jobType === "field_frame_only" ? "field_frame_only" : "complete_motor";
+    const jobType = normalizeWorkOrderJobType(body.jobType, motorClass);
 
     const acSpecs =
       motorClass === "AC"

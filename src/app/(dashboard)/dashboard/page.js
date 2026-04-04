@@ -38,7 +38,7 @@ const PO_STATUS_LABELS = {
 const ENDPOINTS = [
   { key: "leads", url: "/api/dashboard/leads", href: "/dashboard/leads", label: "Leads", icon: FiInbox, statusKey: "status", statusLabels: LEAD_STATUS_LABELS },
   { key: "customers", url: "/api/dashboard/customers", href: "/dashboard/customers", label: "Customers", icon: FiUsers },
-  { key: "motors", url: "/api/dashboard/motors", href: "/dashboard/motors", label: "Motor assets", icon: FiPackage },
+  { key: "motors", url: "/api/dashboard/motors", href: "/dashboard/motors", label: "Customer's motors", icon: FiPackage },
   { key: "quotes", url: "/api/dashboard/quotes", href: "/dashboard/quotes", label: "Quotes", icon: FiFileText, statusKey: "status", statusLabels: QUOTE_STATUS_LABELS },
   { key: "vendors", url: "/api/dashboard/vendors", href: "/dashboard/vendors", label: "Vendors", icon: FiTruck },
   { key: "purchaseOrders", url: "/api/dashboard/purchase-orders", href: "/dashboard/purchase-orders", label: "Purchase orders", icon: FiShoppingCart, statusKey: "status", statusLabels: PO_STATUS_LABELS },

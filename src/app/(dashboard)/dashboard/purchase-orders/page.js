@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2, FiPlus, FiRotateCw, FiSend } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiPrinter, FiRotateCw, FiSend } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
@@ -17,6 +17,7 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
+import PoPrintPreview from "@/components/dashboard/po-print-preview";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "40%" },
@@ -175,6 +176,7 @@ export default function DashboardPurchaseOrdersPage() {
 
   const [sendingVendor, setSendingVendor] = useState(false);
   const [sendingVendorId, setSendingVendorId] = useState(null);
+  const [printPoId, setPrintPoId] = useState(null);
 
   const vendorOptions = useMemo(
     () => vendors.map((v) => ({ value: v.id, label: v.name || v.id || "—" })),
@@ -581,7 +583,16 @@ export default function DashboardPurchaseOrdersPage() {
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
             >
-              <FiEdit2 className="h-4 w-4" />
+              <FiEdit2 className="h-4 w-4 shrink-0" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setPrintPoId(row.id)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Print"
+              title="Print"
+            >
+              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
             </button>
             <button
               type="button"
@@ -591,7 +602,11 @@ export default function DashboardPurchaseOrdersPage() {
               aria-label="Send to vendor"
               title="Send to vendor"
             >
-              {sendingVendorId === row.id ? <FiRotateCw className="h-4 w-4 animate-spin" aria-hidden /> : <FiSend className="h-4 w-4" />}
+              {sendingVendorId === row.id ? (
+                <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+              ) : (
+                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+              )}
             </button>
           </div>
         ),
@@ -1299,6 +1314,8 @@ export default function DashboardPurchaseOrdersPage() {
           </div>
         </Form>
       </Modal>
+
+      <PoPrintPreview purchaseOrderId={printPoId} open={!!printPoId} onClose={() => setPrintPoId(null)} />
     </div>
   );
 }

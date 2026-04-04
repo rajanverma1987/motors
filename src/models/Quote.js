@@ -4,7 +4,7 @@ const quoteSchema = new mongoose.Schema(
   {
     /** Customer id (dashboard Customer) */
     customerId: { type: String, required: true, trim: true },
-    /** Motor asset id */
+    /** Customer's motor id (Motor document) */
     motorId: { type: String, required: true, trim: true },
     /** Optional: lead this quote was created from */
     leadId: { type: String, default: "", trim: true },
@@ -64,6 +64,10 @@ const quoteSchema = new mongoose.Schema(
       default: [],
     },
     createdByEmail: { type: String, required: true, trim: true },
+    /** When created from Job Write-Up final flow quote */
+    repairFlowJobId: { type: String, default: "", trim: true },
+    /** MotorRepairFlowQuote document id (pipeline quote) */
+    motorRepairFlowQuoteId: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );

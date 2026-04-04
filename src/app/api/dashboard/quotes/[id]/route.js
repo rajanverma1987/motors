@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
+import { resolveRepairFlowJobIdForQuote } from "@/lib/quote-repair-flow-job-id";
+import WorkOrder from "@/models/WorkOrder";
+import Invoice from "@/models/Invoice";
+import SalesCommission from "@/models/SalesCommission";
+import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { releaseInventoryReservationsForQuote } from "@/lib/inventory-service";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 
@@ -65,11 +71,15 @@ export async function GET(request, context) {
     const attachments = Array.isArray(attachmentsRaw)
       ? attachmentsRaw.map((a) => ({ url: a?.url ?? "", name: a?.name ?? (a?.url ?? "") }))
       : [];
+    const motorRepairFlowQuoteId = String(obj.motorRepairFlowQuoteId ?? "").trim();
+    const repairFlowJobId = await resolveRepairFlowJobIdForQuote(obj, user.email);
     const out = {
       id: obj._id?.toString?.() ?? String(obj._id),
       customerId: obj.customerId ?? "",
       motorId: obj.motorId ?? "",
       leadId: obj.leadId ?? "",
+      repairFlowJobId,
+      motorRepairFlowQuoteId,
       status: obj.status ?? "draft",
       customerPo: obj.customerPo ?? "",
       date: obj.date ?? "",
@@ -207,5 +217,68 @@ export async function PATCH(request, context) {
   } catch (err) {
     console.error("Dashboard update quote error:", err);
     return NextResponse.json({ error: err.message || "Failed to update quote" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    const email = user.email.trim().toLowerCase();
+    await connectDB();
+
+    const existing = await Quote.findOne({
+      _id: id,
+      createdByEmail: email,
+    })
+      .select("_id")
+      .lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const idStr = String(id);
+
+    const woCount = await WorkOrder.countDocuments({ createdByEmail: email, quoteId: idStr });
+    if (woCount > 0) {
+      return NextResponse.json(
+        { error: "This quote has work orders. Delete those work orders first, then try again." },
+        { status: 409 }
+      );
+    }
+
+    const inv = await Invoice.findOne({ createdByEmail: email, quoteId: idStr }).select("_id").lean();
+    if (inv) {
+      return NextResponse.json(
+        { error: "An invoice exists for this quote. It cannot be deleted." },
+        { status: 409 }
+      );
+    }
+
+    try {
+      await releaseInventoryReservationsForQuote(email, idStr);
+    } catch (invErr) {
+      console.error("Release inventory on quote delete:", invErr);
+    }
+
+    await SalesCommission.deleteMany({ createdByEmail: email, quoteId: idStr });
+    await PurchaseOrder.updateMany({ createdByEmail: email, quoteId: idStr }, { $set: { quoteId: "" } });
+
+    const r = await Quote.deleteOne({ _id: id, createdByEmail: email });
+    if (r.deletedCount === 0) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Dashboard delete quote error:", err);
+    return NextResponse.json({ error: err.message || "Failed to delete quote" }, { status: 500 });
   }
 }

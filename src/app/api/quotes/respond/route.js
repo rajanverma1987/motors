@@ -7,6 +7,7 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { syncRepairFlowJobAfterCrmCustomerRespond } from "@/lib/repair-flow-sync-crm-quote-respond";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
 export async function GET(request) {
@@ -110,6 +111,11 @@ export async function POST(request) {
     doc.status = newStatus;
     doc.respondedAt = new Date();
     await doc.save();
+    try {
+      await syncRepairFlowJobAfterCrmCustomerRespond(doc, action);
+    } catch (syncErr) {
+      console.error("Repair flow sync after CRM quote respond:", syncErr);
+    }
     return NextResponse.json({
       ok: true,
       status: doc.status,

@@ -17,8 +17,8 @@ const workflowFeatures = [
     detail: "Print a durable tag for each motor; technicians scan the QR code on a phone or tablet to update status from the center floor. No walking back to a desk or hunting for the right record—scan, tap the new status, and the job board updates for everyone in real time.",
   },
   {
-    title: "Customer and motor asset registry",
-    detail: "Keep a digital record of every motor: serial number, specs, service history, and test results linked to the same asset over time. When a repeat customer sends in a motor, you see past repairs and test data instantly, so you can quote and plan work with full context.",
+    title: "Customer's motors registry",
+    detail: "Keep a digital record of every motor: serial number, specs, service history, and test results linked to the same motor over time. When a repeat customer sends in a motor, you see past repairs and test data instantly, so you can quote and plan work with full context.",
   },
   {
     title: "Quotes system and approval tracking",

@@ -145,7 +145,7 @@ export default function Modal({
       <div
         ref={dialogRef}
         style={dialogStyle}
-        className={`absolute left-1/2 top-1/2 w-full rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
+        className={`absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title != null || showClose || actions) && (
@@ -185,7 +185,7 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="flex-1 min-h-0 overflow-auto p-4">{children}</div>
+        <div className="flex-1 min-h-0 w-full min-w-0 overflow-auto p-4">{children}</div>
       </div>
     </div>
   );

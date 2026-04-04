@@ -294,7 +294,7 @@ export default function DashboardCustomersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create motor");
-      toast.success("Motor asset created and linked to this customer.");
+      toast.success("Customer's motor created and linked to this customer.");
       closeAddMotorModal();
       const custRes = await fetch(`/api/dashboard/customers/${viewingCustomer.id}`, {
         credentials: "include",
@@ -926,7 +926,7 @@ export default function DashboardCustomersPage() {
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked</h3>
                 <Button type="button" variant="outline" size="sm" onClick={openAddMotorModal}>
-                  Add new Motor Asset
+                  Add customer's motor
                 </Button>
               </div>
               {Array.isArray(viewingCustomer.linkedMotors) && viewingCustomer.linkedMotors.length > 0 ? (
@@ -953,7 +953,7 @@ export default function DashboardCustomersPage() {
                   </table>
                 </div>
               ) : (
-                <p className="text-sm text-secondary">Motor assets: —</p>
+                <p className="text-sm text-secondary">Customer's motors: —</p>
               )}
               <p className="mt-2 text-sm text-secondary">Job history: —</p>
             </div>
@@ -961,11 +961,11 @@ export default function DashboardCustomersPage() {
         ) : null}
       </Modal>
 
-      {/* Add Motor Asset modal (from Customer View) */}
+      {/* Add customer's motor modal (from Customer View) */}
       <Modal
         open={addMotorModalOpen}
         onClose={closeAddMotorModal}
-        title="Add new Motor Asset"
+        title="Add customer's motor"
         size="4xl"
         actions={
           <>

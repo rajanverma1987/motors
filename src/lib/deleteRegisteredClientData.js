@@ -16,6 +16,9 @@ import MarketingContact from "@/models/MarketingContact";
 import MarketplaceItem from "@/models/MarketplaceItem";
 import MarketplaceOrder from "@/models/MarketplaceOrder";
 import Motor from "@/models/Motor";
+import MotorRepairFlowQuote from "@/models/MotorRepairFlowQuote";
+import MotorRepairInspection from "@/models/MotorRepairInspection";
+import MotorRepairJob from "@/models/MotorRepairJob";
 import Policy from "@/models/Policy";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import Quote from "@/models/Quote";
@@ -121,6 +124,9 @@ export async function deleteAllDataForRegisteredClient(user) {
     WireSize.deleteMany(shopQ),
     InventoryItem.deleteMany(shopQ),
     Motor.deleteMany(shopQ),
+    MotorRepairFlowQuote.deleteMany(shopQ),
+    MotorRepairInspection.deleteMany(shopQ),
+    MotorRepairJob.deleteMany(shopQ),
     MarketplaceItem.deleteMany(shopQ),
     LogisticsEntry.deleteMany(shopQ),
     Invoice.deleteMany(shopQ),

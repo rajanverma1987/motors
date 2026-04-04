@@ -800,7 +800,8 @@ export default function DashboardLeadsPage() {
                 Actions
               </h3>
               <p className="mb-3 text-sm text-secondary">
-                Create a customer, motor, or quote from this lead. You will review and save each step manually.
+                Create a customer or motor from this lead, then use Job Write-Up to add repair jobs and RFQs. You will
+                review and save each step manually.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Link href={`/dashboard/customers?fromLead=${viewingLead.id}`}>
@@ -813,9 +814,9 @@ export default function DashboardLeadsPage() {
                     Create Motor from Lead
                   </Button>
                 </Link>
-                <Link href={`/dashboard/quotes?fromLead=${viewingLead.id}`}>
+                <Link href="/dashboard/repair-flow">
                   <Button variant="outline" size="sm">
-                    Create Quote from Lead
+                    Job Write-Up (quotes)
                   </Button>
                 </Link>
               </div>

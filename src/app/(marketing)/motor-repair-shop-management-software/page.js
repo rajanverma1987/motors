@@ -51,7 +51,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
             Why “any CRM” fails motor repair businesses
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Most CRMs are built for sales pipelines or break/fix dispatch. Motor repair and rewinding has a different rhythm: incoming motors with unknown failure modes, teardown approvals, coil data, balancing, and final electrical tests. Software that only tracks “status = in progress” loses the detail your techs actually need—and your customers ask about when they pay.
+            Most CRMs are built for sales pipelines or break/fix dispatch. Motor repair and rewinding has a different rhythm: incoming motors with unknown failure modes, disassembly approvals, coil data, balancing, and final electrical tests. Software that only tracks “status = in progress” loses the detail your techs actually need—and your customers ask about when they pay.
           </p>
           <p className="mt-4 text-secondary leading-relaxed">
             Good motor shop management ties together <strong className="text-title">lead intake</strong>,{" "}

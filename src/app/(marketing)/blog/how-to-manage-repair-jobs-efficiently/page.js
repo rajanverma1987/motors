@@ -45,7 +45,7 @@ export default function BlogManageJobsEfficientlyPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Standardize stages—then enforce them</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Pick stages that map to your floor: teardown, quote pending, waiting on PO, in mechanical, in electrical, balance, test, ship. Train the team that a job doesn’t move backward without a documented reason. See{" "}
+            Pick stages that map to your floor: disassembly, quote pending, waiting on PO, in mechanical, in electrical, balance, test, ship. Train the team that a job doesn’t move backward without a documented reason. See{" "}
             <Link href="/track-motor-repair-jobs" className="text-primary font-medium hover:underline">
               track motor repair jobs
             </Link>{" "}
@@ -70,7 +70,7 @@ export default function BlogManageJobsEfficientlyPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Measure cycle time by stage</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Average days in teardown vs. rewind tells you where to hire, outsource, or adjust quoted lead times. Gut feel helps; histograms convince partners and lenders.
+            Average days in disassembly vs. rewind tells you where to hire, outsource, or adjust quoted lead times. Gut feel helps; histograms convince partners and lenders.
           </p>
         </section>
 

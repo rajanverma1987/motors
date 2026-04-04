@@ -38,7 +38,7 @@ export default function TrackMotorRepairJobsPage() {
   return (
     <BlogPageLayout
       title="Track motor repair jobs with fewer status calls"
-      description="Plants call when they’re nervous. The fix isn’t more meetings—it’s predictable updates tied to real job states: intake, teardown, quote pending, waiting on parts, in rewind, test, ship. Here’s how shops tighten WIP visibility without hiring a dispatcher."
+      description="Plants call when they’re nervous. The fix isn’t more meetings—it’s predictable updates tied to real job states: intake, disassembly, quote pending, waiting on parts, in rewind, test, ship. Here’s how shops tighten WIP visibility without hiring a dispatcher."
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
       sidebarTitle="Quotes → jobs → billing"
@@ -51,7 +51,7 @@ export default function TrackMotorRepairJobsPage() {
             Define statuses that match your floor—not software defaults
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Generic statuses like “Open/Closed” don’t help a rewind department. Consider stages such as Intake, Teardown/Inspect, Quote Sent, Waiting on PO, In Mechanical, In Electrical, Balance, Final Test, Ready to Ship, Invoiced. The right granularity ends hallway conversations and makes load visible to sales.
+            Generic statuses like “Open/Closed” don’t help a rewind department. Consider stages such as Intake, Disassembly/Inspect, Quote Sent, Waiting on PO, In Mechanical, In Electrical, Balance, Final Test, Ready to Ship, Invoiced. The right granularity ends hallway conversations and makes load visible to sales.
           </p>
         </section>
 

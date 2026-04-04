@@ -13,6 +13,7 @@ import {
   DC_WORK_ORDER_FIELDS,
   DC_ARMATURE_FIELDS,
   JOB_TYPE_OPTIONS,
+  normalizeWorkOrderJobType,
 } from "@/lib/work-order-fields";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 
@@ -23,12 +24,12 @@ function QuoteReferenceNoPrices({ scopeLines = [], otherCostLines = [] }) {
   return (
     <div className="rounded-lg border border-border bg-card/80 p-4">
       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-        From quote (no prices — for technician reference)
+        Scope From quote
       </h3>
       <div className="grid gap-4 lg:grid-cols-2">
         {hasScope && (
           <div>
-            <p className="mb-2 text-sm font-medium text-title">Scope</p>
+            
             <ul className="list-inside list-disc space-y-1.5 text-sm text-text">
               {scopeLines.map((row, i) => (
                 <li key={i} className="whitespace-pre-wrap pl-1">
@@ -152,6 +153,11 @@ export default function WorkOrderFormModal({
 
   const statusSelectOptions = statusOptions.map((s) => ({ value: s, label: s }));
 
+  const jobTypeSelectOptions = useMemo(() => {
+    if (editing?.motorClass === "DC") return JOB_TYPE_OPTIONS;
+    return JOB_TYPE_OPTIONS.filter((o) => o.value !== "armature_only");
+  }, [editing?.motorClass]);
+
   useEffect(() => {
     if (!open) {
       setEditing(null);
@@ -197,7 +203,7 @@ export default function WorkOrderFormModal({
           setForm({
             date: d.date || "",
             technicianEmployeeId: d.technicianEmployeeId || "",
-            jobType: d.jobType || "complete_motor",
+            jobType: normalizeWorkOrderJobType(d.jobType || "complete_motor", d.motorClass || "AC"),
             status: d.status || "Assigned",
             acSpecs: { ...(d.acSpecs || {}) },
             dcSpecs: { ...(d.dcSpecs || {}) },
@@ -215,7 +221,7 @@ export default function WorkOrderFormModal({
           setForm({
             date: d.date || "",
             technicianEmployeeId: d.technicianEmployeeId || "",
-            jobType: d.jobType || "complete_motor",
+            jobType: normalizeWorkOrderJobType(d.jobType || "complete_motor", d.motorClass || "AC"),
             status: d.status || "Assigned",
             acSpecs: { ...(d.acSpecs || {}) },
             dcSpecs: { ...(d.dcSpecs || {}) },
@@ -308,7 +314,7 @@ export default function WorkOrderFormModal({
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Save failed");
-      toast.success("Work order saved. Motor asset updated with spec data.");
+      toast.success("Work order saved. Customer's motor updated with spec data.");
       handleClose();
       onAfterSave?.();
     } catch (err) {
@@ -381,9 +387,17 @@ export default function WorkOrderFormModal({
             />
             <Select
               label="Job type"
-              options={JOB_TYPE_OPTIONS}
+              options={jobTypeSelectOptions}
               value={form.jobType}
-              onChange={(e) => setForm((f) => ({ ...f, jobType: e.target.value ?? "complete_motor" }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  jobType: normalizeWorkOrderJobType(
+                    e.target.value ?? "complete_motor",
+                    editing.motorClass || "AC"
+                  ),
+                }))
+              }
               searchable={false}
             />
             <Select
@@ -396,7 +410,7 @@ export default function WorkOrderFormModal({
           </div>
           <p className="text-xs text-secondary">
             Motor class: <strong className="text-title">{editing.motorClass}</strong> — fields pre-filled from
-            the motor asset where available.
+            the customer's motor where available.
           </p>
           <QuoteReferenceNoPrices
             scopeLines={editing.quoteScopeForTech}
@@ -413,7 +427,23 @@ export default function WorkOrderFormModal({
               />
             </div>
           )}
-          {editing.motorClass === "DC" && (
+          {editing.motorClass === "DC" && form.jobType === "armature_only" && (
+            <div>
+              <h3 className="mb-3 text-sm font-semibold text-title">Armature</h3>
+              <SpecGrid
+                idPrefix="wo-modal-arm"
+                fields={DC_ARMATURE_FIELDS}
+                values={form.armatureSpecs}
+                onChange={(k, v) =>
+                  setForm((f) => ({
+                    ...f,
+                    armatureSpecs: { ...f.armatureSpecs, [k]: v },
+                  }))
+                }
+              />
+            </div>
+          )}
+          {editing.motorClass === "DC" && form.jobType !== "armature_only" && (
             <Tabs
               defaultTab="dc"
               tabs={[

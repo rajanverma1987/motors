@@ -19,7 +19,7 @@ export const metadata = {
   openGraph: {
     title: "Job Card System for Repair Shops | MotorsWinding.com",
     description:
-      "Structure teardown, approval, labor, parts, and testing so every job is traceable.",
+      "Structure disassembly, approval, labor, parts, and testing so every job is traceable.",
     url: path,
     type: "article",
     siteName: "MotorsWinding.com",

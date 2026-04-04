@@ -148,7 +148,21 @@ export const DC_ARMATURE_OTHERS_FIELDS = DC_ARMATURE_FIELDS.filter(
 export const JOB_TYPE_OPTIONS = [
   { value: "complete_motor", label: "Complete Motor" },
   { value: "field_frame_only", label: "Field Frame Only" },
+  /** DC work orders only — armature winding specs without DC motor tab. */
+  { value: "armature_only", label: "Armature only" },
 ];
+
+/**
+ * Persisted jobType for WorkOrder. Armature only is valid for DC motors only.
+ * @param {string} raw
+ * @param {"AC"|"DC"} motorClass
+ */
+export function normalizeWorkOrderJobType(raw, motorClass) {
+  const v = String(raw || "").trim();
+  if (v === "field_frame_only") return "field_frame_only";
+  if (v === "armature_only" && motorClass === "DC") return "armature_only";
+  return "complete_motor";
+}
 
 export const DEFAULT_WORK_ORDER_STATUSES = [
   "Assigned",

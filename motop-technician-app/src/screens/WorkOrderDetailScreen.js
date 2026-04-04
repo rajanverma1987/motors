@@ -25,6 +25,7 @@ import { colors, spacing } from "../theme";
 const DEFAULT_JOB_TYPES = [
   { value: "complete_motor", label: "Complete Motor" },
   { value: "field_frame_only", label: "Field Frame Only" },
+  { value: "armature_only", label: "Armature only" },
 ];
 
 function WorkOrderBookmarkControl({ woId, wo }) {
@@ -453,7 +454,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
 
       {motor ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Motor asset (reference)</Text>
+          <Text style={styles.sectionTitle}>Customer's motor (reference)</Text>
           <Text style={styles.line}>{motor.serialNumber ? `S/N ${motor.serialNumber}` : ""}</Text>
           <Text style={styles.line}>
             {[motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "—"}

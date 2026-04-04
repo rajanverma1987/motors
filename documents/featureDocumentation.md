@@ -469,7 +469,7 @@ This helps measure lead effectiveness.
 When a repair shop wins the job, the lead can be converted into:
 
 Customer record
-Motor asset
+Customer's motor
 Work order
 
 This transition moves the process from **lead management to repair operations**.
@@ -544,7 +544,7 @@ Additional features
 
 Customer notes
 Customer job history
-Motor asset records
+Customer's motor records
 
 ---
 
@@ -572,7 +572,7 @@ Approved quotes convert into work orders.
 
 ---
 
-# 3.4 Motor Asset Registry
+# 3.4 Customer's motors registry
 
 Purpose
 
@@ -595,7 +595,7 @@ Nameplate images
 Service history
 Test results
 
-Every repair performed on a motor is linked to its asset record.
+Every repair performed on a motor is linked to its motor record.
 
 ---
 
@@ -608,7 +608,7 @@ Track all repair jobs.
 Work order contains
 
 Customer information
-Motor asset
+Customer's motor
 Reported problem
 Assigned technician
 Estimated completion date

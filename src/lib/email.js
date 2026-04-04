@@ -399,6 +399,38 @@ export async function sendQuoteToCustomer(
   return sendEmail(toEmail, subject, html);
 }
 
+/** Email link for repair-flow preliminary quote — customer approves teardown, declines repair, or authorizes scrap. */
+export async function sendRepairFlowPreliminaryToCustomer(
+  toEmail,
+  customerName,
+  jobNumber,
+  respondUrl,
+  shopCompanyName,
+  options = {}
+) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const signature = esc(shopName);
+  const jobRef = esc(jobNumber) || "your repair job";
+  const subject = `Preliminary quote — Job ${jobRef} – ${shopName}`;
+  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
+  const logoBlock = logoAbs
+    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+    : "";
+  const html = `
+    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
+    <p>Your <strong>preliminary (pre-disassembly) quote</strong> for job <strong>${jobRef}</strong> is ready.</p>
+    <p>Open the link below to review the quote and tell us how you would like to proceed: approve disassembly and repair, decline and pick up as-is, or authorize scrap.</p>
+    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Review preliminary quote</a></p>
+    <p>You can print or save the quote as a PDF from that page.</p>
+    ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
+    ${logoBlock}
+    <p style="margin-top:16px">— ${signature}</p>
+  `;
+  return sendEmail(toEmail, subject, html);
+}
+
 /**
  * Invoice email to customer — primary CTA is link to view/print (same idea as quote respond link).
  * Pass options.viewUrl (e.g. /invoice/view/{token}).

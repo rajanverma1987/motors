@@ -333,8 +333,8 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
     title: "Shop operations & workflow",
     items: [
       "Quotes and work orders with labor and parts lines that match how motor shops actually work—not generic “tickets.”",
-      "Job board / floor visibility so everyone knows what’s in teardown, rewind, balance, test, or ready to ship.",
-      "Motor asset history tied to customers so repeat failures are easier to diagnose and quote honestly.",
+      "Job board / floor visibility so everyone knows what’s in disassembly, rewind, balance, test, or ready to ship.",
+      "Each customer's motors and history in one place so repeat failures are easier to diagnose and quote honestly.",
       "Parts catalog with reservations against jobs so you don’t promise dates you can’t hit.",
       "Receiving and shipping logistics tied to work orders so chain-of-custody is clear when customers ask “where’s my motor?”",
     ],

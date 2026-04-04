@@ -31,7 +31,7 @@ function SpecBlock({ title, subtitle, specs, fields }) {
 }
 
 /**
- * Read-only motor asset: identification + technical fields by motor type (AC vs DC+armature).
+ * Read-only customer's motor: identification + technical fields by motor type (AC vs DC+armature).
  */
 export default function MotorAssetReadonlyDetail({ motor, customerName }) {
   if (!motor) return null;
@@ -109,13 +109,13 @@ export default function MotorAssetReadonlyDetail({ motor, customerName }) {
       {String(motor.motorType || "").toUpperCase() === "DC" ? (
         <>
           <SpecBlock
-            title="DC motor — technical (motor asset)"
+            title="DC motor — technical (customer's motor)"
             subtitle="Stored on motor; pre-fills DC work orders."
             specs={motor.dcSpecs}
             fields={DC_WORK_ORDER_FIELDS}
           />
           <SpecBlock
-            title="Armature (motor asset)"
+            title="Armature (customer's motor)"
             subtitle="Stored on motor; pre-fills DC armature tab."
             specs={motor.dcArmatureSpecs}
             fields={DC_ARMATURE_FIELDS}
@@ -123,7 +123,7 @@ export default function MotorAssetReadonlyDetail({ motor, customerName }) {
         </>
       ) : (
         <SpecBlock
-          title="AC winding & technical (motor asset)"
+          title="AC winding & technical (customer's motor)"
           subtitle="Stored on motor; pre-fills AC work orders."
           specs={motor.acSpecs}
           fields={AC_WORK_ORDER_FIELDS}
