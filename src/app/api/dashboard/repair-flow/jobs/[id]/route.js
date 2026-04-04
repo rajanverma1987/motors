@@ -6,6 +6,7 @@ import MotorRepairJob from "@/models/MotorRepairJob";
 import MotorRepairInspection from "@/models/MotorRepairInspection";
 import MotorRepairFlowQuote from "@/models/MotorRepairFlowQuote";
 import Quote from "@/models/Quote";
+import SalesCommission from "@/models/SalesCommission";
 import Customer from "@/models/Customer";
 import Motor from "@/models/Motor";
 import { applyMotorNameplateFields, motorNameplateFromLean } from "@/lib/motor-nameplate-patch";
@@ -218,9 +219,14 @@ export async function DELETE(request, context) {
           $or: [{ repairFlowJobId: jobIdStr }, { _id: finalIdRaw }],
         }
       : { createdByEmail: email, repairFlowJobId: jobIdStr };
+    const quotesToDrop = await Quote.find(quoteDeleteFilter).select("_id").lean();
+    const quoteIdsForComm = quotesToDrop.map((q) => String(q._id));
+    const commissionOr = [{ repairFlowJobId: jobIdStr }];
+    if (quoteIdsForComm.length) commissionOr.push({ quoteId: { $in: quoteIdsForComm } });
     await Promise.all([
       MotorRepairInspection.deleteMany({ jobId: jobIdStr, createdByEmail: email }),
       MotorRepairFlowQuote.deleteMany({ jobId: jobIdStr, createdByEmail: email }),
+      SalesCommission.deleteMany({ createdByEmail: email, $or: commissionOr }),
       Quote.deleteMany(quoteDeleteFilter),
     ]);
     await MotorRepairJob.deleteOne({ _id: id, createdByEmail: email });

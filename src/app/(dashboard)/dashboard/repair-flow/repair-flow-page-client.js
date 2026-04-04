@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { FiPlus, FiEye, FiPrinter, FiTrash2, FiSend, FiClipboard, FiRotateCw } from "react-icons/fi";
+import {
+  FiPlus,
+  FiEye,
+  FiPrinter,
+  FiTrash2,
+  FiSend,
+  FiClipboard,
+  FiRotateCw,
+  FiDollarSign,
+} from "react-icons/fi";
+import { LuQrCode } from "react-icons/lu";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
@@ -11,7 +21,10 @@ import { useConfirm } from "@/components/confirm-provider";
 import RepairFlowNewJobForm from "@/components/dashboard/repair-flow-new-job-form";
 import RepairFlowJobDetailClient from "./[id]/repair-flow-job-detail-client";
 import RepairFlowFlowQuotePrintPreview from "@/components/dashboard/repair-flow-flow-quote-print-preview";
+import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
+import SalesCommissionModal from "@/components/dashboard/sales-commission-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import { REPAIR_FLOW_PHASE_LABELS, phaseBadgeVariant } from "@/lib/repair-flow-constants";
 import { getRepairFlowWorkOrderToolbarState } from "@/lib/repair-flow-work-order-toolbar";
@@ -78,6 +91,10 @@ export default function RepairFlowPageClient() {
   );
   const [repairListWoModal, setRepairListWoModal] = useState(null);
   const [listWoLookupLoading, setListWoLookupLoading] = useState(false);
+  const [modalQuotePrintId, setModalQuotePrintId] = useState(null);
+  const [modalCommissionOpen, setModalCommissionOpen] = useState(false);
+  const [modalCommissionRepairFlowJobId, setModalCommissionRepairFlowJobId] = useState("");
+  const [modalCommissionJobNumber, setModalCommissionJobNumber] = useState("");
 
   const onWorkOrderToolbarContext = useCallback((ctx) => {
     setWorkOrderToolbarCtx(ctx);
@@ -100,27 +117,31 @@ export default function RepairFlowPageClient() {
     setWorkOrderToolbarCtx(getRepairFlowWorkOrderToolbarState(null, []));
     setRepairListWoModal(null);
     setListWoLookupLoading(false);
+    setModalQuotePrintId(null);
+    setModalCommissionOpen(false);
+    setModalCommissionRepairFlowJobId("");
+    setModalCommissionJobNumber("");
   }, []);
 
   const viewJobToolbarItems = useMemo(() => {
-    const printDisabled = !viewJobHasFlowQuotes || flowQuotePrintPreparing;
-    const base = [
-      {
-        key: "print",
-        label: flowQuotePrintPreparing ? "Preparing…" : "Print quote",
-        icon: <FiPrinter className={MENU_IC} aria-hidden />,
-        disabled: printDisabled,
-        title: !viewJobHasFlowQuotes ? "Add a preliminary or final flow quote first" : undefined,
-        onClick: () => setFlowQuotePrintOpen(true),
-      },
+    const crmId = workOrderToolbarCtx.crmQuoteId;
+    const items = [
       {
         key: "send",
-        label: sendingToCustomer ? "Sending…" : "Send quote to customer",
-        icon: <FiSend className={MENU_IC} aria-hidden />,
-        disabled: sendingToCustomer || !customerSend.canSend,
+        label: sendingToCustomer ? "Sending…" : "Send to customer",
+        icon: sendingToCustomer ? (
+          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
+        ) : (
+          <FiSend className={MENU_IC} aria-hidden />
+        ),
+        disabled: sendingToCustomer,
         title: customerSend.sendDisabledTitle || undefined,
         onClick: async () => {
           if (!viewJobId) return;
+          if (!customerSend.canSend) {
+            toast.error(customerSend.sendDisabledTitle || "Send to customer is not available for this job yet.");
+            return;
+          }
           setSendingToCustomer(true);
           try {
             const res = await fetch(`/api/dashboard/repair-flow/jobs/${viewJobId}/send-to-customer`, {
@@ -130,6 +151,7 @@ export default function RepairFlowPageClient() {
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || "Send failed");
             toast.success(data.message || "Sent to customer.");
+            await load();
           } catch (e) {
             toast.error(e.message || "Send failed");
           } finally {
@@ -137,23 +159,80 @@ export default function RepairFlowPageClient() {
           }
         },
       },
+      {
+        key: "printFlow",
+        label: flowQuotePrintPreparing ? "Preparing…" : "Print job quotes",
+        icon: <FiPrinter className={MENU_IC} aria-hidden />,
+        disabled: flowQuotePrintPreparing,
+        title: !viewJobHasFlowQuotes ? "Add a preliminary or final flow quote first" : undefined,
+        onClick: () => {
+          if (!viewJobHasFlowQuotes) {
+            toast.error("Add a preliminary or final flow quote before printing job quotes.");
+            return;
+          }
+          setFlowQuotePrintOpen(true);
+        },
+      },
+      {
+        key: "printRfq",
+        label: "Print RFQ sheet",
+        icon: <FiPrinter className={MENU_IC} aria-hidden />,
+        title: !crmId ? "Set a primary final RFQ on this job first" : undefined,
+        onClick: () => {
+          if (!crmId) {
+            toast.error("Set a primary final RFQ on this job first.");
+            return;
+          }
+          setModalQuotePrintId(crmId);
+        },
+      },
+      {
+        key: "tagQr",
+        label: "Tag QR",
+        icon: <LuQrCode className={MENU_IC} aria-hidden />,
+        title: !viewJobHeader?.jobNumber
+          ? "Job number required"
+          : "Print QR motor tag (technician scans → work order)",
+        onClick: async () => {
+          const code = String(viewJobHeader?.jobNumber || "").trim();
+          if (!code) {
+            toast.error("Job number is required to print the tag.");
+            return;
+          }
+          const ok = await printQuoteMotorTagQr(code, {
+            customerName: viewJobHeader?.customerLabel || "",
+            motor:
+              viewJobHeader?.motorNameplate && typeof viewJobHeader.motorNameplate === "object"
+                ? viewJobHeader.motorNameplate
+                : null,
+            motorFallbackLine: viewJobHeader?.motorLabel || "",
+          });
+          if (!ok) toast.error("Allow pop-ups to print the tag, or try again.");
+        },
+      },
     ];
-    if (!workOrderToolbarCtx.showWorkOrderActions) return base;
-    return [
-      ...base,
+    items.push(
       { key: "div-wo", type: "divider" },
       {
         key: "createWo",
         label: "Create work order",
         icon: <FiClipboard className={MENU_IC} aria-hidden />,
-        disabled: !workOrderToolbarCtx.canCreateWorkOrder,
         title: workOrderToolbarCtx.canCreateWorkOrder
           ? "Open work order form — saved when you click Save on that form"
           : workOrderToolbarCtx.createWorkOrderDisabledTitle || undefined,
         onClick: () => {
-          const cid = workOrderToolbarCtx.crmQuoteId;
-          if (!cid) return;
-          setRepairListWoModal({ draftQuoteId: cid });
+          if (!workOrderToolbarCtx.canCreateWorkOrder) {
+            toast.error(
+              workOrderToolbarCtx.createWorkOrderDisabledTitle ||
+                "Work order cannot be created for this job yet."
+            );
+            return;
+          }
+          if (!crmId) {
+            toast.error("Set a primary final RFQ on this job first.");
+            return;
+          }
+          setRepairListWoModal({ draftQuoteId: crmId });
         },
       },
       {
@@ -164,10 +243,12 @@ export default function RepairFlowPageClient() {
         ) : (
           <FiEye className={MENU_IC} aria-hidden />
         ),
-        disabled: !workOrderToolbarCtx.crmQuoteId || listWoLookupLoading,
+        disabled: listWoLookupLoading,
         onClick: async () => {
-          const cid = workOrderToolbarCtx.crmQuoteId;
-          if (!cid) return;
+          if (!crmId) {
+            toast.error("Set a primary final RFQ on this job first.");
+            return;
+          }
           setListWoLookupLoading(true);
           try {
             const res = await fetch("/api/dashboard/work-orders", {
@@ -176,9 +257,13 @@ export default function RepairFlowPageClient() {
             });
             const list = await res.json();
             if (!res.ok) throw new Error(list.error || "Could not load work orders");
-            const matches = list.filter((w) => String(w.quoteId) === String(cid));
+            const matches = list.filter(
+              (w) =>
+                String(w.quoteId) === String(crmId) ||
+                (viewJobId && String(w.repairFlowJobId || "") === String(viewJobId))
+            );
             if (!matches.length) {
-              toast.error("No work order exists for this quote yet.");
+              toast.error("No work order exists for this job yet.");
               return;
             }
             matches.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
@@ -189,8 +274,23 @@ export default function RepairFlowPageClient() {
             setListWoLookupLoading(false);
           }
         },
-      },
-    ];
+      }
+    );
+    items.push(
+      { key: "div-tail", type: "divider" },
+      {
+        key: "commission",
+        label: "Sales Commission",
+        icon: <FiDollarSign className={MENU_IC} aria-hidden />,
+        onClick: () => {
+          if (!viewJobId) return;
+          setModalCommissionRepairFlowJobId(viewJobId);
+          setModalCommissionJobNumber(String(viewJobHeader?.jobNumber || "").trim());
+          setModalCommissionOpen(true);
+        },
+      }
+    );
+    return items;
   }, [
     viewJobHasFlowQuotes,
     flowQuotePrintPreparing,
@@ -199,11 +299,13 @@ export default function RepairFlowPageClient() {
     sendingToCustomer,
     viewJobId,
     toast,
-    workOrderToolbarCtx.showWorkOrderActions,
+    load,
     workOrderToolbarCtx.canCreateWorkOrder,
     workOrderToolbarCtx.createWorkOrderDisabledTitle,
     workOrderToolbarCtx.crmQuoteId,
     listWoLookupLoading,
+    viewJobHeader,
+    viewJobId,
   ]);
 
   const onFlowQuotesChange = useCallback((list) => {
@@ -296,6 +398,26 @@ export default function RepairFlowPageClient() {
     [openJobModal, deleteJob, deletingId]
   );
 
+  const [jobSearchQuery, setJobSearchQuery] = useState("");
+  const filteredJobs = useMemo(() => {
+    const q = jobSearchQuery.trim().toLowerCase();
+    if (!q) return jobs;
+    return jobs.filter((row) => {
+      const jobNum = String(row.jobNumber || "").toLowerCase();
+      const customer = String(row.customerLabel || "").toLowerCase();
+      const motor = String(row.motorLabel || "").toLowerCase();
+      const phaseRaw = String(row.phase || "").toLowerCase();
+      const phaseLabel = String(REPAIR_FLOW_PHASE_LABELS[row.phase] || "").toLowerCase();
+      return (
+        jobNum.includes(q) ||
+        customer.includes(q) ||
+        motor.includes(q) ||
+        phaseRaw.includes(q) ||
+        phaseLabel.includes(q)
+      );
+    });
+  }, [jobs, jobSearchQuery]);
+
   return (
     <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
@@ -326,11 +448,19 @@ export default function RepairFlowPageClient() {
       <div className="mt-6">
         <Table
           columns={columns}
-          data={jobs}
+          data={filteredJobs}
           rowKey="id"
           loading={loading}
-          emptyMessage="No jobs yet. Create one to start intake."
+          emptyMessage={
+            jobs.length === 0
+              ? "No jobs yet. Create one to start intake."
+              : "No jobs match the search."
+          }
+          searchable
+          onSearch={setJobSearchQuery}
+          searchPlaceholder="Search job #, customer, motor, phase…"
           onRefresh={load}
+          responsive
         />
       </div>
 
@@ -407,6 +537,11 @@ export default function RepairFlowPageClient() {
               onFlowQuotesChange={onFlowQuotesChange}
               onCustomerSendEligibility={setCustomerSend}
               onWorkOrderToolbarContext={onWorkOrderToolbarContext}
+              onOpenWorkOrderDraft={(draftQuoteId) => {
+                const dq = String(draftQuoteId || "").trim();
+                if (!dq) return;
+                setRepairListWoModal({ draftQuoteId: dq });
+              }}
             />
           ) : null}
         </div>
@@ -428,6 +563,20 @@ export default function RepairFlowPageClient() {
         onClose={() => setRepairListWoModal(null)}
         onAfterSave={load}
         zIndex={60}
+      />
+
+      {modalQuotePrintId ? (
+        <QuotePrintPreview quoteId={modalQuotePrintId} open onClose={() => setModalQuotePrintId(null)} />
+      ) : null}
+      <SalesCommissionModal
+        open={modalCommissionOpen}
+        onClose={() => {
+          setModalCommissionOpen(false);
+          setModalCommissionRepairFlowJobId("");
+          setModalCommissionJobNumber("");
+        }}
+        repairFlowJobId={modalCommissionRepairFlowJobId}
+        jobNumber={modalCommissionJobNumber}
       />
     </div>
   );

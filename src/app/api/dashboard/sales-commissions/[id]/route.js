@@ -16,6 +16,8 @@ function toJson(doc) {
     id: row._id?.toString(),
     quoteId: row.quoteId ?? "",
     rfqNumber: row.rfqNumber ?? "",
+    repairFlowJobId: row.repairFlowJobId ?? "",
+    jobNumber: row.jobNumber ?? "",
     salesPersonId: row.salesPersonId ?? "",
     amount: Number(row.amount || 0),
     status: row.status === "paid" ? "paid" : "unpaid",

@@ -9,11 +9,7 @@ import {
   FiPrinter,
   FiTrash2,
   FiRotateCw,
-  FiClipboard,
-  FiEye,
   FiFileText,
-  FiDollarSign,
-  FiCheck,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -29,7 +25,6 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { useAuth } from "@/contexts/auth-context";
-import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
@@ -146,19 +141,6 @@ const INITIAL_FORM = {
   motorRepairFlowQuoteId: "",
 };
 
-const COMMISSION_INITIAL = {
-  salesPersonId: "",
-  rfqNumber: "",
-  amount: "",
-};
-
-const SALES_PERSON_INITIAL = {
-  name: "",
-  phone: "",
-  email: "",
-  bankDetail: "",
-};
-
 function sumLinePrices(lines, priceKey = "price") {
   if (!Array.isArray(lines)) return 0;
   let sum = 0;
@@ -219,17 +201,13 @@ export default function DashboardQuotesPage() {
   const [customers, setCustomers] = useState([]);
   const [motors, setMotors] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [salesPersons, setSalesPersons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewingQuote, setViewingQuote] = useState(null);
   const [viewLoadingQuoteId, setViewLoadingQuoteId] = useState(null);
   const [savingQuote, setSavingQuote] = useState(false);
-  const [sendingQuote, setSendingQuote] = useState(false);
   const [quotePrintId, setQuotePrintId] = useState(null);
-  const [workOrderLookupLoading, setWorkOrderLookupLoading] = useState(false);
-  const [quoteWoModal, setQuoteWoModal] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -239,18 +217,6 @@ export default function DashboardQuotesPage() {
   const [savingMotor, setSavingMotor] = useState(false);
 
   const fmt = useFormatMoney();
-
-  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
-  const [commissionSaving, setCommissionSaving] = useState(false);
-  const [commissionLoading, setCommissionLoading] = useState(false);
-  const [commissionStatusSavingId, setCommissionStatusSavingId] = useState("");
-  const [commissionQuoteId, setCommissionQuoteId] = useState("");
-  const [commissionForm, setCommissionForm] = useState(COMMISSION_INITIAL);
-  const [commissionRows, setCommissionRows] = useState([]);
-
-  const [quickSalesPersonModalOpen, setQuickSalesPersonModalOpen] = useState(false);
-  const [quickSalesPersonSaving, setQuickSalesPersonSaving] = useState(false);
-  const [quickSalesPersonForm, setQuickSalesPersonForm] = useState(SALES_PERSON_INITIAL);
 
   const openAddMotorModal = () => {
     const custId = form.customerId || formRef.current?.customerId;
@@ -341,17 +307,6 @@ export default function DashboardQuotesPage() {
     }
   }, []);
 
-  const loadSalesPersons = useCallback(async () => {
-    try {
-      const res = await fetch("/api/dashboard/sales-persons", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load sales persons");
-      setSalesPersons(Array.isArray(data) ? data : []);
-    } catch {
-      setSalesPersons([]);
-    }
-  }, []);
-
   const defaultPreparedByEmployeeId = useMemo(() => {
     const loginEmail = String(authUser?.email || "")
       .trim()
@@ -365,11 +320,11 @@ export default function DashboardQuotesPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      await Promise.all([loadQuotes(), loadCustomers(), loadMotors(), loadEmployees(), loadSalesPersons()]);
+      await Promise.all([loadQuotes(), loadCustomers(), loadMotors(), loadEmployees()]);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [loadQuotes, loadCustomers, loadMotors, loadEmployees, loadSalesPersons]);
+  }, [loadQuotes, loadCustomers, loadMotors, loadEmployees]);
 
   useEffect(() => {
     if (!fromLeadId) return;
@@ -468,7 +423,7 @@ export default function DashboardQuotesPage() {
     return m;
   }, [motors]);
 
-  const openViewModal = (quote) => {
+  const openViewModal = useCallback((quote) => {
     if (!quote?.id) {
       setViewingQuote(quote);
       setViewModalOpen(true);
@@ -477,7 +432,7 @@ export default function DashboardQuotesPage() {
     setViewingQuote(null);
     setViewLoadingQuoteId(quote.id);
     setViewModalOpen(true);
-  };
+  }, []);
 
   useEffect(() => {
     if (!viewModalOpen || !viewLoadingQuoteId) return;
@@ -505,11 +460,11 @@ export default function DashboardQuotesPage() {
     return () => { cancelled = true; };
   }, [viewModalOpen, viewLoadingQuoteId]);
 
-  const closeViewModal = () => {
+  const closeViewModal = useCallback(() => {
     setViewModalOpen(false);
     setViewingQuote(null);
     setViewLoadingQuoteId(null);
-  };
+  }, []);
 
   const closeEditModal = () => {
     setEditModalOpen(false);
@@ -592,215 +547,44 @@ export default function DashboardQuotesPage() {
   const handleDeleteQuoteRef = useRef(handleDeleteQuote);
   handleDeleteQuoteRef.current = handleDeleteQuote;
 
-  const handleSendToCustomer = async (quoteFromTable) => {
-    const quote = quoteFromTable?.id != null ? quoteFromTable : viewingQuote;
-    const quoteId = quote?.id;
-    if (!quoteId) return;
-    const rfq = quote?.rfqNumber || quoteId;
-    const confirmed = await confirm({
-      title: "Send quote to customer",
-      message: `Send quote ${rfq} to the customer? They will receive an email with a link to view and respond.`,
-      confirmLabel: "Send",
-      cancelLabel: "Cancel",
-    });
-    if (!confirmed) return;
-    setSendingQuote(true);
-    setSendingQuoteId(quoteId);
-    try {
-      const res = await fetch(`/api/dashboard/quotes/${quoteId}/send`, {
-        method: "POST",
-        credentials: "include",
+  const handleSendToCustomer = useCallback(
+    async (quoteFromTable) => {
+      const quote = quoteFromTable?.id != null ? quoteFromTable : viewingQuote;
+      const quoteId = quote?.id;
+      if (!quoteId) return;
+      const rfq = quote?.rfqNumber || quoteId;
+      const confirmed = await confirm({
+        title: "Send quote to customer",
+        message: `Send quote ${rfq} to the customer? They will receive an email with a link to view and respond.`,
+        confirmLabel: "Send",
+        cancelLabel: "Cancel",
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to send quote");
-      toast.success("Quote sent to customer. Status set to Sent.");
-      setQuotes((prev) =>
-        prev.map((q) => (q.id === quoteId ? { ...q, status: "sent" } : q))
-      );
-      setViewingQuote((prev) => (prev?.id === quoteId ? { ...prev, status: "sent" } : prev));
-    } catch (err) {
-      toast.error(err.message || "Failed to send quote");
-    } finally {
-      setSendingQuote(false);
-      setSendingQuoteId(null);
-    }
-  };
+      if (!confirmed) return;
+      setSendingQuoteId(quoteId);
+      try {
+        const res = await fetch(`/api/dashboard/quotes/${quoteId}/send`, {
+          method: "POST",
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send quote");
+        toast.success("Quote sent to customer. Status set to Sent.");
+        setQuotes((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status: "sent" } : q)));
+        setViewingQuote((prev) => (prev?.id === quoteId ? { ...prev, status: "sent" } : prev));
+      } catch (err) {
+        toast.error(err.message || "Failed to send quote");
+      } finally {
+        setSendingQuoteId(null);
+      }
+    },
+    [viewingQuote, confirm, toast]
+  );
 
   const handlePrintQuote = useCallback((quoteFromTable) => {
     const q = quoteFromTable ?? viewingQuote;
     if (!q?.id) return;
     setQuotePrintId(q.id);
   }, [viewingQuote]);
-
-  const handleCreateWorkOrder = (quoteId) => {
-    if (!quoteId) return;
-    setQuoteWoModal({ draftQuoteId: quoteId });
-  };
-
-  const handleViewWorkOrder = async (quoteId) => {
-    if (!quoteId) return;
-    setWorkOrderLookupLoading(true);
-    try {
-      const res = await fetch("/api/dashboard/work-orders", {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const list = await res.json();
-      if (!res.ok) throw new Error(list.error || "Could not load work orders");
-      const matches = list.filter((w) => String(w.quoteId) === String(quoteId));
-      if (!matches.length) {
-        toast.error("No work order exists for this quote yet.");
-        return;
-      }
-      matches.sort(
-        (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-      );
-      setQuoteWoModal({ workOrderId: matches[0].id });
-    } catch (e) {
-      toast.error(e.message || "Could not open work order");
-    } finally {
-      setWorkOrderLookupLoading(false);
-    }
-  };
-
-  const handleCreateInvoiceFromQuote = (quoteId) => {
-    if (!quoteId) return;
-    router.push(`/dashboard/invoices?draftQuote=${encodeURIComponent(quoteId)}`);
-  };
-
-  const closeCommissionModal = () => {
-    setCommissionModalOpen(false);
-    setCommissionQuoteId("");
-    setCommissionForm(COMMISSION_INITIAL);
-    setCommissionRows([]);
-    setCommissionLoading(false);
-    setCommissionSaving(false);
-    setCommissionStatusSavingId("");
-  };
-
-  const openCommissionModal = async (quote) => {
-    if (!quote?.id) {
-      toast.error("Save the RFQ before adding sales commission.");
-      return;
-    }
-    const rfq = String(quote.rfqNumber || "").trim();
-    if (!rfq) {
-      toast.error("RFQ# is required before adding sales commission.");
-      return;
-    }
-    setCommissionQuoteId(quote.id);
-    setCommissionForm({ ...COMMISSION_INITIAL, rfqNumber: rfq });
-    setCommissionRows([]);
-    setCommissionModalOpen(true);
-    setCommissionLoading(true);
-    try {
-      const res = await fetch(`/api/dashboard/sales-commissions?quoteId=${encodeURIComponent(quote.id)}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load sales commission");
-      setCommissionRows(Array.isArray(data?.commissions) ? data.commissions : []);
-    } catch (err) {
-      toast.error(err.message || "Failed to load sales commission");
-    } finally {
-      setCommissionLoading(false);
-    }
-  };
-
-  const handleCommissionSalesPersonChange = (e) => {
-    const value = e.target?.value ?? "";
-    if (value === "__add_sales_person__") {
-      setQuickSalesPersonForm(SALES_PERSON_INITIAL);
-      setQuickSalesPersonModalOpen(true);
-      return;
-    }
-    setCommissionForm((prev) => ({ ...prev, salesPersonId: value }));
-  };
-
-  const handleQuickSalesPersonSubmit = async (e) => {
-    e.preventDefault();
-    setQuickSalesPersonSaving(true);
-    try {
-      const res = await fetch("/api/dashboard/sales-persons", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(quickSalesPersonForm),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create sales person");
-      setSalesPersons((prev) => [data.salesPerson, ...prev]);
-      setCommissionForm((prev) => ({ ...prev, salesPersonId: data.salesPerson?.id || "" }));
-      setQuickSalesPersonModalOpen(false);
-      setQuickSalesPersonForm(SALES_PERSON_INITIAL);
-      toast.success("Sales person added.");
-    } catch (err) {
-      toast.error(err.message || "Failed to create sales person");
-    } finally {
-      setQuickSalesPersonSaving(false);
-    }
-  };
-
-  const handleCommissionSubmit = async (e) => {
-    e.preventDefault();
-    if (!commissionQuoteId) return;
-    if (!commissionForm.salesPersonId) {
-      toast.error("Sales person is required.");
-      return;
-    }
-    const amountNum = Number(commissionForm.amount);
-    if (!Number.isFinite(amountNum) || amountNum < 0) {
-      toast.error("Amount must be a valid number.");
-      return;
-    }
-    setCommissionSaving(true);
-    try {
-      const res = await fetch("/api/dashboard/sales-commissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          quoteId: commissionQuoteId,
-          rfqNumber: commissionForm.rfqNumber,
-          salesPersonId: commissionForm.salesPersonId,
-          amount: amountNum,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to save sales commission");
-      toast.success("Sales commission saved.");
-      setCommissionRows((prev) => [data.commission, ...prev]);
-      setCommissionForm((prev) => ({ ...prev, salesPersonId: "", amount: "" }));
-    } catch (err) {
-      toast.error(err.message || "Failed to save sales commission");
-    } finally {
-      setCommissionSaving(false);
-    }
-  };
-
-  const handleCommissionMarkPaid = async (commissionId) => {
-    if (!commissionId) return;
-    setCommissionStatusSavingId(commissionId);
-    try {
-      const res = await fetch(`/api/dashboard/sales-commissions/${commissionId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status: "paid" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to mark commission paid");
-      setCommissionRows((prev) =>
-        prev.map((row) => (row.id === commissionId ? data.commission : row))
-      );
-      toast.success("Commission marked as paid.");
-    } catch (err) {
-      toast.error(err.message || "Failed to update commission");
-    } finally {
-      setCommissionStatusSavingId("");
-    }
-  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -873,6 +657,15 @@ export default function DashboardQuotesPage() {
               >
                 {isSending ? <FiRotateCw className="h-4 w-4 animate-spin" aria-hidden /> : <FiSend className="h-4 w-4" />}
               </button>
+              <button
+                type="button"
+                onClick={() => router.push(`/dashboard/invoices?draftQuote=${encodeURIComponent(row.id)}`)}
+                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label="Create invoice"
+                title="Create invoice"
+              >
+                <FiFileText className="h-4 w-4 shrink-0" />
+              </button>
             </div>
           );
         },
@@ -937,7 +730,18 @@ export default function DashboardQuotesPage() {
       },
       { key: "estimatedCompletion", label: "Est. completion" },
     ],
-    [customerNameMap, motorLabelMap, sendingQuoteId, deletingQuoteId, fmt]
+    [
+      customerNameMap,
+      motorLabelMap,
+      sendingQuoteId,
+      deletingQuoteId,
+      fmt,
+      router,
+      openViewModal,
+      openEditModal,
+      handlePrintQuote,
+      handleSendToCustomer,
+    ]
   );
 
   const employeeOptions = useMemo(
@@ -947,25 +751,6 @@ export default function DashboardQuotesPage() {
       ),
     [employees]
   );
-
-  const salesPersonOptions = useMemo(
-    () => [
-      ...salesPersons.map((sp) => ({
-        value: sp.id,
-        label: sp.name || sp.email || sp.phone || sp.id || "—",
-      })),
-      { value: "__add_sales_person__", label: "+ Add new" },
-    ],
-    [salesPersons]
-  );
-
-  const salesPersonNameMap = useMemo(() => {
-    const map = {};
-    for (const sp of salesPersons) {
-      map[sp.id] = sp.name || sp.email || sp.phone || sp.id || "—";
-    }
-    return map;
-  }, [salesPersons]);
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === form.customerId) || null,
@@ -984,62 +769,6 @@ export default function DashboardQuotesPage() {
     const vq = viewingQuote;
     return [
       {
-        key: "send",
-        label: sendingQuote ? "Sending…" : "Send to customer",
-        icon: sendingQuote ? (
-          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiSend className={MENU_IC} />
-        ),
-        disabled: !vq?.id || sendingQuote,
-        title: !vq?.id ? "Save the RFQ prior to send to customer" : undefined,
-        onClick: () => handleSendToCustomer(vq),
-      },
-      {
-        key: "print",
-        label: "Print",
-        icon: <FiPrinter className={MENU_IC} />,
-        disabled: !vq?.id,
-        title: !vq?.id ? "Save the RFQ prior to print" : undefined,
-        onClick: () => handlePrintQuote(vq),
-      },
-      {
-        key: "createWo",
-        label: "Create work order",
-        icon: <FiClipboard className={MENU_IC} />,
-        disabled: !vq?.id,
-        title: !vq?.id
-          ? "Save the RFQ first"
-          : "Open work order form — saved to database when you click Save on that form",
-        onClick: () => handleCreateWorkOrder(vq?.id),
-      },
-      {
-        key: "viewWo",
-        label: workOrderLookupLoading ? "Opening…" : "View work order",
-        icon: workOrderLookupLoading ? (
-          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiEye className={MENU_IC} />
-        ),
-        disabled: !vq?.id || workOrderLookupLoading,
-        onClick: () => handleViewWorkOrder(vq?.id),
-      },
-      {
-        key: "invoice",
-        label: "Create invoice",
-        icon: <FiFileText className={MENU_IC} />,
-        disabled: !vq?.id,
-        onClick: () => handleCreateInvoiceFromQuote(vq?.id),
-      },
-      {
-        key: "commission",
-        label: "Sales Commission",
-        icon: <FiDollarSign className={MENU_IC} />,
-        disabled: !vq?.id,
-        onClick: () => openCommissionModal(vq),
-      },
-      { key: "div-edit", type: "divider" },
-      {
         key: "edit",
         label: "Edit",
         icon: <FiEdit2 className={MENU_IC} />,
@@ -1050,101 +779,7 @@ export default function DashboardQuotesPage() {
         },
       },
     ];
-  }, [
-    viewingQuote,
-    sendingQuote,
-    workOrderLookupLoading,
-    handleSendToCustomer,
-    handlePrintQuote,
-    handleCreateWorkOrder,
-    handleViewWorkOrder,
-    handleCreateInvoiceFromQuote,
-    openCommissionModal,
-    closeViewModal,
-    openEditModal,
-  ]);
-
-  const editQuoteToolbarMenuItems = useMemo(() => {
-    const vq = viewingQuote;
-    return [
-      {
-        key: "send",
-        label: sendingQuote ? "Sending…" : "Send to customer",
-        icon: sendingQuote ? (
-          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiSend className={MENU_IC} />
-        ),
-        disabled: !vq?.id || sendingQuote,
-        title: !vq?.id ? "Save the RFQ prior to send to customer" : undefined,
-        onClick: () => handleSendToCustomer(vq),
-      },
-      {
-        key: "print",
-        label: "Print",
-        icon: <FiPrinter className={MENU_IC} />,
-        disabled: !vq?.id,
-        title: !vq?.id ? "Save the RFQ prior to print" : undefined,
-        onClick: () =>
-          handlePrintQuote({
-            ...vq,
-            ...form,
-            scopeLines: Array.isArray(form.scopeLines) ? form.scopeLines : (vq?.scopeLines ?? []),
-            partsLines: Array.isArray(form.partsLines) ? form.partsLines : (vq?.partsLines ?? []),
-          }),
-      },
-      {
-        key: "createWo",
-        label: "Create work order",
-        icon: <FiClipboard className={MENU_IC} />,
-        disabled: !vq?.id,
-        title: !vq?.id
-          ? "Save the RFQ first"
-          : "Open work order form — saved to database when you click Save on that form",
-        onClick: () => handleCreateWorkOrder(vq?.id),
-      },
-      {
-        key: "viewWo",
-        label: workOrderLookupLoading ? "Opening…" : "View work order",
-        icon: workOrderLookupLoading ? (
-          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiEye className={MENU_IC} />
-        ),
-        disabled: !vq?.id || workOrderLookupLoading,
-        onClick: () => handleViewWorkOrder(vq?.id),
-      },
-      {
-        key: "invoice",
-        label: "Create invoice",
-        icon: <FiFileText className={MENU_IC} />,
-        disabled: !vq?.id,
-        onClick: () => handleCreateInvoiceFromQuote(vq?.id),
-      },
-      {
-        key: "commission",
-        label: "Sales Commission",
-        icon: <FiDollarSign className={MENU_IC} />,
-        disabled: !vq?.id,
-        onClick: () =>
-          openCommissionModal({
-            ...vq,
-            rfqNumber: form.rfqNumber || vq?.rfqNumber || "",
-          }),
-      },
-    ];
-  }, [
-    viewingQuote,
-    form,
-    sendingQuote,
-    workOrderLookupLoading,
-    handleSendToCustomer,
-    handlePrintQuote,
-    handleCreateWorkOrder,
-    handleViewWorkOrder,
-    handleCreateInvoiceFromQuote,
-    openCommissionModal,
-  ]);
+  }, [viewingQuote, closeViewModal, openEditModal]);
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
@@ -1152,8 +787,10 @@ export default function DashboardQuotesPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Quotes</h1>
           <p className="mt-1 text-sm text-secondary">
-            View and edit RFQs, send to customers, and manage status. New quotes are added from Job Write-Up. File
-            attachments for a repair job live on Job Write-Up (Attachments), not on each RFQ here.
+            View and edit RFQs and manage status. New repair RFQs and job actions (send, print, work order, sales
+            commission, Tag QR) are on Job Write-Up; create invoices from this page (row icon). Use the row icons here for
+            print/send/invoice on standalone quotes. File attachments for a repair job are on Job Write-Up →
+            Attachments.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -1475,7 +1112,6 @@ export default function DashboardQuotesPage() {
             <Button type="button" variant="outline" size="sm" onClick={closeEditModal} disabled={savingQuote}>
               Cancel
             </Button>
-            <ModalActionsDropdown items={editQuoteToolbarMenuItems} />
             <Button
               type="submit"
               form="edit-quote-form"
@@ -1661,195 +1297,6 @@ export default function DashboardQuotesPage() {
           </div>
         </Form>
       </Modal>
-
-      <Modal
-        open={commissionModalOpen}
-        onClose={closeCommissionModal}
-        title="Sales Commission"
-        size="full"
-        width="70vw"
-        zIndex={110}
-        actions={
-          <Button
-            type="submit"
-            form="sales-commission-form"
-            variant="primary"
-            size="sm"
-            disabled={commissionSaving || commissionLoading}
-          >
-            {commissionSaving ? "Saving…" : "Save"}
-          </Button>
-        }
-      >
-        <Form id="sales-commission-form" onSubmit={handleCommissionSubmit} className="flex flex-col gap-4 !space-y-0">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-            <Select
-              label="Sales person"
-              options={salesPersonOptions}
-              value={commissionForm.salesPersonId}
-              onChange={handleCommissionSalesPersonChange}
-              placeholder="Select sales person"
-              searchable
-              className="sm:col-span-2"
-              disabled={commissionLoading}
-            />
-            <Input
-              label="RFQ#"
-              value={commissionForm.rfqNumber}
-              readOnly
-              className="sm:col-span-1"
-            />
-            <Input
-              label="Amount"
-              type="number"
-              step="0.01"
-              min="0"
-              value={commissionForm.amount}
-              onChange={(e) => setCommissionForm((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder="0.00"
-              required
-              disabled={commissionLoading}
-            />
-          </div>
-
-          <div className="mt-2">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Linked commission records</h3>
-            <div className="overflow-hidden rounded-lg border border-border">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-card">
-                  <tr>
-                    <th className="w-16 px-2 py-2 text-left font-medium text-title">Action</th>
-                    <th className="px-3 py-2 text-left font-medium text-title">Sales person</th>
-                    <th className="px-3 py-2 text-right font-medium text-title">Amount</th>
-                    <th className="px-3 py-2 text-left font-medium text-title">Status</th>
-                    <th className="px-3 py-2 text-left font-medium text-title">Paid date</th>
-                    <th className="px-3 py-2 text-left font-medium text-title">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {commissionLoading ? (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-secondary">Loading…</td>
-                    </tr>
-                  ) : commissionRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="px-3 py-6 text-center text-secondary">
-                        No commission records yet. Add a new entry above.
-                      </td>
-                    </tr>
-                  ) : (
-                    commissionRows.map((row) => {
-                      const isPaid = row.status === "paid";
-                      const isSavingRow = commissionStatusSavingId === row.id;
-                      return (
-                        <tr key={row.id} className="border-b border-border last:border-b-0">
-                          <td className="px-2 py-2">
-                            {!isPaid ? (
-                              <button
-                                type="button"
-                                onClick={() => handleCommissionMarkPaid(row.id)}
-                                disabled={isSavingRow}
-                                className="rounded p-1.5 text-success hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-success disabled:opacity-50"
-                                aria-label="Mark paid"
-                                title="Mark paid"
-                              >
-                                {isSavingRow ? <FiRotateCw className="h-4 w-4 animate-spin" /> : <FiCheck className="h-4 w-4" />}
-                              </button>
-                            ) : (
-                              <span className="px-1.5 text-secondary">—</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2 text-title">{row.salesPersonName || salesPersonNameMap[row.salesPersonId] || "—"}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(row.amount || 0)}</td>
-                          <td className="px-3 py-2">
-                            <Badge
-                              variant={isPaid ? "success" : "warning"}
-                              className="rounded-full px-2.5 py-0.5 text-xs"
-                            >
-                              {isPaid ? "Paid" : "Unpaid"}
-                            </Badge>
-                          </td>
-                          <td className="px-3 py-2 text-title">
-                            {row.paidAt ? new Date(row.paidAt).toLocaleDateString() : "—"}
-                          </td>
-                          <td className="px-3 py-2 text-secondary">
-                            {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </Form>
-      </Modal>
-
-      <Modal
-        open={quickSalesPersonModalOpen}
-        onClose={() => setQuickSalesPersonModalOpen(false)}
-        title="Add Sales Person"
-        size="xl"
-        zIndex={120}
-        actions={
-          <Button
-            type="submit"
-            form="quick-sales-person-form"
-            variant="primary"
-            size="sm"
-            disabled={quickSalesPersonSaving}
-          >
-            {quickSalesPersonSaving ? "Saving…" : "Save"}
-          </Button>
-        }
-      >
-        <Form id="quick-sales-person-form" onSubmit={handleQuickSalesPersonSubmit} className="flex flex-col gap-4 !space-y-0">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-3">
-            <Input
-              label="Name"
-              name="name"
-              value={quickSalesPersonForm.name}
-              onChange={(e) => setQuickSalesPersonForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Full name"
-              required
-            />
-            <Input
-              label="Phone"
-              name="phone"
-              value={quickSalesPersonForm.phone}
-              onChange={(e) => setQuickSalesPersonForm((prev) => ({ ...prev, phone: e.target.value }))}
-              placeholder="Phone number"
-            />
-            <Input
-              label="Email"
-              name="email"
-              type="email"
-              value={quickSalesPersonForm.email}
-              onChange={(e) => setQuickSalesPersonForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="Email address"
-            />
-            <Textarea
-              label="Bank Detail"
-              name="bankDetail"
-              value={quickSalesPersonForm.bankDetail}
-              onChange={(e) => setQuickSalesPersonForm((prev) => ({ ...prev, bankDetail: e.target.value }))}
-              placeholder="Bank account / payout detail"
-              rows={4}
-              className="sm:col-span-3"
-            />
-          </div>
-        </Form>
-      </Modal>
-
-      <WorkOrderFormModal
-        open={!!quoteWoModal}
-        draftQuoteId={quoteWoModal?.draftQuoteId ?? null}
-        workOrderId={quoteWoModal?.workOrderId ?? null}
-        onClose={() => setQuoteWoModal(null)}
-        onAfterSave={loadQuotes}
-        zIndex={60}
-      />
 
       {quotePrintId ? (
         <QuotePrintPreview

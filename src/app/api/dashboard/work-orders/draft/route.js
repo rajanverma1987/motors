@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
 import Quote from "@/models/Quote";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
+import MotorRepairJob from "@/models/MotorRepairJob";
 import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -24,14 +26,15 @@ function initialStatusFromSettings(settingsDoc) {
 }
 
 /**
- * Suggest the next work order number for this account + RFQ prefix.
+ * Suggest the next work order number for this account + Job#/RFQ slug.
  * Purely read-only; actual creation happens in POST /api/dashboard/work-orders.
  */
-async function suggestWorkOrderNumber(email, safeRfq) {
-  const prefix = `W-${safeRfq}-`;
+async function suggestWorkOrderNumber(email, safeSegment) {
+  const prefix = `W-${safeSegment}-`;
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const latest = await WorkOrder.findOne({
     createdByEmail: email,
-    workOrderNumber: { $regex: `^${prefix}\\d+$` },
+    workOrderNumber: { $regex: `^${escaped}\\d+$` },
   })
     .sort({ createdAt: -1, workOrderNumber: -1 })
     .lean();
@@ -76,8 +79,19 @@ export async function GET(request) {
       createdByEmail: email,
     }).lean();
     const rfq = (quote.rfqNumber || "").trim() || "RFQ";
-    const safeRfq = rfq.replace(/[^\w-]/g, "") || "RFQ";
-    const workOrderNumber = await suggestWorkOrderNumber(email, safeRfq);
+    let safeSegment = rfq.replace(/[^\w-]/g, "") || "RFQ";
+    let repairFlowJobId = "";
+    let repairJobNumber = "";
+    const qJob = String(quote.repairFlowJobId || "").trim();
+    if (qJob && mongoose.isValidObjectId(qJob)) {
+      const rj = await MotorRepairJob.findOne({ _id: qJob, createdByEmail: email }).select("jobNumber").lean();
+      if (rj?.jobNumber) {
+        repairFlowJobId = qJob;
+        repairJobNumber = String(rj.jobNumber).trim();
+        safeSegment = repairJobNumber.replace(/[^\w-]/g, "") || safeSegment;
+      }
+    }
+    const workOrderNumber = await suggestWorkOrderNumber(email, safeSegment);
     const motorClass = motorClassFromMotorType(motor.motorType);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const today = new Date().toISOString().slice(0, 10);
@@ -136,6 +150,8 @@ export async function GET(request) {
       status: initialStatusFromSettings(settingsDoc),
       motorClass,
       quoteId,
+      repairFlowJobId,
+      repairJobNumber,
       motorId: String(motor._id),
       customerId: String(quote.customerId),
       companyName,

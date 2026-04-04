@@ -40,6 +40,7 @@ function WorkOrderBookmarkControl({ woId, wo }) {
           workOrderNumber: wo.workOrderNumber,
           companyName: wo.customerCompany || wo.companyName,
           quoteRfqNumber: wo.quoteRfqNumber,
+          repairJobNumber: wo.repairJobNumber,
         })
       }
       style={{ paddingHorizontal: 14, paddingVertical: 8 }}
@@ -348,6 +349,12 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           <Text style={styles.readLabel}>Work order #</Text>
           <Text style={styles.readValue}>{wo?.workOrderNumber || "—"}</Text>
         </View>
+        {wo?.repairJobNumber ? (
+          <View style={styles.readRow}>
+            <Text style={styles.readLabel}>Job #</Text>
+            <Text style={styles.readValue}>{wo.repairJobNumber}</Text>
+          </View>
+        ) : null}
         <View style={styles.readRow}>
           <Text style={styles.readLabel}>RFQ #</Text>
           <Text style={styles.readValue}>{wo?.quoteRfqNumber || "—"}</Text>

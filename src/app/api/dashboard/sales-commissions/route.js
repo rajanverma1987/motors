@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import SalesCommission from "@/models/SalesCommission";
 import SalesPerson from "@/models/SalesPerson";
+import MotorRepairJob from "@/models/MotorRepairJob";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { clampString } from "@/lib/validation";
 
@@ -12,6 +14,8 @@ function toJson(doc) {
     id: row._id?.toString(),
     quoteId: row.quoteId ?? "",
     rfqNumber: row.rfqNumber ?? "",
+    repairFlowJobId: row.repairFlowJobId ?? "",
+    jobNumber: row.jobNumber ?? "",
     salesPersonId: row.salesPersonId ?? "",
     salesPersonName: row.salesPersonName ?? "",
     amount: Number(row.amount || 0),
@@ -30,12 +34,14 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const quoteId = clampString(searchParams.get("quoteId"), 200);
+    const repairFlowJobId = clampString(searchParams.get("repairFlowJobId"), 200);
     const status = clampString(searchParams.get("status"), 20).toLowerCase();
     const statusFilter = status === "paid" || status === "unpaid" ? status : "";
 
     await connectDB();
     const where = { createdByEmail: owner };
     if (quoteId) where.quoteId = quoteId;
+    if (repairFlowJobId) where.repairFlowJobId = repairFlowJobId;
     if (statusFilter) where.status = statusFilter;
 
     const [rows, salesPeople] = await Promise.all([
@@ -65,24 +71,36 @@ export async function POST(request) {
 
     await connectDB();
     const body = await request.json();
-    const quoteId = clampString(body?.quoteId, 200);
-    const rfqNumber = clampString(body?.rfqNumber, 200);
+    let repairFlowJobId = clampString(body?.repairFlowJobId, 200);
+    let jobNumber = clampString(body?.jobNumber, 200);
     const salesPersonId = clampString(body?.salesPersonId, 200);
     const amount = Number(body?.amount);
 
-    if (!quoteId) return NextResponse.json({ error: "Quote is required" }, { status: 400 });
-    if (!rfqNumber) return NextResponse.json({ error: "RFQ# is required" }, { status: 400 });
+    if (!repairFlowJobId || !mongoose.isValidObjectId(repairFlowJobId)) {
+      return NextResponse.json({ error: "Repair job is required" }, { status: 400 });
+    }
     if (!salesPersonId) return NextResponse.json({ error: "Sales person is required" }, { status: 400 });
     if (!Number.isFinite(amount) || amount < 0) {
       return NextResponse.json({ error: "Amount must be a valid number" }, { status: 400 });
+    }
+
+    const repairJob = await MotorRepairJob.findOne({ _id: repairFlowJobId, createdByEmail: owner })
+      .select("jobNumber")
+      .lean();
+    if (!repairJob) return NextResponse.json({ error: "Repair job not found" }, { status: 404 });
+    if (!jobNumber) jobNumber = String(repairJob.jobNumber || "").trim();
+    if (!jobNumber) {
+      return NextResponse.json({ error: "Job# missing on repair job" }, { status: 400 });
     }
 
     const salesPerson = await SalesPerson.findOne({ _id: salesPersonId, createdByEmail: owner }).lean();
     if (!salesPerson) return NextResponse.json({ error: "Sales person not found" }, { status: 404 });
 
     const doc = await SalesCommission.create({
-      quoteId,
-      rfqNumber,
+      quoteId: "",
+      rfqNumber: "",
+      repairFlowJobId,
+      jobNumber,
       salesPersonId,
       amount,
       status: "unpaid",

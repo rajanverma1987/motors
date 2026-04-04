@@ -101,7 +101,7 @@ export default function MyWorkOrdersScreen({ navigation }) {
         }
         ListEmptyComponent={
           <Text style={styles.empty}>
-            No open work orders assigned to you. Assignments are set in the CRM, or use Scan / RFQ /
+            No open work orders assigned to you. Assignments are set in the CRM, or use Scan, Job#/RFQ, or
             serial to find a job.
           </Text>
         }
@@ -115,7 +115,9 @@ export default function MyWorkOrdersScreen({ navigation }) {
             <Text style={styles.company} numberOfLines={1}>
               {item.companyName || "—"}
             </Text>
-            {item.quoteRfqNumber ? (
+            {item.repairJobNumber ? (
+              <Text style={styles.rfqSmall}>Job {item.repairJobNumber}</Text>
+            ) : item.quoteRfqNumber ? (
               <Text style={styles.rfqSmall}>RFQ {item.quoteRfqNumber}</Text>
             ) : null}
             {item.updatedAt ? (

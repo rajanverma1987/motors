@@ -373,6 +373,7 @@ export default function WorkOrderFormModal({
               }
               readOnly
             />
+            <Input label="Job#" value={editing.repairJobNumber || "—"} readOnly />
             <Input label="RFQ#" value={editing.quoteRfqNumber || "—"} readOnly />
             <Input label="Company" value={editing.customerCompany || editing.companyName || "—"} readOnly />
           </div>

@@ -53,6 +53,7 @@ export async function GET(request, context) {
       status: w.status || "",
       companyName: w.companyName || "",
       quoteRfqNumber: w.quoteRfqNumber || rfqNumber,
+      repairJobNumber: w.repairJobNumber || "",
       motorClass: w.motorClass || "",
       date: w.date || "",
     }));

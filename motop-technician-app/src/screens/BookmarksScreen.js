@@ -39,7 +39,11 @@ export default function BookmarksScreen({ navigation }) {
                 <Text style={styles.bmWo}>{item.workOrderNumber || item.id}</Text>
                 <Text style={styles.bmSub} numberOfLines={1}>
                   {item.companyName || "—"}
-                  {item.quoteRfqNumber ? ` · RFQ ${item.quoteRfqNumber}` : ""}
+                  {item.repairJobNumber
+                    ? ` · Job ${item.repairJobNumber}`
+                    : item.quoteRfqNumber
+                      ? ` · RFQ ${item.quoteRfqNumber}`
+                      : ""}
                 </Text>
               </Pressable>
               <Pressable

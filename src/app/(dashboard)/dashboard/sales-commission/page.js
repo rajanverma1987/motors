@@ -73,6 +73,7 @@ export default function DashboardSalesCommissionPage() {
     const q = searchUnpaid.trim().toLowerCase();
     if (!q) return unpaidRows;
     return unpaidRows.filter((r) =>
+      (r.jobNumber || "").toLowerCase().includes(q) ||
       (r.rfqNumber || "").toLowerCase().includes(q) ||
       (r.salesPersonName || "").toLowerCase().includes(q) ||
       String(r.amount ?? "").toLowerCase().includes(q)
@@ -83,6 +84,7 @@ export default function DashboardSalesCommissionPage() {
     const q = searchPaid.trim().toLowerCase();
     if (!q) return paidRows;
     return paidRows.filter((r) =>
+      (r.jobNumber || "").toLowerCase().includes(q) ||
       (r.rfqNumber || "").toLowerCase().includes(q) ||
       (r.salesPersonName || "").toLowerCase().includes(q) ||
       String(r.amount ?? "").toLowerCase().includes(q)
@@ -114,7 +116,11 @@ export default function DashboardSalesCommissionPage() {
             </button>
           ),
       },
-      { key: "rfqNumber", label: "RFQ#" },
+      {
+        key: "jobNumber",
+        label: "Job#",
+        render: (_, row) => row.jobNumber || row.rfqNumber || "—",
+      },
       { key: "salesPersonName", label: "Sales person" },
       {
         key: "amount",
@@ -152,7 +158,7 @@ export default function DashboardSalesCommissionPage() {
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Sales Commission</h1>
         <p className="mt-1 text-sm text-secondary">
-          View and manage all commission records across RFQ numbers.
+          View and manage commission records linked to Job Write-Up job numbers.
         </p>
       </div>
 
@@ -172,7 +178,7 @@ export default function DashboardSalesCommissionPage() {
                   loading={loading}
                   searchable
                   onSearch={setSearchUnpaid}
-                  searchPlaceholder="Search RFQ#, sales person, amount..."
+                  searchPlaceholder="Search job#, sales person, amount..."
                   emptyMessage={unpaidRows.length === 0 ? "No unpaid commissions." : "No unpaid records match your search."}
                   onRefresh={async () => {
                     setLoading(true);
@@ -193,7 +199,7 @@ export default function DashboardSalesCommissionPage() {
                   loading={loading}
                   searchable
                   onSearch={setSearchPaid}
-                  searchPlaceholder="Search RFQ#, sales person, amount..."
+                  searchPlaceholder="Search job#, sales person, amount..."
                   emptyMessage={paidRows.length === 0 ? "No paid commissions yet." : "No paid records match your search."}
                   onRefresh={async () => {
                     setLoading(true);

@@ -16,7 +16,7 @@ import { colors, spacing } from "../theme";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
 
 /**
- * Search tab: scan QR, RFQ#, motor serial — find work orders.
+ * Search tab: scan QR (job#), job/RFQ#, motor serial — find work orders.
  */
 export default function SearchScreen({ navigation }) {
   const headerHeight = useHeaderHeight();
@@ -71,17 +71,17 @@ export default function SearchScreen({ navigation }) {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
           onPress={() => navigation.navigate("Scan")}
         >
-          <Text style={styles.primaryBtnText}>Scan QR tag (RFQ)</Text>
+          <Text style={styles.primaryBtnText}>Scan QR tag (Job#)</Text>
         </Pressable>
 
-        <Text style={styles.sectionLabel}>Find by RFQ#</Text>
+        <Text style={styles.sectionLabel}>Find by Job# or RFQ#</Text>
         <View collapsable={false} ref={rfqInputWrapRef}>
           <TextInput
             style={styles.input}
             value={rfqManual}
             onChangeText={setRfqManual}
             onFocus={() => scrollFieldToCenter(rfqInputWrapRef.current)}
-            placeholder="e.g. A00042"
+            placeholder="e.g. RF-00042 or A00042"
             placeholderTextColor={colors.secondary}
             autoCapitalize="characters"
           />

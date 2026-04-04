@@ -1,6 +1,7 @@
 /**
- * Work order Actions (Create / View) on Job Write-Up after final repair is approved.
+ * Work order Actions (Create / View) on Job Write-Up. Menu always lists these; `canCreateWorkOrder` gates the form.
  * Uses the primary final RFQ id on the job (`finalFlowQuoteId`) — CRM Quote document (same as Quotes tab).
+ * `showWorkOrderActions` is true only in execution phases (legacy / summaries); UI no longer hides menu items on it.
  */
 const WO_TOOLBAR_PHASES = ["work_execution", "testing_qa", "completed"];
 
@@ -21,14 +22,29 @@ export function getRepairFlowWorkOrderToolbarState(job, quotes) {
   const crmId = String(
     finalQ?.crmQuoteId || (finalQ?.source === "crm" ? finalQ.id : "") || ""
   ).trim();
-  const showWorkOrderActions = WO_TOOLBAR_PHASES.includes(job.phase) && !!finalId;
+  const primaryRfqNumber = String(finalQ?.rfqNumber || finalQ?.crmRfqNumber || "").trim();
+  const phaseOk = WO_TOOLBAR_PHASES.includes(job.phase);
+  const showWorkOrderActions = phaseOk && !!finalId;
+  const hasFinalLink = !!finalId;
+  const hasCrmQuote = !!crmId;
+
+  let createWorkOrderDisabledTitle = "";
+  if (!hasFinalLink) {
+    createWorkOrderDisabledTitle =
+      "Set a primary final quote on this job before creating a work order.";
+  } else if (!hasCrmQuote) {
+    createWorkOrderDisabledTitle =
+      "Set a primary final quote on this job (RFQ) before creating a work order.";
+  } else if (!phaseOk) {
+    createWorkOrderDisabledTitle =
+      "Create work order after the final quote is approved (job moves to work execution).";
+  }
+
   return {
     showWorkOrderActions,
     crmQuoteId: crmId || null,
-    canCreateWorkOrder: showWorkOrderActions && !!crmId,
-    createWorkOrderDisabledTitle:
-      showWorkOrderActions && !crmId
-        ? "Set a primary final quote on this job (RFQ) before creating a work order."
-        : "",
+    primaryRfqNumber,
+    canCreateWorkOrder: phaseOk && hasFinalLink && hasCrmQuote,
+    createWorkOrderDisabledTitle,
   };
 }

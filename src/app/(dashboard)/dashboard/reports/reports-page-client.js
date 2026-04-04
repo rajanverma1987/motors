@@ -717,7 +717,11 @@ export default function ReportsPageClient() {
             <h3 className="mb-3 text-sm font-semibold text-title">Unpaid records</h3>
             <ReportTable
               columns={[
-                { key: "rfqNumber", label: "RFQ#" },
+                {
+                  key: "jobNumber",
+                  label: "Job#",
+                  render: (_, row) => row.jobNumber || row.rfqNumber || "—",
+                },
                 { key: "salesPersonName", label: "Sales person" },
                 { key: "amount", label: "Amount", align: "right", render: (v) => fmt(v || 0) },
               ]}
@@ -729,7 +733,11 @@ export default function ReportsPageClient() {
             <h3 className="mb-3 text-sm font-semibold text-title">Paid records</h3>
             <ReportTable
               columns={[
-                { key: "rfqNumber", label: "RFQ#" },
+                {
+                  key: "jobNumber",
+                  label: "Job#",
+                  render: (_, row) => row.jobNumber || row.rfqNumber || "—",
+                },
                 { key: "salesPersonName", label: "Sales person" },
                 { key: "amount", label: "Amount", align: "right", render: (v) => fmt(v || 0) },
                 {

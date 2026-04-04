@@ -11,7 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const STORAGE_KEY = "motop_tech_bookmarks_v1";
 const MAX_BOOKMARKS = 40;
 
-/** @typedef {{ id: string, workOrderNumber: string, companyName: string, quoteRfqNumber: string, savedAt: string }} BookmarkItem */
+/** @typedef {{ id: string, workOrderNumber: string, companyName: string, quoteRfqNumber: string, repairJobNumber: string, savedAt: string }} BookmarkItem */
 
 const BookmarksContext = createContext(null);
 
@@ -35,6 +35,7 @@ export function BookmarksProvider({ children }) {
                 workOrderNumber: String(x.workOrderNumber || "").slice(0, 120),
                 companyName: String(x.companyName || "").slice(0, 200),
                 quoteRfqNumber: String(x.quoteRfqNumber || "").slice(0, 80),
+                repairJobNumber: String(x.repairJobNumber || "").slice(0, 80),
                 savedAt: String(x.savedAt || new Date().toISOString()),
               }));
             setItems(cleaned.slice(0, MAX_BOOKMARKS));
@@ -65,7 +66,7 @@ export function BookmarksProvider({ children }) {
     [items]
   );
 
-  /** @param {{ id: string, workOrderNumber?: string, companyName?: string, quoteRfqNumber?: string }} wo */
+  /** @param {{ id: string, workOrderNumber?: string, companyName?: string, quoteRfqNumber?: string, repairJobNumber?: string }} wo */
   const addBookmark = useCallback(
     async (wo) => {
       const id = String(wo?.id || "").trim();
@@ -76,6 +77,7 @@ export function BookmarksProvider({ children }) {
         workOrderNumber: String(wo.workOrderNumber || id).slice(0, 120),
         companyName: String(wo.companyName || "").slice(0, 200),
         quoteRfqNumber: String(wo.quoteRfqNumber || "").slice(0, 80),
+        repairJobNumber: String(wo.repairJobNumber || "").slice(0, 80),
         savedAt: new Date().toISOString(),
       });
       await persist(next.slice(0, MAX_BOOKMARKS));

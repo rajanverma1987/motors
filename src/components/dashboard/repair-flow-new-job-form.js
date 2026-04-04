@@ -692,11 +692,6 @@ export default function RepairFlowNewJobForm({
                   Create Final Quote
                 </Button>
               ) : null}
-              {canAddLinkedRfqModal ? (
-                <Button type="button" variant="outline" size="sm" onClick={addLinkedRfq} disabled={quoteBusy}>
-                  Add RFQ
-                </Button>
-              ) : null}
             </>
           ) : (
             <>
@@ -720,11 +715,6 @@ export default function RepairFlowNewJobForm({
                   disabled={quoteBusy}
                 >
                   Create Final Quote
-                </Button>
-              ) : null}
-              {canAddLinkedRfqModal ? (
-                <Button type="button" variant="outline" size="sm" onClick={addLinkedRfq} disabled={quoteBusy}>
-                  Add RFQ
                 </Button>
               ) : null}
               {preliminaryInspectionsForQuote.length === 0 && (showGenPreliminary || showGenFinalFromPreInspection) ? (

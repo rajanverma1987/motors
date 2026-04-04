@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
 import Quote from "@/models/Quote";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
+import MotorRepairJob from "@/models/MotorRepairJob";
 import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -28,15 +30,14 @@ function initialStatusFromSettings(settingsDoc) {
 }
 
 /**
- * Find the next available work order number for this account + RFQ prefix.
- * Uses the highest existing numeric suffix and adds 1.
- * Example: W-A00001-1, W-A00001-2 → returns W-A00001-3.
+ * Find the next available work order number for this account + label (Job# or RFQ-derived slug).
+ * Example: W-RF00042-1, W-RF00042-2 → returns W-RF00042-3.
  */
-async function nextWorkOrderNumberSuggestion(email, safeRfq) {
-  const prefix = `W-${safeRfq}-`;
+async function nextWorkOrderNumberSuggestion(email, safeSegment) {
+  const prefix = `W-${safeSegment}-`;
   const latest = await WorkOrder.findOne({
     createdByEmail: email,
-    workOrderNumber: { $regex: `^${prefix}\\d+$` },
+    workOrderNumber: { $regex: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\d+$` },
   })
     .sort({ createdAt: -1, workOrderNumber: -1 })
     .lean();
@@ -115,7 +116,18 @@ export async function POST(request) {
       createdByEmail: email,
     }).lean();
     const rfq = (quote.rfqNumber || "").trim() || "RFQ";
-    const safeRfq = rfq.replace(/[^\w-]/g, "") || "RFQ";
+    let safeSegment = rfq.replace(/[^\w-]/g, "") || "RFQ";
+    let repairFlowJobId = "";
+    let repairJobNumber = "";
+    const qJob = String(quote.repairFlowJobId || "").trim();
+    if (qJob && mongoose.isValidObjectId(qJob)) {
+      const rj = await MotorRepairJob.findOne({ _id: qJob, createdByEmail: email }).select("jobNumber").lean();
+      if (rj?.jobNumber) {
+        repairFlowJobId = qJob;
+        repairJobNumber = String(rj.jobNumber).trim();
+        safeSegment = repairJobNumber.replace(/[^\w-]/g, "") || safeSegment;
+      }
+    }
     const motorClass = motorClassFromMotorType(motor.motorType);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const today = new Date().toISOString().slice(0, 10);
@@ -149,11 +161,13 @@ export async function POST(request) {
     // Try a few times in case of rare concurrent inserts with the same prefix.
     let lastErr;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const workOrderNumber = await nextWorkOrderNumberSuggestion(email, safeRfq);
+      const workOrderNumber = await nextWorkOrderNumberSuggestion(email, safeSegment);
       try {
         const doc = await WorkOrder.create({
           createdByEmail: email,
           quoteId,
+          repairFlowJobId,
+          repairJobNumber,
           motorId: String(motor._id),
           customerId: String(quote.customerId),
           workOrderNumber,
@@ -185,6 +199,7 @@ export async function POST(request) {
             workOrderNumber: doc.workOrderNumber,
             companyName: o.companyName,
             quoteRfqNumber: rfq,
+            repairJobNumber,
           }).catch(() => {});
         }
         try {

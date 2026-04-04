@@ -36,12 +36,12 @@ function motorRows(motor) {
 }
 
 /**
- * Print sheet: QR encodes quote # (RFQ). Technician app scans → opens WO for this quote.
- * @param {string} rfqNumber
+ * Print sheet: QR encodes Job Write-Up job# (e.g. RF-00042). Technician app scans → opens WO for that job.
+ * @param {string} jobNumber
  * @param {MotorTagPrintOptions} [options]
  */
-export async function printQuoteMotorTagQr(rfqNumber, options = {}) {
-  const code = String(rfqNumber ?? "").trim();
+export async function printQuoteMotorTagQr(jobNumber, options = {}) {
+  const code = String(jobNumber ?? "").trim();
   if (!code) return false;
 
   const customerName = String(options.customerName ?? "").trim();
@@ -70,14 +70,14 @@ export async function printQuoteMotorTagQr(rfqNumber, options = {}) {
     ? `<dl class="motor-dl">${rows.map(([k, v]) => `<div class="motor-row"><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>`
     : hasFallbackOnly
       ? `<p class="motor-one">${esc(motorFallbackLine)}</p>`
-      : `<div class="motor-warn">No motor linked on this quote yet. Link the correct motor before attaching this tag.</div>`;
+      : `<div class="motor-warn">No motor linked on this job yet. Link the correct motor before attaching this tag.</div>`;
 
   const customerBlock = customerName
     ? `<div class="customer"><span class="lbl">Customer</span><span class="val">${esc(customerName)}</span></div>`
     : "";
 
   w.document.open();
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Motor tag ${esc(code)}</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Motor tag · Job ${esc(code)}</title>
 <style>
   *{box-sizing:border-box;}
   body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:16px 20px 24px;max-width:420px;margin-left:auto;margin-right:auto;color:#111;}
@@ -105,7 +105,7 @@ export async function printQuoteMotorTagQr(rfqNumber, options = {}) {
 </style></head><body>
 <section class="purpose">
   <h2>For technician</h2>
-  <p>Scan this <strong>QR code</strong> with the <strong>shop mobile app</strong>. The app opens the <strong>work order</strong> for quote <strong>${esc(code)}</strong> so you can <strong>update status</strong> from the floor.</p>
+  <p>Scan this <strong>QR code</strong> with the <strong>shop mobile app</strong>. The app opens the <strong>work order</strong> for job <strong>${esc(code)}</strong> so you can <strong>update status</strong> from the floor.</p>
 </section>
 <h2 class="affix-h">Paste this tag on this motor</h2>
 <section class="motor-box">
@@ -114,10 +114,10 @@ export async function printQuoteMotorTagQr(rfqNumber, options = {}) {
 </section>
 <div class="qr-wrap">
   <div class="scan-h">Scan → work order</div>
-  <img src="${dataUrl}" alt="QR ${esc(code)}" width="280" height="280" onload="setTimeout(function(){window.focus();window.print();},200)"/>
-  <div class="rfq">${esc(code)}</div>
+  <img src="${dataUrl}" alt="QR Job ${esc(code)}" width="280" height="280" onload="setTimeout(function(){window.focus();window.print();},200)"/>
+  <div class="rfq">Job ${esc(code)}</div>
 </div>
-<p class="foot">QR data: quote number only. App resolves to the correct work order.</p>
+<p class="foot">QR data: job number only. App resolves to the correct work order.</p>
 </body></html>`);
   w.document.close();
   return true;

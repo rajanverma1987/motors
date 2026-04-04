@@ -3,7 +3,11 @@ import mongoose from "mongoose";
 const workOrderSchema = new mongoose.Schema(
   {
     createdByEmail: { type: String, required: true, trim: true, lowercase: true },
+    /** CRM Quote id (RFQ) — inventory and legacy links */
     quoteId: { type: String, required: true, trim: true },
+    /** Job Write-Up repair job (when WO created from a quote linked to a job) */
+    repairFlowJobId: { type: String, default: "", trim: true },
+    repairJobNumber: { type: String, default: "", trim: true },
     motorId: { type: String, required: true, trim: true },
     customerId: { type: String, required: true, trim: true },
     /** e.g. W-A00001-1 */
@@ -61,6 +65,8 @@ const workOrderSchema = new mongoose.Schema(
 
 workOrderSchema.index({ createdByEmail: 1, createdAt: -1 });
 workOrderSchema.index({ createdByEmail: 1, quoteId: 1 });
+workOrderSchema.index({ createdByEmail: 1, repairFlowJobId: 1 });
+workOrderSchema.index({ createdByEmail: 1, repairJobNumber: 1 });
 workOrderSchema.index({ createdByEmail: 1, workOrderNumber: 1 }, { unique: true });
 workOrderSchema.index({ createdByEmail: 1, technicianEmployeeId: 1, updatedAt: -1 });
 

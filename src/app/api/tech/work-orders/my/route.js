@@ -32,6 +32,7 @@ export async function GET(request) {
         status: w.status || "",
         companyName: w.companyName || "",
         quoteRfqNumber: w.quoteRfqNumber || "",
+        repairJobNumber: w.repairJobNumber || "",
         motorClass: w.motorClass || "",
         date: w.date || "",
         updatedAt: w.updatedAt ? new Date(w.updatedAt).toISOString() : null,

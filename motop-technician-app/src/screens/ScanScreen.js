@@ -30,7 +30,7 @@ export default function ScanScreen({ navigation }) {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Text style={styles.info}>Camera access is needed to scan RFQ QR codes.</Text>
+        <Text style={styles.info}>Camera access is needed to scan motor tag QR codes.</Text>
         <Pressable style={styles.btn} onPress={requestPermission}>
           <Text style={styles.btnText}>Allow camera</Text>
         </Pressable>
@@ -52,7 +52,7 @@ export default function ScanScreen({ navigation }) {
         onBarcodeScanned={locked ? undefined : onBarcodeScanned}
       />
       <View style={styles.overlay}>
-        <Text style={styles.hint}>Point at the motor tag QR (RFQ#)</Text>
+        <Text style={styles.hint}>Point at the motor tag QR (Job#)</Text>
         <Pressable style={styles.cancel} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>

@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { useTechAuth } from "../TechAuthContext";
-import { techFetch } from "../api";
+import { techFetch, getApiBase } from "../api";
 import { colors, spacing } from "../theme";
 
 export default function RfqWorkOrdersScreen({ route, navigation }) {
@@ -19,6 +19,8 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [quote, setQuote] = useState(null);
+  const [jobInfo, setJobInfo] = useState(null);
+  const [lookupKind, setLookupKind] = useState("rfq");
   const [motorInfo, setMotorInfo] = useState(null);
   const [rows, setRows] = useState([]);
 
@@ -31,15 +33,42 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
       if (!s) return;
       const path = `/api/tech/motor-serial/${encodeURIComponent(s)}/work-orders`;
       const data = await techFetch(path, { token });
+      setLookupKind("serial");
       setQuote(null);
+      setJobInfo(null);
       setMotorInfo(data.motor || null);
       setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
       return;
     }
     const r = String(rfq || "").trim();
     if (!r) return;
-    const path = `/api/tech/rfq/${encodeURIComponent(r)}/work-orders`;
-    const data = await techFetch(path, { token });
+    const base = getApiBase();
+    const headers = {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+    const jRes = await fetch(`${base}/api/tech/job/${encodeURIComponent(r)}/work-orders`, { headers });
+    const jText = await jRes.text();
+    let jData = {};
+    try {
+      jData = jText ? JSON.parse(jText) : {};
+    } catch {
+      jData = { error: jText || "Invalid response" };
+    }
+    if (jRes.ok) {
+      setLookupKind("job");
+      setJobInfo(jData.job || null);
+      setQuote(null);
+      setMotorInfo(null);
+      setRows(Array.isArray(jData.workOrders) ? jData.workOrders : []);
+      return;
+    }
+    if (jRes.status !== 404) {
+      throw new Error(jData.error || "Failed to load");
+    }
+    const data = await techFetch(`/api/tech/rfq/${encodeURIComponent(r)}/work-orders`, { token });
+    setLookupKind("rfq");
+    setJobInfo(null);
     setQuote(data.quote || null);
     setMotorInfo(null);
     setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
@@ -95,6 +124,13 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
     );
   }
 
+  const emptyMessage =
+    mode === "serial"
+      ? "No open work orders assigned to you for this motor."
+      : lookupKind === "job"
+        ? "No work orders assigned to you for this job."
+        : "No work orders assigned to you for this RFQ.";
+
   return (
     <View style={styles.container}>
       <View style={styles.banner}>
@@ -114,6 +150,14 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
             ) : null}
             <Text style={styles.openHint}>Only open (active) work orders are listed.</Text>
           </>
+        ) : lookupKind === "job" ? (
+          <>
+            <Text style={styles.rfqLabel}>Job</Text>
+            <Text style={styles.rfqValue}>{jobInfo?.jobNumber || rfq}</Text>
+            {jobInfo?.phase ? (
+              <Text style={styles.quoteStatus}>Phase: {jobInfo.phase}</Text>
+            ) : null}
+          </>
         ) : (
           <>
             <Text style={styles.rfqLabel}>RFQ</Text>
@@ -130,13 +174,7 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            {mode === "serial"
-              ? "No open work orders assigned to you for this motor."
-              : "No work orders assigned to you for this RFQ."}
-          </Text>
-        }
+        ListEmptyComponent={<Text style={styles.empty}>{emptyMessage}</Text>}
         renderItem={({ item }) => (
           <Pressable
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
@@ -147,7 +185,9 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
             <Text style={styles.company} numberOfLines={1}>
               {item.companyName || "—"}
             </Text>
-            {item.quoteRfqNumber ? (
+            {item.repairJobNumber ? (
+              <Text style={styles.rfqSmall}>Job {item.repairJobNumber}</Text>
+            ) : item.quoteRfqNumber ? (
               <Text style={styles.rfqSmall}>RFQ {item.quoteRfqNumber}</Text>
             ) : null}
           </Pressable>

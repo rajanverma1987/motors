@@ -13,6 +13,7 @@ import { sendExpoPushMessages } from "@/lib/expo-push";
  * @param {string} [opts.workOrderNumber]
  * @param {string} [opts.companyName]
  * @param {string} [opts.quoteRfqNumber]
+ * @param {string} [opts.repairJobNumber] - Job Write-Up job# when WO is tied to a repair job
  */
 export async function notifyTechnicianWorkOrderAssigned(opts) {
   const shopEmail = String(opts.shopEmail || "")
@@ -44,11 +45,13 @@ export async function notifyTechnicianWorkOrderAssigned(opts) {
 
     const woNum = String(opts.workOrderNumber || "").trim() || "Work order";
     const company = String(opts.companyName || "").trim();
+    const jobNum = String(opts.repairJobNumber || "").trim();
     const rfq = String(opts.quoteRfqNumber || "").trim();
     const title = "Work order assigned";
     const bodyParts = [woNum];
     if (company) bodyParts.push(company);
-    if (rfq) bodyParts.push(`RFQ ${rfq}`);
+    if (jobNum) bodyParts.push(`Job ${jobNum}`);
+    else if (rfq) bodyParts.push(`RFQ ${rfq}`);
     const body = bodyParts.join(" · ");
 
     await sendExpoPushMessages(
