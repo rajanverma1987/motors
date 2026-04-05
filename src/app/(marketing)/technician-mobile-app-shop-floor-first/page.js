@@ -8,7 +8,7 @@ const path = "/technician-mobile-app-shop-floor-first";
 export const metadata = {
   title: "Technician Mobile App for Motor Repair Shops | Shop-Floor First",
   description:
-    "Give technicians a mobile app to scan motor QR tags, update work order status, and capture testing data from the floor in real time.",
+    "Give technicians a mobile app to scan job Tag QR codes (repair job number), update work order status, and capture testing data from the floor in real time.",
   keywords: [
     "technician mobile app motor repair",
     "shop floor work order app",
@@ -50,9 +50,13 @@ export default function TechnicianMobileAppPage() {
             What technicians can do in the app
           </h2>
           <p className="mt-4 leading-relaxed text-secondary">
-            The app is designed for fast shop-floor actions: scan a motor tag QR code, open the assigned work order,
-            update status, and attach testing notes/readings. This reduces lag between floor activity and office
-            visibility so dispatch, quotes, and customer updates stay accurate.
+            The app is designed for fast shop-floor actions: scan the Tag QR from{" "}
+            <Link href="/dashboard/repair-flow" className="font-medium text-primary hover:underline">
+              Job Write-Up
+            </Link>{" "}
+            (it encodes the repair job number), open the assigned work order, update status, and attach testing
+            notes/readings. This reduces lag between floor activity and office visibility so dispatch, quotes, and
+            customer updates stay accurate.
           </p>
         </section>
 
@@ -74,15 +78,20 @@ export default function TechnicianMobileAppPage() {
             Connected with quotes, work orders, and testing records
           </h2>
           <p className="mt-4 leading-relaxed text-secondary">
-            Mobile updates are tied to the same records used by office staff. That means the path from{" "}
+            Mobile updates are tied to the same records used by office staff. Work orders are linked to the repair job
+            and its primary final quote, so the path from{" "}
+            <Link href="/dashboard/repair-flow" className="font-medium text-primary hover:underline">
+              Job Write-Up
+            </Link>{" "}
+            through{" "}
             <Link href="/dashboard/quotes" className="font-medium text-primary hover:underline">
-              quote
+              Quotes (RFQs)
             </Link>{" "}
             to{" "}
             <Link href="/dashboard/work-orders" className="font-medium text-primary hover:underline">
               work order
             </Link>{" "}
-            to invoice remains consistent, with testing data logged as part of the motor history.
+            and invoice stays consistent, with testing data logged as part of the motor history.
           </p>
         </section>
 
@@ -96,7 +105,7 @@ export default function TechnicianMobileAppPage() {
             and back-and-forth with office staff.
           </p>
           <p className="mt-4 leading-relaxed text-secondary">
-            This works especially well with the mobile app: scan the job, review motor context, use calculator results,
+            This works especially well with the mobile app: scan the job Tag QR, review motor context, use calculator results,
             and log updates in one flow. Explore the{" "}
             <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
               calculators module

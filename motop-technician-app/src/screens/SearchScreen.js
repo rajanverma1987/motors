@@ -16,24 +16,24 @@ import { colors, spacing } from "../theme";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
 
 /**
- * Search tab: scan QR (job#), job/RFQ#, motor serial — find work orders.
+ * Search tab: scan QR (Job#), type Job#, or motor serial — find work orders.
  */
 export default function SearchScreen({ navigation }) {
   const headerHeight = useHeaderHeight();
   const { employee, logout } = useTechAuth();
-  const [rfqManual, setRfqManual] = useState("");
+  const [jobNumberManual, setJobNumberManual] = useState("");
   const [serialManual, setSerialManual] = useState("");
-  const rfqInputWrapRef = useRef(null);
+  const jobInputWrapRef = useRef(null);
   const serialInputWrapRef = useRef(null);
   const { scrollRef, onScroll, scrollFieldToCenter } = useCenterFieldInScroll(headerHeight);
 
-  const goRfq = (rfq) => {
-    const code = String(rfq || "").trim();
+  const goJob = (jobNum) => {
+    const code = String(jobNum || "").trim();
     if (!code) {
-      Alert.alert("RFQ required", "Enter an RFQ number or scan a tag.");
+      Alert.alert("Job number required", "Enter the repair job number or scan the motor tag QR.");
       return;
     }
-    navigation.navigate("RfqWorkOrders", { rfq: code });
+    navigation.navigate("RfqWorkOrders", { jobNumber: code });
   };
 
   const goSerial = (serial) => {
@@ -74,21 +74,24 @@ export default function SearchScreen({ navigation }) {
           <Text style={styles.primaryBtnText}>Scan QR tag (Job#)</Text>
         </Pressable>
 
-        <Text style={styles.sectionLabel}>Find by Job# or RFQ#</Text>
-        <View collapsable={false} ref={rfqInputWrapRef}>
+        <Text style={styles.sectionLabel}>Find by Job#</Text>
+        <Text style={styles.sectionHint}>
+          Use the same job number shown on Job Write-Up and encoded on the Tag QR.
+        </Text>
+        <View collapsable={false} ref={jobInputWrapRef}>
           <TextInput
             style={styles.input}
-            value={rfqManual}
-            onChangeText={setRfqManual}
-            onFocus={() => scrollFieldToCenter(rfqInputWrapRef.current)}
-            placeholder="e.g. RF-00042 or A00042"
+            value={jobNumberManual}
+            onChangeText={setJobNumberManual}
+            onFocus={() => scrollFieldToCenter(jobInputWrapRef.current)}
+            placeholder="e.g. A00042"
             placeholderTextColor={colors.secondary}
             autoCapitalize="characters"
           />
         </View>
         <Pressable
           style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
-          onPress={() => goRfq(rfqManual)}
+          onPress={() => goJob(jobNumberManual)}
         >
           <Text style={styles.secondaryBtnText}>Find work orders</Text>
         </Pressable>

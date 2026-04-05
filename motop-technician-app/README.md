@@ -1,6 +1,6 @@
 # Motop Technician (Expo)
 
-Mobile app for shop technicians: sign in with **employee email + password** (same as configured in CRM), scan **RFQ QR tags** printed from the Quotes screen, open work orders, update **status**, add **comments**, and use **Calculators** (same tools as the CRM Calculators page, including **CM Best Match** with the shop wire catalog via `GET /api/tech/wire-sizes`).
+Mobile app for shop technicians: sign in with **employee email + password** (same as configured in CRM), scan **Tag QR codes** printed from **Job Write-Up** (encode the repair **Job#**), or type the Job# to open your assigned work orders, update **status**, add **comments**, and use **Calculators** (same tools as the CRM Calculators page, including **CM Best Match** with the shop wire catalog via `GET /api/tech/wire-sizes`).
 
 - **JavaScript only** (no TypeScript).
 - **Theme** colors match the MotorsWinding CRM light theme (`src/theme.js` → same HSL tokens as web `globals.css`).
@@ -8,7 +8,7 @@ Mobile app for shop technicians: sign in with **employee email + password** (sam
 ## Prerequisites (CRM)
 
 1. **Employees** → add employee with email, password, and **Technician App access** enabled.
-2. **Quotes** → save quote so it has an **RFQ#**, then use **Tag QR** to print the motor tag (QR encodes the RFQ number only).
+2. **Job Write-Up** → use **Tag QR** to print the motor tag (QR encodes the repair **Job#**). Work orders are looked up by that job number in the app.
 
 ## API URL
 
@@ -57,7 +57,7 @@ Then open in **Expo Go** (same major SDK as this project) or a dev build. Camera
 ## Backend routes (main repo)
 
 - `POST /api/tech/auth/login` — employee login; returns JWT + `workOrderStatuses`.
-- `GET /api/tech/rfq/:rfq/work-orders` — work orders for that RFQ **assigned to you** (`technicianEmployeeId` = logged-in employee) (Bearer).
+- `GET /api/tech/job/:jobNumber/work-orders` — work orders for that repair job **assigned to you** (`technicianEmployeeId` = logged-in employee) (Bearer).
 - `GET /api/tech/motor-serial/:serial/work-orders` — **open** work orders for that serial **assigned to you** (Bearer).
 - `GET /api/tech/work-orders/:id` — work order detail.
 - `PATCH /api/tech/work-orders/:id` — body: `{ status }` and/or `{ appendNote: "text" }`.

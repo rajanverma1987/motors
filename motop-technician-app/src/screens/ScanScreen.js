@@ -13,8 +13,8 @@ export default function ScanScreen({ navigation }) {
       const raw = String(data || "").trim();
       if (!raw) return;
       setLocked(true);
-      const rfq = raw.split(/[\n\r]/)[0].trim();
-      navigation.replace("RfqWorkOrders", { rfq });
+      const jobNumber = raw.split(/[\n\r]/)[0].trim();
+      navigation.replace("RfqWorkOrders", { jobNumber });
     },
     [locked, navigation]
   );
@@ -30,7 +30,7 @@ export default function ScanScreen({ navigation }) {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Text style={styles.info}>Camera access is needed to scan motor tag QR codes.</Text>
+        <Text style={styles.info}>Camera access is needed to scan Tag QR codes (repair Job#).</Text>
         <Pressable style={styles.btn} onPress={requestPermission}>
           <Text style={styles.btnText}>Allow camera</Text>
         </Pressable>

@@ -5,24 +5,28 @@ import HeroBackground from "@/components/marketing/HeroBackground";
 
 const workflowFeatures = [
   {
-    title: "Work orders from quote to delivery",
-    detail: "Create work orders directly from approved quotes so job details, scope, and pricing flow through without re-entry. Motor specs, customer info, and line items carry over automatically—reducing errors and saving time so your team can focus on the repair, not data entry.",
+    title: "Job Write-Up: one job number from intake to approval",
+    detail: "Every repair runs as a Job Write-Up with its own job number: intake and inspections, preliminary and final quotes in the pipeline, customer send, job-level attachments, sales commission, and shop actions (print, work order, Tag QR) live together. The team works one continuous record instead of splitting context across disconnected screens.",
+  },
+  {
+    title: "Work orders tied to the job — and the approved RFQ",
+    detail: "Create work orders from the primary final CRM quote on that job. Motor, customer, scope, and line items carry through; numbering stays aligned with the job so desk and floor share the same ID. Inventory reservations and consumption still follow the quote-backed path through delivery.",
   },
   {
     title: "Center floor job board",
     detail: "A visual board with status columns (e.g. Received, Inspection, Rewinding, Testing, Ready) shows exactly where every motor is. Drag or tap to move jobs as work progresses, so the board always reflects reality. Managers get at-a-glance visibility; technicians know what’s next without asking.",
   },
   {
-    title: "Motor job tags with QR codes",
-    detail: "Print a durable tag for each motor; technicians scan the QR code on a phone or tablet to update status from the center floor. No walking back to a desk or hunting for the right record—scan, tap the new status, and the job board updates for everyone in real time.",
+    title: "Motor job tags with QR codes (job number)",
+    detail: "Print a Tag QR from Job Write-Up; it encodes the repair job number. Technicians scan with the mobile app to open the assigned work order for that job—no walking back to a desk to look up an RFQ. Tap status updates and the job board stays current for everyone.",
   },
   {
     title: "Customer's motors registry",
     detail: "Keep a digital record of every motor: serial number, specs, service history, and test results linked to the same motor over time. When a repeat customer sends in a motor, you see past repairs and test data instantly, so you can quote and plan work with full context.",
   },
   {
-    title: "Quotes system and approval tracking",
-    detail: "A full quotes system: build quotes with labor and parts, attach to customers and motors, and send for approval. Track when the customer approves and convert to a work order with one click. Approval status is visible to the whole team, so you know which jobs are confirmed and which are still pending—no more duplicate data or lost follow-ups.",
+    title: "Quotes (RFQs), editing, and invoicing",
+    detail: "Use Quotes to view and edit formal RFQs, manage status, and create invoices. New repair RFQs start from Job Write-Up so they stay linked to the same job number; customer approvals and line items remain visible to the whole team with less duplicate entry.",
   },
   {
     title: "Quote parts from shop inventory",
@@ -34,7 +38,7 @@ const managementFeatures = [
   {
     title: "Technician mobile app (shop-floor first)",
     href: "/technician-mobile-app-shop-floor-first",
-    detail: "Give technicians a dedicated mobile app to run jobs from the floor: scan motor QR tags, open assigned work orders, post live status updates, and record motor testing notes/values as work happens. This is a core workflow advantage—office and floor stay in sync in real time without extra calls, paper notes, or desk-only updates.",
+    detail: "Give technicians a dedicated mobile app to run jobs from the floor: scan Tag QR codes (job number), open assigned work orders, post live status updates, and record motor testing notes/values as work happens. Office and floor stay in sync in real time without extra calls, paper notes, or desk-only updates.",
   },
   {
     title: "Customer database and contacts",
@@ -98,8 +102,8 @@ const leadFeatures = [
     detail: "Top up a lead credit balance; the system deducts credits when a lead is delivered to you. You control spend and budget predictably. When credits are available, you never miss a lead—so you can stay in the flow of new repair opportunities without overcommitting.",
   },
   {
-    title: "Convert leads to customers and work orders",
-    detail: "When you win the job, convert the lead into a customer and a work order in one step. The inquiry, follow-up, and job all live in the same system—no re-entering motor details or customer info into a separate tool. Full history stays in one place for reporting and repeat business.",
+    title: "Convert leads to customers and repair jobs",
+    detail: "When you win the job, convert the lead into a customer and continue in Job Write-Up (and work orders when you are ready). The inquiry, follow-up, and repair record stay in the same system—no re-entering motor details or customer info into a separate tool. Full history stays in one place for reporting and repeat business.",
   },
 ];
 
@@ -129,7 +133,7 @@ export default function HomePage() {
               </h1>
               <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
                 From first lead through cash collection, vendor buying, payables, and sales commissions—one connected
-                workflow instead of scattered spreadsheets and apps. Job board, inventory, invoicing, repair leads,{" "}
+                workflow instead of scattered spreadsheets and apps. Job Write-Up, job board, inventory, invoicing, repair leads,{" "}
                 <Link href="/careers" className="font-medium text-primary hover:underline">
                   hiring
                 </Link>
@@ -154,7 +158,7 @@ export default function HomePage() {
               <ul className="mt-12 flex flex-wrap gap-x-8 gap-y-2 text-sm text-secondary sm:gap-x-10">
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Quotes system & quote-to-delivery
+                  Job Write-Up & quote-to-delivery
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
@@ -195,8 +199,9 @@ export default function HomePage() {
                   {[
                     "Leads",
                     "Customers",
-                    "Quotes",
-                    "Work Order and Motor Testing Data",
+                    "Job Write-Up",
+                    "Quotes (RFQs)",
+                    "Work orders & motor testing data",
                     "Accounts receivable",
                     "Vendor PO",
                     "Accounts payable",
@@ -222,9 +227,9 @@ export default function HomePage() {
                     Mobile App For Technician on the floor
                   </Link>
                   <p className="mt-2 text-sm text-secondary">
-                    Give technicians mobile access to assigned jobs on the shop floor. They can scan motor QR tags,
-                    update work status in real time, and add testing notes without going back to a desk. This keeps the
-                    office and floor synced throughout the repair process.
+                    Give technicians mobile access to assigned jobs on the shop floor. They scan Tag QR codes that carry
+                    the repair job number, open the right work order, update status in real time, and add testing notes
+                    without going back to a desk—keeping office and floor synced throughout the repair process.
                   </p>
                 </div>
                 <p className="mt-6 text-center text-sm text-secondary">
@@ -256,7 +261,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">One place for every job</h3>
               <p className="mt-2 text-sm text-secondary">
-                From quote to delivery you keep a single job record—no re-entering motor details, re-typing specs, or chasing paper between center and office. Everyone sees the same status and history, so handoffs are smooth and nothing falls through the cracks.
+                From intake on Job Write-Up through quote approval and delivery you keep a single job record—no re-entering motor details, re-typing specs, or chasing paper between center and office. Everyone sees the same job number, status, and history, so handoffs are smooth and nothing falls through the cracks.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
@@ -265,7 +270,7 @@ export default function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
               </span>
-              <h3 className="mt-4 font-semibold text-title"> Floor and office in sync</h3>
+              <h3 className="mt-4 font-semibold text-title">Floor and office in sync</h3>
               <p className="mt-2 text-sm text-secondary">
                 Technicians update status from the floor using mobile app; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is—the system stays current so scheduling and customer updates are accurate.
               </p>
@@ -335,7 +340,7 @@ export default function HomePage() {
               Motor repair workflow
             </h3>
             <p className="mt-3 max-w-2xl text-secondary">
-              Track every job from the moment it arrives to delivery. Use the quotes system to build and send quotes, then create work orders from approved quotes and move jobs across the center floor board. Technicians update status via motor tags and mobile—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
+              Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
             </p>
             <ul className="mt-8 space-y-6">
               {workflowFeatures.map((item) => (
@@ -375,7 +380,7 @@ export default function HomePage() {
               Job management tools
             </h3>
             <p className="mt-3 max-w-2xl text-secondary">
-              One system for customers, the quotes system, invoicing, vendors, shop inventory, and logistics. Create invoices from completed work orders, track payments, manage parts on hand and reservations, and handle receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, stock, and physical flow in sync without leaving the platform.
+              One system for customers, Job Write-Up, Quotes, invoicing, vendors, shop inventory, and logistics. Create invoices from completed work orders, track payments, manage parts on hand and reservations, and handle receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, stock, and physical flow in sync without leaving the platform.
             </p>
             <ul className="mt-8 space-y-6">
               {managementFeatures.map((item) => (
@@ -406,7 +411,7 @@ export default function HomePage() {
               Lead generation network
             </h3>
             <p className="mt-3 max-w-2xl text-secondary">
-              Get repair inquiries from the MotorsWinding.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and work orders—so new jobs flow into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
+              Get repair inquiries from the MotorsWinding.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up—so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
             </p>
             <ul className="mt-8 space-y-6">
               {leadFeatures.map((item) => (

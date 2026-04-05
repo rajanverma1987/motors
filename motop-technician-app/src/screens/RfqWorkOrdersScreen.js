@@ -9,70 +9,40 @@ import {
   RefreshControl,
 } from "react-native";
 import { useTechAuth } from "../TechAuthContext";
-import { techFetch, getApiBase } from "../api";
+import { techFetch } from "../api";
 import { colors, spacing } from "../theme";
 
 export default function RfqWorkOrdersScreen({ route, navigation }) {
-  const { rfq, serial } = route.params || {};
+  const { jobNumber, serial } = route.params || {};
   const { token } = useTechAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [quote, setQuote] = useState(null);
   const [jobInfo, setJobInfo] = useState(null);
-  const [lookupKind, setLookupKind] = useState("rfq");
   const [motorInfo, setMotorInfo] = useState(null);
   const [rows, setRows] = useState([]);
 
-  const mode = serial ? "serial" : "rfq";
+  const mode = serial ? "serial" : "job";
 
   const load = useCallback(async () => {
     if (!token) return;
     if (mode === "serial") {
       const s = String(serial || "").trim();
-      if (!s) return;
+      if (!s) throw new Error("Serial number required");
       const path = `/api/tech/motor-serial/${encodeURIComponent(s)}/work-orders`;
       const data = await techFetch(path, { token });
-      setLookupKind("serial");
-      setQuote(null);
       setJobInfo(null);
       setMotorInfo(data.motor || null);
       setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
       return;
     }
-    const r = String(rfq || "").trim();
-    if (!r) return;
-    const base = getApiBase();
-    const headers = {
-      Accept: "application/json",
-      Authorization: `Bearer ${token}`,
-    };
-    const jRes = await fetch(`${base}/api/tech/job/${encodeURIComponent(r)}/work-orders`, { headers });
-    const jText = await jRes.text();
-    let jData = {};
-    try {
-      jData = jText ? JSON.parse(jText) : {};
-    } catch {
-      jData = { error: jText || "Invalid response" };
-    }
-    if (jRes.ok) {
-      setLookupKind("job");
-      setJobInfo(jData.job || null);
-      setQuote(null);
-      setMotorInfo(null);
-      setRows(Array.isArray(jData.workOrders) ? jData.workOrders : []);
-      return;
-    }
-    if (jRes.status !== 404) {
-      throw new Error(jData.error || "Failed to load");
-    }
-    const data = await techFetch(`/api/tech/rfq/${encodeURIComponent(r)}/work-orders`, { token });
-    setLookupKind("rfq");
-    setJobInfo(null);
-    setQuote(data.quote || null);
+    const r = String(jobNumber || "").trim();
+    if (!r) throw new Error("Job number required");
+    const jData = await techFetch(`/api/tech/job/${encodeURIComponent(r)}/work-orders`, { token });
+    setJobInfo(jData.job || null);
     setMotorInfo(null);
-    setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
-  }, [token, mode, rfq, serial]);
+    setRows(Array.isArray(jData.workOrders) ? jData.workOrders : []);
+  }, [token, mode, jobNumber, serial]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,9 +97,7 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
   const emptyMessage =
     mode === "serial"
       ? "No open work orders assigned to you for this motor."
-      : lookupKind === "job"
-        ? "No work orders assigned to you for this job."
-        : "No work orders assigned to you for this RFQ.";
+      : "No work orders assigned to you for this job.";
 
   return (
     <View style={styles.container}>
@@ -150,20 +118,12 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
             ) : null}
             <Text style={styles.openHint}>Only open (active) work orders are listed.</Text>
           </>
-        ) : lookupKind === "job" ? (
-          <>
-            <Text style={styles.rfqLabel}>Job</Text>
-            <Text style={styles.rfqValue}>{jobInfo?.jobNumber || rfq}</Text>
-            {jobInfo?.phase ? (
-              <Text style={styles.quoteStatus}>Phase: {jobInfo.phase}</Text>
-            ) : null}
-          </>
         ) : (
           <>
-            <Text style={styles.rfqLabel}>RFQ</Text>
-            <Text style={styles.rfqValue}>{quote?.rfqNumber || rfq}</Text>
-            {quote?.status ? (
-              <Text style={styles.quoteStatus}>Quote: {quote.status}</Text>
+            <Text style={styles.rfqLabel}>Job</Text>
+            <Text style={styles.rfqValue}>{jobInfo?.jobNumber || jobNumber}</Text>
+            {jobInfo?.phase ? (
+              <Text style={styles.quoteStatus}>Phase: {jobInfo.phase}</Text>
             ) : null}
           </>
         )}
