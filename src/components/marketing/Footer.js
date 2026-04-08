@@ -5,7 +5,7 @@ const footerLinks = {
   "For repair shops": [
     { href: "/usa/motor-repair-business-listing", label: "USA — list + CRM (SEO hub)" },
     { href: "/careers", label: "Careers — hire technicians (public job posts)" },
-    { href: "/blog", label: "Shop owner blog" },
+    { href: "/blog", label: "Blog — shop guides & calculators" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-marketplace", label: "Marketplace for shops" },
     { href: "/list-your-electric-motor-services", label: "List your center" },
@@ -25,6 +25,7 @@ const footerLinks = {
     { href: "/cost-of-motor-repair-and-rewinding", label: "Repair costs" },
   ],
   Company: [
+    { href: "/blog", label: "Blog" },
     { href: "/#features", label: "Features & inventory" },
     { href: "/careers", label: "Careers & job postings" },
     { href: "/pricing", label: "Pricing" },

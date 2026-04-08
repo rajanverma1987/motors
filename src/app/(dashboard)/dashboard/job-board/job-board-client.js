@@ -201,7 +201,7 @@ export default function JobBoardClient({
     <div className={rootClass}>
       <div className="mb-4 shrink-0 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-title">
             Shop floor job board
           </h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-secondary">

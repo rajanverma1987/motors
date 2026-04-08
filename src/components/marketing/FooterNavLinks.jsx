@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_LINKS = [
+  { href: "/blog", label: "Blog" },
   { href: "/marketplace", label: "Marketplace" },
   { href: "/motor-repair-marketplace", label: "For shops" },
   { href: "/careers", label: "Careers" },
@@ -12,6 +13,7 @@ const NAV_LINKS = [
 function navLinkClass(pathname, href) {
   const active =
     pathname === href ||
+    (href === "/blog" && pathname.startsWith("/blog")) ||
     (href === "/marketplace" && pathname.startsWith("/marketplace/")) ||
     (href === "/motor-repair-marketplace" && pathname.startsWith("/motor-repair-marketplace")) ||
     (href === "/careers" && pathname.startsWith("/careers"));
@@ -25,7 +27,7 @@ export default function FooterNavLinks() {
   return (
     <nav
       className="flex flex-wrap items-center justify-center gap-1"
-      aria-label="Marketplace, shops, careers, and job postings"
+      aria-label="Blog, marketplace, shops, and careers"
     >
       {NAV_LINKS.map(({ href, label }) => (
         <Link key={href} href={href} className={navLinkClass(pathname, href)}>

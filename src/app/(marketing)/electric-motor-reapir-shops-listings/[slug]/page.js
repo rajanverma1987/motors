@@ -13,12 +13,8 @@ import {
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 import ListingDetailFaqSection from "./listing-detail-faq-section";
-import {
-  ListingHeroImage,
-  ListingInlineLogo,
-  ListingLogoImage,
-  ListingGalleryThumb,
-} from "@/components/listings/listing-optimized-images";
+import ListingGalleryLightbox from "./listing-gallery-lightbox";
+import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
@@ -493,16 +489,8 @@ export default async function ListingDetailPage({ params }) {
                   {gallery.length > 0 && (
                     <div>
                       <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Gallery</h3>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                        {gallery.map((url, i) => (
-                          <div
-                            key={i}
-                            className="relative aspect-square overflow-hidden rounded-lg border border-border bg-muted/30"
-                          >
-                            <ListingGalleryThumb src={url} />
-                          </div>
-                        ))}
-                      </div>
+                      <p className="mb-3 text-xs text-secondary">Click a photo to view it larger. Use Previous / Next or arrow keys to move between images.</p>
+                      <ListingGalleryLightbox urls={gallery} companyName={listing.companyName} />
                     </div>
                   )}
                 </div>

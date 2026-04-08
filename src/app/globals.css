@@ -28,9 +28,9 @@ html.dark {
   --bg: 22 14% 7%;
   --card: 24 12% 12%;
   --form-bg: 23 11% 10%;
-  /* Body: warm off-white (easier long sessions than pure #fff-tint) */
-  --text: 35 12% 86%;
-  --title: 40 20% 96%;
+  /* Body / headings: warm gray (softer than near-white for long dark-mode reading) */
+  --text: 34 9% 78%;
+  --title: 36 11% 88%;
   /* Copper: saturated enough to pop, light enough for AA on buttons */
   --primary: 27 62% 52%;
   /* Muted labels / hints — visible on 7% bg without competing with body */
@@ -81,8 +81,8 @@ html:not(.dark) .job-board-status-pill {
   -webkit-text-fill-color: #000000;
 }
 html.dark .job-board-status-pill {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff;
+  color: hsl(var(--title)) !important;
+  -webkit-text-fill-color: hsl(var(--title));
 }
 
 /* Tabular numbers for tables (aligns numbers in columns) */

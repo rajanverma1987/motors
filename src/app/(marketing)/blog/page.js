@@ -15,6 +15,18 @@ export const metadata = {
 
 const POSTS = [
   {
+    href: "/blog/electric-motor-calculators-fla-torque-speed-power",
+    title: "Electric motor calculators: FLA, torque, speed & bench electrical",
+    excerpt:
+      "What each dashboard tool does—HP↔kW, estimated FLA, synchronous speed, belt/pulley RPM, torque, Ohm’s law, Δ↔Y—and when shops use them.",
+  },
+  {
+    href: "/blog/motor-rewinding-cm-best-match-calculator-guide",
+    title: "CM Best Match calculator for motor rewinding",
+    excerpt:
+      "Circular mils explained, how catalog-backed CM matching works, match bands, printing for the bench, and what still needs engineering sign-off.",
+  },
+  {
     href: "/blog/how-to-get-more-customers-for-motor-repair-shop",
     title: "How to get more customers for a motor repair shop",
     excerpt: "Directory presence, response speed, and proof of capability—what actually moves the needle.",
