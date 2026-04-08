@@ -4,8 +4,15 @@ import { getPublicListings, resolvePublicListingFromSlugParam } from "@/lib/list
 import { getListingReviewStats } from "@/lib/reviews-public";
 import { getLocationPageForArea } from "@/lib/location-pages-public";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import {
+  buildListingDetailFaqs,
+  buildListingDetailJsonLdGraph,
+  listingAssetAbsoluteUrl,
+} from "@/lib/listing-detail-seo";
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
+import ListingDetailFaqSection from "./listing-detail-faq-section";
 import {
   ListingHeroImage,
   ListingInlineLogo,
@@ -92,8 +99,13 @@ export async function generateMetadata({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
   const { listing } = await resolvePublicListingFromSlugParam(slug);
-  if (!listing) return { title: "Repair center not found" };
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com").replace(/\/$/, "");
+  if (!listing) {
+    return {
+      title: "Repair center not found",
+      robots: { index: false, follow: true },
+    };
+  }
+  const siteUrl = getPublicSiteUrl().replace(/\/$/, "");
   const canonicalSlug = getListingPublicPathSegment(listing);
   const canonicalUrl = `${siteUrl}/electric-motor-reapir-shops-listings/${canonicalSlug}`;
 
@@ -134,11 +146,7 @@ export async function generateMetadata({ params }) {
   const logoUrl = String(listing.logoUrl || "").trim();
   const firstGallery = Array.isArray(listing.galleryPhotoUrls) ? listing.galleryPhotoUrls.find(Boolean) : "";
   const imageCandidate = logoUrl || firstGallery || "";
-  const ogImage = imageCandidate
-    ? imageCandidate.startsWith("http")
-      ? imageCandidate
-      : `${siteUrl}${imageCandidate.startsWith("/") ? imageCandidate : `/${imageCandidate}`}`
-    : null;
+  const ogImage = imageCandidate ? listingAssetAbsoluteUrl(siteUrl, imageCandidate) : null;
 
   const keywordSet = new Set([
     "electric motor repair",
@@ -156,12 +164,15 @@ export async function generateMetadata({ params }) {
     description,
     keywords: [...keywordSet],
     alternates: { canonical: canonicalUrl },
+    robots: { index: true, follow: true },
     openGraph: {
       title,
       description,
       type: "website",
       url: canonicalUrl,
-      images: ogImage ? [{ url: ogImage }] : undefined,
+      siteName: "MotorsWinding.com",
+      locale: "en_US",
+      images: ogImage ? [{ url: ogImage, alt: `${listing.companyName} — electric motor repair` }] : undefined,
     },
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
@@ -213,8 +224,57 @@ export default async function ListingDetailPage({ params }) {
 
   const listingForClient = toClientListingProps(listing);
 
+  const serviceBits = [
+    ...formatListAsReadableArray(listing.services),
+    ...formatListAsReadableArray(listing.motorCapabilities),
+    ...formatListAsReadableArray(listing.equipmentTesting).slice(0, 4),
+  ].filter(Boolean);
+  const servicesPreview = [...new Set(serviceBits)].slice(0, 18).join(", ");
+
+  const regionParts = [
+    listing.serviceRadiusMiles && `${String(listing.serviceRadiusMiles).trim()}-mile service radius`,
+    listing.statesServed && String(listing.statesServed).trim(),
+    listing.citiesOrMetrosServed && String(listing.citiesOrMetrosServed).trim(),
+    listing.areaCoveredFrom && String(listing.areaCoveredFrom).trim(),
+    listing.serviceZipCode && `ZIP ${String(listing.serviceZipCode).trim()}`,
+  ].filter(Boolean);
+  const companyNameTrim = String(listing.companyName || "This shop").trim();
+  const regionLine = regionParts.length
+    ? `${companyNameTrim} serves customers across ${regionParts.slice(0, 5).join("; ")}.`
+    : "";
+
+  const addressLine = fullAddress.length ? fullAddress.join(", ") : "";
+
+  const siteBase = getPublicSiteUrl().replace(/\/$/, "");
+  const faqs = buildListingDetailFaqs(
+    listing,
+    {
+      locationLine: location,
+      addressLine,
+      servicesPreview,
+      regionLine,
+    },
+    siteBase
+  );
+
+  const pageCanonicalUrl = `${siteBase}/electric-motor-reapir-shops-listings/${canonicalSlug}`;
+  const jsonLd = buildListingDetailJsonLdGraph({
+    listing,
+    canonicalUrl: pageCanonicalUrl,
+    siteBase,
+    reviewStats,
+    faqs,
+  });
+
   return (
     <>
+      <script
+        id="listing-directory-jsonld"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
       <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
         <Link
           href="/electric-motor-reapir-shops-listings"
@@ -450,6 +510,7 @@ export default async function ListingDetailPage({ params }) {
             )}
           </div>
         </div>
+        <ListingDetailFaqSection items={faqs} />
           </div>
           <div className="lg:sticky lg:top-8">
             <ListingReviewsSidebar
