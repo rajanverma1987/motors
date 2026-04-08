@@ -11,6 +11,10 @@ import { ensureLocationPageForArea } from "@/lib/location-pages-public";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
+import {
+  computeListingDirectoryScore,
+  mergeListingForDirectoryScore,
+} from "@/lib/listing-directory-score";
 
 export async function GET(request, context) {
   try {
@@ -157,6 +161,13 @@ export async function PATCH(request, context) {
         listing: { ...current, id: current._id.toString(), _id: undefined },
       });
     }
+
+    const existing = await Listing.findById(id).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const merged = mergeListingForDirectoryScore(existing, set);
+    set.directoryScore = computeListingDirectoryScore(merged);
 
     const saved = await Listing.findByIdAndUpdate(
       id,

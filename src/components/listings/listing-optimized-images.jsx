@@ -101,6 +101,40 @@ export function ListingInlineLogo({ src }) {
   );
 }
 
+/** Directory grid card: small logo in a rounded rectangle (object-contain). */
+export function ListingDirectoryCardLogo({ src, alt = "", priority = false }) {
+  const normalized = getListingImageSrc(src);
+  if (!normalized) return null;
+
+  const inner = "max-h-full max-w-full object-contain object-center p-1.5";
+
+  if (isRemoteImageUrl(normalized)) {
+    return (
+      <img
+        src={normalized}
+        alt={alt}
+        className={inner}
+        loading={priority ? "eager" : "lazy"}
+        decoding="async"
+        fetchPriority={priority ? "high" : "low"}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={normalized}
+      alt={alt}
+      width={64}
+      height={64}
+      className={inner}
+      sizes="64px"
+      priority={priority}
+      quality={85}
+    />
+  );
+}
+
 /** Company logo block — bounded box, contain. */
 export function ListingLogoImage({ src, alt = "Company logo" }) {
   const normalized = getListingImageSrc(src);

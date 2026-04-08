@@ -7,6 +7,10 @@ import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation"
 import { sendNewListingSubmittedToAdmin } from "@/lib/email";
 import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
+import {
+  computeListingDirectoryScore,
+  mergeListingForDirectoryScore,
+} from "@/lib/listing-directory-score";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -314,6 +318,13 @@ export async function PATCH(request) {
       const current = await Listing.findById(id).lean();
       return NextResponse.json({ ok: true, listing: serializeListing(current) });
     }
+
+    const existing = await Listing.findById(id).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const merged = mergeListingForDirectoryScore(existing, set);
+    set.directoryScore = computeListingDirectoryScore(merged);
 
     const saved = await Listing.findByIdAndUpdate(
       id,

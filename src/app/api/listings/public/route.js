@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { filterListingsByLocation } from "@/lib/location-filter";
+import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
 
 export async function GET(request) {
   try {
@@ -11,8 +12,9 @@ export async function GET(request) {
     const zip = searchParams.get("zip") || "";
 
     await connectDB();
+    await ensureApprovedListingsHaveUrlSlug();
     const list = await Listing.find({ status: "approved" })
-      .sort({ companyName: 1 })
+      .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
       .lean();
     const withId = list.map((l) => {
       const { isSeed, _id, ...rest } = l;

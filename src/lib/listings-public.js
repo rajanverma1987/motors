@@ -8,7 +8,7 @@ export async function getPublicListings() {
   await connectDB();
   await ensureApprovedListingsHaveUrlSlug();
   const list = await Listing.find({ status: "approved" })
-    .sort({ companyName: 1 })
+    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
     .lean();
   return list.map((l) => ({
     ...l,

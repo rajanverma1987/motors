@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { computeListingDirectoryScore } from "@/lib/listing-directory-score";
 
 const listingSchema = new mongoose.Schema(
   {
@@ -50,12 +51,24 @@ const listingSchema = new mongoose.Schema(
     isSeed: { type: Boolean, default: false },
     /** Public directory URL segment (no Mongo id): e.g. clearwater-electric-motor-repair-llc */
     urlSlug: { type: String, default: "" },
+    /** Profile completeness for directory sort (services, capacity, capabilities, coverage). */
+    directoryScore: { type: Number, default: 0 },
     /** Portal User created via Admin → Onboard to CRM */
     crmUserId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     crmOnboardedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
+
+listingSchema.pre("save", function listingDirectoryScorePreSave(next) {
+  try {
+    const plain = this.toObject({ depopulate: true });
+    this.directoryScore = computeListingDirectoryScore(plain);
+  } catch {
+    this.directoryScore = 0;
+  }
+  next();
+});
 
 listingSchema.index(
   { urlSlug: 1 },
@@ -67,5 +80,6 @@ listingSchema.index(
 listingSchema.index({ status: 1, submittedAt: -1 });
 listingSchema.index({ status: 1 });
 listingSchema.index({ companyName: 1 });
+listingSchema.index({ status: 1, directoryScore: -1, companyName: 1 });
 
 export default mongoose.models.Listing || mongoose.model("Listing", listingSchema);

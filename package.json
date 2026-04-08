@@ -10,7 +10,8 @@
     "start": "next start -p 5066",
     "lint": "eslint",
     "sitemap": "node scripts/generate-sitemap.js",
-    "git": "node scripts/git-push.js"
+    "git": "node scripts/git-push.js",
+    "backfill:listing-scores": "node scripts/backfill-listing-directory-scores.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

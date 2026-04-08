@@ -31,7 +31,7 @@ export function getRepairFlowWorkOrderToolbarState(job, quotes) {
   let createWorkOrderDisabledTitle = "";
   if (!hasFinalLink) {
     createWorkOrderDisabledTitle =
-      "Set a primary final quote on this job before creating a work order.";
+      "No approved  final quote found on this job.";
   } else if (!hasCrmQuote) {
     createWorkOrderDisabledTitle =
       "Set a primary final quote on this job (RFQ) before creating a work order.";

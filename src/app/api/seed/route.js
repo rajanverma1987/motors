@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { computeListingDirectoryScore } from "@/lib/listing-directory-score";
 
 const SEED_LISTINGS = [
   { companyName: "Houston Motor Rewind Co", city: "Houston", state: "Texas", zipCode: "77001", email: "contact@houstonmotorrewind.com", phone: "713-555-0101", serviceZipCode: "77001", statesServed: "Texas", areaCoveredFrom: "Greater Houston, Gulf Coast" },
@@ -58,6 +59,18 @@ export async function POST(request) {
     const inserted = await Listing.insertMany(
       SEED_LISTINGS.map((s) => ({ ...base, ...s, address: `123 Industrial Blvd, ${s.city}, ${s.state} ${s.zipCode}` }))
     );
+    if (inserted.length) {
+      const ops = inserted.map((doc) => {
+        const plain = typeof doc.toObject === "function" ? doc.toObject() : { ...doc };
+        return {
+          updateOne: {
+            filter: { _id: doc._id },
+            update: { $set: { directoryScore: computeListingDirectoryScore(plain) } },
+          },
+        };
+      });
+      await Listing.bulkWrite(ops, { ordered: false });
+    }
     return NextResponse.json({ ok: true, count: inserted.length });
   } catch (err) {
     console.error("Seed error:", err);
