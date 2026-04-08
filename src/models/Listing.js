@@ -60,14 +60,14 @@ const listingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-listingSchema.pre("save", function listingDirectoryScorePreSave(next) {
+// Mongoose 9+: pre("save") no longer receives next(); use sync or async/Promise only.
+listingSchema.pre("save", function listingDirectoryScorePreSave() {
   try {
     const plain = this.toObject({ depopulate: true });
     this.directoryScore = computeListingDirectoryScore(plain);
   } catch {
     this.directoryScore = 0;
   }
-  next();
 });
 
 listingSchema.index(
