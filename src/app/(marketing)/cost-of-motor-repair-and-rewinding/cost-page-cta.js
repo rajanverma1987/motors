@@ -1,22 +1,17 @@
-"use client";
+import Link from "next/link";
 
-import { useState } from "react";
-import Button from "@/components/ui/button";
-import LeadFormModal from "@/components/lead-form-modal";
+const CALCULATOR_HREF = "/electric-motor-rewinding-cost-calculator";
+
+const btnClass =
+  "inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-md bg-primary text-white transition-opacity hover:opacity-90";
 
 export default function CostPageCta({ compact = false }) {
-  const [leadFormOpen, setLeadFormOpen] = useState(false);
   return (
-    <>
-      <Button
-        variant="primary"
-        size={compact ? "sm" : "lg"}
-        onClick={() => setLeadFormOpen(true)}
-        className={compact ? "!text-xs w-full" : ""}
-      >
-        {compact ? "Request quote" : "Contact / Request quote"}
-      </Button>
-      <LeadFormModal open={leadFormOpen} onClose={() => setLeadFormOpen(false)} listing={null} />
-    </>
+    <Link
+      href={CALCULATOR_HREF}
+      className={`${btnClass} ${compact ? "px-3 py-1 text-sm" : "px-6 py-3 text-lg"}`}
+    >
+      Calculate Cost yourself
+    </Link>
   );
 }

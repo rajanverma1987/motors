@@ -101,8 +101,8 @@ export default function CostOfMotorRepairPage() {
         description="Electric motor repair and rewinding costs depend on motor size, type of work, and condition. This guide explains what drives price in the US, typical ballpark ranges, how to compare quotes, and where to find qualified centers—without replacing advice from your shop."
         breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
         canonicalPath={path}
-        sidebarTitle="Get a quote"
-        sidebarDescription="Tell us about your motor and location. We can connect you with repair centers that quote rewinds, repairs, and emergency work."
+        sidebarTitle="Calculate rewinding cost"
+        sidebarDescription="Use our ballpark calculator for rewind pricing, then request quotes from winding shops in your area."
         sidebarCta={<CostPageCta />}
       >
         <article className="prose prose-neutral dark:prose-invert max-w-none">
@@ -121,6 +121,10 @@ export default function CostOfMotorRepairPage() {
             , and{" "}
             <Link href="/contact" className="text-primary font-medium hover:underline">
               quote request
+            </Link>
+            . You can also use our{" "}
+            <Link href="/electric-motor-rewinding-cost-calculator" className="text-primary font-medium hover:underline">
+              rewinding cost calculator
             </Link>{" "}
             to move from ballpark numbers to a real estimate.
           </p>

@@ -7,7 +7,10 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
-import { sendNewWebsiteLeadNotificationToShop } from "@/lib/email";
+import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
+import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
+import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
+import { buildRewindCalculatorPdfBuffer } from "@/lib/motor-rewind-cost/build-calculator-pdf";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "lead", 20);
@@ -32,6 +35,7 @@ export async function POST(request) {
       problemDescription,
       urgencyLevel,
       motorPhotos,
+      calculatorContext: rawCalculatorContext,
     } = body;
     if (!name || !email) {
       return NextResponse.json(
@@ -73,18 +77,47 @@ export async function POST(request) {
       };
     }
 
+    const sanitizedCalc = sanitizeCalculatorContext(rawCalculatorContext);
+    let serverBreakdown = null;
+    let problemOut = clampString(problemDescription, LIMITS.message.max);
+    let messageOut = clampString(message, LIMITS.message.max);
+    if (sanitizedCalc) {
+      try {
+        const calcInput = {
+          ...sanitizedCalc.form,
+          slots: Number(sanitizedCalc.form.slots),
+          voltage: Number(sanitizedCalc.form.voltage),
+        };
+        const bd = computeCustomerRewindBallpark(calcInput);
+        const prefix = `[Rewind calculator ballpark ≈ $${bd.ballparkTotal} USD; equiv. ${bd.motorHp} HP]\n\n`;
+        problemOut = clampString(`${prefix}${(problemDescription || "").trim()}`, LIMITS.message.max);
+        messageOut = clampString(
+          JSON.stringify({
+            source: "rewind-calculator",
+            ballparkUsd: bd.ballparkTotal,
+            motorHp: bd.motorHp,
+            page: sanitizedCalc.sourcePage || "",
+          }),
+          LIMITS.message.max,
+        );
+        serverBreakdown = bd;
+      } catch (e) {
+        console.warn("Calculator context recompute failed:", e);
+      }
+    }
+
     const doc = await Lead.create({
       name: clampString(name, LIMITS.name.max),
       email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
       phone: clampString(phone, 30),
-      message: clampString(message, LIMITS.message.max),
+      message: messageOut,
       company: clampString(company, LIMITS.companyName.max),
       city: clampString(city, LIMITS.city.max),
       zipCode: clampString(zipCode, LIMITS.zip.max),
       motorType: clampString(motorType, LIMITS.shortText.max),
       motorHp: clampString(motorHp, LIMITS.shortText.max),
       voltage: clampString(voltage, LIMITS.shortText.max),
-      problemDescription: clampString(problemDescription, LIMITS.message.max),
+      problemDescription: problemOut,
       urgencyLevel: clampString(urgencyLevel, LIMITS.shortText.max),
       motorPhotos: clampArray(motorPhotos, 20),
       sourceListingId: clampString(sourceListingId, 50),
@@ -103,6 +136,41 @@ export async function POST(request) {
         });
       } catch (e) {
         console.warn("Notify listing shop of new lead email failed:", e);
+      }
+    }
+
+    if (sanitizedCalc && serverBreakdown) {
+      try {
+        const pdfBuffer = await buildRewindCalculatorPdfBuffer({
+          form: sanitizedCalc.form,
+          breakdown: serverBreakdown,
+        });
+        const esc = (v) =>
+          v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const rows = [
+          ["Equiv. HP", serverBreakdown.motorHp],
+          ["Copper & wire (est.)", `$${serverBreakdown.copperCost}`],
+          ["Insulation / varnish (est.)", `$${serverBreakdown.materialCost}`],
+          ["Labor band (est.)", `$${serverBreakdown.laborUsd}`],
+          ["Ballpark total (USD)", `$${serverBreakdown.ballparkTotal}`],
+        ]
+          .map(
+            ([a, b]) =>
+              `<tr><td style="padding:6px 10px;border:1px solid #ddd;font-weight:600;">${esc(a)}</td><td style="padding:6px 10px;border:1px solid #ddd;">${esc(b)}</td></tr>`,
+          )
+          .join("");
+        await sendRewindCalculatorRfqToAdmin({
+          leadName: doc.name,
+          leadEmail: doc.email,
+          leadPhone: doc.phone,
+          leadCity: doc.city,
+          leadZip: doc.zipCode,
+          problemDescription: doc.problemDescription,
+          htmlRows: rows,
+          pdfBuffer,
+        });
+      } catch (e) {
+        console.warn("Rewind calculator RFQ admin email failed:", e);
       }
     }
 

@@ -17,6 +17,8 @@ export default function BlogPageLayout({
   sidebarDescription,
   sidebarCta,
   canonicalPath,
+  /** Optional full-width block above the main grid (e.g. tools above the sticky quote CTA). */
+  topContent,
   children,
 }) {
   const articleUrl = canonicalPath ? `${siteUrl.replace(/\/$/, "")}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}` : null;
@@ -76,6 +78,7 @@ export default function BlogPageLayout({
       </section>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        {topContent ? <div className="pt-10 sm:pt-12 md:pt-14">{topContent}</div> : null}
         {/* ~65% content | ~35% CTA on md+ */}
         <div className="grid grid-cols-1 gap-8 py-12 sm:py-16 md:grid-cols-[13fr_7fr]">
           {/* Mobile CTA - above content, only on small screens */}

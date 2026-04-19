@@ -42,6 +42,49 @@ export async function sendNewReviewNotification(to, companyName, reviewerName, r
   return sendEmail(to, subject, html);
 }
 
+/** Rewind calculator RFQ + PDF — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
+const rewindCalculatorRfqEmail = () =>
+  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@MotorsWinding.com";
+
+/**
+ * Notify MotorsWinding when a visitor submits an RFQ after using the public rewind ballpark calculator.
+ * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string, pdfBuffer?: Buffer }} params
+ */
+export async function sendRewindCalculatorRfqToAdmin(params) {
+  const to = rewindCalculatorRfqEmail();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subject = "Rewind calculator RFQ — MotorsWinding.com";
+  const html = `
+    <p>A visitor used the <strong>electric motor rewinding cost calculator</strong> and requested quotes from shops in their area.</p>
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Name</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadName)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadEmail)}</td></tr>
+        ${params.leadPhone ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Phone</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadPhone)}</td></tr>` : ""}
+        ${params.leadCity ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">City</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadCity)}</td></tr>` : ""}
+        ${params.leadZip ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">ZIP</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadZip)}</td></tr>` : ""}
+      </tbody>
+    </table>
+    <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
+    <table style="border-collapse:collapse;">${params.htmlRows}</table>
+    ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
+    <p style="margin-top:20px;font-size:12px;color:#555;">PDF attachment: ballpark breakdown from the calculator at submit time.</p>
+    <p>— MotorsWinding.com (automated)</p>
+  `;
+  const attachments =
+    params.pdfBuffer && Buffer.isBuffer(params.pdfBuffer) && params.pdfBuffer.length
+      ? [
+          {
+            filename: "rewind-calculator-ballpark.pdf",
+            content: params.pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ]
+      : undefined;
+  return sendEmail(to, subject, html, { attachments });
+}
+
 /** Notify contact@MotorsWinding.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
   const to = "contact@MotorsWinding.com";

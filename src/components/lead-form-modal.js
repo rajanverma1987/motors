@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -30,11 +30,28 @@ const INITIAL_FORM = {
   urgencyLevel: "",
 };
 
-export default function LeadFormModal({ open, onClose, listing = null }) {
+export default function LeadFormModal({
+  open,
+  onClose,
+  listing = null,
+  prefill = null,
+  introTextOverride = null,
+  calculatorFormSnapshot = null,
+  calculatorSourcePage = "",
+}) {
   const [form, setForm] = useState(INITIAL_FORM);
   const [motorPhotoFiles, setMotorPhotoFiles] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  const listingIdStr = listing?.id != null ? String(listing.id).trim() : "";
+
+  useEffect(() => {
+    if (!open) return;
+    setForm({ ...INITIAL_FORM, ...(prefill && typeof prefill === "object" ? prefill : {}) });
+    setSubmitted(false);
+    setMotorPhotoFiles([]);
+  }, [open, prefill]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,6 +66,17 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
         if (!upRes.ok) throw new Error(upData.error || "Photo upload failed");
         motorPhotos = upData.urls || [];
       }
+      const calculatorContext =
+        calculatorFormSnapshot &&
+        typeof calculatorFormSnapshot === "object" &&
+        calculatorSourcePage &&
+        !listingIdStr
+          ? {
+              form: { ...calculatorFormSnapshot },
+              sourcePage: String(calculatorSourcePage).slice(0, 240),
+            }
+          : undefined;
+
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,7 +93,8 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
           problemDescription: form.problemDescription,
           urgencyLevel: form.urgencyLevel,
           motorPhotos,
-          listingId: listing?.id ?? "",
+          listingId: listingIdStr,
+          calculatorContext,
         }),
       });
       const data = await res.json();
@@ -84,11 +113,14 @@ export default function LeadFormModal({ open, onClose, listing = null }) {
     onClose();
     setSubmitted(false);
     setMotorPhotoFiles([]);
+    setForm(INITIAL_FORM);
   };
 
-  const introText = listing
-    ? `Submit your repair requirement. It will be sent to ${listing.companyName}.`
-    : "Submit your repair requirement. We'll match you with repair centers in your area.";
+  const introText =
+    introTextOverride ||
+    (listing
+      ? `Submit your repair requirement. It will be sent to ${listing.companyName}.`
+      : "Submit your repair requirement. We'll match you with repair centers in your area.");
 
   return (
     <Modal
