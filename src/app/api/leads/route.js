@@ -10,7 +10,6 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
-import { buildRewindCalculatorPdfBuffer } from "@/lib/motor-rewind-cost/build-calculator-pdf";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "lead", 20);
@@ -141,10 +140,6 @@ export async function POST(request) {
 
     if (sanitizedCalc && serverBreakdown) {
       try {
-        const pdfBuffer = await buildRewindCalculatorPdfBuffer({
-          form: sanitizedCalc.form,
-          breakdown: serverBreakdown,
-        });
         const esc = (v) =>
           v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         const rows = [
@@ -167,7 +162,6 @@ export async function POST(request) {
           leadZip: doc.zipCode,
           problemDescription: doc.problemDescription,
           htmlRows: rows,
-          pdfBuffer,
         });
       } catch (e) {
         console.warn("Rewind calculator RFQ admin email failed:", e);

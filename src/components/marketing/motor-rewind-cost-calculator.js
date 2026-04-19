@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { FiPrinter } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -202,76 +200,70 @@ function money(n) {
 }
 
 export function buildRewindCalculatorLeadPrefill(form, breakdown) {
-  const hpLine =
+  const phaseLabel = form.phase === "1" ? "Single-phase" : "Three-phase";
+  const coilLabel =
+    form.coilType === "lap"
+      ? "Lap"
+      : form.coilType === "wave"
+        ? "Wave"
+        : form.coilType === "concentric"
+          ? "Concentric"
+          : String(form.coilType || "—");
+
+  const ratingLine =
     form.ratingUnit === "kw"
-      ? `${form.kw || ""} kW (about ${breakdown.motorHp} HP equivalent)`
-      : `${form.hp || ""} HP`;
+      ? `${form.kw || "—"} kW on nameplate (calculator used ~${breakdown.motorHp} HP equivalent for the ballpark)`
+      : `${form.hp || "—"} HP on nameplate`;
+
+  const copperLine =
+    form.manualCuKg && String(form.manualCuKg).trim()
+      ? `• Approximate copper weight (I entered): ${String(form.manualCuKg).trim()} kg\n`
+      : "";
+
+  const problemDescription = `REQUEST — Motor rewinding quotes (MotorsWinding.com calculator)
+
+WHAT I NEED
+Qualified rewind / motor repair shops: please reply with a quote or offer to inspect. Local service or inbound freight is fine if you accept shipped cores.
+
+MOTOR / WINDING (from calculator — verify against nameplate)
+• Rating: ${ratingLine}
+• Phase: ${phaseLabel}
+• Voltage: ${form.voltage || "—"} V | RPM: ${form.rpm || "—"}
+• Slots: ${form.slots} | AWG: ${form.wireGauge} | Coil type: ${coilLabel}
+${copperLine}
+BALLPARK (WEBSITE ONLY — NOT A BINDING QUOTE)
+Calculator planning figure about ${money(breakdown.ballparkTotal)} USD (typical materials + labor band). Final price depends on inspection, core/slot damage, insulation class, varnish/VPI, bearings, balance, electrical tests, rush fees, and your shop rates.
+
+NAMEPLATE / DOCUMENTS
+• I can attach clear nameplate photos using “Motor photos” on this form if that helps your first pass.
+
+PLEASE FILL IN THE LINES BELOW (anything you already know helps)
+• Application (pump, fan, compressor, etc.):
+• Failure / symptoms (trip, smoke, ground, bearings, environment):
+• Frame, enclosure (TEFC/ODP), insulation class if known:
+• Timeline (standard vs rush):
+• Can you quote from photos + nameplate, or must the motor be in your shop first?
+• Service area / willingness to accept shipped motor:
+• Special construction (vertical, explosion-proof, washdown, inverter-duty, etc.) if applicable:
+
+Thanks — I appreciate responses with clear scope, assumptions, and line items (labor, materials, testing, warranty).`;
+
+  const motorHpShort =
+    form.ratingUnit === "kw" ? `${form.kw || ""} kW (~${breakdown.motorHp} HP eq.)` : `${form.hp || ""} HP`;
+
   return {
-    motorHp: hpLine,
+    motorHp: motorHpShort,
     voltage: form.voltage ? `${form.voltage} V` : "",
     motorType: "AC motor rewinding",
-    problemDescription:
-      `I'd like quotes from rewinding shops in my area. ` +
-      `The MotorsWinding ballpark calculator estimated about ${money(breakdown.ballparkTotal)} for this motor.\n\n` +
-      `Details I entered: ${form.phase === "1" ? "Single-phase" : "Three-phase"}, ${form.rpm || "—"} RPM, ${form.slots} stator slots, AWG ${form.wireGauge}, ${form.coilType || "—"} coil.`,
+    problemDescription,
   };
 }
-
-const STYLE_ID = "motor-rewind-customer-print-styles";
-const PRINT_ROOT_CLASS = "motor-rewind-customer-print-root";
-
-function injectPrintStyles() {
-  if (typeof document === "undefined") return () => {};
-  if (document.getElementById(STYLE_ID)) return () => {};
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    @media print {
-      body * { visibility: hidden !important; }
-      .${PRINT_ROOT_CLASS},
-      .${PRINT_ROOT_CLASS} * { visibility: visible !important; }
-      .${PRINT_ROOT_CLASS} {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100% !important;
-        min-height: 100% !important;
-        overflow: visible !important;
-        opacity: 1 !important;
-        background: white !important;
-        color: #111 !important;
-        z-index: 2147483647 !important;
-        padding: 1.5rem !important;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-  return () => {
-    document.getElementById(STYLE_ID)?.remove();
-  };
-}
-
-const OFFSCREEN_STYLE = {
-  position: "fixed",
-  left: "-100vw",
-  top: 0,
-  width: "8.5in",
-  maxWidth: "100vw",
-  opacity: 0,
-  pointerEvents: "none",
-  zIndex: -1,
-  overflow: "hidden",
-};
 
 export default function MotorRewindCostCalculator() {
   const [form, setForm] = useState(defaultForm);
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadPrefill, setLeadPrefill] = useState(null);
-  const [printPayload, setPrintPayload] = useState(null);
-  const cleanupPrintRef = useRef(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- post-mount localStorage restore */
@@ -325,58 +317,8 @@ export default function MotorRewindCostCalculator() {
     setLeadOpen(true);
   }, [form, breakdown]);
 
-  const triggerPrint = useCallback(() => {
-    cleanupPrintRef.current?.();
-    cleanupPrintRef.current = injectPrintStyles();
-    setPrintPayload({ breakdown, form: { ...form }, at: new Date().toISOString() });
-  }, [breakdown, form]);
-
-  useLayoutEffect(() => {
-    if (!printPayload) return undefined;
-    let cancelled = false;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!cancelled) window.print();
-      });
-    });
-    const onAfterPrint = () => {
-      setPrintPayload(null);
-      cleanupPrintRef.current?.();
-      cleanupPrintRef.current = null;
-    };
-    window.addEventListener("afterprint", onAfterPrint);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("afterprint", onAfterPrint);
-    };
-  }, [printPayload]);
-
-  const printSheet =
-    printPayload &&
-    createPortal(
-      <div className={PRINT_ROOT_CLASS} style={OFFSCREEN_STYLE} aria-hidden>
-        <h1 style={{ fontSize: "1.2rem", marginBottom: "0.75rem" }}>Motor rewinding — ballpark estimate</h1>
-        <p style={{ fontSize: "0.8rem", color: "#444" }}>{new Date(printPayload.at).toLocaleString()}</p>
-        <p style={{ marginTop: "1rem", fontSize: "1.35rem", fontWeight: 700 }}>
-          {money(printPayload.breakdown.ballparkTotal)}
-        </p>
-        <p style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>Equiv. HP: {printPayload.breakdown.motorHp}</p>
-        <ul style={{ marginTop: "1rem", fontSize: "0.9rem", lineHeight: 1.6 }}>
-          <li>Copper and wire (est.): {money(printPayload.breakdown.copperCost)}</li>
-          <li>Insulation and varnish (est.): {money(printPayload.breakdown.materialCost)}</li>
-          <li>Typical shop labor band (est.): {money(printPayload.breakdown.laborUsd)}</li>
-        </ul>
-        <p style={{ marginTop: "1.25rem", fontSize: "0.75rem", color: "#666" }}>
-          Non-binding estimate for planning only. Shops quote after inspection.
-        </p>
-      </div>,
-      document.body,
-    );
-
   return (
     <div className="not-prose rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
-      {printSheet}
-
       <div className="border-b border-border pb-4">
         <h1 className="text-xl font-semibold text-title sm:text-2xl">Electric motor rewinding cost calculator</h1>
         <p className="mt-2 text-sm text-secondary">
@@ -477,13 +419,9 @@ export default function MotorRewindCostCalculator() {
           <li>Insulation and varnish (estimate): {money(breakdown.materialCost)}</li>
           <li>Typical labor band (estimate): {money(breakdown.laborUsd)}</li>
         </ul>
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <div className="mt-6">
           <Button type="button" variant="primary" size="lg" className="w-full sm:w-auto" onClick={openQuoteModal}>
             Get a quote from a winding shop in your area
-          </Button>
-          <Button type="button" variant="outline" size="lg" className="w-full gap-1.5 sm:w-auto" onClick={triggerPrint}>
-            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-            Print summary
           </Button>
         </div>
       </div>

@@ -127,7 +127,8 @@ export default function LeadFormModal({
       open={open}
       onClose={handleClose}
       title="Send your requirement"
-      size="4xl"
+      size="7xl"
+      className="max-w-[min(96rem,calc(100vw-2rem))]"
       actions={
         submitted ? null : (
           <Button type="submit" form="lead-form-modal-form" variant="primary" size="sm" disabled={submitting}>
@@ -147,114 +148,119 @@ export default function LeadFormModal({
         <Form id="lead-form-modal-form" onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
           <p className="text-sm text-secondary">{introText}</p>
 
-          <div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-              <Input
-                label="Your name"
-                name="name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                required
-              />
-              <Input
-                label="Company Name"
-                name="company"
-                value={form.company}
-                onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-              />
-              <Input
-                label="Phone"
-                name="phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              />
-              <Input
-                label="Email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                required
-              />
-              <Input
-                label="City / location"
-                name="city"
-                value={form.city}
-                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-              />
-              <Input
-                label="Zip code"
-                name="zipCode"
-                value={form.zipCode}
-                onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
-                placeholder="e.g. 12345"
-              />
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-              Motor details
-            </h3>
-            <div className="grid grid-cols-3 gap-x-4 gap-y-2">
-              <Input
-                label="Motor type"
-                name="motorType"
-                value={form.motorType}
-                onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value }))}
-                placeholder="e.g. AC induction, DC"
-              />
-              <Input
-                label="Motor HP"
-                name="motorHp"
-                value={form.motorHp}
-                onChange={(e) => setForm((f) => ({ ...f, motorHp: e.target.value }))}
-                placeholder="e.g. 50 HP"
-              />
-              <Input
-                label="Voltage"
-                name="voltage"
-                value={form.voltage}
-                onChange={(e) => setForm((f) => ({ ...f, voltage: e.target.value }))}
-                placeholder="e.g. 480V"
-              />
-              <div className="col-span-2">
-                <Select
-                  label="Urgency level"
-                  name="urgencyLevel"
-                  options={URGENCY_OPTIONS}
-                  value={form.urgencyLevel}
-                  onChange={(e) => setForm((f) => ({ ...f, urgencyLevel: e.target.value }))}
-                  searchable={false}
-                />
-              </div>
+          <div className="grid min-h-0 grid-cols-1 items-stretch gap-6 lg:min-h-[min(70vh,36rem)] lg:grid-cols-[minmax(0,1fr)_minmax(18rem,42%)] lg:gap-8">
+            <div className="flex min-h-0 flex-col gap-5 lg:h-full">
               <div>
-                <label className="text-sm text-title">Motor photos (optional)</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  className="mt-1 w-full rounded border border-border bg-card px-3 py-2 text-sm text-text file:mr-2 file:rounded file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:text-white"
-                  onChange={(e) => setMotorPhotoFiles(Array.from(e.target.files || []))}
-                />
-                {motorPhotoFiles.length > 0 && (
-                  <p className="mt-0.5 text-xs text-secondary">{motorPhotoFiles.length} file(s)</p>
-                )}
+                <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+                  <Input
+                    label="Your name"
+                    name="name"
+                    value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    required
+                  />
+                  <Input
+                    label="Company Name"
+                    name="company"
+                    value={form.company}
+                    onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                  />
+                  <Input
+                    label="Phone"
+                    name="phone"
+                    type="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                  />
+                  <Input
+                    label="Email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                    required
+                  />
+                  <Input
+                    label="City / location"
+                    name="city"
+                    value={form.city}
+                    onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
+                  />
+                  <Input
+                    label="Zip code"
+                    name="zipCode"
+                    value={form.zipCode}
+                    onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
+                    placeholder="e.g. 12345"
+                  />
+                </div>
               </div>
-              <div className="col-span-3">
-                <Textarea
-                  label="Problem description"
-                  name="problemDescription"
-                  value={form.problemDescription}
-                  onChange={(e) => setForm((f) => ({ ...f, problemDescription: e.target.value }))}
-                  placeholder="Describe the issue, symptoms, timeline, etc."
-                  rows={3}
-                />
+
+              <div>
+                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+                <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
+                  <Input
+                    label="Motor type"
+                    name="motorType"
+                    value={form.motorType}
+                    onChange={(e) => setForm((f) => ({ ...f, motorType: e.target.value }))}
+                    placeholder="e.g. AC induction, DC"
+                  />
+                  <Input
+                    label="Motor HP"
+                    name="motorHp"
+                    value={form.motorHp}
+                    onChange={(e) => setForm((f) => ({ ...f, motorHp: e.target.value }))}
+                    placeholder="e.g. 50 HP"
+                  />
+                  <Input
+                    label="Voltage"
+                    name="voltage"
+                    value={form.voltage}
+                    onChange={(e) => setForm((f) => ({ ...f, voltage: e.target.value }))}
+                    placeholder="e.g. 480V"
+                  />
+                  <div className="sm:col-span-2 lg:col-span-2">
+                    <Select
+                      label="Urgency level"
+                      name="urgencyLevel"
+                      options={URGENCY_OPTIONS}
+                      value={form.urgencyLevel}
+                      onChange={(e) => setForm((f) => ({ ...f, urgencyLevel: e.target.value }))}
+                      searchable={false}
+                    />
+                  </div>
+                  <div className="sm:col-span-2 lg:col-span-1">
+                    <label className="text-sm text-title">Motor photos (optional)</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="mt-1 w-full rounded border border-border bg-card px-3 py-2 text-sm text-text file:mr-2 file:rounded file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:text-white"
+                      onChange={(e) => setMotorPhotoFiles(Array.from(e.target.files || []))}
+                    />
+                    {motorPhotoFiles.length > 0 && (
+                      <p className="mt-0.5 text-xs text-secondary">{motorPhotoFiles.length} file(s)</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
+            <div className="flex min-h-[min(50vh,22rem)] flex-col border-t border-border pt-6 lg:h-full lg:min-h-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+              <Textarea
+                label="Review and verify your message to shops"
+                help="Read this entire text before you submit. Correct any errors, update nameplate data, and add missing context so repair shops can quote accurately."
+                name="problemDescription"
+                value={form.problemDescription}
+                onChange={(e) => setForm((f) => ({ ...f, problemDescription: e.target.value }))}
+                placeholder="Describe the issue, symptoms, timeline, etc."
+                rows={6}
+                className="flex min-h-0 flex-1 flex-col gap-2"
+                textareaClassName="min-h-[12rem] flex-1 resize-y lg:min-h-0"
+              />
+            </div>
+          </div>
         </Form>
       )}
     </Modal>

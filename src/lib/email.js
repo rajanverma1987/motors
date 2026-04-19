@@ -42,13 +42,13 @@ export async function sendNewReviewNotification(to, companyName, reviewerName, r
   return sendEmail(to, subject, html);
 }
 
-/** Rewind calculator RFQ + PDF — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
+/** Rewind calculator RFQ — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
 const rewindCalculatorRfqEmail = () =>
   process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@MotorsWinding.com";
 
 /**
  * Notify MotorsWinding when a visitor submits an RFQ after using the public rewind ballpark calculator.
- * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string, pdfBuffer?: Buffer }} params
+ * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string }} params
  */
 export async function sendRewindCalculatorRfqToAdmin(params) {
   const to = rewindCalculatorRfqEmail();
@@ -69,20 +69,9 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
     <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
     ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
-    <p style="margin-top:20px;font-size:12px;color:#555;">PDF attachment: ballpark breakdown from the calculator at submit time.</p>
     <p>— MotorsWinding.com (automated)</p>
   `;
-  const attachments =
-    params.pdfBuffer && Buffer.isBuffer(params.pdfBuffer) && params.pdfBuffer.length
-      ? [
-          {
-            filename: "rewind-calculator-ballpark.pdf",
-            content: params.pdfBuffer,
-            contentType: "application/pdf",
-          },
-        ]
-      : undefined;
-  return sendEmail(to, subject, html, { attachments });
+  return sendEmail(to, subject, html);
 }
 
 /** Notify contact@MotorsWinding.com when a user has no listings in their area (near-me page). */

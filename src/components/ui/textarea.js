@@ -10,6 +10,8 @@ export default function Textarea({
   name,
   rows = 4,
   className = "",
+  /** Extra classes on the native textarea (e.g. flex-1 for modal layouts). */
+  textareaClassName = "",
   disabled = false,
 }) {
   const id = idProp ?? name;
@@ -29,7 +31,7 @@ export default function Textarea({
         onChange={onChange}
         rows={rows}
         disabled={disabled}
-        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text min-h-[120px] placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 resize-y disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "opacity-60 cursor-not-allowed !bg-card border-border/80" : ""}`}
+        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text min-h-[120px] placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 resize-y disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "opacity-60 cursor-not-allowed !bg-card border-border/80" : ""} ${textareaClassName}`.trim()}
       />
     </div>
   );
