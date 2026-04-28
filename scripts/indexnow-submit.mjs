@@ -3,7 +3,10 @@
  * Post-build IndexNow submission (Bing, Yandex, etc.).
  * Runs after `next build` via npm `postbuild` when INDEXNOW_KEY is set.
  *
- * Requires: INDEXNOW_KEY, NEXT_PUBLIC_SITE_URL or SITE_URL, MONGODB_URI (for full URL list like sitemap).
+ * Default behavior: submit only changed routes inferred from git deltas.
+ * Optional fallback full submit: set INDEXNOW_FALLBACK_FULL=true.
+ *
+ * Requires: INDEXNOW_KEY, NEXT_PUBLIC_SITE_URL or SITE_URL.
  * Writes public/{INDEXNOW_KEY}.txt for verification (IndexNow spec).
  *
  * @see https://www.indexnow.org/documentation
@@ -142,10 +145,15 @@ async function main() {
     urls = changedRoutes.map((r) => `${origin}${r}`);
     console.log(`[indexnow] Using changed routes from git delta (${urls.length}).`);
   } else {
+    const allowFullFallback = String(process.env.INDEXNOW_FALLBACK_FULL || "").toLowerCase() === "true";
+    if (!allowFullFallback) {
+      console.log("[indexnow] No changed routes found; skipping submission (set INDEXNOW_FALLBACK_FULL=true to submit full sitemap).");
+      process.exit(0);
+    }
     const { getAllSitemapUrls } = jiti(path.join(root, "src/lib/sitemap-url-entries.js"));
     try {
       urls = await getAllSitemapUrls();
-      console.log(`[indexnow] No changed routes found; fallback to full sitemap list (${urls.length}).`);
+      console.log(`[indexnow] No changed routes found; fallback enabled, submitting full sitemap list (${urls.length}).`);
     } catch (e) {
       console.error("[indexnow] Failed to collect URLs (check MONGODB_URI for DB-backed routes):", e?.message || e);
       process.exit(1);
