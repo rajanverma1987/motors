@@ -86,6 +86,7 @@ export default function SettingsDataUploadPanel() {
     running: false,
   });
   const [clearingAll, setClearingAll] = useState(false);
+  const [clearingByCollection, setClearingByCollection] = useState({});
 
   async function ensureCollectionsLoaded() {
     if (loadedCollections) return allowedCollections;
@@ -228,6 +229,53 @@ export default function SettingsDataUploadPanel() {
     }
   }
 
+  async function clearCollection(row) {
+    const collection = row?.collection;
+    const label = row?.label || collection;
+    if (!collection || uploadModal.running || clearingAll || clearingByCollection[collection]) return;
+    const first = await confirm({
+      title: `Delete ${label} data?`,
+      message: `This will permanently delete all imported data for "${label}". Do you want to continue?`,
+      confirmLabel: "Continue",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!first) return;
+    const second = await confirm({
+      title: "Please confirm again",
+      message: `Delete all "${label}" records now? This action cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!second) return;
+
+    setClearingByCollection((p) => ({ ...p, [collection]: true }));
+    try {
+      const res = await fetch("/api/dashboard/import/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          confirmPhrase: "CLEAR_ALL_IMPORT_DATA",
+          collection,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || `Failed to clear ${label}.`);
+      setFiles((p) => ({ ...p, [collection]: null }));
+      setStatsByCollection((p) => {
+        const next = { ...p };
+        delete next[collection];
+        return next;
+      });
+      toast.success(`Deleted ${label} data (${json?.deletedCount || 0} affected).`);
+    } catch (err) {
+      toast.error(err.message || `Failed to clear ${label}.`);
+    } finally {
+      setClearingByCollection((p) => ({ ...p, [collection]: false }));
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8 pb-24">
       <FormContainer>
@@ -261,6 +309,7 @@ export default function SettingsDataUploadPanel() {
           {rows.map((row) => {
             const levelPad = row.level * 18;
             const busy = !!busyByCollection[row.collection];
+            const clearingOne = !!clearingByCollection[row.collection];
             const stats = statsByCollection[row.collection];
             const file = files[row.collection] || null;
             return (
@@ -289,7 +338,7 @@ export default function SettingsDataUploadPanel() {
                       aria-label={`Download template for ${row.label}`}
                       title="Download template"
                       onClick={() => downloadTemplate(row.collection)}
-                      disabled={busy}
+                      disabled={busy || clearingOne || clearingAll}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FiDownload className="h-4 w-4" />
@@ -299,7 +348,7 @@ export default function SettingsDataUploadPanel() {
                       aria-label={`Choose CSV file for ${row.label}`}
                       title="Choose CSV file"
                       onClick={() => fileInputRefs.current[row.collection]?.click()}
-                      disabled={busy}
+                      disabled={busy || clearingOne || clearingAll}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-secondary hover:bg-card hover:text-title disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FiFilePlus className="h-4 w-4" />
@@ -309,10 +358,20 @@ export default function SettingsDataUploadPanel() {
                       aria-label={`Upload CSV for ${row.label}`}
                       title={busy ? "Importing..." : "Upload CSV"}
                       onClick={() => importFile(row.collection)}
-                      disabled={busy || !file}
+                      disabled={busy || clearingOne || clearingAll || !file}
                       className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <FiUpload className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${row.label} data`}
+                      title={clearingOne ? "Deleting..." : "Delete data"}
+                      onClick={() => clearCollection(row)}
+                      disabled={busy || clearingOne || clearingAll || uploadModal.running}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-danger/40 text-danger hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <FiTrash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>

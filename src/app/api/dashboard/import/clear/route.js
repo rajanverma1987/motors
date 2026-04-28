@@ -18,6 +18,26 @@ import MotorRepairInspection from "@/models/MotorRepairInspection";
 
 const CLEAR_CONFIRM_PHRASE = "CLEAR_ALL_IMPORT_DATA";
 
+const ALL_COLLECTION_KEYS = [
+  "customers",
+  "customerAdditionalContacts",
+  "motors",
+  "quotes",
+  "quoteScopeLines",
+  "quotePartLines",
+  "workOrders",
+  "invoices",
+  "vendors",
+  "inventoryItems",
+  "purchaseOrders",
+  "employees",
+  "salesPersons",
+  "salesCommissions",
+  "repairFlowJobs",
+  "repairFlowQuotes",
+  "repairFlowInspections",
+];
+
 export async function POST(request) {
   const user = await getPortalUserFromRequest(request);
   if (!user?.email) {
@@ -33,25 +53,67 @@ export async function POST(request) {
 
     await connectDB();
     const ownerEmail = user.email.trim().toLowerCase();
+    const requestedCollection = String(body?.collection || "").trim();
 
-    const results = await Promise.all([
-      Customer.deleteMany({ createdByEmail: ownerEmail }),
-      Motor.deleteMany({ createdByEmail: ownerEmail }),
-      Quote.deleteMany({ createdByEmail: ownerEmail }),
-      WorkOrder.deleteMany({ createdByEmail: ownerEmail }),
-      Invoice.deleteMany({ createdByEmail: ownerEmail }),
-      Vendor.deleteMany({ createdByEmail: ownerEmail }),
-      InventoryItem.deleteMany({ createdByEmail: ownerEmail }),
-      PurchaseOrder.deleteMany({ createdByEmail: ownerEmail }),
-      Employee.deleteMany({ createdByEmail: ownerEmail }),
-      SalesPerson.deleteMany({ createdByEmail: ownerEmail }),
-      SalesCommission.deleteMany({ createdByEmail: ownerEmail }),
-      MotorRepairJob.deleteMany({ createdByEmail: ownerEmail }),
-      MotorRepairFlowQuote.deleteMany({ createdByEmail: ownerEmail }),
-      MotorRepairInspection.deleteMany({ createdByEmail: ownerEmail }),
-    ]);
+    const deleteOne = async (collection) => {
+      switch (collection) {
+        case "customers":
+          return Customer.deleteMany({ createdByEmail: ownerEmail });
+        case "customerAdditionalContacts":
+          return Customer.updateMany({ createdByEmail: ownerEmail }, { $set: { additionalContacts: [] } });
+        case "motors":
+          return Motor.deleteMany({ createdByEmail: ownerEmail });
+        case "quotes":
+          return Quote.deleteMany({ createdByEmail: ownerEmail });
+        case "quoteScopeLines":
+          return Quote.updateMany({ createdByEmail: ownerEmail }, { $set: { scopeLines: [], laborTotal: "0.00" } });
+        case "quotePartLines":
+          return Quote.updateMany({ createdByEmail: ownerEmail }, { $set: { partsLines: [], partsTotal: "0.00" } });
+        case "workOrders":
+          return WorkOrder.deleteMany({ createdByEmail: ownerEmail });
+        case "invoices":
+          return Invoice.deleteMany({ createdByEmail: ownerEmail });
+        case "vendors":
+          return Vendor.deleteMany({ createdByEmail: ownerEmail });
+        case "inventoryItems":
+          return InventoryItem.deleteMany({ createdByEmail: ownerEmail });
+        case "purchaseOrders":
+          return PurchaseOrder.deleteMany({ createdByEmail: ownerEmail });
+        case "employees":
+          return Employee.deleteMany({ createdByEmail: ownerEmail });
+        case "salesPersons":
+          return SalesPerson.deleteMany({ createdByEmail: ownerEmail });
+        case "salesCommissions":
+          return SalesCommission.deleteMany({ createdByEmail: ownerEmail });
+        case "repairFlowJobs":
+          return MotorRepairJob.deleteMany({ createdByEmail: ownerEmail });
+        case "repairFlowQuotes":
+          return MotorRepairFlowQuote.deleteMany({ createdByEmail: ownerEmail });
+        case "repairFlowInspections":
+          return MotorRepairInspection.deleteMany({ createdByEmail: ownerEmail });
+        default:
+          return null;
+      }
+    };
 
-    const deletedCount = results.reduce((sum, r) => sum + (Number(r?.deletedCount) || 0), 0);
+    if (requestedCollection) {
+      if (!ALL_COLLECTION_KEYS.includes(requestedCollection)) {
+        return NextResponse.json({ error: "Unknown collection." }, { status: 400 });
+      }
+      const result = await deleteOne(requestedCollection);
+      const affectedCount = Number(result?.deletedCount ?? result?.modifiedCount ?? 0);
+      return NextResponse.json({
+        ok: true,
+        collection: requestedCollection,
+        deletedCount: affectedCount,
+      });
+    }
+
+    const results = await Promise.all(ALL_COLLECTION_KEYS.map((c) => deleteOne(c)));
+    const deletedCount = results.reduce(
+      (sum, r) => sum + (Number(r?.deletedCount ?? r?.modifiedCount) || 0),
+      0,
+    );
     return NextResponse.json({ ok: true, deletedCount });
   } catch (err) {
     console.error("Import clear error:", err);
