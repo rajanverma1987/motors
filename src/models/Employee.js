@@ -16,6 +16,11 @@ const employeeSchema = new mongoose.Schema(
     passwordHash: { type: String, default: "", select: false },
     /** Shop that owns this employee (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
+    sourceSystem: { type: String, default: "manual_csv", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
     /** Expo push tokens for Technician App (ExponentPushToken[…]) */
     expoPushTokens: [
       {
@@ -28,6 +33,13 @@ const employeeSchema = new mongoose.Schema(
 );
 
 employeeSchema.index({ createdByEmail: 1, createdAt: -1 });
+employeeSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { externalRef: { $type: "string", $gt: "" } },
+  }
+);
 
 // Next.js / Turbopack can keep a cached model with an older schema; strict mode then drops new paths on save.
 const existingEmployee = mongoose.models.Employee;

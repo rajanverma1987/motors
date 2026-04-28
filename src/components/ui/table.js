@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FiEdit2, FiTrash2, FiRotateCw } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiRotateCw, FiUpload } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
+import { usePathname } from "next/navigation";
 import Button from "./button";
 import Checkbox from "./checkbox";
 import Modal from "./modal";
@@ -39,6 +40,49 @@ function escapeCsvCell(str) {
   const s = String(str);
   if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
+}
+
+function inferImportCollectionFromPath(pathname) {
+  const p = String(pathname || "").toLowerCase();
+  if (!p.includes("/dashboard")) return "";
+  if (p.includes("/dashboard/repair-flow")) return "repairFlowJobs";
+  if (p.includes("/dashboard/customers")) return "customers";
+  if (p.includes("/dashboard/motors")) return "motors";
+  if (p.includes("/dashboard/quotes")) return "quotes";
+  if (p.includes("/dashboard/work-orders")) return "workOrders";
+  if (p.includes("/dashboard/invoices")) return "invoices";
+  if (p.includes("/dashboard/vendors")) return "vendors";
+  if (p.includes("/dashboard/inventory")) return "inventoryItems";
+  if (p.includes("/dashboard/purchase-orders")) return "purchaseOrders";
+  return "";
+}
+
+function importDisabledForToolsReports(pathname) {
+  const p = String(pathname || "").toLowerCase();
+  return (
+    p.includes("/dashboard/calculators") ||
+    p.includes("/dashboard/subscription") ||
+    p.includes("/dashboard/reports") ||
+    p.includes("/dashboard/integrations") ||
+    p.includes("/dashboard/marketplace") ||
+    p.includes("/dashboard/directory-listing") ||
+    p.includes("/dashboard/customer-portal") ||
+    p.includes("/dashboard/support") ||
+    p.includes("/dashboard/access-control") ||
+    p.includes("/dashboard/job-postings")
+  );
+}
+
+function importCollectionsForPath(pathname) {
+  const p = String(pathname || "").toLowerCase();
+  if (p.includes("/dashboard/repair-flow")) {
+    return ["repairFlowJobs", "repairFlowQuotes", "repairFlowInspections"];
+  }
+  if (p.includes("/dashboard/quotes")) {
+    return ["quotes", "quoteScopeLines", "quotePartLines"];
+  }
+  const inferred = inferImportCollectionFromPath(pathname);
+  return inferred ? [inferred] : [];
 }
 
 export default function Table({
@@ -98,6 +142,7 @@ export default function Table({
   /** Client-side slice when server pagination is not used (default: on). Set false to show all rows. */
   paginateClientSide = true,
 }) {
+  const pathname = usePathname();
   const hasPagination = pagination && typeof onPageChange === "function";
   const enableClientPagination = !hasPagination && paginateClientSide;
   const hasEdit = typeof onEdit === "function";
@@ -113,12 +158,27 @@ export default function Table({
   const hasColumnWidths = columns.some((c) => c.width || c.minWidth || c.maxWidth);
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
+  const hasImport =
+    typeof pathname === "string" &&
+    pathname.includes("/dashboard") &&
+    !pathname.includes("/print") &&
+    !importDisabledForToolsReports(pathname);
+  const pageImportCollection = inferImportCollectionFromPath(pathname);
+  const pageImportAllowedCollections = importCollectionsForPath(pathname);
 
   const cellPy = dense ? "py-1.5" : "py-2";
   const headerPy = dense ? "py-1.5" : "py-2";
 
   const [searchInput, setSearchInput] = useState("");
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importCollections, setImportCollections] = useState([]);
+  const [importCollection, setImportCollection] = useState(pageImportCollection || "customers");
+  const [importFile, setImportFile] = useState(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  const [importError, setImportError] = useState("");
+  const [importResult, setImportResult] = useState(null);
   const [draftHiddenKeys, setDraftHiddenKeys] = useState([]);
   const [columnWidthOverrides, setColumnWidthOverrides] = useState({});
   const [resizing, setResizing] = useState({ key: null, startX: 0, startWidth: 0 });
@@ -313,6 +373,100 @@ export default function Table({
   const openSettingsModal = () => {
     setDraftHiddenKeys([...hiddenColumnKeys]);
     setSettingsModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!importModalOpen || !hasImport) return;
+    let cancelled = false;
+    fetch("/api/dashboard/import/template", { cache: "no-store" })
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        const list = Array.isArray(json?.collections) ? json.collections : [];
+        const filtered = pageImportAllowedCollections.length
+          ? list.filter((x) => pageImportAllowedCollections.includes(String(x?.value || "")))
+          : list;
+        setImportCollections(filtered);
+        const preferred = pageImportCollection || importCollection;
+        if (preferred && filtered.some((x) => x?.value === preferred)) {
+          setImportCollection(preferred);
+        } else if (filtered[0]?.value) {
+          setImportCollection(String(filtered[0].value));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setImportError("Failed to load import collections.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [importModalOpen, hasImport, pageImportCollection, pathname]);
+
+  const handleDownloadTemplate = async () => {
+    setImportError("");
+    if (!importCollection) return;
+    const res = await fetch(`/api/dashboard/import/template?collection=${encodeURIComponent(importCollection)}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setImportError(json?.error || "Failed to download template.");
+      return;
+    }
+    const text = await res.text();
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${importCollection}-template.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleRunImport = async () => {
+    setImportError("");
+    setImportResult(null);
+    if (!importFile) {
+      setImportError("Choose a CSV file to import.");
+      return;
+    }
+    if (!importCollection) {
+      setImportError("Choose a collection.");
+      return;
+    }
+    setImportBusy(true);
+    setImportProgress(5);
+    const tick = setInterval(() => {
+      setImportProgress((p) => (p >= 90 ? p : p + 7));
+    }, 250);
+    try {
+      const csvText = await importFile.text();
+      const res = await fetch("/api/dashboard/import/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ collection: importCollection, csvText }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(json?.error || "Import failed");
+      setImportProgress(100);
+      setImportResult(json);
+      if (json?.invalidCsv) {
+        const blob = new Blob([json.invalidCsv], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${importCollection}-invalid-records.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+      if (typeof onRefresh === "function") onRefresh();
+    } catch (err) {
+      setImportError(err?.message || "Import failed");
+    } finally {
+      clearInterval(tick);
+      setTimeout(() => setImportBusy(false), 200);
+    }
   };
 
   const saveColumnVisibility = () => {
@@ -612,7 +766,7 @@ export default function Table({
 
   return (
     <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-4" : "space-y-4"}>
-      {(hasSearch || hasRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
+      {(hasSearch || hasRefresh || loading || (exportable && data.length > 0) || hasColumnSettings || hasImport) && (
         <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
           {hasSearch && (
             <input
@@ -660,6 +814,24 @@ export default function Table({
               </svg>
             </button>
           )}
+          {hasImport && (
+            <button
+              type="button"
+              onClick={() => {
+                setImportError("");
+                setImportResult(null);
+                setImportFile(null);
+                setImportProgress(0);
+                if (pageImportCollection) setImportCollection(pageImportCollection);
+                setImportModalOpen(true);
+              }}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Import CSV"
+              title="Import CSV"
+            >
+              <FiUpload className="h-5 w-5" aria-hidden />
+            </button>
+          )}
         </div>
       )}
 
@@ -691,6 +863,94 @@ export default function Table({
                 Save
               </Button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {hasImport && (
+        <Modal
+          open={importModalOpen}
+          onClose={() => {
+            if (!importBusy) setImportModalOpen(false);
+          }}
+          title="Import records"
+          size="xl"
+          actions={
+            <>
+              <Button type="button" variant="outline" size="sm" onClick={handleDownloadTemplate} disabled={importBusy}>
+                Download template
+              </Button>
+              <Button type="button" variant="primary" size="sm" onClick={handleRunImport} disabled={importBusy}>
+                {importBusy ? "Importing..." : "Upload and import"}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-secondary">
+              Import valid rows only. Invalid rows are skipped and downloaded as CSV with reasons.
+            </p>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-title" htmlFor="import-collection">
+                Collection
+              </label>
+              <select
+                id="import-collection"
+                value={importCollection}
+                onChange={(e) => setImportCollection(e.target.value)}
+                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text disabled:cursor-not-allowed disabled:opacity-60 disabled:bg-card disabled:text-secondary"
+                disabled={importCollections.length <= 1}
+              >
+                {(importCollections.length ? importCollections : [{ value: "customers", label: "Customers" }]).map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium text-title" htmlFor="import-file">
+                CSV file
+              </label>
+              <input
+                id="import-file"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                disabled={importBusy}
+                className="block w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text"
+              />
+              {importFile ? <p className="text-xs text-secondary">{importFile.name}</p> : null}
+            </div>
+            <div>
+              <div className="mb-1 flex items-center justify-between text-xs text-secondary">
+                <span>Progress</span>
+                <span>{importProgress}%</span>
+              </div>
+              <div className="h-2 w-full rounded bg-card">
+                <div
+                  className="h-2 rounded bg-primary transition-all"
+                  style={{ width: `${Math.max(0, Math.min(100, importProgress))}%` }}
+                />
+              </div>
+            </div>
+            {importError ? <p className="text-sm text-danger">{importError}</p> : null}
+            {importResult ? (
+              <div className="rounded-md border border-border bg-card p-3 text-sm">
+                <p className="font-medium text-title">Import completed</p>
+                <ul className="mt-2 space-y-1 text-secondary">
+                  <li>Total rows: {importResult.totalRows ?? 0}</li>
+                  <li>Valid rows: {importResult.validRows ?? 0}</li>
+                  <li>Imported rows: {importResult.importedRows ?? 0}</li>
+                  <li>Invalid rows: {importResult.invalidRows ?? 0}</li>
+                </ul>
+                {(importResult.invalidRows || 0) > 0 ? (
+                  <p className="mt-2 text-warning">
+                    Invalid records are not imported. Please fix in the CSV and re-upload.
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </Modal>
       )}

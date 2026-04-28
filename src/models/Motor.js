@@ -29,6 +29,15 @@ const motorSchema = new mongoose.Schema(
     dcSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     /** Filled from DC work order — Armature tab */
     dcArmatureSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Optional parent ref metadata for import traceability */
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
     /** Shop that owns this motor (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
   },
@@ -37,6 +46,10 @@ const motorSchema = new mongoose.Schema(
 
 motorSchema.index({ createdByEmail: 1, createdAt: -1 });
 motorSchema.index({ createdByEmail: 1, customerId: 1 });
+motorSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 // Recompile if cached model was created before new fields were added
 if (mongoose.models.Motor && !mongoose.models.Motor.schema.paths.acSpecs) {

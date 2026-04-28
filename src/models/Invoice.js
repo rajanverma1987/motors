@@ -4,8 +4,14 @@ import mongoose from "mongoose";
 const invoiceSchema = new mongoose.Schema(
   {
     quoteId: { type: String, required: true, trim: true },
+    quoteSourceSystem: { type: String, default: "", trim: true },
+    quoteExternalRef: { type: String, default: "", trim: true },
     customerId: { type: String, required: true, trim: true },
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
     motorId: { type: String, required: true, trim: true },
+    motorSourceSystem: { type: String, default: "", trim: true },
+    motorExternalRef: { type: String, default: "", trim: true },
     /** Same as quote RFQ# (per product requirement) */
     invoiceNumber: { type: String, required: true, trim: true },
     rfqNumber: { type: String, default: "", trim: true },
@@ -43,6 +49,12 @@ const invoiceSchema = new mongoose.Schema(
     createdByEmail: { type: String, required: true, lowercase: true, trim: true },
     /** Secret token for customer view/print link (set on first Send to customer) */
     customerViewToken: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
@@ -50,5 +62,9 @@ const invoiceSchema = new mongoose.Schema(
 invoiceSchema.index({ createdByEmail: 1, quoteId: 1 }, { unique: true });
 invoiceSchema.index({ createdByEmail: 1, createdAt: -1 });
 invoiceSchema.index({ customerViewToken: 1 }, { unique: true, sparse: true });
+invoiceSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.Invoice || mongoose.model("Invoice", invoiceSchema);

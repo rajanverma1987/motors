@@ -6,6 +6,8 @@ import mongoose from "mongoose";
 const motorRepairInspectionSchema = new mongoose.Schema(
   {
     jobId: { type: String, required: true, trim: true },
+    jobSourceSystem: { type: String, default: "", trim: true },
+    jobExternalRef: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true, lowercase: true },
     kind: {
       type: String,
@@ -19,12 +21,22 @@ const motorRepairInspectionSchema = new mongoose.Schema(
     },
     /** Extensible findings (insulation, rotation, damage, notes, etc.) */
     findings: { type: mongoose.Schema.Types.Mixed, default: {} },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
 
 motorRepairInspectionSchema.index({ jobId: 1, createdAt: -1 });
 motorRepairInspectionSchema.index({ createdByEmail: 1, jobId: 1 });
+motorRepairInspectionSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.MotorRepairInspection ||
   mongoose.model("MotorRepairInspection", motorRepairInspectionSchema);

@@ -12,6 +12,7 @@ import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
+import SettingsDataUploadPanel from "@/components/dashboard/settings-data-upload-panel";
 import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
@@ -42,6 +43,7 @@ export default function SettingsPageClient() {
   const toast = useToast();
   const { user } = useAuth();
   const { refresh: refreshContext } = useUserSettings();
+  const [activeTab, setActiveTab] = useState("account");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(() => ({ ...USER_SETTINGS_DEFAULTS }));
@@ -630,6 +632,11 @@ export default function SettingsPageClient() {
         ),
       },
       {
+        id: "data-upload",
+        label: "Data Upload",
+        children: <SettingsDataUploadPanel />,
+      },
+      {
         id: "more",
         label: "More",
         children: (
@@ -679,7 +686,7 @@ export default function SettingsPageClient() {
   }
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col px-4 py-8">
+    <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-8">
       <div className="mb-8 shrink-0 border-b border-border pb-6">
         <h1 className="text-2xl font-bold text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">
@@ -687,13 +694,15 @@ export default function SettingsPageClient() {
         </p>
       </div>
 
-      <Tabs defaultTab="account" tabs={settingsTabs} />
+      <Tabs defaultTab="account" value={activeTab} onChange={setActiveTab} tabs={settingsTabs} />
 
-      <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
-        <Button variant="primary" onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : "Save changes"}
-        </Button>
-      </div>
+      {activeTab !== "data-upload" ? (
+        <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
+          <Button variant="primary" onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

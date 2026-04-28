@@ -71,6 +71,17 @@ const motorRepairJobSchema = new mongoose.Schema(
     qaPassed: { type: Boolean, default: null },
     qaNotes: { type: String, default: "", trim: true, maxlength: 4000 },
     finalTestSummary: { type: String, default: "", trim: true, maxlength: 8000 },
+    /** Parent ref metadata for import traceability */
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
+    motorSourceSystem: { type: String, default: "", trim: true },
+    motorExternalRef: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
@@ -83,5 +94,9 @@ motorRepairJobSchema.index(
 motorRepairJobSchema.index({ createdByEmail: 1, motorId: 1 });
 motorRepairJobSchema.index({ createdByEmail: 1, customerId: 1 });
 motorRepairJobSchema.index({ preliminaryRespondToken: 1 }, { unique: true, sparse: true });
+motorRepairJobSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.MotorRepairJob || mongoose.model("MotorRepairJob", motorRepairJobSchema);

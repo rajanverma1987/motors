@@ -14,6 +14,12 @@ const inventoryItemSchema = new mongoose.Schema(
     threshold: { type: Number, default: 0 },
     location: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true },
   },
   { timestamps: true }
@@ -21,6 +27,10 @@ const inventoryItemSchema = new mongoose.Schema(
 
 inventoryItemSchema.index({ createdByEmail: 1, createdAt: -1 });
 inventoryItemSchema.index({ createdByEmail: 1, sku: 1 });
+inventoryItemSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 // Next.js dev HMR can keep a stale compiled model without newer paths (e.g. `uom`), which makes Mongoose
 // strip those keys on save. Drop the cached model in development so the current schema always applies.

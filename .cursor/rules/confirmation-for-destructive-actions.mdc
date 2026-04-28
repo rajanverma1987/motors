@@ -1,0 +1,14 @@
+---
+description: Use Confirmation component for destructive actions
+alwaysApply: true
+---
+
+# Confirmation For Destructive Actions
+
+- For any destructive or irreversible action (delete, clear, reset, revoke, purge), use `useConfirm` from `@/components/confirm-provider`.
+- Do not use browser-native confirms (`window.confirm`) in dashboard/product UI flows.
+- For high-risk operations, require two confirmation steps using `confirm(...)` twice.
+- Use danger styling for the confirmation action:
+  - `variant: "danger"`
+  - explicit labels like `Delete`, `Clear all`, `Revoke access`.
+

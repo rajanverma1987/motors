@@ -27,6 +27,12 @@ const customerSchema = new mongoose.Schema(
     notes: { type: String, default: "", trim: true },
     /** Token for customer portal link (public view of motors, quotes, status). Unique when set — do not default to "". */
     portalToken: { type: String, trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
     /** Shop that owns this customer (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
   },
@@ -35,6 +41,10 @@ const customerSchema = new mongoose.Schema(
 
 customerSchema.index({ createdByEmail: 1, createdAt: -1 });
 customerSchema.index({ createdByEmail: 1, companyName: 1 });
+customerSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 /** Unique only for non-empty tokens; empty string would collide for every new customer (E11000). */
 customerSchema.index(
   { portalToken: 1 },

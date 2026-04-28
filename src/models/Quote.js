@@ -63,6 +63,17 @@ const quoteSchema = new mongoose.Schema(
       }],
       default: [],
     },
+    /** Parent ref metadata for import traceability */
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
+    motorSourceSystem: { type: String, default: "", trim: true },
+    motorExternalRef: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true },
     /** When created from Job Write-Up final flow quote */
     repairFlowJobId: { type: String, default: "", trim: true },
@@ -75,5 +86,9 @@ const quoteSchema = new mongoose.Schema(
 quoteSchema.index({ createdByEmail: 1, createdAt: -1 });
 quoteSchema.index({ createdByEmail: 1, customerId: 1 });
 quoteSchema.index({ respondToken: 1 }, { sparse: true });
+quoteSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.Quote || mongoose.model("Quote", quoteSchema);

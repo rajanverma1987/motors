@@ -5,11 +5,17 @@ const workOrderSchema = new mongoose.Schema(
     createdByEmail: { type: String, required: true, trim: true, lowercase: true },
     /** CRM Quote id (RFQ) — inventory and legacy links */
     quoteId: { type: String, required: true, trim: true },
+    quoteSourceSystem: { type: String, default: "", trim: true },
+    quoteExternalRef: { type: String, default: "", trim: true },
     /** Job Write-Up repair job (when WO created from a quote linked to a job) */
     repairFlowJobId: { type: String, default: "", trim: true },
     repairJobNumber: { type: String, default: "", trim: true },
     motorId: { type: String, required: true, trim: true },
+    motorSourceSystem: { type: String, default: "", trim: true },
+    motorExternalRef: { type: String, default: "", trim: true },
     customerId: { type: String, required: true, trim: true },
+    customerSourceSystem: { type: String, default: "", trim: true },
+    customerExternalRef: { type: String, default: "", trim: true },
     /** e.g. W-A00001-1 */
     workOrderNumber: { type: String, required: true, trim: true },
     date: { type: String, default: "", trim: true },
@@ -59,6 +65,12 @@ const workOrderSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
@@ -69,5 +81,9 @@ workOrderSchema.index({ createdByEmail: 1, repairFlowJobId: 1 });
 workOrderSchema.index({ createdByEmail: 1, repairJobNumber: 1 });
 workOrderSchema.index({ createdByEmail: 1, workOrderNumber: 1 }, { unique: true });
 workOrderSchema.index({ createdByEmail: 1, technicianEmployeeId: 1, updatedAt: -1 });
+workOrderSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.WorkOrder || mongoose.model("WorkOrder", workOrderSchema);
