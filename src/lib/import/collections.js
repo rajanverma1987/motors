@@ -57,6 +57,12 @@ const IMPORT_COLLECTIONS = {
       "state",
       "zip_code",
       "country",
+      "shipping_address",
+      "shipping_city",
+      "shipping_state",
+      "shipping_zip_code",
+      "shipping_country",
+      "additional_contacts_json",
       "notes",
     ],
     sample: {
@@ -71,6 +77,12 @@ const IMPORT_COLLECTIONS = {
       state: "Texas",
       zip_code: "77001",
       country: "United States",
+      shipping_address: "Warehouse 2, 456 Shipping Ln",
+      shipping_city: "Houston",
+      shipping_state: "Texas",
+      shipping_zip_code: "77002",
+      shipping_country: "United States",
+      additional_contacts_json: '[{"contactName":"Jane Roe","phone":"+1 713 555 0102","email":"jane@acmepumps.com"}]',
       notes: "Priority account",
     },
     buildPayload: (r, ctx) => ({
@@ -86,6 +98,12 @@ const IMPORT_COLLECTIONS = {
       state: s(r.state),
       zipCode: s(r.zip_code),
       country: s(r.country || "United States"),
+      shippingAddress: s(r.shipping_address),
+      shippingCity: s(r.shipping_city),
+      shippingState: s(r.shipping_state),
+      shippingZipCode: s(r.shipping_zip_code),
+      shippingCountry: s(r.shipping_country || "United States"),
+      additionalContacts: s(r.additional_contacts_json) ? parseJsonArrayField(r.additional_contacts_json, "additional_contacts_json") : [],
       notes: s(r.notes),
       importBatchId: ctx.batchId,
       importedAt: new Date(),
@@ -95,7 +113,71 @@ const IMPORT_COLLECTIONS = {
       const errs = [];
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.company_name)) errs.push("company_name is required");
+      if (s(r.additional_contacts_json)) {
+        try {
+          parseJsonArrayField(r.additional_contacts_json, "additional_contacts_json");
+        } catch (err) {
+          errs.push(err.message || "additional_contacts_json must be a valid JSON array");
+        }
+      }
       return errs;
+    },
+  },
+  customerAdditionalContacts: {
+    label: "Customer Additional Contacts",
+    model: Customer,
+    skipModelValidation: true,
+    headers: [
+      ...BASE_HEADERS,
+      "customer_external_ref",
+      "customer_source_system",
+      "contact_name",
+      "phone",
+      "email",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "CAC-1001",
+      customer_external_ref: "CUST-1001",
+      customer_source_system: "manual_csv",
+      contact_name: "Jane Roe",
+      phone: "+1 713 555 0102",
+      email: "jane@acmepumps.com",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.customer_external_ref)) errs.push("customer_external_ref is required");
+      if (!s(r.contact_name)) errs.push("contact_name is required");
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const customerId = ctx.resolveRef("customers", s(r.customer_source_system || "manual_csv"), s(r.customer_external_ref));
+      if (!customerId) throw new Error("customer_external_ref not found");
+      return {
+        customerId,
+        contact: {
+          contactName: s(r.contact_name),
+          phone: s(r.phone),
+          email: s(r.email).toLowerCase(),
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const customer = await Customer.findOne({ _id: payload.customerId, createdByEmail: ownerEmail }).lean();
+      if (!customer) throw new Error("Customer not found for additional contact");
+      const existing = Array.isArray(customer.additionalContacts) ? customer.additionalContacts : [];
+      const already = existing.some(
+        (x) =>
+          s(x?.contactName).toLowerCase() === s(payload.contact.contactName).toLowerCase() &&
+          s(x?.phone) === s(payload.contact.phone) &&
+          s(x?.email).toLowerCase() === s(payload.contact.email).toLowerCase(),
+      );
+      const nextContacts = already ? existing : [...existing, payload.contact];
+      await Customer.updateOne(
+        { _id: payload.customerId, createdByEmail: ownerEmail },
+        { $set: { additionalContacts: nextContacts } },
+      );
+      return { imported: true };
     },
   },
   motors: {
@@ -112,9 +194,13 @@ const IMPORT_COLLECTIONS = {
       "kw",
       "rpm",
       "voltage",
+      "amps",
       "motor_type",
       "slots",
       "frame_size",
+      "core_length",
+      "core_diameter",
+      "bars",
       "notes",
     ],
     sample: {
@@ -129,9 +215,13 @@ const IMPORT_COLLECTIONS = {
       kw: "37",
       rpm: "1780",
       voltage: "460",
-      motor_type: "AC Induction",
+      amps: "59.3",
+      motor_type: "AC",
       slots: "36",
       frame_size: "326T",
+      core_length: "8.5",
+      core_diameter: "6.2",
+      bars: "",
       notes: "",
     },
     validateRow: (r) => {
@@ -157,9 +247,13 @@ const IMPORT_COLLECTIONS = {
         kw: s(r.kw),
         rpm: s(r.rpm),
         voltage: s(r.voltage),
+        amps: s(r.amps),
         motorType: s(r.motor_type),
         slots: s(r.slots),
         frameSize: s(r.frame_size),
+        coreLength: s(r.core_length),
+        coreDiameter: s(r.core_diameter),
+        bars: s(r.bars),
         notes: s(r.notes),
         importBatchId: ctx.batchId,
         importedAt: new Date(),
@@ -179,7 +273,11 @@ const IMPORT_COLLECTIONS = {
       "rfq_number",
       "date",
       "status",
+      "status_options_hint",
       "customer_po",
+      "prepared_by",
+      "estimated_completion",
+      "customer_notes",
       "labor_total",
       "parts_total",
       "notes",
@@ -194,7 +292,11 @@ const IMPORT_COLLECTIONS = {
       rfq_number: "A00001",
       date: "2026-04-28",
       status: "draft",
+      status_options_hint: "draft|sent|approved|rejected|rnr",
       customer_po: "PO-9001",
+      prepared_by: "Mike Turner",
+      estimated_completion: "2026-05-03",
+      customer_notes: "Standard lead time applies.",
       labor_total: "1200",
       parts_total: "650",
       notes: "",
@@ -225,6 +327,9 @@ const IMPORT_COLLECTIONS = {
         date: s(r.date),
         status: s(r.status || "draft"),
         customerPo: s(r.customer_po),
+        preparedBy: s(r.prepared_by),
+        estimatedCompletion: s(r.estimated_completion),
+        customerNotes: s(r.customer_notes),
         laborTotal: s(r.labor_total),
         partsTotal: s(r.parts_total),
         notes: s(r.notes),
@@ -349,8 +454,16 @@ const IMPORT_COLLECTIONS = {
       "work_order_number",
       "date",
       "status",
+      "status_options_hint",
       "job_type",
+      "job_type_options_hint",
       "motor_class",
+      "motor_class_options_hint",
+      "technician_external_ref",
+      "technician_source_system",
+      "repair_job_external_ref",
+      "repair_job_source_system",
+      "repair_job_number",
     ],
     sample: {
       source_system: "manual_csv",
@@ -364,8 +477,16 @@ const IMPORT_COLLECTIONS = {
       work_order_number: "W-A00001-1",
       date: "2026-04-28",
       status: "Assigned",
+      status_options_hint: "Assigned|In Progress|Waiting Parts|QC|Completed|Shipped",
       job_type: "complete_motor",
+      job_type_options_hint: "complete_motor|field_frame_only|armature_only (DC only)",
       motor_class: "AC",
+      motor_class_options_hint: "AC|DC",
+      technician_external_ref: "EMP-1001",
+      technician_source_system: "manual_csv",
+      repair_job_external_ref: "RFJ-1001",
+      repair_job_source_system: "manual_csv",
+      repair_job_number: "RF-00042",
     },
     validateRow: (r) => {
       const errs = [];
@@ -383,6 +504,18 @@ const IMPORT_COLLECTIONS = {
       if (!motorId) throw new Error("motor_external_ref not found");
       const customerId = ctx.resolveRef("customers", s(r.customer_source_system || "manual_csv"), s(r.customer_external_ref));
       if (!customerId) throw new Error("customer_external_ref not found");
+      const technicianEmployeeId = s(r.technician_external_ref)
+        ? ctx.resolveRef("employees", s(r.technician_source_system || "manual_csv"), s(r.technician_external_ref))
+        : "";
+      if (s(r.technician_external_ref) && !technicianEmployeeId) {
+        throw new Error("technician_external_ref not found");
+      }
+      const repairFlowJobId = s(r.repair_job_external_ref)
+        ? ctx.resolveRef("repairFlowJobs", s(r.repair_job_source_system || "manual_csv"), s(r.repair_job_external_ref))
+        : "";
+      if (s(r.repair_job_external_ref) && !repairFlowJobId) {
+        throw new Error("repair_job_external_ref not found");
+      }
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -401,6 +534,9 @@ const IMPORT_COLLECTIONS = {
         status: s(r.status || "Assigned"),
         jobType: s(r.job_type || "complete_motor"),
         motorClass: s(r.motor_class || "AC"),
+        technicianEmployeeId,
+        repairFlowJobId,
+        repairJobNumber: s(r.repair_job_number),
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
@@ -422,6 +558,12 @@ const IMPORT_COLLECTIONS = {
       "rfq_number",
       "date",
       "status",
+      "status_options_hint",
+      "customer_po",
+      "prepared_by",
+      "estimated_completion",
+      "customer_notes",
+      "notes",
       "labor_total",
       "parts_total",
     ],
@@ -438,6 +580,12 @@ const IMPORT_COLLECTIONS = {
       rfq_number: "A00001",
       date: "2026-04-28",
       status: "draft",
+      status_options_hint: "draft|sent|partial_paid|fully_paid",
+      customer_po: "PO-9001",
+      prepared_by: "EMP-1001",
+      estimated_completion: "2026-05-03",
+      customer_notes: "Payment due in 30 days.",
+      notes: "Internal billing note.",
       labor_total: "1200",
       parts_total: "650",
     },
@@ -474,6 +622,11 @@ const IMPORT_COLLECTIONS = {
         rfqNumber: s(r.rfq_number),
         date: s(r.date),
         status: s(r.status || "draft"),
+        customerPo: s(r.customer_po),
+        preparedBy: s(r.prepared_by),
+        estimatedCompletion: s(r.estimated_completion),
+        customerNotes: s(r.customer_notes),
+        notes: s(r.notes),
         laborTotal: s(r.labor_total),
         partsTotal: s(r.parts_total),
         importBatchId: ctx.batchId,
@@ -485,7 +638,20 @@ const IMPORT_COLLECTIONS = {
   vendors: {
     label: "Vendors",
     model: Vendor,
-    headers: [...BASE_HEADERS, "name", "contact_name", "phone", "email", "city", "state", "zip_code", "payment_terms", "notes"],
+    headers: [
+      ...BASE_HEADERS,
+      "name",
+      "contact_name",
+      "phone",
+      "email",
+      "address",
+      "city",
+      "state",
+      "zip_code",
+      "parts_supplied_csv",
+      "payment_terms",
+      "notes",
+    ],
     sample: {
       source_system: "manual_csv",
       external_ref: "VEND-55",
@@ -493,9 +659,11 @@ const IMPORT_COLLECTIONS = {
       contact_name: "Mia Ray",
       phone: "+1 281 555 7722",
       email: "orders@deltabearing.com",
+      address: "901 Supply Rd",
       city: "Houston",
       state: "Texas",
       zip_code: "77002",
+      parts_supplied_csv: "Bearing|Copper wire|Insulation paper",
       payment_terms: "Net 30",
       notes: "",
     },
@@ -513,9 +681,13 @@ const IMPORT_COLLECTIONS = {
       contactName: s(r.contact_name),
       phone: s(r.phone),
       email: s(r.email).toLowerCase(),
+      address: s(r.address),
       city: s(r.city),
       state: s(r.state),
       zipCode: s(r.zip_code),
+      partsSupplied: s(r.parts_supplied_csv)
+        ? s(r.parts_supplied_csv).split("|").map((x) => s(x)).filter(Boolean)
+        : [],
       paymentTerms: s(r.payment_terms),
       notes: s(r.notes),
       importBatchId: ctx.batchId,
@@ -568,7 +740,18 @@ const IMPORT_COLLECTIONS = {
   purchaseOrders: {
     label: "Purchase Orders",
     model: PurchaseOrder,
-    headers: [...BASE_HEADERS, "po_number", "vendor_external_ref", "vendor_source_system", "type", "notes"],
+    headers: [
+      ...BASE_HEADERS,
+      "po_number",
+      "vendor_external_ref",
+      "vendor_source_system",
+      "type",
+      "type_options_hint",
+      "quote_external_ref",
+      "quote_source_system",
+      "line_items_json",
+      "notes",
+    ],
     sample: {
       source_system: "manual_csv",
       external_ref: "PO-2026-01",
@@ -576,6 +759,10 @@ const IMPORT_COLLECTIONS = {
       vendor_external_ref: "VEND-55",
       vendor_source_system: "manual_csv",
       type: "shop",
+      type_options_hint: "shop|job",
+      quote_external_ref: "",
+      quote_source_system: "manual_csv",
+      line_items_json: '[{"description":"6205 Bearing","qty":"2","uom":"ea","unitPrice":"45","status":"Ordered"}]',
       notes: "",
     },
     validateRow: (r) => {
@@ -583,11 +770,33 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.vendor_external_ref)) errs.push("vendor_external_ref is required");
       if (!s(r.type)) errs.push("type is required");
+      if (s(r.type).toLowerCase() === "job" && !s(r.quote_external_ref)) errs.push("quote_external_ref is required when type is job");
+      if (s(r.line_items_json)) {
+        try {
+          parseJsonArrayField(r.line_items_json, "line_items_json");
+        } catch (err) {
+          errs.push(err.message || "line_items_json must be valid JSON array");
+        }
+      }
       return errs;
     },
     buildPayload: (r, ctx) => {
       const vendorId = ctx.resolveRef("vendors", s(r.vendor_source_system || "manual_csv"), s(r.vendor_external_ref));
       if (!vendorId) throw new Error("vendor_external_ref not found");
+      const quoteId = s(r.quote_external_ref)
+        ? ctx.resolveRef("quotes", s(r.quote_source_system || "manual_csv"), s(r.quote_external_ref))
+        : "";
+      if (s(r.quote_external_ref) && !quoteId) throw new Error("quote_external_ref not found");
+      const lineItemsRaw = s(r.line_items_json)
+        ? parseJsonArrayField(r.line_items_json, "line_items_json")
+        : [];
+      const lineItems = lineItemsRaw.map((it) => ({
+        description: s(it?.description),
+        qty: s(it?.qty || "1"),
+        uom: s(it?.uom),
+        unitPrice: s(it?.unitPrice),
+        status: s(it?.status || "Ordered"),
+      }));
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -597,6 +806,8 @@ const IMPORT_COLLECTIONS = {
         vendorExternalRef: s(r.vendor_external_ref),
         vendorSourceSystem: s(r.vendor_source_system || "manual_csv"),
         type: s(r.type || "shop"),
+        quoteId,
+        lineItems,
         notes: s(r.notes),
         importBatchId: ctx.batchId,
         importedAt: new Date(),
@@ -607,13 +818,23 @@ const IMPORT_COLLECTIONS = {
   employees: {
     label: "Employees",
     model: Employee,
-    headers: [...BASE_HEADERS, "name", "email", "role", "phone", "can_login", "technician_app_access"],
+    headers: [
+      ...BASE_HEADERS,
+      "name",
+      "email",
+      "role",
+      "role_options_hint",
+      "phone",
+      "can_login",
+      "technician_app_access",
+    ],
     sample: {
       source_system: "manual_csv",
       external_ref: "EMP-1001",
       name: "Mike Turner",
       email: "mike@shop.com",
       role: "Technician",
+      role_options_hint: "Technician|Lead|Office|Supervisor|Manager|Other",
       phone: "+1 713 555 0140",
       can_login: "false",
       technician_app_access: "true",
@@ -685,6 +906,7 @@ const IMPORT_COLLECTIONS = {
       "job_source_system",
       "amount",
       "status",
+      "status_options_hint",
       "paid_at",
       "quote_id",
       "rfq_number",
@@ -699,6 +921,7 @@ const IMPORT_COLLECTIONS = {
       job_source_system: "manual_csv",
       amount: "125.50",
       status: "unpaid",
+      status_options_hint: "unpaid|paid",
       paid_at: "",
       quote_id: "",
       rfq_number: "",
@@ -762,6 +985,7 @@ const IMPORT_COLLECTIONS = {
       "motor_external_ref",
       "motor_source_system",
       "phase",
+      "phase_options_hint",
       "complaint",
       "nameplate_summary",
       "intake_notes",
@@ -778,6 +1002,7 @@ const IMPORT_COLLECTIONS = {
       motor_external_ref: "MTR-0001",
       motor_source_system: "manual_csv",
       phase: "intake",
+      phase_options_hint: "intake|pre_inspection|preliminary_quote|awaiting_preliminary_approval|teardown_approved|disassembly_detailed|final_quote|awaiting_final_approval|work_execution|testing_qa|completed|closed_returned|closed_scrap",
       complaint: "Trips breaker at startup",
       nameplate_summary: "50 HP, 460V, 1780 RPM",
       intake_notes: "",
@@ -827,15 +1052,29 @@ const IMPORT_COLLECTIONS = {
   repairFlowQuotes: {
     label: "Repair Flow Quotes",
     model: MotorRepairFlowQuote,
-    headers: [...BASE_HEADERS, "job_external_ref", "job_source_system", "stage", "status", "subtotal", "quote_notes"],
+    headers: [
+      ...BASE_HEADERS,
+      "job_external_ref",
+      "job_source_system",
+      "stage",
+      "stage_options_hint",
+      "status",
+      "status_options_hint",
+      "subtotal",
+      "line_items_json",
+      "quote_notes",
+    ],
     sample: {
       source_system: "manual_csv",
       external_ref: "RFQ-2001",
       job_external_ref: "RFJ-1001",
       job_source_system: "manual_csv",
       stage: "preliminary",
+      stage_options_hint: "preliminary|final",
       status: "draft",
+      status_options_hint: "draft|waiting_approval|approved|rejected|locked",
       subtotal: "1850",
+      line_items_json: '[{"description":"Rewind labor","quantity":1,"unitPrice":1200,"notes":"","subjectToTeardown":false}]',
       quote_notes: "",
     },
     validateRow: (r) => {
@@ -843,11 +1082,28 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.job_external_ref)) errs.push("job_external_ref is required");
       if (!s(r.stage)) errs.push("stage is required");
+      if (s(r.line_items_json)) {
+        try {
+          parseJsonArrayField(r.line_items_json, "line_items_json");
+        } catch (err) {
+          errs.push(err.message || "line_items_json must be valid JSON array");
+        }
+      }
       return errs;
     },
     buildPayload: (r, ctx) => {
       const jobId = ctx.resolveRef("repairFlowJobs", s(r.job_source_system || "manual_csv"), s(r.job_external_ref));
       if (!jobId) throw new Error("job_external_ref not found");
+      const lineItemsRaw = s(r.line_items_json)
+        ? parseJsonArrayField(r.line_items_json, "line_items_json")
+        : [];
+      const lineItems = lineItemsRaw.map((it) => ({
+        description: s(it?.description),
+        quantity: n(it?.quantity, 1),
+        unitPrice: n(it?.unitPrice, 0),
+        notes: s(it?.notes),
+        subjectToTeardown: Boolean(it?.subjectToTeardown),
+      }));
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -858,6 +1114,7 @@ const IMPORT_COLLECTIONS = {
         stage: s(r.stage),
         status: s(r.status || "draft"),
         subtotal: n(r.subtotal, 0),
+        lineItems,
         quoteNotes: s(r.quote_notes),
         importBatchId: ctx.batchId,
         importedAt: new Date(),
@@ -868,14 +1125,25 @@ const IMPORT_COLLECTIONS = {
   repairFlowInspections: {
     label: "Repair Flow Inspections",
     model: MotorRepairInspection,
-    headers: [...BASE_HEADERS, "job_external_ref", "job_source_system", "kind", "component", "findings_json"],
+    headers: [
+      ...BASE_HEADERS,
+      "job_external_ref",
+      "job_source_system",
+      "kind",
+      "kind_options_hint",
+      "component",
+      "component_options_hint",
+      "findings_json",
+    ],
     sample: {
       source_system: "manual_csv",
       external_ref: "RFI-3001",
       job_external_ref: "RFJ-1001",
       job_source_system: "manual_csv",
       kind: "preliminary",
-      component: "full_motor",
+      kind_options_hint: "preliminary|detailed",
+      component: "stator",
+      component_options_hint: "stator|rotor|field_frame|armature|full_motor",
       findings_json: "{\"summary\":\"Insulation appears degraded\"}",
     },
     validateRow: (r) => {
@@ -940,13 +1208,14 @@ function rowsToObjects(csvText) {
 }
 
 async function fetchRefMaps(ownerEmail) {
-  const [customers, motors, quotes, vendors, repairFlowJobs, salesPersons] = await Promise.all([
+  const [customers, motors, quotes, vendors, repairFlowJobs, salesPersons, employees] = await Promise.all([
     Customer.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
     Motor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
     Quote.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
     Vendor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
     MotorRepairJob.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
     SalesPerson.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
+    Employee.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } }).select("_id sourceSystem externalRef").lean(),
   ]);
 
   const toMap = (items) => {
@@ -964,6 +1233,7 @@ async function fetchRefMaps(ownerEmail) {
     vendors: toMap(vendors),
     repairFlowJobs: toMap(repairFlowJobs),
     salesPersons: toMap(salesPersons),
+    employees: toMap(employees),
   };
 }
 

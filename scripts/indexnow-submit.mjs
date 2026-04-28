@@ -12,6 +12,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
 import { createJiti } from "jiti";
@@ -23,6 +24,73 @@ dotenv.config({ path: path.join(root, ".env") });
 dotenv.config({ path: path.join(root, ".env.local") });
 
 const INDEXNOW_MAX_URLS = 10000;
+
+function runGit(cmd) {
+  try {
+    return execSync(cmd, { cwd: root, stdio: ["ignore", "pipe", "ignore"] })
+      .toString("utf8")
+      .trim();
+  } catch {
+    return "";
+  }
+}
+
+function normalizeRouteFromAppDir(absDir) {
+  const appRoot = path.join(root, "src", "app");
+  const rel = path.relative(appRoot, absDir).split(path.sep).join("/");
+  if (!rel || rel === ".") return "/";
+  const cleanParts = rel
+    .split("/")
+    .filter(Boolean)
+    .filter((part) => !(part.startsWith("(") && part.endsWith(")")))
+    .filter((part) => !(part.startsWith("[") && part.endsWith("]")));
+  return cleanParts.length ? `/${cleanParts.join("/")}` : "/";
+}
+
+function routeForChangedFile(relFile) {
+  if (!relFile.startsWith("src/app/")) return "";
+  const absFile = path.join(root, relFile);
+  let cur = fs.existsSync(absFile) ? absFile : path.dirname(absFile);
+  if (fs.existsSync(absFile) && fs.statSync(absFile).isFile()) cur = path.dirname(absFile);
+
+  const appRoot = path.join(root, "src", "app");
+  while (cur.startsWith(appRoot)) {
+    const pageJs = path.join(cur, "page.js");
+    const pageJsx = path.join(cur, "page.jsx");
+    if (fs.existsSync(pageJs) || fs.existsSync(pageJsx)) {
+      return normalizeRouteFromAppDir(cur);
+    }
+    const parent = path.dirname(cur);
+    if (parent === cur) break;
+    cur = parent;
+  }
+  return "";
+}
+
+function getChangedRoutes() {
+  const changed = new Set();
+  // Last commit delta (best signal on CI/production builds).
+  const headDelta = runGit("git diff --name-only --diff-filter=ACMRTUXB HEAD~1..HEAD");
+  for (const line of headDelta.split("\n")) {
+    if (line.trim()) changed.add(line.trim());
+  }
+  // Include local staged + unstaged deltas (useful on local build runs).
+  const staged = runGit("git diff --name-only --cached --diff-filter=ACMRTUXB");
+  for (const line of staged.split("\n")) {
+    if (line.trim()) changed.add(line.trim());
+  }
+  const unstaged = runGit("git diff --name-only --diff-filter=ACMRTUXB");
+  for (const line of unstaged.split("\n")) {
+    if (line.trim()) changed.add(line.trim());
+  }
+
+  const routes = new Set();
+  for (const file of changed) {
+    const route = routeForChangedFile(file);
+    if (route) routes.add(route);
+  }
+  return [...routes];
+}
 
 async function main() {
   const key = process.env.INDEXNOW_KEY?.trim();
@@ -68,14 +136,20 @@ async function main() {
     },
   });
 
-  const { getAllSitemapUrls } = jiti(path.join(root, "src/lib/sitemap-url-entries.js"));
-
-  let urls;
-  try {
-    urls = await getAllSitemapUrls();
-  } catch (e) {
-    console.error("[indexnow] Failed to collect URLs (check MONGODB_URI for DB-backed routes):", e?.message || e);
-    process.exit(1);
+  let urls = [];
+  const changedRoutes = getChangedRoutes();
+  if (changedRoutes.length > 0) {
+    urls = changedRoutes.map((r) => `${origin}${r}`);
+    console.log(`[indexnow] Using changed routes from git delta (${urls.length}).`);
+  } else {
+    const { getAllSitemapUrls } = jiti(path.join(root, "src/lib/sitemap-url-entries.js"));
+    try {
+      urls = await getAllSitemapUrls();
+      console.log(`[indexnow] No changed routes found; fallback to full sitemap list (${urls.length}).`);
+    } catch (e) {
+      console.error("[indexnow] Failed to collect URLs (check MONGODB_URI for DB-backed routes):", e?.message || e);
+      process.exit(1);
+    }
   }
 
   console.log(`[indexnow] Submitting ${urls.length} URL(s) for ${hostname}`);

@@ -13,6 +13,7 @@ const IMPORT_TREE = [
     collection: "customers",
     label: "Customers",
     children: [
+      { collection: "customerAdditionalContacts", label: "Additional Contacts", children: [] },
       {
         collection: "motors",
         label: "Motors",
