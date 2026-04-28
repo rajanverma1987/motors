@@ -126,15 +126,6 @@ export default function DashboardSidebar() {
           </div>
         ))}
       </nav>
-      <div className="shrink-0 border-t border-border p-3">
-        <Link
-          href="/dashboard/settings"
-          className={`whitespace-nowrap ${linkClass("/dashboard/settings")}`}
-        >
-          <FiSettings className="h-5 w-5 shrink-0" aria-hidden />
-          Settings
-        </Link>
-      </div>
     </aside>
   );
 }

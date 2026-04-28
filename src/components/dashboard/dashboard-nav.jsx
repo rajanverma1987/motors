@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FiLogOut, FiSearch } from "react-icons/fi";
+import { FiLogOut, FiSearch, FiSettings } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import { useAuth } from "@/contexts/auth-context";
@@ -73,6 +73,14 @@ export default function DashboardNav() {
             </kbd>
           </button>
           <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+          <Link
+            href="/dashboard/settings"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white"
+            title="Settings"
+            aria-label="Settings"
+          >
+            <FiSettings className="h-5 w-5" aria-hidden />
+          </Link>
           <ThemeToggle />
           <button
             type="button"
