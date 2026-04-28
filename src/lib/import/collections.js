@@ -62,7 +62,6 @@ const IMPORT_COLLECTIONS = {
       "shipping_state",
       "shipping_zip_code",
       "shipping_country",
-      "additional_contacts_json",
       "notes",
     ],
     sample: {
@@ -82,7 +81,6 @@ const IMPORT_COLLECTIONS = {
       shipping_state: "Texas",
       shipping_zip_code: "77002",
       shipping_country: "United States",
-      additional_contacts_json: '[{"contactName":"Jane Roe","phone":"+1 713 555 0102","email":"jane@acmepumps.com"}]',
       notes: "Priority account",
     },
     buildPayload: (r, ctx) => ({
@@ -103,7 +101,6 @@ const IMPORT_COLLECTIONS = {
       shippingState: s(r.shipping_state),
       shippingZipCode: s(r.shipping_zip_code),
       shippingCountry: s(r.shipping_country || "United States"),
-      additionalContacts: s(r.additional_contacts_json) ? parseJsonArrayField(r.additional_contacts_json, "additional_contacts_json") : [],
       notes: s(r.notes),
       importBatchId: ctx.batchId,
       importedAt: new Date(),
@@ -113,13 +110,6 @@ const IMPORT_COLLECTIONS = {
       const errs = [];
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.company_name)) errs.push("company_name is required");
-      if (s(r.additional_contacts_json)) {
-        try {
-          parseJsonArrayField(r.additional_contacts_json, "additional_contacts_json");
-        } catch (err) {
-          errs.push(err.message || "additional_contacts_json must be a valid JSON array");
-        }
-      }
       return errs;
     },
   },
