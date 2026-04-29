@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Employee from "@/models/Employee";
 import { verifyPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getLoginBlockReason } from "@/lib/subscription-access";
@@ -26,23 +27,45 @@ export async function POST(request) {
     }
 
     await connectDB();
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password." },
-        { status: 401 }
-      );
+    const emailRaw = email.trim().toLowerCase();
+    let ownerUser = await User.findOne({ email: emailRaw });
+    let actingEmployee = null;
+    let ownerEmail = emailRaw;
+
+    if (ownerUser) {
+      const valid = await verifyPassword(password, ownerUser.passwordHash);
+      if (!valid) {
+        ownerUser = null;
+      }
     }
 
-    const valid = await verifyPassword(password, user.passwordHash);
-    if (!valid) {
-      return NextResponse.json(
-        { error: "Invalid email or password." },
-        { status: 401 }
-      );
+    if (!ownerUser) {
+      const employeeCandidates = await Employee.find({ email: emailRaw }).select("+passwordHash").lean();
+      for (const emp of employeeCandidates) {
+        if (!emp?.canLogin) continue;
+        if (!emp?.passwordHash) continue;
+        const ok = await verifyPassword(password, emp.passwordHash);
+        if (!ok) continue;
+        const empOwnerEmail = String(emp.createdByEmail || "").trim().toLowerCase();
+        if (!empOwnerEmail) continue;
+        const owner = await User.findOne({ email: empOwnerEmail });
+        if (!owner) continue;
+        ownerUser = owner;
+        ownerEmail = empOwnerEmail;
+        actingEmployee = {
+          id: String(emp._id || ""),
+          email: String(emp.email || ""),
+          name: String(emp.name || ""),
+        };
+        break;
+      }
     }
 
-    if (user.canLogin === false) {
+    if (!ownerUser) {
+      return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    }
+
+    if (ownerUser.canLogin === false) {
       return NextResponse.json(
         { error: "Login access has been revoked. Please contact support.", code: "LOGIN_REVOKED" },
         { status: 403 }
@@ -50,12 +73,12 @@ export async function POST(request) {
     }
 
     try {
-      await syncSubscriptionWithAccountTier(user.email);
+      await syncSubscriptionWithAccountTier(ownerEmail);
     } catch (_) {
       /* ignore */
     }
 
-    const subRevokeReason = await getLoginBlockReason(user.email);
+    const subRevokeReason = await getLoginBlockReason(ownerEmail);
     if (subRevokeReason) {
       return NextResponse.json(
         { error: subRevokeReason, code: "SUBSCRIPTION_REVOKED" },
@@ -64,9 +87,12 @@ export async function POST(request) {
     }
 
     const token = await createPortalToken({
-      email: user.email,
-      shopName: user.shopName,
-      contactName: user.contactName,
+      email: ownerEmail,
+      shopName: ownerUser.shopName,
+      contactName: ownerUser.contactName,
+      authType: actingEmployee ? "employee" : "owner",
+      employeeId: actingEmployee?.id || "",
+      employeeEmail: actingEmployee?.email || "",
     });
     const cookieStore = await cookies();
     cookieStore.set(getPortalCookieName(), token, {
@@ -77,15 +103,17 @@ export async function POST(request) {
       path: "/",
     });
 
-    const listingOnly = await userIsListingOnlyAccount(user.email);
+    const listingOnly = await userIsListingOnlyAccount(ownerEmail);
 
     return NextResponse.json({
       ok: true,
       user: {
-        email: user.email,
-        shopName: user.shopName,
-        contactName: user.contactName,
+        email: ownerEmail,
+        shopName: ownerUser.shopName,
+        contactName: ownerUser.contactName,
         listingOnlyAccount: listingOnly,
+        isEmployeeSession: Boolean(actingEmployee),
+        employee: actingEmployee,
       },
     });
   } catch (err) {

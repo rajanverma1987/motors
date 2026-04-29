@@ -584,7 +584,7 @@ export default function Table({
     const px = col.isSelect ? "px-2" : "px-4";
     return `${px} ${headerPy} text-sm font-medium text-title outline-none whitespace-nowrap ${align}`;
   };
-  const thStickyStyle = stickyHeader
+  const thStickyStyle = effectiveStickyHeader
     ? { position: "sticky", top: 0, zIndex: 10, backgroundColor: "hsl(var(--card))", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" }
     : undefined;
 
