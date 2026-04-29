@@ -87,7 +87,7 @@ export default async function MotorRepairShopLocationPage({ params }) {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <Link
             href="/electric-motor-reapir-shops-listings"
             className="inline-flex items-center text-sm text-secondary hover:text-primary"
@@ -100,7 +100,7 @@ export default async function MotorRepairShopLocationPage({ params }) {
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
             {page.title}
           </h1>
-          <p className="mt-4 max-w-2xl text-lg text-secondary">
+          <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             {page.metaDescription || `Browse approved motor repair and rewinding centers in ${areaLabel}. Contact shops directly or submit your requirement.`}
           </p>
           <ListingsHeroCta />
@@ -108,7 +108,7 @@ export default async function MotorRepairShopLocationPage({ params }) {
       </section>
 
       <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <p className="mb-6 text-sm text-secondary">
             {listings.length} center{listings.length !== 1 ? "s" : ""} in this area
           </p>

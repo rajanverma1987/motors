@@ -420,7 +420,7 @@ export default function AdminMarketplacePage() {
 
   return (
     <div className="flex w-full flex-1 justify-center">
-      <div className="w-full max-w-7xl p-6">
+      <div className="w-full max-w-[96rem] p-6">
       <h1 className="text-center text-2xl font-bold text-title">Marketplace (platform)</h1>
       <p className="mt-1 text-center text-sm text-secondary">
         List items on the public marketplace as MotorsWinding.com. Orders appear here for your team to fulfill—no

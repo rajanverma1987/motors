@@ -57,7 +57,7 @@ export default function MarketplaceEmptyWantForm({
 
   if (done) {
     return (
-      <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+      <div className="mx-auto max-w-[38.4rem] rounded-xl border border-border bg-card p-6 text-center shadow-sm">
         <p className="font-semibold text-title">Thanks — we received your request</p>
         <p className="mt-2 text-sm text-secondary">
           Our team will review what you need and reach out by email. You can also try different search keywords or
@@ -70,7 +70,7 @@ export default function MarketplaceEmptyWantForm({
   const isBelowListings = variant === "belowListings";
 
   return (
-    <div className="mx-auto max-w-lg rounded-xl border border-border bg-card p-6 shadow-sm">
+    <div className="mx-auto max-w-[38.4rem] rounded-xl border border-border bg-card p-6 shadow-sm">
       {isBelowListings ? (
         <>
           <p className="text-sm text-secondary">

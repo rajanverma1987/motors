@@ -59,7 +59,7 @@ export default function BlogPageLayout({
       )}
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
           {breadcrumbLink?.href && (
             <Link
               href={breadcrumbLink.href}
@@ -77,7 +77,7 @@ export default function BlogPageLayout({
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+      <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
         {topContent ? <div className="pt-10 sm:pt-12 md:pt-14">{topContent}</div> : null}
         {/* ~65% content | ~35% CTA on md+ */}
         <div className="grid grid-cols-1 gap-8 py-12 sm:py-16 md:grid-cols-[13fr_7fr]">

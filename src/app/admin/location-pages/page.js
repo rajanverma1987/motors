@@ -155,7 +155,7 @@ export default function AdminLocationPagesPage() {
   ];
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">SEO location pages</h1>
         <p className="mt-1 text-sm text-secondary">
@@ -163,7 +163,7 @@ export default function AdminLocationPagesPage() {
         </p>
       </div>
 
-      <Form onSubmit={handleSubmit} className="mt-8 max-w-2xl shrink-0">
+      <Form onSubmit={handleSubmit} className="mt-8 max-w-[50.4rem] shrink-0">
         <h2 className="text-lg font-semibold text-title">Add location page</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input

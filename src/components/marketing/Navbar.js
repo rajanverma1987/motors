@@ -15,7 +15,7 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-[86.4rem] items-center justify-between gap-3 px-4 sm:px-6">
         <Link
           href="/"
           className="shrink-0 text-xl font-semibold tracking-tight text-title hover:text-primary transition-colors"

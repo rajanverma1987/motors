@@ -223,7 +223,7 @@ export default function SettingsPageClient() {
                 after you sign in. This does not affect the sticky <strong className="text-title">Save changes</strong>{" "}
                 bar for other settings (save those separately).
               </p>
-              <form className="flex max-w-md flex-col gap-4" onSubmit={handlePasswordChange}>
+              <form className="flex max-w-[33.6rem] flex-col gap-4" onSubmit={handlePasswordChange}>
                 <Input
                   type="password"
                   label="Current password"
@@ -295,7 +295,7 @@ export default function SettingsPageClient() {
                 Default payment terms for your shop. Use for invoices, quotes, and vendor expectations. You
                 can still override per document later when that is supported.
               </p>
-              <div className="max-w-md">
+              <div className="max-w-[33.6rem]">
                 <Select
                   label="Standard terms"
                   options={ACCOUNTS_PAYMENT_TERMS_OPTIONS}
@@ -410,7 +410,7 @@ export default function SettingsPageClient() {
               <p className="mb-4 text-sm text-secondary">
                 Quotes, purchase orders, and other money fields on the dashboard are shown in this currency. Stored amounts are unchanged; only display formatting updates.
               </p>
-              <div className="max-w-md">
+              <div className="max-w-[33.6rem]">
                 <Select
                   label="Display currency"
                   options={DISPLAY_CURRENCIES}
@@ -679,14 +679,14 @@ export default function SettingsPageClient() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-10">
+      <div className="mx-auto max-w-[50.4rem] px-4 py-10">
         <p className="text-secondary">Loading settings…</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 py-8">
+    <div className="mx-auto flex min-h-0 w-full max-w-[76.8rem] flex-1 flex-col px-4 py-8">
       <div className="mb-8 shrink-0 border-b border-border pb-6">
         <h1 className="text-2xl font-bold text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">

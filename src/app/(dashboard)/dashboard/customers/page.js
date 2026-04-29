@@ -543,7 +543,7 @@ export default function DashboardCustomersPage() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Customers</h1>
@@ -553,7 +553,7 @@ export default function DashboardCustomersPage() {
         </div>
         <div className="flex flex-wrap items-end gap-3">
           {user?.listingOnlyAccount && customers.length >= LISTING_ONLY_MAX_CUSTOMERS ? (
-            <p className="max-w-md text-xs text-secondary">{LISTING_ONLY_UPGRADE_MESSAGE}</p>
+            <p className="max-w-[33.6rem] text-xs text-secondary">{LISTING_ONLY_UPGRADE_MESSAGE}</p>
           ) : (
             <Button variant="primary" onClick={openEnterModal} className="shrink-0">
               Enter New Customer

@@ -311,7 +311,7 @@ export default function AdminMarketingPage() {
     .map((c) => ({ ...c }));
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-7xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Marketing emails</h1>

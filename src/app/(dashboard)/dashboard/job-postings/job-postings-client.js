@@ -337,11 +337,11 @@ export default function JobPostingsClient() {
   }
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold text-title">Job postings</h1>
-          <p className="mt-1 text-sm text-secondary max-w-2xl mx-auto sm:mx-0">
+          <p className="mt-1 text-sm text-secondary max-w-[50.4rem] mx-auto sm:mx-0">
             Create detailed roles for technicians, winders, and office staff. Open postings marked &quot;On careers
             site&quot; appear on the public{" "}
             <a href="/careers" className="text-primary font-medium hover:underline" target="_blank" rel="noreferrer">

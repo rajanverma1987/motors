@@ -45,7 +45,7 @@ export default function DashboardGuard({ children }) {
   if (!mounted) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg p-6">
-        <div className="max-w-xl rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="max-w-[43.2rem] rounded-2xl border border-border bg-card p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
           <h1 className="mt-2 text-xl font-semibold text-title">Checking access…</h1>
           <p className="mt-3 text-sm text-secondary">
@@ -60,7 +60,7 @@ export default function DashboardGuard({ children }) {
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg p-6">
-        <div className="max-w-xl rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div className="max-w-[43.2rem] rounded-2xl border border-border bg-card p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
           <h1 className="mt-2 text-xl font-semibold text-title">{pageCopy.title} requires CRM access.</h1>
           <p className="mt-3 text-sm text-secondary">{pageCopy.detail}</p>

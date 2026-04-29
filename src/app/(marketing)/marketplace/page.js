@@ -47,14 +47,14 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
   return (
     <div className="min-h-screen bg-bg">
       <div className="border-b border-border bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 py-10 sm:px-6">
           <p className="text-sm font-medium text-primary">
             <Link href="/motor-repair-marketplace" className="hover:underline">
               For shops: sell on the marketplace →
             </Link>
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-title sm:text-4xl">Marketplace</h1>
-          <p className="mt-3 max-w-2xl text-secondary">
+          <p className="mt-3 max-w-[50.4rem] text-secondary">
             Parts, motors, tools, and surplus from repair centers and our team. Use search and filters to find what
             you need. When you request an item, the seller contacts you—no checkout or payment on this site.
           </p>
@@ -101,7 +101,7 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+      <div className="mx-auto max-w-[86.4rem] px-4 py-10 sm:px-6">
         {items.length === 0 ? (
           <div className="flex flex-col items-center gap-8">
             <p className="text-center text-secondary">No listings match your filters. Try different keywords.</p>

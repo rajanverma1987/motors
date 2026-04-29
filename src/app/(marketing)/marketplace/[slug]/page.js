@@ -108,7 +108,7 @@ export default async function MarketplaceItemPage({ params }) {
       />
       <div className="min-h-screen bg-bg">
         <div className="border-b border-border bg-card">
-          <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <div className="mx-auto max-w-[67.2rem] px-4 py-6 sm:px-6">
             <Link href="/marketplace" className="text-sm text-primary hover:underline">
               ← Back to marketplace
             </Link>
@@ -124,7 +124,7 @@ export default async function MarketplaceItemPage({ params }) {
           </div>
         </div>
 
-        <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-[67.2rem] px-4 py-8 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-5">
             <div className="lg:col-span-3">
               {images.length > 0 ? (

@@ -198,8 +198,8 @@ export default function ListYourCenterPage() {
       <>
         <section className="relative border-b border-border bg-card py-10 sm:py-14 overflow-hidden">
           <HeroBackground />
-          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="max-w-xl">
+          <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+            <div className="max-w-[43.2rem]">
               <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
                 Free directory listing
               </span>
@@ -224,7 +224,7 @@ export default function ListYourCenterPage() {
           </div>
         </section>
         <section className="py-10 sm:py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-start">
               <div>
                 <h2 className="text-2xl font-bold text-title sm:text-3xl">
@@ -319,7 +319,7 @@ export default function ListYourCenterPage() {
       <>
         <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
           <HeroBackground />
-          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
             <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
               Check your email
             </h1>
@@ -329,7 +329,7 @@ export default function ListYourCenterPage() {
           </div>
         </section>
         <section className="py-10 sm:py-16">
-          <div className="mx-auto max-w-md px-4 sm:px-6">
+          <div className="mx-auto max-w-[33.6rem] px-4 sm:px-6">
             <FormContainer>
               <FormSectionTitle as="h2">Step 2: Enter verification code</FormSectionTitle>
               <Input
@@ -366,14 +366,14 @@ export default function ListYourCenterPage() {
       <>
         <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
           <HeroBackground />
-          <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
             <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
               Listing submitted
             </h1>
           </div>
         </section>
         <section className="py-10 sm:py-16">
-          <div className="mx-auto max-w-lg px-4 sm:px-6">
+          <div className="mx-auto max-w-[38.4rem] px-4 sm:px-6">
             <FormContainer>
               <p className="text-secondary">
                 Thanks for listing <strong className="text-title">{formData.companyName || "your center"}</strong>. We’ve received your details. Your listing will be reviewed and, once approved, will appear in the directory. We may contact you at <strong className="text-title">{formData.email}</strong> if we need anything.
@@ -395,7 +395,7 @@ export default function ListYourCenterPage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-8 sm:py-12">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
             Email verified: {formData.email}
           </span>
@@ -409,7 +409,7 @@ export default function ListYourCenterPage() {
       </section>
 
       <form onSubmit={handleSubmitListing} className="py-10 sm:py-16">
-        <div className="mx-auto max-w-3xl space-y-10 px-4 sm:px-6">
+        <div className="mx-auto max-w-[57.6rem] space-y-10 px-4 sm:px-6">
           <DirectoryListingFormFields
             formData={formData}
             updateForm={updateForm}

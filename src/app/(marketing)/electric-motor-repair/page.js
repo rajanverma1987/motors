@@ -57,7 +57,7 @@ export default function ElectricMotorRepairHubPage() {
       />
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
           <Link
             href="/"
             className="inline-flex items-center text-sm text-secondary hover:text-primary"
@@ -76,7 +76,7 @@ export default function ElectricMotorRepairHubPage() {
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6 sm:py-16">
         <div className="grid grid-cols-1 gap-8 md:grid-cols-[13fr_7fr]">
           <div className="min-w-0 space-y-10">
             <section className="rounded-xl border border-border bg-card p-6 shadow-sm">

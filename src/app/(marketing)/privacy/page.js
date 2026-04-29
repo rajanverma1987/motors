@@ -20,7 +20,7 @@ export default function PrivacyPage() {
   const siteUrl = getPublicSiteUrl();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-[57.6rem] px-4 py-12 sm:px-6">
       <p className="text-sm text-secondary">
         <Link href="/" className="text-primary hover:underline">
           Home

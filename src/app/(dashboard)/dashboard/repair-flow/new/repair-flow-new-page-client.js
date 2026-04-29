@@ -8,7 +8,7 @@ export default function RepairFlowNewPageClient() {
   const router = useRouter();
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
+    <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
       <Link href="/dashboard/repair-flow" className="text-sm text-secondary hover:text-primary">
         ← Back to repair flow
       </Link>

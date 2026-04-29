@@ -55,7 +55,7 @@ export default function PortalViewPage() {
   if (error || !data) {
     return (
       <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-[33.6rem]">
           <p className="font-medium text-danger">{error || "Portal not found"}</p>
           <p className="mt-2 text-sm text-secondary">
             This link may be invalid or expired. Please contact your repair shop for a new link.
@@ -75,7 +75,7 @@ export default function PortalViewPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-[67.2rem] px-4 py-8">
         <header className="mb-8 border-b border-border pb-6">
           <h1 className="text-2xl font-bold text-title">Motor repair portal</h1>
           <p className="mt-1 text-secondary">

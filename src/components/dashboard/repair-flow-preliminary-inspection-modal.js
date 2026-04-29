@@ -45,7 +45,7 @@ export default function RepairFlowPreliminaryInspectionModal({
       }
     >
       <Form id={formId} onSubmit={onSubmit} className="space-y-4">
-        <div className="min-w-0 max-w-md">
+        <div className="min-w-0 max-w-[33.6rem]">
           <Select
             label="Component"
             options={componentOptions}

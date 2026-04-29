@@ -85,7 +85,7 @@ export default function RepairFlowPreliminaryRespondPage() {
   if (data.resolved) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 print:hidden">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
+        <div className="max-w-[33.6rem] w-full bg-white rounded-lg shadow p-8 text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Preliminary quote</h1>
           <p className="text-gray-700">{data.message}</p>
           {data.jobNumber ? (
@@ -99,7 +99,7 @@ export default function RepairFlowPreliminaryRespondPage() {
   if (response?.ok) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 print:hidden">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
+        <div className="max-w-[33.6rem] w-full bg-white rounded-lg shadow p-8 text-center">
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Thank you</h1>
           <p className="text-gray-700">{response.message}</p>
         </div>
@@ -110,7 +110,7 @@ export default function RepairFlowPreliminaryRespondPage() {
   if (response?.error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 print:hidden">
-        <div className="max-w-md w-full bg-white rounded-lg shadow p-8 text-center">
+        <div className="max-w-[33.6rem] w-full bg-white rounded-lg shadow p-8 text-center">
           <p className="text-red-600">{response.error}</p>
         </div>
       </div>
@@ -119,7 +119,7 @@ export default function RepairFlowPreliminaryRespondPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 print:py-4 print:px-0">
-      <div className="max-w-3xl mx-auto bg-white rounded-lg shadow print:shadow-none print:max-w-none">
+      <div className="max-w-[57.6rem] mx-auto bg-white rounded-lg shadow print:shadow-none print:max-w-none">
         <div className="p-6 print:p-4 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-4 print:border-gray-300">
             <div>

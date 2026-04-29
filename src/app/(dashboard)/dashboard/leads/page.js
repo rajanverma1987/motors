@@ -355,7 +355,7 @@ export default function DashboardLeadsPage() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Leads</h1>
@@ -363,7 +363,7 @@ export default function DashboardLeadsPage() {
             Manage incoming repair inquiries from the website, admin assignment, or manual entry.
           </p>
           {user?.listingOnlyAccount ? (
-            <p className="mt-2 max-w-2xl text-xs text-secondary">
+            <p className="mt-2 max-w-[50.4rem] text-xs text-secondary">
               <strong className="text-title">Directory listing plan:</strong> you see all leads here. Full contact
               details for the website are shown for the first two per calendar month (oldest first); additional
               website leads show masked contact info until you upgrade. Manual leads you add always show full

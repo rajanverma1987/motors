@@ -213,7 +213,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
       style={OFFSCREEN_STYLE}
       aria-hidden="true"
     >
-      <div className="mx-auto max-w-3xl text-sm">
+      <div className="mx-auto max-w-[57.6rem] text-sm">
         <QuotePrintSheetBody
           quote={quote}
           customerName={customerName}

@@ -79,7 +79,7 @@ function LoginPageContent() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
             Log in to your portal
           </h1>
@@ -87,7 +87,7 @@ function LoginPageContent() {
       </section>
 
       <section className="py-10 sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
             <div>
               <p className="text-base text-secondary">

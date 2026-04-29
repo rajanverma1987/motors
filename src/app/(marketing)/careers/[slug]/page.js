@@ -94,7 +94,7 @@ export default async function CareerDetailPage({ params }) {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-[96rem] px-4 py-10 sm:px-6 lg:px-8">
       <Link href="/careers" className="text-sm text-secondary hover:text-primary">
         ← All careers
       </Link>

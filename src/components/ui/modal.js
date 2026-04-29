@@ -7,15 +7,15 @@ import { useModalStack } from "@/components/modal-provider";
 const BASE_Z = 50;
 const sizeClasses = {
   sm: "max-w-sm",
-  md: "max-w-md",
-  lg: "max-w-lg",
-  xl: "max-w-xl",
-  "2xl": "max-w-2xl",
-  "3xl": "max-w-3xl",
-  "4xl": "max-w-4xl",
-  "5xl": "max-w-5xl",
-  "6xl": "max-w-6xl",
-  "7xl": "max-w-7xl",
+  md: "max-w-[33.6rem]",
+  lg: "max-w-[38.4rem]",
+  xl: "max-w-[43.2rem]",
+  "2xl": "max-w-[50.4rem]",
+  "3xl": "max-w-[57.6rem]",
+  "4xl": "max-w-[67.2rem]",
+  "5xl": "max-w-[76.8rem]",
+  "6xl": "max-w-[86.4rem]",
+  "7xl": "max-w-[96rem]",
   full: "max-w-[90vw]",
 };
 

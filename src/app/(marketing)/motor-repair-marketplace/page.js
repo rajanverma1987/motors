@@ -124,7 +124,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
       <JsonLd baseUrl={baseUrl} />
 
       <div className="border-b border-border bg-gradient-to-b from-primary/[0.08] via-card to-bg">
-        <div className="mx-auto max-w-4xl px-4 py-14 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-[67.2rem] px-4 py-14 sm:px-6 sm:py-20">
           <nav className="text-sm text-secondary" aria-label="Breadcrumb">
             <Link href="/" className="hover:text-primary">
               Home
@@ -164,7 +164,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
         </div>
       </div>
 
-      <article className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
+      <article className="mx-auto max-w-[67.2rem] px-4 py-12 sm:px-6 sm:py-16">
         <section className="border-b border-border pb-12" aria-labelledby="section-what">
           <h2 id="section-what" className="text-2xl font-bold text-title sm:text-3xl">
             What this marketplace solves for motor repair businesses
@@ -351,7 +351,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           <h2 id="section-cta" className="text-xl font-bold text-title sm:text-2xl">
             Ready to list from your motor repair CRM?
           </h2>
-          <p className="mt-3 max-w-2xl text-secondary">
+          <p className="mt-3 max-w-[50.4rem] text-secondary">
             Open <strong className="text-title">Marketplace</strong> in your dashboard sidebar after you sign in. New
             to the platform? Start with a plan that fits your shop, or talk to us about{" "}
             <Link href="/pricing" className="font-medium text-primary hover:underline">

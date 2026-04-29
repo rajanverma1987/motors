@@ -95,7 +95,7 @@ export default function PoVendorViewPage() {
 
   return (
     <div className="min-h-screen bg-background text-title">
-      <div className="mx-auto max-w-4xl px-4 py-8 print:py-4">
+      <div className="mx-auto max-w-[67.2rem] px-4 py-8 print:py-4">
         {/* Actions: print and save status - hidden when printing */}
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 print:hidden">
           <h1 className="text-xl font-bold">{po.poNumber ? `Purchase Order ${po.poNumber}` : "Purchase Order"}</h1>

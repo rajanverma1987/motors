@@ -19,7 +19,7 @@ export default function QuotePrintSheetBody({
   const totalNum = parseFloat(quote.laborTotal || 0) + parseFloat(quote.partsTotal || 0);
 
   return (
-    <div className="quote-print-sheet max-w-3xl mx-auto p-6 print:p-4 text-sm text-title">
+    <div className="quote-print-sheet max-w-[57.6rem] mx-auto p-6 print:p-4 text-sm text-title">
       <div className="mb-6 border-b border-border pb-4">
         <CompanyAccountsPrint
           billingAddress={accountSettings?.accountsBillingAddress}

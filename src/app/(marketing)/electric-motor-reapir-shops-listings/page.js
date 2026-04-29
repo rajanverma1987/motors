@@ -81,14 +81,14 @@ export default async function ListingsPage({ searchParams }) {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
             Directory
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
             Find a motor repair center
           </h1>
-          <p className="mt-4 max-w-2xl text-lg text-secondary">
+          <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             Browse approved repair centers by location. Submit your requirement and we&apos;ll match you with repair centers in your area.
           </p>
           <ListingsHeroCta />
@@ -96,7 +96,7 @@ export default async function ListingsPage({ searchParams }) {
       </section>
 
       <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <form method="GET" className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             {city && <input type="hidden" name="city" value={city} />}
             {state && <input type="hidden" name="state" value={state} />}
@@ -105,7 +105,7 @@ export default async function ListingsPage({ searchParams }) {
               name="search"
               placeholder="Search by company, city, state, or zip code…"
               defaultValue={search}
-              className="min-w-0 flex-1 max-w-xl rounded-md border border-border bg-bg px-4 py-2.5 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary sm:max-w-2xl"
+              className="min-w-0 flex-1 max-w-[43.2rem] rounded-md border border-border bg-bg px-4 py-2.5 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary sm:max-w-[50.4rem]"
               aria-label="Search listings"
             />
             <p className="text-sm text-secondary">

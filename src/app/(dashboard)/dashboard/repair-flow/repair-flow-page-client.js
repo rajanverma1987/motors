@@ -419,11 +419,11 @@ export default function RepairFlowPageClient() {
   }, [jobs, jobSearchQuery]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
+    <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Job Write-Up</h1>
-          <p className="mt-1 max-w-2xl text-sm text-secondary">
+          <p className="mt-1 max-w-[50.4rem] text-sm text-secondary">
             Inspection-driven pipeline from intake through preliminary and final quotes and approval gates. After the
             final repair quote is approved, use <span className="text-title">Actions</span> →{" "}
             <span className="text-title">Create work order</span> (final flow quote must be linked to a CRM RFQ). Jobs stay

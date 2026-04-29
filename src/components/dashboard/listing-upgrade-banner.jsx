@@ -23,7 +23,7 @@ export default function ListingUpgradeBanner() {
 
   return (
     <div className="border-b border-amber-300/80 bg-amber-100/90 px-4 py-2.5 text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-50">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-[86.4rem] flex-wrap items-center justify-between gap-3">
         <p className="text-sm">
           <span className="font-semibold">Directory listing plan.</span> Upgrade to full CRM for unlimited leads,
           customers, and workflows.{" "}

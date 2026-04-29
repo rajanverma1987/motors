@@ -161,21 +161,21 @@ export default function RegisterPage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <span className="inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm">
             One month free trial — no credit card required
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">
             Register your center
           </h1>
-          <p className="mt-4 max-w-2xl text-lg text-secondary">
+          <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal—work orders, quotes, customers, shop inventory, and repair leads in one place.
           </p>
         </div>
       </section>
 
       <section className="py-10 sm:py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
             {leftColumn}
 

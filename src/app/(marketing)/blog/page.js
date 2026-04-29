@@ -53,7 +53,7 @@ export default function BlogIndexPage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
           <Link href="/" className="text-sm text-secondary hover:text-primary">
             ← Home
           </Link>
@@ -67,7 +67,7 @@ export default function BlogIndexPage() {
           </p>
         </div>
       </section>
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6 sm:py-16">
         <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
           <article className="min-w-0">
             <ul className="space-y-8">

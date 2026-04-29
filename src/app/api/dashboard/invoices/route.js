@@ -59,6 +59,8 @@ export async function GET(request) {
         rfqNumber: inv.rfqNumber,
         date: inv.date,
         status: inv.status,
+        laborTotal: inv.laborTotal,
+        partsTotal: inv.partsTotal,
         customerId: inv.customerId,
         motorId: inv.motorId,
         customerName: custMap[String(inv.customerId)] || inv.customerId,

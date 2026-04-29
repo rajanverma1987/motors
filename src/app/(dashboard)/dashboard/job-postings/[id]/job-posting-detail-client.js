@@ -96,7 +96,7 @@ export default function JobPostingDetailClient() {
       key: "experienceText",
       label: "Experience",
       render: (v) => (
-        <p className="max-w-md whitespace-pre-wrap text-sm text-secondary line-clamp-4" title={v}>
+        <p className="max-w-[33.6rem] whitespace-pre-wrap text-sm text-secondary line-clamp-4" title={v}>
           {v || "—"}
         </p>
       ),
@@ -137,7 +137,7 @@ export default function JobPostingDetailClient() {
         </p>
       </div>
 
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-[67.2rem]">
         <h2 className="text-lg font-semibold text-title">Applicants ({applications.length})</h2>
         <p className="mt-1 text-sm text-secondary">
           Candidates who applied from the careers page. Contact them via email or phone.

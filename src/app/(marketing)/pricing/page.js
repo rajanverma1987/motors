@@ -18,8 +18,8 @@ export default function PricingPage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-16 sm:py-20">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+          <div className="mx-auto max-w-[50.4rem] text-center">
             <h1 className="text-4xl font-bold tracking-tight text-title sm:text-5xl">
               Pricing tailored to your workflow
             </h1>
@@ -42,7 +42,7 @@ export default function PricingPage() {
       </section>
 
       <section className="py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="grid gap-8 lg:grid-cols-3">
             <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
               <h2 className="text-xl font-semibold text-title">Available pricing models</h2>

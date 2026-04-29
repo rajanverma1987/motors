@@ -24,7 +24,7 @@ export default async function CareersPage() {
   const baseUrl = getPublicSiteUrl();
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-[67.2rem] px-4 py-12 sm:px-6">
       <div className="border-b border-border pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">

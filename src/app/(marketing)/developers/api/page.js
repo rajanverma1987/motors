@@ -24,7 +24,7 @@ const collections = [
 
 export default function PublicApiDocsPage() {
   return (
-    <main className="mx-auto max-w-5xl px-4 py-10 text-sm">
+    <main className="mx-auto max-w-[76.8rem] px-4 py-10 text-sm">
       <h1 className="text-3xl font-bold text-title">Motors CRM Public API</h1>
       <p className="mt-3 text-secondary">
         This API is for client account integrations only. It excludes all admin functionality.

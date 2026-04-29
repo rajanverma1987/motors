@@ -55,7 +55,7 @@ export default function SubscriptionPageClient() {
   ];
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-[67.2rem] px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold text-title">Subscription</h1>
       <p className="mt-1 text-secondary">
         Your plan, billing status, and recent payment activity. Complete PayPal checkout if your shop was assigned a

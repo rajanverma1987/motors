@@ -9,13 +9,14 @@ import {
   FiSend,
   FiPrinter,
   FiRotateCw,
+  FiDollarSign,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
@@ -30,6 +31,7 @@ function InvoicesInner() {
   const openId = searchParams.get("open");
   const draftQuoteParam = searchParams.get("draftQuote");
   const { settings: accountSettings } = useUserSettings();
+  const fmt = useFormatMoney();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -104,6 +106,40 @@ function InvoicesInner() {
       return hay.includes(q);
     });
   }, [rows, searchQuery]);
+
+  const statusSummaryCards = useMemo(() => {
+    const calcAmount = (row) => {
+      const labor = parseFloat(row?.laborTotal ?? "0");
+      const parts = parseFloat(row?.partsTotal ?? "0");
+      return (Number.isFinite(labor) ? labor : 0) + (Number.isFinite(parts) ? parts : 0);
+    };
+    return [
+      {
+        key: "draft",
+        label: "Draft",
+        count: rows.filter((r) => r.status === "draft").length,
+        amount: rows.filter((r) => r.status === "draft").reduce((sum, r) => sum + calcAmount(r), 0),
+      },
+      {
+        key: "sent",
+        label: "Sent",
+        count: rows.filter((r) => r.status === "sent").length,
+        amount: rows.filter((r) => r.status === "sent").reduce((sum, r) => sum + calcAmount(r), 0),
+      },
+      {
+        key: "partial_paid",
+        label: "Partial Paid",
+        count: rows.filter((r) => r.status === "partial_paid").length,
+        amount: rows.filter((r) => r.status === "partial_paid").reduce((sum, r) => sum + calcAmount(r), 0),
+      },
+      {
+        key: "fully_paid",
+        label: "Fully Paid",
+        count: rows.filter((r) => r.status === "fully_paid").length,
+        amount: rows.filter((r) => r.status === "fully_paid").reduce((sum, r) => sum + calcAmount(r), 0),
+      },
+    ];
+  }, [rows]);
 
   const runPrint = () => {
     requestAnimationFrame(() => {
@@ -277,13 +313,26 @@ function InvoicesInner() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Invoices</h1>
         <p className="mt-2 text-sm text-secondary">
           Create from a quote (opens here). Nothing is saved until you click Save. Then edit, send to client,
           print, or delete from this list.
         </p>
+      </div>
+
+      <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {statusSummaryCards.map((card) => (
+          <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
+            <div className="flex items-center gap-2 text-sm text-secondary">
+              <FiDollarSign className="h-4 w-4" aria-hidden />
+              {card.label}
+            </div>
+            <p className="mt-1 text-2xl font-bold tabular text-title">{fmt(card.amount)}</p>
+            <p className="text-xs text-secondary">Count: {card.count}</p>
+          </div>
+        ))}
       </div>
 
       <Table

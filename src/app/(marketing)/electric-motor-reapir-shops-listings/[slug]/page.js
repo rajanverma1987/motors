@@ -190,7 +190,7 @@ export default async function ListingDetailPage({ params }) {
 
   if (!listing) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+      <div className="mx-auto max-w-[67.2rem] px-4 py-16 text-center">
         <p className="text-secondary">Repair center not found.</p>
         <Link href="/electric-motor-reapir-shops-listings" className="mt-4 inline-block text-primary hover:underline">
           ← Back to listings
@@ -271,7 +271,7 @@ export default async function ListingDetailPage({ params }) {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-12">
+      <div className="mx-auto max-w-[86.4rem] px-4 py-8 sm:py-12">
         <Link
           href="/electric-motor-reapir-shops-listings"
           className="inline-flex items-center text-sm text-secondary hover:text-primary"

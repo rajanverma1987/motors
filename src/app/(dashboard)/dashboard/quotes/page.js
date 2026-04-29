@@ -10,6 +10,7 @@ import {
   FiTrash2,
   FiRotateCw,
   FiFileText,
+  FiDollarSign,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -619,6 +620,48 @@ export default function DashboardQuotesPage() {
     );
   }, [quotes, searchQuery, statusFilter, customerNameMap, motorLabelMap]);
 
+  const statusSummaryCards = useMemo(() => {
+    const calcAmount = (quote) => {
+      const labor = parseFloat(quote?.laborTotal ?? "0");
+      const parts = parseFloat(quote?.partsTotal ?? "0");
+      return (Number.isFinite(labor) ? labor : 0) + (Number.isFinite(parts) ? parts : 0);
+    };
+    return [
+      {
+        key: "draft",
+        label: "Draft",
+        count: quotes.filter((q) => (q.status || "draft") === "draft").length,
+        amount: quotes
+          .filter((q) => (q.status || "draft") === "draft")
+          .reduce((sum, q) => sum + calcAmount(q), 0),
+      },
+      {
+        key: "sent",
+        label: "Sent",
+        count: quotes.filter((q) => (q.status || "draft") === "sent").length,
+        amount: quotes
+          .filter((q) => (q.status || "draft") === "sent")
+          .reduce((sum, q) => sum + calcAmount(q), 0),
+      },
+      {
+        key: "approved",
+        label: "Approved",
+        count: quotes.filter((q) => (q.status || "draft") === "approved").length,
+        amount: quotes
+          .filter((q) => (q.status || "draft") === "approved")
+          .reduce((sum, q) => sum + calcAmount(q), 0),
+      },
+      {
+        key: "rejected_rnr",
+        label: "Rejected + RNR",
+        count: quotes.filter((q) => ["rejected", "rnr"].includes(q.status || "draft")).length,
+        amount: quotes
+          .filter((q) => ["rejected", "rnr"].includes(q.status || "draft"))
+          .reduce((sum, q) => sum + calcAmount(q), 0),
+      },
+    ];
+  }, [quotes]);
+
   const columns = useMemo(
     () => [
       {
@@ -801,7 +844,7 @@ export default function DashboardQuotesPage() {
   }, [viewingQuote, closeViewModal, openEditModal]);
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Quotes</h1>
@@ -829,6 +872,18 @@ export default function DashboardQuotesPage() {
       </div>
 
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {statusSummaryCards.map((card) => (
+            <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
+              <div className="flex items-center gap-2 text-sm text-secondary">
+                <FiDollarSign className="h-4 w-4" aria-hidden />
+                {card.label}
+              </div>
+              <p className="mt-1 text-2xl font-bold tabular text-title">{fmt(card.amount)}</p>
+              <p className="text-xs text-secondary">Count: {card.count}</p>
+            </div>
+          ))}
+        </div>
         <Table
           columns={columns}
           data={filteredQuotes}

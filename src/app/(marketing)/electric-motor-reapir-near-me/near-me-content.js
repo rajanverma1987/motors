@@ -168,7 +168,7 @@ export default function NearMeContent() {
       </div>
       <ListingsHeroCta />
       <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           {locationStatus === "denied" && (
             <div className="mb-8 rounded-xl border border-border bg-card p-6 text-center">
               <p className="font-medium text-title">Location access was denied</p>

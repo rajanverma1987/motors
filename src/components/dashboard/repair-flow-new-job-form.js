@@ -733,7 +733,7 @@ export default function RepairFlowNewJobForm({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Quotes</h2>
-              <p className="mt-1 max-w-3xl text-xs text-secondary">
+              <p className="mt-1 max-w-[57.6rem] text-xs text-secondary">
                 Final RFQs are the same records as on the Quotes tab. Use the eye icon to open one for editing. Add RFQ
                 attaches another draft to this job.
               </p>

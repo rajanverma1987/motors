@@ -68,7 +68,7 @@ export default function InvoiceCustomerViewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 print:px-0 print:py-4">
-      <div className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow print:max-w-none print:rounded-none print:p-4 print:shadow-none">
+      <div className="mx-auto max-w-[57.6rem] rounded-lg bg-white p-6 shadow print:max-w-none print:rounded-none print:p-4 print:shadow-none">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-4">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 print:text-black">Invoice</h1>
           <button

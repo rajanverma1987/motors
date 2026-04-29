@@ -35,7 +35,7 @@ export default function ConfirmDialog({
         className="absolute inset-0 bg-black/50"
         onClick={onCancel}
       />
-      <div className="relative w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl">
+      <div className="relative w-full max-w-[33.6rem] rounded-lg border border-border bg-card p-6 shadow-xl">
         <h2 id="confirm-title" className="mb-2 text-lg font-semibold text-title">
           {title}
         </h2>

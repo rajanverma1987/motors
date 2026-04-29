@@ -117,7 +117,7 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-card to-card" aria-hidden />
         <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black_40%,transparent_100%)] opacity-50" aria-hidden />
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
           <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-center">
             {/* Left: copy + CTAs */}
             <div>
@@ -131,7 +131,7 @@ export default function HomePage() {
                 </span>{" "}
                 for your electric motor repair company.
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-secondary sm:text-xl">
+              <p className="mt-6 max-w-[43.2rem] text-lg text-secondary sm:text-xl">
                 From first lead through cash collection, vendor buying, payables, and sales commissions—one connected
                 workflow instead of scattered spreadsheets and apps. Job Write-Up, job board, inventory, invoicing, repair leads,{" "}
                 <Link href="/careers" className="font-medium text-primary hover:underline">
@@ -244,7 +244,7 @@ export default function HomePage() {
       {/* Why one platform */}
       <section className="border-t border-border bg-bg pt-16 pb-10 sm:pt-24 sm:pb-12">
         <div className="mx-auto max-w-[82.8rem] px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
+          <div className="mx-auto max-w-[50.4rem] text-center">
             <h2 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
               No more paperwork, more time for your business
             </h2>
@@ -303,8 +303,8 @@ export default function HomePage() {
 
       {/* All features */}
       <section id="features" className="pt-12 pb-20 sm:pt-16 sm:pb-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
+          <div className="mx-auto max-w-[50.4rem] text-center">
             <span className="inline-block rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
               Platform
             </span>
@@ -339,7 +339,7 @@ export default function HomePage() {
             <h3 className="mt-6 text-2xl font-bold text-title sm:text-3xl">
               Motor repair workflow
             </h3>
-            <p className="mt-3 max-w-2xl text-secondary">
+            <p className="mt-3 max-w-[50.4rem] text-secondary">
               Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
             </p>
             <ul className="mt-8 space-y-6">
@@ -379,7 +379,7 @@ export default function HomePage() {
             <h3 className="mt-6 text-2xl font-bold text-title sm:text-3xl">
               Job management tools
             </h3>
-            <p className="mt-3 max-w-2xl text-secondary">
+            <p className="mt-3 max-w-[50.4rem] text-secondary">
               One system for customers, Job Write-Up, Quotes, invoicing, vendors, shop inventory, and logistics. Create invoices from completed work orders, track payments, manage parts on hand and reservations, and handle receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, stock, and physical flow in sync without leaving the platform.
             </p>
             <ul className="mt-8 space-y-6">
@@ -410,7 +410,7 @@ export default function HomePage() {
             <h3 className="mt-6 text-2xl font-bold text-title sm:text-3xl">
               Lead generation network
             </h3>
-            <p className="mt-3 max-w-2xl text-secondary">
+            <p className="mt-3 max-w-[50.4rem] text-secondary">
               Get repair inquiries from the MotorsWinding.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up—so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
             </p>
             <ul className="mt-8 space-y-6">
@@ -452,7 +452,7 @@ export default function HomePage() {
                   <span className="text-sm font-semibold uppercase tracking-wide text-primary">Marketplace</span>
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">List excess inventory on the public site</h3>
-                <p className="mt-3 max-w-2xl text-secondary">
+                <p className="mt-3 max-w-[50.4rem] text-secondary">
                   Publish parts, motors, tools, and surplus from your CRM. Each listing gets its own SEO-friendly URL.
                   Buyers search and filter on{" "}
                   <Link href="/marketplace" className="font-medium text-primary hover:underline">
@@ -494,7 +494,7 @@ export default function HomePage() {
                   <span className="text-sm font-semibold uppercase tracking-wide text-primary">Hiring</span>
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">Post jobs, candidates apply on the site</h3>
-                <p className="mt-3 max-w-2xl text-secondary">
+                <p className="mt-3 max-w-[50.4rem] text-secondary">
                   Shops using the CRM can publish employee job postings that appear on the public{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     Careers
@@ -526,7 +526,7 @@ export default function HomePage() {
                 <h3 className="mt-3 text-2xl font-bold text-title sm:text-3xl">
                   Pricing tailored to your workflow
                 </h3>
-                <p className="mt-3 max-w-2xl text-secondary">
+                <p className="mt-3 max-w-[50.4rem] text-secondary">
                   Every business is different. We analyze your process and offer the best pricing model - monthly,
                   yearly, or one-time.
                 </p>
@@ -550,14 +550,14 @@ export default function HomePage() {
 
       {/* List your center */}
       <section className="border-t border-border bg-bg py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
             <div className="flex flex-col items-center gap-6 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
                   List your repair company in the directory - Free to list
                 </h2>
-                <p className="mt-3 max-w-xl text-secondary">
+                <p className="mt-3 max-w-[43.2rem] text-secondary">
                   Add your company to the MotorsWinding.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     post employee job openings
@@ -577,11 +577,11 @@ export default function HomePage() {
 
       {/* CTA */}
       <section className="border-t border-border bg-card py-16 sm:py-24">
-        <div className="mx-auto max-w-6xl px-4 text-center sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 text-center sm:px-6">
           <h2 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
             Ready to streamline your center?
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-lg text-secondary">
+          <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-secondary">
             Contact us for a demo and see how MotorsWinding.com can help you manage jobs, stock, grow with leads, and hire
             through public job postings.
           </p>

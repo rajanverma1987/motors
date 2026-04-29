@@ -65,8 +65,8 @@ export default function ContactPage() {
       <section className="relative overflow-hidden border-b border-border bg-gradient-to-br from-primary/5 via-card to-card py-16 sm:py-24">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,var(--color-primary)/.08,transparent)]" aria-hidden />
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-2xl text-center">
+        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+          <div className="mx-auto max-w-[50.4rem] text-center">
             <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               Get in touch
             </span>
@@ -82,7 +82,7 @@ export default function ContactPage() {
 
       {/* Main: side info + form */}
       <section className="py-14 sm:py-20">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:gap-16 lg:items-start">
             {/* Side info */}
             <div className="order-2 lg:order-1 lg:sticky lg:top-8">

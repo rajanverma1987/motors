@@ -106,7 +106,7 @@ export default function SeoLeadLandingPage({
 
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
           <nav aria-label="Breadcrumb" className="text-sm text-secondary">
             <ol className="flex flex-wrap items-center gap-2">
               {breadcrumbs.map((b, i) => (
@@ -123,7 +123,7 @@ export default function SeoLeadLandingPage({
         </div>
       </section>
 
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6 sm:py-16">
         <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
           <article className="min-w-0 space-y-10 prose prose-neutral dark:prose-invert max-w-none">
             <section>

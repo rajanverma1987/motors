@@ -22,7 +22,7 @@ export default function InvoicePrintPreview({
   if (!q) return null;
   const totalNum = parseFloat(q.laborTotal || 0) + parseFloat(q.partsTotal || 0);
   return (
-    <div className="mx-auto max-w-3xl text-title">
+    <div className="mx-auto max-w-[57.6rem] text-title">
       <h1 className="mb-6 border-b border-border pb-4 text-4xl font-bold tracking-tight">Invoice</h1>
       <div className="mb-6 grid gap-8 border-b border-border pb-6 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">

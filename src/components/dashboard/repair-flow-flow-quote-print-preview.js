@@ -158,7 +158,7 @@ export default function RepairFlowFlowQuotePrintPreview({ open, jobId, onClose, 
       }}
       aria-hidden="true"
     >
-      <div className="mx-auto max-w-3xl text-sm">
+      <div className="mx-auto max-w-[57.6rem] text-sm">
         <RepairFlowFlowQuotePrintContent job={job} quotes={quotes} fmt={fmt} accountSettings={accountSettings} />
       </div>
     </div>,

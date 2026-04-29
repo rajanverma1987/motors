@@ -83,7 +83,7 @@ function JobBoardSharePageInner() {
     return (
       <div className="relative min-h-screen bg-bg flex items-center justify-center p-6">
         <ShareBoardThemeCorner />
-        <div className="max-w-xl rounded-2xl border border-border bg-card p-6 text-left shadow-sm">
+        <div className="max-w-[43.2rem] rounded-2xl border border-border bg-card p-6 text-left shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
           <h1 className="mt-2 text-xl font-semibold text-title">
             {isProtected ? "This job board is private to CRM users." : error || "Job board not found"}

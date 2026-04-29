@@ -264,7 +264,7 @@ export default function IntegrationsPageClient() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-8">
+    <div className="mx-auto w-full max-w-[96rem] px-4 py-8">
       <div className="border-b border-border pb-4">
         <h1 className="text-2xl font-semibold text-title">API Integrations</h1>
         <p className="mt-1 text-sm text-secondary">

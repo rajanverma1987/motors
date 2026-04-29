@@ -10,7 +10,7 @@ export default function ListingDetailFaqSection({ items }) {
       <h2 id="listing-faq-heading" className="text-xl font-bold tracking-tight text-title sm:text-2xl">
         Frequently asked questions
       </h2>
-      <p className="mt-2 max-w-3xl text-sm text-secondary">
+      <p className="mt-2 max-w-[57.6rem] text-sm text-secondary">
         Common questions about this electric motor repair listing and how to use the MotorsWinding directory.
       </p>
       <div className="mt-6 divide-y divide-border rounded-xl border border-border bg-card">
@@ -29,7 +29,7 @@ export default function ListingDetailFaqSection({ items }) {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </summary>
-            <div className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary whitespace-pre-line">
+            <div className="mt-3 max-w-[57.6rem] text-sm leading-relaxed text-secondary whitespace-pre-line">
               {item.answer}
             </div>
           </details>

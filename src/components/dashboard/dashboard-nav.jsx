@@ -54,11 +54,11 @@ export default function DashboardNav() {
             {user?.shopName || "Dashboard"}
           </span>
         </Link>
-        <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4 max-w-2xl ml-4">
+        <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4 max-w-[50.4rem] ml-4">
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="relative flex w-full min-w-0 max-w-md flex-1 cursor-text items-center rounded-md border border-border bg-bg py-2 pl-9 pr-3 text-left text-sm text-secondary transition-colors hover:border-primary/30 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary"
+            className="relative flex w-full min-w-0 max-w-[33.6rem] flex-1 cursor-text items-center rounded-md border border-border bg-bg py-2 pl-9 pr-3 text-left text-sm text-secondary transition-colors hover:border-primary/30 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary"
             aria-label="Open search (⌘K or Ctrl+K)"
           >
             <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" aria-hidden />

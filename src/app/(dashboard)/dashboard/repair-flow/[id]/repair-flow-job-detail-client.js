@@ -623,7 +623,7 @@ export default function RepairFlowJobDetailClient({
       return <p className="text-sm text-secondary">Loading…</p>;
     }
     return (
-      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
+      <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
         <p className="text-secondary">Loading…</p>
       </div>
     );
@@ -643,7 +643,7 @@ export default function RepairFlowJobDetailClient({
       );
     }
     return (
-      <div className="mx-auto w-full max-w-6xl min-w-0 px-4 py-8">
+      <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
         <p className="text-secondary">Job not found.</p>
         <Link href="/dashboard/repair-flow" className="mt-4 inline-block text-primary hover:underline">
           Back to list
@@ -669,7 +669,7 @@ export default function RepairFlowJobDetailClient({
   const showCompleteFromExecution = phase === "work_execution" || phase === "testing_qa";
 
   return (
-    <div className={isModal ? "w-full min-w-0 space-y-6" : "mx-auto w-full max-w-6xl min-w-0 px-4 py-6"}>
+    <div className={isModal ? "w-full min-w-0 space-y-6" : "mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-6"}>
       {!isModal ? (
         <div className="shrink-0 border-b border-border pb-4">
           <Link href="/dashboard/repair-flow" className="text-sm text-secondary hover:text-primary">
@@ -835,7 +835,7 @@ export default function RepairFlowJobDetailClient({
           {phase === "intake" ? (
             <div className="mt-6 border-t border-border pt-5">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-title">Quotes from intake</h3>
-              <p className="mt-1 max-w-3xl text-xs text-secondary">
+              <p className="mt-1 max-w-[57.6rem] text-xs text-secondary">
                 Create a preliminary or final quote without recording a pre-inspection. Choose customer and motor in the
                 quote form, then enter scope and costs manually (RFQ is created for final quotes). You can still add
                 pre-inspections below for reference when quoting — they do not auto-fill the quote form.
@@ -1000,7 +1000,7 @@ export default function RepairFlowJobDetailClient({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Quotes</h2>
-              <p className="mt-1 max-w-3xl text-xs text-secondary">
+              <p className="mt-1 max-w-[57.6rem] text-xs text-secondary">
                 Final repair quotes are the same RFQs as on the Quotes tab — edits there appear here. Pre-inspection
                 pipeline rows are separate until you add an RFQ. Use Add RFQ for an extra draft linked to this job.
                 Attach photos and documents for this job using <span className="text-title">Attachments</span> (not per

@@ -68,7 +68,7 @@ export default function CareerApplyForm({ slug, headingId = "apply-heading" }) {
         <h3 id={headingId} className="text-xl font-semibold text-title sm:text-2xl">
           Apply for this role
         </h3>
-        <p className="mt-2 max-w-3xl text-sm text-secondary sm:text-base">
+        <p className="mt-2 max-w-[57.6rem] text-sm text-secondary sm:text-base">
           Enter your contact details and a short summary of your relevant experience (motor repair, rewinding, electrical,
           machining, etc.).
         </p>

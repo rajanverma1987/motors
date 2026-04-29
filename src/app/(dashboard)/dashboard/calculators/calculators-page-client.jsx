@@ -480,7 +480,7 @@ export default function CalculatorsPageClient() {
         id: "power",
         label: "Power & current",
         children: (
-          <div className="flex max-w-4xl flex-col gap-6">
+          <div className="flex max-w-[67.2rem] flex-col gap-6">
             <PowerConvertPanel />
             <FlaPanel />
           </div>
@@ -490,7 +490,7 @@ export default function CalculatorsPageClient() {
         id: "speed",
         label: "Speed & drives",
         children: (
-          <div className="flex max-w-4xl flex-col gap-6">
+          <div className="flex max-w-[67.2rem] flex-col gap-6">
             <SyncSpeedPanel />
             <BeltDrivePanel />
           </div>
@@ -500,7 +500,7 @@ export default function CalculatorsPageClient() {
         id: "torque",
         label: "Torque",
         children: (
-          <div className="flex max-w-3xl flex-col gap-6">
+          <div className="flex max-w-[57.6rem] flex-col gap-6">
             <TorquePanel />
           </div>
         ),
@@ -509,7 +509,7 @@ export default function CalculatorsPageClient() {
         id: "electrical",
         label: "Bench electrical",
         children: (
-          <div className="flex max-w-5xl flex-col gap-6">
+          <div className="flex max-w-[76.8rem] flex-col gap-6">
             <OhmsLawPanel />
             <DeltaWyePanel />
           </div>
@@ -520,10 +520,10 @@ export default function CalculatorsPageClient() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <header className="mb-6 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Calculators</h1>
-        <p className="mt-1 max-w-3xl text-sm text-secondary">
+        <p className="mt-1 max-w-[57.6rem] text-sm text-secondary">
           Quick reference tools for motor shops—power conversion, FLA estimates, speed, torque, bench DC math, and
           circular-mil winding combinations. Results are for estimation; always follow NEC/local code and nameplate data
           in the field.

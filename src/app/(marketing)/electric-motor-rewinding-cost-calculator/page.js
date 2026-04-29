@@ -16,7 +16,7 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6">
+        <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
           <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Rewinding cost calculator</h1>
           <p className="mt-3 text-lg text-secondary">
             A quick, non-binding ballpark for homeowners and plant buyers—then connect with qualified winding shops
@@ -24,7 +24,7 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
           </p>
         </div>
       </section>
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12">
+      <div className="mx-auto max-w-[67.2rem] px-4 py-10 sm:px-6 sm:py-12">
         <MotorRewindCostCalculator />
       </div>
     </>

@@ -184,7 +184,7 @@ export default function AdminSupportPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col px-4 py-6 sm:px-6">
-      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col min-h-0">
+      <div className="mx-auto flex w-full max-w-[86.4rem] flex-1 flex-col min-h-0">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-bold text-title">Support tickets</h1>

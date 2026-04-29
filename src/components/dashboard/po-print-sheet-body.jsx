@@ -15,7 +15,7 @@ export default function PoPrintSheetBody({ po, vendor, rfqNumber, settings, fmt 
   const contactLine = [v.phone, v.email].filter(Boolean).join(" | ");
 
   return (
-    <div className="max-w-3xl mx-auto p-6 print:p-4 text-sm text-title">
+    <div className="max-w-[57.6rem] mx-auto p-6 print:p-4 text-sm text-title">
       {(settings?.accountsBillingAddress || settings?.accountsShippingAddress) && (
         <section className="mb-6 border-b border-border pb-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Motor shop (accounts)</h2>

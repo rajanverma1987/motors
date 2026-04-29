@@ -693,7 +693,7 @@ export default function DashboardPurchaseOrdersPage() {
   const PO_MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <h1 className="text-2xl font-bold text-title">Purchase orders</h1>
