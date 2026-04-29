@@ -48,7 +48,7 @@ const invoiceSchema = new mongoose.Schema(
     },
     createdByEmail: { type: String, required: true, lowercase: true, trim: true },
     /** Secret token for customer view/print link (set on first Send to customer) */
-    customerViewToken: { type: String, default: "", trim: true },
+    customerViewToken: { type: String, default: undefined, trim: true },
     /** Import metadata for external system linking */
     sourceSystem: { type: String, default: "", trim: true },
     externalRef: { type: String, default: "", trim: true },
@@ -61,7 +61,10 @@ const invoiceSchema = new mongoose.Schema(
 
 invoiceSchema.index({ createdByEmail: 1, quoteId: 1 }, { unique: true });
 invoiceSchema.index({ createdByEmail: 1, createdAt: -1 });
-invoiceSchema.index({ customerViewToken: 1 }, { unique: true, sparse: true });
+invoiceSchema.index(
+  { customerViewToken: 1 },
+  { unique: true, partialFilterExpression: { customerViewToken: { $gt: "" } } }
+);
 invoiceSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }

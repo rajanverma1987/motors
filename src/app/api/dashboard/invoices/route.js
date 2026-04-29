@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import Invoice from "@/models/Invoice";
@@ -22,6 +23,10 @@ function normalizeLines(body) {
       }))
     : [];
   return { scopeLines, partsLines };
+}
+
+function createCustomerViewToken() {
+  return crypto.randomBytes(24).toString("hex");
 }
 
 export async function GET(request) {
@@ -113,6 +118,8 @@ export async function POST(request) {
       customerNotes: String(body.customerNotes ?? "").slice(0, 8000),
       notes: String(body.notes ?? "").slice(0, 8000),
       status: normalizeInvoiceStatusSlug(body.status),
+      // Keep non-empty to avoid duplicate-key conflicts on legacy customerViewToken indexes.
+      customerViewToken: createCustomerViewToken(),
       createdByEmail: email,
     });
     const o = doc.toObject();
@@ -120,6 +127,13 @@ export async function POST(request) {
   } catch (err) {
     console.error("Invoice create:", err);
     if (err.code === 11000) {
+      const dupKey = Object.keys(err?.keyPattern || {})[0] || "";
+      if (dupKey === "customerViewToken") {
+        return NextResponse.json(
+          { error: "Invoice token conflict. Please try Save again." },
+          { status: 409 },
+        );
+      }
       try {
         if (ownerEmailForDup && quoteIdForDup) {
           const dup = await Invoice.findOne({ createdByEmail: ownerEmailForDup, quoteId: quoteIdForDup }).lean();
