@@ -67,14 +67,18 @@ export async function GET(request) {
 }
 
 export async function POST(request) {
+  let ownerEmailForDup = "";
+  let quoteIdForDup = "";
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const email = user.email.trim().toLowerCase();
+    ownerEmailForDup = email;
     const body = await request.json().catch(() => ({}));
     const quoteId = String(body.quoteId || "").trim();
+    quoteIdForDup = quoteId;
     if (!quoteId) {
       return NextResponse.json({ error: "quoteId required" }, { status: 400 });
     }
@@ -116,6 +120,22 @@ export async function POST(request) {
   } catch (err) {
     console.error("Invoice create:", err);
     if (err.code === 11000) {
+      try {
+        if (ownerEmailForDup && quoteIdForDup) {
+          const dup = await Invoice.findOne({ createdByEmail: ownerEmailForDup, quoteId: quoteIdForDup }).lean();
+          if (dup) {
+            return NextResponse.json(
+              {
+                error: "An invoice already exists for this quote. Open it to edit.",
+                existingId: dup._id.toString(),
+              },
+              { status: 409 },
+            );
+          }
+        }
+      } catch {
+        /* ignore and fallback below */
+      }
       return NextResponse.json({ error: "Invoice already exists for this quote." }, { status: 409 });
     }
     return NextResponse.json({ error: err.message || "Failed to create" }, { status: 500 });

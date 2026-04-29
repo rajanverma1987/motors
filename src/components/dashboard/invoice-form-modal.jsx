@@ -427,6 +427,18 @@ export default function InvoiceFormModal({
           toast.info("Invoice already exists — opened for editing.");
           return;
         }
+        if (res.status === 409 && payload.quoteId) {
+          const draftRes = await fetch(
+            `/api/dashboard/invoices/draft?quoteId=${encodeURIComponent(payload.quoteId)}`,
+            { credentials: "include", cache: "no-store" },
+          );
+          const draftData = await draftRes.json().catch(() => ({}));
+          if (draftRes.ok && draftData?.existingInvoiceId) {
+            onSwitchToInvoice?.(draftData.existingInvoiceId);
+            toast.info("Invoice already exists — opened for editing.");
+            return;
+          }
+        }
         if (!res.ok) throw new Error(d.error || "Save failed");
         toast.success("Invoice saved.");
         setSavedId(d.invoice?.id || null);
