@@ -28,6 +28,7 @@ import { useAuth } from "@/contexts/auth-context";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
+import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 
 /** Icons in modal Actions dropdown menu rows */
@@ -208,6 +209,7 @@ export default function DashboardQuotesPage() {
   const [viewLoadingQuoteId, setViewLoadingQuoteId] = useState(null);
   const [savingQuote, setSavingQuote] = useState(false);
   const [quotePrintId, setQuotePrintId] = useState(null);
+  const [invoiceModal, setInvoiceModal] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -264,10 +266,21 @@ export default function DashboardQuotesPage() {
 
   const loadQuotes = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load quotes");
-      setQuotes(Array.isArray(data) ? data : []);
+      const [quotesRes, invoicesRes] = await Promise.all([
+        fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
+        fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
+      ]);
+      const [quotesData, invoicesData] = await Promise.all([quotesRes.json(), invoicesRes.json()]);
+      if (!quotesRes.ok) throw new Error(quotesData.error || "Failed to load quotes");
+      const invoiceQuoteIds = new Set(
+        (Array.isArray(invoicesData) ? invoicesData : [])
+          .map((inv) => String(inv?.quoteId || "").trim())
+          .filter(Boolean),
+      );
+      const visibleQuotes = (Array.isArray(quotesData) ? quotesData : []).filter(
+        (q) => !invoiceQuoteIds.has(String(q?.id || "").trim()),
+      );
+      setQuotes(visibleQuotes);
     } catch (e) {
       toast.error(e.message || "Failed to load quotes");
       setQuotes([]);
@@ -659,7 +672,13 @@ export default function DashboardQuotesPage() {
               </button>
               <button
                 type="button"
-                onClick={() => router.push(`/dashboard/invoices?draftQuote=${encodeURIComponent(row.id)}`)}
+                onClick={() =>
+                  setInvoiceModal({
+                    draftQuoteId: row.id,
+                    invoiceId: null,
+                    sourceQuoteId: row.id,
+                  })
+                }
                 className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Create invoice"
                 title="Create invoice"
@@ -1305,6 +1324,32 @@ export default function DashboardQuotesPage() {
           onClose={() => setQuotePrintId(null)}
         />
       ) : null}
+
+      <InvoiceFormModal
+        open={!!invoiceModal}
+        draftQuoteId={invoiceModal?.draftQuoteId ?? null}
+        invoiceId={invoiceModal?.invoiceId ?? null}
+        onClose={() => setInvoiceModal(null)}
+        onAfterSave={() => {
+          const sourceQuoteId = String(invoiceModal?.sourceQuoteId || "").trim();
+          if (sourceQuoteId) {
+            setQuotes((prev) => prev.filter((q) => q.id !== sourceQuoteId));
+          }
+          loadQuotes();
+        }}
+        onSwitchToInvoice={(id) => {
+          const sourceQuoteId = String(invoiceModal?.sourceQuoteId || "").trim();
+          if (sourceQuoteId) {
+            setQuotes((prev) => prev.filter((q) => q.id !== sourceQuoteId));
+          }
+          setInvoiceModal((prev) => ({
+            draftQuoteId: null,
+            invoiceId: id,
+            sourceQuoteId: prev?.sourceQuoteId || "",
+          }));
+        }}
+        zIndex={60}
+      />
     </div>
   );
 }
