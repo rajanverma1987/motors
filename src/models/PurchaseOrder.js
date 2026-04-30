@@ -52,7 +52,7 @@ const purchaseOrderSchema = new mongoose.Schema(
     ],
     notes: { type: String, default: "", trim: true },
     /** Token for vendor-facing view/print link (no auth); generated on first "Send to Vendor" */
-    vendorShareToken: { type: String, default: "", trim: true },
+    vendorShareToken: { type: String, default: undefined, trim: true },
     /** Shop that owns this PO (dashboard user email) */
     createdByEmail: { type: String, required: true, trim: true },
     /** Import metadata for external system linking */
@@ -67,7 +67,10 @@ const purchaseOrderSchema = new mongoose.Schema(
 
 purchaseOrderSchema.index({ createdByEmail: 1, createdAt: -1 });
 purchaseOrderSchema.index({ createdByEmail: 1, poNumber: 1 }, { unique: true, sparse: true });
-purchaseOrderSchema.index({ vendorShareToken: 1 }, { unique: true, sparse: true });
+purchaseOrderSchema.index(
+  { vendorShareToken: 1 },
+  { unique: true, partialFilterExpression: { vendorShareToken: { $gt: "" } } }
+);
 purchaseOrderSchema.index({ createdByEmail: 1, vendorId: 1 });
 purchaseOrderSchema.index({ createdByEmail: 1, quoteId: 1 });
 purchaseOrderSchema.index(
