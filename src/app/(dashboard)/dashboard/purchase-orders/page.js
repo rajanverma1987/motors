@@ -178,6 +178,11 @@ export default function DashboardPurchaseOrdersPage() {
   const [sendingVendorId, setSendingVendorId] = useState(null);
   const [printPoId, setPrintPoId] = useState(null);
 
+  const vendorNameMap = useMemo(() => {
+    const m = {};
+    vendors.forEach((v) => { m[v.id] = v.name || v.id || "—"; });
+    return m;
+  }, [vendors]);
   const vendorOptions = useMemo(() => {
     const base = vendors.map((v) => ({ value: v.id, label: v.name || v.id || "—" }));
     const selectedVendorId = String(form.vendorId ?? "").trim();
@@ -193,12 +198,6 @@ export default function DashboardPurchaseOrdersPage() {
     if (base.some((opt) => opt.value === selectedQuoteId)) return base;
     return [{ value: selectedQuoteId, label: selectedQuoteId }, ...base];
   }, [quotes, form.quoteId]);
-  const vendorNameMap = useMemo(() => {
-    const m = {};
-    vendors.forEach((v) => { m[v.id] = v.name || v.id || "—"; });
-    return m;
-  }, [vendors]);
-
   const loadPos = useCallback(async () => {
     try {
       const res = await fetch("/api/dashboard/purchase-orders", { credentials: "include", cache: "no-store" });
