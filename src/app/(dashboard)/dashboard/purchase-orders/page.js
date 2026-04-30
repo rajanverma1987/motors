@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2, FiPlus, FiPrinter, FiRotateCw, FiSend } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiPrinter, FiRotateCw, FiSend, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
@@ -178,14 +178,21 @@ export default function DashboardPurchaseOrdersPage() {
   const [sendingVendorId, setSendingVendorId] = useState(null);
   const [printPoId, setPrintPoId] = useState(null);
 
-  const vendorOptions = useMemo(
-    () => vendors.map((v) => ({ value: v.id, label: v.name || v.id || "—" })),
-    [vendors]
-  );
-  const quoteOptions = useMemo(
-    () => quotes.map((q) => ({ value: q.id, label: q.rfqNumber || q.id || "—" })),
-    [quotes]
-  );
+  const vendorOptions = useMemo(() => {
+    const base = vendors.map((v) => ({ value: v.id, label: v.name || v.id || "—" }));
+    const selectedVendorId = String(form.vendorId ?? "").trim();
+    if (!selectedVendorId) return base;
+    if (base.some((opt) => opt.value === selectedVendorId)) return base;
+    const fallbackLabel = vendorNameMap[selectedVendorId] || selectedVendorId;
+    return [{ value: selectedVendorId, label: fallbackLabel }, ...base];
+  }, [vendors, form.vendorId, vendorNameMap]);
+  const quoteOptions = useMemo(() => {
+    const base = quotes.map((q) => ({ value: q.id, label: q.rfqNumber || q.id || "—" }));
+    const selectedQuoteId = String(form.quoteId ?? "").trim();
+    if (!selectedQuoteId) return base;
+    if (base.some((opt) => opt.value === selectedQuoteId)) return base;
+    return [{ value: selectedQuoteId, label: selectedQuoteId }, ...base];
+  }, [quotes, form.quoteId]);
   const vendorNameMap = useMemo(() => {
     const m = {};
     vendors.forEach((v) => { m[v.id] = v.name || v.id || "—"; });
@@ -301,6 +308,36 @@ export default function DashboardPurchaseOrdersPage() {
     }
   };
 
+  const handleDeletePo = useCallback(
+    async (row) => {
+      if (!row?.id) return;
+      const ok = await confirm({
+        title: "Delete purchase order",
+        message: `Delete purchase order ${row.poNumber || row.id}? This cannot be undone.`,
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        variant: "danger",
+      });
+      if (!ok) return;
+      try {
+        const res = await fetch(`/api/dashboard/purchase-orders/${row.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to delete purchase order");
+        toast.success("Purchase order deleted.");
+        setPos((prev) => prev.filter((p) => p.id !== row.id));
+        if (viewingPo?.id === row.id) {
+          closeViewModal();
+        }
+      } catch (err) {
+        toast.error(err.message || "Failed to delete purchase order");
+      }
+    },
+    [confirm, toast, viewingPo]
+  );
+
   const handleAddVendorSubmit = async (e) => {
     e.preventDefault();
     setSavingVendor(true);
@@ -388,10 +425,15 @@ export default function DashboardPurchaseOrdersPage() {
         if (res.ok) dataToUse = await res.json();
       } catch {}
     }
+    const normalizedType = String(dataToUse.type ?? "")
+      .trim()
+      .toLowerCase() === "job"
+      ? "job"
+      : "shop";
     setForm({
-      vendorId: dataToUse.vendorId ?? "",
-      type: dataToUse.type ?? "shop",
-      quoteId: dataToUse.quoteId ?? "",
+      vendorId: String(dataToUse.vendorId ?? "").trim(),
+      type: normalizedType,
+      quoteId: normalizedType === "job" ? String(dataToUse.quoteId ?? "").trim() : "",
       lineItems: Array.isArray(dataToUse.lineItems) ? dataToUse.lineItems : [],
       notes: dataToUse.notes ?? "",
     });
@@ -579,6 +621,15 @@ export default function DashboardPurchaseOrdersPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => handleDeletePo(row)}
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+              aria-label="Delete"
+              title="Delete"
+            >
+              <FiTrash2 className="h-4 w-4 shrink-0" />
+            </button>
+            <button
+              type="button"
               onClick={() => openEditModal(row)}
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
@@ -682,7 +733,7 @@ export default function DashboardPurchaseOrdersPage() {
         render: (_, row) => (row.totalPaid ? fmt(row.totalPaid) : "—"),
       },
     ],
-    [vendorNameMap, sendingVendorId, fmt]
+    [vendorNameMap, sendingVendorId, fmt, handleDeletePo]
   );
 
   const todayString = () => {
