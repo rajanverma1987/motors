@@ -1,5 +1,4 @@
 import { Inter, Geist, Geist_Mono } from "next/font/google";
-import ContextualAiWidget from "@/components/contextual-ai-widget";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ToastProvider } from "@/components/toast-provider";
 import { ConfirmProvider } from "@/components/confirm-provider";
@@ -97,7 +96,6 @@ export default function RootLayout({ children }) {
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>
-        <ContextualAiWidget />
       </body>
     </html>
   );

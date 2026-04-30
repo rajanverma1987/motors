@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { formatMoney } from "@/lib/format-currency";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 export default function InvoiceCustomerViewPage() {
   const params = useParams();
@@ -64,7 +65,12 @@ export default function InvoiceCustomerViewPage() {
 
   const code = inv.currency || "USD";
   const fmt = (v) => formatMoney(v, code);
-  const totalNum = parseFloat(inv.laborTotal || 0) + parseFloat(inv.partsTotal || 0);
+  const totals = computeTotalsFromLaborAndParts({
+    laborTotal: inv.laborTotal,
+    partsTotal: inv.partsTotal,
+    taxExempt: inv.customerTaxExempt,
+    taxPercent: inv.customerTaxPercent,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 print:px-0 print:py-4">
@@ -215,7 +221,15 @@ export default function InvoiceCustomerViewPage() {
             </div>
             <div>
               <dt className="text-gray-500">Invoice total</dt>
-              <dd className="font-semibold text-gray-900">{fmt(totalNum)}</dd>
+              <dd className="text-gray-900">{fmt(totals.subtotal)}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Tax amount</dt>
+              <dd className="text-gray-900">{fmt(totals.taxAmount)}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500">Grand total</dt>
+              <dd className="font-semibold text-gray-900">{fmt(totals.grandTotal)}</dd>
             </div>
           </dl>
         </section>

@@ -80,6 +80,10 @@ const INITIAL_FORM = {
   shippingCountry: "United States",
   additionalContacts: [],
   notes: "",
+  ein: "",
+  creditLimit: "",
+  taxExempt: true,
+  taxPercent: "",
 };
 
 /** Build request body with all fields explicitly so shipping is never omitted (JSON.stringify drops undefined). */
@@ -102,6 +106,10 @@ function buildCustomerPayload(form) {
     shippingCountry: f.shippingCountry ?? "United States",
     additionalContacts: Array.isArray(f.additionalContacts) ? f.additionalContacts : [],
     notes: f.notes ?? "",
+    ein: f.ein ?? "",
+    creditLimit: f.creditLimit ?? "",
+    taxExempt: !!f.taxExempt,
+    taxPercent: f.taxExempt ? "" : f.taxPercent ?? "",
   };
 }
 
@@ -345,6 +353,10 @@ export default function DashboardCustomersPage() {
         email: ac.email ?? "",
       })) : [],
       notes: dataToUse.notes ?? "",
+      ein: dataToUse.ein ?? "",
+      creditLimit: dataToUse.creditLimit ?? "",
+      taxExempt: dataToUse.taxExempt !== false,
+      taxPercent: dataToUse.taxPercent ?? "",
     });
     setEditModalOpen(true);
   };
@@ -537,6 +549,18 @@ export default function DashboardCustomersPage() {
       { key: "primaryContactName", label: "Contact" },
       { key: "phone", label: "Phone" },
       { key: "email", label: "Email" },
+      { key: "ein", label: "EIN", render: (_, row) => row.ein || "—" },
+      { key: "creditLimit", label: "Credit Limit", render: (_, row) => row.creditLimit || "—" },
+      {
+        key: "taxExempt",
+        label: "Tax Exempted",
+        render: (_, row) => (row.taxExempt === false ? "No" : "Yes"),
+      },
+      {
+        key: "taxPercent",
+        label: "Tax %",
+        render: (_, row) => (row.taxExempt === false ? (row.taxPercent || "0") : "0"),
+      },
       { key: "city", label: "City" },
     ],
     []
@@ -654,6 +678,47 @@ export default function DashboardCustomersPage() {
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="email@example.com"
+              />
+              <Input
+                label="EIN"
+                name="ein"
+                value={form.ein}
+                onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))}
+                placeholder="Employer Identification Number"
+              />
+              <Input
+                label="Credit limit"
+                name="creditLimit"
+                value={form.creditLimit}
+                onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
+                placeholder="e.g. 10000"
+              />
+              <Select
+                label="Tax exempted"
+                value={form.taxExempt ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    taxExempt: e.target.value !== "no",
+                    taxPercent: e.target.value === "no" ? f.taxPercent : "",
+                  }))
+                }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                searchable={false}
+              />
+              <Input
+                label="Tax %"
+                name="taxPercent"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.taxPercent}
+                onChange={(e) => setForm((f) => ({ ...f, taxPercent: e.target.value }))}
+                placeholder="e.g. 8.25"
+                disabled={form.taxExempt}
               />
             </div>
           </div>
@@ -841,6 +906,10 @@ export default function DashboardCustomersPage() {
                 <div><dt className="text-secondary">Primary contact</dt><dd className="text-title">{viewingCustomer.primaryContactName || "—"}</dd></div>
                 <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingCustomer.phone || "—"}</dd></div>
                 <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingCustomer.email || "—"}</dd></div>
+                <div><dt className="text-secondary">EIN</dt><dd className="text-title">{viewingCustomer.ein || "—"}</dd></div>
+                <div><dt className="text-secondary">Credit limit</dt><dd className="text-title">{viewingCustomer.creditLimit || "—"}</dd></div>
+                <div><dt className="text-secondary">Tax exempted</dt><dd className="text-title">{viewingCustomer.taxExempt === false ? "No" : "Yes"}</dd></div>
+                <div><dt className="text-secondary">Tax %</dt><dd className="text-title">{viewingCustomer.taxExempt === false ? (viewingCustomer.taxPercent || "0") : "0"}</dd></div>
               </dl>
             </div>
             {Array.isArray(viewingCustomer.additionalContacts) && viewingCustomer.additionalContacts.length > 0 && (
@@ -1127,6 +1196,47 @@ export default function DashboardCustomersPage() {
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 placeholder="email@example.com"
+              />
+              <Input
+                label="EIN"
+                name="ein"
+                value={form.ein}
+                onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))}
+                placeholder="Employer Identification Number"
+              />
+              <Input
+                label="Credit limit"
+                name="creditLimit"
+                value={form.creditLimit}
+                onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
+                placeholder="e.g. 10000"
+              />
+              <Select
+                label="Tax exempted"
+                value={form.taxExempt ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    taxExempt: e.target.value !== "no",
+                    taxPercent: e.target.value === "no" ? f.taxPercent : "",
+                  }))
+                }
+                options={[
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+                searchable={false}
+              />
+              <Input
+                label="Tax %"
+                name="taxPercent"
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.taxPercent}
+                onChange={(e) => setForm((f) => ({ ...f, taxPercent: e.target.value }))}
+                placeholder="e.g. 8.25"
+                disabled={form.taxExempt}
               />
             </div>
           </div>

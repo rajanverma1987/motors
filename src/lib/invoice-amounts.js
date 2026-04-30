@@ -1,9 +1,13 @@
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+
 /** Numeric invoice total from labor + parts (same as UI). */
 export function invoiceLineTotal(inv) {
-  const l = parseFloat(inv?.laborTotal ?? "0");
-  const p = parseFloat(inv?.partsTotal ?? "0");
-  const a = (Number.isFinite(l) ? l : 0) + (Number.isFinite(p) ? p : 0);
-  return Math.round(a * 100) / 100;
+  return computeTotalsFromLaborAndParts({
+    laborTotal: inv?.laborTotal,
+    partsTotal: inv?.partsTotal,
+    taxExempt: inv?.customerTaxExempt,
+    taxPercent: inv?.customerTaxPercent,
+  }).grandTotal;
 }
 
 /** Sum of recorded payment amounts. */

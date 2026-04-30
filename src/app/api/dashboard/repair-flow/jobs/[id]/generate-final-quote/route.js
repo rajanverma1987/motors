@@ -20,6 +20,7 @@ import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 function toPublic(doc) {
   const o = doc.toObject ? doc.toObject() : doc;
@@ -168,6 +169,8 @@ export async function POST(request, context) {
       repairScope: "",
       laborTotal: laborFromLines,
       partsTotal: partsFromLines,
+      customerTaxExempt: normalizeTaxExempt(cust.taxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(cust.taxPercent)),
       scopeLines: scopeLinesForLegacy,
       partsLines: partsLinesForLegacy,
       estimatedCompletion: "",

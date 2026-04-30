@@ -22,6 +22,8 @@ const quoteSchema = new mongoose.Schema(
     repairScope: { type: String, default: "", trim: true },
     laborTotal: { type: String, default: "", trim: true },
     partsTotal: { type: String, default: "", trim: true },
+    customerTaxExempt: { type: Boolean, default: true },
+    customerTaxPercent: { type: String, default: "0", trim: true },
     /** Scope line items: description + price (labor) */
     scopeLines: [{
       scope: { type: String, default: "", trim: true },

@@ -4,6 +4,7 @@ import Customer from "@/models/Customer";
 import Motor from "@/models/Motor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 function sanitizeAdditionalContacts(arr) {
@@ -80,6 +81,10 @@ export async function GET(request, context) {
       shippingCountry: doc.shippingCountry ?? "United States",
       additionalContacts,
       notes: doc.notes ?? "",
+      ein: doc.ein ?? "",
+      creditLimit: doc.creditLimit ?? "",
+      taxExempt: normalizeTaxExempt(doc.taxExempt),
+      taxPercent: String(normalizeTaxPercent(doc.taxPercent)),
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
       linkedMotors: linkedMotorsList,
@@ -128,6 +133,10 @@ export async function PATCH(request, context) {
       shippingCountry,
       additionalContacts,
       notes,
+      ein,
+      creditLimit,
+      taxExempt,
+      taxPercent,
     } = body;
     if (companyName !== undefined) {
       if (!String(companyName).trim()) {
@@ -158,6 +167,10 @@ export async function PATCH(request, context) {
       doc.markModified("additionalContacts");
     }
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
+    if (ein !== undefined) doc.ein = clampString(ein, 50);
+    if (creditLimit !== undefined) doc.creditLimit = clampString(creditLimit, 50);
+    if (taxExempt !== undefined) doc.taxExempt = normalizeTaxExempt(taxExempt);
+    if (taxPercent !== undefined) doc.taxPercent = String(normalizeTaxPercent(taxPercent));
     await doc.save();
     return NextResponse.json({
       ok: true,

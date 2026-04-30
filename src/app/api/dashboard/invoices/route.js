@@ -6,6 +6,7 @@ import Invoice from "@/models/Invoice";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -61,6 +62,8 @@ export async function GET(request) {
         status: inv.status,
         laborTotal: inv.laborTotal,
         partsTotal: inv.partsTotal,
+        customerTaxExempt: normalizeTaxExempt(inv.customerTaxExempt),
+        customerTaxPercent: String(normalizeTaxPercent(inv.customerTaxPercent)),
         customerId: inv.customerId,
         motorId: inv.motorId,
         customerName: custMap[String(inv.customerId)] || inv.customerId,
@@ -101,6 +104,9 @@ export async function POST(request) {
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     }
+    const customer = await Customer.findOne({ _id: quote.customerId, createdByEmail: email })
+      .select("taxExempt taxPercent")
+      .lean();
     const { scopeLines, partsLines } = normalizeLines(body);
     const rfq = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
     const doc = await Invoice.create({
@@ -116,6 +122,8 @@ export async function POST(request) {
       partsLines,
       laborTotal: String(body.laborTotal ?? "").slice(0, 50),
       partsTotal: String(body.partsTotal ?? "").slice(0, 50),
+      customerTaxExempt: normalizeTaxExempt(quote.customerTaxExempt ?? customer?.taxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(quote.customerTaxPercent ?? customer?.taxPercent)),
       estimatedCompletion: String(body.estimatedCompletion ?? "").slice(0, 200),
       customerNotes: String(body.customerNotes ?? "").slice(0, 8000),
       notes: String(body.notes ?? "").slice(0, 8000),

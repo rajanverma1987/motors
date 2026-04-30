@@ -2,6 +2,7 @@
 
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 /**
  * Printable invoice body. Wrap in a container with class invoice-print-preview for print CSS.
@@ -20,7 +21,12 @@ export default function InvoicePrintPreview({
 }) {
   const fmt = useFormatMoney();
   if (!q) return null;
-  const totalNum = parseFloat(q.laborTotal || 0) + parseFloat(q.partsTotal || 0);
+  const totals = computeTotalsFromLaborAndParts({
+    laborTotal: q.laborTotal,
+    partsTotal: q.partsTotal,
+    taxExempt: q.customerTaxExempt,
+    taxPercent: q.customerTaxPercent,
+  });
   return (
     <div className="mx-auto max-w-[57.6rem] text-title">
       <h1 className="mb-6 border-b border-border pb-4 text-4xl font-bold tracking-tight">Invoice</h1>
@@ -151,7 +157,15 @@ export default function InvoicePrintPreview({
           </div>
           <div>
             <dt className="text-secondary">Invoice total</dt>
-            <dd className="font-semibold">{fmt(totalNum)}</dd>
+            <dd>{fmt(totals.subtotal)}</dd>
+          </div>
+          <div>
+            <dt className="text-secondary">Tax amount</dt>
+            <dd>{fmt(totals.taxAmount)}</dd>
+          </div>
+          <div>
+            <dt className="text-secondary">Grand total</dt>
+            <dd className="font-semibold">{fmt(totals.grandTotal)}</dd>
           </div>
         </dl>
       </section>

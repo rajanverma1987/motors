@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
+import Customer from "@/models/Customer";
 import { resolveRepairFlowJobIdForQuote } from "@/lib/quote-repair-flow-job-id";
 import WorkOrder from "@/models/WorkOrder";
 import Invoice from "@/models/Invoice";
@@ -10,6 +11,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { releaseInventoryReservationsForQuote } from "@/lib/inventory-service";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
 
@@ -88,6 +90,8 @@ export async function GET(request, context) {
       repairScope: obj.repairScope ?? "",
       laborTotal: obj.laborTotal ?? "",
       partsTotal: obj.partsTotal ?? "",
+      customerTaxExempt: normalizeTaxExempt(obj.customerTaxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(obj.customerTaxPercent)),
       scopeLines: Array.isArray(obj.scopeLines) ? obj.scopeLines : [],
       partsLines: Array.isArray(obj.partsLines) ? obj.partsLines : [],
       estimatedCompletion: obj.estimatedCompletion ?? "",
@@ -156,6 +160,8 @@ export async function PATCH(request, context) {
       estimatedCompletion,
       customerNotes,
       notes,
+      customerTaxExempt,
+      customerTaxPercent,
       customerPo,
       date,
       preparedBy,
@@ -165,6 +171,16 @@ export async function PATCH(request, context) {
         return NextResponse.json({ error: "Customer is required" }, { status: 400 });
       }
       doc.customerId = String(customerId).trim();
+      const customer = await Customer.findOne({
+        _id: doc.customerId,
+        createdByEmail: user.email.trim().toLowerCase(),
+      })
+        .select("taxExempt taxPercent")
+        .lean();
+      if (customer) {
+        doc.customerTaxExempt = normalizeTaxExempt(customer.taxExempt);
+        doc.customerTaxPercent = String(normalizeTaxPercent(customer.taxPercent));
+      }
     }
     if (motorId !== undefined) {
       if (!String(motorId).trim()) {
@@ -199,6 +215,8 @@ export async function PATCH(request, context) {
     if (estimatedCompletion !== undefined) doc.estimatedCompletion = clampString(estimatedCompletion, 100);
     if (customerNotes !== undefined) doc.customerNotes = clampString(customerNotes, LIMITS.message.max);
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
+    if (customerTaxExempt !== undefined) doc.customerTaxExempt = normalizeTaxExempt(customerTaxExempt);
+    if (customerTaxPercent !== undefined) doc.customerTaxPercent = String(normalizeTaxPercent(customerTaxPercent));
     if (body.attachments !== undefined && Array.isArray(body.attachments)) {
       doc.attachments = body.attachments
         .filter((a) => a && typeof a.url === "string" && a.url.trim())

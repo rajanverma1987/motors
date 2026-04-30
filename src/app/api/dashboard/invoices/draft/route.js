@@ -57,6 +57,8 @@ export async function GET(request) {
       partsLines: Array.isArray(quote.partsLines) ? quote.partsLines.map((r) => ({ ...r })) : [],
       laborTotal: quote.laborTotal || "",
       partsTotal: quote.partsTotal || "",
+      customerTaxExempt: quote.customerTaxExempt ?? customer.taxExempt ?? true,
+      customerTaxPercent: quote.customerTaxPercent ?? customer.taxPercent ?? "0",
       customerNotes: quote.customerNotes || "",
       notes: quote.notes || "",
       status: "draft",

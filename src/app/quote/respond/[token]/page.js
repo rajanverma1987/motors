@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 export default function QuoteRespondPage() {
   const params = useParams();
@@ -100,7 +101,12 @@ export default function QuoteRespondPage() {
     );
   }
 
-  const total = (parseFloat(quote.laborTotal || 0) + parseFloat(quote.partsTotal || 0)).toFixed(2);
+  const totals = computeTotalsFromLaborAndParts({
+    laborTotal: quote.laborTotal,
+    partsTotal: quote.partsTotal,
+    taxExempt: quote.customerTaxExempt,
+    taxPercent: quote.customerTaxPercent,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 print:py-4 print:px-0">
@@ -236,7 +242,9 @@ export default function QuoteRespondPage() {
             <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div><dt className="text-gray-500">Scope total</dt><dd className="text-gray-900">{quote.laborTotal ? `$${quote.laborTotal}` : "—"}</dd></div>
               <div><dt className="text-gray-500">Other Cost total</dt><dd className="text-gray-900">{quote.partsTotal ? `$${quote.partsTotal}` : "—"}</dd></div>
-              <div><dt className="text-gray-500">Service proposal total</dt><dd className="font-semibold text-gray-900">${total}</dd></div>
+              <div><dt className="text-gray-500">Service proposal total</dt><dd className="font-semibold text-gray-900">${totals.subtotal.toFixed(2)}</dd></div>
+              <div><dt className="text-gray-500">Tax amount</dt><dd className="text-gray-900">${totals.taxAmount.toFixed(2)}</dd></div>
+              <div><dt className="text-gray-500">Grand total</dt><dd className="font-semibold text-gray-900">${totals.grandTotal.toFixed(2)}</dd></div>
               <div><dt className="text-gray-500">Est. completion</dt><dd className="text-gray-900">{quote.estimatedCompletion || "—"}</dd></div>
             </dl>
           </section>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
+import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
@@ -9,6 +10,7 @@ import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
 
@@ -54,6 +56,8 @@ export async function GET(request) {
       ...q,
       id: q._id.toString(),
       _id: undefined,
+      customerTaxExempt: normalizeTaxExempt(q.customerTaxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(q.customerTaxPercent)),
     }));
     return NextResponse.json(listWithId);
   } catch (err) {
@@ -98,6 +102,11 @@ export async function POST(request) {
     const laborFromLines = scopeLines.length ? sumPrices(scopeLines) : "";
     const partsFromLines = partsLines.length ? sumPartsLines(partsLines) : "";
     const email = user.email.trim().toLowerCase();
+    const customer = await Customer.findOne({ _id: customerId.trim(), createdByEmail: email })
+      .select("taxExempt taxPercent")
+      .lean();
+    const customerTaxExempt = normalizeTaxExempt(customer?.taxExempt);
+    const customerTaxPercent = String(normalizeTaxPercent(customer?.taxPercent));
     const rfqNumber = await getNextRfqNumber(email);
     const dateStr = String(date ?? "").trim() || todayQuoteDateString();
     let preparedByStr = String(preparedBy ?? "").trim();
@@ -118,6 +127,8 @@ export async function POST(request) {
       partsTotal: partsFromLines || clampString(partsTotal, 50),
       scopeLines,
       partsLines,
+      customerTaxExempt,
+      customerTaxPercent,
       estimatedCompletion: clampString(estimatedCompletion, 100),
       customerNotes: clampString(customerNotes, LIMITS.message.max),
       notes: clampString(notes, LIMITS.message.max),

@@ -2,6 +2,7 @@
 
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 /**
  * Printable quote sheet markup (screen + print). Used by QuotePrintPreview and the standalone print route.
@@ -16,7 +17,12 @@ export default function QuotePrintSheetBody({
 }) {
   if (!quote) return null;
 
-  const totalNum = parseFloat(quote.laborTotal || 0) + parseFloat(quote.partsTotal || 0);
+  const totals = computeTotalsFromLaborAndParts({
+    laborTotal: quote.laborTotal,
+    partsTotal: quote.partsTotal,
+    taxExempt: quote.customerTaxExempt,
+    taxPercent: quote.customerTaxPercent,
+  });
 
   return (
     <div className="quote-print-sheet max-w-[57.6rem] mx-auto p-6 print:p-4 text-sm text-title">
@@ -71,7 +77,15 @@ export default function QuotePrintSheetBody({
           </div>
           <div>
             <dt className="text-secondary">Service proposal total</dt>
-            <dd className="font-semibold">{fmt(totalNum)}</dd>
+            <dd className="font-semibold">{fmt(totals.subtotal)}</dd>
+          </div>
+          <div>
+            <dt className="text-secondary">Tax amount</dt>
+            <dd>{fmt(totals.taxAmount)}</dd>
+          </div>
+          <div>
+            <dt className="text-secondary">Grand total</dt>
+            <dd className="font-semibold">{fmt(totals.grandTotal)}</dd>
           </div>
           <div>
             <dt className="text-secondary">Est. completion</dt>

@@ -28,6 +28,8 @@ const invoiceSchema = new mongoose.Schema(
     },
     laborTotal: { type: String, default: "" },
     partsTotal: { type: String, default: "" },
+    customerTaxExempt: { type: Boolean, default: true },
+    customerTaxPercent: { type: String, default: "0", trim: true },
     estimatedCompletion: { type: String, default: "", trim: true },
     customerNotes: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },

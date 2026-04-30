@@ -19,6 +19,7 @@ import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print"
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import { FiSave, FiEdit2, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
 import { INVOICE_STATUS_OPTIONS, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
@@ -80,6 +81,8 @@ const emptyForm = () => ({
   partsLines: [],
   laborTotal: "",
   partsTotal: "",
+  customerTaxExempt: true,
+  customerTaxPercent: "0",
   customerNotes: "",
   notes: "",
   status: "draft",
@@ -196,6 +199,8 @@ export default function InvoiceFormModal({
             partsLines: Array.isArray(d.partsLines) ? d.partsLines : [],
             laborTotal: d.laborTotal || "",
             partsTotal: d.partsTotal || "",
+            customerTaxExempt: d.customerTaxExempt !== false,
+            customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
             status: normalizeInvoiceStatusSlug(d.status),
@@ -232,6 +237,8 @@ export default function InvoiceFormModal({
             partsLines: Array.isArray(d.partsLines) ? d.partsLines : [],
             laborTotal: d.laborTotal || "",
             partsTotal: d.partsTotal || "",
+            customerTaxExempt: d.customerTaxExempt !== false,
+            customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
             status: normalizeInvoiceStatusSlug(d.status),
@@ -400,6 +407,8 @@ export default function InvoiceFormModal({
         partsLines: form.partsLines,
         laborTotal: form.laborTotal,
         partsTotal: form.partsTotal,
+        customerTaxExempt: form.customerTaxExempt !== false,
+        customerTaxPercent: form.customerTaxExempt ? "0" : form.customerTaxPercent,
         customerNotes: form.customerNotes,
         notes: form.notes,
         status: form.status,
@@ -458,6 +467,12 @@ export default function InvoiceFormModal({
   const isNew = !savedId && !invoiceId;
   const title = savedId || invoiceId ? `Edit invoice #${form.invoiceNumber || "—"}` : "New invoice";
   const headerDisabled = saving || loading || headerBusy;
+  const invoiceTotals = computeTotalsFromLaborAndParts({
+    laborTotal: scopeTotal,
+    partsTotal: partsTotalSum,
+    taxExempt: form.customerTaxExempt,
+    taxPercent: form.customerTaxPercent,
+  });
 
   const invoiceActionsMenuItems = useMemo(() => {
     if (!canUseRecordActions) return [];
@@ -598,6 +613,16 @@ export default function InvoiceFormModal({
                 setForm((f) => ({ ...f, status: normalizeInvoiceStatusSlug(e.target.value) }))
               }
             />
+            <Input
+              label="Tax %"
+              value={form.customerTaxExempt ? "0" : form.customerTaxPercent || "0"}
+              readOnly
+            />
+            <Input
+              label="Tax exempted"
+              value={form.customerTaxExempt ? "Yes" : "No"}
+              readOnly
+            />
           </div>
           <div>
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Scope &amp; other cost</h3>
@@ -621,9 +646,31 @@ export default function InvoiceFormModal({
                 />
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
-              <span className="text-sm text-secondary">Scope sum (lines): {fmt(scopeTotal)}</span>
-              <span className="text-sm text-secondary">Other cost sum: {fmt(partsTotalSum)}</span>
+            <div className="mt-3 rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <tbody>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Scope sum (lines)</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(scopeTotal)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Other cost sum</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(partsTotalSum)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Invoice subtotal</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(invoiceTotals.subtotal)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Tax</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(invoiceTotals.taxAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-semibold text-title">Grand total</td>
+                    <td className="px-3 py-2 text-right font-semibold text-title">{fmt(invoiceTotals.grandTotal)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Input

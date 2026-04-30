@@ -22,6 +22,7 @@ import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
 import { invoiceStatusLabel, invoiceStatusBadgeVariant } from "@/lib/invoice-status";
+import { invoiceLineTotal } from "@/lib/invoice-amounts";
 
 function InvoicesInner() {
   const toast = useToast();
@@ -108,35 +109,30 @@ function InvoicesInner() {
   }, [rows, searchQuery]);
 
   const statusSummaryCards = useMemo(() => {
-    const calcAmount = (row) => {
-      const labor = parseFloat(row?.laborTotal ?? "0");
-      const parts = parseFloat(row?.partsTotal ?? "0");
-      return (Number.isFinite(labor) ? labor : 0) + (Number.isFinite(parts) ? parts : 0);
-    };
     return [
       {
         key: "draft",
         label: "Draft",
         count: rows.filter((r) => r.status === "draft").length,
-        amount: rows.filter((r) => r.status === "draft").reduce((sum, r) => sum + calcAmount(r), 0),
+        amount: rows.filter((r) => r.status === "draft").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
       },
       {
         key: "sent",
         label: "Sent",
         count: rows.filter((r) => r.status === "sent").length,
-        amount: rows.filter((r) => r.status === "sent").reduce((sum, r) => sum + calcAmount(r), 0),
+        amount: rows.filter((r) => r.status === "sent").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
       },
       {
         key: "partial_paid",
         label: "Partial Paid",
         count: rows.filter((r) => r.status === "partial_paid").length,
-        amount: rows.filter((r) => r.status === "partial_paid").reduce((sum, r) => sum + calcAmount(r), 0),
+        amount: rows.filter((r) => r.status === "partial_paid").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
       },
       {
         key: "fully_paid",
         label: "Fully Paid",
         count: rows.filter((r) => r.status === "fully_paid").length,
-        amount: rows.filter((r) => r.status === "fully_paid").reduce((sum, r) => sum + calcAmount(r), 0),
+        amount: rows.filter((r) => r.status === "fully_paid").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
       },
     ];
   }, [rows]);
@@ -302,6 +298,11 @@ function InvoicesInner() {
       { key: "customerName", label: "Customer" },
       { key: "date", label: "Date" },
       {
+        key: "totalAmount",
+        label: "Total Amount",
+        render: (_, row) => fmt(invoiceLineTotal(row)),
+      },
+      {
         key: "status",
         label: "Status",
         render: (v) => (
@@ -309,7 +310,7 @@ function InvoicesInner() {
         ),
       },
     ],
-    [handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId]
+    [fmt, handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId]
   );
 
   return (

@@ -12,6 +12,7 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -91,6 +92,8 @@ export async function GET(request, context) {
       fromShopContact,
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
+      customerTaxExempt: normalizeTaxExempt(inv.customerTaxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(inv.customerTaxPercent)),
       invoiceTotal: invTotal,
       amountPaid: invPaid,
       balance: invBal,
@@ -128,6 +131,8 @@ export async function PATCH(request, context) {
     if (body.customerNotes !== undefined) doc.customerNotes = String(body.customerNotes ?? "").slice(0, 8000);
     if (body.notes !== undefined) doc.notes = String(body.notes ?? "").slice(0, 8000);
     if (body.status !== undefined) doc.status = normalizeInvoiceStatusSlug(body.status);
+    if (body.customerTaxExempt !== undefined) doc.customerTaxExempt = normalizeTaxExempt(body.customerTaxExempt);
+    if (body.customerTaxPercent !== undefined) doc.customerTaxPercent = String(normalizeTaxPercent(body.customerTaxPercent));
     if (scopeLines) doc.scopeLines = scopeLines;
     if (partsLines) doc.partsLines = partsLines;
     await doc.save();

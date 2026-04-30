@@ -25,6 +25,10 @@ const customerSchema = new mongoose.Schema(
       },
     ],
     notes: { type: String, default: "", trim: true },
+    ein: { type: String, default: "", trim: true },
+    creditLimit: { type: String, default: "", trim: true },
+    taxExempt: { type: Boolean, default: true },
+    taxPercent: { type: String, default: "0", trim: true },
     /** Token for customer portal link (public view of motors, quotes, status). Unique when set — do not default to "". */
     portalToken: { type: String, trim: true },
     /** Import metadata for external system linking */

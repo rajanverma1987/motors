@@ -1,6 +1,7 @@
 import Script from "next/script";
 import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
+import ContextualAiWidget from "@/components/contextual-ai-widget";
 
 const GA_MEASUREMENT_ID = "G-RTSF7V6T7M";
 const CLARITY_PROJECT_ID = "vwab4oi27x";
@@ -40,6 +41,7 @@ gtag('config', '${GA_MEASUREMENT_ID}');
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />
+      <ContextualAiWidget />
     </div>
   );
 }

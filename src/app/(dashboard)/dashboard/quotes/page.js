@@ -31,6 +31,7 @@ import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-rep
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
+import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 /** Icons in modal Actions dropdown menu rows */
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
@@ -132,6 +133,8 @@ const INITIAL_FORM = {
   repairScope: "",
   laborTotal: "",
   partsTotal: "",
+  customerTaxExempt: true,
+  customerTaxPercent: "0",
   scopeLines: [],
   partsLines: [],
   estimatedCompletion: "",
@@ -181,6 +184,8 @@ function buildQuotePayload(form) {
     repairScope: f.repairScope ?? "",
     laborTotal: laborFromLines,
     partsTotal: partsFromLines,
+    customerTaxExempt: f.customerTaxExempt !== false,
+    customerTaxPercent: f.customerTaxExempt ? "0" : (f.customerTaxPercent ?? "0"),
     scopeLines,
     partsLines,
     estimatedCompletion: f.estimatedCompletion ?? "",
@@ -365,6 +370,7 @@ export default function DashboardQuotesPage() {
         // use row data
       }
     }
+    const customerForQuote = customers.find((c) => c.id === (dataToUse.customerId ?? ""));
     setViewingQuote(dataToUse);
     setForm({
       customerId: dataToUse.customerId ?? "",
@@ -378,6 +384,10 @@ export default function DashboardQuotesPage() {
       repairScope: dataToUse.repairScope ?? "",
       laborTotal: dataToUse.laborTotal ?? "",
       partsTotal: dataToUse.partsTotal ?? "",
+      customerTaxExempt:
+        dataToUse.customerTaxExempt !== undefined ? dataToUse.customerTaxExempt !== false : customerForQuote?.taxExempt !== false,
+      customerTaxPercent:
+        dataToUse.customerTaxPercent ?? (customerForQuote?.taxExempt === false ? String(customerForQuote?.taxPercent ?? "0") : "0"),
       scopeLines: Array.isArray(dataToUse.scopeLines) ? dataToUse.scopeLines : [],
       partsLines: (Array.isArray(dataToUse.partsLines) ? dataToUse.partsLines : []).map((row) => ({ ...row, qty: row?.qty ?? "1" })),
       estimatedCompletion: dataToUse.estimatedCompletion ?? "",
@@ -387,7 +397,7 @@ export default function DashboardQuotesPage() {
       motorRepairFlowQuoteId: dataToUse.motorRepairFlowQuoteId ?? "",
     });
     setEditModalOpen(true);
-  }, []);
+  }, [customers]);
 
   useEffect(() => {
     const id = editQuoteIdParam?.trim();
@@ -622,9 +632,12 @@ export default function DashboardQuotesPage() {
 
   const statusSummaryCards = useMemo(() => {
     const calcAmount = (quote) => {
-      const labor = parseFloat(quote?.laborTotal ?? "0");
-      const parts = parseFloat(quote?.partsTotal ?? "0");
-      return (Number.isFinite(labor) ? labor : 0) + (Number.isFinite(parts) ? parts : 0);
+      return computeTotalsFromLaborAndParts({
+        laborTotal: quote?.laborTotal,
+        partsTotal: quote?.partsTotal,
+        taxExempt: quote?.customerTaxExempt,
+        taxPercent: quote?.customerTaxPercent,
+      }).grandTotal;
     };
     return [
       {
@@ -784,10 +797,13 @@ export default function DashboardQuotesPage() {
         key: "grandTotal",
         label: "Grand Total",
         render: (_, row) => {
-          const labor = parseFloat(row.laborTotal || 0);
-          const parts = parseFloat(row.partsTotal || 0);
-          const total = labor + parts;
-          return total ? fmt(total) : "—";
+          const totals = computeTotalsFromLaborAndParts({
+            laborTotal: row.laborTotal,
+            partsTotal: row.partsTotal,
+            taxExempt: row.customerTaxExempt,
+            taxPercent: row.customerTaxPercent,
+          });
+          return totals.grandTotal ? fmt(totals.grandTotal) : "—";
         },
       },
       { key: "estimatedCompletion", label: "Est. completion" },
@@ -826,6 +842,16 @@ export default function DashboardQuotesPage() {
   const scopeTotal = useMemo(() => sumLinePrices(form.scopeLines), [form.scopeLines]);
   const partsTotalSum = useMemo(() => sumPartsLineTotals(form.partsLines), [form.partsLines]);
   const serviceProposalTotal = scopeTotal + partsTotalSum;
+  const selectedCustomerTaxExempt = selectedCustomer?.taxExempt !== false;
+  const selectedCustomerTaxPercent = selectedCustomerTaxExempt
+    ? "0"
+    : String(selectedCustomer?.taxPercent ?? "0");
+  const formTotals = computeTotalsFromLaborAndParts({
+    laborTotal: scopeTotal,
+    partsTotal: partsTotalSum,
+    taxExempt: selectedCustomerTaxExempt,
+    taxPercent: selectedCustomerTaxPercent,
+  });
 
   const viewQuoteToolbarMenuItems = useMemo(() => {
     const vq = viewingQuote;
@@ -1068,7 +1094,9 @@ export default function DashboardQuotesPage() {
                 <div><dt className="text-secondary">Status</dt><dd className="text-title">{STATUS_OPTIONS.find((o) => o.value === (viewingQuote.status || ""))?.label ?? (viewingQuote.status || "—")}</dd></div>
                 <div><dt className="text-secondary">Scope total</dt><dd className="text-title">{viewingQuote.laborTotal ? fmt(viewingQuote.laborTotal) : "—"}</dd></div>
                 <div><dt className="text-secondary">Other Cost total</dt><dd className="text-title">{viewingQuote.partsTotal ? fmt(viewingQuote.partsTotal) : "—"}</dd></div>
-                <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold text-title">{fmt(parseFloat(viewingQuote.laborTotal || 0) + parseFloat(viewingQuote.partsTotal || 0))}</dd></div>
+                <div><dt className="text-secondary">Tax %</dt><dd className="text-title">{normalizeTaxExempt(viewingQuote.customerTaxExempt) ? "0" : normalizeTaxPercent(viewingQuote.customerTaxPercent)}</dd></div>
+                <div><dt className="text-secondary">Tax amount</dt><dd className="text-title">{fmt(computeTotalsFromLaborAndParts({ laborTotal: viewingQuote.laborTotal, partsTotal: viewingQuote.partsTotal, taxExempt: viewingQuote.customerTaxExempt, taxPercent: viewingQuote.customerTaxPercent }).taxAmount)}</dd></div>
+                <div><dt className="text-secondary">Service proposal total</dt><dd className="font-semibold text-title">{fmt(computeTotalsFromLaborAndParts({ laborTotal: viewingQuote.laborTotal, partsTotal: viewingQuote.partsTotal, taxExempt: viewingQuote.customerTaxExempt, taxPercent: viewingQuote.customerTaxPercent }).grandTotal)}</dd></div>
                 <div><dt className="text-secondary">Est. completion</dt><dd className="text-title">{viewingQuote.estimatedCompletion || "—"}</dd></div>
               </dl>
             </div>
@@ -1258,7 +1286,14 @@ export default function DashboardQuotesPage() {
                   const newCustomerId = e.target.value ?? "";
                   const currentMotor = motors.find((m) => m.id === form.motorId);
                   const keepMotor = currentMotor && currentMotor.customerId === newCustomerId;
-                  setForm((f) => ({ ...f, customerId: newCustomerId, motorId: keepMotor ? f.motorId : "" }));
+                  const nextCustomer = customers.find((c) => c.id === newCustomerId);
+                  setForm((f) => ({
+                    ...f,
+                    customerId: newCustomerId,
+                    motorId: keepMotor ? f.motorId : "",
+                    customerTaxExempt: nextCustomer?.taxExempt !== false,
+                    customerTaxPercent: nextCustomer?.taxExempt === false ? String(nextCustomer?.taxPercent ?? "0") : "0",
+                  }));
                 }}
                 placeholder="Select customer"
                 searchable
@@ -1286,6 +1321,9 @@ export default function DashboardQuotesPage() {
                     ) : null}
                     {selectedCustomer.phone ? <p className="text-secondary">{selectedCustomer.phone}</p> : null}
                     {selectedCustomer.email ? <p className="text-secondary">{selectedCustomer.email}</p> : null}
+                    <p className="text-secondary">
+                      Tax: {selectedCustomer.taxExempt === false ? `${selectedCustomer.taxPercent || "0"}%` : "Exempt"}
+                    </p>
                     {(selectedCustomer.address || selectedCustomer.city) && (
                       <p className="text-secondary">
                         {[selectedCustomer.address, selectedCustomer.city, selectedCustomer.state, selectedCustomer.zipCode]
@@ -1353,10 +1391,31 @@ export default function DashboardQuotesPage() {
                 />
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-4 border-t border-border pt-3">
-              <span className="text-sm text-secondary">Scope total: {fmt(scopeTotal)}</span>
-              <span className="text-sm text-secondary">Other Cost total: {fmt(partsTotalSum)}</span>
-              <span className="font-semibold text-title">Service proposal total: {fmt(serviceProposalTotal)}</span>
+            <div className="mt-3 rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <tbody>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Scope total</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(scopeTotal)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Other Cost total</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(partsTotalSum)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Service proposal total</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(serviceProposalTotal)}</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 text-secondary">Tax</td>
+                    <td className="px-3 py-2 text-right text-title">{fmt(formTotals.taxAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-semibold text-title">Grand total</td>
+                    <td className="px-3 py-2 text-right font-semibold text-title">{fmt(formTotals.grandTotal)}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
           <div>

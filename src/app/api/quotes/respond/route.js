@@ -8,6 +8,7 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { syncRepairFlowJobAfterCrmCustomerRespond } from "@/lib/repair-flow-sync-crm-quote-respond";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
 export async function GET(request) {
@@ -55,6 +56,8 @@ export async function GET(request) {
       partsLines: Array.isArray(doc.partsLines) ? doc.partsLines : [],
       laborTotal: doc.laborTotal ?? "",
       partsTotal: doc.partsTotal ?? "",
+      customerTaxExempt: normalizeTaxExempt(doc.customerTaxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(doc.customerTaxPercent)),
       estimatedCompletion: doc.estimatedCompletion ?? "",
       customerNotes: doc.customerNotes ?? "",
       shop: {

@@ -8,6 +8,7 @@ import {
   LISTING_ONLY_MAX_CUSTOMERS,
 } from "@/lib/listing-account-messages";
 import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listing-account-restrictions";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 function sanitizeAdditionalContacts(arr) {
@@ -48,6 +49,10 @@ export async function GET(request) {
         shippingZipCode: c.shippingZipCode ?? "",
         shippingCountry: c.shippingCountry ?? "United States",
         additionalContacts,
+        ein: c.ein ?? "",
+        creditLimit: c.creditLimit ?? "",
+        taxExempt: normalizeTaxExempt(c.taxExempt),
+        taxPercent: String(normalizeTaxPercent(c.taxPercent)),
       };
     });
     return NextResponse.json(listWithId);
@@ -92,6 +97,10 @@ export async function POST(request) {
       shippingCountry,
       additionalContacts,
       notes,
+      ein,
+      creditLimit,
+      taxExempt,
+      taxPercent,
     } = body;
     if (!companyName?.trim()) {
       return NextResponse.json({ error: "Company name is required" }, { status: 400 });
@@ -116,6 +125,10 @@ export async function POST(request) {
       shippingCountry: clampString(shippingCountry, 100),
       additionalContacts: sanitizeAdditionalContacts(additionalContacts),
       notes: clampString(notes, LIMITS.message.max),
+      ein: clampString(ein, 50),
+      creditLimit: clampString(creditLimit, 50),
+      taxExempt: normalizeTaxExempt(taxExempt),
+      taxPercent: String(normalizeTaxPercent(taxPercent)),
       createdByEmail: user.email.trim().toLowerCase(),
     });
     return NextResponse.json({

@@ -4,11 +4,13 @@ import { connectDB } from "@/lib/db";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import MotorRepairJob from "@/models/MotorRepairJob";
 import Quote from "@/models/Quote";
+import Customer from "@/models/Customer";
 import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
 import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 /** Attach another draft RFQ (Quote) to this repair job — same collection as the Quotes tab. */
 export async function POST(request, context) {
@@ -42,6 +44,9 @@ export async function POST(request, context) {
     const rfqNumber = await getNextRfqNumber(email);
     const quoteDate = todayQuoteDateString();
     const preparedByEmpId = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    const customer = await Customer.findOne({ _id: customerId, createdByEmail: email })
+      .select("taxExempt taxPercent")
+      .lean();
 
     const crmQuote = await Quote.create({
       customerId,
@@ -56,6 +61,8 @@ export async function POST(request, context) {
       repairScope: "",
       laborTotal: "",
       partsTotal: "",
+      customerTaxExempt: normalizeTaxExempt(customer?.taxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(customer?.taxPercent)),
       scopeLines: [],
       partsLines: [],
       estimatedCompletion: "",

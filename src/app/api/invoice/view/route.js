@@ -9,6 +9,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 /** Public GET ?token= — invoice for customer view/print (no internal notes). */
 export async function GET(request) {
@@ -69,6 +70,8 @@ export async function GET(request) {
       partsLines: Array.isArray(doc.partsLines) ? doc.partsLines : [],
       laborTotal: doc.laborTotal ?? "",
       partsTotal: doc.partsTotal ?? "",
+      customerTaxExempt: normalizeTaxExempt(doc.customerTaxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(doc.customerTaxPercent)),
       customerNotes: doc.customerNotes ?? "",
       motorLabel,
       fromShopName: owner?.shopName?.trim() || "",
