@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
@@ -81,6 +82,8 @@ export default function LedgerPageClient() {
   const [entryForm, setEntryForm] = useState({ ...EMPTY_ENTRY, date: todayDate() });
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [partyOptions, setPartyOptions] = useState([]);
+  const [partyValue, setPartyValue] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,6 +116,84 @@ export default function LedgerPageClient() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPartyOptions() {
+      try {
+        const [customersRes, salesPersonsRes, vendorsRes, employeesRes] = await Promise.all([
+          fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/sales-persons", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/vendors", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" }),
+        ]);
+
+        const [customers, salesPersons, vendors, employees] = await Promise.all([
+          customersRes.json().catch(() => []),
+          salesPersonsRes.json().catch(() => []),
+          vendorsRes.json().catch(() => []),
+          employeesRes.json().catch(() => []),
+        ]);
+
+        if (cancelled) return;
+
+        const options = [
+          ...(Array.isArray(customers)
+            ? customers.map((c) => {
+                const name = String(c.companyName || c.primaryContactName || "").trim();
+                return {
+                  value: `client:${c.id || c._id || name}`,
+                  label: `Client - ${name || "Unnamed"}`,
+                  partyName: name || "Unnamed",
+                };
+              })
+            : []),
+          ...(Array.isArray(salesPersons)
+            ? salesPersons.map((sp) => {
+                const name = String(sp.name || sp.email || "").trim();
+                return {
+                  value: `sales:${sp.id || name}`,
+                  label: `Sales Person - ${name || "Unnamed"}`,
+                  partyName: name || "Unnamed",
+                };
+              })
+            : []),
+          ...(Array.isArray(vendors)
+            ? vendors.map((v) => {
+                const name = String(v.name || v.contactName || "").trim();
+                return {
+                  value: `vendor:${v.id || v._id || name}`,
+                  label: `Vendor - ${name || "Unnamed"}`,
+                  partyName: name || "Unnamed",
+                };
+              })
+            : []),
+          ...(Array.isArray(employees)
+            ? employees.map((e) => {
+                const name = String(e.name || e.email || "").trim();
+                return {
+                  value: `employee:${e.id || name}`,
+                  label: `Employee - ${name || "Unnamed"}`,
+                  partyName: name || "Unnamed",
+                };
+              })
+            : []),
+        ]
+          .filter((opt) => opt.partyName)
+          .sort((a, b) => a.label.localeCompare(b.label));
+
+        setPartyOptions(options);
+      } catch {
+        if (!cancelled) setPartyOptions([]);
+      }
+    }
+
+    loadPartyOptions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -202,6 +283,7 @@ export default function LedgerPageClient() {
       toast.success("Ledger entry added.");
       setEntryOpen(false);
       setEntryForm({ ...EMPTY_ENTRY, date: todayDate() });
+      setPartyValue("");
       load();
     } catch (err) {
       toast.error(err.message || "Failed to save entry");
@@ -324,10 +406,16 @@ export default function LedgerPageClient() {
             value={entryForm.description}
             onChange={(e) => setEntryForm((p) => ({ ...p, description: e.target.value }))}
           />
-          <Input
+          <Select
             label="Party"
-            value={entryForm.party}
-            onChange={(e) => setEntryForm((p) => ({ ...p, party: e.target.value }))}
+            options={partyOptions}
+            value={partyValue}
+            onChange={(e) => {
+              const selected = partyOptions.find((opt) => opt.value === e.target.value);
+              setPartyValue(e.target.value);
+              setEntryForm((p) => ({ ...p, party: selected?.partyName || "" }));
+            }}
+            placeholder="Select party..."
           />
           <div className="grid gap-3 sm:grid-cols-2">
             <Input
