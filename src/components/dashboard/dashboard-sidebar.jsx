@@ -48,6 +48,7 @@ const JOBS_NAV = [
 const ACCOUNTING_NAV = [
   { href: "/dashboard/invoices", label: "Invoices", icon: FiDollarSign },
   { href: "/dashboard/accounts-receivable", label: "Accounts receivable", icon: FiTrendingUp },
+  { href: "/dashboard/ledger", label: "Ledger", icon: FiCreditCard },
 ];
 
 const PROCUREMENT_NAV = [

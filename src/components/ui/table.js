@@ -63,6 +63,7 @@ function importDisabledForToolsReports(pathname) {
     p.includes("/dashboard/calculators") ||
     p.includes("/dashboard/subscription") ||
     p.includes("/dashboard/reports") ||
+    p.includes("/dashboard/ledger") ||
     p.includes("/dashboard/integrations") ||
     p.includes("/dashboard/marketplace") ||
     p.includes("/dashboard/directory-listing") ||
