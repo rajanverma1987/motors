@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiPlus, FiRotateCw } from "react-icons/fi";
+import { FiCheck, FiDollarSign, FiEdit2, FiPlus, FiRotateCw } from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
@@ -21,6 +21,13 @@ const NEW_COMMISSION_INITIAL = {
   paidAt: "",
 };
 
+function formatDateIST(dateValue) {
+  if (!dateValue) return "—";
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+}
+
 export default function DashboardSalesCommissionPage() {
   const toast = useToast();
   const fmt = useFormatMoney();
@@ -33,6 +40,8 @@ export default function DashboardSalesCommissionPage() {
   const [salesPersons, setSalesPersons] = useState([]);
   const [jobOptions, setJobOptions] = useState([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingCommissionId, setEditingCommissionId] = useState("");
   const [savingCommission, setSavingCommission] = useState(false);
   const [newCommissionForm, setNewCommissionForm] = useState(NEW_COMMISSION_INITIAL);
 
@@ -160,6 +169,91 @@ export default function DashboardSalesCommissionPage() {
     }
   };
 
+  const openEditModal = (row) => {
+    const matchedOption =
+      jobOptions.find((opt) => opt.meta?.quoteId && opt.meta.quoteId === String(row.quoteId || "")) ||
+      jobOptions.find((opt) => opt.meta?.rfqNumber && opt.meta.rfqNumber === String(row.rfqNumber || ""));
+    const fallbackJobNumber = String(row.jobNumber || row.rfqNumber || "").trim();
+    const jobKey = matchedOption?.value || (fallbackJobNumber ? `manual:${row.id}` : "");
+    if (jobKey.startsWith("manual:")) {
+      setJobOptions((prev) => {
+        if (prev.some((opt) => opt.value === jobKey)) return prev;
+        return [
+          {
+            value: jobKey,
+            label: fallbackJobNumber,
+            meta: {
+              jobNumber: fallbackJobNumber,
+              quoteId: String(row.quoteId || ""),
+              rfqNumber: String(row.rfqNumber || ""),
+            },
+          },
+          ...prev,
+        ];
+      });
+    }
+    setEditingCommissionId(row.id);
+    setNewCommissionForm({
+      jobKey,
+      salesPersonId: String(row.salesPersonId || ""),
+      amount: String(row.amount ?? ""),
+      status: row.status === "paid" ? "paid" : "unpaid",
+      paidAt: row.paidAt ? new Date(row.paidAt).toISOString().slice(0, 10) : "",
+    });
+    setEditModalOpen(true);
+  };
+
+  const handleEditCommission = async (e) => {
+    e.preventDefault();
+    if (!editingCommissionId) return;
+    const selectedJob = jobOptions.find((opt) => opt.value === newCommissionForm.jobKey);
+    if (!selectedJob) {
+      toast.error("Job# is required.");
+      return;
+    }
+    if (!newCommissionForm.salesPersonId) {
+      toast.error("Sales person is required.");
+      return;
+    }
+    const amountNum = Number(newCommissionForm.amount);
+    if (!Number.isFinite(amountNum) || amountNum < 0) {
+      toast.error("Amount must be a valid number.");
+      return;
+    }
+    setSavingCommission(true);
+    try {
+      const res = await fetch(`/api/dashboard/sales-commissions/${editingCommissionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          jobNumber: selectedJob.meta.jobNumber,
+          quoteId: selectedJob.meta.quoteId,
+          rfqNumber: selectedJob.meta.rfqNumber,
+          salesPersonId: newCommissionForm.salesPersonId,
+          amount: amountNum,
+          status: newCommissionForm.status,
+          paidAt: newCommissionForm.paidAt,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update commission");
+      const commissionWithName = {
+        ...data.commission,
+        salesPersonName: salesPersonNameMap[data.commission?.salesPersonId] || "",
+      };
+      setRows((prev) => prev.map((r) => (r.id === editingCommissionId ? commissionWithName : r)));
+      setEditModalOpen(false);
+      setEditingCommissionId("");
+      setNewCommissionForm(NEW_COMMISSION_INITIAL);
+      toast.success("Sales commission updated.");
+    } catch (err) {
+      toast.error(err.message || "Failed to update commission");
+    } finally {
+      setSavingCommission(false);
+    }
+  };
+
   const markPaid = async (id) => {
     if (!id) return;
     setStatusSavingId(id);
@@ -212,30 +306,63 @@ export default function DashboardSalesCommissionPage() {
     );
   }, [paidRows, searchPaid]);
 
+  const statusSummaryCards = useMemo(() => {
+    const calcAmount = (list) =>
+      list.reduce((sum, row) => {
+        const amt = Number(row?.amount);
+        return sum + (Number.isFinite(amt) ? amt : 0);
+      }, 0);
+    return [
+      {
+        key: "unpaid",
+        label: "Unpaid",
+        count: unpaidRows.length,
+        amount: calcAmount(unpaidRows),
+      },
+      {
+        key: "paid",
+        label: "Paid",
+        count: paidRows.length,
+        amount: calcAmount(paidRows),
+      },
+    ];
+  }, [paidRows, unpaidRows]);
+
   const columns = useMemo(
     () => [
       {
         key: "actions",
         label: "",
         render: (_, row) =>
-          row.status === "paid" ? (
-            <span className="px-1.5 text-secondary">—</span>
-          ) : (
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => markPaid(row.id)}
-              disabled={statusSavingId === row.id}
-              className="rounded p-1.5 text-success hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-success disabled:opacity-50"
-              aria-label="Mark paid"
-              title="Mark paid"
+              onClick={() => openEditModal(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Edit"
+              title="Edit"
             >
-              {statusSavingId === row.id ? (
-                <FiRotateCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <FiCheck className="h-4 w-4" />
-              )}
+              <FiEdit2 className="h-4 w-4" />
             </button>
-          ),
+            {row.status === "paid" ? (
+              <span className="px-1.5 text-secondary">—</span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => markPaid(row.id)}
+                disabled={statusSavingId === row.id}
+                className="rounded p-1.5 text-success hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-success disabled:opacity-50"
+                aria-label="Mark paid"
+                title="Mark paid"
+              >
+                {statusSavingId === row.id ? (
+                  <FiRotateCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FiCheck className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </div>,
       },
       {
         key: "jobNumber",
@@ -263,15 +390,15 @@ export default function DashboardSalesCommissionPage() {
       {
         key: "paidAt",
         label: "Paid date",
-        render: (_, row) => (row.paidAt ? new Date(row.paidAt).toLocaleDateString() : "—"),
+        render: (_, row) => formatDateIST(row.paidAt),
       },
       {
         key: "createdAt",
         label: "Created",
-        render: (_, row) => (row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"),
+        render: (_, row) => formatDateIST(row.createdAt),
       },
     ],
-    [fmt, statusSavingId]
+    [fmt, statusSavingId, jobOptions]
   );
 
   return (
@@ -292,6 +419,18 @@ export default function DashboardSalesCommissionPage() {
       </div>
 
       <div className="mt-6 min-h-0 flex-1">
+        <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {statusSummaryCards.map((card) => (
+            <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
+              <div className="flex items-center gap-2 text-sm text-secondary">
+                <FiDollarSign className="h-4 w-4" aria-hidden />
+                {card.label}
+              </div>
+              <p className="mt-1 text-2xl font-bold tabular text-title">{fmt(card.amount)}</p>
+              <p className="text-xs text-secondary">Count: {card.count}</p>
+            </div>
+          ))}
+        </div>
         <Tabs
           value={activeTab}
           onChange={setActiveTab}
@@ -363,7 +502,77 @@ export default function DashboardSalesCommissionPage() {
             options={jobOptions}
             value={newCommissionForm.jobKey}
             onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, jobKey: e.target.value ?? "" }))}
-            placeholder="Select RFQ# or Invoice#"
+            placeholder="Select Job#"
+            searchable
+            required
+          />
+          <Select
+            label="Sales Person"
+            options={salesPersonOptions}
+            value={newCommissionForm.salesPersonId}
+            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, salesPersonId: e.target.value ?? "" }))}
+            placeholder="Select sales person"
+            searchable
+            required
+          />
+          <Input
+            label="Amount"
+            type="number"
+            min="0"
+            step="0.01"
+            value={newCommissionForm.amount}
+            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, amount: e.target.value }))}
+            placeholder="0.00"
+            required
+          />
+          <Select
+            label="Status"
+            options={[
+              { value: "unpaid", label: "Unpaid" },
+              { value: "paid", label: "Paid" },
+            ]}
+            value={newCommissionForm.status}
+            onChange={(e) =>
+              setNewCommissionForm((prev) => ({
+                ...prev,
+                status: e.target.value ?? "unpaid",
+                paidAt: (e.target.value ?? "unpaid") === "paid" ? (prev.paidAt || new Date().toISOString().slice(0, 10)) : "",
+              }))
+            }
+            searchable={false}
+          />
+          <Input
+            label="Paid date"
+            type="date"
+            value={newCommissionForm.paidAt}
+            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, paidAt: e.target.value }))}
+          />
+        </Form>
+      </Modal>
+
+      <Modal
+        open={editModalOpen}
+        onClose={() => {
+          if (savingCommission) return;
+          setEditModalOpen(false);
+          setEditingCommissionId("");
+          setNewCommissionForm(NEW_COMMISSION_INITIAL);
+        }}
+        title="Edit Commission"
+        size="2xl"
+        actions={
+          <Button type="submit" form="edit-sales-commission-form" variant="primary" size="sm" disabled={savingCommission}>
+            {savingCommission ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <Form id="edit-sales-commission-form" onSubmit={handleEditCommission} className="flex flex-col gap-4 !space-y-0">
+          <Select
+            label="Job#"
+            options={jobOptions}
+            value={newCommissionForm.jobKey}
+            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, jobKey: e.target.value ?? "" }))}
+            placeholder="Select Job#"
             searchable
             required
           />

@@ -80,6 +80,7 @@ export async function POST(request) {
     const statusInput = clampString(body?.status, 20).toLowerCase();
     const status = statusInput === "paid" ? "paid" : "unpaid";
     const paidAtInput = clampString(body?.paidAt, 50);
+    const paidAtDate = paidAtInput ? new Date(`${paidAtInput}T12:00:00.000Z`) : null;
 
     if (!salesPersonId) return NextResponse.json({ error: "Sales person is required" }, { status: 400 });
     if (!Number.isFinite(amount) || amount < 0) {
@@ -113,7 +114,7 @@ export async function POST(request) {
       status,
       paidAt:
         status === "paid"
-          ? (paidAtInput ? new Date(`${paidAtInput}T12:00:00`) : new Date())
+          ? (paidAtDate && !Number.isNaN(paidAtDate.getTime()) ? paidAtDate : new Date())
           : null,
       createdByEmail: owner,
     });

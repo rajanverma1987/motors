@@ -183,6 +183,7 @@ export async function GET(request) {
       .slice(0, 10);
 
     const quoteByStatus = { draft: 0, sent: 0, approved: 0, rejected: 0, rnr: 0, other: 0 };
+    const quoteAmountByStatus = { draft: 0, sent: 0, approved: 0, rejected: 0, rnr: 0, other: 0 };
     let quotePipelineValue = 0;
     let quoteApprovedValue = 0;
     const quoteSeries = initSeries(chartMeta, true);
@@ -192,6 +193,8 @@ export async function GET(request) {
       if (quoteByStatus[st] !== undefined) quoteByStatus[st]++;
       else quoteByStatus.other++;
       const val = quoteDollarTotal(q);
+      if (quoteAmountByStatus[st] !== undefined) quoteAmountByStatus[st] += val;
+      else quoteAmountByStatus.other += val;
       if (st !== "rejected" && st !== "rnr") quotePipelineValue += val;
       if (st === "approved") quoteApprovedValue += val;
       const t = new Date(q.createdAt).getTime();
@@ -347,6 +350,9 @@ export async function GET(request) {
       },
       quotes: {
         byStatus: quoteByStatus,
+        byStatusAmount: Object.fromEntries(
+          Object.entries(quoteAmountByStatus).map(([k, v]) => [k, Math.round((v || 0) * 100) / 100]),
+        ),
         pipelineValueExRejected: Math.round(quotePipelineValue * 100) / 100,
         approvedValue: Math.round(quoteApprovedValue * 100) / 100,
         byMonth: quoteSeriesOut,

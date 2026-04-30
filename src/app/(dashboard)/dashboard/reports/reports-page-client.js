@@ -24,7 +24,6 @@ const QUOTE_STATUS_LABELS = {
   approved: "Approved",
   rejected: "Rejected",
   rnr: "R&R",
-  other: "Other",
 };
 
 const LEAD_SOURCE_LABELS = {
@@ -200,10 +199,15 @@ export default function ReportsPageClient() {
 
   const quoteStatusRows = useMemo(() => {
     const b = data?.quotes?.byStatus;
-    if (!b) return [];
-    return Object.entries(b)
-      .filter(([, c]) => c > 0)
-      .map(([k, count]) => ({ key: k, label: QUOTE_STATUS_LABELS[k] || k, count }));
+    const byAmount = data?.quotes?.byStatusAmount || {};
+    const byStatus = b || {};
+    const ordered = ["draft", "sent", "approved", "rejected", "rnr"];
+    return ordered.map((key) => ({
+      key,
+      label: QUOTE_STATUS_LABELS[key] || key,
+      count: Number(byStatus[key] || 0),
+      amount: Number(byAmount[key] || 0),
+    }));
   }, [data]);
 
   const commissionUnpaidRows = useMemo(
@@ -339,30 +343,6 @@ export default function ReportsPageClient() {
         </div>
       </section>
 
-      {/* Customers & motors */}
-      <section className="mt-10">
-        <h2 className="mb-3 text-lg font-semibold text-title">Customers & motors</h2>
-        <div className="mb-4 flex flex-wrap gap-4 rounded-lg border border-border bg-card px-4 py-3">
-          <div>
-            <span className="text-xs text-secondary">Avg motors per customer</span>
-            <p className="text-xl font-semibold tabular-nums text-title">
-              {data?.customers?.avgMotorsPerCustomer ?? "—"}
-            </p>
-          </div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <h3 className="mb-3 text-sm font-semibold text-title">Top customers by motor count</h3>
-          <ReportTable
-            columns={[
-              { key: "name", label: "Customer" },
-              { key: "motorCount", label: "Motors", align: "right" },
-            ]}
-            rows={data?.customers?.topByMotors || []}
-            empty="No motors linked to customers."
-          />
-        </div>
-      </section>
-
       {/* Quotes */}
       <section className="mt-10">
         <h2 className="mb-3 text-lg font-semibold text-title">Quotes</h2>
@@ -387,6 +367,7 @@ export default function ReportsPageClient() {
               columns={[
                 { key: "label", label: "Status" },
                 { key: "count", label: "Count", align: "right" },
+                { key: "amount", label: "Amount", align: "right", render: (v) => fmt(v || 0) },
               ]}
               rows={quoteStatusRows}
               empty="No quotes."
@@ -403,11 +384,6 @@ export default function ReportsPageClient() {
               empty="No quotes with customers."
             />
           </div>
-        </div>
-        <div className="mt-6 rounded-lg border border-border bg-card p-4">
-          <h3 className="mb-1 text-sm font-semibold text-title">Quotes over time</h3>
-          <p className="mb-2 text-xs text-secondary">Dollar value created per period (bar height)</p>
-          <MiniBars rows={data?.quotes?.series || data?.quotes?.byMonth || []} valueKey="value" fmt={fmt} />
         </div>
         <div className="mt-6 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-1 text-sm font-semibold text-title">Quotes by period</h3>
@@ -530,11 +506,6 @@ export default function ReportsPageClient() {
               empty="No invoice revenue by customer."
             />
           </div>
-        </div>
-        <div className="mt-6 rounded-lg border border-border bg-card p-4">
-          <h3 className="mb-1 text-sm font-semibold text-title">Invoices over time</h3>
-          <p className="mb-2 text-xs text-secondary">Amount billed per period (bar height)</p>
-          <MiniBars rows={data?.invoices?.series || data?.invoices?.byMonth || []} valueKey="billed" fmt={fmt} />
         </div>
         <div className="mt-6 rounded-lg border border-border bg-card p-4">
           <h3 className="mb-1 text-sm font-semibold text-title">Invoices by period</h3>

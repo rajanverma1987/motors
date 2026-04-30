@@ -25,6 +25,13 @@ const SALES_PERSON_INITIAL = {
   bankDetail: "",
 };
 
+function formatDateIST(dateValue) {
+  if (!dateValue) return "—";
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+}
+
 /**
  * @param {object} props
  * @param {boolean} props.open
@@ -333,10 +340,10 @@ export default function SalesCommissionModal({ open, onClose, repairFlowJobId, j
                             </Badge>
                           </td>
                           <td className="px-3 py-2 text-title">
-                            {row.paidAt ? new Date(row.paidAt).toLocaleDateString() : "—"}
+                            {formatDateIST(row.paidAt)}
                           </td>
                           <td className="px-3 py-2 text-secondary">
-                            {row.createdAt ? new Date(row.createdAt).toLocaleDateString() : "—"}
+                            {formatDateIST(row.createdAt)}
                           </td>
                         </tr>
                       );

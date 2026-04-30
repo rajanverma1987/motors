@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEye } from "react-icons/fi";
+import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -157,10 +157,10 @@ export default function DashboardSalesPersonPage() {
             type="button"
             onClick={() => openEdit(row)}
             className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="View"
-            title="View"
+            aria-label="Edit"
+            title="Edit"
           >
-            <FiEye className="h-4 w-4" />
+            <FiEdit2 className="h-4 w-4" />
           </button>
         ),
       },
@@ -256,7 +256,7 @@ export default function DashboardSalesPersonPage() {
       <Modal
         open={isEditOpen}
         onClose={closeEdit}
-        title="View Sales Person"
+        title="Edit Sales Person"
         size="xl"
         actions={
           <Button type="submit" form="edit-sales-person-form" variant="primary" size="sm" disabled={saving}>
