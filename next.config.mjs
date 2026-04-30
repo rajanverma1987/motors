@@ -19,14 +19,16 @@ const nextConfig = {
   async headers() {
     // CSP: allow Microsoft Clarity (https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp),
     // Google Analytics, and required Next.js / app sources. If you add stricter rules elsewhere, ensure Clarity stays allowed.
+    const contextualAi = "https://contextualaisystems.com";
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms",
-      "connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://*.bing.com",
-      "img-src 'self' data: blob: https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://www.google-analytics.com",
+      `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://www.clarity.ms https://*.clarity.ms ${contextualAi}`,
+      `connect-src 'self' https://www.google-analytics.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://*.bing.com ${contextualAi} wss://contextualaisystems.com`,
+      `img-src 'self' data: blob: https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://www.google-analytics.com ${contextualAi}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
       "frame-src 'self'",
+      "media-src 'self' blob:",
     ].join("; ");
 
     return [
