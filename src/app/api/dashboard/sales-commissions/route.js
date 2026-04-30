@@ -73,38 +73,48 @@ export async function POST(request) {
     const body = await request.json();
     let repairFlowJobId = clampString(body?.repairFlowJobId, 200);
     let jobNumber = clampString(body?.jobNumber, 200);
+    const quoteId = clampString(body?.quoteId, 200);
+    const rfqNumber = clampString(body?.rfqNumber, 200);
     const salesPersonId = clampString(body?.salesPersonId, 200);
     const amount = Number(body?.amount);
+    const statusInput = clampString(body?.status, 20).toLowerCase();
+    const status = statusInput === "paid" ? "paid" : "unpaid";
+    const paidAtInput = clampString(body?.paidAt, 50);
 
-    if (!repairFlowJobId || !mongoose.isValidObjectId(repairFlowJobId)) {
-      return NextResponse.json({ error: "Repair job is required" }, { status: 400 });
-    }
     if (!salesPersonId) return NextResponse.json({ error: "Sales person is required" }, { status: 400 });
     if (!Number.isFinite(amount) || amount < 0) {
       return NextResponse.json({ error: "Amount must be a valid number" }, { status: 400 });
     }
 
-    const repairJob = await MotorRepairJob.findOne({ _id: repairFlowJobId, createdByEmail: owner })
-      .select("jobNumber")
-      .lean();
-    if (!repairJob) return NextResponse.json({ error: "Repair job not found" }, { status: 404 });
-    if (!jobNumber) jobNumber = String(repairJob.jobNumber || "").trim();
+    if (repairFlowJobId) {
+      if (!mongoose.isValidObjectId(repairFlowJobId)) {
+        return NextResponse.json({ error: "Invalid repair job" }, { status: 400 });
+      }
+      const repairJob = await MotorRepairJob.findOne({ _id: repairFlowJobId, createdByEmail: owner })
+        .select("jobNumber")
+        .lean();
+      if (!repairJob) return NextResponse.json({ error: "Repair job not found" }, { status: 404 });
+      if (!jobNumber) jobNumber = String(repairJob.jobNumber || "").trim();
+    }
     if (!jobNumber) {
-      return NextResponse.json({ error: "Job# missing on repair job" }, { status: 400 });
+      return NextResponse.json({ error: "Job# is required" }, { status: 400 });
     }
 
     const salesPerson = await SalesPerson.findOne({ _id: salesPersonId, createdByEmail: owner }).lean();
     if (!salesPerson) return NextResponse.json({ error: "Sales person not found" }, { status: 404 });
 
     const doc = await SalesCommission.create({
-      quoteId: "",
-      rfqNumber: "",
+      quoteId,
+      rfqNumber,
       repairFlowJobId,
       jobNumber,
       salesPersonId,
       amount,
-      status: "unpaid",
-      paidAt: null,
+      status,
+      paidAt:
+        status === "paid"
+          ? (paidAtInput ? new Date(`${paidAtInput}T12:00:00`) : new Date())
+          : null,
       createdByEmail: owner,
     });
 

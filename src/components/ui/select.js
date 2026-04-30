@@ -22,10 +22,12 @@ export default function Select({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [dropdownRect, setDropdownRect] = useState(null);
   const containerRef = useRef(null);
   const triggerRef = useRef(null);
   const dropdownRef = useRef(null);
+  const optionRefs = useRef([]);
 
   const selectedValues = multiple
     ? Array.isArray(value) ? value : value ? [value] : []
@@ -73,6 +75,25 @@ export default function Select({
   }, [isOpen]);
 
   useEffect(() => {
+    if (!isOpen) {
+      setHighlightedIndex(-1);
+      return;
+    }
+    if (filteredOptions.length === 0) {
+      setHighlightedIndex(-1);
+      return;
+    }
+    const selectedIdx = filteredOptions.findIndex((opt) => isSelected(opt));
+    setHighlightedIndex(selectedIdx >= 0 ? selectedIdx : 0);
+  }, [isOpen, searchQuery, value, options]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (highlightedIndex < 0) return;
+    optionRefs.current[highlightedIndex]?.scrollIntoView({ block: "nearest" });
+  }, [isOpen, highlightedIndex]);
+
+  useEffect(() => {
     if (disabled) setIsOpen(false);
   }, [disabled]);
 
@@ -96,6 +117,63 @@ export default function Select({
       onChange({ target: { name, value: opt.value } });
       setIsOpen(false);
       setSearchQuery("");
+    }
+  };
+
+  const openDropdown = () => {
+    if (disabled) return;
+    setIsOpen(true);
+    setSearchQuery("");
+  };
+
+  const closeDropdown = () => {
+    setIsOpen(false);
+    setSearchQuery("");
+    setHighlightedIndex(-1);
+  };
+
+  const moveHighlight = (delta) => {
+    if (filteredOptions.length === 0) return;
+    setHighlightedIndex((prev) => {
+      const start = prev < 0 ? 0 : prev;
+      const next = (start + delta + filteredOptions.length) % filteredOptions.length;
+      return next;
+    });
+  };
+
+  const handleKeyboardNavigation = (e) => {
+    if (disabled) return;
+    if (!isOpen) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        openDropdown();
+      } else if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        openDropdown();
+      }
+      return;
+    }
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      moveHighlight(1);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      moveHighlight(-1);
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (highlightedIndex >= 0 && filteredOptions[highlightedIndex]) {
+        handleSelect(filteredOptions[highlightedIndex]);
+      }
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeDropdown();
+      triggerRef.current?.focus();
     }
   };
 
@@ -155,17 +233,13 @@ export default function Select({
         aria-disabled={disabled}
         onClick={() => {
           if (disabled) return;
-          setIsOpen((o) => !o);
-          setSearchQuery("");
-        }}
-        onKeyDown={(e) => {
-          if (disabled) return;
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setIsOpen((o) => !o);
-            setSearchQuery("");
+          if (isOpen) {
+            closeDropdown();
+          } else {
+            openDropdown();
           }
         }}
+        onKeyDown={handleKeyboardNavigation}
         className={`flex w-full min-h-[2.5rem] items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary ${disabled ? "cursor-not-allowed opacity-60 bg-card border-border/80" : "cursor-pointer"}`}
       >
         {triggerContent}
@@ -201,21 +275,34 @@ export default function Select({
                   placeholder="Search..."
                   className="w-full rounded border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
                   autoFocus
-                  onKeyDown={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => {
+                    e.stopPropagation();
+                    handleKeyboardNavigation(e);
+                  }}
                 />
               </div>
             )}
-            <ul className="max-h-48 overflow-auto py-1">
+            <ul className="max-h-48 overflow-auto py-1" role="listbox">
               {filteredOptions.length === 0 ? (
                 <li className="px-3 py-2 text-sm text-title">No options</li>
               ) : (
                 filteredOptions.map((opt, i) => (
                   <li key={i}>
                     <button
+                      ref={(el) => {
+                        optionRefs.current[i] = el;
+                      }}
                       type="button"
                       onClick={() => handleSelect(opt)}
-                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-bg ${
-                        isSelected(opt) ? "bg-bg text-primary font-medium" : "text-text"
+                      role="option"
+                      aria-selected={isSelected(opt)}
+                      onMouseEnter={() => setHighlightedIndex(i)}
+                      className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors ${
+                        highlightedIndex === i
+                          ? "bg-card text-title"
+                          : "hover:bg-bg"
+                      } ${
+                        isSelected(opt) ? "text-primary font-medium" : "text-text"
                       }`}
                     >
                       {multiple && (
