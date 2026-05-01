@@ -1,15 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEdit2 } from "react-icons/fi";
+import { FiDollarSign, FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
+
+function formatDateShort(dateValue) {
+  if (!dateValue) return "—";
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
+}
 
 const INITIAL_FORM = {
   name: "",
@@ -29,6 +38,7 @@ function buildPayload(form) {
 
 export default function DashboardSalesPersonPage() {
   const toast = useToast();
+  const fmt = useFormatMoney();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,6 +47,10 @@ export default function DashboardSalesPersonPage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [commissionsModalOpen, setCommissionsModalOpen] = useState(false);
+  const [commissionsModalPerson, setCommissionsModalPerson] = useState(null);
+  const [commissionsForPerson, setCommissionsForPerson] = useState([]);
+  const [commissionsLoading, setCommissionsLoading] = useState(false);
 
   const loadSalesPersons = useCallback(async () => {
     try {
@@ -55,6 +69,109 @@ export default function DashboardSalesPersonPage() {
   useEffect(() => {
     loadSalesPersons();
   }, [loadSalesPersons]);
+
+  const openCommissionsModal = useCallback((row) => {
+    if (!row?.id) return;
+    setCommissionsModalPerson({
+      id: row.id,
+      name: row.name || row.email || row.phone || "Sales person",
+    });
+    setCommissionsModalOpen(true);
+  }, []);
+
+  const closeCommissionsModal = useCallback(() => {
+    setCommissionsModalOpen(false);
+    setCommissionsModalPerson(null);
+    setCommissionsForPerson([]);
+  }, []);
+
+  useEffect(() => {
+    if (!commissionsModalOpen || !commissionsModalPerson?.id) return;
+    let cancelled = false;
+    setCommissionsLoading(true);
+    setCommissionsForPerson([]);
+    (async () => {
+      try {
+        const qs = new URLSearchParams({ salesPersonId: commissionsModalPerson.id });
+        const res = await fetch(`/api/dashboard/sales-commissions?${qs}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!res.ok) throw new Error(data.error || "Failed to load commissions");
+        setCommissionsForPerson(Array.isArray(data.commissions) ? data.commissions : []);
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err.message || "Failed to load commissions");
+          setCommissionsForPerson([]);
+        }
+      } finally {
+        if (!cancelled) setCommissionsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [commissionsModalOpen, commissionsModalPerson?.id, toast]);
+
+  const commissionColumns = useMemo(
+    () => [
+      {
+        key: "jobNumber",
+        label: "Job#",
+        render: (_, row) => {
+          const label = row.jobNumber || row.rfqNumber || "—";
+          const rawTotal = row.jobTotalAmount;
+          const hasTotal =
+            rawTotal != null && rawTotal !== "" && Number.isFinite(Number(rawTotal));
+          const totalNum = hasTotal ? Number(rawTotal) : null;
+          const statusText = row.jobStatus ? String(row.jobStatus).trim() : "";
+          const bits = [];
+          if (hasTotal && totalNum != null) bits.push(`Job total ${fmt(totalNum)}`);
+          if (statusText) bits.push(statusText);
+          if (bits.length === 0) return label;
+          return (
+            <div className="min-w-0 max-w-md text-left" title={[label, ...bits].join(" · ")}>
+              <span className="font-medium text-title">{label}</span>
+              <span className="text-secondary">
+                {" · "}
+                {bits.join(" · ")}
+              </span>
+            </div>
+          );
+        },
+      },
+      {
+        key: "amount",
+        label: "Amount",
+        render: (_, row) => fmt(row.amount || 0),
+      },
+      {
+        key: "status",
+        label: "Status",
+        render: (_, row) => (
+          <Badge
+            variant={row.status === "paid" ? "success" : "warning"}
+            className="rounded-full px-2.5 py-0.5 text-xs"
+          >
+            {row.status === "paid" ? "Paid" : "Unpaid"}
+          </Badge>
+        ),
+      },
+      {
+        key: "paidAt",
+        label: "Paid date",
+        render: (_, row) => formatDateShort(row.paidAt),
+      },
+      {
+        key: "createdAt",
+        label: "Created",
+        render: (_, row) => formatDateShort(row.createdAt),
+      },
+    ],
+    [fmt]
+  );
 
   const openCreate = () => {
     setForm(INITIAL_FORM);
@@ -158,15 +275,26 @@ export default function DashboardSalesPersonPage() {
         key: "actions",
         label: "",
         render: (_, row) => (
-          <button
-            type="button"
-            onClick={() => openEdit(row)}
-            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="Edit"
-            title="Edit"
-          >
-            <FiEdit2 className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => openCommissionsModal(row)}
+              className="rounded p-1.5 text-secondary hover:bg-card hover:text-title focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="View commissions"
+              title="Commissions"
+            >
+              <FiDollarSign className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Edit"
+              title="Edit"
+            >
+              <FiEdit2 className="h-4 w-4" />
+            </button>
+          </div>
         ),
       },
       { key: "name", label: "Name", sortable: true },
@@ -174,7 +302,7 @@ export default function DashboardSalesPersonPage() {
       { key: "email", label: "Email", sortable: true },
       { key: "bankDetail", label: "Bank Detail", sortable: true },
     ],
-    []
+    [openCommissionsModal]
   );
 
   return (
@@ -210,6 +338,30 @@ export default function DashboardSalesPersonPage() {
           responsive
         />
       </div>
+
+      <Modal
+        open={commissionsModalOpen}
+        onClose={closeCommissionsModal}
+        title={
+          commissionsModalPerson
+            ? `Commissions — ${commissionsModalPerson.name}`
+            : "Commissions"
+        }
+        size="4xl"
+      >
+        {commissionsLoading ? (
+          <div className="flex justify-center py-12 text-secondary">Loading…</div>
+        ) : (
+          <Table
+            columns={commissionColumns}
+            data={commissionsForPerson}
+            rowKey="id"
+            loading={false}
+            emptyMessage="No commissions for this sales person yet."
+            responsive
+          />
+        )}
+      </Modal>
 
       <Modal
         open={isCreateOpen}

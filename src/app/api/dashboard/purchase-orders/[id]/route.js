@@ -10,6 +10,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import Vendor from "@/models/Vendor";
 import { poBalanceDue } from "@/lib/po-payable";
+import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 import {
   normalizePurchaseOrderLineItems,
   normalizeLineItemStatus,
@@ -133,6 +134,13 @@ export async function GET(request, context) {
           .select("name")
           .lean()
       : null;
+    const attachmentsRaw = Array.isArray(doc.attachments) ? doc.attachments : [];
+    const attachments = attachmentsRaw.map((a) => ({
+      url: String(a?.url ?? "").trim(),
+      name: String(a?.name ?? "").trim() || String(a?.url ?? "").trim(),
+    }));
+    const attachmentCount = attachments.length;
+
     const out = {
       id: doc._id.toString(),
       poNumber: doc.poNumber ?? "",
@@ -143,6 +151,8 @@ export async function GET(request, context) {
       lineItems: lineItemsWithStatus,
       vendorInvoices,
       payments,
+      attachments,
+      attachmentCount,
       totalOrder: totalOrder.toFixed(2),
       totalInvoiced: totalInvoiced.toFixed(2),
       totalPaid: totalPaid.toFixed(2),
@@ -212,7 +222,17 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const body = await request.json();
-    const { vendorId, type, quoteId, lineItems, vendorInvoices, payments, notes, ensureVendorShareToken } = body;
+    const {
+      vendorId,
+      type,
+      quoteId,
+      lineItems,
+      vendorInvoices,
+      payments,
+      notes,
+      attachments,
+      ensureVendorShareToken,
+    } = body;
     if (ensureVendorShareToken && !doc.vendorShareToken?.trim()) {
       let token;
       let exists = true;
@@ -248,6 +268,10 @@ export async function PATCH(request, context) {
       doc.markModified("payments");
     }
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
+    if (attachments !== undefined) {
+      doc.attachments = normalizePurchaseOrderAttachmentsFromClient(attachments);
+      doc.markModified("attachments");
+    }
     await doc.save();
     const po = doc.toObject();
     const totalOrder = sumLineItems(po.lineItems ?? []);
@@ -275,6 +299,10 @@ export async function PATCH(request, context) {
         paidStatus: computePaidStatus(totalInvoiced, totalPaid),
         notes: po.notes ?? "",
         vendorShareToken: doc.vendorShareToken ?? "",
+        attachments: Array.isArray(po.attachments)
+          ? po.attachments.map((a) => ({ url: a?.url ?? "", name: a?.name ?? "" }))
+          : [],
+        attachmentCount: Array.isArray(po.attachments) ? po.attachments.length : 0,
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
       },

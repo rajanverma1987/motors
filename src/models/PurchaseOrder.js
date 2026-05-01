@@ -51,6 +51,11 @@ const purchaseOrderSchema = new mongoose.Schema(
       },
     ],
     notes: { type: String, default: "", trim: true },
+    /** Dashboard uploads: { url, name } */
+    attachments: {
+      type: [{ url: { type: String, trim: true }, name: { type: String, trim: true } }],
+      default: [],
+    },
     /** Token for vendor-facing view/print link (no auth); generated on first "Send to Vendor" */
     vendorShareToken: { type: String, default: undefined, trim: true },
     /** Shop that owns this PO (dashboard user email) */

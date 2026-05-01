@@ -14,6 +14,11 @@ const salesCommissionSchema = new mongoose.Schema(
     jobSourceSystem: { type: String, default: "manual_csv", trim: true },
     jobExternalRef: { type: String, default: "", trim: true },
     amount: { type: Number, required: true, default: 0 },
+    /** Dashboard uploads: { url, name } */
+    attachments: {
+      type: [{ url: { type: String, trim: true }, name: { type: String, trim: true } }],
+      default: [],
+    },
     status: { type: String, enum: ["unpaid", "paid"], default: "unpaid" },
     paidAt: { type: Date, default: null },
     createdByEmail: { type: String, required: true, trim: true },

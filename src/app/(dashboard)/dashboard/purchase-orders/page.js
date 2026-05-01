@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2, FiPlus, FiPrinter, FiRotateCw, FiSend, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPaperclip, FiPlus, FiPrinter, FiRotateCw, FiSend, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
@@ -18,6 +18,7 @@ import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import PoPrintPreview from "@/components/dashboard/po-print-preview";
+import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
 const PO_LINE_COLUMNS = [
@@ -108,6 +109,7 @@ const INITIAL_FORM = {
   quoteId: "",
   lineItems: [],
   notes: "",
+  attachments: [],
 };
 
 function buildPayload(form) {
@@ -118,6 +120,7 @@ function buildPayload(form) {
     quoteId: f.type === "job" ? (f.quoteId ?? "") : "",
     lineItems: Array.isArray(f.lineItems) ? f.lineItems : [],
     notes: f.notes ?? "",
+    attachments: Array.isArray(f.attachments) ? f.attachments : [],
   };
 }
 
@@ -178,6 +181,14 @@ export default function DashboardPurchaseOrdersPage() {
   const [sendingVendor, setSendingVendor] = useState(false);
   const [sendingVendorId, setSendingVendorId] = useState(null);
   const [printPoId, setPrintPoId] = useState(null);
+
+  const [pendingPoAttachmentFiles, setPendingPoAttachmentFiles] = useState([]);
+  const [attachmentPoUploading, setAttachmentPoUploading] = useState(false);
+  const [docsPoModalOpen, setDocsPoModalOpen] = useState(false);
+  const [docsPoMeta, setDocsPoMeta] = useState(null);
+  const [docsPoAttachments, setDocsPoAttachments] = useState([]);
+  const [docsPoLoading, setDocsPoLoading] = useState(false);
+  const [docsPoSaving, setDocsPoSaving] = useState(false);
 
   const vendorNameMap = useMemo(() => {
     const m = {};
@@ -255,9 +266,13 @@ export default function DashboardPurchaseOrdersPage() {
 
   const openCreateModal = () => {
     setForm(INITIAL_FORM);
+    setPendingPoAttachmentFiles([]);
     setCreateModalOpen(true);
   };
-  const closeCreateModal = () => setCreateModalOpen(false);
+  const closeCreateModal = () => {
+    setPendingPoAttachmentFiles([]);
+    setCreateModalOpen(false);
+  };
 
   const nextPoNumber = useMemo(() => {
     let maxNum = 0;
@@ -416,6 +431,103 @@ export default function DashboardPurchaseOrdersPage() {
     });
   };
 
+  const openDocsPoModal = (row) => {
+    if (!row?.id) return;
+    setDocsPoMeta({ id: row.id, label: row.poNumber || row.id });
+    setDocsPoAttachments([]);
+    setDocsPoModalOpen(true);
+  };
+
+  const closeDocsPoModal = () => {
+    setDocsPoModalOpen(false);
+    setDocsPoMeta(null);
+    setDocsPoAttachments([]);
+    setDocsPoLoading(false);
+  };
+
+  const persistDocsPoAttachments = async (next) => {
+    if (!docsPoMeta?.id) return;
+    setDocsPoSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/purchase-orders/${docsPoMeta.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ attachments: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      const att = Array.isArray(data.purchaseOrder?.attachments) ? data.purchaseOrder.attachments : next;
+      setDocsPoAttachments(att);
+      await loadPos();
+    } catch (e) {
+      toast.error(e.message || "Could not update documents");
+    } finally {
+      setDocsPoSaving(false);
+    }
+  };
+
+  const handleDocsPoRemoveRow = async (_index, row) => {
+    const next = docsPoAttachments.filter((a) => a.url !== row.url);
+    await persistDocsPoAttachments(next);
+  };
+
+  const handlePoFileUpload = async (files, poId) => {
+    const id = String(poId || "").trim();
+    if (!id) {
+      toast.error("Save the purchase order first, then add documents.");
+      return;
+    }
+    setAttachmentPoUploading(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await fetch(`/api/dashboard/purchase-orders/${id}/upload`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setForm((f) => ({ ...f, attachments: Array.isArray(data.attachments) ? data.attachments : f.attachments }));
+      toast.success("Files uploaded.");
+      loadPos();
+    } catch (err) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setAttachmentPoUploading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!docsPoModalOpen || !docsPoMeta?.id) return;
+    let cancelled = false;
+    setDocsPoLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/purchase-orders/${docsPoMeta.id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (cancelled) return;
+        if (!res.ok) {
+          setDocsPoAttachments([]);
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        setDocsPoAttachments(Array.isArray(data.attachments) ? data.attachments : []);
+      } catch {
+        if (!cancelled) setDocsPoAttachments([]);
+      } finally {
+        if (!cancelled) setDocsPoLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [docsPoModalOpen, docsPoMeta?.id]);
+
   const openEditModal = async (po) => {
     if (!po) return;
     let dataToUse = po;
@@ -436,6 +548,7 @@ export default function DashboardPurchaseOrdersPage() {
       quoteId: normalizedType === "job" ? String(dataToUse.quoteId ?? "").trim() : "",
       lineItems: Array.isArray(dataToUse.lineItems) ? dataToUse.lineItems : [],
       notes: dataToUse.notes ?? "",
+      attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
     });
     setViewingPo(dataToUse);
     setEditModalOpen(true);
@@ -457,7 +570,23 @@ export default function DashboardPurchaseOrdersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create purchase order");
+      const newId = data.purchaseOrder?.id;
+      const pending = pendingPoAttachmentFiles;
+      if (newId && pending.length > 0) {
+        const fd = new FormData();
+        pending.forEach((f) => fd.append("files", f));
+        const up = await fetch(`/api/dashboard/purchase-orders/${newId}/upload`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const upData = await up.json().catch(() => ({}));
+        if (!up.ok) {
+          toast.error(upData.error || "Purchase order saved but document upload failed.");
+        }
+      }
       toast.success("Purchase order created.");
+      setPendingPoAttachmentFiles([]);
       closeCreateModal();
       loadPos();
     } catch (err) {
@@ -631,6 +760,16 @@ export default function DashboardPurchaseOrdersPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => openDocsPoModal(row)}
+              disabled={!(Number(row.attachmentCount) > 0)}
+              className="rounded p-1.5 text-secondary hover:bg-card hover:text-title focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-30"
+              aria-label="View documents"
+              title={row.attachmentCount ? "View documents" : "No documents"}
+            >
+              <FiPaperclip className="h-4 w-4 shrink-0" />
+            </button>
+            <button
+              type="button"
               onClick={() => handleDeletePo(row)}
               className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
               aria-label="Delete"
@@ -753,7 +892,7 @@ export default function DashboardPurchaseOrdersPage() {
         render: (_, row) => (row.totalPaid ? fmt(row.totalPaid) : "—"),
       },
     ],
-    [vendorNameMap, sendingVendorId, fmt, handleDeletePo]
+    [vendorNameMap, sendingVendorId, fmt, handleDeletePo, openDocsPoModal]
   );
 
   const todayString = () => {
@@ -878,6 +1017,15 @@ export default function DashboardPurchaseOrdersPage() {
               rows={2}
             />
           </div>
+          <VendorAttachmentsPanel
+            resourceLabel="purchase order"
+            vendorId={null}
+            attachments={form.attachments}
+            onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+            pendingFiles={pendingPoAttachmentFiles}
+            onPendingFilesChange={setPendingPoAttachmentFiles}
+            uploading={attachmentPoUploading}
+          />
         </Form>
       </Modal>
 
@@ -1135,6 +1283,23 @@ export default function DashboardPurchaseOrdersPage() {
               )}
               <p className="mt-2 text-sm font-medium text-title">Order total: {fmt(viewingPo.totalOrder || 0)}</p>
             </div>
+            {(Number(viewingPo.attachmentCount) > 0 ||
+              (Array.isArray(viewingPo.attachments) && viewingPo.attachments.length > 0)) && (
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Documents</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    closeViewModal();
+                    openDocsPoModal(viewingPo);
+                  }}
+                >
+                  View {viewingPo.attachmentCount || viewingPo.attachments?.length || 0} document(s)
+                </Button>
+              </div>
+            )}
             {(viewingPo.notes || "").trim() && (
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
@@ -1385,7 +1550,45 @@ export default function DashboardPurchaseOrdersPage() {
               rows={2}
             />
           </div>
+          <VendorAttachmentsPanel
+            resourceLabel="purchase order"
+            resourceId={viewingPo?.id || null}
+            vendorId={null}
+            attachments={form.attachments}
+            onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={attachmentPoUploading}
+            onPickFilesForUpload={handlePoFileUpload}
+          />
         </Form>
+      </Modal>
+
+      <Modal
+        open={docsPoModalOpen}
+        onClose={closeDocsPoModal}
+        title={docsPoMeta ? `Documents — PO ${docsPoMeta.label}` : "Documents"}
+        size="lg"
+      >
+        {docsPoLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="text-secondary">Loading…</span>
+          </div>
+        ) : (
+          <VendorAttachmentsPanel
+            title="Attachments"
+            resourceLabel="purchase order"
+            resourceId={docsPoMeta?.id || null}
+            vendorId={null}
+            attachments={docsPoAttachments}
+            onAttachmentsChange={setDocsPoAttachments}
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={docsPoSaving}
+            hideUpload
+            onRemoveSavedRow={handleDocsPoRemoveRow}
+          />
+        )}
       </Modal>
 
       <PoPrintPreview purchaseOrderId={printPoId} open={!!printPoId} onClose={() => setPrintPoId(null)} />

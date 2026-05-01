@@ -5,6 +5,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items";
 import { getNextPoNumber } from "@/lib/purchase-order-numbers";
+import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
@@ -123,6 +124,7 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}) {
     paidStatus,
     notes: po.notes ?? "",
     vendorShareToken: po.vendorShareToken ?? "",
+    attachmentCount: Array.isArray(po.attachments) ? po.attachments.length : 0,
     createdAt: po.createdAt,
     updatedAt: po.updatedAt,
   };
@@ -165,7 +167,7 @@ export async function POST(request) {
     }
     await connectDB();
     const body = await request.json();
-    const { vendorId, type, quoteId, lineItems, vendorInvoices, payments, notes } = body;
+    const { vendorId, type, quoteId, lineItems, vendorInvoices, payments, notes, attachments } = body;
     if (!vendorId?.trim()) {
       return NextResponse.json({ error: "Vendor is required" }, { status: 400 });
     }
@@ -181,6 +183,7 @@ export async function POST(request) {
       vendorInvoices: normalizeVendorInvoices(vendorInvoices ?? []),
       payments: normalizePayments(payments ?? []),
       notes: clampString(notes, LIMITS.message.max),
+      attachments: normalizePurchaseOrderAttachmentsFromClient(attachments ?? []),
       createdByEmail: email,
     });
     const po = doc.toObject();
@@ -204,6 +207,9 @@ export async function POST(request) {
         status: computeStatus(totalOrder, totalInvoiced, totalPaid),
         notes: po.notes ?? "",
         vendorShareToken: po.vendorShareToken ?? "",
+        attachments: Array.isArray(po.attachments)
+          ? po.attachments.map((a) => ({ url: a?.url ?? "", name: a?.name ?? "" }))
+          : [],
         createdAt: doc.createdAt,
         updatedAt: doc.updatedAt,
       },

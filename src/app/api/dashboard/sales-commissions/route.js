@@ -4,26 +4,62 @@ import { connectDB } from "@/lib/db";
 import SalesCommission from "@/models/SalesCommission";
 import SalesPerson from "@/models/SalesPerson";
 import MotorRepairJob from "@/models/MotorRepairJob";
+import Quote from "@/models/Quote";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { clampString } from "@/lib/validation";
+import { normalizeSalesCommissionAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
+import { commissionToJson } from "@/lib/sales-commission-json";
+import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
-function toJson(doc) {
-  const row = doc && (doc.toObject ? doc.toObject() : doc);
-  if (!row) return null;
-  return {
-    id: row._id?.toString(),
-    quoteId: row.quoteId ?? "",
-    rfqNumber: row.rfqNumber ?? "",
-    repairFlowJobId: row.repairFlowJobId ?? "",
-    jobNumber: row.jobNumber ?? "",
-    salesPersonId: row.salesPersonId ?? "",
-    salesPersonName: row.salesPersonName ?? "",
-    amount: Number(row.amount || 0),
-    status: row.status === "paid" ? "paid" : "unpaid",
-    paidAt: row.paidAt ?? null,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
+function humanizeRepairPhase(phase) {
+  const p = String(phase || "").trim();
+  if (!p) return "";
+  return p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function quoteGrandTotal(quote) {
+  if (!quote) return null;
+  const t = computeTotalsFromLaborAndParts({
+    laborTotal: quote.laborTotal,
+    partsTotal: quote.partsTotal,
+    taxExempt: quote.customerTaxExempt,
+    taxPercent: quote.customerTaxPercent,
+  });
+  const n = t.grandTotal;
+  return Number.isFinite(n) ? n : null;
+}
+
+/** @param {Map<string, object>} quoteById @param {Map<string, object>} repairJobById */
+function resolveJobSummaryForCommission(row, quoteById, repairJobById) {
+  const qid = String(row.quoteId || "").trim();
+  if (mongoose.isValidObjectId(qid)) {
+    const quote = quoteById.get(qid);
+    if (quote) {
+      return {
+        jobTotalAmount: quoteGrandTotal(quote),
+        jobStatus: String(quote.status || "").trim() || null,
+      };
+    }
+  }
+  const rid = String(row.repairFlowJobId || "").trim();
+  if (mongoose.isValidObjectId(rid)) {
+    const job = repairJobById.get(rid);
+    if (job) {
+      let jobTotalAmount = null;
+      const fq = String(job.finalFlowQuoteId || "").trim();
+      const pq = String(job.preliminaryFlowQuoteId || "").trim();
+      if (mongoose.isValidObjectId(fq) && quoteById.has(fq)) {
+        jobTotalAmount = quoteGrandTotal(quoteById.get(fq));
+      } else if (mongoose.isValidObjectId(pq) && quoteById.has(pq)) {
+        jobTotalAmount = quoteGrandTotal(quoteById.get(pq));
+      }
+      return {
+        jobTotalAmount,
+        jobStatus: humanizeRepairPhase(job.phase) || null,
+      };
+    }
+  }
+  return { jobTotalAmount: null, jobStatus: null };
 }
 
 export async function GET(request) {
@@ -35,6 +71,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const quoteId = clampString(searchParams.get("quoteId"), 200);
     const repairFlowJobId = clampString(searchParams.get("repairFlowJobId"), 200);
+    const salesPersonId = clampString(searchParams.get("salesPersonId"), 200);
     const status = clampString(searchParams.get("status"), 20).toLowerCase();
     const statusFilter = status === "paid" || status === "unpaid" ? status : "";
 
@@ -42,6 +79,12 @@ export async function GET(request) {
     const where = { createdByEmail: owner };
     if (quoteId) where.quoteId = quoteId;
     if (repairFlowJobId) where.repairFlowJobId = repairFlowJobId;
+    if (salesPersonId) {
+      if (!mongoose.isValidObjectId(salesPersonId)) {
+        return NextResponse.json({ error: "Invalid sales person id" }, { status: 400 });
+      }
+      where.salesPersonId = salesPersonId;
+    }
     if (statusFilter) where.status = statusFilter;
 
     const [rows, salesPeople] = await Promise.all([
@@ -56,7 +99,55 @@ export async function GET(request) {
       ...row,
       salesPersonName: salesPersonNameMap[String(row.salesPersonId)] || "",
     }));
-    return NextResponse.json({ commissions: enriched.map((row) => toJson(row)) });
+
+    let quoteById = new Map();
+    let repairJobById = new Map();
+    if (salesPersonId && enriched.length > 0) {
+      const quoteIdSet = new Set();
+      const repairJobIdSet = new Set();
+      for (const row of enriched) {
+        const qid = String(row.quoteId || "").trim();
+        if (mongoose.isValidObjectId(qid)) quoteIdSet.add(qid);
+        const rid = String(row.repairFlowJobId || "").trim();
+        if (mongoose.isValidObjectId(rid)) repairJobIdSet.add(rid);
+      }
+      const repairJobs =
+        repairJobIdSet.size > 0
+          ? await MotorRepairJob.find({
+              _id: { $in: Array.from(repairJobIdSet) },
+              createdByEmail: owner,
+            })
+              .select("phase preliminaryFlowQuoteId finalFlowQuoteId")
+              .lean()
+          : [];
+      for (const j of repairJobs) {
+        for (const ref of [j.finalFlowQuoteId, j.preliminaryFlowQuoteId]) {
+          const q = String(ref || "").trim();
+          if (mongoose.isValidObjectId(q)) quoteIdSet.add(q);
+        }
+      }
+      const quoteIds = Array.from(quoteIdSet).filter((id) => mongoose.isValidObjectId(id));
+      const quotes =
+        quoteIds.length > 0
+          ? await Quote.find({
+              _id: { $in: quoteIds },
+              createdByEmail: owner,
+            })
+              .select("laborTotal partsTotal customerTaxExempt customerTaxPercent status")
+              .lean()
+          : [];
+      quoteById = new Map(quotes.map((q) => [String(q._id), q]));
+      repairJobById = new Map(repairJobs.map((j) => [String(j._id), j]));
+    }
+
+    const commissionsPayload = enriched.map((row) => {
+      const base = commissionToJson(row, { includeAttachments: false });
+      if (!salesPersonId) return base;
+      const { jobTotalAmount, jobStatus } = resolveJobSummaryForCommission(row, quoteById, repairJobById);
+      return { ...base, jobTotalAmount, jobStatus };
+    });
+
+    return NextResponse.json({ commissions: commissionsPayload });
   } catch (err) {
     console.error("Dashboard get sales commission error:", err);
     return NextResponse.json({ error: "Failed to load sales commission" }, { status: 500 });
@@ -81,6 +172,7 @@ export async function POST(request) {
     const status = statusInput === "paid" ? "paid" : "unpaid";
     const paidAtInput = clampString(body?.paidAt, 50);
     const paidAtDate = paidAtInput ? new Date(`${paidAtInput}T12:00:00.000Z`) : null;
+    const attachments = normalizeSalesCommissionAttachmentsFromClient(body?.attachments ?? []);
 
     if (!salesPersonId) return NextResponse.json({ error: "Sales person is required" }, { status: 400 });
     if (!Number.isFinite(amount) || amount < 0) {
@@ -112,6 +204,7 @@ export async function POST(request) {
       salesPersonId,
       amount,
       status,
+      attachments,
       paidAt:
         status === "paid"
           ? (paidAtDate && !Number.isNaN(paidAtDate.getTime()) ? paidAtDate : new Date())
@@ -119,7 +212,11 @@ export async function POST(request) {
       createdByEmail: owner,
     });
 
-    return NextResponse.json({ ok: true, commission: toJson(doc) });
+    const spName = salesPerson.name || salesPerson.email || salesPerson.phone || String(salesPerson._id);
+    return NextResponse.json({
+      ok: true,
+      commission: commissionToJson({ ...doc.toObject(), salesPersonName: spName }, { includeAttachments: true }),
+    });
   } catch (err) {
     console.error("Dashboard save sales commission error:", err);
     return NextResponse.json({ error: err.message || "Failed to save sales commission" }, { status: 500 });

@@ -8,15 +8,20 @@ import { FiTrash2, FiExternalLink, FiUpload } from "react-icons/fi";
  */
 
 /**
+ * resourceId overrides vendorId when set (e.g. purchase order / sales commission).
+ * resourceLabel drives helper copy ("vendor", "purchase order", …).
+ *
  * @param {{
  *   title?: string,
- *   vendorId: string | null,
+ *   vendorId?: string | null,
+ *   resourceId?: string | null,
+ *   resourceLabel?: string,
  *   attachments: VendorAttachment[],
  *   onAttachmentsChange: (next: VendorAttachment[]) => void,
  *   pendingFiles: File[],
  *   onPendingFilesChange: (next: File[]) => void,
  *   uploading?: boolean,
- *   onPickFilesForUpload?: (files: File[], vendorId: string | null) => void | Promise<void>,
+ *   onPickFilesForUpload?: (files: File[], resourceId: string | null) => void | Promise<void>,
  *   hideUpload?: boolean,
  *   onRemoveSavedRow?: (index: number, row: VendorAttachment) => void | Promise<void>,
  * }} props
@@ -24,6 +29,8 @@ import { FiTrash2, FiExternalLink, FiUpload } from "react-icons/fi";
 export default function VendorAttachmentsPanel({
   title = "Documents",
   vendorId,
+  resourceId,
+  resourceLabel = "vendor",
   attachments,
   onAttachmentsChange,
   pendingFiles,
@@ -34,7 +41,8 @@ export default function VendorAttachmentsPanel({
   onRemoveSavedRow,
 }) {
   const fileInputId = useId();
-  const isCreate = !vendorId;
+  const savedResourceId = resourceId !== undefined ? resourceId : vendorId;
+  const isCreate = !savedResourceId;
 
   const handleFileChange = async (e) => {
     if (hideUpload) return;
@@ -46,8 +54,8 @@ export default function VendorAttachmentsPanel({
       onPendingFilesChange((prev) => [...(Array.isArray(prev) ? prev : []), ...files].slice(0, 50));
       return;
     }
-    if (onPickFilesForUpload && vendorId) {
-      await onPickFilesForUpload(files, vendorId);
+    if (onPickFilesForUpload && savedResourceId) {
+      await onPickFilesForUpload(files, savedResourceId);
     }
   };
 
@@ -82,8 +90,8 @@ export default function VendorAttachmentsPanel({
             {hideUpload
               ? "View or remove documents. Removals save immediately."
               : isCreate
-                ? "Select files before saving; they upload after the vendor is created."
-                : "Upload files stored with this vendor. Save the form to persist removals."}
+                ? `Select files before saving; they upload after the ${resourceLabel} is created.`
+                : `Upload files stored with this ${resourceLabel}. Save the form to persist removals.`}
           </p>
         </div>
         {!hideUpload ? (

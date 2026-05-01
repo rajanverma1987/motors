@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiDollarSign, FiEdit2, FiPlus, FiRotateCw } from "react-icons/fi";
+import { FiCheck, FiDollarSign, FiEdit2, FiPaperclip, FiPlus, FiRotateCw } from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 
 const NEW_COMMISSION_INITIAL = {
   jobKey: "",
@@ -20,6 +21,7 @@ const NEW_COMMISSION_INITIAL = {
   amount: "",
   status: "unpaid",
   paidAt: "",
+  attachments: [],
 };
 
 function formatDateIST(dateValue) {
@@ -45,6 +47,13 @@ export default function DashboardSalesCommissionPage() {
   const [editingCommissionId, setEditingCommissionId] = useState("");
   const [savingCommission, setSavingCommission] = useState(false);
   const [newCommissionForm, setNewCommissionForm] = useState(NEW_COMMISSION_INITIAL);
+  const [pendingCommissionAttachmentFiles, setPendingCommissionAttachmentFiles] = useState([]);
+  const [commissionAttachmentUploading, setCommissionAttachmentUploading] = useState(false);
+  const [docsCommissionModalOpen, setDocsCommissionModalOpen] = useState(false);
+  const [docsCommissionMeta, setDocsCommissionMeta] = useState(null);
+  const [docsCommissionAttachments, setDocsCommissionAttachments] = useState([]);
+  const [docsCommissionLoading, setDocsCommissionLoading] = useState(false);
+  const [docsCommissionSaving, setDocsCommissionSaving] = useState(false);
 
   const salesPersonNameMap = useMemo(() => {
     const map = {};
@@ -151,17 +160,40 @@ export default function DashboardSalesCommissionPage() {
           amount: amountNum,
           status: newCommissionForm.status,
           paidAt: newCommissionForm.paidAt,
+          attachments: Array.isArray(newCommissionForm.attachments) ? newCommissionForm.attachments : [],
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create commission");
-      const commissionWithName = {
+      const newId = data.commission?.id;
+      const pending = pendingCommissionAttachmentFiles;
+      let commissionWithName = {
         ...data.commission,
         salesPersonName: salesPersonNameMap[data.commission?.salesPersonId] || "",
       };
+      if (newId && pending.length > 0) {
+        const fd = new FormData();
+        pending.forEach((f) => fd.append("files", f));
+        const up = await fetch(`/api/dashboard/sales-commissions/${newId}/upload`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const upData = await up.json().catch(() => ({}));
+        if (!up.ok) {
+          toast.error(upData.error || "Commission saved but document upload failed.");
+        } else if (Array.isArray(upData.attachments)) {
+          commissionWithName = {
+            ...commissionWithName,
+            attachments: upData.attachments,
+            attachmentCount: upData.attachments.length,
+          };
+        }
+      }
       setRows((prev) => [commissionWithName, ...prev]);
       setCreateModalOpen(false);
       setNewCommissionForm(NEW_COMMISSION_INITIAL);
+      setPendingCommissionAttachmentFiles([]);
       toast.success("Sales commission created.");
     } catch (err) {
       toast.error(err.message || "Failed to create commission");
@@ -170,7 +202,7 @@ export default function DashboardSalesCommissionPage() {
     }
   };
 
-  const openEditModal = (row) => {
+  const openEditModal = async (row) => {
     const matchedOption =
       jobOptions.find((opt) => opt.meta?.quoteId && opt.meta.quoteId === String(row.quoteId || "")) ||
       jobOptions.find((opt) => opt.meta?.rfqNumber && opt.meta.rfqNumber === String(row.rfqNumber || ""));
@@ -193,13 +225,30 @@ export default function DashboardSalesCommissionPage() {
         ];
       });
     }
+    let attachments = Array.isArray(row.attachments) ? row.attachments : [];
+    if (row.id) {
+      try {
+        const res = await fetch(`/api/dashboard/sales-commissions/${row.id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (res.ok) {
+          const full = await res.json();
+          attachments = Array.isArray(full.attachments) ? full.attachments : attachments;
+        }
+      } catch {
+        /* keep list-row attachments if any */
+      }
+    }
     setEditingCommissionId(row.id);
+    setPendingCommissionAttachmentFiles([]);
     setNewCommissionForm({
       jobKey,
       salesPersonId: String(row.salesPersonId || ""),
       amount: String(row.amount ?? ""),
       status: row.status === "paid" ? "paid" : "unpaid",
       paidAt: row.paidAt ? new Date(row.paidAt).toISOString().slice(0, 10) : "",
+      attachments,
     });
     setEditModalOpen(true);
   };
@@ -235,18 +284,23 @@ export default function DashboardSalesCommissionPage() {
           amount: amountNum,
           status: newCommissionForm.status,
           paidAt: newCommissionForm.paidAt,
+          attachments: Array.isArray(newCommissionForm.attachments) ? newCommissionForm.attachments : [],
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update commission");
       const commissionWithName = {
         ...data.commission,
-        salesPersonName: salesPersonNameMap[data.commission?.salesPersonId] || "",
+        salesPersonName:
+          data.commission?.salesPersonName ||
+          salesPersonNameMap[data.commission?.salesPersonId] ||
+          "",
       };
       setRows((prev) => prev.map((r) => (r.id === editingCommissionId ? commissionWithName : r)));
       setEditModalOpen(false);
       setEditingCommissionId("");
       setNewCommissionForm(NEW_COMMISSION_INITIAL);
+      setPendingCommissionAttachmentFiles([]);
       toast.success("Sales commission updated.");
     } catch (err) {
       toast.error(err.message || "Failed to update commission");
@@ -267,7 +321,19 @@ export default function DashboardSalesCommissionPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to mark as paid");
-      setRows((prev) => prev.map((r) => (r.id === id ? data.commission : r)));
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? {
+                ...r,
+                ...data.commission,
+                salesPersonName: data.commission?.salesPersonName || r.salesPersonName,
+                attachmentCount:
+                  data.commission?.attachmentCount ?? r.attachmentCount ?? 0,
+              }
+            : r
+        )
+      );
       toast.success("Commission marked as paid.");
     } catch (err) {
       toast.error(err.message || "Failed to update commission status");
@@ -275,6 +341,112 @@ export default function DashboardSalesCommissionPage() {
       setStatusSavingId("");
     }
   };
+
+  const openDocsCommissionModal = useCallback((row) => {
+    if (!row?.id) return;
+    setDocsCommissionMeta({
+      id: row.id,
+      label: String(row.jobNumber || row.rfqNumber || row.id).trim() || row.id,
+    });
+    setDocsCommissionAttachments([]);
+    setDocsCommissionModalOpen(true);
+  }, []);
+
+  const closeDocsCommissionModal = useCallback(() => {
+    setDocsCommissionModalOpen(false);
+    setDocsCommissionMeta(null);
+    setDocsCommissionAttachments([]);
+    setDocsCommissionLoading(false);
+  }, []);
+
+  const persistDocsCommissionAttachments = useCallback(
+    async (next) => {
+      if (!docsCommissionMeta?.id) return;
+      setDocsCommissionSaving(true);
+      try {
+        const res = await fetch(`/api/dashboard/sales-commissions/${docsCommissionMeta.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ attachments: next }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Update failed");
+        const att = Array.isArray(data.commission?.attachments) ? data.commission.attachments : next;
+        setDocsCommissionAttachments(att);
+        await loadRows();
+      } catch (e) {
+        toast.error(e.message || "Could not update documents");
+      } finally {
+        setDocsCommissionSaving(false);
+      }
+    },
+    [docsCommissionMeta?.id, loadRows, toast]
+  );
+
+  const handleDocsCommissionRemoveRow = async (_index, row) => {
+    const next = docsCommissionAttachments.filter((a) => a.url !== row.url);
+    await persistDocsCommissionAttachments(next);
+  };
+
+  const handleCommissionFileUpload = useCallback(async (files, commissionId) => {
+    const id = String(commissionId || "").trim();
+    if (!id) {
+      toast.error("Save the commission first, then add documents.");
+      return;
+    }
+    setCommissionAttachmentUploading(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await fetch(`/api/dashboard/sales-commissions/${id}/upload`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setNewCommissionForm((f) => ({
+        ...f,
+        attachments: Array.isArray(data.attachments) ? data.attachments : f.attachments,
+      }));
+      toast.success("Files uploaded.");
+      loadRows();
+    } catch (err) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setCommissionAttachmentUploading(false);
+    }
+  }, [toast, loadRows]);
+
+  useEffect(() => {
+    if (!docsCommissionModalOpen || !docsCommissionMeta?.id) return;
+    let cancelled = false;
+    setDocsCommissionLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/sales-commissions/${docsCommissionMeta.id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (cancelled) return;
+        if (!res.ok) {
+          setDocsCommissionAttachments([]);
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        setDocsCommissionAttachments(Array.isArray(data.attachments) ? data.attachments : []);
+      } catch {
+        if (!cancelled) setDocsCommissionAttachments([]);
+      } finally {
+        if (!cancelled) setDocsCommissionLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [docsCommissionModalOpen, docsCommissionMeta?.id]);
 
   const unpaidRows = useMemo(
     () => rows.filter((r) => r.status !== "paid"),
@@ -363,6 +535,16 @@ export default function DashboardSalesCommissionPage() {
           <div className="flex items-center gap-1">
             <button
               type="button"
+              onClick={() => openDocsCommissionModal(row)}
+              disabled={!(Number(row.attachmentCount) > 0)}
+              className="rounded p-1.5 text-secondary hover:bg-card hover:text-title focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-30"
+              aria-label="View documents"
+              title={row.attachmentCount ? "View documents" : "No documents"}
+            >
+              <FiPaperclip className="h-4 w-4 shrink-0" />
+            </button>
+            <button
+              type="button"
               onClick={() => openEditModal(row)}
               className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
               aria-label="Edit"
@@ -429,7 +611,7 @@ export default function DashboardSalesCommissionPage() {
         render: (_, row) => formatDateIST(row.createdAt),
       },
     ],
-    [fmt, statusSavingId, jobOptions]
+    [fmt, statusSavingId, openDocsCommissionModal]
   );
 
   return (
@@ -522,6 +704,7 @@ export default function DashboardSalesCommissionPage() {
           if (savingCommission) return;
           setCreateModalOpen(false);
           setNewCommissionForm(NEW_COMMISSION_INITIAL);
+          setPendingCommissionAttachmentFiles([]);
         }}
         title="Add New Commission"
         size="2xl"
@@ -582,6 +765,17 @@ export default function DashboardSalesCommissionPage() {
             value={newCommissionForm.paidAt}
             onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, paidAt: e.target.value }))}
           />
+          <VendorAttachmentsPanel
+            resourceLabel="sales commission"
+            vendorId={null}
+            attachments={Array.isArray(newCommissionForm.attachments) ? newCommissionForm.attachments : []}
+            onAttachmentsChange={(next) =>
+              setNewCommissionForm((prev) => ({ ...prev, attachments: next }))
+            }
+            pendingFiles={pendingCommissionAttachmentFiles}
+            onPendingFilesChange={setPendingCommissionAttachmentFiles}
+            uploading={commissionAttachmentUploading}
+          />
         </Form>
       </Modal>
 
@@ -592,6 +786,7 @@ export default function DashboardSalesCommissionPage() {
           setEditModalOpen(false);
           setEditingCommissionId("");
           setNewCommissionForm(NEW_COMMISSION_INITIAL);
+          setPendingCommissionAttachmentFiles([]);
         }}
         title="Edit Commission"
         size="2xl"
@@ -652,7 +847,51 @@ export default function DashboardSalesCommissionPage() {
             value={newCommissionForm.paidAt}
             onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, paidAt: e.target.value }))}
           />
+          <VendorAttachmentsPanel
+            resourceLabel="sales commission"
+            resourceId={editingCommissionId || null}
+            vendorId={null}
+            attachments={Array.isArray(newCommissionForm.attachments) ? newCommissionForm.attachments : []}
+            onAttachmentsChange={(next) =>
+              setNewCommissionForm((prev) => ({ ...prev, attachments: next }))
+            }
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={commissionAttachmentUploading}
+            onPickFilesForUpload={handleCommissionFileUpload}
+          />
         </Form>
+      </Modal>
+
+      <Modal
+        open={docsCommissionModalOpen}
+        onClose={closeDocsCommissionModal}
+        title={
+          docsCommissionMeta
+            ? `Documents — Job ${docsCommissionMeta.label}`
+            : "Documents"
+        }
+        size="lg"
+      >
+        {docsCommissionLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="text-secondary">Loading…</span>
+          </div>
+        ) : (
+          <VendorAttachmentsPanel
+            title="Attachments"
+            resourceLabel="sales commission"
+            resourceId={docsCommissionMeta?.id || null}
+            vendorId={null}
+            attachments={docsCommissionAttachments}
+            onAttachmentsChange={setDocsCommissionAttachments}
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={docsCommissionSaving}
+            hideUpload
+            onRemoveSavedRow={handleDocsCommissionRemoveRow}
+          />
+        )}
       </Modal>
     </div>
   );
