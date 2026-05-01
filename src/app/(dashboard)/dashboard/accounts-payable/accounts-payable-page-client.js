@@ -19,6 +19,7 @@ import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const TABS = [
   { id: "due", label: "Due to vendors", include: "due" },
@@ -250,6 +251,14 @@ export default function AccountsPayablePageClient() {
 
   const showAging = tab === "due" || tab === "vendor";
 
+  const [apTableSort, setApTableSort] = useState({ key: null, direction: "asc" });
+  const apTableSource = tab === "due" ? filteredDueRows : rows;
+  const sortedApTableData = useMemo(
+    () => sortRowsClient(apTableSource, apTableSort),
+    [apTableSource, apTableSort]
+  );
+  const handleApTableSort = useCallback((key, direction) => setApTableSort({ key, direction }), []);
+
   const tableColumns = useMemo(
     () => [
       {
@@ -265,44 +274,52 @@ export default function AccountsPayablePageClient() {
       {
         key: "poNumber",
         label: "PO#",
+        sortable: true,
         render: (v) => (
           <span className="font-medium text-title">{v || "—"}</span>
         ),
       },
-      { key: "vendorName", label: "Vendor" },
+      { key: "vendorName", label: "Vendor", sortable: true },
       {
         key: "orderTotal",
         label: "Order",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "invoiced",
         label: "Invoiced",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "paid",
         label: "Paid",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "balanceDue",
         label: "Due",
+        sortable: true,
         render: (v) => <span className="tabular font-medium">{fmt(v)}</span>,
       },
       {
         key: "daysOutstanding",
         label: "Days",
+        sortable: true,
         render: (v) => (v != null ? v : "—"),
       },
       {
         key: "agingBucket",
         label: "Aging",
+        sortable: true,
         render: (v) => <span className="text-secondary">{v}</span>,
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => <Badge variant={STATUS_VARIANT[v] || "default"}>{v}</Badge>,
       },
     ],
@@ -319,9 +336,7 @@ export default function AccountsPayablePageClient() {
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Accounts payable</h1>
         <p className="mt-2 text-sm text-secondary">
-          Pay vendors against <strong className="text-title">vendor invoices</strong> attached on each PO. Add
-          vendor bills on Purchase orders → then record payments here. Aging uses the latest vendor invoice date
-          (or PO date if none).
+          Pay vendors against PO invoices—aging from invoice or PO date.
         </p>
       </div>
 
@@ -467,10 +482,12 @@ export default function AccountsPayablePageClient() {
       ) : (
         <Table
           columns={tab === "closed" ? closedColumns : tableColumns}
-          data={tab === "due" ? filteredDueRows : rows}
+          data={sortedApTableData}
           rowKey="id"
           loading={loading}
           fillHeight
+          sortState={apTableSort}
+          onSort={handleApTableSort}
           emptyMessage={
             tab === "closed"
               ? "No closed POs yet."

@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { randomBytes } from "crypto";
 import { connectDB } from "@/lib/db";
 import PurchaseOrder from "@/models/PurchaseOrder";
+import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import Vendor from "@/models/Vendor";
@@ -152,6 +156,35 @@ export async function GET(request, context) {
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
+
+    const ownerEmail = user.email.trim().toLowerCase();
+    const [owner, settingsDoc] = await Promise.all([
+      User.findOne({ email: ownerEmail }).select("shopName contactName email").lean(),
+      UserSettings.findOne({ ownerEmail: ownerEmail }).lean(),
+    ]);
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const fromShopName = String(owner?.shopName || "").trim();
+    const ownerEmailDisplay = String(owner?.email || "").trim();
+    const fromShopContact = [owner?.contactName, ownerEmailDisplay].filter(Boolean).join(" · ");
+    out.fromShopName = fromShopName;
+    out.fromShopContact = fromShopContact;
+    out.fromShopLogoUrl = String(merged.logoUrl || "").trim();
+    out.fromAccountsBillingAddress = String(merged.accountsBillingAddress || "").trim();
+    out.fromAccountsShippingAddress = String(merged.accountsShippingAddress || "").trim();
+    out.fromPaymentTermsLabel = merged.accountsPaymentTerms
+      ? accountsPaymentTermsLabel(merged.accountsPaymentTerms)
+      : "";
+    out.invoicePaymentOptions = merged.invoicePaymentOptions ?? "";
+    out.invoiceThankYouNote = merged.invoiceThankYouNote ?? "";
+    out.formattedCreatedAt =
+      doc.createdAt != null
+        ? new Date(doc.createdAt).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+
     return NextResponse.json(out);
   } catch (err) {
     console.error("Dashboard get purchase order error:", err);

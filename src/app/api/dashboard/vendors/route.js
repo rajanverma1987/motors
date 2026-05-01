@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Vendor from "@/models/Vendor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { normalizeVendorAttachmentsFromClient } from "@/lib/vendor-attachments";
 
 const MAX_PARTS_ITEMS = 100;
 /** Normalize to array of strings (accepts array of strings or array of { item } from frontend) */
@@ -33,11 +34,14 @@ export async function GET(request) {
       } else if (typeof v.partsSupplied === "string" && v.partsSupplied.trim()) {
         partsSupplied = [v.partsSupplied.trim()];
       }
+      const attachmentCount = Array.isArray(v.attachments) ? v.attachments.length : 0;
+      const { attachments: _a, ...rest } = v;
       return {
-        ...v,
+        ...rest,
         id: v._id.toString(),
         _id: undefined,
         partsSupplied,
+        attachmentCount,
       };
     });
     return NextResponse.json(listWithId);
@@ -67,6 +71,7 @@ export async function POST(request) {
       partsSupplied,
       paymentTerms,
       notes,
+      attachments,
     } = body;
     if (!name?.trim()) {
       return NextResponse.json({ error: "Vendor name is required" }, { status: 400 });
@@ -75,6 +80,7 @@ export async function POST(request) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
     const partsSuppliedArr = normalizePartsSupplied(partsSupplied);
+    const attachmentsArr = normalizeVendorAttachmentsFromClient(attachments);
     const doc = await Vendor.create({
       name: clampString(name, LIMITS.companyName.max),
       contactName: clampString(contactName, LIMITS.name.max),
@@ -87,14 +93,18 @@ export async function POST(request) {
       partsSupplied: partsSuppliedArr,
       paymentTerms: clampString(paymentTerms, LIMITS.shortText.max),
       notes: clampString(notes, LIMITS.message.max),
+      attachments: attachmentsArr,
       createdByEmail: user.email.trim().toLowerCase(),
     });
+    const vo = doc.toObject();
     return NextResponse.json({
       ok: true,
       vendor: {
-        ...doc.toObject(),
+        ...vo,
         id: doc._id.toString(),
         _id: undefined,
+        attachments: Array.isArray(vo.attachments) ? vo.attachments : [],
+        attachmentCount: Array.isArray(vo.attachments) ? vo.attachments.length : 0,
       },
     });
   } catch (err) {

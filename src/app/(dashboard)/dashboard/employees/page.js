@@ -11,6 +11,7 @@ import Checkbox from "@/components/ui/checkbox";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const ROLE_OPTIONS = [
   { value: "", label: "Select role" },
@@ -225,6 +226,13 @@ export default function DashboardEmployeesPage() {
     });
   }, [employees, searchQuery]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedEmployees = useMemo(
+    () => sortRowsClient(filteredEmployees, tableSort),
+    [filteredEmployees, tableSort]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -246,6 +254,7 @@ export default function DashboardEmployeesPage() {
       {
         key: "name",
         label: "Name",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -256,12 +265,13 @@ export default function DashboardEmployeesPage() {
           </button>
         ),
       },
-      { key: "role", label: "Role" },
-      { key: "email", label: "Email" },
-      { key: "phone", label: "Phone" },
+      { key: "role", label: "Role", sortable: true },
+      { key: "email", label: "Email", sortable: true },
+      { key: "phone", label: "Phone", sortable: true },
       {
         key: "canLogin",
         label: "CRM login",
+        sortable: true,
         render: (_, row) => (
           <Badge variant={row.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
             {row.canLogin ? "Yes" : "No"}
@@ -271,6 +281,7 @@ export default function DashboardEmployeesPage() {
       {
         key: "technicianAppAccess",
         label: "Technician app",
+        sortable: true,
         render: (_, row) => (
           <Badge variant={row.technicianAppAccess ? "primary" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
             {row.technicianAppAccess ? "Allowed" : "Off"}
@@ -287,7 +298,7 @@ export default function DashboardEmployeesPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Employees</h1>
           <p className="mt-1 text-sm text-secondary">
-            Manage technicians and staff. Add employees to assign to work orders and track workload.
+            Technicians and staff for assignments and workload.
           </p>
         </div>
         <Button variant="primary" onClick={openEnterModal} className="shrink-0">
@@ -298,7 +309,7 @@ export default function DashboardEmployeesPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredEmployees}
+          data={sortedEmployees}
           rowKey="id"
           loading={loading}
           emptyMessage={employees.length === 0 ? "No employees yet. Use “Add Employee” to add one." : "No employees match the search."}
@@ -306,6 +317,8 @@ export default function DashboardEmployeesPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search name, role, email, phone…"
           onRefresh={async () => { setLoading(true); await loadEmployees(); setLoading(false); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

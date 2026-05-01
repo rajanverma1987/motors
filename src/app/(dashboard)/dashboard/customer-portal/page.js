@@ -5,6 +5,7 @@ import { FiGlobe, FiCopy } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 export default function CustomerPortalPage() {
   const toast = useToast();
@@ -73,11 +74,24 @@ export default function CustomerPortalPage() {
     });
   }, [customers, searchQuery]);
 
+  const getPortalSortValue = useCallback((row, key) => {
+    if (key === "name") return row.companyName || row.primaryContactName || "";
+    return row?.[key];
+  }, []);
+
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedCustomers = useMemo(
+    () => sortRowsClient(filteredCustomers, tableSort, getPortalSortValue),
+    [filteredCustomers, tableSort, getPortalSortValue]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
         key: "name",
         label: "Customer",
+        sortable: true,
         render: (_, row) => (
           <span className="font-medium text-title">
             {row.companyName || row.primaryContactName || "—"}
@@ -87,11 +101,13 @@ export default function CustomerPortalPage() {
       {
         key: "primaryContactName",
         label: "Contact",
+        sortable: true,
         render: (_, row) => row.primaryContactName || "—",
       },
       {
         key: "email",
         label: "Email",
+        sortable: true,
         render: (_, row) => row.email || "—",
       },
       {
@@ -132,7 +148,7 @@ export default function CustomerPortalPage() {
             Customer portal
           </h1>
           <p className="mt-1 text-sm text-secondary">
-            Share a link with customers so they can view their motors, repair status (quotes), and history online. Click “Copy link” for a customer to copy their unique portal URL.
+            Per-customer links for motors, quotes, and history—use Copy link.
           </p>
         </div>
       </div>
@@ -140,9 +156,11 @@ export default function CustomerPortalPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredCustomers}
+          data={sortedCustomers}
           rowKey="id"
           loading={loading}
+          sortState={tableSort}
+          onSort={handleTableSort}
           emptyMessage={
             customers.length === 0
               ? "No customers yet. Add customers first, then use “Copy link” to share their portal."

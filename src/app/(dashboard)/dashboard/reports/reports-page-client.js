@@ -252,8 +252,7 @@ export default function ReportsPageClient() {
         <div>
           <h1 className="text-2xl font-bold text-title">Reports</h1>
           <p className="mt-1 text-sm text-secondary">
-            Shop-wide summaries from leads, customers, quotes, jobs, invoices, and purchase orders. Charts use
-            days, weeks, or months depending on the period.
+            Trends for leads through purchase orders by day, week, or month.
           </p>
           {data?.period?.label && (
             <p className="mt-1 text-sm font-medium text-title">Showing: {data.period.label}</p>

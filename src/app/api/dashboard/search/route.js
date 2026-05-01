@@ -111,12 +111,29 @@ export async function GET(request) {
       const linked = [];
       const qDoc = quotes.find((qu) => (qu.leadId || "").toString() === id);
       if (qDoc) {
+        const qid = qDoc._id.toString();
         linked.push({
           type: "quote",
           label: "Quote",
           title: `RFQ ${qDoc.rfqNumber || qDoc._id}`,
-          openHref: `/dashboard/quotes?open=${qDoc._id}`,
+          openHref: `/dashboard/quotes?open=${qid}`,
         });
+        for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === qid).slice(0, 5)) {
+          linked.push({
+            type: "invoice",
+            label: "Invoice",
+            title: inv.invoiceNumber || inv._id,
+            openHref: `/dashboard/invoices?open=${inv._id}`,
+          });
+        }
+        for (const w of workOrders.filter((wo) => (wo.quoteId || "").toString() === qid).slice(0, 5)) {
+          linked.push({
+            type: "work_order",
+            label: "Work order",
+            title: w.workOrderNumber || w._id,
+            openHref: `/dashboard/work-orders?open=${w._id}`,
+          });
+        }
       }
       pushLimited(
         raw,
@@ -141,8 +158,10 @@ export async function GET(request) {
       ) {
         continue;
       }
-      const custMotors = motors.filter((m) => m.customerId === id).slice(0, 3);
-      const custQuotes = quotes.filter((qu) => qu.customerId === id).slice(0, 3);
+      const custMotors = motors.filter((m) => (m.customerId || "").toString() === id).slice(0, 3);
+      const custQuotes = quotes.filter((qu) => (qu.customerId || "").toString() === id).slice(0, 3);
+      const custInvoices = invoices.filter((inv) => (inv.customerId || "").toString() === id).slice(0, 5);
+      const custWorkOrders = workOrders.filter((w) => (w.customerId || "").toString() === id).slice(0, 5);
       const linked = [
         ...custMotors.map((m) => ({
           type: "motor",
@@ -155,6 +174,18 @@ export async function GET(request) {
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || qu._id}`,
           openHref: `/dashboard/quotes?open=${qu._id}`,
+        })),
+        ...custInvoices.map((inv) => ({
+          type: "invoice",
+          label: "Invoice",
+          title: inv.invoiceNumber || inv._id,
+          openHref: `/dashboard/invoices?open=${inv._id}`,
+        })),
+        ...custWorkOrders.map((w) => ({
+          type: "work_order",
+          label: "Work order",
+          title: w.workOrderNumber || w._id,
+          openHref: `/dashboard/work-orders?open=${w._id}`,
         })),
       ];
       pushLimited(
@@ -180,7 +211,7 @@ export async function GET(request) {
       ) {
         continue;
       }
-      const cust = customerMap[m.customerId];
+      const cust = customerMap[(m.customerId || "").toString()];
       const linked = [];
       if (cust) {
         linked.push({
@@ -190,13 +221,31 @@ export async function GET(request) {
           openHref: `/dashboard/customers?open=${cust._id}`,
         });
       }
-      const motorQuotes = quotes.filter((qu) => qu.motorId === id).slice(0, 5);
+      const motorQuotes = quotes.filter((qu) => (qu.motorId || "").toString() === id).slice(0, 5);
       for (const qu of motorQuotes) {
         linked.push({
           type: "quote",
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || qu._id}`,
           openHref: `/dashboard/quotes?open=${qu._id}`,
+        });
+      }
+      const motorInvoices = invoices.filter((inv) => (inv.motorId || "").toString() === id).slice(0, 5);
+      for (const inv of motorInvoices) {
+        linked.push({
+          type: "invoice",
+          label: "Invoice",
+          title: inv.invoiceNumber || inv._id,
+          openHref: `/dashboard/invoices?open=${inv._id}`,
+        });
+      }
+      const motorWorkOrders = workOrders.filter((w) => (w.motorId || "").toString() === id).slice(0, 5);
+      for (const w of motorWorkOrders) {
+        linked.push({
+          type: "work_order",
+          label: "Work order",
+          title: w.workOrderNumber || w._id,
+          openHref: `/dashboard/work-orders?open=${w._id}`,
         });
       }
       pushLimited(
@@ -220,8 +269,8 @@ export async function GET(request) {
       if (!matchesQuery(qu, ["rfqNumber", "customerPo", "repairScope", "status", "date"], rx)) {
         continue;
       }
-      const cust = customerMap[qu.customerId];
-      const motor = motors.find((mo) => mo._id.toString() === qu.motorId);
+      const cust = customerMap[(qu.customerId || "").toString()];
+      const motor = motors.find((mo) => mo._id.toString() === (qu.motorId || "").toString());
       const linked = [];
       if (cust) {
         linked.push({
@@ -239,7 +288,7 @@ export async function GET(request) {
           openHref: `/dashboard/motors?open=${motor._id}`,
         });
       }
-      const wos = workOrders.filter((w) => w.quoteId === id);
+      const wos = workOrders.filter((w) => (w.quoteId || "").toString() === id);
       for (const w of wos.slice(0, 5)) {
         linked.push({
           type: "work_order",
@@ -248,7 +297,7 @@ export async function GET(request) {
           openHref: `/dashboard/work-orders?open=${w._id}`,
         });
       }
-      const invs = invoices.filter((inv) => inv.quoteId === id);
+      const invs = invoices.filter((inv) => (inv.quoteId || "").toString() === id);
       for (const inv of invs.slice(0, 5)) {
         linked.push({
           type: "invoice",
@@ -265,7 +314,7 @@ export async function GET(request) {
           openHref: `/dashboard/leads?open=${qu.leadId}`,
         });
       }
-      const poJob = pos.filter((p) => p.type === "job" && p.quoteId === id).slice(0, 3);
+      const poJob = pos.filter((p) => p.type === "job" && (p.quoteId || "").toString() === id).slice(0, 3);
       for (const p of poJob) {
         linked.push({
           type: "purchase_order",
@@ -296,7 +345,7 @@ export async function GET(request) {
         continue;
       }
       const linked = [];
-      const cust = customerMap[w.customerId];
+      const cust = customerMap[(w.customerId || "").toString()];
       if (cust) {
         linked.push({
           type: "customer",
@@ -305,7 +354,7 @@ export async function GET(request) {
           openHref: `/dashboard/customers?open=${cust._id}`,
         });
       }
-      const qu = quoteMap[w.quoteId];
+      const qu = quoteMap[(w.quoteId || "").toString()];
       if (qu) {
         linked.push({
           type: "quote",
@@ -314,7 +363,7 @@ export async function GET(request) {
           openHref: `/dashboard/quotes?open=${qu._id}`,
         });
       }
-      const motor = motors.find((mo) => mo._id.toString() === w.motorId);
+      const motor = motors.find((mo) => mo._id.toString() === (w.motorId || "").toString());
       if (motor) {
         linked.push({
           type: "motor",
@@ -322,6 +371,17 @@ export async function GET(request) {
           title: [motor.manufacturer, motor.model, motor.serialNumber].filter(Boolean).join(" · ") || "Motor",
           openHref: `/dashboard/motors?open=${motor._id}`,
         });
+      }
+      const qidForWo = (w.quoteId || "").toString();
+      if (qidForWo) {
+        for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === qidForWo).slice(0, 5)) {
+          linked.push({
+            type: "invoice",
+            label: "Invoice",
+            title: inv.invoiceNumber || inv._id,
+            openHref: `/dashboard/invoices?open=${inv._id}`,
+          });
+        }
       }
       pushLimited(
         raw,
@@ -345,7 +405,7 @@ export async function GET(request) {
         continue;
       }
       const linked = [];
-      const cust = customerMap[inv.customerId];
+      const cust = customerMap[(inv.customerId || "").toString()];
       if (cust) {
         linked.push({
           type: "customer",
@@ -354,7 +414,8 @@ export async function GET(request) {
           openHref: `/dashboard/customers?open=${cust._id}`,
         });
       }
-      const qu = quoteMap[inv.quoteId];
+      const qidInv = (inv.quoteId || "").toString();
+      const qu = quoteMap[qidInv];
       if (qu) {
         linked.push({
           type: "quote",
@@ -363,7 +424,7 @@ export async function GET(request) {
           openHref: `/dashboard/quotes?open=${qu._id}`,
         });
       }
-      const motor = motors.find((mo) => mo._id.toString() === inv.motorId);
+      const motor = motors.find((mo) => mo._id.toString() === (inv.motorId || "").toString());
       if (motor) {
         linked.push({
           type: "motor",
@@ -371,6 +432,16 @@ export async function GET(request) {
           title: [motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "Motor",
           openHref: `/dashboard/motors?open=${motor._id}`,
         });
+      }
+      if (qidInv) {
+        for (const wo of workOrders.filter((w) => (w.quoteId || "").toString() === qidInv).slice(0, 5)) {
+          linked.push({
+            type: "work_order",
+            label: "Work order",
+            title: wo.workOrderNumber || wo._id,
+            openHref: `/dashboard/work-orders?open=${wo._id}`,
+          });
+        }
       }
       pushLimited(
         raw,
@@ -432,13 +503,30 @@ export async function GET(request) {
         });
       }
       if (p.type === "job" && p.quoteId) {
-        const qu = quoteMap[p.quoteId];
+        const pqid = (p.quoteId || "").toString();
+        const qu = quoteMap[pqid];
         linked.push({
           type: "quote",
           label: "Quote",
           title: qu ? `RFQ ${qu.rfqNumber}` : `Quote ${p.quoteId}`,
-          openHref: `/dashboard/quotes?open=${p.quoteId}`,
+          openHref: `/dashboard/quotes?open=${pqid}`,
         });
+        for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === pqid).slice(0, 5)) {
+          linked.push({
+            type: "invoice",
+            label: "Invoice",
+            title: inv.invoiceNumber || inv._id,
+            openHref: `/dashboard/invoices?open=${inv._id}`,
+          });
+        }
+        for (const w of workOrders.filter((wo) => (wo.quoteId || "").toString() === pqid).slice(0, 5)) {
+          linked.push({
+            type: "work_order",
+            label: "Work order",
+            title: w.workOrderNumber || w._id,
+            openHref: `/dashboard/work-orders?open=${w._id}`,
+          });
+        }
       }
       pushLimited(
         raw,

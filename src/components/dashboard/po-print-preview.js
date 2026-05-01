@@ -32,7 +32,7 @@ function injectPoPrintStyles() {
         opacity: 1 !important;
         background: white !important;
         z-index: 2147483647 !important;
-        padding: 1.5rem !important;
+        padding: 1rem !important;
       }
     }
   `;
@@ -55,7 +55,7 @@ const OFFSCREEN_STYLE = {
 };
 
 /**
- * Loads PO + vendor (+ RFQ label for job POs), keeps markup off-screen, opens system print dialog.
+ * Loads PO + vendor, keeps markup off-screen, opens system print dialog.
  */
 export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
   const fmt = useFormatMoney();
@@ -63,7 +63,6 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
   const { settings } = useUserSettings();
   const [po, setPo] = useState(null);
   const [vendor, setVendor] = useState(null);
-  const [rfqNumber, setRfqNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -76,7 +75,6 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
     if (!open) {
       setPo(null);
       setVendor(null);
-      setRfqNumber("");
       setError(null);
       setLoading(true);
     }
@@ -95,7 +93,6 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
     setError(null);
     setPo(null);
     setVendor(null);
-    setRfqNumber("");
     (async () => {
       try {
         const res = await fetch(`/api/dashboard/purchase-orders/${purchaseOrderId}`, {
@@ -119,17 +116,6 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
           if (vRes.ok && !cancelled) {
             const v = await vRes.json();
             setVendor(v);
-          }
-        }
-
-        if (data.type === "job" && String(data.quoteId || "").trim()) {
-          const qRes = await fetch(`/api/dashboard/quotes/${encodeURIComponent(data.quoteId)}`, {
-            credentials: "include",
-            cache: "no-store",
-          });
-          if (qRes.ok && !cancelled) {
-            const q = await qRes.json();
-            setRfqNumber(String(q.rfqNumber || "").trim());
           }
         }
       } catch {
@@ -183,11 +169,11 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
 
   return createPortal(
     <div
-      className={`${PRINT_ROOT_CLASS} bg-white text-title`}
+      className={`${PRINT_ROOT_CLASS} bg-white text-sm text-neutral-900 print:text-black`}
       style={OFFSCREEN_STYLE}
       aria-hidden="true"
     >
-      <PoPrintSheetBody po={po} vendor={vendor} rfqNumber={rfqNumber} settings={settings} fmt={fmt} />
+      <PoPrintSheetBody po={po} vendor={vendor} settings={settings} fmt={fmt} />
     </div>,
     document.body
   );

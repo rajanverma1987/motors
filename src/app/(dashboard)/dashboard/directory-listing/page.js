@@ -2,7 +2,7 @@ import DirectoryListingPageClient from "./directory-listing-page-client";
 
 export const metadata = {
   title: "Directory listing",
-  description: "Create or update your repair center profile on the public directory.",
+  description: "Your public repair-shop profile.",
 };
 
 export default function DirectoryListingPage() {

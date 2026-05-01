@@ -11,6 +11,7 @@ import Checkbox from "@/components/ui/checkbox";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { PAGES, ACTIONS } from "@/lib/pbac";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const INITIAL_FORM = {
   name: "",
@@ -240,6 +241,22 @@ export default function AccessControlPage() {
     });
   }, [policies, searchQuery]);
 
+  const getPolicySortValue = useCallback((row, key) => {
+    if (key === "employees") return Array.isArray(row.subjectIds) ? row.subjectIds.length : 0;
+    if (key === "resources") {
+      const res = Array.isArray(row.resources) ? row.resources : [];
+      return res.filter((r) => r.actions?.length).length;
+    }
+    return row?.[key];
+  }, []);
+
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedPolicies = useMemo(
+    () => sortRowsClient(filteredPolicies, tableSort, getPolicySortValue),
+    [filteredPolicies, tableSort, getPolicySortValue]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -274,6 +291,7 @@ export default function AccessControlPage() {
       {
         key: "name",
         label: "Policy name",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -287,6 +305,7 @@ export default function AccessControlPage() {
       {
         key: "description",
         label: "Description",
+        sortable: true,
         render: (_, row) => (
           <span className="text-secondary text-sm max-w-xs truncate block">
             {row.description || "—"}
@@ -296,6 +315,7 @@ export default function AccessControlPage() {
       {
         key: "employees",
         label: "Employees",
+        sortable: true,
         render: (_, row) => {
           const count = Array.isArray(row.subjectIds) ? row.subjectIds.length : 0;
           return count ? `${count} employee${count !== 1 ? "s" : ""}` : "—";
@@ -304,6 +324,7 @@ export default function AccessControlPage() {
       {
         key: "resources",
         label: "Permissions",
+        sortable: true,
         render: (_, row) => {
           const res = Array.isArray(row.resources) ? row.resources : [];
           const pages = res.filter((r) => r.actions?.length);
@@ -323,7 +344,7 @@ export default function AccessControlPage() {
             Access control
           </h1>
           <p className="mt-1 text-sm text-secondary">
-            Policy-based access control (PBAC). Create policies and assign them to employees to grant page-level and action-level permissions.
+            Policies that decide which pages and actions each employee can use.
           </p>
         </div>
         <Button variant="primary" onClick={openCreate} className="shrink-0">
@@ -334,9 +355,11 @@ export default function AccessControlPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredPolicies}
+          data={sortedPolicies}
           rowKey="id"
           loading={loading}
+          sortState={tableSort}
+          onSort={handleTableSort}
           emptyMessage={
             policies.length === 0
               ? "No policies yet. Use “Add policy” to define who can access which pages and actions."

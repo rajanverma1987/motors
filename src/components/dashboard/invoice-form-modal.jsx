@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
 import Modal from "@/components/ui/modal";
 import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Button from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
-import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
+import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import { FiSave, FiEdit2, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
 import { INVOICE_STATUS_OPTIONS, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
@@ -255,31 +254,6 @@ export default function InvoiceFormModal({
     };
   }, [open, draftQuoteId, invoiceId, onSwitchToInvoice, toast]);
 
-  useEffect(() => {
-    if (!printOpen) return;
-    const styleId = "invoice-modal-print-styles";
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      @media print {
-        body * { visibility: hidden; }
-        .invoice-print-preview, .invoice-print-preview * { visibility: visible; }
-        .invoice-print-preview {
-          position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
-          width: 100% !important; height: 100% !important; background: white !important; z-index: 99999 !important;
-          overflow: auto !important;
-        }
-        .invoice-print-preview .no-print { display: none !important; }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      const el = document.getElementById(styleId);
-      if (el) el.remove();
-    };
-  }, [printOpen]);
-
   const scrollToForm = () => {
     formScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
@@ -327,6 +301,7 @@ export default function InvoiceFormModal({
         motorLabel: inv.motorLabel,
         fromShopName: inv.fromShopName || "",
         fromShopContact: inv.fromShopContact || "",
+        fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
         fromBillingAddress: inv.fromBillingAddress || "",
         fromPaymentTermsLabel:
           inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
@@ -368,14 +343,6 @@ export default function InvoiceFormModal({
     } finally {
       setHeaderBusy(false);
     }
-  };
-
-  const runPrintDialog = () => {
-    requestAnimationFrame(() => {
-      window.print();
-      setPrintOpen(false);
-      setPrintPayload(null);
-    });
   };
 
   // Keep totals in sync with the tables automatically.
@@ -703,45 +670,14 @@ export default function InvoiceFormModal({
       )}
     </Modal>
 
-    {printOpen && printPayload && typeof document !== "undefined"
-      ? createPortal(
-          <div
-            className="invoice-print-preview fixed inset-0 overflow-auto bg-card p-6 text-title"
-            style={{ zIndex: (zIndex || 50) + 20 }}
-          >
-            <div className="no-print mb-4 flex justify-end gap-2 border-b border-border pb-4">
-              <Button type="button" variant="outline" size="sm" onClick={runPrintDialog}>
-                <FiPrinter className="mr-1.5 inline h-4 w-4" />
-                Print
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setPrintOpen(false);
-                  setPrintPayload(null);
-                }}
-              >
-                Close
-              </Button>
-            </div>
-            <InvoicePrintPreview
-              invoice={printPayload.invoice}
-              motorLabel={printPayload.motorLabel}
-              fromShopName={printPayload.fromShopName}
-              fromShopContact={printPayload.fromShopContact}
-              fromBillingAddress={printPayload.fromBillingAddress}
-              fromPaymentTermsLabel={printPayload.fromPaymentTermsLabel}
-              customerToName={printPayload.customerToName}
-              customerBillingAddress={printPayload.customerBillingAddress}
-              invoicePaymentOptions={printPayload.invoicePaymentOptions}
-              invoiceThankYouNote={printPayload.invoiceThankYouNote}
-            />
-          </div>,
-          document.body
-        )
-      : null}
+    <InvoicePrintOffscreen
+      open={printOpen}
+      payload={printPayload}
+      onClose={() => {
+        setPrintOpen(false);
+        setPrintPayload(null);
+      }}
+    />
     </>
   );
 }

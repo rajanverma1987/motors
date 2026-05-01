@@ -12,6 +12,7 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import Badge from "@/components/ui/badge";
 import { STATUS_LABELS, EMPLOYMENT_LABELS, EXPERIENCE_LABELS } from "@/lib/job-posting-labels";
+import { sortRowsClient } from "@/lib/client-table-sort";
 import JobPostingFormFields from "./job-posting-form-fields";
 
 const EMPTY_FORM = {
@@ -102,6 +103,21 @@ export default function JobPostingsClient() {
       return hay.includes(q);
     });
   }, [rows, searchQuery]);
+
+  const getJobPostingSortValue = useCallback((row, key) => {
+    if (key === "updatedAt") {
+      const t = row?.updatedAt ? new Date(row.updatedAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    return row?.[key];
+  }, []);
+
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedFilteredRows = useMemo(
+    () => sortRowsClient(filteredRows, tableSort, getJobPostingSortValue),
+    [filteredRows, tableSort, getJobPostingSortValue]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
 
   useEffect(() => {
     load();
@@ -235,6 +251,7 @@ export default function JobPostingsClient() {
       {
         key: "title",
         label: "Role",
+        sortable: true,
         render: (val, row) => (
           <Link
             href={`/dashboard/job-postings/${row.id}`}
@@ -247,6 +264,7 @@ export default function JobPostingsClient() {
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => (
           <Badge variant={v === "open" ? "success" : v === "closed" ? "default" : "warning"}>
             {STATUS_LABELS[v] || v}
@@ -256,16 +274,19 @@ export default function JobPostingsClient() {
       {
         key: "location",
         label: "Location",
+        sortable: true,
         render: (v) => v || "—",
       },
       {
         key: "listedOnMarketingSite",
         label: "On careers site",
+        sortable: true,
         render: (v) => (v ? <span className="text-title">Yes</span> : <span className="text-secondary">No</span>),
       },
       {
         key: "updatedAt",
         label: "Updated",
+        sortable: true,
         render: (v) => (v ? new Date(v).toLocaleString() : "—"),
       },
       {
@@ -342,12 +363,11 @@ export default function JobPostingsClient() {
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold text-title">Job postings</h1>
           <p className="mt-1 text-sm text-secondary max-w-[50.4rem] mx-auto sm:mx-0">
-            Create detailed roles for technicians, winders, and office staff. Open postings marked &quot;On careers
-            site&quot; appear on the public{" "}
+            Open roles; list on the public{" "}
             <a href="/careers" className="text-primary font-medium hover:underline" target="_blank" rel="noreferrer">
               Careers
             </a>{" "}
-            page so candidates can apply with their experience.
+            page when enabled.
           </p>
         </div>
         <div className="flex w-full justify-center sm:w-auto sm:justify-end shrink-0">
@@ -366,9 +386,11 @@ export default function JobPostingsClient() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredRows}
+          data={sortedFilteredRows}
           rowKey="id"
           loading={loading}
+          sortState={tableSort}
+          onSort={handleTableSort}
           emptyMessage={
             rows.length === 0
               ? "No job postings yet. Create one to list on the careers site."

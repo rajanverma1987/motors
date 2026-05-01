@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2 } from "react-icons/fi";
+import { FiEdit2, FiPaperclip } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
@@ -11,6 +11,8 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
+import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 
 const PARTS_SUPPLIED_COLUMNS = [{ key: "item", label: "Part / material" }];
 
@@ -26,6 +28,7 @@ const INITIAL_FORM = {
   partsSupplied: [],
   paymentTerms: "",
   notes: "",
+  attachments: [],
 };
 
 function buildVendorPayload(form) {
@@ -42,6 +45,7 @@ function buildVendorPayload(form) {
     partsSupplied: Array.isArray(f.partsSupplied) ? f.partsSupplied : [],
     paymentTerms: f.paymentTerms ?? "",
     notes: f.notes ?? "",
+    attachments: Array.isArray(f.attachments) ? f.attachments : [],
   };
 }
 
@@ -59,6 +63,15 @@ export default function DashboardVendorsPage() {
   const [viewLoadingVendorId, setViewLoadingVendorId] = useState(null);
   const [savingVendor, setSavingVendor] = useState(false);
   const [form, setForm] = useState(INITIAL_FORM);
+  const [pendingAttachmentFiles, setPendingAttachmentFiles] = useState([]);
+  const pendingAttachmentFilesRef = useRef([]);
+  pendingAttachmentFilesRef.current = pendingAttachmentFiles;
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const [docsModalOpen, setDocsModalOpen] = useState(false);
+  const [docsVendorMeta, setDocsVendorMeta] = useState(null);
+  const [docsAttachments, setDocsAttachments] = useState([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docsSaving, setDocsSaving] = useState(false);
   const formRef = useRef(form);
   formRef.current = form;
 
@@ -90,6 +103,7 @@ export default function DashboardVendorsPage() {
 
   const openEnterModal = () => {
     setForm(INITIAL_FORM);
+    setPendingAttachmentFiles([]);
     setEnterModalOpen(true);
   };
 
@@ -132,12 +146,76 @@ export default function DashboardVendorsPage() {
     return () => { cancelled = true; };
   }, [viewModalOpen, viewLoadingVendorId]);
 
+  useEffect(() => {
+    if (!docsModalOpen || !docsVendorMeta?.id) return;
+    let cancelled = false;
+    setDocsLoading(true);
+    (async () => {
+      try {
+        const res = await fetch(`/api/dashboard/vendors/${docsVendorMeta.id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (cancelled) return;
+        if (!res.ok) {
+          setDocsAttachments([]);
+          return;
+        }
+        const data = await res.json();
+        if (cancelled) return;
+        setDocsAttachments(Array.isArray(data.attachments) ? data.attachments : []);
+      } catch {
+        if (!cancelled) setDocsAttachments([]);
+      } finally {
+        if (!cancelled) setDocsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [docsModalOpen, docsVendorMeta?.id]);
+
   const closeViewModal = () => {
     queueMicrotask(() => {
       setViewModalOpen(false);
       setViewingVendor(null);
       setViewLoadingVendorId(null);
     });
+  };
+
+  const openDocsModal = (row) => {
+    if (!row?.id) return;
+    setDocsVendorMeta({ id: row.id, name: row.name || "Vendor" });
+    setDocsAttachments([]);
+    setDocsModalOpen(true);
+  };
+
+  const closeDocsModal = () => {
+    setDocsModalOpen(false);
+    setDocsVendorMeta(null);
+    setDocsAttachments([]);
+    setDocsLoading(false);
+  };
+
+  const persistDocsAttachments = async (next) => {
+    if (!docsVendorMeta?.id) return;
+    setDocsSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/vendors/${docsVendorMeta.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ attachments: next }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Update failed");
+      setDocsAttachments(Array.isArray(data.vendor?.attachments) ? data.vendor.attachments : next);
+      await loadVendors();
+    } catch (e) {
+      toast.error(e.message || "Could not update documents");
+    } finally {
+      setDocsSaving(false);
+    }
   };
 
   const openEditModal = async (vendor) => {
@@ -165,6 +243,7 @@ export default function DashboardVendorsPage() {
       })),
       paymentTerms: dataToUse.paymentTerms ?? "",
       notes: dataToUse.notes ?? "",
+      attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
     });
     setViewingVendor(dataToUse);
     setEditModalOpen(true);
@@ -187,7 +266,23 @@ export default function DashboardVendorsPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to create vendor");
+      const newId = data.vendor?.id;
+      const pending = pendingAttachmentFilesRef.current;
+      if (newId && pending.length > 0) {
+        const fd = new FormData();
+        pending.forEach((f) => fd.append("files", f));
+        const up = await fetch(`/api/dashboard/vendors/${newId}/upload`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const upData = await up.json().catch(() => ({}));
+        if (!up.ok) {
+          toast.error(upData.error || "Vendor saved but document upload failed.");
+        }
+      }
       toast.success("Vendor added.");
+      setPendingAttachmentFiles([]);
       closeEnterModal();
       loadVendors();
     } catch (err) {
@@ -223,6 +318,33 @@ export default function DashboardVendorsPage() {
     }
   };
 
+  const handleVendorFileUpload = async (files, vendorId) => {
+    const id = String(vendorId || "").trim();
+    if (!id) {
+      toast.error("Save the vendor first, then add documents.");
+      return;
+    }
+    setAttachmentUploading(true);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await fetch(`/api/dashboard/vendors/${id}/upload`, {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Upload failed");
+      setForm((f) => ({ ...f, attachments: Array.isArray(data.attachments) ? data.attachments : f.attachments }));
+      toast.success("Files uploaded.");
+      loadVendors();
+    } catch (err) {
+      toast.error(err.message || "Upload failed");
+    } finally {
+      setAttachmentUploading(false);
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const filteredVendors = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -236,6 +358,19 @@ export default function DashboardVendorsPage() {
     });
   }, [vendors, searchQuery]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedVendors = useMemo(
+    () =>
+      sortRowsClient(filteredVendors, tableSort, (row, key) => {
+        if (key !== "partsSupplied") return row[key];
+        const parts = Array.isArray(row.partsSupplied) ? row.partsSupplied : [];
+        const labels = parts.map((p) => (typeof p === "string" ? p : p?.item ?? "")).filter(Boolean);
+        return labels.join(", ");
+      }),
+    [filteredVendors, tableSort]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -243,6 +378,16 @@ export default function DashboardVendorsPage() {
         label: "",
         render: (_, row) => (
           <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => openDocsModal(row)}
+              disabled={!(Number(row.attachmentCount) > 0)}
+              className="rounded p-1.5 text-secondary hover:bg-card hover:text-title focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-30"
+              aria-label="View documents"
+              title={row.attachmentCount ? "View documents" : "No documents"}
+            >
+              <FiPaperclip className="h-4 w-4" />
+            </button>
             <button
               type="button"
               onClick={() => openEditModal(row)}
@@ -257,6 +402,7 @@ export default function DashboardVendorsPage() {
       {
         key: "name",
         label: "Name",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -267,12 +413,13 @@ export default function DashboardVendorsPage() {
           </button>
         ),
       },
-      { key: "contactName", label: "Contact" },
-      { key: "phone", label: "Phone" },
-      { key: "email", label: "Email" },
+      { key: "contactName", label: "Contact", sortable: true },
+      { key: "phone", label: "Phone", sortable: true },
+      { key: "email", label: "Email", sortable: true },
       {
         key: "partsSupplied",
         label: "Parts supplied",
+        sortable: true,
         render: (_, row) => {
           const parts = Array.isArray(row.partsSupplied) ? row.partsSupplied : [];
           if (parts.length === 0) return "—";
@@ -285,11 +432,17 @@ export default function DashboardVendorsPage() {
       {
         key: "paymentTerms",
         label: "Payment terms",
+        sortable: true,
         render: (_, row) => (row.paymentTerms ? String(row.paymentTerms).slice(0, 30) + (row.paymentTerms.length > 30 ? "…" : "") : "—"),
       },
     ],
     []
   );
+
+  const handleDocsRemoveRow = async (_index, row) => {
+    const next = docsAttachments.filter((a) => a.url !== row.url);
+    await persistDocsAttachments(next);
+  };
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
@@ -297,7 +450,7 @@ export default function DashboardVendorsPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Vendors</h1>
           <p className="mt-1 text-sm text-secondary">
-            Manage parts and materials suppliers. Store vendor name, contact details, parts supplied, and payment terms.
+            Suppliers, contacts, parts focus, and payment terms.
           </p>
         </div>
         <Button variant="primary" onClick={openEnterModal} className="shrink-0">
@@ -308,7 +461,7 @@ export default function DashboardVendorsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredVendors}
+          data={sortedVendors}
           rowKey="id"
           loading={loading}
           emptyMessage={vendors.length === 0 ? "No vendors yet. Use “Add Vendor” to add one." : "No vendors match the search."}
@@ -316,6 +469,8 @@ export default function DashboardVendorsPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search name, contact, email, parts…"
           onRefresh={async () => { setLoading(true); await loadVendors(); setLoading(false); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>
@@ -429,6 +584,14 @@ export default function DashboardVendorsPage() {
               rows={3}
             />
           </div>
+          <VendorAttachmentsPanel
+            vendorId={null}
+            attachments={form.attachments}
+            onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+            pendingFiles={pendingAttachmentFiles}
+            onPendingFilesChange={setPendingAttachmentFiles}
+            uploading={attachmentUploading}
+          />
         </Form>
       </Modal>
 
@@ -485,6 +648,23 @@ export default function DashboardVendorsPage() {
               <div>
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
                 <p className="whitespace-pre-wrap text-sm text-title">{viewingVendor.notes}</p>
+              </div>
+            )}
+            {(viewingVendor.attachmentCount > 0 ||
+              (Array.isArray(viewingVendor.attachments) && viewingVendor.attachments.length > 0)) && (
+              <div>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Documents</h3>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    closeViewModal();
+                    openDocsModal(viewingVendor);
+                  }}
+                >
+                  View {viewingVendor.attachmentCount || viewingVendor.attachments?.length || 0} document(s)
+                </Button>
               </div>
             )}
             <div>
@@ -604,7 +784,41 @@ export default function DashboardVendorsPage() {
               rows={3}
             />
           </div>
+          <VendorAttachmentsPanel
+            vendorId={viewingVendor?.id || null}
+            attachments={form.attachments}
+            onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={attachmentUploading}
+            onPickFilesForUpload={handleVendorFileUpload}
+          />
         </Form>
+      </Modal>
+
+      <Modal
+        open={docsModalOpen}
+        onClose={closeDocsModal}
+        title={docsVendorMeta ? `Documents — ${docsVendorMeta.name}` : "Documents"}
+        size="lg"
+      >
+        {docsLoading ? (
+          <div className="flex justify-center py-10">
+            <span className="text-secondary">Loading…</span>
+          </div>
+        ) : (
+          <VendorAttachmentsPanel
+            title="Attachments"
+            vendorId={docsVendorMeta?.id || null}
+            attachments={docsAttachments}
+            onAttachmentsChange={setDocsAttachments}
+            pendingFiles={[]}
+            onPendingFilesChange={() => {}}
+            uploading={docsSaving}
+            hideUpload
+            onRemoveSavedRow={handleDocsRemoveRow}
+          />
+        )}
       </Modal>
     </div>
   );

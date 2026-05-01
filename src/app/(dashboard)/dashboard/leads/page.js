@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiEdit2 } from "react-icons/fi";
@@ -14,6 +14,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import Badge from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth-context";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const SOURCE_LABELS = {
   website: "Website",
@@ -293,6 +294,21 @@ export default function DashboardLeadsPage() {
     return list;
   }, [leads, statusFilter, searchQuery]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedLeads = useMemo(
+    () =>
+      sortRowsClient(filteredLeads, tableSort, (row, key) => {
+        if (key === "createdAt") {
+          const t = row.createdAt ? new Date(row.createdAt).getTime() : 0;
+          return Number.isFinite(t) ? t : 0;
+        }
+        if (key === "source") return SOURCE_LABELS[row.source] || row.source || "";
+        return row[key];
+      }),
+    [filteredLeads, tableSort]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -314,6 +330,7 @@ export default function DashboardLeadsPage() {
       {
         key: "name",
         label: "Name",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -324,16 +341,18 @@ export default function DashboardLeadsPage() {
           </button>
         ),
       },
-      { key: "company", label: "Company" },
-      { key: "email", label: "Email" },
+      { key: "company", label: "Company", sortable: true },
+      { key: "email", label: "Email", sortable: true },
       {
         key: "source",
         label: "Source",
+        sortable: true,
         render: (_, row) => SOURCE_LABELS[row.source] || row.source || "—",
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (_, row) => {
           const status = row.status || "new";
           const variant = STATUS_BADGE_VARIANT[status] || "default";
@@ -348,6 +367,7 @@ export default function DashboardLeadsPage() {
       {
         key: "createdAt",
         label: "Submitted",
+        sortable: true,
         render: (val) => (val ? new Date(val).toLocaleString() : "—"),
       },
     ],
@@ -360,7 +380,7 @@ export default function DashboardLeadsPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Leads</h1>
           <p className="mt-1 text-sm text-secondary">
-            Manage incoming repair inquiries from the website, admin assignment, or manual entry.
+            Repair inquiries from the web, referrals, or manual entry.
           </p>
           {user?.listingOnlyAccount ? (
             <p className="mt-2 max-w-[50.4rem] text-xs text-secondary">
@@ -399,7 +419,7 @@ export default function DashboardLeadsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredLeads}
+          data={sortedLeads}
           rowKey="id"
           loading={loading}
           emptyMessage={
@@ -411,6 +431,8 @@ export default function DashboardLeadsPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search name, company, email…"
           onRefresh={() => { setLoading(true); loadLeads(); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

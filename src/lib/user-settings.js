@@ -33,10 +33,30 @@ export const USER_SETTINGS_DEFAULTS = {
   invoiceThankYouNote: "Thank you for your business!",
   /** Bin / shelf labels for inventory items (dropdown on master inventory) */
   inventoryLocations: [],
+  /**
+   * Work order status → tile preset index (string "0"…"n") for shop floor column headers.
+   * Omitted statuses use automatic rotation by column order.
+   */
+  workOrderStatusTileColors: {},
+  /** Controlled dropdown definitions (quote_status, work_order_status) — see dropdown-catalog.js */
+  controlledDropdowns: {},
+  /** Optional prefix for new repair-flow job numbers (blank = RF-00001 style). */
+  prefixRepairJob: "",
+  /** Optional prefix prepended to quote RFQ# on new invoices. */
+  prefixInvoice: "",
+  /** Optional prefix for new work order numbers before RFQ/job segment (blank = W-). */
+  prefixWorkOrder: "",
 };
 
+import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
 import { isAllowedCurrency } from "@/lib/format-currency";
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
+import { normalizeWorkOrderStatusTileColors, sanitizeWorkOrderStatusTileColorsPatch } from "@/lib/work-order-status-tiles";
+import {
+  normalizeControlledDropdowns,
+  sanitizeControlledDropdownsPatch,
+  deriveWorkOrderFieldsFromControlledEntries,
+} from "@/lib/dropdown-catalog";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -54,6 +74,11 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "invoicePaymentOptions",
   "invoiceThankYouNote",
   "inventoryLocations",
+  "workOrderStatusTileColors",
+  "controlledDropdowns",
+  "prefixRepairJob",
+  "prefixInvoice",
+  "prefixWorkOrder",
 ]);
 
 const ACCOUNTS_PAYMENT_TERMS = new Set([
@@ -124,6 +149,17 @@ export function mergeUserSettings(stored) {
   const merged = { ...USER_SETTINGS_DEFAULTS, ...s };
   merged.workOrderStatuses = normalizeWorkOrderStatusList(merged.workOrderStatuses);
 
+  merged.controlledDropdowns = normalizeControlledDropdowns(
+    merged.controlledDropdowns,
+    merged.workOrderStatuses,
+    merged.workOrderStatusTileColors
+  );
+  const woDerived = deriveWorkOrderFieldsFromControlledEntries(
+    merged.controlledDropdowns.work_order_status.entries
+  );
+  merged.workOrderStatuses = woDerived.statuses;
+  merged.workOrderStatusTileColors = woDerived.tileColors;
+
   const storedHasBoard = Object.prototype.hasOwnProperty.call(s, "shopFloorBoardOrder");
   if (!storedHasBoard) {
     merged.shopFloorBoardOrder = [...merged.workOrderStatuses];
@@ -132,6 +168,13 @@ export function mergeUserSettings(stored) {
     merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(rawBoard, merged.workOrderStatuses);
   }
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
+  merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
+  merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
+  merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
+  merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
+    merged.workOrderStatusTileColors,
+    merged.workOrderStatuses
+  );
   return merged;
 }
 
@@ -199,6 +242,23 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "inventoryLocations") {
       out.inventoryLocations = normalizeInventoryLocations(body[key]);
+      continue;
+    }
+    if (key === "workOrderStatusTileColors") {
+      out.workOrderStatusTileColors = sanitizeWorkOrderStatusTileColorsPatch(body[key]);
+      continue;
+    }
+    if (key === "prefixRepairJob" || key === "prefixInvoice" || key === "prefixWorkOrder") {
+      out[key] = sanitizeDocumentNumberPrefix(body[key]);
+      continue;
+    }
+    if (key === "controlledDropdowns") {
+      const woLeg = normalizeWorkOrderStatusList(body.workOrderStatuses);
+      const tilesLeg =
+        body.workOrderStatusTileColors && typeof body.workOrderStatusTileColors === "object"
+          ? body.workOrderStatusTileColors
+          : {};
+      out.controlledDropdowns = sanitizeControlledDropdownsPatch(body.controlledDropdowns, woLeg, tilesLeg);
       continue;
     }
     if (typeof body[key] === "boolean") {

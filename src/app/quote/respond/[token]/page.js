@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 export default function QuoteRespondPage() {
@@ -37,8 +38,21 @@ export default function QuoteRespondPage() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
+
+  useEffect(() => {
+    if (!quote || typeof window === "undefined") return;
+    if (String(window.location.hash || "").toLowerCase() !== "#print") return;
+    const t = window.setTimeout(() => {
+      window.print();
+      const path = window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", path);
+    }, 450);
+    return () => window.clearTimeout(t);
+  }, [quote]);
 
   const handleRespond = async (action) => {
     if (!token || submitting) return;
@@ -163,10 +177,15 @@ export default function QuoteRespondPage() {
           </div>
 
           {/* Same layout as print: Motor Shop, Service Proposal title, Quote info, Customer & motor, Scope, Other Cost, Totals, Customer notes */}
-          <section className="mb-6 pb-4 border-b border-gray-200">
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Motor Shop</h2>
-            <p className="font-semibold text-gray-900">{quote.shop?.name || "—"}</p>
-            <p className="text-sm text-gray-500">{quote.shop?.contact || "—"}</p>
+          <section className="mb-6 border-b border-gray-200 pb-4">
+            <div className="flex flex-wrap items-start gap-3">
+              <PrintShopLogo logoUrl={quote.shopLogoUrl} alt="" />
+              <div className="min-w-0 flex-1">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Motor Shop</h2>
+                <p className="font-semibold text-gray-900">{quote.shop?.name || "—"}</p>
+                <p className="text-sm text-gray-500">{quote.shop?.contact || "—"}</p>
+              </div>
+            </div>
           </section>
           <div className="mb-6 border-b border-gray-200 pb-4">
             <CompanyAccountsPrint
@@ -253,6 +272,26 @@ export default function QuoteRespondPage() {
             <section>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Customer notes</h2>
               <p className="text-sm text-gray-900 whitespace-pre-wrap">{quote.customerNotes}</p>
+            </section>
+          )}
+
+          {Array.isArray(quote.attachments) && quote.attachments.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Attachments</h2>
+              <ul className="list-inside list-disc space-y-1 text-sm text-gray-900">
+                {quote.attachments.map((a, i) => (
+                  <li key={`${a.url}-${i}`}>
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-blue-700 underline hover:opacity-90"
+                    >
+                      {a.name || "Download"}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
         </div>

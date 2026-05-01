@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { createPortal } from "react-dom";
+import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   FiEdit2,
@@ -19,7 +18,7 @@ import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
-import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
+import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
 import { invoiceStatusLabel, invoiceStatusBadgeVariant } from "@/lib/invoice-status";
 import { invoiceLineTotal } from "@/lib/invoice-amounts";
@@ -37,11 +36,11 @@ function InvoicesInner() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [invoiceSort, setInvoiceSort] = useState({ key: null, direction: "asc" });
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [printPayload, setPrintPayload] = useState(null);
   const [sendingInvoiceId, setSendingInvoiceId] = useState(null);
-  const printRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,31 +71,6 @@ function InvoicesInner() {
     }
   }, [draftQuoteParam, openId, router]);
 
-  useEffect(() => {
-    if (!printOpen) return;
-    const styleId = "invoice-print-page-styles";
-    if (document.getElementById(styleId)) return;
-    const style = document.createElement("style");
-    style.id = styleId;
-    style.textContent = `
-      @media print {
-        body * { visibility: hidden; }
-        .invoice-print-preview, .invoice-print-preview * { visibility: visible; }
-        .invoice-print-preview {
-          position: fixed !important; left: 0 !important; top: 0 !important; right: 0 !important; bottom: 0 !important;
-          width: 100% !important; height: 100% !important; background: white !important; z-index: 99999 !important;
-          overflow: auto !important;
-        }
-        .invoice-print-preview .no-print { display: none !important; }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      const el = document.getElementById(styleId);
-      if (el) el.remove();
-    };
-  }, [printOpen]);
-
   const filteredRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return rows;
@@ -107,6 +81,53 @@ function InvoicesInner() {
       return hay.includes(q);
     });
   }, [rows, searchQuery]);
+
+  const sortedRows = useMemo(() => {
+    const sortKey = invoiceSort?.key;
+    const dir = invoiceSort?.direction === "desc" ? -1 : 1;
+    if (!sortKey) return filteredRows;
+
+    const comparePrimary = (a, b) => {
+      switch (sortKey) {
+        case "invoiceNumber": {
+          const va = String(a.invoiceNumber || "").toLowerCase();
+          const vb = String(b.invoiceNumber || "").toLowerCase();
+          return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+        }
+        case "customerName": {
+          const va = String(a.customerName || "").toLowerCase();
+          const vb = String(b.customerName || "").toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        case "date": {
+          const va = String(a.date || "").trim().toLowerCase();
+          const vb = String(b.date || "").trim().toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        case "totalAmount":
+          return (invoiceLineTotal(a) - invoiceLineTotal(b)) * dir;
+        case "status": {
+          const va = String(a.status || "").toLowerCase();
+          const vb = String(b.status || "").toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        default:
+          return 0;
+      }
+    };
+
+    const list = [...filteredRows];
+    list.sort((a, b) => {
+      const primary = comparePrimary(a, b);
+      if (primary !== 0) return primary;
+      return String(a.id || "").localeCompare(String(b.id || ""));
+    });
+    return list;
+  }, [filteredRows, invoiceSort]);
+
+  const handleInvoiceSort = useCallback((key, direction) => {
+    setInvoiceSort({ key, direction });
+  }, []);
 
   const statusSummaryCards = useMemo(() => {
     return [
@@ -136,14 +157,6 @@ function InvoicesInner() {
       },
     ];
   }, [rows]);
-
-  const runPrint = () => {
-    requestAnimationFrame(() => {
-      window.print();
-      setPrintOpen(false);
-      setPrintPayload(null);
-    });
-  };
 
   const handleDeleteCb = useCallback(
     async (row) => {
@@ -211,6 +224,7 @@ function InvoicesInner() {
           motorLabel: inv.motorLabel,
           fromShopName: inv.fromShopName || "",
           fromShopContact: inv.fromShopContact || "",
+          fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
           fromBillingAddress: inv.fromBillingAddress || "",
           fromPaymentTermsLabel:
             inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
@@ -294,17 +308,19 @@ function InvoicesInner() {
           </div>
         ),
       },
-      { key: "invoiceNumber", label: "Invoice#", clickable: true },
-      { key: "customerName", label: "Customer" },
-      { key: "date", label: "Date" },
+      { key: "invoiceNumber", label: "Invoice#", clickable: true, sortable: true },
+      { key: "customerName", label: "Customer", sortable: true },
+      { key: "date", label: "Date", sortable: true },
       {
         key: "totalAmount",
         label: "Total Amount",
+        sortable: true,
         render: (_, row) => fmt(invoiceLineTotal(row)),
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => (
           <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>
         ),
@@ -318,8 +334,7 @@ function InvoicesInner() {
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Invoices</h1>
         <p className="mt-2 text-sm text-secondary">
-          Create from a quote (opens here). Nothing is saved until you click Save. Then edit, send to client,
-          print, or delete from this list.
+          Bills from quotes—edit, send, print, and track payment.
         </p>
       </div>
 
@@ -338,10 +353,12 @@ function InvoicesInner() {
 
       <Table
         columns={columns}
-        data={filteredRows}
+        data={sortedRows}
         rowKey="id"
         loading={loading}
         fillHeight
+        sortState={invoiceSort}
+        onSort={handleInvoiceSort}
         searchable
         onSearch={setSearchQuery}
         searchPlaceholder="Search invoice#, customer, date, status…"
@@ -366,46 +383,14 @@ function InvoicesInner() {
         zIndex={55}
       />
 
-      {printOpen && printPayload && typeof document !== "undefined"
-        ? createPortal(
-            <div
-              ref={printRef}
-              className="invoice-print-preview fixed inset-0 overflow-auto bg-card p-6 text-title"
-              style={{ zIndex: 99999 }}
-            >
-              <div className="no-print mb-4 flex justify-end gap-2 border-b border-border pb-4">
-                <Button type="button" variant="outline" size="sm" onClick={runPrint}>
-                  <FiPrinter className="mr-1.5 inline h-4 w-4" />
-                  Print
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setPrintOpen(false);
-                    setPrintPayload(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-              <InvoicePrintPreview
-                invoice={printPayload.invoice}
-                motorLabel={printPayload.motorLabel}
-                fromShopName={printPayload.fromShopName}
-                fromShopContact={printPayload.fromShopContact}
-                fromBillingAddress={printPayload.fromBillingAddress}
-                fromPaymentTermsLabel={printPayload.fromPaymentTermsLabel}
-                customerToName={printPayload.customerToName}
-                customerBillingAddress={printPayload.customerBillingAddress}
-                invoicePaymentOptions={printPayload.invoicePaymentOptions}
-                invoiceThankYouNote={printPayload.invoiceThankYouNote}
-              />
-            </div>,
-            document.body
-          )
-        : null}
+      <InvoicePrintOffscreen
+        open={printOpen}
+        payload={printPayload}
+        onClose={() => {
+          setPrintOpen(false);
+          setPrintPayload(null);
+        }}
+      />
     </div>
   );
 }

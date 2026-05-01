@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Settings",
-  description: "Your CRM preferences and account options.",
+  description: "Shop defaults, display, billing, and integrations.",
 };
 
 export default function SettingsLayout({ children }) {

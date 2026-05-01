@@ -60,6 +60,14 @@ export async function GET(request) {
       customerTaxPercent: String(normalizeTaxPercent(doc.customerTaxPercent)),
       estimatedCompletion: doc.estimatedCompletion ?? "",
       customerNotes: doc.customerNotes ?? "",
+      attachments: Array.isArray(doc.attachments)
+        ? doc.attachments
+            .map((a) => ({
+              url: String(a?.url ?? "").trim(),
+              name: String(a?.name ?? "").trim() || "Attachment",
+            }))
+            .filter((a) => a.url)
+        : [],
       shop: {
         name: owner?.shopName?.trim() || "",
         address: "",
@@ -67,6 +75,7 @@ export async function GET(request) {
       },
       accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
       accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
+      shopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       accountsPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       respondedAt:
         doc.respondedAt

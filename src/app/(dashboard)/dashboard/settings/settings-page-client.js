@@ -8,11 +8,11 @@ import Textarea from "@/components/ui/textarea";
 import Input from "@/components/ui/input";
 import Tabs from "@/components/ui/tabs";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import SettingsDataUploadPanel from "@/components/dashboard/settings-data-upload-panel";
+import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
 import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
@@ -463,145 +463,50 @@ export default function SettingsPageClient() {
               </div>
             </FormContainer>
             <FormContainer>
-              <FormSectionTitle as="h2">Work order statuses</FormSectionTitle>
-              <p className="mb-3 text-sm text-secondary">
-                List every status technicians can set on a work order (one per line, top to bottom = dropdown order). Then choose which of those appear as columns on the{" "}
-                <span className="font-medium text-title">Shop floor job board</span> and in what order (left to right).
+              <FormSectionTitle as="h2">Document number prefixes</FormSectionTitle>
+              <p className="mb-4 max-w-[42rem] text-sm text-secondary">
+                Applied when creating new repair jobs, invoices (from a quote), and work orders. Letters, digits, hyphen,
+                and underscore only (max 16 characters). Hyphens are added automatically if you omit one (e.g.{" "}
+                <span className="font-mono text-title">ACME</span> becomes <span className="font-mono text-title">ACME-</span>
+                ).
               </p>
-              <Textarea
-                label="All statuses (one per line)"
-                value={Array.isArray(draft.workOrderStatuses) ? draft.workOrderStatuses.join("\n") : ""}
-                onChange={(e) => {
-                  const workOrderStatuses = e.target.value
-                    .split("\n")
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .slice(0, 25);
-                  setDraft((prev) => ({
-                    ...prev,
-                    workOrderStatuses,
-                    shopFloorBoardOrder: (Array.isArray(prev.shopFloorBoardOrder)
-                      ? prev.shopFloorBoardOrder
-                      : []
-                    ).filter((s) => workOrderStatuses.includes(s)),
-                  }));
-                }}
-                rows={8}
-                placeholder={"Assigned\nIn Progress\nWaiting Parts\nQC\nCompleted"}
-              />
-              <div className="mt-6 rounded-lg border border-border bg-form-bg/80 p-4">
-                <p className="mb-1 text-sm font-medium text-title">Shop floor job board columns</p>
-                <p className="mb-4 text-xs text-secondary">
-                  Only statuses below appear as swimlanes on the job board. Use ↑ ↓ to change column order. Add others from the list when you need them on the floor.
-                </p>
-                {(() => {
-                  const statuses = Array.isArray(draft.workOrderStatuses) ? draft.workOrderStatuses : [];
-                  const board = Array.isArray(draft.shopFloorBoardOrder)
-                    ? draft.shopFloorBoardOrder.filter((s) => statuses.includes(s))
-                    : [];
-                  const notOnBoard = statuses.filter((s) => !board.includes(s));
-                  const move = (label, delta) => {
-                    setDraft((prev) => {
-                      const st = Array.isArray(prev.workOrderStatuses) ? prev.workOrderStatuses : [];
-                      let b = (Array.isArray(prev.shopFloorBoardOrder) ? prev.shopFloorBoardOrder : []).filter(
-                        (x) => st.includes(x)
-                      );
-                      const i = b.indexOf(label);
-                      if (i < 0) return prev;
-                      const j = i + delta;
-                      if (j < 0 || j >= b.length) return prev;
-                      const next = [...b];
-                      [next[i], next[j]] = [next[j], next[i]];
-                      return { ...prev, shopFloorBoardOrder: next };
-                    });
-                  };
-                  return (
-                    <>
-                      {board.length === 0 ? (
-                        <p className="mb-3 text-sm text-secondary">
-                          No columns on the board yet. Add statuses from the list below — work orders still use every status above; jobs only show under columns you add, plus any extra status that has open jobs.
-                        </p>
-                      ) : (
-                        <ul className="mb-4 space-y-2">
-                          {board.map((label) => (
-                            <li
-                              key={label}
-                              className="flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm"
-                            >
-                              <span className="min-w-0 flex-1 font-medium text-title">{label}</span>
-                              <div className="flex shrink-0 gap-1">
-                                <button
-                                  type="button"
-                                  className="rounded p-1.5 text-secondary hover:bg-card hover:text-title"
-                                  aria-label={`Move ${label} left`}
-                                  onClick={() => move(label, -1)}
-                                >
-                                  <FiChevronUp className="h-4 w-4 -rotate-90" aria-hidden />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="rounded p-1.5 text-secondary hover:bg-card hover:text-title"
-                                  aria-label={`Move ${label} right`}
-                                  onClick={() => move(label, 1)}
-                                >
-                                  <FiChevronDown className="h-4 w-4 -rotate-90" aria-hidden />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="ml-1 rounded border border-border px-2 py-1 text-xs text-secondary hover:bg-danger/10 hover:text-danger"
-                                  onClick={() =>
-                                    setDraft((prev) => ({
-                                      ...prev,
-                                      shopFloorBoardOrder: (
-                                        Array.isArray(prev.shopFloorBoardOrder) ? prev.shopFloorBoardOrder : []
-                                      ).filter((x) => x !== label),
-                                    }))
-                                  }
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      {notOnBoard.length > 0 && (
-                        <div>
-                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-secondary">
-                            Not on job board
-                          </p>
-                          <div className="flex flex-wrap gap-2">
-                            {notOnBoard.map((label) => (
-                              <button
-                                key={label}
-                                type="button"
-                                className="rounded-full border border-border bg-bg px-3 py-1.5 text-sm text-primary hover:bg-primary/10"
-                                onClick={() =>
-                                  setDraft((prev) => {
-                                    const st = Array.isArray(prev.workOrderStatuses)
-                                      ? prev.workOrderStatuses
-                                      : [];
-                                    let b = (
-                                      Array.isArray(prev.shopFloorBoardOrder) ? prev.shopFloorBoardOrder : []
-                                    ).filter((x) => st.includes(x));
-                                    if (b.includes(label)) return prev;
-                                    return { ...prev, shopFloorBoardOrder: [...b, label] };
-                                  })
-                                }
-                              >
-                                + {label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
+              <div className="flex max-w-md flex-col gap-4">
+                <Input
+                  label="Repair job prefix"
+                  value={draft.prefixRepairJob ?? ""}
+                  onChange={(e) => updateDraft({ prefixRepairJob: e.target.value })}
+                  placeholder="RF-"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">Leave blank for default RF-00001 style.</p>
+                <Input
+                  label="Invoice prefix"
+                  value={draft.prefixInvoice ?? ""}
+                  onChange={(e) => updateDraft({ prefixInvoice: e.target.value })}
+                  placeholder="Optional"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">Prepended to the quote RFQ# on new invoices (e.g. INV- + A00001).</p>
+                <Input
+                  label="Work order prefix"
+                  value={draft.prefixWorkOrder ?? ""}
+                  onChange={(e) => updateDraft({ prefixWorkOrder: e.target.value })}
+                  placeholder="W-"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">Replaces the default W- before the RFQ or job segment (e.g. WO-A00001-1).</p>
               </div>
             </FormContainer>
           </div>
         ),
+      },
+      {
+        id: "dropdowns",
+        label: "Dropdowns",
+        children: <SettingsControlledDropdownsPanel draft={draft} setDraft={setDraft} />,
       },
       {
         id: "inventory",
@@ -664,8 +569,11 @@ export default function SettingsPageClient() {
       draft.marketingTips,
       draft.tablePageSize,
       draft.weekStartsOn,
-      draft.workOrderStatuses,
-      draft.shopFloorBoardOrder,
+      draft.prefixRepairJob,
+      draft.prefixInvoice,
+      draft.prefixWorkOrder,
+      draft.workOrderStatusTileColors,
+      draft.controlledDropdowns,
       draft.inventoryLocations,
       logoUploading,
       user?.email,
@@ -690,7 +598,7 @@ export default function SettingsPageClient() {
       <div className="mb-8 shrink-0 border-b border-border pb-6">
         <h1 className="text-2xl font-bold text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">
-          Preferences for your account. More options will appear here over time.
+          Shop defaults, display, billing, and integrations.
         </p>
       </div>
 

@@ -18,6 +18,7 @@ import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import PoPrintPreview from "@/components/dashboard/po-print-preview";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "40%" },
@@ -611,6 +612,16 @@ export default function DashboardPurchaseOrdersPage() {
     });
   }, [pos, searchQuery, vendorNameMap]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedPos = useMemo(
+    () =>
+      sortRowsClient(filteredPos, tableSort, (row, key) =>
+        key === "vendor" ? vendorNameMap[row.vendorId] ?? "" : row[key]
+      ),
+    [filteredPos, tableSort, vendorNameMap]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -664,11 +675,13 @@ export default function DashboardPurchaseOrdersPage() {
       {
         key: "poNumber",
         label: "PO #",
+        sortable: true,
         render: (_, row) => row.poNumber || "—",
       },
       {
         key: "vendor",
         label: "Vendor",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -682,16 +695,19 @@ export default function DashboardPurchaseOrdersPage() {
       {
         key: "type",
         label: "Type",
+        sortable: true,
         render: (_, row) => (row.type === "job" ? "Job PO" : "Shop PO"),
       },
       {
         key: "rfqNumber",
         label: "RFQ#",
+        sortable: true,
         render: (_, row) => (row.type === "job" ? (row.rfqNumber || "—") : "—"),
       },
       {
         key: "deliveryStatus",
         label: "Delivered",
+        sortable: true,
         render: (_, row) => (
           <Badge variant={DELIVERY_STATUS_VARIANT[row.deliveryStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">
             {row.deliveryStatus ?? "Partial"}
@@ -701,6 +717,7 @@ export default function DashboardPurchaseOrdersPage() {
       {
         key: "invoicedStatus",
         label: "Invoiced",
+        sortable: true,
         render: (_, row) => (
           <Badge variant={INVOICED_STATUS_VARIANT[row.invoicedStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">
             {row.invoicedStatus ?? "—"}
@@ -710,6 +727,7 @@ export default function DashboardPurchaseOrdersPage() {
       {
         key: "paidStatus",
         label: "Paid",
+        sortable: true,
         render: (_, row) => (
           <Badge variant={PAID_STATUS_VARIANT[row.paidStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">
             {row.paidStatus ?? "—"}
@@ -719,16 +737,19 @@ export default function DashboardPurchaseOrdersPage() {
       {
         key: "totalOrder",
         label: "Order total",
+        sortable: true,
         render: (_, row) => (row.totalOrder ? fmt(row.totalOrder) : "—"),
       },
       {
         key: "totalInvoiced",
         label: "Invoiced",
+        sortable: true,
         render: (_, row) => (row.totalInvoiced ? fmt(row.totalInvoiced) : "—"),
       },
       {
         key: "totalPaid",
         label: "Paid",
+        sortable: true,
         render: (_, row) => (row.totalPaid ? fmt(row.totalPaid) : "—"),
       },
     ],
@@ -752,14 +773,14 @@ export default function DashboardPurchaseOrdersPage() {
           </Button>
         </div>
         <p className="mt-1 text-sm text-secondary">
-          Create PO to vendor. Attach vendor invoices, record payments. Invoiced/Paid status; Delivered when all items are Received (via logistics).
+          Vendor POs with invoices, receipts, and payments.
         </p>
       </div>
 
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredPos}
+          data={sortedPos}
           rowKey="id"
           loading={loading}
           emptyMessage={pos.length === 0 ? "No purchase orders yet. Use “Create Purchase Order” to add one." : "No purchase orders match the search."}
@@ -767,6 +788,8 @@ export default function DashboardPurchaseOrdersPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search PO #, vendor, RFQ#, status…"
           onRefresh={async () => { setLoading(true); await loadPos(); setLoading(false); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

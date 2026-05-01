@@ -14,6 +14,11 @@ const vendorSchema = new mongoose.Schema(
     partsSupplied: [{ type: String, trim: true }],
     paymentTerms: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },
+    /** Uploaded files (dashboard): { url, name } */
+    attachments: {
+      type: [{ url: { type: String, trim: true }, name: { type: String, trim: true } }],
+      default: [],
+    },
     /** Import metadata for external system linking */
     sourceSystem: { type: String, default: "", trim: true },
     externalRef: { type: String, default: "", trim: true },

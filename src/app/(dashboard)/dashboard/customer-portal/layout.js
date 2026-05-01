@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Customer portal",
-  description: "Share portal links so customers can view motors, repair status, and history.",
+  description: "Customer links for motors, quotes, and history.",
 };
 
 export default function CustomerPortalLayout({ children }) {

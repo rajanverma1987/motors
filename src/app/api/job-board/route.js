@@ -56,6 +56,7 @@ export async function POST(request) {
       workOrders,
       workOrderStatuses: merged.workOrderStatuses,
       shopFloorBoardOrder: merged.shopFloorBoardOrder,
+      workOrderStatusTileColors: merged.workOrderStatusTileColors || {},
     });
   } catch (err) {
     console.error("Public job board POST error:", err);

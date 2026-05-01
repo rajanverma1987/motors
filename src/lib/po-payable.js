@@ -37,6 +37,25 @@ export function poBalanceDue(po) {
   return Math.max(0, Math.round((inv - paid) * 100) / 100);
 }
 
+/**
+ * Outstanding for vendor-facing PO print: unpaid on recorded vendor bills when any exist;
+ * otherwise order total minus payments (PO commitment before bills are entered).
+ */
+export function poBalanceDueVendorFacing(po) {
+  const invoiced = sumVendorInvoiced(po);
+  const paid = sumVendorPayments(po);
+  if (invoiced > 0) {
+    return Math.max(0, Math.round((invoiced - paid) * 100) / 100);
+  }
+  const rawOrder = po?.totalOrder;
+  let orderNum =
+    rawOrder != null && rawOrder !== "" && Number.isFinite(parseFloat(rawOrder))
+      ? parseFloat(rawOrder)
+      : poLineOrderTotal(po);
+  if (!Number.isFinite(orderNum)) orderNum = 0;
+  return Math.max(0, Math.round((orderNum - paid) * 100) / 100);
+}
+
 /** Latest vendor invoice date (YYYY-MM-DD) for aging; null if none. */
 export function latestVendorInvoiceDate(po) {
   const inv = Array.isArray(po?.vendorInvoices) ? po.vendorInvoices : [];

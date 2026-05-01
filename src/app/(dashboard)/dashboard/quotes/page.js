@@ -11,6 +11,7 @@ import {
   FiRotateCw,
   FiFileText,
   FiDollarSign,
+  FiTool,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -20,29 +21,24 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
-import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { quoteStatusSelectOptionsFromMerged, quoteStatusTileColorForValue } from "@/lib/dropdown-catalog";
+import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
 import { useAuth } from "@/contexts/auth-context";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
+import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 /** Icons in modal Actions dropdown menu rows */
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
-
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "sent", label: "Sent" },
-  { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
-  { value: "rnr", label: "RNR (Return No Repair)" },
-];
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -216,6 +212,7 @@ export default function DashboardQuotesPage() {
   const [savingQuote, setSavingQuote] = useState(false);
   const [quotePrintId, setQuotePrintId] = useState(null);
   const [invoiceModal, setInvoiceModal] = useState(null);
+  const [workOrderModal, setWorkOrderModal] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -225,6 +222,12 @@ export default function DashboardQuotesPage() {
   const [savingMotor, setSavingMotor] = useState(false);
 
   const fmt = useFormatMoney();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const statusSelectOptions = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
 
   const openAddMotorModal = () => {
     const custId = form.customerId || formRef.current?.customerId;
@@ -612,6 +615,8 @@ export default function DashboardQuotesPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [quoteSort, setQuoteSort] = useState({ key: null, direction: "asc" });
+
   const filteredQuotes = useMemo(() => {
     let list = quotes;
     if (statusFilter && statusFilter.trim()) {
@@ -620,15 +625,87 @@ export default function DashboardQuotesPage() {
     }
     const q = searchQuery.trim().toLowerCase();
     if (!q) return list;
+    const labelFor = (qt) =>
+      statusSelectOptions.find((o) => o.value === (qt.status || "draft").toLowerCase())?.label ?? "";
     return list.filter(
       (qt) =>
         (qt.rfqNumber || "").toLowerCase().includes(q) ||
         (customerNameMap[qt.customerId] || "").toLowerCase().includes(q) ||
         (motorLabelMap[qt.motorId] || "").toLowerCase().includes(q) ||
         (qt.status || "").toLowerCase().includes(q) ||
+        labelFor(qt).toLowerCase().includes(q) ||
         (qt.repairScope || "").toLowerCase().includes(q)
     );
-  }, [quotes, searchQuery, statusFilter, customerNameMap, motorLabelMap]);
+  }, [quotes, searchQuery, statusFilter, customerNameMap, motorLabelMap, statusSelectOptions]);
+
+  const sortedQuotes = useMemo(() => {
+    const sortKey = quoteSort?.key;
+    const dir = quoteSort?.direction === "desc" ? -1 : 1;
+    if (!sortKey) return filteredQuotes;
+
+    const quoteGrandTotal = (row) =>
+      computeTotalsFromLaborAndParts({
+        laborTotal: row?.laborTotal,
+        partsTotal: row?.partsTotal,
+        taxExempt: row?.customerTaxExempt,
+        taxPercent: row?.customerTaxPercent,
+      }).grandTotal ?? 0;
+
+    const parseMoney = (v) => {
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    const comparePrimary = (a, b) => {
+      switch (sortKey) {
+        case "rfqNumber": {
+          const va = String(a.rfqNumber || "").toLowerCase();
+          const vb = String(b.rfqNumber || "").toLowerCase();
+          return va.localeCompare(vb, undefined, { numeric: true }) * dir;
+        }
+        case "customer": {
+          const va = String(customerNameMap[a.customerId] || a.customerId || "").toLowerCase();
+          const vb = String(customerNameMap[b.customerId] || b.customerId || "").toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        case "motor": {
+          const va = String(motorLabelMap[a.motorId] || a.motorId || "").toLowerCase();
+          const vb = String(motorLabelMap[b.motorId] || b.motorId || "").toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        case "status": {
+          const va = String(a.status || "draft").toLowerCase();
+          const vb = String(b.status || "draft").toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        case "laborTotal":
+          return (parseMoney(a.laborTotal) - parseMoney(b.laborTotal)) * dir;
+        case "partsTotal":
+          return (parseMoney(a.partsTotal) - parseMoney(b.partsTotal)) * dir;
+        case "grandTotal":
+          return (quoteGrandTotal(a) - quoteGrandTotal(b)) * dir;
+        case "estimatedCompletion": {
+          const va = String(a.estimatedCompletion || "").trim().toLowerCase();
+          const vb = String(b.estimatedCompletion || "").trim().toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
+        default:
+          return 0;
+      }
+    };
+
+    const list = [...filteredQuotes];
+    list.sort((a, b) => {
+      const primary = comparePrimary(a, b);
+      if (primary !== 0) return primary;
+      return String(a.id || "").localeCompare(String(b.id || ""));
+    });
+    return list;
+  }, [filteredQuotes, quoteSort, customerNameMap, motorLabelMap]);
+
+  const handleQuoteSort = useCallback((key, direction) => {
+    setQuoteSort({ key, direction });
+  }, []);
 
   const statusSummaryCards = useMemo(() => {
     const calcAmount = (quote) => {
@@ -639,41 +716,28 @@ export default function DashboardQuotesPage() {
         taxPercent: quote?.customerTaxPercent,
       }).grandTotal;
     };
-    return [
-      {
-        key: "draft",
-        label: "Draft",
-        count: quotes.filter((q) => (q.status || "draft") === "draft").length,
-        amount: quotes
-          .filter((q) => (q.status || "draft") === "draft")
-          .reduce((sum, q) => sum + calcAmount(q), 0),
-      },
-      {
-        key: "sent",
-        label: "Sent",
-        count: quotes.filter((q) => (q.status || "draft") === "sent").length,
-        amount: quotes
-          .filter((q) => (q.status || "draft") === "sent")
-          .reduce((sum, q) => sum + calcAmount(q), 0),
-      },
-      {
-        key: "approved",
-        label: "Approved",
-        count: quotes.filter((q) => (q.status || "draft") === "approved").length,
-        amount: quotes
-          .filter((q) => (q.status || "draft") === "approved")
-          .reduce((sum, q) => sum + calcAmount(q), 0),
-      },
-      {
-        key: "rejected_rnr",
-        label: "Rejected + RNR",
-        count: quotes.filter((q) => ["rejected", "rnr"].includes(q.status || "draft")).length,
-        amount: quotes
-          .filter((q) => ["rejected", "rnr"].includes(q.status || "draft"))
-          .reduce((sum, q) => sum + calcAmount(q), 0),
-      },
-    ];
-  }, [quotes]);
+    const keysLower = new Set(statusSelectOptions.map((o) => o.value.toLowerCase()));
+    const cards = statusSelectOptions.map((opt) => {
+      const v = opt.value.toLowerCase();
+      const matches = (q) => (q.status || "draft").toLowerCase() === v;
+      return {
+        key: opt.value,
+        label: opt.label,
+        count: quotes.filter(matches).length,
+        amount: quotes.filter(matches).reduce((sum, q) => sum + calcAmount(q), 0),
+      };
+    });
+    const orphans = quotes.filter((q) => !keysLower.has((q.status || "draft").toLowerCase()));
+    if (orphans.length) {
+      cards.push({
+        key: "__other__",
+        label: "Not in dropdown list",
+        count: orphans.length,
+        amount: orphans.reduce((sum, q) => sum + calcAmount(q), 0),
+      });
+    }
+    return cards;
+  }, [quotes, statusSelectOptions]);
 
   const columns = useMemo(
     () => [
@@ -683,6 +747,7 @@ export default function DashboardQuotesPage() {
         render: (_, row) => {
           const isSending = sendingQuoteId === row.id;
           const isDeleting = deletingQuoteId === row.id;
+          const isApproved = (row.status || "draft").toLowerCase() === "approved";
           return (
             <div className="flex items-center gap-1">
               <button
@@ -728,6 +793,20 @@ export default function DashboardQuotesPage() {
               </button>
               <button
                 type="button"
+                onClick={() => setWorkOrderModal({ draftQuoteId: row.id })}
+                disabled={!isApproved}
+                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={isApproved ? "Create work order" : "Create work order (approved quotes only)"}
+                title={
+                  isApproved
+                    ? "Create work order"
+                    : "Set status to Approved to create a work order"
+                }
+              >
+                <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
                 onClick={() =>
                   setInvoiceModal({
                     draftQuoteId: row.id,
@@ -748,6 +827,7 @@ export default function DashboardQuotesPage() {
       {
         key: "rfqNumber",
         label: "RFQ#",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -761,41 +841,56 @@ export default function DashboardQuotesPage() {
       {
         key: "customer",
         label: "Customer",
+        sortable: true,
         render: (_, row) => customerNameMap[row.customerId] || row.customerId || "—",
       },
       {
         key: "motor",
         label: "Motor",
+        sortable: true,
         render: (_, row) => motorLabelMap[row.motorId] || row.motorId || "—",
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (_, row) => {
           const s = (row.status || "draft").toLowerCase();
-          const variantMap = { draft: "default", sent: "primary", approved: "success", rejected: "danger", rnr: "warning" };
-          const variant = variantMap[s] || "default";
-          const label = STATUS_OPTIONS.find((o) => o.value === s)?.label ?? s.charAt(0).toUpperCase() + s.slice(1);
+          const optIdx = statusSelectOptions.findIndex((o) => o.value.toLowerCase() === s);
+          const { tileColor, index } = quoteStatusTileColorForValue(
+            mergedSettings,
+            s,
+            optIdx >= 0 ? optIdx : 0
+          );
+          const pillClass = resolveTilePresetClass(tileColor, index);
+          const label =
+            statusSelectOptions.find((o) => o.value === s)?.label ??
+            s.charAt(0).toUpperCase() + s.slice(1);
           return (
-            <Badge variant={variant} className="rounded-full px-2.5 py-0.5 text-xs">
+            <span
+              className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs ring-1 ring-inset ${pillClass}`}
+            >
               {label}
-            </Badge>
+            </span>
           );
         },
       },
       {
         key: "laborTotal",
         label: "Labor",
+        sortable: true,
         render: (_, row) => (row.laborTotal ? fmt(row.laborTotal) : "—"),
       },
       {
         key: "partsTotal",
         label: "Other Cost",
+        sortable: true,
         render: (_, row) => (row.partsTotal ? fmt(row.partsTotal) : "—"),
       },
       {
         key: "grandTotal",
         label: "Grand Total",
+        sortable: true,
         render: (_, row) => {
           const totals = computeTotalsFromLaborAndParts({
             laborTotal: row.laborTotal,
@@ -806,7 +901,7 @@ export default function DashboardQuotesPage() {
           return totals.grandTotal ? fmt(totals.grandTotal) : "—";
         },
       },
-      { key: "estimatedCompletion", label: "Est. completion" },
+      { key: "estimatedCompletion", label: "Est. completion", sortable: true },
     ],
     [
       customerNameMap,
@@ -814,6 +909,8 @@ export default function DashboardQuotesPage() {
       sendingQuoteId,
       deletingQuoteId,
       fmt,
+      mergedSettings,
+      statusSelectOptions,
       router,
       openViewModal,
       openEditModal,
@@ -875,10 +972,7 @@ export default function DashboardQuotesPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Quotes</h1>
           <p className="mt-1 text-sm text-secondary">
-            View and edit RFQs and manage status. New repair RFQs and job actions (send, print, work order, sales
-            commission, Tag QR) are on Job Write-Up; create invoices from this page (row icon). Use the row icons here for
-            print/send/invoice on standalone quotes. File attachments for a repair job are on Job Write-Up →
-            Attachments.
+            RFQs and status—print, send, invoice, and work orders from here. New repair quotes live on Job Write-Up.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -886,10 +980,7 @@ export default function DashboardQuotesPage() {
             label="Filter by status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value ?? "")}
-            options={[
-              { value: "", label: "All" },
-              ...STATUS_OPTIONS,
-            ]}
+            options={[{ value: "", label: "All" }, ...statusSelectOptions]}
             searchable={false}
             placeholder="All statuses"
             className="w-44"
@@ -898,7 +989,7 @@ export default function DashboardQuotesPage() {
       </div>
 
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {statusSummaryCards.map((card) => (
             <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
               <div className="flex items-center gap-2 text-sm text-secondary">
@@ -912,9 +1003,11 @@ export default function DashboardQuotesPage() {
         </div>
         <Table
           columns={columns}
-          data={filteredQuotes}
+          data={sortedQuotes}
           rowKey="id"
           loading={loading}
+          sortState={quoteSort}
+          onSort={handleQuoteSort}
           emptyMessage={
             quotes.length === 0
               ? "No quotes yet. Create repair jobs and RFQs from Job Write-Up."
@@ -1091,7 +1184,14 @@ export default function DashboardQuotesPage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Status & totals</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div><dt className="text-secondary">Status</dt><dd className="text-title">{STATUS_OPTIONS.find((o) => o.value === (viewingQuote.status || ""))?.label ?? (viewingQuote.status || "—")}</dd></div>
+                <div>
+                  <dt className="text-secondary">Status</dt>
+                  <dd className="text-title">
+                    {statusSelectOptions.find(
+                      (o) => o.value === (viewingQuote.status || "draft").toLowerCase()
+                    )?.label ?? (viewingQuote.status || "—")}
+                  </dd>
+                </div>
                 <div><dt className="text-secondary">Scope total</dt><dd className="text-title">{viewingQuote.laborTotal ? fmt(viewingQuote.laborTotal) : "—"}</dd></div>
                 <div><dt className="text-secondary">Other Cost total</dt><dd className="text-title">{viewingQuote.partsTotal ? fmt(viewingQuote.partsTotal) : "—"}</dd></div>
                 <div><dt className="text-secondary">Tax %</dt><dd className="text-title">{normalizeTaxExempt(viewingQuote.customerTaxExempt) ? "0" : normalizeTaxPercent(viewingQuote.customerTaxPercent)}</dd></div>
@@ -1176,9 +1276,15 @@ export default function DashboardQuotesPage() {
                 <ul className="space-y-1.5 text-sm">
                   {(viewingQuote.statusLog ?? []).map((entry, i) => (
                     <li key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-secondary">
-                      <span className="font-medium text-title">{STATUS_OPTIONS.find((o) => o.value === (entry.from || "draft"))?.label ?? (entry.from || "draft")}</span>
+                      <span className="font-medium text-title">
+                        {statusSelectOptions.find((o) => o.value === String(entry.from || "draft").toLowerCase())
+                          ?.label ?? (entry.from || "draft")}
+                      </span>
                       <span>→</span>
-                      <span className="font-medium text-title">{STATUS_OPTIONS.find((o) => o.value === (entry.to))?.label ?? (entry.to || "—")}</span>
+                      <span className="font-medium text-title">
+                        {statusSelectOptions.find((o) => o.value === String(entry.to || "").toLowerCase())?.label ??
+                          (entry.to || "—")}
+                      </span>
                       {entry.at && (
                         <span className="text-xs">
                           {new Date(entry.at).toLocaleString()}
@@ -1261,7 +1367,7 @@ export default function DashboardQuotesPage() {
               />
               <Select
                 label="Status"
-                options={STATUS_OPTIONS}
+                options={statusSelectOptions}
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "draft" }))}
                 placeholder="Status"
@@ -1438,6 +1544,14 @@ export default function DashboardQuotesPage() {
           onClose={() => setQuotePrintId(null)}
         />
       ) : null}
+
+      <WorkOrderFormModal
+        open={!!workOrderModal}
+        draftQuoteId={workOrderModal?.draftQuoteId ?? null}
+        workOrderId={null}
+        onClose={() => setWorkOrderModal(null)}
+        zIndex={60}
+      />
 
       <InvoiceFormModal
         open={!!invoiceModal}

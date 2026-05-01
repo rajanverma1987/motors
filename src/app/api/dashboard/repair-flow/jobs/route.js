@@ -6,6 +6,9 @@ import MotorRepairJob from "@/models/MotorRepairJob";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
 import { applyMotorNameplateFields } from "@/lib/motor-nameplate-patch";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { effectiveRepairJobNumberPrefix } from "@/lib/document-number-prefixes";
 
 function toPublicJob(doc) {
   if (!doc) return null;
@@ -17,9 +20,17 @@ function toPublicJob(doc) {
   };
 }
 
-async function nextJobNumber(email) {
-  const n = await MotorRepairJob.countDocuments({ createdByEmail: email });
-  return `RF-${String(n + 1).padStart(5, "0")}`;
+async function nextJobNumber(email, mergedSettings) {
+  const prefix = effectiveRepairJobNumberPrefix(mergedSettings);
+  const esc = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const jobs = await MotorRepairJob.find({ createdByEmail: email }, { jobNumber: 1 }).lean();
+  let maxNum = 0;
+  const re = new RegExp(`^${esc}(\\d+)$`);
+  for (const j of jobs) {
+    const m = (j.jobNumber || "").match(re);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  }
+  return `${prefix}${String(maxNum + 1).padStart(5, "0")}`;
 }
 
 export async function GET(request) {
@@ -94,7 +105,9 @@ export async function POST(request) {
       await motorDoc.save();
     }
 
-    const jobNumber = await nextJobNumber(email);
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const jobNumber = await nextJobNumber(email, u);
     const doc = await MotorRepairJob.create({
       createdByEmail: email,
       jobNumber,

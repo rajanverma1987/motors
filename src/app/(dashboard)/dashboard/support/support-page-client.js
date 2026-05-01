@@ -9,6 +9,7 @@ import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const CATEGORIES = [
   { value: "bug", label: "Bug / something broken" },
@@ -232,26 +233,46 @@ export default function SupportPageClient() {
     }
   }
 
+  const getTicketSortValue = useCallback((row, key) => {
+    if (key === "updatedAt") {
+      const t = row?.updatedAt ? new Date(row.updatedAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    if (key === "category") return CATEGORIES.find((c) => c.value === row?.category)?.label || row?.category || "";
+    if (key === "status") return STATUS_LABEL[row?.status] || row?.status || "";
+    return row?.[key];
+  }, []);
+
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedTickets = useMemo(
+    () => sortRowsClient(tickets, tableSort, getTicketSortValue),
+    [tickets, tableSort, getTicketSortValue]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
-      { key: "ticketRef", label: "Ticket", clickable: true },
-      { key: "subject", label: "Subject", clickable: true },
+      { key: "ticketRef", label: "Ticket", clickable: true, sortable: true },
+      { key: "subject", label: "Subject", clickable: true, sortable: true },
       {
         key: "category",
         label: "Category",
         clickable: true,
+        sortable: true,
         render: (v) => CATEGORIES.find((c) => c.value === v)?.label || v,
       },
       {
         key: "status",
         label: "Status",
         clickable: true,
+        sortable: true,
         render: (v) => STATUS_LABEL[v] || v,
       },
       {
         key: "updatedAt",
         label: "Updated",
         clickable: true,
+        sortable: true,
         render: (v) => fmtDate(v),
       },
     ],
@@ -265,7 +286,7 @@ export default function SupportPageClient() {
           <div>
             <h1 className="text-2xl font-bold text-title">Support</h1>
             <p className="mt-1 text-sm text-secondary">
-              Report bugs or ask for help. Our team reads every ticket and replies here.
+              Bugs and questions—we reply in-thread.
             </p>
           </div>
           <div className="flex gap-2">
@@ -282,11 +303,13 @@ export default function SupportPageClient() {
       <div className="flex min-h-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={tickets}
+          data={sortedTickets}
           rowKey="id"
           loading={loading}
           fillHeight
           emptyMessage="No tickets yet. Use New ticket to contact support."
+          sortState={tableSort}
+          onSort={handleTableSort}
           onCellClick={(row) => openDetail(row)}
         />
       </div>

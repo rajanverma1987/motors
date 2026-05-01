@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Vendor from "@/models/Vendor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { normalizeVendorAttachmentsFromClient } from "@/lib/vendor-attachments";
 
 const MAX_PARTS_ITEMS = 100;
 /** Normalize to array of strings (accepts array of strings or array of { item } from frontend) */
@@ -46,6 +47,10 @@ export async function GET(request, context) {
     } else if (typeof doc.partsSupplied === "string" && doc.partsSupplied.trim()) {
       partsSupplied = [doc.partsSupplied.trim()];
     }
+    const attachmentsRaw = doc.attachments;
+    const attachments = Array.isArray(attachmentsRaw)
+      ? attachmentsRaw.map((a) => ({ url: a?.url ?? "", name: a?.name ?? (a?.url ?? "") }))
+      : [];
     const out = {
       id: doc._id.toString(),
       name: doc.name ?? "",
@@ -59,6 +64,8 @@ export async function GET(request, context) {
       partsSupplied,
       paymentTerms: doc.paymentTerms ?? "",
       notes: doc.notes ?? "",
+      attachments,
+      attachmentCount: attachments.length,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -101,6 +108,7 @@ export async function PATCH(request, context) {
       partsSupplied,
       paymentTerms,
       notes,
+      attachments,
     } = body;
     if (name !== undefined) {
       if (!String(name).trim()) {
@@ -126,13 +134,21 @@ export async function PATCH(request, context) {
     }
     if (paymentTerms !== undefined) doc.paymentTerms = clampString(paymentTerms, LIMITS.shortText.max);
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
+    if (attachments !== undefined) {
+      doc.attachments = normalizeVendorAttachmentsFromClient(attachments);
+      doc.markModified("attachments");
+    }
     await doc.save();
+    const vo = doc.toObject();
+    const att = Array.isArray(vo.attachments) ? vo.attachments : [];
     return NextResponse.json({
       ok: true,
       vendor: {
-        ...doc.toObject(),
+        ...vo,
         id: doc._id.toString(),
         _id: undefined,
+        attachments: att,
+        attachmentCount: att.length,
       },
     });
   } catch (err) {

@@ -4,6 +4,8 @@ import { connectDB } from "@/lib/db";
 import MotorRepairJob from "@/models/MotorRepairJob";
 import MotorRepairFlowQuote from "@/models/MotorRepairFlowQuote";
 import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
 
 function money(n) {
   const x = Number(n);
@@ -26,7 +28,12 @@ export async function GET(request) {
     }
 
     const ownerEmail = String(job.createdByEmail || "").trim().toLowerCase();
-    const owner = ownerEmail ? await User.findOne({ email: ownerEmail }).select("shopName").lean() : null;
+    const [owner, settingsDoc] = await Promise.all([
+      ownerEmail ? User.findOne({ email: ownerEmail }).select("shopName").lean() : Promise.resolve(null),
+      ownerEmail ? UserSettings.findOne({ ownerEmail }).lean() : Promise.resolve(null),
+    ]);
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const shopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
     const shopName =
       (owner?.shopName && String(owner.shopName).trim()) ||
       process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
@@ -37,6 +44,7 @@ export async function GET(request) {
         resolved: true,
         jobNumber: job.jobNumber || "",
         shopName,
+        shopLogoUrl,
         phase: job.phase,
         message:
           job.phase === "teardown_approved" || job.phase === "disassembly_detailed"
@@ -69,6 +77,7 @@ export async function GET(request) {
       resolved: false,
       jobNumber: job.jobNumber || "",
       shopName,
+      shopLogoUrl,
       quoteNotes: quote.quoteNotes || "",
       subtotal: money(subtotal),
       lineItems: lineItems.map((row) => ({

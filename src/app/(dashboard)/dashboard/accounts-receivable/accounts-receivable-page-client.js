@@ -21,6 +21,7 @@ import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { invoiceStatusLabel, invoiceStatusBadgeVariant } from "@/lib/invoice-status";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const TABS = [
   { id: "open", label: "Open (due)", include: "open" },
@@ -255,6 +256,14 @@ export default function AccountsReceivablePageClient() {
 
   const showAging = tab === "open" || tab === "customer";
 
+  const [arTableSort, setArTableSort] = useState({ key: null, direction: "asc" });
+  const arTableSource = tab === "paid" || tab === "draft" ? rows : filteredOpenRows;
+  const sortedArTableData = useMemo(
+    () => sortRowsClient(arTableSource, arTableSort),
+    [arTableSource, arTableSort]
+  );
+  const handleArTableSort = useCallback((key, direction) => setArTableSort({ key, direction }), []);
+
   const openColumns = useMemo(
     () => [
       {
@@ -270,6 +279,7 @@ export default function AccountsReceivablePageClient() {
       {
         key: "invoiceNumber",
         label: "Invoice#",
+        sortable: true,
         render: (v, row) => (
           <button
             type="button"
@@ -280,36 +290,42 @@ export default function AccountsReceivablePageClient() {
           </button>
         ),
       },
-      { key: "customerName", label: "Customer" },
-      { key: "date", label: "Date" },
+      { key: "customerName", label: "Customer", sortable: true },
+      { key: "date", label: "Date", sortable: true },
       {
         key: "invoiceTotal",
         label: "Total",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "amountPaid",
         label: "Paid",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "balance",
         label: "Balance",
+        sortable: true,
         render: (v) => <span className="tabular font-medium">{fmt(v)}</span>,
       },
       {
         key: "daysOutstanding",
         label: "Days",
+        sortable: true,
         render: (v) => (v != null ? v : "—"),
       },
       {
         key: "agingBucket",
         label: "Aging",
+        sortable: true,
         render: (v) => <span className="text-secondary">{v}</span>,
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>,
       },
     ],
@@ -321,6 +337,7 @@ export default function AccountsReceivablePageClient() {
       {
         key: "invoiceNumber",
         label: "Invoice#",
+        sortable: true,
         render: (v, row) => (
           <button
             type="button"
@@ -331,27 +348,31 @@ export default function AccountsReceivablePageClient() {
           </button>
         ),
       },
-      { key: "customerName", label: "Customer" },
-      { key: "date", label: "Date" },
+      { key: "customerName", label: "Customer", sortable: true },
+      { key: "date", label: "Date", sortable: true },
       {
         key: "invoiceTotal",
         label: "Total",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "amountPaid",
         label: "Paid",
+        sortable: true,
         render: (v) => <span className="tabular">{fmt(v)}</span>,
       },
       {
         key: "daysOutstanding",
         label: "Days",
+        sortable: true,
         render: (v) => (v != null ? v : "—"),
       },
-      { key: "agingBucket", label: "Aging" },
+      { key: "agingBucket", label: "Aging", sortable: true },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>,
       },
     ],
@@ -363,13 +384,7 @@ export default function AccountsReceivablePageClient() {
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Accounts receivable</h1>
         <p className="mt-2 text-sm text-secondary">
-          Record customer payments, track open balances, and export for accounting.{" "}
-          <strong>Overdue</strong> = open balance past your default payment terms (
-          {summary.overdueTermsLabel || "NET 30"}
-          {summary.overdueGraceDays != null && summary.overdueGraceDays > 0
-            ? ` — ${summary.overdueGraceDays}+ days from invoice date`
-            : " — due upon receipt; counted overdue after invoice date"}
-          ), set in Settings → Accounts.
+          Customer payments and open balances; export for accounting. Overdue follows Settings → Accounts.
         </p>
       </div>
 
@@ -506,10 +521,12 @@ export default function AccountsReceivablePageClient() {
       ) : (
         <Table
           columns={tab === "paid" ? paidHistoryColumns : openColumns}
-          data={tab === "paid" ? rows : tab === "draft" ? rows : filteredOpenRows}
+          data={sortedArTableData}
           rowKey="id"
           loading={loading}
           fillHeight
+          sortState={arTableSort}
+          onSort={handleArTableSort}
           emptyMessage={
             tab === "paid"
               ? "No paid invoices yet. Record payments on open invoices."

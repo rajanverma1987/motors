@@ -12,6 +12,7 @@ import Input from "@/components/ui/input";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const NEW_COMMISSION_INITIAL = {
   jobKey: "",
@@ -306,6 +307,31 @@ export default function DashboardSalesCommissionPage() {
     );
   }, [paidRows, searchPaid]);
 
+  const getCommissionSortValue = useCallback((row, key) => {
+    if (key === "jobNumber") return row.jobNumber || row.rfqNumber || "";
+    if (key === "paidAt" || key === "createdAt") {
+      const raw = row?.[key];
+      const t = raw ? new Date(raw).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    if (key === "amount") return row?.amount;
+    return row?.[key];
+  }, []);
+
+  const [unpaidSort, setUnpaidSort] = useState({ key: null, direction: "asc" });
+  const [paidSort, setPaidSort] = useState({ key: null, direction: "asc" });
+  const handleUnpaidSort = useCallback((key, direction) => setUnpaidSort({ key, direction }), []);
+  const handlePaidSort = useCallback((key, direction) => setPaidSort({ key, direction }), []);
+
+  const sortedFilteredUnpaid = useMemo(
+    () => sortRowsClient(filteredUnpaid, unpaidSort, getCommissionSortValue),
+    [filteredUnpaid, unpaidSort, getCommissionSortValue]
+  );
+  const sortedFilteredPaid = useMemo(
+    () => sortRowsClient(filteredPaid, paidSort, getCommissionSortValue),
+    [filteredPaid, paidSort, getCommissionSortValue]
+  );
+
   const statusSummaryCards = useMemo(() => {
     const calcAmount = (list) =>
       list.reduce((sum, row) => {
@@ -367,17 +393,20 @@ export default function DashboardSalesCommissionPage() {
       {
         key: "jobNumber",
         label: "Job#",
+        sortable: true,
         render: (_, row) => row.jobNumber || row.rfqNumber || "—",
       },
-      { key: "salesPersonName", label: "Sales person" },
+      { key: "salesPersonName", label: "Sales person", sortable: true },
       {
         key: "amount",
         label: "Amount",
+        sortable: true,
         render: (_, row) => fmt(row.amount || 0),
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (_, row) => (
           <Badge
             variant={row.status === "paid" ? "success" : "warning"}
@@ -390,11 +419,13 @@ export default function DashboardSalesCommissionPage() {
       {
         key: "paidAt",
         label: "Paid date",
+        sortable: true,
         render: (_, row) => formatDateIST(row.paidAt),
       },
       {
         key: "createdAt",
         label: "Created",
+        sortable: true,
         render: (_, row) => formatDateIST(row.createdAt),
       },
     ],
@@ -408,7 +439,7 @@ export default function DashboardSalesCommissionPage() {
           <div>
             <h1 className="text-2xl font-bold text-title">Sales Commission</h1>
             <p className="mt-1 text-sm text-secondary">
-              View and manage commission records linked to Job#, RFQ#, and Invoice#.
+              Commissions tied to jobs, RFQs, and invoices.
             </p>
           </div>
           <Button type="button" variant="primary" onClick={() => setCreateModalOpen(true)}>
@@ -441,7 +472,7 @@ export default function DashboardSalesCommissionPage() {
               children: (
                 <Table
                   columns={columns}
-                  data={filteredUnpaid}
+                  data={sortedFilteredUnpaid}
                   rowKey="id"
                   loading={loading}
                   searchable
@@ -452,6 +483,8 @@ export default function DashboardSalesCommissionPage() {
                     setLoading(true);
                     await loadRows();
                   }}
+                  sortState={unpaidSort}
+                  onSort={handleUnpaidSort}
                   responsive
                 />
               ),
@@ -462,7 +495,7 @@ export default function DashboardSalesCommissionPage() {
               children: (
                 <Table
                   columns={columns}
-                  data={filteredPaid}
+                  data={sortedFilteredPaid}
                   rowKey="id"
                   loading={loading}
                   searchable
@@ -473,6 +506,8 @@ export default function DashboardSalesCommissionPage() {
                     setLoading(true);
                     await loadRows();
                   }}
+                  sortState={paidSort}
+                  onSort={handlePaidSort}
                   responsive
                 />
               ),

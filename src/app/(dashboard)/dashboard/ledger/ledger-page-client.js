@@ -10,6 +10,7 @@ import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const EMPTY_ENTRY = {
   date: "",
@@ -195,34 +196,41 @@ export default function LedgerPageClient() {
     };
   }, []);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+
   const columns = useMemo(
     () => [
-      { key: "date", label: "Date", render: (v) => formatLedgerDate(v) },
-      { key: "description", label: "Description", render: (v) => v || "—" },
-      { key: "party", label: "Party", render: (v) => v || "—" },
+      { key: "date", label: "Date", sortable: true, render: (v) => formatLedgerDate(v) },
+      { key: "description", label: "Description", sortable: true, render: (v) => v || "—" },
+      { key: "party", label: "Party", sortable: true, render: (v) => v || "—" },
       {
         key: "debit",
         label: "Debit",
+        sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
       },
       {
         key: "credit",
         label: "Credit",
+        sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
       },
       {
         key: "receivable",
         label: "Receivable",
+        sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
       },
       {
         key: "payable",
         label: "Payable",
+        sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) =>
           v ? (
             <Badge variant={statusVariant(v)} className="rounded-full px-2.5 py-0.5 text-xs">
@@ -235,6 +243,8 @@ export default function LedgerPageClient() {
     ],
     [fmt]
   );
+
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
 
   const filteredRows = useMemo(() => {
     const q = String(searchQuery || "").trim().toLowerCase();
@@ -253,6 +263,11 @@ export default function LedgerPageClient() {
       return fields.some((value) => String(value ?? "").toLowerCase().includes(q));
     });
   }, [rows, searchQuery]);
+
+  const sortedFilteredRows = useMemo(
+    () => sortRowsClient(filteredRows, tableSort),
+    [filteredRows, tableSort]
+  );
 
   const handleSaveEntry = async () => {
     if (saving) return;
@@ -298,7 +313,7 @@ export default function LedgerPageClient() {
         <div>
           <h1 className="text-2xl font-bold text-title">Ledger</h1>
           <p className="mt-2 text-sm text-secondary">
-            Every money movement in and out, including receivables, payables, and settlement entries.
+            Cash movements across AR, AP, and settlements.
           </p>
         </div>
         <Button type="button" onClick={() => setEntryOpen(true)}>
@@ -366,13 +381,15 @@ export default function LedgerPageClient() {
 
       <Table
         columns={columns}
-        data={filteredRows}
+        data={sortedFilteredRows}
         rowKey="id"
         loading={loading}
         fillHeight
         searchable
         onSearch={setSearchQuery}
         searchPlaceholder="Search ledger..."
+        sortState={tableSort}
+        onSort={handleTableSort}
         emptyMessage="No ledger transactions found for this date range."
       />
 

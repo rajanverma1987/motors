@@ -114,8 +114,8 @@ function JobBoardSharePageInner() {
     <div className="flex min-h-dvh flex-col bg-bg">
       <JobBoardClient
         initialWorkOrders={data.workOrders}
-        initialStatuses={data.workOrderStatuses}
         initialBoardOrder={data.shopFloorBoardOrder}
+        initialStatusTileColors={data.workOrderStatusTileColors}
         publicMode
         shareToken={token}
       />

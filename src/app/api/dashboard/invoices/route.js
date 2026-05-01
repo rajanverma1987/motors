@@ -7,6 +7,9 @@ import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { effectiveInvoiceNumberPrefix } from "@/lib/document-number-prefixes";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -109,11 +112,15 @@ export async function POST(request) {
       .lean();
     const { scopeLines, partsLines } = normalizeLines(body);
     const rfq = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const invPrefix = effectiveInvoiceNumberPrefix(u);
+    const invoiceNumber = invPrefix ? `${invPrefix}${rfq}` : rfq;
     const doc = await Invoice.create({
       quoteId,
       customerId: String(quote.customerId || ""),
       motorId: String(quote.motorId || ""),
-      invoiceNumber: rfq,
+      invoiceNumber,
       rfqNumber: quote.rfqNumber || "",
       customerPo: String(body.customerPo ?? quote.customerPo ?? "").slice(0, 200),
       date: String(body.date ?? quote.date ?? "").slice(0, 50),

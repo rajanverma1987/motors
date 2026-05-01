@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatMoney } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
 import Button from "@/components/ui/button";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
@@ -33,7 +33,7 @@ function injectQuotePrintStyles() {
         opacity: 1 !important;
         background: white !important;
         z-index: 2147483647 !important;
-        padding: 1.5rem !important;
+        padding: 1rem !important;
       }
     }
   `;
@@ -63,11 +63,7 @@ const OFFSCREEN_STYLE = {
 export default function QuotePrintPreview({ quoteId, open, onClose, standalone = false }) {
   const fmt = useFormatMoney();
   const toast = useToast();
-  const { settings: accountSettings } = useUserSettings();
   const [quote, setQuote] = useState(null);
-  const [customerName, setCustomerName] = useState("");
-  const [motorLabel, setMotorLabel] = useState("");
-  const [preparedByName, setPreparedByName] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -81,9 +77,6 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     if (standalone) return;
     if (!open) {
       setQuote(null);
-      setCustomerName("");
-      setMotorLabel("");
-      setPreparedByName("");
       setError(null);
       setLoading(true);
     }
@@ -111,32 +104,6 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
           return;
         }
         setQuote(data);
-        if (data.customerId) {
-          const custRes = await fetch(`/api/dashboard/customers/${data.customerId}`, { credentials: "include" });
-          if (custRes.ok) {
-            const cust = await custRes.json();
-            if (!cancelled) setCustomerName(cust.companyName || cust.primaryContactName || "");
-          }
-        }
-        if (data.motorId) {
-          const motorRes = await fetch(`/api/dashboard/motors`, { credentials: "include" });
-          if (motorRes.ok) {
-            const motors = await motorRes.json();
-            const m = (Array.isArray(motors) ? motors : []).find((x) => x.id === data.motorId);
-            if (m && !cancelled) {
-              setMotorLabel([m.serialNumber, m.manufacturer, m.model].filter(Boolean).join(" · ") || m.id);
-            }
-          }
-        }
-        if (data.preparedBy != null && String(data.preparedBy).trim() !== "") {
-          const empRes = await fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" });
-          if (empRes.ok) {
-            const emps = await empRes.json();
-            const list = Array.isArray(emps) ? emps : [];
-            const match = list.find((e) => String(e.id) === String(data.preparedBy));
-            if (!cancelled) setPreparedByName(match?.name || "");
-          }
-        }
       } catch {
         if (!cancelled) setError("Failed to load quote");
       } finally {
@@ -213,16 +180,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
       style={OFFSCREEN_STYLE}
       aria-hidden="true"
     >
-      <div className="mx-auto max-w-[57.6rem] text-sm">
-        <QuotePrintSheetBody
-          quote={quote}
-          customerName={customerName}
-          motorLabel={motorLabel}
-          preparedByName={preparedByName}
-          fmt={fmt}
-          accountSettings={accountSettings}
-        />
-      </div>
+      <QuotePrintSheetBody quote={quote} fmt={fmt} />
     </div>,
     document.body
   );

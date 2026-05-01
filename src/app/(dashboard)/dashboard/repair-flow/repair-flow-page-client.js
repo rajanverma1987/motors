@@ -28,6 +28,7 @@ import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import { REPAIR_FLOW_PHASE_LABELS, phaseBadgeVariant } from "@/lib/repair-flow-constants";
 import { getRepairFlowWorkOrderToolbarState } from "@/lib/repair-flow-work-order-toolbar";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
@@ -377,12 +378,13 @@ export default function RepairFlowPageClient() {
           </div>
         ),
       },
-      { key: "jobNumber", label: "Job #" },
-      { key: "customerLabel", label: "Customer" },
-      { key: "motorLabel", label: "Motor" },
+      { key: "jobNumber", label: "Job #", sortable: true },
+      { key: "customerLabel", label: "Customer", sortable: true },
+      { key: "motorLabel", label: "Motor", sortable: true },
       {
         key: "phase",
         label: "Phase",
+        sortable: true,
         render: (p) => (
           <Badge variant={phaseBadgeVariant(p)} className="rounded-full px-2.5 py-0.5 text-xs">
             {REPAIR_FLOW_PHASE_LABELS[p] || p}
@@ -392,6 +394,7 @@ export default function RepairFlowPageClient() {
       {
         key: "updatedAt",
         label: "Updated",
+        sortable: true,
         render: (v) => (v ? new Date(v).toLocaleString() : "—"),
       },
     ],
@@ -418,16 +421,29 @@ export default function RepairFlowPageClient() {
     });
   }, [jobs, jobSearchQuery]);
 
+  const getRepairJobSortValue = useCallback((row, key) => {
+    if (key === "updatedAt") {
+      const t = row?.updatedAt ? new Date(row.updatedAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    if (key === "phase") return REPAIR_FLOW_PHASE_LABELS[row.phase] || row.phase || "";
+    return row?.[key];
+  }, []);
+
+  const [jobsSort, setJobsSort] = useState({ key: null, direction: "asc" });
+  const sortedFilteredJobs = useMemo(
+    () => sortRowsClient(filteredJobs, jobsSort, getRepairJobSortValue),
+    [filteredJobs, jobsSort, getRepairJobSortValue]
+  );
+  const handleJobsSort = useCallback((key, direction) => setJobsSort({ key, direction }), []);
+
   return (
     <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Job Write-Up</h1>
           <p className="mt-1 max-w-[50.4rem] text-sm text-secondary">
-            Inspection-driven pipeline from intake through preliminary and final quotes and approval gates. After the
-            final repair quote is approved, use <span className="text-title">Actions</span> →{" "}
-            <span className="text-title">Create work order</span> (final flow quote must be linked to a CRM RFQ). Jobs stay
-            on this list so you can keep working the write-up alongside Quotes and Work orders.
+            Inspection through quotes and approvals; create work orders when the RFQ is ready.
           </p>
         </div>
         <Button
@@ -448,7 +464,7 @@ export default function RepairFlowPageClient() {
       <div className="mt-6">
         <Table
           columns={columns}
-          data={filteredJobs}
+          data={sortedFilteredJobs}
           rowKey="id"
           loading={loading}
           emptyMessage={
@@ -460,6 +476,8 @@ export default function RepairFlowPageClient() {
           onSearch={setJobSearchQuery}
           searchPlaceholder="Search job #, customer, motor, phase…"
           onRefresh={load}
+          sortState={jobsSort}
+          onSort={handleJobsSort}
           responsive
         />
       </div>

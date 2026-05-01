@@ -1,6 +1,7 @@
 "use client";
 
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
 export const STAGE_LABEL = {
@@ -57,11 +58,14 @@ export default function RepairFlowFlowQuotePrintContent({ job, quotes, fmt, acco
 
   return (
     <>
-      <div className="mb-6 border-b border-border pb-4">
-        <CompanyAccountsPrint
-          billingAddress={accountSettings?.accountsBillingAddress}
-          paymentTermsLabel={paymentTermsLabel}
-        />
+      <div className="mb-4 flex flex-wrap items-start gap-3 border-b border-border pb-3">
+        <PrintShopLogo logoUrl={accountSettings?.logoUrl} alt="" />
+        <div className="min-w-0 flex-1">
+          <CompanyAccountsPrint
+            billingAddress={accountSettings?.accountsBillingAddress}
+            paymentTermsLabel={paymentTermsLabel}
+          />
+        </div>
       </div>
 
       <div className="mb-6 border-b border-border pb-4">

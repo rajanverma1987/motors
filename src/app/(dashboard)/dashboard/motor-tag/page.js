@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Motor tag",
-  description: "Print motor tag QR from Job Write-Up (repair job quotes).",
+  description: "Motor tag QR opens from Job Write-Up.",
 };
 
 /** Motor tag QR is printed from Job Write-Up → job → Quotes table (QR action). */

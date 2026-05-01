@@ -26,6 +26,8 @@ const workOrderSchema = new mongoose.Schema(
     status: { type: String, default: "Assigned", trim: true },
     companyName: { type: String, default: "", trim: true },
     quoteRfqNumber: { type: String, default: "", trim: true },
+    /** Shop / office notes on this work order (dashboard). */
+    notes: { type: String, default: "", trim: true, maxlength: 8000 },
     acSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     dcSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },
     armatureSpecs: { type: mongoose.Schema.Types.Mixed, default: {} },

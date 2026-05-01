@@ -13,6 +13,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -515,6 +516,13 @@ export default function DashboardCustomersPage() {
     );
   }, [customers, searchQuery]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedCustomers = useMemo(
+    () => sortRowsClient(filteredCustomers, tableSort),
+    [filteredCustomers, tableSort]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -536,6 +544,7 @@ export default function DashboardCustomersPage() {
       {
         key: "companyName",
         label: "Company",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -546,22 +555,24 @@ export default function DashboardCustomersPage() {
           </button>
         ),
       },
-      { key: "primaryContactName", label: "Contact" },
-      { key: "phone", label: "Phone" },
-      { key: "email", label: "Email" },
-      { key: "ein", label: "EIN", render: (_, row) => row.ein || "—" },
-      { key: "creditLimit", label: "Credit Limit", render: (_, row) => row.creditLimit || "—" },
+      { key: "primaryContactName", label: "Contact", sortable: true },
+      { key: "phone", label: "Phone", sortable: true },
+      { key: "email", label: "Email", sortable: true },
+      { key: "ein", label: "EIN", sortable: true, render: (_, row) => row.ein || "—" },
+      { key: "creditLimit", label: "Credit Limit", sortable: true, render: (_, row) => row.creditLimit || "—" },
       {
         key: "taxExempt",
         label: "Tax Exempted",
+        sortable: true,
         render: (_, row) => (row.taxExempt === false ? "No" : "Yes"),
       },
       {
         key: "taxPercent",
         label: "Tax %",
+        sortable: true,
         render: (_, row) => (row.taxExempt === false ? (row.taxPercent || "0") : "0"),
       },
-      { key: "city", label: "City" },
+      { key: "city", label: "City", sortable: true },
     ],
     []
   );
@@ -572,7 +583,7 @@ export default function DashboardCustomersPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Customers</h1>
           <p className="mt-1 text-sm text-secondary">
-            Maintain customer database: company name, contacts, phone, addresses, billing. Enter new customer or create from lead.
+            Companies, contacts, billing, and addresses.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -620,7 +631,7 @@ export default function DashboardCustomersPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredCustomers}
+          data={sortedCustomers}
           rowKey="id"
           loading={loading}
           emptyMessage={customers.length === 0 ? "No customers yet. Use “Enter New Customer” to add one." : "No customers match the search."}
@@ -628,6 +639,8 @@ export default function DashboardCustomersPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search company, contact, email…"
           onRefresh={() => { setLoading(true); loadCustomers(); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

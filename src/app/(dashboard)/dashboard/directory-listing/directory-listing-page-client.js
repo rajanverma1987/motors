@@ -259,8 +259,8 @@ export default function DirectoryListingPageClient() {
     <div className="mx-auto max-w-[57.6rem] px-4 py-8 sm:px-6">
       <div className="mb-8">
         <h1 className="text-2xl font-semibold text-title">Directory listing</h1>
-        <p className="mt-1 text-secondary">
-          Create or update the same profile shown on the public repair shop directory. This form matches the website listing flow.
+        <p className="mt-1 text-sm text-secondary">
+          Your public repair-shop directory profile.
         </p>
         <div className="mt-3 flex flex-wrap gap-3 text-sm">
           <Link

@@ -8,7 +8,7 @@ const quoteSchema = new mongoose.Schema(
     motorId: { type: String, required: true, trim: true },
     /** Optional: lead this quote was created from */
     leadId: { type: String, default: "", trim: true },
-    /** draft | sent | approved | rejected | rnr (Return No Repair) */
+    /** RFQ lifecycle slug — configurable under Settings → Dropdowns (default set includes draft, sent, approved, …). */
     status: { type: String, default: "draft", trim: true },
     /** Customer PO number */
     customerPo: { type: String, default: "", trim: true },

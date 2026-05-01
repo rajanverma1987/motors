@@ -9,6 +9,7 @@ import MotorRepairJob from "@/models/MotorRepairJob";
 import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { effectiveWorkOrderNumberPrefix } from "@/lib/document-number-prefixes";
 import {
   motorClassFromMotorType,
   prefillSpecsFromMotor,
@@ -29,12 +30,14 @@ function initialStatusFromSettings(settingsDoc) {
  * Suggest the next work order number for this account + Job#/RFQ slug.
  * Purely read-only; actual creation happens in POST /api/dashboard/work-orders.
  */
-async function suggestWorkOrderNumber(email, safeSegment) {
-  const prefix = `W-${safeSegment}-`;
-  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+async function suggestWorkOrderNumber(email, safeSegment, woHead) {
+  const head = String(woHead || "W-");
+  const escHead = head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escSeg = String(safeSegment).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = `^${escHead}${escSeg}-\\d+$`;
   const latest = await WorkOrder.findOne({
     createdByEmail: email,
-    workOrderNumber: { $regex: `^${escaped}\\d+$` },
+    workOrderNumber: { $regex: pattern },
   })
     .sort({ createdAt: -1, workOrderNumber: -1 })
     .lean();
@@ -46,7 +49,7 @@ async function suggestWorkOrderNumber(email, safeSegment) {
     const parsed = Number.parseInt(suffixRaw, 10);
     if (Number.isFinite(parsed) && parsed > 0) next = parsed + 1;
   }
-  return `${prefix}${next}`;
+  return `${head}${safeSegment}-${next}`;
 }
 
 /** Preview work order fields from quote — does not persist. */
@@ -66,6 +69,13 @@ export async function GET(request) {
     const quote = await Quote.findOne({ _id: quoteId, createdByEmail: email }).lean();
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
+    }
+    const quoteStatus = String(quote.status || "draft").trim().toLowerCase();
+    if (quoteStatus !== "approved") {
+      return NextResponse.json(
+        { error: "Quote must be approved before creating a work order" },
+        { status: 400 }
+      );
     }
     const motor = await Motor.findOne({
       _id: quote.motorId,
@@ -91,9 +101,11 @@ export async function GET(request) {
         safeSegment = repairJobNumber.replace(/[^\w-]/g, "") || safeSegment;
       }
     }
-    const workOrderNumber = await suggestWorkOrderNumber(email, safeSegment);
-    const motorClass = motorClassFromMotorType(motor.motorType);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const woHead = effectiveWorkOrderNumberPrefix(merged);
+    const workOrderNumber = await suggestWorkOrderNumber(email, safeSegment, woHead);
+    const motorClass = motorClassFromMotorType(motor.motorType);
     const today = new Date().toISOString().slice(0, 10);
 
     const acSpecs =

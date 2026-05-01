@@ -1,114 +1,118 @@
 "use client";
 
-import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
-import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
+const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
+const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
+const thRow = "bg-neutral-900 text-left text-[10px] font-semibold uppercase tracking-wide text-white";
+const thCell = "px-2 py-1.5";
+const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
+
 /**
- * Printable quote sheet markup (screen + print). Used by QuotePrintPreview and the standalone print route.
+ * Printable quote body — same layout/styling as {@link InvoicePrintPreview} (masthead, from/to, tables, totals, footer).
+ * Expects dashboard quote GET payload (enriched with print fields: fromShop*, customerTo*, motorLabel, etc.).
  */
-export default function QuotePrintSheetBody({
-  quote,
-  customerName,
-  motorLabel,
-  preparedByName,
-  fmt,
-  accountSettings,
-}) {
-  if (!quote) return null;
+export default function QuotePrintSheetBody({ quote: q, fmt }) {
+  if (!q) return null;
 
   const totals = computeTotalsFromLaborAndParts({
-    laborTotal: quote.laborTotal,
-    partsTotal: quote.partsTotal,
-    taxExempt: quote.customerTaxExempt,
-    taxPercent: quote.customerTaxPercent,
+    laborTotal: q.laborTotal,
+    partsTotal: q.partsTotal,
+    taxExempt: q.customerTaxExempt,
+    taxPercent: q.customerTaxPercent,
   });
 
   return (
-    <div className="quote-print-sheet max-w-[57.6rem] mx-auto p-6 print:p-4 text-sm text-title">
-      <div className="mb-6 border-b border-border pb-4">
-        <CompanyAccountsPrint
-          billingAddress={accountSettings?.accountsBillingAddress}
-          paymentTermsLabel={accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms)}
-        />
-      </div>
-      <div className="border-b border-border pb-4 mb-4">
-        <h1 className="text-2xl font-bold">Quote {quote.rfqNumber || ""}</h1>
+    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+      <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <PrintShopLogo logoUrl={q.fromShopLogoUrl} alt="" />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+            <p className="font-semibold text-neutral-900">{q.fromShopName || "—"}</p>
+            {q.fromShopContact ? <p className="text-xs text-neutral-700">{q.fromShopContact}</p> : null}
+          </div>
+        </div>
+        <div className="shrink-0 text-right">
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">Quote</h1>
+        </div>
+      </header>
+
+      <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
+        <div className="min-w-0">
+          {q.fromBillingAddress ? (
+            <p className="whitespace-pre-wrap text-xs text-neutral-800">{q.fromBillingAddress}</p>
+          ) : null}
+          <p className="mt-1.5 text-xs text-neutral-800">
+            <span className="text-neutral-600">Payment terms: </span>
+            <span className="font-medium">{q.fromPaymentTermsLabel || "—"}</span>
+          </p>
+        </div>
+        <div className="min-w-0 sm:text-right print:text-right">
+          <p className={sectionLabel + " sm:text-right"}>To</p>
+          {q.customerToName ? (
+            <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900 sm:ml-auto sm:text-right">
+              {q.customerToName}
+            </p>
+          ) : (
+            <p className="text-xs text-neutral-500">—</p>
+          )}
+          {q.customerBillingAddress ? (
+            <p className="mt-1.5 whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
+              {q.customerBillingAddress}
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Quote info</h2>
-        <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="mb-3">
+        <h2 className={sectionLabel}>Quote info</h2>
+        <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-secondary">RFQ#</dt>
-            <dd className="font-medium">{quote.rfqNumber || "—"}</dd>
+            <dt className="text-neutral-600">RFQ#</dt>
+            <dd className="font-medium text-neutral-900">{q.rfqNumber || "—"}</dd>
           </div>
           <div>
-            <dt className="text-secondary">Customer PO#</dt>
-            <dd>{quote.customerPo || "—"}</dd>
+            <dt className="text-neutral-600">Customer PO#</dt>
+            <dd className="text-neutral-900">{q.customerPo || "—"}</dd>
           </div>
           <div>
-            <dt className="text-secondary">Date</dt>
-            <dd>{quote.date || "—"}</dd>
+            <dt className="text-neutral-600">Date</dt>
+            <dd className="text-neutral-900">{q.date || "—"}</dd>
           </div>
           <div>
-            <dt className="text-secondary">Prepared by</dt>
-            <dd>{preparedByName || quote.preparedBy || "—"}</dd>
+            <dt className="text-neutral-600">Prepared by</dt>
+            <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
+          </div>
+          <div>
+            <dt className="text-neutral-600">Est. completion</dt>
+            <dd className="text-neutral-900">{q.estimatedCompletion || "—"}</dd>
           </div>
         </dl>
       </section>
 
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Customer & motor</h2>
-        <p className="font-medium">{customerName || quote.customerId || "—"}</p>
-        <p className="text-secondary">{motorLabel || quote.motorId || "—"}</p>
+      <section className="mb-3">
+        <h2 className={sectionLabel}>Motor</h2>
+        <p className="text-xs font-medium text-neutral-900">{q.motorLabel || q.motorId || "—"}</p>
       </section>
 
-      <section className="mb-6">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Totals</h2>
-        <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className="text-secondary">Scope total</dt>
-            <dd>{quote.laborTotal ? fmt(quote.laborTotal) : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-secondary">Parts total</dt>
-            <dd>{quote.partsTotal ? fmt(quote.partsTotal) : "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-secondary">Service proposal total</dt>
-            <dd className="font-semibold">{fmt(totals.subtotal)}</dd>
-          </div>
-          <div>
-            <dt className="text-secondary">Tax amount</dt>
-            <dd>{fmt(totals.taxAmount)}</dd>
-          </div>
-          <div>
-            <dt className="text-secondary">Grand total</dt>
-            <dd className="font-semibold">{fmt(totals.grandTotal)}</dd>
-          </div>
-          <div>
-            <dt className="text-secondary">Est. completion</dt>
-            <dd>{quote.estimatedCompletion || "—"}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {Array.isArray(quote.scopeLines) && quote.scopeLines.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Scope</h2>
-          <table className="w-full border border-border rounded-lg overflow-hidden">
-            <thead className="bg-card">
+      {Array.isArray(q.scopeLines) && q.scopeLines.length > 0 && (
+        <section className="mb-3">
+          <h2 className={sectionLabel}>Scope</h2>
+          <table className={tableWrap + " w-full"}>
+            <thead className={thRow}>
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Scope</th>
-                <th className="px-3 py-2 text-right font-medium">Price</th>
+                <th className={thCell + " text-left"}>Scope</th>
+                <th className={thCell + " w-[7rem] text-right"}>Price</th>
               </tr>
             </thead>
             <tbody>
-              {quote.scopeLines.map((row, i) => (
-                <tr key={i} className="border-t border-border">
-                  <td className="px-3 py-2">{row.scope || "—"}</td>
-                  <td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td>
+              {q.scopeLines.map((row, i) => (
+                <tr key={i}>
+                  <td className={tdCell + " align-top"}>{row.scope || "—"}</td>
+                  <td className={tdCell + " text-right tabular-nums"}>{row.price ? fmt(row.price) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -116,32 +120,32 @@ export default function QuotePrintSheetBody({
         </section>
       )}
 
-      {Array.isArray(quote.partsLines) && quote.partsLines.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Other Cost</h2>
-          <table className="w-full border border-border rounded-lg overflow-hidden">
-            <thead className="bg-card">
+      {Array.isArray(q.partsLines) && q.partsLines.length > 0 && (
+        <section className="mb-3">
+          <h2 className={sectionLabel}>Other cost</h2>
+          <table className={tableWrap + " w-full"}>
+            <thead className={thRow}>
               <tr>
-                <th className="px-3 py-2 text-left font-medium">Item</th>
-                <th className="px-3 py-2 text-right font-medium">Qty</th>
-                <th className="px-3 py-2 text-left font-medium">UOM</th>
-                <th className="px-3 py-2 text-right font-medium">Price</th>
-                <th className="px-3 py-2 text-right font-medium">Total</th>
+                <th className={thCell}>Item</th>
+                <th className={thCell + " w-10 text-right"}>Qty</th>
+                <th className={thCell + " w-12"}>UOM</th>
+                <th className={thCell + " w-[4.5rem] text-right"}>Price</th>
+                <th className={thCell + " w-[5rem] text-right"}>Total</th>
               </tr>
             </thead>
             <tbody>
-              {quote.partsLines.map((row, i) => {
+              {q.partsLines.map((row, i) => {
                 const qty = parseFloat(row?.qty ?? "1");
                 const price = parseFloat(row?.price ?? "0");
-                const lineTotal = Number.isFinite(qty) && Number.isFinite(price) ? (qty * price).toFixed(2) : "—";
+                const lineTotalNum = Number.isFinite(qty) && Number.isFinite(price) ? qty * price : null;
                 return (
-                  <tr key={i} className="border-t border-border">
-                    <td className="px-3 py-2">{row.item || "—"}</td>
-                    <td className="px-3 py-2 text-right">{row.qty ?? "1"}</td>
-                    <td className="px-3 py-2">{row.uom || "—"}</td>
-                    <td className="px-3 py-2 text-right">{row.price ? fmt(row.price) : "—"}</td>
-                    <td className="px-3 py-2 text-right">
-                      {lineTotal !== "—" ? fmt(parseFloat(lineTotal)) : "—"}
+                  <tr key={i}>
+                    <td className={tdCell}>{row.item || "—"}</td>
+                    <td className={tdCell + " text-right tabular-nums"}>{row.qty ?? "1"}</td>
+                    <td className={tdCell}>{row.uom || "—"}</td>
+                    <td className={tdCell + " text-right tabular-nums"}>{row.price ? fmt(row.price) : "—"}</td>
+                    <td className={tdCell + " text-right tabular-nums"}>
+                      {lineTotalNum != null ? fmt(lineTotalNum) : "—"}
                     </td>
                   </tr>
                 );
@@ -151,12 +155,49 @@ export default function QuotePrintSheetBody({
         </section>
       )}
 
-      {quote.customerNotes && (
-        <section className="mb-6">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Customer notes</h2>
-          <p className="whitespace-pre-wrap">{quote.customerNotes}</p>
+      <section className="mb-3">
+        <h2 className={sectionLabel}>Totals</h2>
+        <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
+          <tbody>
+            <tr className="border-b border-neutral-200 bg-neutral-50">
+              <td className="px-2 py-1.5 font-medium text-neutral-800">Scope total</td>
+              <td className="px-2 py-1.5 text-right font-medium text-neutral-900">
+                {q.laborTotal ? fmt(q.laborTotal) : "—"}
+              </td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Other cost total</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? fmt(q.partsTotal) : "—"}</td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Quote subtotal</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.subtotal)}</td>
+            </tr>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Tax</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.taxAmount)}</td>
+            </tr>
+            <tr className="bg-neutral-100">
+              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
+              <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">{fmt(totals.grandTotal)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      {q.customerNotes ? (
+        <section className="mb-3">
+          <h2 className={sectionLabel}>Customer notes</h2>
+          <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{q.customerNotes}</p>
         </section>
-      )}
+      ) : null}
+
+      <InvoicePaymentFooterPrint
+        paymentOptions={q.invoicePaymentOptions}
+        thankYouNote={q.invoiceThankYouNote}
+        variant="dashboard"
+        compact
+      />
     </div>
   );
 }

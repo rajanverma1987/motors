@@ -107,6 +107,7 @@ export async function PATCH(request, context) {
       doc.jobType = normalizeWorkOrderJobType(body.jobType, doc.motorClass);
     }
     if (body.status !== undefined) doc.status = String(body.status || "").trim().slice(0, 80);
+    if (body.notes !== undefined) doc.notes = String(body.notes ?? "").trim().slice(0, 8000);
     if (body.acSpecs !== undefined && doc.motorClass === "AC") {
       doc.acSpecs = sanitizeSpecs(body.acSpecs);
     }

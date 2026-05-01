@@ -12,6 +12,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const TABS = [
   {
@@ -372,6 +373,17 @@ export default function LogisticsPageClient() {
     return v || "—";
   };
 
+  const [logisticsSort, setLogisticsSort] = useState({ key: null, direction: "asc" });
+  const handleLogisticsSort = useCallback((key, direction) => setLogisticsSort({ key, direction }), []);
+  const getLogisticsSortValue = useCallback((row, key) => {
+    if (key === "po") return row.poNumberSnapshot || row.purchaseOrderId || "";
+    return row?.[key];
+  }, []);
+  const sortedRows = useMemo(
+    () => sortRowsClient(rows, logisticsSort, getLogisticsSortValue),
+    [rows, logisticsSort, getLogisticsSortValue]
+  );
+
   const columns = useMemo(() => {
     if (activeKind === "motor_receiving") {
       return [
@@ -399,19 +411,21 @@ export default function LogisticsPageClient() {
             </div>
           ),
         },
-        { key: "date", label: "Date" },
-        { key: "jobNumber", label: "REF# / Job" },
-        { key: "mannerOfTransport", label: "Transport" },
-        { key: "freight", label: "Freight" },
-        { key: "droppedBy", label: "Dropped by" },
+        { key: "date", label: "Date", sortable: true },
+        { key: "jobNumber", label: "REF# / Job", sortable: true },
+        { key: "mannerOfTransport", label: "Transport", sortable: true },
+        { key: "freight", label: "Freight", sortable: true },
+        { key: "droppedBy", label: "Dropped by", sortable: true },
         {
           key: "charges",
           label: "Charges",
+          sortable: true,
           render: (v) => <span className="tabular-nums">{chargesDisplay(v)}</span>,
         },
         {
           key: "notes",
           label: "Notes",
+          sortable: true,
           render: (v) => (
             <span className="line-clamp-2 max-w-[200px]" title={v}>
               {v || "—"}
@@ -446,19 +460,21 @@ export default function LogisticsPageClient() {
             </div>
           ),
         },
-        { key: "date", label: "Date" },
-        { key: "invoiceNumber", label: "Invoice #" },
-        { key: "mannerOfTransport", label: "Transport" },
-        { key: "freight", label: "Freight" },
-        { key: "pickedBy", label: "Picked by" },
+        { key: "date", label: "Date", sortable: true },
+        { key: "invoiceNumber", label: "Invoice #", sortable: true },
+        { key: "mannerOfTransport", label: "Transport", sortable: true },
+        { key: "freight", label: "Freight", sortable: true },
+        { key: "pickedBy", label: "Picked by", sortable: true },
         {
           key: "charges",
           label: "Charges",
+          sortable: true,
           render: (v) => <span className="tabular-nums">{chargesDisplay(v)}</span>,
         },
         {
           key: "notes",
           label: "Notes",
+          sortable: true,
           render: (v) => (
             <span className="line-clamp-2 max-w-[200px]" title={v}>
               {v || "—"}
@@ -492,24 +508,27 @@ export default function LogisticsPageClient() {
           </div>
         ),
       },
-      { key: "date", label: "Date" },
+      { key: "date", label: "Date", sortable: true },
       {
         key: "po",
         label: "PO",
+        sortable: true,
         render: (_, row) => row.poNumberSnapshot || row.purchaseOrderId || "—",
       },
-      { key: "invoiceNumber", label: "Vendor inv. #" },
-      { key: "mannerOfTransport", label: "Transport" },
-      { key: "freight", label: "Freight" },
-      { key: "droppedBy", label: "Received by" },
+      { key: "invoiceNumber", label: "Vendor inv. #", sortable: true },
+      { key: "mannerOfTransport", label: "Transport", sortable: true },
+      { key: "freight", label: "Freight", sortable: true },
+      { key: "droppedBy", label: "Received by", sortable: true },
       {
         key: "charges",
         label: "Charges",
+        sortable: true,
         render: (v) => <span className="tabular-nums">{chargesDisplay(v)}</span>,
       },
       {
         key: "notes",
         label: "Notes",
+        sortable: true,
         render: (v) => (
           <span className="line-clamp-2 max-w-[200px]" title={v}>
             {v || "—"}
@@ -524,8 +543,7 @@ export default function LogisticsPageClient() {
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Logistics</h1>
         <p className="mt-1 text-sm text-secondary">
-          Receiving and shipping motors (repair workflow), and receiving shipments against vendor purchase
-          orders.
+          Receive and ship repair motors; receive vendor PO shipments.
         </p>
       </div>
 
@@ -564,11 +582,13 @@ export default function LogisticsPageClient() {
       <div className="mt-4 min-h-0 min-w-0 flex-1">
         <Table
           columns={columns}
-          data={rows}
+          data={sortedRows}
           rowKey="id"
           loading={loading}
           emptyMessage="No entries yet. Use Add entry to log receiving or shipping."
           onRefresh={load}
+          sortState={logisticsSort}
+          onSort={handleLogisticsSort}
           responsive
         />
       </div>

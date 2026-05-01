@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Tabs from "@/components/ui/tabs";
 import { Form, FormLayout, FormField } from "@/components/ui/form-layout";
@@ -97,20 +98,36 @@ function useWoSpecColumns() {
   );
 }
 
-function SpecGrid({ fields, values, onChange, idPrefix = "wo" }) {
+function SpecGrid({ fields, values, onChange, idPrefix = "wo", compact = false }) {
   const cols = useWoSpecColumns();
   return (
-    <FormLayout labelWidth="minmax(7.5rem, 10.5rem)" cols={cols} className="w-full min-w-0">
+    <FormLayout
+      labelWidth={compact ? "minmax(5rem, 6.75rem)" : "minmax(7.5rem, 10.5rem)"}
+      cols={cols}
+      className={`w-full min-w-0 ${compact ? "!gap-y-1 !gap-x-1" : ""}`}
+    >
       {fields.map(({ key, label }) => {
         const fid = `${idPrefix}-${key}`;
         return (
-          <FormField key={key} label={label} id={fid} name={key} labelAlign="right" classNameLabel="pr-2">
+          <FormField
+            key={key}
+            label={label}
+            id={fid}
+            name={key}
+            labelAlign="right"
+            labelSize={compact ? "xs" : "sm"}
+            labelWeight={compact ? "normal" : "medium"}
+            classNameLabel={compact ? "pr-1 py-0 leading-tight" : "pr-2"}
+          >
             <Input
               id={fid}
               name={key}
               value={values[key] ?? ""}
               onChange={(e) => onChange(key, e.target.value)}
-              className="min-w-0"
+              className="min-w-0 !gap-0"
+              inputClassName={
+                compact ? "!h-8 !py-1 !px-2 !text-xs leading-tight" : ""
+              }
             />
           </FormField>
         );
@@ -205,6 +222,7 @@ export default function WorkOrderFormModal({
             technicianEmployeeId: d.technicianEmployeeId || "",
             jobType: normalizeWorkOrderJobType(d.jobType || "complete_motor", d.motorClass || "AC"),
             status: d.status || "Assigned",
+            notes: d.notes || "",
             acSpecs: { ...(d.acSpecs || {}) },
             dcSpecs: { ...(d.dcSpecs || {}) },
             armatureSpecs: { ...(d.armatureSpecs || {}) },
@@ -223,6 +241,7 @@ export default function WorkOrderFormModal({
             technicianEmployeeId: d.technicianEmployeeId || "",
             jobType: normalizeWorkOrderJobType(d.jobType || "complete_motor", d.motorClass || "AC"),
             status: d.status || "Assigned",
+            notes: "",
             acSpecs: { ...(d.acSpecs || {}) },
             dcSpecs: { ...(d.dcSpecs || {}) },
             armatureSpecs: { ...(d.armatureSpecs || {}) },
@@ -274,6 +293,7 @@ export default function WorkOrderFormModal({
           technicianEmployeeId: form.technicianEmployeeId,
           jobType: form.jobType,
           status: form.status,
+          notes: form.notes ?? "",
         };
         if (editing.motorClass === "AC") patchBody.acSpecs = form.acSpecs;
         if (editing.motorClass === "DC") {
@@ -300,6 +320,7 @@ export default function WorkOrderFormModal({
         technicianEmployeeId: form.technicianEmployeeId,
         jobType: form.jobType,
         status: form.status,
+        notes: form.notes ?? "",
       };
       if (editing.motorClass === "AC") body.acSpecs = form.acSpecs;
       if (editing.motorClass === "DC") {
@@ -373,7 +394,6 @@ export default function WorkOrderFormModal({
               }
               readOnly
             />
-            <Input label="Job#" value={editing.repairJobNumber || "—"} readOnly />
             <Input label="RFQ#" value={editing.quoteRfqNumber || "—"} readOnly />
             <Input label="Company" value={editing.customerCompany || editing.companyName || "—"} readOnly />
           </div>
@@ -409,6 +429,17 @@ export default function WorkOrderFormModal({
               searchable={false}
             />
           </div>
+          <Textarea
+            label="Notes"
+            id="wo-modal-notes"
+            name="notes"
+            rows={3}
+            placeholder="Shop notes for this work order…"
+            value={form.notes ?? ""}
+            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+            maxLength={8000}
+            textareaClassName="min-h-[4.5rem] text-sm"
+          />
           <p className="text-xs text-secondary">
             Motor class: <strong className="text-title">{editing.motorClass}</strong> — fields pre-filled from
             the customer's motor where available.
@@ -419,8 +450,11 @@ export default function WorkOrderFormModal({
           />
           {editing.motorClass === "AC" && (
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-title">AC motor — winding &amp; mechanical</h3>
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-title">
+                AC motor — winding &amp; mechanical
+              </h3>
               <SpecGrid
+                compact
                 idPrefix="wo-modal-ac"
                 fields={AC_WORK_ORDER_FIELDS}
                 values={form.acSpecs}
@@ -430,8 +464,9 @@ export default function WorkOrderFormModal({
           )}
           {editing.motorClass === "DC" && form.jobType === "armature_only" && (
             <div>
-              <h3 className="mb-3 text-sm font-semibold text-title">Armature</h3>
+              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-title">Armature</h3>
               <SpecGrid
+                compact
                 idPrefix="wo-modal-arm"
                 fields={DC_ARMATURE_FIELDS}
                 values={form.armatureSpecs}
@@ -452,8 +487,9 @@ export default function WorkOrderFormModal({
                   id: "dc",
                   label: "DC motor",
                   children: (
-                    <div className="pt-2">
+                    <div className="pt-1">
                       <SpecGrid
+                        compact
                         idPrefix="wo-modal-dc"
                         fields={DC_WORK_ORDER_FIELDS}
                         values={form.dcSpecs}
@@ -466,8 +502,9 @@ export default function WorkOrderFormModal({
                   id: "armature",
                   label: "Armature",
                   children: (
-                    <div className="pt-2">
+                    <div className="pt-1">
                       <SpecGrid
+                        compact
                         idPrefix="wo-modal-arm"
                         fields={DC_ARMATURE_FIELDS}
                         values={form.armatureSpecs}

@@ -10,6 +10,7 @@ import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 import Badge from "@/components/ui/badge";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 function workOrderStatusVariant(status) {
   const s = (status || "").trim().toLowerCase();
@@ -142,22 +143,40 @@ export default function WorkOrdersPageClient() {
     });
   }, [rowsAfterStatus, searchQuery, employees]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedRows = useMemo(
+    () =>
+      sortRowsClient(filteredRows, tableSort, (row, key) => {
+        if (key === "technicianEmployeeId") {
+          return employees.find((e) => e.id === row.technicianEmployeeId)?.name ?? row.technicianEmployeeId ?? "";
+        }
+        if (key === "jobType") {
+          return JOB_TYPE_OPTIONS.find((o) => o.value === row.jobType)?.label ?? row.jobType ?? "";
+        }
+        return row[key];
+      }),
+    [filteredRows, tableSort, employees]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
-      { key: "workOrderNumber", label: "WO#", clickable: true },
-      { key: "quoteRfqNumber", label: "RFQ#" },
-      { key: "date", label: "Date" },
-      { key: "customerCompany", label: "Company" },
-      { key: "motorClass", label: "Motor" },
+      { key: "workOrderNumber", label: "WO#", clickable: true, sortable: true },
+      { key: "quoteRfqNumber", label: "RFQ#", sortable: true },
+      { key: "date", label: "Date", sortable: true },
+      { key: "customerCompany", label: "Company", sortable: true },
+      { key: "motorClass", label: "Motor", sortable: true },
       {
         key: "jobType",
         label: "Type",
+        sortable: true,
         render: (v) =>
           JOB_TYPE_OPTIONS.find((o) => o.value === v)?.label || v || "—",
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (value) => {
           const label = value != null && String(value).trim() ? String(value).trim() : "—";
           if (label === "—") return label;
@@ -171,6 +190,7 @@ export default function WorkOrdersPageClient() {
       {
         key: "technicianEmployeeId",
         label: "Technician",
+        sortable: true,
         render: (id) => employees.find((e) => e.id === id)?.name || id || "—",
       },
     ],
@@ -195,25 +215,26 @@ export default function WorkOrdersPageClient() {
           </div>
         </div>
         <p className="mt-2 text-sm text-secondary">
-          From a quote, use Create work order to open the form on the Quotes page; save there to create the
-          row. AC vs DC forms match motor type.
+          Shop jobs from approved quotes—filter by status below.
         </p>
       </div>
       <Table
         columns={columns}
-        data={filteredRows}
+        data={sortedRows}
         rowKey="id"
         loading={loading}
         fillHeight
         searchable
         onSearch={setSearchQuery}
         searchPlaceholder="Search WO#, RFQ#, company, motor, type, status, technician…"
+        sortState={tableSort}
+        onSort={handleTableSort}
         onCellClick={(row) => setWoModal({ workOrderId: row.id })}
         onDelete={handleDeleteWorkOrder}
         onRefresh={load}
         emptyMessage={
           rows.length === 0
-            ? "No work orders yet. Create from a saved quote on the Quotes page."
+            ? "No work orders yet. Create from an approved quote on the Quotes page (row icon) or Job Write-Up."
             : filteredRows.length === 0 && searchQuery.trim()
               ? "No work orders match your search."
               : statusFilter.trim()

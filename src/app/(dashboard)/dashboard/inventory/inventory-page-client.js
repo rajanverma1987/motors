@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { FiRefreshCw, FiPlus } from "react-icons/fi";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 export default function InventoryPageClient() {
   const toast = useToast();
@@ -82,6 +83,13 @@ export default function InventoryPageClient() {
       return hay.includes(q);
     });
   }, [items, searchQuery]);
+
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedItems = useMemo(
+    () => sortRowsClient(filteredItems, tableSort),
+    [filteredItems, tableSort]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
 
   const closeUsage = useCallback(() => {
     setUsageFor(null);
@@ -272,6 +280,7 @@ export default function InventoryPageClient() {
       {
         key: "name",
         label: "Part",
+        sortable: true,
         render: (v, row) => (
           <button
             type="button"
@@ -286,11 +295,12 @@ export default function InventoryPageClient() {
           </button>
         ),
       },
-      { key: "sku", label: "SKU" },
-      { key: "uom", label: "UOM", render: (v) => v || "ea" },
+      { key: "sku", label: "SKU", sortable: true },
+      { key: "uom", label: "UOM", sortable: true, render: (v) => v || "ea" },
       {
         key: "onHand",
         label: "On hand",
+        sortable: true,
         align: "right",
         render: (_, row) => (
           <span className="inline-flex items-center justify-end gap-2 tabular-nums">
@@ -312,12 +322,14 @@ export default function InventoryPageClient() {
       {
         key: "reserved",
         label: "Reserved",
+        sortable: true,
         align: "right",
         render: (v) => <span className="tabular-nums text-secondary">{v}</span>,
       },
       {
         key: "available",
         label: "Available",
+        sortable: true,
         align: "right",
         render: (v, row) => {
           const avail = Number(v) || 0;
@@ -334,10 +346,11 @@ export default function InventoryPageClient() {
       {
         key: "threshold",
         label: "Threshold",
+        sortable: true,
         align: "right",
         render: (v) => <span className="tabular-nums">{v}</span>,
       },
-      { key: "location", label: "Location" },
+      { key: "location", label: "Location", sortable: true },
     ],
     [openUsage]
   );
@@ -372,19 +385,14 @@ export default function InventoryPageClient() {
           </div>
         </div>
         <p className="mt-2 text-sm text-secondary">
-          On-hand and reserved quantities. Reserved parts are tied to a work order from a quote until the job is{" "}
-          <strong className="text-title">Shipped</strong>. Set location labels in{" "}
-          <Link href="/dashboard/settings" className="text-primary underline" onClick={() => refreshSettings()}>
-            Settings → Inventory
-          </Link>
-          .
+          Stock and reservations by work order. Locations in Settings → Inventory.
         </p>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredItems}
+          data={sortedItems}
           rowKey="id"
           loading={loading}
           fillHeight
@@ -392,6 +400,8 @@ export default function InventoryPageClient() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search part, SKU, UOM, location, qty…"
           onRefresh={load}
+          sortState={tableSort}
+          onSort={handleTableSort}
           onEdit={(row) => openEdit(row)}
           onDelete={handleDeleteRow}
           emptyMessage={
@@ -599,16 +609,6 @@ export default function InventoryPageClient() {
           placeholder="e.g. 5 or -2"
         />
       </Modal>
-
-      <div className="shrink-0 border-t border-border pb-8 pt-4">
-        <FormSectionTitle as="h2" className="text-base">
-          Reports
-        </FormSectionTitle>
-        <p className="text-sm text-secondary">
-          Open <Link href="/dashboard/reports" className="text-primary underline">Reports</Link> for period summaries
-          and low-stock counts.
-        </p>
-      </div>
     </div>
   );
 }

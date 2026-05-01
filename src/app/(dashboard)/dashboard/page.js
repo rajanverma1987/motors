@@ -469,7 +469,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-bold text-title">Dashboard</h1>
             <p className="mt-1 text-sm text-secondary">
-              Overview of your CRM. Filter by period (created date). AR uses invoice date on open items.
+              Shop snapshot by period. Open AR follows invoice dates.
             </p>
           </div>
           <Link

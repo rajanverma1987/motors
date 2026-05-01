@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const STATE_BADGE = {
   active: "success",
@@ -42,24 +43,49 @@ export default function SubscriptionPageClient() {
 
   const sub = data?.subscription;
   const plan = sub?.plan;
-  const txCols = [
-    { key: "createdAt", label: "Date", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
-    { key: "type", label: "Type" },
-    { key: "status", label: "Status" },
-    {
-      key: "amount",
-      label: "Amount",
-      render: (v, row) => (v != null ? `${row.currency || "USD"} ${Number(v).toFixed(2)}` : "—"),
-    },
-    { key: "description", label: "Note" },
-  ];
+
+  const [txSort, setTxSort] = useState({ key: null, direction: "asc" });
+  const handleTxSort = useCallback((key, direction) => setTxSort({ key, direction }), []);
+  const getTxSortValue = useCallback((row, key) => {
+    if (key === "createdAt") {
+      const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    if (key === "amount") return row?.amount;
+    return row?.[key];
+  }, []);
+
+  const sortedTransactions = useMemo(
+    () => sortRowsClient(data?.transactions || [], txSort, getTxSortValue),
+    [data?.transactions, txSort, getTxSortValue]
+  );
+
+  const txCols = useMemo(
+    () => [
+      {
+        key: "createdAt",
+        label: "Date",
+        sortable: true,
+        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+      },
+      { key: "type", label: "Type", sortable: true },
+      { key: "status", label: "Status", sortable: true },
+      {
+        key: "amount",
+        label: "Amount",
+        sortable: true,
+        render: (v, row) => (v != null ? `${row.currency || "USD"} ${Number(v).toFixed(2)}` : "—"),
+      },
+      { key: "description", label: "Note", sortable: true },
+    ],
+    []
+  );
 
   return (
     <div className="mx-auto max-w-[67.2rem] px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-semibold text-title">Subscription</h1>
-      <p className="mt-1 text-secondary">
-        Your plan, billing status, and recent payment activity. Complete PayPal checkout if your shop was assigned a
-        paid plan.
+      <p className="mt-1 text-sm text-secondary">
+        Plan, billing status, and recent payments.
       </p>
 
       {loading && <p className="mt-6 text-secondary">Loading…</p>}
@@ -138,9 +164,11 @@ export default function SubscriptionPageClient() {
             <div className="mt-3">
               <Table
                 columns={txCols}
-                data={data.transactions || []}
+                data={sortedTransactions}
                 rowKey="id"
                 emptyMessage="No transactions yet."
+                sortState={txSort}
+                onSort={handleTxSort}
                 responsive
               />
             </div>

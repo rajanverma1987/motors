@@ -18,6 +18,7 @@ import {
   DC_ARMATURE_FIELDS,
   emptySpecsFromFields,
 } from "@/lib/work-order-fields";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 function mergeSpecsFromMotor(stored, fieldList) {
   const base = emptySpecsFromFields(fieldList);
@@ -432,6 +433,16 @@ export default function DashboardMotorsPage() {
     });
   }, [motors, searchQuery, customerNameMap]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedMotors = useMemo(
+    () =>
+      sortRowsClient(filteredMotors, tableSort, (row, key) =>
+        key === "customer" ? customerNameMap[row.customerId] ?? "" : row[key]
+      ),
+    [filteredMotors, tableSort, customerNameMap]
+  );
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -453,11 +464,13 @@ export default function DashboardMotorsPage() {
       {
         key: "customer",
         label: "Customer",
+        sortable: true,
         render: (_, row) => customerNameMap[row.customerId] || row.customerId || "—",
       },
       {
         key: "serialNumber",
         label: "Serial",
+        sortable: true,
         render: (_, row) => (
           <button
             type="button"
@@ -468,12 +481,12 @@ export default function DashboardMotorsPage() {
           </button>
         ),
       },
-      { key: "manufacturer", label: "Manufacturer" },
-      { key: "model", label: "Model" },
-      { key: "hp", label: "HP" },
-      { key: "rpm", label: "RPM" },
-      { key: "voltage", label: "Voltage" },
-      { key: "frameSize", label: "Frame" },
+      { key: "manufacturer", label: "Manufacturer", sortable: true },
+      { key: "model", label: "Model", sortable: true },
+      { key: "hp", label: "HP", sortable: true },
+      { key: "rpm", label: "RPM", sortable: true },
+      { key: "voltage", label: "Voltage", sortable: true },
+      { key: "frameSize", label: "Frame", sortable: true },
     ],
     [customerNameMap]
   );
@@ -484,7 +497,7 @@ export default function DashboardMotorsPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Customer's motors</h1>
           <p className="mt-1 text-sm text-secondary">
-            Digital record of motors serviced. Link to customer. Create from list or from lead.
+            Motors linked to customers—create here or from a lead.
           </p>
         </div>
         <Button variant="primary" onClick={openCreateModal} className="shrink-0">
@@ -495,7 +508,7 @@ export default function DashboardMotorsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredMotors}
+          data={sortedMotors}
           rowKey="id"
           loading={loading}
           emptyMessage={motors.length === 0 ? "No motors yet. Use “Create Motor” or create from a lead." : "No motors match the search."}
@@ -503,6 +516,8 @@ export default function DashboardMotorsPage() {
           onSearch={setSearchQuery}
           searchPlaceholder="Search customer, serial, manufacturer, model…"
           onRefresh={async () => { setLoading(true); await loadMotors(); setLoading(false); }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

@@ -7,6 +7,7 @@ import Input from "@/components/ui/input";
 import Checkbox from "@/components/ui/checkbox";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const COLLECTION_NAMES = [
   "customers",
@@ -155,6 +156,47 @@ export default function IntegrationsPageClient() {
     );
   };
 
+  const timestampSortValue = (v) => {
+    const t = v ? new Date(v).getTime() : NaN;
+    return Number.isFinite(t) ? t : null;
+  };
+
+  const getKeyRowSortValue = useCallback((row, key) => {
+    if (key === "createdAt" || key === "lastUsedAt") return timestampSortValue(row?.[key]);
+    return row?.[key];
+  }, []);
+
+  const getWebhookRowSortValue = useCallback((row, key) => {
+    if (key === "events") {
+      const v = row?.events;
+      return Array.isArray(v) ? v.join("\n") : String(v ?? "");
+    }
+    return row?.[key];
+  }, []);
+
+  const getDeliveryRowSortValue = useCallback((row, key) => {
+    if (key === "createdAt") return timestampSortValue(row?.createdAt);
+    return row?.[key];
+  }, []);
+
+  const [keysSort, setKeysSort] = useState({ key: null, direction: "asc" });
+  const [webhooksSort, setWebhooksSort] = useState({ key: null, direction: "asc" });
+  const [deliveriesSort, setDeliveriesSort] = useState({ key: null, direction: "asc" });
+
+  const sortedKeys = useMemo(() => sortRowsClient(keys, keysSort, getKeyRowSortValue), [keys, keysSort, getKeyRowSortValue]);
+  const sortedWebhooks = useMemo(
+    () => sortRowsClient(webhooks, webhooksSort, getWebhookRowSortValue),
+    [webhooks, webhooksSort, getWebhookRowSortValue]
+  );
+  const sortedDeliveries = useMemo(
+    () => sortRowsClient(deliveries, deliveriesSort, getDeliveryRowSortValue),
+    [deliveries, deliveriesSort, getDeliveryRowSortValue]
+  );
+
+  const handleKeysSort = useCallback((key, direction) => setKeysSort({ key, direction }), []);
+  const handleWebhooksSort = useCallback((key, direction) => setWebhooksSort({ key, direction }), []);
+  const handleDeliveriesSort = useCallback((key, direction) => setDeliveriesSort({ key, direction }), []);
+
   const toggleWebhook = async (id, active) => {
     try {
       const res = await fetch(`/api/dashboard/integrations/webhooks/${id}`, {
@@ -187,11 +229,12 @@ export default function IntegrationsPageClient() {
 
   const keyColumns = useMemo(
     () => [
-      { key: "name", label: "Name" },
-      { key: "keyPrefix", label: "Prefix" },
+      { key: "name", label: "Name", sortable: true },
+      { key: "keyPrefix", label: "Prefix", sortable: true },
       {
         key: "active",
         label: "Active",
+        sortable: true,
         render: (v, row) => (
           <button type="button" className="text-primary hover:underline" onClick={() => toggleKey(row.id, v)}>
             {v ? "Yes" : "No"}
@@ -201,11 +244,13 @@ export default function IntegrationsPageClient() {
       {
         key: "createdAt",
         label: "Created",
+        sortable: true,
         render: (v) => (v ? new Date(v).toLocaleString() : "—"),
       },
       {
         key: "lastUsedAt",
         label: "Last used",
+        sortable: true,
         render: (v) => (v ? new Date(v).toLocaleString() : "Never"),
       },
       {
@@ -223,16 +268,18 @@ export default function IntegrationsPageClient() {
 
   const webhookColumns = useMemo(
     () => [
-      { key: "name", label: "Name" },
-      { key: "endpointUrl", label: "Endpoint URL" },
+      { key: "name", label: "Name", sortable: true },
+      { key: "endpointUrl", label: "Endpoint URL", sortable: true },
       {
         key: "events",
         label: "Events",
+        sortable: true,
         render: (v) => (Array.isArray(v) ? v.join(", ") : ""),
       },
       {
         key: "active",
         label: "Active",
+        sortable: true,
         render: (v, row) => (
           <button type="button" className="text-primary hover:underline" onClick={() => toggleWebhook(row.id, v)}>
             {v ? "Yes" : "No"}
@@ -254,11 +301,16 @@ export default function IntegrationsPageClient() {
 
   const deliveryColumns = useMemo(
     () => [
-      { key: "eventName", label: "Event" },
-      { key: "status", label: "Status" },
-      { key: "httpStatusCode", label: "HTTP" },
-      { key: "error", label: "Error" },
-      { key: "createdAt", label: "Time", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
+      { key: "eventName", label: "Event", sortable: true },
+      { key: "status", label: "Status", sortable: true },
+      { key: "httpStatusCode", label: "HTTP", sortable: true },
+      { key: "error", label: "Error", sortable: true },
+      {
+        key: "createdAt",
+        label: "Time",
+        sortable: true,
+        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+      },
     ],
     []
   );
@@ -268,8 +320,7 @@ export default function IntegrationsPageClient() {
       <div className="border-b border-border pb-4">
         <h1 className="text-2xl font-semibold text-title">API Integrations</h1>
         <p className="mt-1 text-sm text-secondary">
-          Create per-account secret API keys, configure event webhooks, and integrate external systems. No admin APIs
-          are exposed.
+          Secret keys and webhooks for your integrations.
         </p>
         <p className="mt-2 text-sm">
           <Link href="/developers/api" target="_blank" className="text-primary hover:underline">
@@ -295,7 +346,15 @@ export default function IntegrationsPageClient() {
               <p className="mt-1 break-all font-mono text-xs text-secondary">{lastCreatedKey}</p>
             </div>
           ) : null}
-          <Table columns={keyColumns} data={keys} rowKey="id" emptyMessage="No keys yet." responsive />
+          <Table
+            columns={keyColumns}
+            data={sortedKeys}
+            rowKey="id"
+            emptyMessage="No keys yet."
+            sortState={keysSort}
+            onSort={handleKeysSort}
+            responsive
+          />
         </section>
 
         <section className="space-y-4 rounded-lg border border-border p-4">
@@ -324,13 +383,29 @@ export default function IntegrationsPageClient() {
             </div>
           ) : null}
           <Button onClick={createWebhook}>Create webhook</Button>
-          <Table columns={webhookColumns} data={webhooks} rowKey="id" emptyMessage="No webhooks yet." responsive />
+          <Table
+            columns={webhookColumns}
+            data={sortedWebhooks}
+            rowKey="id"
+            emptyMessage="No webhooks yet."
+            sortState={webhooksSort}
+            onSort={handleWebhooksSort}
+            responsive
+          />
         </section>
       </div>
 
       <section className="mt-8 rounded-lg border border-border p-4">
         <h2 className="text-lg font-medium text-title">Recent webhook deliveries</h2>
-        <Table columns={deliveryColumns} data={deliveries} rowKey="id" emptyMessage="No deliveries yet." responsive />
+        <Table
+          columns={deliveryColumns}
+          data={sortedDeliveries}
+          rowKey="id"
+          emptyMessage="No deliveries yet."
+          sortState={deliveriesSort}
+          onSort={handleDeliveriesSort}
+          responsive
+        />
       </section>
     </div>
   );

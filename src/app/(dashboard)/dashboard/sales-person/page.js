@@ -9,6 +9,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 
 const INITIAL_FORM = {
   name: "",
@@ -147,6 +148,10 @@ export default function DashboardSalesPersonPage() {
     });
   }, [rows, searchQuery]);
 
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const sortedRows = useMemo(() => sortRowsClient(filteredRows, tableSort), [filteredRows, tableSort]);
+  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+
   const columns = useMemo(
     () => [
       {
@@ -164,10 +169,10 @@ export default function DashboardSalesPersonPage() {
           </button>
         ),
       },
-      { key: "name", label: "Name" },
-      { key: "phone", label: "Phone" },
-      { key: "email", label: "Email" },
-      { key: "bankDetail", label: "Bank Detail" },
+      { key: "name", label: "Name", sortable: true },
+      { key: "phone", label: "Phone", sortable: true },
+      { key: "email", label: "Email", sortable: true },
+      { key: "bankDetail", label: "Bank Detail", sortable: true },
     ],
     []
   );
@@ -178,7 +183,7 @@ export default function DashboardSalesPersonPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Sales Person</h1>
           <p className="mt-1 text-sm text-secondary">
-            Manage your sales team contacts and bank details for payouts and commissions.
+            Sales contacts and payout banking details.
           </p>
         </div>
         <Button variant="primary" onClick={openCreate} className="shrink-0">
@@ -189,7 +194,7 @@ export default function DashboardSalesPersonPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredRows}
+          data={sortedRows}
           rowKey="id"
           loading={loading}
           emptyMessage={rows.length === 0 ? "No sales persons yet. Use Add New to create one." : "No matching sales persons found."}
@@ -200,6 +205,8 @@ export default function DashboardSalesPersonPage() {
             setLoading(true);
             await loadSalesPersons();
           }}
+          sortState={tableSort}
+          onSort={handleTableSort}
           responsive
         />
       </div>

@@ -15,6 +15,8 @@ export default function Input({
   required = false,
   maxLength,
   autoComplete,
+  /** Applied to the native input element (e.g. compact rows in spec grids). */
+  inputClassName = "",
 }) {
   const id = idProp ?? name;
   return (
@@ -37,7 +39,7 @@ export default function Input({
         required={required}
         maxLength={maxLength}
         autoComplete={autoComplete}
-        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-form-bg !border-border select-none" : ""}`}
+        className={`rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${inputClassName}`.trim()}
       />
     </div>
   );

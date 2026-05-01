@@ -92,6 +92,7 @@ export async function GET(request, context) {
       address: "",
       contact: shopContact || process.env.MOTOR_SHOP_CONTACT?.trim() || "",
     };
+    const shopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
     return NextResponse.json({
       id: doc._id.toString(),
       poNumber: doc.poNumber ?? "",
@@ -102,6 +103,7 @@ export async function GET(request, context) {
       lineItems,
       notes: doc.notes ?? "",
       shop,
+      shopLogoUrl,
       accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
       accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
       totalOrder: lineItems.reduce((sum, row) => {

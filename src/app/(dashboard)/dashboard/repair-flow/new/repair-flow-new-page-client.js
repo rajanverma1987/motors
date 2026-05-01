@@ -14,8 +14,7 @@ export default function RepairFlowNewPageClient() {
       </Link>
       <h1 className="mt-4 text-2xl font-bold text-title">New repair job</h1>
       <p className="mt-1 text-sm text-secondary">
-        Link an existing customer and motor. After you create the job, add pre-inspections as needed; they appear in the
-        table below. Use <span className="font-medium text-title">Open job</span> when you want the full job page.
+        Attach a customer and motor to start a job; open it for inspections and quotes.
       </p>
 
       <div className="mt-8">

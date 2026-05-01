@@ -524,9 +524,7 @@ export default function CalculatorsPageClient() {
       <header className="mb-6 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Calculators</h1>
         <p className="mt-1 max-w-[57.6rem] text-sm text-secondary">
-          Quick reference tools for motor shops—power conversion, FLA estimates, speed, torque, bench DC math, and
-          circular-mil winding combinations. Results are for estimation; always follow NEC/local code and nameplate data
-          in the field.
+          Motor math for estimates—confirm with code and nameplates in the field.
         </p>
       </header>
       <div className="min-h-0 flex-1 overflow-auto pb-8">

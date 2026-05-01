@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 
 export default function PoVendorViewPage() {
   const params = useParams();
@@ -112,11 +113,16 @@ export default function PoVendorViewPage() {
         </div>
 
         <div className="rounded-lg border border-border bg-card p-6 shadow-sm print:shadow-none print:border print:p-4">
-          {(po.shop?.name || po.shop?.contact) && (
+          {(String(po.shopLogoUrl || "").trim() || po.shop?.name || po.shop?.contact) && (
             <section className="mb-6 border-b border-border pb-4">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Motor Shop</h2>
-              {po.shop?.name && <p className="font-semibold text-title">{po.shop.name}</p>}
-              {po.shop?.contact && <p className="text-sm text-secondary">{po.shop.contact}</p>}
+              <div className="flex flex-wrap items-start gap-3">
+                <PrintShopLogo logoUrl={po.shopLogoUrl} alt="" />
+                <div className="min-w-0 flex-1">
+                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Motor Shop</h2>
+                  {po.shop?.name && <p className="font-semibold text-title">{po.shop.name}</p>}
+                  {po.shop?.contact && <p className="text-sm text-secondary">{po.shop.contact}</p>}
+                </div>
+              </div>
             </section>
           )}
           {(po.accountsBillingAddress || po.accountsShippingAddress) && (

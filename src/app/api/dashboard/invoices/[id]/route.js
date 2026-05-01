@@ -90,6 +90,7 @@ export async function GET(request, context) {
       preparedByDisplay,
       fromShopName,
       fromShopContact,
+      fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       customerTaxExempt: normalizeTaxExempt(inv.customerTaxExempt),

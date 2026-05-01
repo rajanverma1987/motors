@@ -10,6 +10,7 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
 import { useConfirm } from "@/components/confirm-provider";
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft (not public)" },
@@ -213,6 +214,25 @@ export default function MarketplacePageClient() {
     }
   };
 
+  const [itemsSort, setItemsSort] = useState({ key: null, direction: "asc" });
+  const [ordersSort, setOrdersSort] = useState({ key: null, direction: "asc" });
+  const handleItemsSort = useCallback((key, direction) => setItemsSort({ key, direction }), []);
+  const handleOrdersSort = useCallback((key, direction) => setOrdersSort({ key, direction }), []);
+
+  const getOrderSortValue = useCallback((row, key) => {
+    if (key === "createdAt") {
+      const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    return row?.[key];
+  }, []);
+
+  const sortedItems = useMemo(() => sortRowsClient(items, itemsSort), [items, itemsSort]);
+  const sortedOrders = useMemo(
+    () => sortRowsClient(orders, ordersSort, getOrderSortValue),
+    [orders, ordersSort, getOrderSortValue]
+  );
+
   const patchOrderStatus = async (row, status) => {
     try {
       const res = await fetch(`/api/dashboard/marketplace/orders/${row.id}`, {
@@ -256,17 +276,19 @@ export default function MarketplacePageClient() {
           </div>
         ),
       },
-      { key: "title", label: "Title" },
-      { key: "category", label: "Category" },
-      { key: "priceDisplay", label: "Price / note" },
+      { key: "title", label: "Title", sortable: true },
+      { key: "category", label: "Category", sortable: true },
+      { key: "priceDisplay", label: "Price / note", sortable: true },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => (v === "published" ? "Published" : "Draft"),
       },
       {
         key: "slug",
         label: "Public link",
+        sortable: true,
         render: (v) =>
           v ? (
             <a
@@ -287,14 +309,15 @@ export default function MarketplacePageClient() {
 
   const orderColumns = useMemo(
     () => [
-      { key: "itemTitleSnapshot", label: "Item" },
-      { key: "buyerName", label: "Buyer" },
-      { key: "buyerEmail", label: "Email" },
-      { key: "buyerPhone", label: "Phone" },
-      { key: "quantity", label: "Qty" },
+      { key: "itemTitleSnapshot", label: "Item", sortable: true },
+      { key: "buyerName", label: "Buyer", sortable: true },
+      { key: "buyerEmail", label: "Email", sortable: true },
+      { key: "buyerPhone", label: "Phone", sortable: true },
+      { key: "quantity", label: "Qty", sortable: true },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v, row) => (
           <select
             className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-title"
@@ -313,13 +336,19 @@ export default function MarketplacePageClient() {
       {
         key: "buyerMessage",
         label: "Message",
+        sortable: true,
         render: (v) => (
           <span className="line-clamp-2 max-w-[200px]" title={v}>
             {v || "—"}
           </span>
         ),
       },
-      { key: "createdAt", label: "Date", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
+      {
+        key: "createdAt",
+        label: "Date",
+        sortable: true,
+        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+      },
     ],
     []
   );
@@ -329,12 +358,7 @@ export default function MarketplacePageClient() {
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Marketplace</h1>
         <p className="mt-1 text-sm text-secondary">
-          List parts, motors, tools, and surplus on the public marketplace. Buyers submit a request—no payment on
-          the site; you follow up directly. Published items appear at{" "}
-          <a href="/marketplace" className="text-primary underline" target="_blank" rel="noopener noreferrer">
-            /marketplace
-          </a>
-          .
+          Publish surplus publicly; buyers request—you close the sale offline.
         </p>
       </div>
 
@@ -369,21 +393,25 @@ export default function MarketplacePageClient() {
         {tab === "items" ? (
           <Table
             columns={itemColumns}
-            data={items}
+            data={sortedItems}
             rowKey="id"
             loading={loading}
             emptyMessage="No listings yet. Create one to show on the public marketplace when published."
             onRefresh={load}
+            sortState={itemsSort}
+            onSort={handleItemsSort}
             responsive
           />
         ) : (
           <Table
             columns={orderColumns}
-            data={orders}
+            data={sortedOrders}
             rowKey="id"
             loading={loading}
             emptyMessage="No buyer requests yet."
             onRefresh={load}
+            sortState={ordersSort}
+            onSort={handleOrdersSort}
             responsive
           />
         )}

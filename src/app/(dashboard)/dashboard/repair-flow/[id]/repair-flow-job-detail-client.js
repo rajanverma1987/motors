@@ -33,6 +33,7 @@ import SalesCommissionModal from "@/components/dashboard/sales-commission-modal"
 import { getRepairFlowWorkOrderToolbarState } from "@/lib/repair-flow-work-order-toolbar";
 import { getRepairFlowCustomerSendEligibility } from "@/lib/repair-flow-customer-send-eligibility";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
+import { sortRowsClient } from "@/lib/client-table-sort";
 import { emptyMotorNameplate } from "@/lib/motor-nameplate-patch";
 import {
   emptyPreliminaryFindings,
@@ -248,6 +249,26 @@ export default function RepairFlowJobDetailClient({
     return [...pre, ...det];
   }, [preliminaryInspectionsForQuote, detailedInspectionsForQuote]);
 
+  const getInspectionSortValue = useCallback(
+    (row, key) => {
+      if (key === "recorded") {
+        const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
+        return Number.isFinite(t) ? t : null;
+      }
+      if (key === "summary") return inspectionSummaryRow(row);
+      if (key === "component") return componentLabel(job?.motorType, row.component);
+      return row?.[key];
+    },
+    [job?.motorType]
+  );
+
+  const [inspectionSort, setInspectionSort] = useState({ key: null, direction: "asc" });
+  const sortedInspections = useMemo(
+    () => sortRowsClient(inspections, inspectionSort, getInspectionSortValue),
+    [inspections, inspectionSort, getInspectionSortValue]
+  );
+  const handleInspectionSort = useCallback((key, direction) => setInspectionSort({ key, direction }), []);
+
   const inspectionColumns = useMemo(
     () => [
       {
@@ -268,6 +289,7 @@ export default function RepairFlowJobDetailClient({
       {
         key: "kind",
         label: "Kind",
+        sortable: true,
         render: (_, row) => (
           <Badge
             variant={row.kind === "detailed" ? "warning" : "primary"}
@@ -280,16 +302,19 @@ export default function RepairFlowJobDetailClient({
       {
         key: "component",
         label: "Component",
+        sortable: true,
         render: (_, row) => componentLabel(job?.motorType, row.component),
       },
       {
         key: "recorded",
         label: "Recorded",
+        sortable: true,
         render: (_, row) => (row.createdAt ? new Date(row.createdAt).toLocaleString() : "—"),
       },
       {
         key: "summary",
         label: "Summary",
+        sortable: true,
         render: (_, row) => <span className="text-secondary">{inspectionSummaryRow(row)}</span>,
       },
     ],
@@ -890,7 +915,7 @@ export default function RepairFlowJobDetailClient({
           <div className="min-h-0 min-w-0 w-full flex-1">
             <Table
               columns={inspectionColumns}
-              data={inspections}
+              data={sortedInspections}
               rowKey="id"
               loading={loading}
               emptyMessage="No inspections yet. Use Add pre-inspection or Add detailed inspection when available."
@@ -898,6 +923,8 @@ export default function RepairFlowJobDetailClient({
               paginateClientSide={false}
               responsive
               onRefresh={loadAll}
+              sortState={inspectionSort}
+              onSort={handleInspectionSort}
             />
           </div>
         </section>

@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import Customer from "@/models/Customer";
+import Motor from "@/models/Motor";
+import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
+import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
 import { resolveRepairFlowJobIdForQuote } from "@/lib/quote-repair-flow-job-id";
 import WorkOrder from "@/models/WorkOrder";
 import Invoice from "@/models/Invoice";
@@ -12,8 +19,7 @@ import { releaseInventoryReservationsForQuote } from "@/lib/inventory-service";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
-
-const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
+import { normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
@@ -75,6 +81,30 @@ export async function GET(request, context) {
       : [];
     const motorRepairFlowQuoteId = String(obj.motorRepairFlowQuoteId ?? "").trim();
     const repairFlowJobId = await resolveRepairFlowJobIdForQuote(obj, user.email);
+    const email = user.email.trim().toLowerCase();
+    const [customer, motor, owner, settingsDoc, preparedByDisplay] = await Promise.all([
+      obj.customerId
+        ? Customer.findOne({ _id: obj.customerId, createdByEmail: email }).lean()
+        : Promise.resolve(null),
+      obj.motorId ? Motor.findOne({ _id: obj.motorId, createdByEmail: email }).lean() : Promise.resolve(null),
+      User.findOne({ email }).lean(),
+      UserSettings.findOne({ ownerEmail: email }).lean(),
+      resolvePreparedByDisplay(obj.preparedBy, email),
+    ]);
+    const { toName: customerToName, billingAddress: customerBillingAddress } = customerInvoiceToBlock(customer);
+    const customerName =
+      (customer?.companyName && String(customer.companyName).trim()) ||
+      (customer?.primaryContactName && String(customer.primaryContactName).trim()) ||
+      "";
+    const motorLabel =
+      motor && [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
+        ? [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
+        : obj.motorId
+          ? String(obj.motorId)
+          : "";
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const fromShopName = (owner?.shopName || "").trim();
+    const fromShopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
     const out = {
       id: obj._id?.toString?.() ?? String(obj._id),
       customerId: obj.customerId ?? "",
@@ -119,6 +149,18 @@ export async function GET(request, context) {
         : [],
       createdAt: obj.createdAt,
       updatedAt: obj.updatedAt,
+      customerName,
+      customerToName,
+      customerBillingAddress,
+      motorLabel,
+      preparedByDisplay,
+      fromShopName,
+      fromShopContact,
+      fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
+      fromBillingAddress: (u.accountsBillingAddress || "").trim(),
+      fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
+      invoicePaymentOptions: (u.invoicePaymentOptions || "").trim(),
+      invoiceThankYouNote: (u.invoiceThankYouNote || "").trim(),
     };
     return NextResponse.json(out);
   } catch (err) {
@@ -189,16 +231,20 @@ export async function PATCH(request, context) {
       doc.motorId = String(motorId).trim();
     }
     if (leadId !== undefined) doc.leadId = clampString(leadId, 100);
-    if (status !== undefined && STATUS_VALUES.includes(status) && status !== doc.status) {
-      if (!Array.isArray(doc.statusLog)) doc.statusLog = [];
-      doc.statusLog.push({
-        from: doc.status || "draft",
-        to: status,
-        at: new Date(),
-        by: (user.contactName && user.contactName.trim()) || (user.shopName && user.shopName.trim()) || user.email?.trim() || "",
-      });
-      doc.markModified("statusLog");
-      doc.status = status;
+    if (status !== undefined) {
+      const nextStatus = normalizeDashboardQuoteStatusSlug(status);
+      const prevStatus = String(doc.status || "draft").trim() || "draft";
+      if (nextStatus !== prevStatus) {
+        if (!Array.isArray(doc.statusLog)) doc.statusLog = [];
+        doc.statusLog.push({
+          from: prevStatus,
+          to: nextStatus,
+          at: new Date(),
+          by: (user.contactName && user.contactName.trim()) || (user.shopName && user.shopName.trim()) || user.email?.trim() || "",
+        });
+        doc.markModified("statusLog");
+        doc.status = nextStatus;
+      }
     }
     if (customerPo !== undefined) doc.customerPo = clampString(customerPo, 100);
     if (date !== undefined) doc.date = clampString(date, 20);

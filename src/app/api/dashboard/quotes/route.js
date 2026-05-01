@@ -11,8 +11,7 @@ import {
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
-
-const STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
+import { normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
@@ -117,7 +116,7 @@ export async function POST(request) {
       customerId: customerId.trim(),
       motorId: motorId.trim(),
       leadId: clampString(leadId, 100),
-      status: status && STATUS_VALUES.includes(status) ? status : "draft",
+      status: normalizeDashboardQuoteStatusSlug(status),
       customerPo: clampString(customerPo, 100),
       date: clampString(dateStr, 20),
       preparedBy: clampString(preparedByStr, 200),

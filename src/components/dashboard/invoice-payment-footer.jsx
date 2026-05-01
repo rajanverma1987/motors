@@ -7,34 +7,38 @@ export function InvoicePaymentFooterPrint({
   paymentOptions = "",
   thankYouNote = "",
   variant = "dashboard",
+  compact = false,
 }) {
   const pay = String(paymentOptions ?? "").trim();
   const thanks = String(thankYouNote ?? "").trim();
   if (!pay && !thanks) return null;
 
   const isCustomer = variant === "customer";
-  const border = isCustomer ? "border-gray-200" : "border-border";
-  const label = isCustomer ? "text-gray-500" : "text-secondary";
-  const body = isCustomer ? "text-gray-900" : "text-title";
-  const thanksClass = isCustomer ? "text-gray-700" : "text-secondary";
+  const border = isCustomer ? "border-gray-200" : "border-neutral-300";
+  const label = isCustomer ? "text-gray-500" : "text-neutral-600";
+  const body = isCustomer ? "text-gray-900" : "text-neutral-900";
+  const thanksClass = isCustomer ? "text-gray-700" : "text-neutral-700";
   const linkClass = "break-all text-primary underline hover:opacity-90";
+  const footerPad = compact ? "mt-3 border-t pt-2" : "mt-8 border-t pt-6";
+  const payBlock = compact ? "mb-2" : "mb-6";
+  const payHeading = compact ? "mb-1 text-[10px]" : "mb-2 text-xs";
 
   return (
-    <footer className={`mt-8 border-t pt-6 ${border}`}>
+    <footer className={`${footerPad} ${border}`}>
       {pay ? (
-        <div className="mb-6">
-          <h2 className={`mb-2 text-xs font-semibold uppercase tracking-wide ${label}`}>
+        <div className={payBlock}>
+          <h2 className={`${payHeading} font-semibold uppercase tracking-wide ${label}`}>
             Payment options
           </h2>
           <PaymentOptionsWithLinks
             text={pay}
-            className={`whitespace-pre-wrap text-sm ${body}`}
+            className={`whitespace-pre-wrap ${compact ? "text-xs leading-snug" : "text-sm"} ${body}`}
             linkClassName={linkClass}
           />
         </div>
       ) : null}
       {thanks ? (
-        <p className={`text-center text-sm font-medium italic ${thanksClass}`}>{thanks}</p>
+        <p className={`text-center ${compact ? "text-xs" : "text-sm"} font-medium italic ${thanksClass}`}>{thanks}</p>
       ) : null}
     </footer>
   );

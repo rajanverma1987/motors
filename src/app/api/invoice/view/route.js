@@ -76,6 +76,7 @@ export async function GET(request) {
       motorLabel,
       fromShopName: owner?.shopName?.trim() || "",
       fromShopContact: [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "",
+      fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       customerToName,

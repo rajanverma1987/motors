@@ -1,0 +1,18 @@
+"use client";
+
+/**
+ * Shop logo sizing for all printable documents (invoice, quote, PO, repair-flow quotes, public links).
+ * ~20% larger than the previous h-14 / max-w-12rem baseline.
+ */
+export const PRINT_SHOP_LOGO_IMG_CLASS =
+  "h-[4.2rem] max-h-[4.2rem] w-auto max-w-[14.5rem] shrink-0 object-contain object-left print:block";
+
+/**
+ * @param {{ logoUrl?: string|null, alt?: string, className?: string }} props
+ */
+export function PrintShopLogo({ logoUrl, alt = "", className = "" }) {
+  const src = String(logoUrl || "").trim();
+  if (!src) return null;
+  const cls = [PRINT_SHOP_LOGO_IMG_CLASS, className].filter(Boolean).join(" ");
+  return <img src={src} alt={alt} className={cls} />;
+}

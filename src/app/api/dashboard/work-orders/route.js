@@ -21,6 +21,7 @@ import {
   DEFAULT_WORK_ORDER_STATUSES,
 } from "@/lib/work-order-fields";
 import { reserveInventoryForQuoteIfFirstWorkOrder } from "@/lib/inventory-service";
+import { effectiveWorkOrderNumberPrefix } from "@/lib/document-number-prefixes";
 
 function initialStatusFromSettings(settingsDoc) {
   const u = mergeUserSettings(settingsDoc?.settings);
@@ -33,11 +34,14 @@ function initialStatusFromSettings(settingsDoc) {
  * Find the next available work order number for this account + label (Job# or RFQ-derived slug).
  * Example: W-RF00042-1, W-RF00042-2 → returns W-RF00042-3.
  */
-async function nextWorkOrderNumberSuggestion(email, safeSegment) {
-  const prefix = `W-${safeSegment}-`;
+async function nextWorkOrderNumberSuggestion(email, safeSegment, woHead) {
+  const head = String(woHead || "W-");
+  const escHead = head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escSeg = String(safeSegment).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = `^${escHead}${escSeg}-\\d+$`;
   const latest = await WorkOrder.findOne({
     createdByEmail: email,
-    workOrderNumber: { $regex: `^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\d+$` },
+    workOrderNumber: { $regex: pattern },
   })
     .sort({ createdAt: -1, workOrderNumber: -1 })
     .lean();
@@ -49,7 +53,7 @@ async function nextWorkOrderNumberSuggestion(email, safeSegment) {
     const parsed = Number.parseInt(suffixRaw, 10);
     if (Number.isFinite(parsed) && parsed > 0) next = parsed + 1;
   }
-  return `${prefix}${next}`;
+  return `${head}${safeSegment}-${next}`;
 }
 
 export async function GET(request) {
@@ -104,6 +108,13 @@ export async function POST(request) {
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     }
+    const quoteStatus = String(quote.status || "draft").trim().toLowerCase();
+    if (quoteStatus !== "approved") {
+      return NextResponse.json(
+        { error: "Quote must be approved before creating a work order" },
+        { status: 400 }
+      );
+    }
     const motor = await Motor.findOne({
       _id: quote.motorId,
       createdByEmail: email,
@@ -130,6 +141,8 @@ export async function POST(request) {
     }
     const motorClass = motorClassFromMotorType(motor.motorType);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const mergedSettings = mergeUserSettings(settingsDoc?.settings);
+    const woHead = effectiveWorkOrderNumberPrefix(mergedSettings);
     const today = new Date().toISOString().slice(0, 10);
     const technicianEmployeeId = String(body.technicianEmployeeId || "").trim();
     const jobType = normalizeWorkOrderJobType(body.jobType, motorClass);
@@ -161,7 +174,7 @@ export async function POST(request) {
     // Try a few times in case of rare concurrent inserts with the same prefix.
     let lastErr;
     for (let attempt = 0; attempt < 5; attempt++) {
-      const workOrderNumber = await nextWorkOrderNumberSuggestion(email, safeSegment);
+      const workOrderNumber = await nextWorkOrderNumberSuggestion(email, safeSegment, woHead);
       try {
         const doc = await WorkOrder.create({
           createdByEmail: email,
