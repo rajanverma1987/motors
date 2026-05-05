@@ -19,6 +19,10 @@ export default function BlogPageLayout({
   canonicalPath,
   /** Optional full-width block above the main grid (e.g. tools above the sticky quote CTA). */
   topContent,
+  /** Rendered below the sidebar CTA (same card on desktop & mobile), e.g. embedded calculator. */
+  sidebarBelowCta,
+  /** Use a wider right column so sidebar tools (calculator) have more horizontal room. */
+  wideSidebar = false,
   children,
 }) {
   const articleUrl = canonicalPath ? `${siteUrl.replace(/\/$/, "")}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}` : null;
@@ -77,33 +81,45 @@ export default function BlogPageLayout({
         </div>
       </section>
 
-      <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
+      <div className={`mx-auto px-4 sm:px-6 ${wideSidebar ? "max-w-[96rem]" : "max-w-[86.4rem]"}`}>
         {topContent ? <div className="pt-10 sm:pt-12 md:pt-14">{topContent}</div> : null}
-        {/* ~65% content | ~35% CTA on md+ */}
-        <div className="grid grid-cols-1 gap-8 py-12 sm:py-16 md:grid-cols-[13fr_7fr]">
+        {/* Default ~65/35; wideSidebar ~48/52 so sidebar tools (e.g. calculator) breathe */}
+        <div
+          className={`grid grid-cols-1 gap-8 py-12 sm:py-16 ${
+            wideSidebar ? "md:grid-cols-[minmax(0,11fr)_minmax(0,13fr)]" : "md:grid-cols-[13fr_7fr]"
+          }`}
+        >
           {/* Mobile CTA - above content, only on small screens */}
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
             <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
             {sidebarDescription && (
               <p className="mt-2 text-sm text-secondary">{sidebarDescription}</p>
             )}
-            <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div>
+            {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
+            {sidebarBelowCta ? (
+              <div className={sidebarCta ? "mt-6 border-t border-border pt-6" : "mt-4"}>{sidebarBelowCta}</div>
+            ) : null}
           </div>
-          {/* Main content - left column, 80% width on md+ */}
+          {/* Main content - left column */}
           <div className="min-w-0 md:col-start-1 md:row-start-1">
             {children}
           </div>
 
-          {/* Sidebar CTA - right column 20% on md+, sticky */}
-          <aside className="hidden min-w-0 md:block md:col-start-2 md:row-start-1 md:sticky md:top-24 md:self-start">
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          {/* Sidebar CTA (+ optional below) — sticky only when no tall embed below CTA */}
+          <aside
+            className={`hidden min-w-0 md:block md:col-start-2 md:row-start-1 md:self-start ${
+              sidebarBelowCta ? "" : "md:sticky md:top-24"
+            }`}
+          >
+            <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
               <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
               {sidebarDescription && (
                 <p className="mt-2 text-sm text-secondary">{sidebarDescription}</p>
               )}
-              <div className="mt-4 flex flex-col gap-3">
-                {sidebarCta}
-              </div>
+              {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
+              {sidebarBelowCta ? (
+                <div className={sidebarCta ? "mt-6 border-t border-border pt-6" : "mt-4"}>{sidebarBelowCta}</div>
+              ) : null}
             </div>
           </aside>
         </div>

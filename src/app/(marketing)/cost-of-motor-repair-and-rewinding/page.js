@@ -1,6 +1,6 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
-import CostPageCta from "./cost-page-cta";
+import MotorRewindCostCalculator from "@/components/marketing/motor-rewind-cost-calculator";
 
 const path = "/cost-of-motor-repair-and-rewinding";
 
@@ -103,7 +103,10 @@ export default function CostOfMotorRepairPage() {
         canonicalPath={path}
         sidebarTitle="Calculate rewinding cost"
         sidebarDescription="Use our ballpark calculator for rewind pricing, then request quotes from winding shops in your area."
-        sidebarCta={<CostPageCta />}
+        sidebarBelowCta={
+          <MotorRewindCostCalculator variant="embedded" calculatorSourcePage={path} />
+        }
+        wideSidebar
       >
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <p className="text-secondary not-prose">

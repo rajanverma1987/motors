@@ -259,7 +259,11 @@ Thanks — I appreciate responses with clear scope, assumptions, and line items 
   };
 }
 
-export default function MotorRewindCostCalculator() {
+export default function MotorRewindCostCalculator({
+  variant = "full",
+  calculatorSourcePage = CALCULATOR_SOURCE_PAGE,
+}) {
+  const isEmbedded = variant === "embedded";
   const [form, setForm] = useState(defaultForm);
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
@@ -318,9 +322,21 @@ export default function MotorRewindCostCalculator() {
   }, [form, breakdown]);
 
   return (
-    <div className="not-prose rounded-xl border border-border bg-card p-4 shadow-sm sm:p-6">
+    <div
+      className={`not-prose rounded-xl border border-border bg-card shadow-sm ${
+        isEmbedded ? "p-3 sm:p-4 md:p-5" : "p-4 sm:p-6"
+      }`}
+    >
       <div className="border-b border-border pb-4">
-        <h1 className="text-xl font-semibold text-title sm:text-2xl">Electric motor rewinding cost calculator</h1>
+        {isEmbedded ? (
+          <h2 className="text-lg font-semibold text-title sm:text-xl">
+            Electric motor rewinding cost calculator
+          </h2>
+        ) : (
+          <h1 className="text-xl font-semibold text-title sm:text-2xl">
+            Electric motor rewinding cost calculator
+          </h1>
+        )}
         <p className="mt-2 text-sm text-secondary">
           Enter a few nameplate-style details for a quick US ballpark range. This is not a shop quote—actual price
           depends on inspection, damage, and the shop you choose.
@@ -433,7 +449,7 @@ export default function MotorRewindCostCalculator() {
         prefill={leadPrefill}
         introTextOverride="Request quotes from rewinding shops near you. Your details and calculator summary are sent to MotorsWinding so we can help match you with shops."
         calculatorFormSnapshot={form}
-        calculatorSourcePage={CALCULATOR_SOURCE_PAGE}
+        calculatorSourcePage={calculatorSourcePage}
       />
     </div>
   );
