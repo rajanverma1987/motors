@@ -180,8 +180,8 @@ export function validateMotorRewindPayload(body) {
   return errors;
 }
 
-/** Typical reference copper value for public ballpark only (not a live commodity quote). */
-const DEFAULT_CUSTOMER_COPPER_USD_PER_KG = 9.75;
+/** Typical reference copper value for public ballpark when live feed is unavailable. */
+export const DEFAULT_CUSTOMER_COPPER_USD_PER_KG = 9.75;
 
 /**
  * Customer-facing ballpark: slab labor, no margin/tax, optional copper override from input.

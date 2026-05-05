@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiUpload } from "react-icons/fi";
-import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
+import {
+  computeCustomerRewindBallpark,
+  DEFAULT_CUSTOMER_COPPER_USD_PER_KG,
+} from "@/lib/motor-rewind-cost/calculate";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
@@ -29,10 +32,15 @@ const DEFAULT_LEAD_INTRO =
 const NAMEPLATE_FAST_PATH_INTRO =
   "Don't know all the winding specs? Attach clear nameplate photos (and any failure notes). We'll route your request so shops can estimate or advise next steps.";
 
-function estimateNewMotorReplacementUsd(motorHp) {
+/**
+ * Generic replacement benchmark scaled by US PPI for motor manufacturing when available (else multiplier 1).
+ * Anchor for the base formula is configured server-side (MOTOR_REPLACEMENT_PPI_ANCHOR).
+ */
+function estimateNewMotorReplacementUsd(motorHp, motorPpiMultiplier = 1) {
   const h = Number(motorHp);
   if (!Number.isFinite(h) || h <= 0) return null;
-  return Math.round(350 + h * 98);
+  const m = Number.isFinite(motorPpiMultiplier) && motorPpiMultiplier > 0 ? motorPpiMultiplier : 1;
+  return Math.round((350 + h * 98) * m);
 }
 
 function rpmLabelForCopy(form) {
@@ -240,6 +248,23 @@ function moneyWhole(n) {
   }).format(x);
 }
 
+/** Short label for API snapshot timestamp (en-US). */
+function formatMarketSnapshotAt(iso) {
+  if (!iso || typeof iso !== "string") return "";
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+}
+
 /** Round band to cleaner increments ($25) for credibility in UI and leads. */
 function roughBallparkBand(low, high) {
   const lo = Number(low);
@@ -342,6 +367,15 @@ export default function MotorRewindCostCalculator({
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadPrefill, setLeadPrefill] = useState(null);
   const [leadIntroOverride, setLeadIntroOverride] = useState(null);
+  const [market, setMarket] = useState(() => ({
+    copperUsdPerKg: DEFAULT_CUSTOMER_COPPER_USD_PER_KG,
+    motorPpiMultiplier: 1,
+    copperLive: false,
+    motorLive: false,
+    copperSourceLabel: "",
+    motorSourceLabel: "",
+    fetchedAt: "",
+  }));
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- post-mount localStorage restore */
@@ -365,6 +399,38 @@ export default function MotorRewindCostCalculator({
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/marketing/motor-calculator-market");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled || !data || typeof data !== "object") return;
+        setMarket({
+          copperUsdPerKg:
+            typeof data.copperUsdPerKg === "number" && Number.isFinite(data.copperUsdPerKg)
+              ? data.copperUsdPerKg
+              : DEFAULT_CUSTOMER_COPPER_USD_PER_KG,
+          motorPpiMultiplier:
+            typeof data.motorPpiMultiplier === "number" && Number.isFinite(data.motorPpiMultiplier) && data.motorPpiMultiplier > 0
+              ? data.motorPpiMultiplier
+              : 1,
+          copperLive: !!data.copperLive,
+          motorLive: !!data.motorLive,
+          copperSourceLabel: typeof data.copperSourceLabel === "string" ? data.copperSourceLabel : "",
+          motorSourceLabel: typeof data.motorSourceLabel === "string" ? data.motorSourceLabel : "",
+          fetchedAt: typeof data.fetchedAt === "string" ? data.fetchedAt : "",
+        });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const t = setTimeout(() => {
       try {
         localStorage.setItem(LS_DRAFT, JSON.stringify(form));
@@ -380,6 +446,7 @@ export default function MotorRewindCostCalculator({
       ...form,
       slots: Number(form.slots),
       voltage: Number(form.voltage),
+      copperRatePerKg: market.copperUsdPerKg,
     });
     const total = breakdown.ballparkTotal;
     const low = Math.round(total * RANGE_LOW_FACTOR * 100) / 100;
@@ -387,7 +454,7 @@ export default function MotorRewindCostCalculator({
     const midpoint = (low + high) / 2;
     const rough = roughBallparkBand(low, high);
     const motorHp = breakdown.motorHp;
-    const newMotorEstimate = estimateNewMotorReplacementUsd(motorHp);
+    const newMotorEstimate = estimateNewMotorReplacementUsd(motorHp, market.motorPpiMultiplier);
     const crossesReplaceVsNew =
       newMotorEstimate != null && Number.isFinite(total) && total > 0.6 * newMotorEstimate;
     const replacementRecommended =
@@ -404,8 +471,12 @@ export default function MotorRewindCostCalculator({
       replacementRecommended,
       industrial,
       fractionalHpNote,
+      copperLive: market.copperLive,
+      motorLive: market.motorLive,
+      copperSourceLabel: market.copperSourceLabel,
+      motorSourceLabel: market.motorSourceLabel,
     };
-  }, [form]);
+  }, [form, market]);
 
   const applyTemplate = useCallback((id) => {
     setTemplateId(id);
@@ -446,6 +517,8 @@ export default function MotorRewindCostCalculator({
     setLeadOpen(false);
     setLeadIntroOverride(null);
   }, []);
+
+  const marketSnapshotShort = formatMarketSnapshotAt(market.fetchedAt);
 
   return (
     <div
@@ -547,69 +620,162 @@ export default function MotorRewindCostCalculator({
         </details>
       </Form>
 
-      <div className="mt-8 rounded-xl border-2 border-primary/35 bg-gradient-to-b from-primary/[0.14] to-primary/[0.06] p-6 shadow-md sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Ballpark estimate (US)</p>
-        <p className="mt-3 text-sm font-medium text-secondary">Estimated cost</p>
-        <p className="mt-1 text-3xl font-bold tracking-tight text-title sm:text-4xl md:text-5xl">
-          {moneyWhole(derived.roughLow)} – {moneyWhole(derived.roughHigh)}
-        </p>
-        <p className="mt-4 text-sm font-medium text-title">Typical turnaround: 2–5 business days</p>
+      <div className="mt-6 rounded-xl border border-primary/30 bg-gradient-to-b from-primary/[0.11] to-primary/[0.04] p-4 shadow-sm sm:p-5">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ballpark estimate (US)</p>
+            <p className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-title sm:text-3xl">
+              {moneyWhole(derived.roughLow)} – {moneyWhole(derived.roughHigh)}
+            </p>
+          </div>
+          <p className="shrink-0 text-[11px] text-secondary">Turnaround ~2–5 business days</p>
+        </div>
 
-        <p className="mt-3 text-xs text-secondary sm:text-sm">Based on typical US rewind shop pricing (2025)</p>
+        <p className="mt-2 text-[11px] leading-snug text-secondary">
+          Based on typical US rewind shop pricing (2025).
+        </p>
 
         {derived.fractionalHpNote ? (
-          <p className="mt-3 rounded-md border border-border bg-card/80 px-3 py-2 text-sm text-secondary">
+          <p className="mt-2 rounded-md border border-border bg-card/80 px-2.5 py-1.5 text-[11px] leading-snug text-secondary">
             Many shops charge a <strong className="text-title">minimum bench fee</strong> on fractional-HP motors—the
             total often reflects minimum labor more than copper alone.
           </p>
         ) : null}
 
         {derived.industrial ? (
-          <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/[0.08] px-3 py-2 text-sm text-secondary">
-            <strong className="text-title">Industrial / large motor:</strong> pricing is usually custom (special iron,
-            insulation class, testing). Use the quote flow—shops typically confirm scope after review or inspection.
+          <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/[0.08] px-2.5 py-1.5 text-[11px] leading-snug text-secondary">
+            <strong className="text-title">Industrial motor:</strong> pricing is usually custom—use quote flow for scope
+            after inspection.
           </p>
         ) : null}
 
         <div
-          className={`mt-5 rounded-md border px-3 py-3 text-sm font-medium ${
+          className={`mt-3 rounded-md border px-2.5 py-2 text-[13px] font-medium leading-snug ${
             derived.replacementRecommended
               ? "border-warning/40 bg-warning/[0.12] text-title"
               : "border-success/35 bg-success/[0.1] text-title"
           }`}
         >
           <p>
-            Recommendation:{" "}
+            <span className="text-secondary">Recommendation:</span>{" "}
             {derived.replacementRecommended ? (
-              <>Compare rewind vs new motor quotes before deciding.</>
+              <>Compare rewind vs new motor quotes.</>
             ) : (
-              <>Rewinding is cost-effective at this range.</>
+              <>Rewinding looks cost-effective at this range.</>
             )}
           </p>
-          <p className="mt-1.5 text-xs font-normal text-secondary">
+          <p className="mt-1 text-[11px] font-normal leading-snug text-secondary">
             {derived.replacementRecommended ? (
-              <>Rule-of-thumb benchmark — verify with written quotes.</>
+              <>Use written quotes from shops—not online benchmarks alone—to decide.</>
             ) : (
-              <>{`(Typically <60% of new motor cost)`}</>
+              <>Typically under ~60% of a generic new-motor benchmark.</>
             )}
           </p>
         </div>
 
-        <div className="mt-6">
-          <Button type="button" variant="primary" size="lg" className="w-full sm:w-auto" onClick={openQuoteModal}>
+        <div className="mt-6 border-t border-primary/15 pt-5">
+          <Button type="button" variant="primary" size="md" className="w-full sm:w-auto" onClick={openQuoteModal}>
             Get exact quote in 30 minutes
           </Button>
-          <p className="mt-2 text-xs text-secondary sm:text-sm">Takes 1–2 minutes. No commitment.</p>
-          <p className="mt-2 text-xs font-medium text-secondary sm:text-sm">Shops typically respond same day</p>
+          <p className="mt-1.5 text-[11px] leading-snug text-secondary">
+            1–2 min · no commitment · shops often same day
+          </p>
         </div>
 
-        <ul className="mt-12 space-y-1 border-t border-primary/20 pt-6 text-xs text-secondary sm:text-sm">
-          <li>Copper and wire (estimate): {money(derived.breakdown.copperCost)}</li>
-          <li>Insulation and varnish (estimate): {money(derived.breakdown.materialCost)}</li>
-          <li>Typical labor band (estimate): {money(derived.breakdown.laborUsd)}</li>
-        </ul>
+        <p className="mt-3 text-[11px] leading-snug text-secondary">Final quote may vary after inspection.</p>
 
-        <p className="mt-5 text-xs leading-relaxed text-secondary sm:text-sm">Final quote may vary after inspection.</p>
+        <details className="mt-3 rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden">
+          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-title hover:bg-card/80 sm:px-4">
+            How this estimate is calculated — data sources & methodology
+          </summary>
+          <div className="space-y-3 border-t border-border px-3 pb-4 pt-3 text-[11px] leading-snug text-secondary sm:px-4">
+            <p>
+              This calculator uses periodically refreshed <strong className="font-medium text-title">public benchmarks</strong>{" "}
+              (commodity copper and motor-industry producer prices) to tune material input and the generic &quot;new
+              motor&quot; comparison. If live data isn&apos;t available for a given refresh (for example, a feed outage),
+              fixed reference values are used instead. Planning guidance only—not a shop quote.
+            </p>
+
+            <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 rounded-md border border-border/80 bg-card/60 px-2.5 py-2">
+              <span className="inline-flex flex-wrap items-center gap-x-1.5">
+                <span className="text-secondary">Copper rate (model)</span>
+                <span className="font-semibold tabular-nums text-title">{money(market.copperUsdPerKg)}/kg</span>
+                {market.copperLive ? (
+                  <span className="rounded bg-success/15 px-1 py-0 text-[9px] font-semibold uppercase tracking-wide text-success">
+                    Live
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-secondary">reference</span>
+                )}
+              </span>
+              <span className="inline-flex flex-wrap items-center gap-x-1.5">
+                <span className="text-secondary">New-motor index factor</span>
+                <span className="font-semibold tabular-nums text-title">
+                  ×{Number(market.motorPpiMultiplier).toFixed(2)}
+                </span>
+                {market.motorLive ? (
+                  <span className="rounded bg-success/15 px-1 py-0 text-[9px] font-semibold uppercase tracking-wide text-success">
+                    Live
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-secondary">baseline</span>
+                )}
+              </span>
+              {marketSnapshotShort ? (
+                <span className="text-[10px] text-secondary">Snapshot {marketSnapshotShort}</span>
+              ) : null}
+            </div>
+
+            {(derived.copperLive || derived.motorLive) && (
+              <ul className="list-disc space-y-1 pl-4 text-[11px] text-secondary">
+                {derived.copperLive ? (
+                  <li>
+                    Copper materials: IMF copper benchmark via{" "}
+                    <abbr title="Federal Reserve Economic Data" className="cursor-help no-underline">
+                      FRED
+                    </abbr>{" "}
+                    (USD/kg), with a wire-purchasing adjustment factor.
+                  </li>
+                ) : null}
+                {derived.motorLive ? (
+                  <li>
+                    New-motor comparison: U.S. producer price index for motor & generator manufacturing vs a configured
+                    baseline index (also via FRED).
+                  </li>
+                ) : null}
+              </ul>
+            )}
+
+            <div>
+              <p className="font-medium text-title">Typical cost components (rule-of-thumb)</p>
+              <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-0.5">
+                <li>Copper/wire ~{money(derived.breakdown.copperCost)}</li>
+                <li>Insulation ~{money(derived.breakdown.materialCost)}</li>
+                <li>Labor ~{money(derived.breakdown.laborUsd)}</li>
+              </ul>
+            </div>
+
+            {derived.newMotorEstimate != null ? (
+              <p className="text-[11px] text-secondary">
+                <span className="font-medium text-title">Replacement benchmark (planning only):</span> generic new motor
+                ~{moneyWhole(derived.newMotorEstimate)}
+                {derived.motorLive ? " (index-adjusted)" : ""}; your band midpoint ~
+                {moneyWhole((derived.roughLow + derived.roughHigh) / 2)}.
+              </p>
+            ) : null}
+
+            {(derived.copperLive || derived.motorLive) && (derived.copperSourceLabel || derived.motorSourceLabel) ? (
+              <div className="rounded-md border border-border/80 bg-card/50 px-2 py-1.5 text-[10px] leading-snug">
+                {derived.copperLive && derived.copperSourceLabel ? (
+                  <span className="block">{derived.copperSourceLabel}</span>
+                ) : null}
+                {derived.motorLive && derived.motorSourceLabel ? (
+                  <span className="mt-0.5 block">{derived.motorSourceLabel}</span>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        </details>
       </div>
 
       <LeadFormModal
