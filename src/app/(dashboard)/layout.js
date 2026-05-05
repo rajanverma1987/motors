@@ -2,12 +2,14 @@ import DashboardGuard from "@/components/dashboard/dashboard-guard";
 import DashboardNav from "@/components/dashboard/dashboard-nav";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import ListingUpgradeBanner from "@/components/dashboard/listing-upgrade-banner";
+import StripContextualAiWidget from "@/components/dashboard/strip-contextual-ai-widget";
 import { UserSettingsProvider } from "@/contexts/user-settings-context";
 
 export default function DashboardLayout({ children }) {
   return (
     <DashboardGuard>
       <UserSettingsProvider>
+      <StripContextualAiWidget />
       <div className="flex h-screen flex-col overflow-hidden bg-bg">
         <header className="shrink-0">
           <DashboardNav />

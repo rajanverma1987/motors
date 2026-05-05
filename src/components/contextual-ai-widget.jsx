@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { teardownContextualAiWidgetDom } from "@/lib/contextual-ai-widget-teardown";
 
 const SCRIPT_ID = "contextual-ai-systems-widget";
 const WIDGET_SRC = "https://contextualaisystems.com/widget.js";
@@ -8,6 +9,9 @@ const WIDGET_SRC = "https://contextualaisystems.com/widget.js";
 export default function ContextualAiWidget() {
   useEffect(() => {
     if (typeof document === "undefined") return;
+
+    teardownContextualAiWidgetDom();
+
     if (document.getElementById(SCRIPT_ID)) return;
 
     const s = document.createElement("script");
@@ -17,6 +21,10 @@ export default function ContextualAiWidget() {
     s.setAttribute("data-tenant", "a907b16d-fc11-45c9-b7db-663658c3d13d");
     s.setAttribute("data-ai-system", "0a941bd9-6f86-4118-94cb-734df37836e4");
     document.body.appendChild(s);
+
+    return () => {
+      teardownContextualAiWidgetDom();
+    };
   }, []);
 
   return null;
