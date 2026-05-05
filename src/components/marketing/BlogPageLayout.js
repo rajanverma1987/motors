@@ -105,13 +105,15 @@ export default function BlogPageLayout({
             {children}
           </div>
 
-          {/* Sidebar CTA (+ optional below) — sticky only when no tall embed below CTA */}
-          <aside
-            className={`hidden min-w-0 md:block md:col-start-2 md:row-start-1 md:self-start ${
-              sidebarBelowCta ? "" : "md:sticky md:top-24"
-            }`}
-          >
-            <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
+          {/* Sidebar — sticky on md+ so CTAs / embedded calculator stay in view while reading */}
+          <aside className="hidden min-w-0 md:sticky md:top-24 md:col-start-2 md:row-start-1 md:block md:self-start">
+            <div
+              className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"} ${
+                sidebarBelowCta
+                  ? "md:max-h-[calc(100vh-7rem)] md:overflow-y-auto md:overscroll-contain"
+                  : ""
+              }`}
+            >
               <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
               {sidebarDescription && (
                 <p className="mt-2 text-sm text-secondary">{sidebarDescription}</p>
