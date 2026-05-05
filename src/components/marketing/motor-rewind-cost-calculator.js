@@ -1,16 +1,44 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FiUpload } from "react-icons/fi";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
-import FormLayout, { Form, FormSectionTitle } from "@/components/ui/form-layout";
+import { Form, FormSectionTitle } from "@/components/ui/form-layout";
 import LeadFormModal from "@/components/lead-form-modal";
 
-const LS_DRAFT = "motorRewindCustomerDraft_v1";
+const LS_DRAFT = "motorRewindCustomerDraft_v2";
 
 const CALCULATOR_SOURCE_PAGE = "/electric-motor-rewinding-cost-calculator";
+
+/** Ballpark range spread around point estimate (conversion UX). */
+const RANGE_LOW_FACTOR = 0.88;
+const RANGE_HIGH_FACTOR = 1.12;
+
+/** Above this HP, show industrial / formal-quote messaging. */
+const INDUSTRIAL_HP_THRESHOLD = 100;
+
+/** Below this midpoint ($), do not suggest replacement—small-job rewinds feel wrong vs “new motor” heuristic. */
+const REPLACEMENT_MIDPOINT_MIN_USD = 1500;
+
+const DEFAULT_LEAD_INTRO =
+  "Request quotes from rewinding shops near you. Your details and calculator summary are sent to MotorsWinding so we can help match you with shops.";
+
+const NAMEPLATE_FAST_PATH_INTRO =
+  "Don't know all the winding specs? Attach clear nameplate photos (and any failure notes). We'll route your request so shops can estimate or advise next steps.";
+
+function estimateNewMotorReplacementUsd(motorHp) {
+  const h = Number(motorHp);
+  if (!Number.isFinite(h) || h <= 0) return null;
+  return Math.round(350 + h * 98);
+}
+
+function rpmLabelForCopy(form) {
+  const r = form?.rpm != null ? String(form.rpm).trim() : "";
+  return r || "1800 (typical)";
+}
 
 const HP_OPTIONS = [
   { value: "0.5", label: "0.5 HP" },
@@ -43,6 +71,8 @@ const RPM_OPTIONS = [
   { value: "3000", label: "3000 RPM" },
   { value: "3600", label: "3600 RPM" },
 ];
+
+const RPM_OPTIONS_OPTIONAL = [{ value: "", label: "Typical / not sure (1800 RPM)" }, ...RPM_OPTIONS];
 
 const SLOT_OPTIONS = [
   { value: "12", label: "12 slots" },
@@ -156,11 +186,11 @@ const TEMPLATES = [
   },
   {
     id: "22kw",
-    label: "22 kW · 1800 RPM · 48 slot",
+    label: "≈22 kW (~30 HP) · 1800 RPM · 48 slot",
     patch: {
-      ratingUnit: "kw",
+      ratingUnit: "hp",
       hp: "30",
-      kw: "22",
+      kw: "",
       phase: "3",
       voltage: "460",
       rpm: "1800",
@@ -179,14 +209,14 @@ const TEMPLATE_SELECT_OPTIONS = [
 function defaultForm() {
   return {
     ratingUnit: "hp",
-    hp: "5",
+    hp: "10",
     kw: "",
     phase: "3",
     voltage: "460",
-    rpm: "1800",
+    rpm: "",
     slots: "36",
     coilType: "lap",
-    wireGauge: "14",
+    wireGauge: "13",
     insulationMode: "fixed",
     insulationValue: "165",
     manualCuKg: "",
@@ -199,7 +229,32 @@ function money(n) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(x);
 }
 
-export function buildRewindCalculatorLeadPrefill(form, breakdown) {
+/** Whole dollars — used for rounded ballpark band display. */
+function moneyWhole(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(x);
+}
+
+/** Round band to cleaner increments ($25) for credibility in UI and leads. */
+function roughBallparkBand(low, high) {
+  const lo = Number(low);
+  const hi = Number(high);
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return { lowR: lo, highR: hi };
+  const roundDown25 = (n) => Math.floor(n / 25) * 25;
+  const roundUp25 = (n) => Math.ceil(n / 25) * 25;
+  let lowR = roundDown25(lo);
+  let highR = roundUp25(hi);
+  if (highR < lowR) highR = lowR + 25;
+  return { lowR, highR };
+}
+
+export function buildRewindCalculatorLeadPrefill(form, breakdown, rangeOpts = {}) {
+  const { low, high, replacementRecommended } = rangeOpts;
   const phaseLabel = form.phase === "1" ? "Single-phase" : "Three-phase";
   const coilLabel =
     form.coilType === "lap"
@@ -220,6 +275,23 @@ export function buildRewindCalculatorLeadPrefill(form, breakdown) {
       ? `• Approximate copper weight (I entered): ${String(form.manualCuKg).trim()} kg\n`
       : "";
 
+  const rough =
+    low != null && high != null && Number.isFinite(low) && Number.isFinite(high) && low <= high
+      ? roughBallparkBand(low, high)
+      : null;
+
+  const ballparkBlock =
+    rough != null
+      ? `Calculator planning range about ${moneyWhole(rough.lowR)} – ${moneyWhole(rough.highR)} USD (rule-of-thumb band). Typical materials + labor; final price depends on inspection, damage, varnish/VPI, bearings, tests, and shop rates.`
+      : `Calculator planning figure about ${money(breakdown.ballparkTotal)} USD (typical materials + labor band). Final price depends on inspection, core/slot damage, insulation class, varnish/VPI, bearings, balance, electrical tests, rush fees, and your shop rates.`;
+
+  const recLine =
+    replacementRecommended === true
+      ? `• Recommendation (rule-of-thumb): compare rewind vs new motor quotes before deciding.\n`
+      : replacementRecommended === false
+        ? `• Recommendation (rule-of-thumb): rewinding looks cost-effective at this ballpark (typically under ~60% of a generic new-motor benchmark).\n`
+        : "";
+
   const problemDescription = `REQUEST — Motor rewinding quotes (MotorsWinding.com calculator)
 
 WHAT I NEED
@@ -228,11 +300,12 @@ Qualified rewind / motor repair shops: please reply with a quote or offer to ins
 MOTOR / WINDING (from calculator — verify against nameplate)
 • Rating: ${ratingLine}
 • Phase: ${phaseLabel}
-• Voltage: ${form.voltage || "—"} V | RPM: ${form.rpm || "—"}
+• Voltage: ${form.voltage || "—"} V | RPM (as entered / typical): ${rpmLabelForCopy(form)}
 • Slots: ${form.slots} | AWG: ${form.wireGauge} | Coil type: ${coilLabel}
 ${copperLine}
+${recLine}
 BALLPARK (WEBSITE ONLY — NOT A BINDING QUOTE)
-Calculator planning figure about ${money(breakdown.ballparkTotal)} USD (typical materials + labor band). Final price depends on inspection, core/slot damage, insulation class, varnish/VPI, bearings, balance, electrical tests, rush fees, and your shop rates.
+${ballparkBlock}
 
 NAMEPLATE / DOCUMENTS
 • I can attach clear nameplate photos using “Motor photos” on this form if that helps your first pass.
@@ -268,6 +341,7 @@ export default function MotorRewindCostCalculator({
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadPrefill, setLeadPrefill] = useState(null);
+  const [leadIntroOverride, setLeadIntroOverride] = useState(null);
 
   useEffect(() => {
     /* eslint-disable react-hooks/set-state-in-effect -- post-mount localStorage restore */
@@ -276,7 +350,12 @@ export default function MotorRewindCostCalculator({
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") {
-          setForm((f) => ({ ...f, ...parsed }));
+          const merged = { ...defaultForm(), ...parsed };
+          if (merged.ratingUnit === "kw") {
+            merged.ratingUnit = "hp";
+            merged.kw = "";
+          }
+          setForm(merged);
         }
       }
     } catch {
@@ -296,12 +375,36 @@ export default function MotorRewindCostCalculator({
     return () => clearTimeout(t);
   }, [form]);
 
-  const breakdown = useMemo(() => {
-    return computeCustomerRewindBallpark({
+  const derived = useMemo(() => {
+    const breakdown = computeCustomerRewindBallpark({
       ...form,
       slots: Number(form.slots),
       voltage: Number(form.voltage),
     });
+    const total = breakdown.ballparkTotal;
+    const low = Math.round(total * RANGE_LOW_FACTOR * 100) / 100;
+    const high = Math.round(total * RANGE_HIGH_FACTOR * 100) / 100;
+    const midpoint = (low + high) / 2;
+    const rough = roughBallparkBand(low, high);
+    const motorHp = breakdown.motorHp;
+    const newMotorEstimate = estimateNewMotorReplacementUsd(motorHp);
+    const crossesReplaceVsNew =
+      newMotorEstimate != null && Number.isFinite(total) && total > 0.6 * newMotorEstimate;
+    const replacementRecommended =
+      crossesReplaceVsNew && Number.isFinite(midpoint) && midpoint >= REPLACEMENT_MIDPOINT_MIN_USD;
+    const industrial = Number.isFinite(motorHp) && motorHp > INDUSTRIAL_HP_THRESHOLD;
+    const fractionalHpNote = Number.isFinite(motorHp) && motorHp > 0 && motorHp < 1;
+    return {
+      breakdown,
+      low,
+      high,
+      roughLow: rough.lowR,
+      roughHigh: rough.highR,
+      newMotorEstimate,
+      replacementRecommended,
+      industrial,
+      fractionalHpNote,
+    };
   }, [form]);
 
   const applyTemplate = useCallback((id) => {
@@ -317,9 +420,32 @@ export default function MotorRewindCostCalculator({
   };
 
   const openQuoteModal = useCallback(() => {
-    setLeadPrefill(buildRewindCalculatorLeadPrefill(form, breakdown));
+    setLeadIntroOverride(null);
+    setLeadPrefill(
+      buildRewindCalculatorLeadPrefill(form, derived.breakdown, {
+        low: derived.low,
+        high: derived.high,
+        replacementRecommended: derived.replacementRecommended,
+      })
+    );
     setLeadOpen(true);
-  }, [form, breakdown]);
+  }, [form, derived]);
+
+  const openNameplateFastPath = useCallback(() => {
+    setLeadIntroOverride(NAMEPLATE_FAST_PATH_INTRO);
+    setLeadPrefill({
+      motorHp: "",
+      voltage: "",
+      motorType: "AC motor rewinding",
+      problemDescription: `I'm not sure of all winding specs yet. I have (or will upload) motor nameplate photo(s) and want rewind/repair guidance or a quote.\n\nPlease review photos and advise scope, inspection needs, and typical turnaround.`,
+    });
+    setLeadOpen(true);
+  }, []);
+
+  const closeLeadModal = useCallback(() => {
+    setLeadOpen(false);
+    setLeadIntroOverride(null);
+  }, []);
 
   return (
     <div
@@ -338,9 +464,20 @@ export default function MotorRewindCostCalculator({
           </h1>
         )}
         <p className="mt-2 text-sm text-secondary">
-          Enter a few nameplate-style details for a quick US ballpark range. This is not a shop quote—actual price
-          depends on inspection, damage, and the shop you choose.
+          Adjust HP, phase, and optionally RPM—your estimate updates instantly. Not a shop quote; inspection may change
+          scope and price.
         </p>
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={openNameplateFastPath}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-primary bg-transparent px-4 py-3 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/10 sm:w-auto sm:justify-start"
+          >
+            <FiUpload className="h-4 w-4 shrink-0" aria-hidden />
+            Upload nameplate for an estimate
+          </button>
+          <p className="mt-2 text-center text-xs text-secondary sm:text-left">No specs needed</p>
+        </div>
       </div>
 
       <Form id="motor-rewind-customer-form" className="mt-4 !border-0 !bg-transparent !p-0 !shadow-none" onSubmit={(e) => e.preventDefault()}>
@@ -348,107 +485,140 @@ export default function MotorRewindCostCalculator({
           Your motor
         </FormSectionTitle>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Select
-            label="Example motors"
-            name="template"
-            options={TEMPLATE_SELECT_OPTIONS}
-            value={templateId}
-            onChange={(e) => applyTemplate(e.target.value)}
-            searchable={false}
-          />
-          <FormLayout cols={1} labelWidth="7.5rem" className="sm:col-span-1">
-            <FormLayout.FormField label="Rating" name="ratingUnitRow">
-              <div className="flex flex-wrap gap-4 py-1 text-sm text-title">
-                <label className="inline-flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="ratingUnit"
-                    value="hp"
-                    checked={form.ratingUnit === "hp"}
-                    onChange={() => setForm((f) => ({ ...f, ratingUnit: "hp" }))}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  Horsepower (HP)
-                </label>
-                <label className="inline-flex cursor-pointer items-center gap-2">
-                  <input
-                    type="radio"
-                    name="ratingUnit"
-                    value="kw"
-                    checked={form.ratingUnit === "kw"}
-                    onChange={() => setForm((f) => ({ ...f, ratingUnit: "kw" }))}
-                    className="h-4 w-4 accent-primary"
-                  />
-                  Kilowatts (kW)
-                </label>
-              </div>
-            </FormLayout.FormField>
-          </FormLayout>
-          {form.ratingUnit === "hp" ? (
-            <Select label="Motor HP" name="hp" options={HP_OPTIONS} value={form.hp} onChange={handleField("hp")} searchable={false} />
-          ) : (
-            <Input label="Motor kW" name="kw" type="number" step="0.01" min="0" value={form.kw} onChange={handleField("kw")} />
-          )}
+          <Select label="Motor HP" name="hp" options={HP_OPTIONS} value={form.hp} onChange={handleField("hp")} searchable={false} />
           <Select label="Phase" name="phase" options={PHASE_OPTIONS} value={form.phase} onChange={handleField("phase")} searchable={false} />
           <Select
-            label="Voltage (nameplate)"
-            name="voltage"
-            options={VOLTAGE_OPTIONS}
-            value={form.voltage}
-            onChange={handleField("voltage")}
+            label="RPM (optional)"
+            name="rpm"
+            options={RPM_OPTIONS_OPTIONAL}
+            value={form.rpm}
+            onChange={handleField("rpm")}
             searchable={false}
-          />
-          <Select label="RPM" name="rpm" options={RPM_OPTIONS} value={form.rpm} onChange={handleField("rpm")} searchable={false} />
-          <Select label="Stator slots" name="slots" options={SLOT_OPTIONS} value={form.slots} onChange={handleField("slots")} searchable={false} />
-          <Select label="Coil type" name="coilType" options={COIL_OPTIONS} value={form.coilType} onChange={handleField("coilType")} searchable={false} />
-          <Select
-            label="Magnet wire (AWG)"
-            name="wireGauge"
-            options={WIRE_OPTIONS}
-            value={form.wireGauge}
-            onChange={handleField("wireGauge")}
-            searchable={false}
-          />
-          <Input
-            label="Copper weight (optional)"
-            name="manualCuKg"
-            type="number"
-            step="0.01"
-            min="0"
-            placeholder="Leave blank to estimate from size"
-            value={form.manualCuKg}
-            onChange={handleField("manualCuKg")}
-            help="Only if you already know approximate copper weight from a shop or teardown."
           />
         </div>
+
+        <details className="mt-5 rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 text-sm font-medium text-title hover:bg-card/80 sm:px-4">
+            <span>Advanced details (optional)</span>
+            <span className="text-xs font-normal text-secondary">Voltage, slots, coil, AWG, copper weight</span>
+          </summary>
+          <div className="grid gap-4 border-t border-border px-3 pb-4 pt-4 sm:grid-cols-2 sm:px-4">
+            <div className="sm:col-span-2">
+              <Select
+                label="Example presets"
+                name="template"
+                options={TEMPLATE_SELECT_OPTIONS}
+                value={templateId}
+                onChange={(e) => applyTemplate(e.target.value)}
+                searchable={false}
+              />
+            </div>
+            <Select
+              label="Voltage (nameplate)"
+              name="voltage"
+              options={VOLTAGE_OPTIONS}
+              value={form.voltage}
+              onChange={handleField("voltage")}
+              searchable={false}
+            />
+            <Select label="Stator slots" name="slots" options={SLOT_OPTIONS} value={form.slots} onChange={handleField("slots")} searchable={false} />
+            <Select label="Coil type" name="coilType" options={COIL_OPTIONS} value={form.coilType} onChange={handleField("coilType")} searchable={false} />
+            <Select
+              label="Magnet wire (AWG)"
+              name="wireGauge"
+              options={WIRE_OPTIONS}
+              value={form.wireGauge}
+              onChange={handleField("wireGauge")}
+              searchable={false}
+            />
+            <Input
+              label="Copper weight (optional)"
+              name="manualCuKg"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="Leave blank to estimate from size"
+              value={form.manualCuKg}
+              onChange={handleField("manualCuKg")}
+              help="Only if you already know approximate copper weight from a shop or teardown."
+              className="sm:col-span-2"
+            />
+          </div>
+        </details>
       </Form>
 
-      <div className="mt-8 rounded-lg border border-primary/25 bg-primary/[0.06] p-5 sm:p-6">
-        <p className="text-sm font-medium text-secondary">Ballpark rewinding cost (USD)</p>
-        <p className="mt-2 text-3xl font-bold tracking-tight text-title sm:text-4xl">{money(breakdown.ballparkTotal)}</p>
-        <p className="mt-3 text-sm text-secondary">
-          Built from typical copper and insulation allowances plus a common US shop labor band for your horsepower
-          size. Real quotes vary—use this to plan before you talk to a shop.
+      <div className="mt-8 rounded-xl border-2 border-primary/35 bg-gradient-to-b from-primary/[0.14] to-primary/[0.06] p-6 shadow-md sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Ballpark estimate (US)</p>
+        <p className="mt-3 text-sm font-medium text-secondary">Estimated cost</p>
+        <p className="mt-1 text-3xl font-bold tracking-tight text-title sm:text-4xl md:text-5xl">
+          {moneyWhole(derived.roughLow)} – {moneyWhole(derived.roughHigh)}
         </p>
-        <ul className="mt-4 space-y-1.5 text-sm text-secondary">
-          <li>Copper and wire (estimate): {money(breakdown.copperCost)}</li>
-          <li>Insulation and varnish (estimate): {money(breakdown.materialCost)}</li>
-          <li>Typical labor band (estimate): {money(breakdown.laborUsd)}</li>
-        </ul>
+        <p className="mt-4 text-sm font-medium text-title">Typical turnaround: 2–5 business days</p>
+
+        <p className="mt-3 text-xs text-secondary sm:text-sm">Based on typical US rewind shop pricing (2025)</p>
+
+        {derived.fractionalHpNote ? (
+          <p className="mt-3 rounded-md border border-border bg-card/80 px-3 py-2 text-sm text-secondary">
+            Many shops charge a <strong className="text-title">minimum bench fee</strong> on fractional-HP motors—the
+            total often reflects minimum labor more than copper alone.
+          </p>
+        ) : null}
+
+        {derived.industrial ? (
+          <p className="mt-3 rounded-md border border-amber-500/40 bg-amber-500/[0.08] px-3 py-2 text-sm text-secondary">
+            <strong className="text-title">Industrial / large motor:</strong> pricing is usually custom (special iron,
+            insulation class, testing). Use the quote flow—shops typically confirm scope after review or inspection.
+          </p>
+        ) : null}
+
+        <div
+          className={`mt-5 rounded-md border px-3 py-3 text-sm font-medium ${
+            derived.replacementRecommended
+              ? "border-warning/40 bg-warning/[0.12] text-title"
+              : "border-success/35 bg-success/[0.1] text-title"
+          }`}
+        >
+          <p>
+            Recommendation:{" "}
+            {derived.replacementRecommended ? (
+              <>Compare rewind vs new motor quotes before deciding.</>
+            ) : (
+              <>Rewinding is cost-effective at this range.</>
+            )}
+          </p>
+          <p className="mt-1.5 text-xs font-normal text-secondary">
+            {derived.replacementRecommended ? (
+              <>Rule-of-thumb benchmark — verify with written quotes.</>
+            ) : (
+              <>{`(Typically <60% of new motor cost)`}</>
+            )}
+          </p>
+        </div>
+
         <div className="mt-6">
           <Button type="button" variant="primary" size="lg" className="w-full sm:w-auto" onClick={openQuoteModal}>
-            Get a quote from a winding shop in your area
+            Get exact quote in 30 minutes
           </Button>
+          <p className="mt-2 text-xs text-secondary sm:text-sm">Takes 1–2 minutes. No commitment.</p>
+          <p className="mt-2 text-xs font-medium text-secondary sm:text-sm">Shops typically respond same day</p>
         </div>
+
+        <ul className="mt-12 space-y-1 border-t border-primary/20 pt-6 text-xs text-secondary sm:text-sm">
+          <li>Copper and wire (estimate): {money(derived.breakdown.copperCost)}</li>
+          <li>Insulation and varnish (estimate): {money(derived.breakdown.materialCost)}</li>
+          <li>Typical labor band (estimate): {money(derived.breakdown.laborUsd)}</li>
+        </ul>
+
+        <p className="mt-5 text-xs leading-relaxed text-secondary sm:text-sm">Final quote may vary after inspection.</p>
       </div>
 
       <LeadFormModal
         open={leadOpen}
-        onClose={() => setLeadOpen(false)}
+        onClose={closeLeadModal}
         listing={null}
         prefill={leadPrefill}
-        introTextOverride="Request quotes from rewinding shops near you. Your details and calculator summary are sent to MotorsWinding so we can help match you with shops."
-        calculatorFormSnapshot={form}
+        introTextOverride={leadIntroOverride ?? DEFAULT_LEAD_INTRO}
+        calculatorFormSnapshot={leadIntroOverride ? null : form}
         calculatorSourcePage={calculatorSourcePage}
       />
     </div>
