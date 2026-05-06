@@ -192,7 +192,7 @@ export default async function ListingDetailPage({ params }) {
     return (
       <div className="mx-auto max-w-[67.2rem] px-4 py-16 text-center">
         <p className="text-secondary">Repair center not found.</p>
-        <Link href="/electric-motor-reapir-shops-listings" className="mt-4 inline-block text-primary hover:underline">
+        <Link href="/electric-motor-reapir-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
           ← Back to listings
         </Link>
       </div>
@@ -274,6 +274,7 @@ export default async function ListingDetailPage({ params }) {
       <div className="mx-auto max-w-[86.4rem] px-4 py-8 sm:py-12">
         <Link
           href="/electric-motor-reapir-shops-listings"
+          prefetch
           className="inline-flex items-center text-sm text-secondary hover:text-primary"
         >
           ← Back to listings
