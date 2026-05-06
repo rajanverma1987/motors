@@ -1,30 +1,34 @@
 import Link from "next/link";
-import { getPublicListings, getListingsFilteredByLocation } from "@/lib/listings-public";
+import { getPublicListingsPaginated } from "@/lib/listings-public";
 import { FormContainer } from "@/components/ui/form-layout";
 import PublicListingCard from "@/components/listings/public-listing-card";
 
-function filterListings(listings, search) {
-  const q = (search || "").trim().toLowerCase();
-  if (!q) return listings;
-  return listings.filter(
-    (l) =>
-      (l.companyName || "").toLowerCase().includes(q) ||
-      (l.city || "").toLowerCase().includes(q) ||
-      (l.state || "").toLowerCase().includes(q) ||
-      (l.zipCode || "").toLowerCase().includes(q) ||
-      (l.serviceZipCode || "").toLowerCase().includes(q)
-  );
-}
+const PAGE_SIZE = 40;
 
 export default async function ListingsDirectoryResults({ searchParams }) {
   const params = typeof searchParams?.then === "function" ? await searchParams : searchParams ?? {};
   const search = (params.search ?? "").trim();
   const city = (params.city ?? "").trim();
   const state = (params.state ?? "").trim();
+  const page = Math.max(1, Number.parseInt(String(params.page || "1"), 10) || 1);
 
-  const listings = await getPublicListings();
-  const byLocation = city || state ? await getListingsFilteredByLocation({ city, state }) : listings;
-  const filtered = filterListings(byLocation, search);
+  const { listings, total, page: currentPage, totalPages } = await getPublicListingsPaginated({
+    search,
+    city,
+    state,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+
+  const withParams = (nextPage) => {
+    const next = new URLSearchParams();
+    if (search) next.set("search", search);
+    if (city) next.set("city", city);
+    if (state) next.set("state", state);
+    if (nextPage > 1) next.set("page", String(nextPage));
+    const qs = next.toString();
+    return qs ? `/electric-motor-reapir-shops-listings?${qs}` : "/electric-motor-reapir-shops-listings";
+  };
 
   return (
     <section className="py-10 sm:py-14">
@@ -41,7 +45,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
             aria-label="Search listings"
           />
           <p className="text-sm text-secondary">
-            {filtered.length} center{filtered.length !== 1 ? "s" : ""} listed
+            {total} center{total !== 1 ? "s" : ""} listed
             {(city || state) && (
               <>
                 {" "}
@@ -54,7 +58,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
           </p>
         </form>
 
-        {filtered.length === 0 ? (
+        {total === 0 ? (
           <FormContainer className="py-12 text-center">
             <p className="text-secondary">
               {search
@@ -74,11 +78,48 @@ export default async function ListingsDirectoryResults({ searchParams }) {
             )}
           </FormContainer>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((listing, index) => (
-              <PublicListingCard key={listing.id} listing={listing} imagePriority={index < 6} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {listings.map((listing, index) => (
+                <PublicListingCard key={listing.id} listing={listing} imagePriority={index < 6} />
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="mt-8 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-secondary">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  {currentPage > 1 ? (
+                    <Link
+                      href={withParams(currentPage - 1)}
+                      prefetch
+                      className="inline-flex items-center rounded-md border border-border px-3 py-2 text-sm font-medium text-title hover:bg-muted/40"
+                    >
+                      ← Previous
+                    </Link>
+                  ) : (
+                    <span className="inline-flex cursor-not-allowed items-center rounded-md border border-border px-3 py-2 text-sm font-medium text-secondary/60">
+                      ← Previous
+                    </span>
+                  )}
+                  {currentPage < totalPages ? (
+                    <Link
+                      href={withParams(currentPage + 1)}
+                      prefetch
+                      className="inline-flex items-center rounded-md border border-border px-3 py-2 text-sm font-medium text-title hover:bg-muted/40"
+                    >
+                      Next →
+                    </Link>
+                  ) : (
+                    <span className="inline-flex cursor-not-allowed items-center rounded-md border border-border px-3 py-2 text-sm font-medium text-secondary/60">
+                      Next →
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

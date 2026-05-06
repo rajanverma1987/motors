@@ -22,6 +22,79 @@ export async function getListingsFilteredByLocation({ state, city, zip }) {
   return filterListingsByLocation(listings, { state, city, zip });
 }
 
+export async function getPublicListingsPaginated({
+  search,
+  city,
+  state,
+  page = 1,
+  pageSize = 40,
+}) {
+  await connectDB();
+  await ensureApprovedListingsHaveUrlSlug();
+
+  const normalizedPage = Math.max(1, Number(page) || 1);
+  const normalizedPageSize = Math.max(1, Number(pageSize) || 40);
+  const normalizedSearch = (search || "").trim();
+  const normalizedCity = (city || "").trim();
+  const normalizedState = (state || "").trim();
+
+  const andFilters = [{ status: "approved" }];
+
+  if (normalizedCity || normalizedState) {
+    const locationOr = [];
+    if (normalizedCity) {
+      locationOr.push(
+        { city: new RegExp(`^${escapeRegExp(normalizedCity)}$`, "i") },
+        { citiesOrMetrosServed: new RegExp(escapeRegExp(normalizedCity), "i") }
+      );
+    }
+    if (normalizedState) {
+      locationOr.push(
+        { state: new RegExp(`^${escapeRegExp(normalizedState)}$`, "i") },
+        { statesServed: new RegExp(escapeRegExp(normalizedState), "i") }
+      );
+    }
+    andFilters.push({ $or: locationOr });
+  }
+
+  if (normalizedSearch) {
+    const searchRegex = new RegExp(escapeRegExp(normalizedSearch), "i");
+    andFilters.push({
+      $or: [
+        { companyName: searchRegex },
+        { city: searchRegex },
+        { state: searchRegex },
+        { zipCode: searchRegex },
+        { serviceZipCode: searchRegex },
+      ],
+    });
+  }
+
+  const query = andFilters.length === 1 ? andFilters[0] : { $and: andFilters };
+  const total = await Listing.countDocuments(query);
+  const totalPages = Math.max(1, Math.ceil(total / normalizedPageSize));
+  const effectivePage = Math.min(normalizedPage, totalPages);
+  const skip = (effectivePage - 1) * normalizedPageSize;
+
+  const list = await Listing.find(query)
+    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .skip(skip)
+    .limit(normalizedPageSize)
+    .lean();
+
+  return {
+    listings: list.map((l) => ({
+      ...l,
+      id: l._id.toString(),
+      _id: undefined,
+    })),
+    total,
+    page: effectivePage,
+    pageSize: normalizedPageSize,
+    totalPages,
+  };
+}
+
 export async function getListingsFilteredByLocationPaginated({
   state,
   city,
