@@ -107,6 +107,7 @@ export default function CostOfMotorRepairPage() {
           <MotorRewindCostCalculator variant="embedded" calculatorSourcePage={path} />
         }
         wideSidebar
+        stickySidebar={false}
       >
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <p className="text-secondary not-prose">

@@ -94,6 +94,9 @@ export async function GET(request) {
     );
     const vendorMap = Object.fromEntries(vendors.map((v) => [v._id.toString(), v]));
     const quoteMap = Object.fromEntries(quotes.map((qu) => [qu._id.toString(), qu]));
+    const invoiceQuoteIds = new Set(
+      invoices.map((inv) => String(inv?.quoteId || "").trim()).filter(Boolean)
+    );
 
     const raw = [];
 
@@ -158,10 +161,14 @@ export async function GET(request) {
       ) {
         continue;
       }
-      const custMotors = motors.filter((m) => (m.customerId || "").toString() === id).slice(0, 3);
-      const custQuotes = quotes.filter((qu) => (qu.customerId || "").toString() === id).slice(0, 3);
-      const custInvoices = invoices.filter((inv) => (inv.customerId || "").toString() === id).slice(0, 5);
-      const custWorkOrders = workOrders.filter((w) => (w.customerId || "").toString() === id).slice(0, 5);
+      const custMotors = motors.filter((m) => (m.customerId || "").toString() === id);
+      const custQuotes = quotes.filter(
+        (qu) =>
+          (qu.customerId || "").toString() === id &&
+          !invoiceQuoteIds.has(String(qu?._id || "").trim())
+      );
+      const custInvoices = invoices.filter((inv) => (inv.customerId || "").toString() === id);
+      const custWorkOrders = workOrders.filter((w) => (w.customerId || "").toString() === id);
       const linked = [
         ...custMotors.map((m) => ({
           type: "motor",

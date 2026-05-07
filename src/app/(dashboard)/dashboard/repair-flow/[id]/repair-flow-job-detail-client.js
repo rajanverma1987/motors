@@ -592,29 +592,6 @@ export default function RepairFlowJobDetailClient({
       },
     ];
     items.push(
-      { key: "div-wo", type: "divider" },
-      {
-        key: "createWo",
-        label: "Create work order",
-        icon: <FiClipboard className={PAGE_MENU_IC} aria-hidden />,
-        title: woToolbarState.canCreateWorkOrder
-          ? "Open work order form — saved when you click Save on that form"
-          : woToolbarState.createWorkOrderDisabledTitle || undefined,
-        onClick: handleCreateWorkOrderFromRepairFlow,
-      },
-      {
-        key: "viewWo",
-        label: woLookupLoading ? "Opening…" : "View work order",
-        icon: woLookupLoading ? (
-          <FiRotateCw className={`${PAGE_MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiEye className={PAGE_MENU_IC} aria-hidden />
-        ),
-        disabled: woLookupLoading,
-        onClick: handleViewWorkOrderFromRepairFlow,
-      }
-    );
-    items.push(
       { key: "div-tail", type: "divider" },
       {
         key: "commission",

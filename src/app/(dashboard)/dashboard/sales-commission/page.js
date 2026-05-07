@@ -88,18 +88,26 @@ export default function DashboardSalesCommissionPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [spRes, qRes, invRes] = await Promise.all([
+        const [spRes, qRes, invRes, customerRes] = await Promise.all([
           fetch("/api/dashboard/sales-persons", { credentials: "include", cache: "no-store" }),
           fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
           fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" }),
         ]);
-        const [spData, qData, invData] = await Promise.all([
+        const [spData, qData, invData, customerData] = await Promise.all([
           spRes.json().catch(() => []),
           qRes.json().catch(() => []),
           invRes.json().catch(() => []),
+          customerRes.json().catch(() => []),
         ]);
         if (cancelled) return;
         if (spRes.ok) setSalesPersons(Array.isArray(spData) ? spData : []);
+        const customerMap = Object.fromEntries(
+          (Array.isArray(customerData) ? customerData : []).map((c) => [
+            String(c.id || ""),
+            c.companyName || c.primaryContactName || "—",
+          ])
+        );
         const quoteList = Array.isArray(qData) ? qData : [];
         const fromQuotes = quoteList
           .filter((q) => String(q.rfqNumber || "").trim())
@@ -110,6 +118,8 @@ export default function DashboardSalesCommissionPage() {
               jobNumber: String(q.rfqNumber),
               quoteId: String(q.id || ""),
               rfqNumber: String(q.rfqNumber || ""),
+              customerName: customerMap[String(q.customerId || "")] || "—",
+              jobStatus: String(q.status || "draft"),
             },
           }));
         setJobOptions(fromQuotes);
@@ -128,6 +138,24 @@ export default function DashboardSalesCommissionPage() {
   const salesPersonOptions = useMemo(
     () => salesPersons.map((sp) => ({ value: sp.id, label: sp.name || sp.email || sp.phone || sp.id || "—" })),
     [salesPersons]
+  );
+
+  const selectedJobMeta = useMemo(
+    () => jobOptions.find((opt) => opt.value === newCommissionForm.jobKey)?.meta || null,
+    [jobOptions, newCommissionForm.jobKey]
+  );
+
+  const getRowJobMeta = useCallback(
+    (row) => {
+      const quoteId = String(row?.quoteId || "").trim();
+      const rfqNumber = String(row?.rfqNumber || "").trim();
+      return (
+        jobOptions.find((opt) => String(opt?.meta?.quoteId || "") === quoteId)?.meta ||
+        jobOptions.find((opt) => String(opt?.meta?.rfqNumber || "") === rfqNumber)?.meta ||
+        null
+      );
+    },
+    [jobOptions]
   );
 
   const handleCreateCommission = async (e) => {
@@ -219,6 +247,8 @@ export default function DashboardSalesCommissionPage() {
               jobNumber: fallbackJobNumber,
               quoteId: String(row.quoteId || ""),
               rfqNumber: String(row.rfqNumber || ""),
+              customerName: String(row.customerName || "").trim() || "—",
+              jobStatus: String(row.jobStatus || "").trim() || "draft",
             },
           },
           ...prev,
@@ -464,9 +494,11 @@ export default function DashboardSalesCommissionPage() {
       (r.jobNumber || "").toLowerCase().includes(q) ||
       (r.rfqNumber || "").toLowerCase().includes(q) ||
       (r.salesPersonName || "").toLowerCase().includes(q) ||
+      (r.customerName || getRowJobMeta(r)?.customerName || "").toLowerCase().includes(q) ||
+      (r.jobStatus || getRowJobMeta(r)?.jobStatus || "").toLowerCase().includes(q) ||
       String(r.amount ?? "").toLowerCase().includes(q)
     );
-  }, [unpaidRows, searchUnpaid]);
+  }, [unpaidRows, searchUnpaid, getRowJobMeta]);
 
   const filteredPaid = useMemo(() => {
     const q = searchPaid.trim().toLowerCase();
@@ -475,9 +507,11 @@ export default function DashboardSalesCommissionPage() {
       (r.jobNumber || "").toLowerCase().includes(q) ||
       (r.rfqNumber || "").toLowerCase().includes(q) ||
       (r.salesPersonName || "").toLowerCase().includes(q) ||
+      (r.customerName || getRowJobMeta(r)?.customerName || "").toLowerCase().includes(q) ||
+      (r.jobStatus || getRowJobMeta(r)?.jobStatus || "").toLowerCase().includes(q) ||
       String(r.amount ?? "").toLowerCase().includes(q)
     );
-  }, [paidRows, searchPaid]);
+  }, [paidRows, searchPaid, getRowJobMeta]);
 
   const getCommissionSortValue = useCallback((row, key) => {
     if (key === "jobNumber") return row.jobNumber || row.rfqNumber || "";
@@ -578,6 +612,34 @@ export default function DashboardSalesCommissionPage() {
         sortable: true,
         render: (_, row) => row.jobNumber || row.rfqNumber || "—",
       },
+      {
+        key: "customerName",
+        label: "Customer",
+        sortable: true,
+        render: (_, row) => row.customerName || getRowJobMeta(row)?.customerName || "—",
+      },
+      {
+        key: "jobStatus",
+        label: "Job status",
+        sortable: true,
+        render: (_, row) => {
+          const status = row.jobStatus || getRowJobMeta(row)?.jobStatus || "—";
+          const s = String(status).toLowerCase();
+          const variant =
+            s === "paid" || s === "approved" || s === "completed" || s === "closed"
+              ? "success"
+              : s === "draft" || s === "open"
+                ? "default"
+                : s === "unpaid" || s === "pending"
+                  ? "warning"
+                  : "primary";
+          return (
+            <Badge variant={variant} className="rounded-full px-2.5 py-0.5 text-xs">
+              {status}
+            </Badge>
+          );
+        },
+      },
       { key: "salesPersonName", label: "Sales person", sortable: true },
       {
         key: "amount",
@@ -611,7 +673,7 @@ export default function DashboardSalesCommissionPage() {
         render: (_, row) => formatDateIST(row.createdAt),
       },
     ],
-    [fmt, statusSavingId, openDocsCommissionModal]
+    [fmt, statusSavingId, openDocsCommissionModal, getRowJobMeta]
   );
 
   return (
@@ -724,6 +786,16 @@ export default function DashboardSalesCommissionPage() {
             searchable
             required
           />
+          <Input
+            label="Customer"
+            value={selectedJobMeta?.customerName || "—"}
+            readOnly
+          />
+          <Input
+            label="Selected job status"
+            value={selectedJobMeta?.jobStatus || "—"}
+            readOnly
+          />
           <Select
             label="Sales Person"
             options={salesPersonOptions}
@@ -805,6 +877,16 @@ export default function DashboardSalesCommissionPage() {
             placeholder="Select Job#"
             searchable
             required
+          />
+          <Input
+            label="Customer"
+            value={selectedJobMeta?.customerName || "—"}
+            readOnly
+          />
+          <Input
+            label="Selected job status"
+            value={selectedJobMeta?.jobStatus || "—"}
+            readOnly
           />
           <Select
             label="Sales Person"

@@ -31,6 +31,7 @@ import {
   FiKey,
   FiGitBranch,
 } from "react-icons/fi";
+import { ImPencil2 } from "react-icons/im";
 
 const CUSTOMERS_NAV = [
   { href: "/dashboard/leads", label: "Leads", icon: FiInbox },
@@ -39,7 +40,7 @@ const CUSTOMERS_NAV = [
 ];
 
 const JOBS_NAV = [
-  { href: "/dashboard/repair-flow", label: "Job Write-Up", icon: FiGitBranch },
+  { href: "/dashboard/repair-flow", label: "Job Write-Up", icon: ImPencil2 },
   { href: "/dashboard/quotes", label: "Quotes", icon: FiFileText },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
   { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
@@ -12,6 +13,7 @@ import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
+import { useFormatMoney } from "@/contexts/user-settings-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
@@ -117,6 +119,7 @@ function buildCustomerPayload(form) {
 export default function DashboardCustomersPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const formatMoney = useFormatMoney();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLeadId = searchParams.get("fromLead");
@@ -131,6 +134,12 @@ export default function DashboardCustomersPage() {
   /** When set, we're loading full customer for View modal; modal shows loading until fetch completes */
   const [viewLoadingCustomerId, setViewLoadingCustomerId] = useState(null);
   const [savingCustomer, setSavingCustomer] = useState(false);
+  const [customerActivityLoading, setCustomerActivityLoading] = useState(false);
+  const [customerActivity, setCustomerActivity] = useState({
+    quotes: [],
+    workOrders: [],
+    invoices: [],
+  });
   /** Index of additional contact being removed from View modal (for loading state) */
   const [removingContactIndex, setRemovingContactIndex] = useState(null);
   /** When converting from lead, if a customer with same email/company exists, show View option instead of Create */
@@ -277,9 +286,66 @@ export default function DashboardCustomersPage() {
       setViewModalOpen(false);
       setViewingCustomer(null);
       setViewLoadingCustomerId(null);
+      setCustomerActivity({ quotes: [], workOrders: [], invoices: [] });
+      setCustomerActivityLoading(false);
       setAddMotorModalOpen(false);
     });
   };
+
+  useEffect(() => {
+    if (!viewModalOpen || !viewingCustomer?.id || viewLoadingCustomerId) return;
+    let cancelled = false;
+    setCustomerActivityLoading(true);
+    (async () => {
+      try {
+        const [quotesRes, workOrdersRes, invoicesRes] = await Promise.all([
+          fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/work-orders", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
+        ]);
+        const [quotesData, workOrdersData, invoicesData] = await Promise.all([
+          quotesRes.json().catch(() => []),
+          workOrdersRes.json().catch(() => []),
+          invoicesRes.json().catch(() => []),
+        ]);
+        if (cancelled) return;
+        const customerId = String(viewingCustomer.id);
+        const invoiceQuoteIds = new Set(
+          (Array.isArray(invoicesData) ? invoicesData : [])
+            .map((inv) => String(inv?.quoteId || "").trim())
+            .filter(Boolean)
+        );
+        const visibleQuotes = (Array.isArray(quotesData) ? quotesData : []).filter(
+          (q) => !invoiceQuoteIds.has(String(q?.id || "").trim())
+        );
+        const quoteAmountById = new Map(
+          (Array.isArray(quotesData) ? quotesData : []).map((q) => [
+            String(q?.id || ""),
+            Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0),
+          ])
+        );
+        setCustomerActivity({
+          quotes: visibleQuotes.filter((q) => String(q.customerId || "") === customerId),
+          workOrders: Array.isArray(workOrdersData)
+            ? workOrdersData
+                .filter((w) => String(w.customerId || "") === customerId)
+                .map((w) => ({
+                  ...w,
+                  linkedQuoteAmount: quoteAmountById.get(String(w?.quoteId || "")) || 0,
+                }))
+            : [],
+          invoices: Array.isArray(invoicesData)
+            ? invoicesData.filter((inv) => String(inv.customerId || "") === customerId)
+            : [],
+        });
+      } finally {
+        if (!cancelled) setCustomerActivityLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [viewModalOpen, viewingCustomer?.id, viewLoadingCustomerId]);
 
   const openAddMotorModal = () => {
     if (!viewingCustomer?.id) return;
@@ -575,6 +641,44 @@ export default function DashboardCustomersPage() {
       { key: "city", label: "City", sortable: true },
     ],
     []
+  );
+
+  const statusBadgeVariant = (status) => {
+    const s = String(status || "").toLowerCase();
+    if (["approved", "paid", "completed", "delivered", "closed"].includes(s)) return "success";
+    if (["pending", "in progress", "assigned", "sent", "partially paid"].includes(s)) return "warning";
+    if (["cancelled", "canceled", "rejected", "overdue", "void"].includes(s)) return "danger";
+    if (["draft", "open"].includes(s)) return "default";
+    return "primary";
+  };
+
+  const moneyLabel = (v) => {
+    const n = Number.parseFloat(String(v ?? ""));
+    return Number.isFinite(n) ? formatMoney(n) : "—";
+  };
+
+  const statusAmountSummary = (rows, getAmount) => {
+    const totals = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const status = String(row?.status || "draft").trim() || "draft";
+      const amount = Number.parseFloat(String(getAmount(row) ?? "0"));
+      const safeAmount = Number.isFinite(amount) ? amount : 0;
+      totals.set(status, (totals.get(status) || 0) + safeAmount);
+    });
+    return Array.from(totals.entries()).map(([status, amount]) => ({ status, amount }));
+  };
+
+  const invoiceStatusTotals = statusAmountSummary(
+    customerActivity.invoices,
+    (inv) => Number(inv?.laborTotal || 0) + Number(inv?.partsTotal || 0)
+  );
+  const quoteStatusTotals = statusAmountSummary(
+    customerActivity.quotes,
+    (q) => Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0)
+  );
+  const workOrderStatusTotals = statusAmountSummary(
+    customerActivity.workOrders,
+    (wo) => Number(wo?.linkedQuoteAmount || 0)
   );
 
   return (
@@ -887,7 +991,7 @@ export default function DashboardCustomersPage() {
         open={viewModalOpen}
         onClose={closeViewModal}
         title="Customer details"
-        size="4xl"
+        size="7xl"
         actions={
           <>
             <Button
@@ -909,135 +1013,278 @@ export default function DashboardCustomersPage() {
             <span className="text-secondary">Loading…</span>
           </div>
         ) : viewingCustomer ? (
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                Company & contact
-              </h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-secondary">Company</dt><dd className="font-medium text-title">{viewingCustomer.companyName || "—"}</dd></div>
-                <div><dt className="text-secondary">Primary contact</dt><dd className="text-title">{viewingCustomer.primaryContactName || "—"}</dd></div>
-                <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingCustomer.phone || "—"}</dd></div>
-                <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingCustomer.email || "—"}</dd></div>
-                <div><dt className="text-secondary">EIN</dt><dd className="text-title">{viewingCustomer.ein || "—"}</dd></div>
-                <div><dt className="text-secondary">Credit limit</dt><dd className="text-title">{viewingCustomer.creditLimit || "—"}</dd></div>
-                <div><dt className="text-secondary">Tax exempted</dt><dd className="text-title">{viewingCustomer.taxExempt === false ? "No" : "Yes"}</dd></div>
-                <div><dt className="text-secondary">Tax %</dt><dd className="text-title">{viewingCustomer.taxExempt === false ? (viewingCustomer.taxPercent || "0") : "0"}</dd></div>
-              </dl>
-            </div>
-            {Array.isArray(viewingCustomer.additionalContacts) && viewingCustomer.additionalContacts.length > 0 && (
-              <div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
+            <div className="space-y-6">
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Customer profile</p>
+                    <h3 className="mt-1 text-lg font-semibold text-title">{viewingCustomer.companyName || "—"}</h3>
+                    <p className="mt-1 text-sm text-secondary">
+                      {viewingCustomer.primaryContactName || "—"} · {viewingCustomer.email || "—"} · {viewingCustomer.phone || "—"}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant={viewingCustomer.taxExempt === false ? "warning" : "success"} className="rounded-full px-2.5 py-0.5 text-xs">
+                      Tax exempted: {viewingCustomer.taxExempt === false ? "No" : "Yes"}
+                    </Badge>
+                    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                      Tax %: {viewingCustomer.taxExempt === false ? (viewingCustomer.taxPercent || "0") : "0"}
+                    </Badge>
+                  </div>
+                </div>
+                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                  <div><dt className="text-secondary">EIN</dt><dd className="font-medium text-title">{viewingCustomer.ein || "—"}</dd></div>
+                  <div><dt className="text-secondary">Credit limit</dt><dd className="font-medium text-title">{viewingCustomer.creditLimit || "—"}</dd></div>
+                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.city || "—"}</dd></div>
+                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.state || "—"}</dd></div>
+                </dl>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Additional contact persons
+                  Billing address
                 </h3>
-                <div className="overflow-x-auto rounded border border-border">
-                  <table className="w-full min-w-[320px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card">
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Name</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Phone</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Email</th>
-                        <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary w-24">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-title">
-                      {viewingCustomer.additionalContacts.map((ac, i) => (
-                        <tr key={i} className="border-b border-border last:border-b-0">
-                          <td className="px-3 py-2">{ac.contactName || "—"}</td>
-                          <td className="px-3 py-2">{ac.phone || "—"}</td>
-                          <td className="px-3 py-2">{ac.email || "—"}</td>
-                          <td className="px-3 py-2 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => { closeViewModal(); openEditModal(viewingCustomer); }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeAdditionalContactFromView(i)}
-                                disabled={removingContactIndex !== null}
-                              >
-                                {removingContactIndex === i ? "Removing…" : "Delete"}
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.address || "—"}</dd></div>
+                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.city || "—"}</dd></div>
+                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.state || "—"}</dd></div>
+                  <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.zipCode || "—"}</dd></div>
+                  <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.country || "—"}</dd></div>
+                </dl>
+              </div>
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Shipping address
+                </h3>
+                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                  <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.shippingAddress || "—"}</dd></div>
+                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.shippingCity || "—"}</dd></div>
+                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.shippingState || "—"}</dd></div>
+                  <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.shippingZipCode || "—"}</dd></div>
+                  <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.shippingCountry || "—"}</dd></div>
+                </dl>
+              </div>
+              {(viewingCustomer.notes || "").trim() && (
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
+                  <p className="whitespace-pre-wrap text-sm text-title">{viewingCustomer.notes}</p>
                 </div>
-              </div>
-            )}
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                Billing address
-              </h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.address || "—"}</dd></div>
-                <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.city || "—"}</dd></div>
-                <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.state || "—"}</dd></div>
-                <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.zipCode || "—"}</dd></div>
-                <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.country || "—"}</dd></div>
-              </dl>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                Shipping address
-              </h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.shippingAddress || "—"}</dd></div>
-                <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.shippingCity || "—"}</dd></div>
-                <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.shippingState || "—"}</dd></div>
-                <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.shippingZipCode || "—"}</dd></div>
-                <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.shippingCountry || "—"}</dd></div>
-              </dl>
-            </div>
-            {(viewingCustomer.notes || "").trim() && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                <p className="whitespace-pre-wrap text-sm text-title">{viewingCustomer.notes}</p>
-              </div>
-            )}
-            <div>
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked</h3>
-                <Button type="button" variant="outline" size="sm" onClick={openAddMotorModal}>
-                  Add customer's motor
-                </Button>
-              </div>
-              {Array.isArray(viewingCustomer.linkedMotors) && viewingCustomer.linkedMotors.length > 0 ? (
-                <div className="overflow-x-auto rounded border border-border">
-                  <table className="w-full min-w-[320px] text-sm">
-                    <thead>
-                      <tr className="border-b border-border bg-card">
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Serial number</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Manufacturer</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Model</th>
-                        <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">HP</th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-title">
-                      {viewingCustomer.linkedMotors.map((m) => (
-                        <tr key={m.id} className="border-b border-border last:border-b-0">
-                          <td className="px-3 py-2">{m.serialNumber || "—"}</td>
-                          <td className="px-3 py-2">{m.manufacturer || "—"}</td>
-                          <td className="px-3 py-2">{m.model || "—"}</td>
-                          <td className="px-3 py-2">{m.hp || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-secondary">Customer's motors: —</p>
               )}
-              <p className="mt-2 text-sm text-secondary">Job history: —</p>
+              {Array.isArray(viewingCustomer.additionalContacts) && viewingCustomer.additionalContacts.length > 0 && (
+                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Additional contacts</h3>
+                  <div className="overflow-x-auto rounded border border-border">
+                    <table className="w-full min-w-[320px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Name</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Phone</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Email</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary w-24">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-title">
+                        {viewingCustomer.additionalContacts.map((ac, i) => (
+                          <tr key={i} className="border-b border-border last:border-b-0">
+                            <td className="px-3 py-2">{ac.contactName || "—"}</td>
+                            <td className="px-3 py-2">{ac.phone || "—"}</td>
+                            <td className="px-3 py-2">{ac.email || "—"}</td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => { closeViewModal(); openEditModal(viewingCustomer); }}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeAdditionalContactFromView(i)}
+                                  disabled={removingContactIndex !== null}
+                                >
+                                  {removingContactIndex === i ? "Removing…" : "Delete"}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked motors</h3>
+                  <Button type="button" variant="outline" size="sm" onClick={openAddMotorModal}>
+                    Add customer's motor
+                  </Button>
+                </div>
+                {Array.isArray(viewingCustomer.linkedMotors) && viewingCustomer.linkedMotors.length > 0 ? (
+                  <div className="overflow-x-auto rounded border border-border">
+                    <table className="w-full min-w-[320px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Serial number</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Manufacturer</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Model</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">HP</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-title">
+                        {viewingCustomer.linkedMotors.map((m) => (
+                          <tr key={m.id} className="border-b border-border last:border-b-0">
+                            <td className="px-3 py-2">{m.serialNumber || "—"}</td>
+                            <td className="px-3 py-2">{m.manufacturer || "—"}</td>
+                            <td className="px-3 py-2">{m.model || "—"}</td>
+                            <td className="px-3 py-2">{m.hp || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-sm text-secondary">Customer's motors: —</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Invoices ({customerActivity.invoices.length})</h3>
+                  {customerActivityLoading && <span className="text-xs text-secondary">Loading related records…</span>}
+                </div>
+                {invoiceStatusTotals.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {invoiceStatusTotals.map((s) => (
+                      <Badge key={`inv-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                        {s.status}: {moneyLabel(s.amount)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {customerActivity.invoices.length === 0 ? (
+                  <p className="text-sm text-secondary">No invoices found.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded border border-border">
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Invoice #</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Date</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Status</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-title">
+                        {customerActivity.invoices.map((inv) => (
+                          <tr key={inv.id} className="border-b border-border last:border-b-0">
+                            <td className="px-3 py-2">{inv.invoiceNumber || "—"}</td>
+                            <td className="px-3 py-2">{inv.date || "—"}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant={statusBadgeVariant(inv.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                                {inv.status || "—"}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-2 text-right">{moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">Quotes ({customerActivity.quotes.length})</h3>
+                {quoteStatusTotals.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {quoteStatusTotals.map((s) => (
+                      <Badge key={`quote-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                        {s.status}: {moneyLabel(s.amount)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {customerActivity.quotes.length === 0 ? (
+                  <p className="text-sm text-secondary">No quotes found.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded border border-border">
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">RFQ #</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Date</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Status</th>
+                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-title">
+                        {customerActivity.quotes.map((q) => (
+                          <tr key={q.id} className="border-b border-border last:border-b-0">
+                            <td className="px-3 py-2">{q.rfqNumber || "—"}</td>
+                            <td className="px-3 py-2">{q.date || "—"}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant={statusBadgeVariant(q.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                                {q.status || "—"}
+                              </Badge>
+                            </td>
+                            <td className="px-3 py-2 text-right">{moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">Work orders ({customerActivity.workOrders.length})</h3>
+                {workOrderStatusTotals.length > 0 && (
+                  <div className="mb-3 flex flex-wrap gap-2">
+                    {workOrderStatusTotals.map((s) => (
+                      <Badge key={`wo-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                        {s.status}: {moneyLabel(s.amount)}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {customerActivity.workOrders.length === 0 ? (
+                  <p className="text-sm text-secondary">No work orders found.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded border border-border">
+                    <table className="w-full min-w-[560px] text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-card">
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">WO #</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">RFQ #</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Date</th>
+                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-title">
+                        {customerActivity.workOrders.map((wo) => (
+                          <tr key={wo.id} className="border-b border-border last:border-b-0">
+                            <td className="px-3 py-2">{wo.workOrderNumber || "—"}</td>
+                            <td className="px-3 py-2">{wo.quoteRfqNumber || "—"}</td>
+                            <td className="px-3 py-2">{wo.date || "—"}</td>
+                            <td className="px-3 py-2">
+                              <Badge variant={statusBadgeVariant(wo.status)} className="rounded-full px-2.5 py-0.5 text-xs">
+                                {wo.status || "—"}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         ) : null}

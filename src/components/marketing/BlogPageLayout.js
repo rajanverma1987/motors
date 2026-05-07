@@ -5,7 +5,7 @@ import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
 
 /**
- * Blog/SEO content page layout: hero + two-column (content + sticky sidebar CTA).
+ * Blog/SEO content page layout: hero + two-column (content + optional sticky sidebar CTA).
  * Use company-listing and customer-facing SEO pages.
  * Pass canonicalPath for JSON-LD Article structured data (e.g. "/why-list-your-motor-repair-shop").
  */
@@ -23,6 +23,8 @@ export default function BlogPageLayout({
   sidebarBelowCta,
   /** Use a wider right column so sidebar tools (calculator) have more horizontal room. */
   wideSidebar = false,
+  /** When false, sidebar scrolls with the page (e.g. tall embedded calculators). */
+  stickySidebar = true,
   children,
 }) {
   const articleUrl = canonicalPath ? `${siteUrl.replace(/\/$/, "")}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}` : null;
@@ -105,8 +107,12 @@ export default function BlogPageLayout({
             {children}
           </div>
 
-          {/* Sidebar — sticky on md+ so CTAs / embedded calculator stay in view while reading */}
-          <aside className="hidden min-w-0 md:sticky md:top-24 md:col-start-2 md:row-start-1 md:block md:self-start">
+          {/* Sidebar — optionally sticky on md+ so short CTAs stay in view while reading */}
+          <aside
+            className={`hidden min-w-0 md:col-start-2 md:row-start-1 md:block ${
+              stickySidebar ? "md:sticky md:top-24 md:self-start" : ""
+            }`}
+          >
             <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
               <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
               {sidebarDescription && (
