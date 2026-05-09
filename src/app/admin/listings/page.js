@@ -118,6 +118,9 @@ export default function AdminListingsPage() {
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState(null);
   const [searchAttempted, setSearchAttempted] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const goManageSubscription = useCallback(
     (row) => {
@@ -145,17 +148,24 @@ export default function AdminListingsPage() {
   }, []);
 
   const fetchListings = useCallback(() => {
-    let url = "/api/listings";
-    if (filter) url += `?status=${filter}`;
+    const params = new URLSearchParams();
+    if (filter) params.set("status", filter);
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    const url = `/api/listings?${params.toString()}`;
     return fetch(url, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setListings(data);
-        else setListings([]);
+        setListings(Array.isArray(data?.items) ? data.items : []);
+        setTotalCount(Number(data?.totalCount) || 0);
       })
-      .catch(() => setListings([]))
+      .catch(() => {
+        setListings([]);
+        setTotalCount(0);
+      })
       .finally(() => setLoading(false));
-  }, [filter]);
+  }, [filter, searchQuery, page, pageSize]);
 
   const handleDeleteListing = useCallback(
     async (row) => {
@@ -333,17 +343,13 @@ export default function AdminListingsPage() {
     }
   }
 
-  const filteredListings = useMemo(() => {
-    return searchQuery.trim() ? listings.filter((row) => matchListing(row, searchQuery.trim())) : listings;
-  }, [listings, searchQuery]);
-
   const handleDownloadCsv = useCallback(() => {
-    if (!filteredListings.length) {
+    if (!listings.length) {
       toast.error("No listings to export.");
       return;
     }
     try {
-      const csv = buildListingsCsv(filteredListings);
+      const csv = buildListingsCsv(listings);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -355,7 +361,7 @@ export default function AdminListingsPage() {
     } catch (e) {
       toast.error(e.message || "Export failed");
     }
-  }, [filteredListings, toast]);
+  }, [listings, toast]);
 
   const handleRefresh = useCallback(async () => {
     setLoading(true);
@@ -364,6 +370,7 @@ export default function AdminListingsPage() {
   }, [fetchListings, toast]);
 
   const handleSearch = useCallback((query) => {
+    setPage(1);
     setSearchQuery(query);
   }, []);
 
@@ -394,11 +401,7 @@ export default function AdminListingsPage() {
       const count = data.updated ?? validListingIds.length;
       setSelectedRowIds([]);
       setTimeout(() => toast.success(`Approved ${count} listing(s).`), 0);
-      let url = "/api/listings";
-      if (filter) url += `?status=${filter}`;
-      const listRes = await fetch(url, { credentials: "include", cache: "no-store" });
-      const listData = await listRes.json();
-      if (Array.isArray(listData)) setListings(listData);
+      await fetchListings();
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Bulk approve failed");
@@ -436,11 +439,7 @@ export default function AdminListingsPage() {
       setRejectReason("");
       setSelectedRowIds([]);
       setTimeout(() => toast.success(`Rejected ${count} listing(s). Email sent to contact(s).`), 0);
-      let url = "/api/listings";
-      if (filter) url += `?status=${filter}`;
-      const listRes = await fetch(url, { credentials: "include", cache: "no-store" });
-      const listData = await listRes.json();
-      if (Array.isArray(listData)) setListings(listData);
+      await fetchListings();
     } catch (err) {
       console.error(err);
       toast.error(err.message || "Bulk reject failed");
@@ -501,7 +500,10 @@ export default function AdminListingsPage() {
           <Select
             options={STATUS_OPTIONS}
             value={filter}
-            onChange={(e) => setFilter(e.target.value ?? "")}
+            onChange={(e) => {
+              setPage(1);
+              setFilter(e.target.value ?? "");
+            }}
             placeholder="All"
             searchable={false}
             className="min-w-[140px]"
@@ -522,7 +524,7 @@ export default function AdminListingsPage() {
             variant="outline"
             size="sm"
             onClick={handleDownloadCsv}
-            disabled={loading || filteredListings.length === 0}
+            disabled={loading || listings.length === 0}
             className="h-10 min-h-[2.5rem] shrink-0"
           >
             <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
@@ -570,7 +572,7 @@ export default function AdminListingsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={filteredListings}
+          data={listings}
           rowKey="id"
           loading={loading}
           emptyMessage="No listings found."
@@ -581,6 +583,12 @@ export default function AdminListingsPage() {
           selectable
           selectedRowIds={selectedRowIds}
           onSelectionChange={handleSelectionChange}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

@@ -185,15 +185,25 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await connectDB();
-    const list = await Lead.find()
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const q = {};
+    const [totalCount, list] = await Promise.all([
+      Lead.countDocuments(q),
+      Lead.find(q)
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(pageSize)
       .lean();
+    ]);
     const listWithId = list.map((l) => ({
       ...l,
       id: l._id.toString(),
       _id: undefined,
     }));
-    return NextResponse.json(listWithId);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("List leads error:", err);
     return NextResponse.json(

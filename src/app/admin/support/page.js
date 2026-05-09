@@ -54,22 +54,31 @@ export default function AdminSupportPage() {
   const [saving, setSaving] = useState(false);
   const [replyText, setReplyText] = useState("");
   const [statusDraft, setStatusDraft] = useState("open");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const q = statusFilter === "all" ? "" : `?status=${encodeURIComponent(statusFilter)}`;
-      const res = await fetch(`/api/admin/support/tickets${q}`, { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (statusFilter !== "all") params.set("status", statusFilter);
+      const res = await fetch(`/api/admin/support/tickets?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
-      setTickets(Array.isArray(data) ? data : []);
+      setTickets(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Could not load tickets");
       setTickets([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast, statusFilter]);
+  }, [toast, statusFilter, page, pageSize]);
 
   useEffect(() => {
     load();
@@ -196,7 +205,10 @@ export default function AdminSupportPage() {
                 label="Filter"
                 options={STATUS_FILTER}
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value ?? "all")}
+                onChange={(e) => {
+                  setPage(1);
+                  setStatusFilter(e.target.value ?? "all");
+                }}
               />
             </div>
             <Button type="button" variant="outline" size="sm" onClick={load} disabled={loading}>
@@ -215,6 +227,11 @@ export default function AdminSupportPage() {
             paginateClientSide={false}
             emptyMessage="No tickets match this filter."
             onCellClick={(row) => openDetail(row)}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
           />
         </div>
       </div>

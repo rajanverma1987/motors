@@ -41,7 +41,57 @@ export async function GET(request) {
     }
     const email = user.email.trim().toLowerCase();
     await connectDB();
-    const list = await Invoice.find({ createdByEmail: email }).sort({ createdAt: -1 }).lean();
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      invoiceNumber: "invoiceNumber",
+      date: "date",
+      status: "status",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "createdAt";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ invoiceNumber: rx }, { rfqNumber: rx }, { status: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      Invoice.countDocuments(q),
+      Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
+    const summaryRows = await Invoice.aggregate([
+      { $match: q },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+          amount: {
+            $sum: {
+              $add: [
+                { $convert: { input: "$laborTotal", to: "double", onError: 0, onNull: 0 } },
+                { $convert: { input: "$partsTotal", to: "double", onError: 0, onNull: 0 } },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    const summaryByStatus = {};
+    for (const row of summaryRows) {
+      const key = String(row?._id || "draft").trim() || "draft";
+      summaryByStatus[key] = {
+        count: Number(row?.count) || 0,
+        amount: Number(row?.amount) || 0,
+      };
+    }
     const customerIds = [...new Set(list.map((i) => String(i.customerId)))];
     const customers = await Customer.find({
       _id: { $in: customerIds },
@@ -55,8 +105,7 @@ export async function GET(request) {
         c.companyName || c.primaryContactName || String(c._id),
       ])
     );
-    return NextResponse.json(
-      list.map((inv) => ({
+    const items = list.map((inv) => ({
         id: inv._id.toString(),
         quoteId: inv.quoteId,
         invoiceNumber: inv.invoiceNumber,
@@ -71,8 +120,9 @@ export async function GET(request) {
         motorId: inv.motorId,
         customerName: custMap[String(inv.customerId)] || inv.customerId,
         createdAt: inv.createdAt,
-      }))
-    );
+      }));
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({ items, page, pageSize, totalCount, summaryByStatus });
   } catch (err) {
     console.error("Invoices list:", err);
     return NextResponse.json({ error: err.message || "Failed to list" }, { status: 500 });

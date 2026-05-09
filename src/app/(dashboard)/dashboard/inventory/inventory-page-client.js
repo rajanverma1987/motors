@@ -13,7 +13,6 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { FiRefreshCw, FiPlus } from "react-icons/fi";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 export default function InventoryPageClient() {
   const toast = useToast();
@@ -22,6 +21,10 @@ export default function InventoryPageClient() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -54,42 +57,37 @@ export default function InventoryPageClient() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/dashboard/inventory/items", {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/inventory/items?${params.toString()}`, {
         credentials: "include",
         cache: "no-store",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
-      setItems(Array.isArray(data) ? data : []);
+      setItems(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Could not load inventory");
       setItems([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const filteredItems = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((row) => {
-      const hay = [row.name, row.sku, row.uom, row.location, String(row.onHand), String(row.available)]
-        .map((x) => String(x ?? "").toLowerCase())
-        .join(" ");
-      return hay.includes(q);
-    });
-  }, [items, searchQuery]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedItems = useMemo(
-    () => sortRowsClient(filteredItems, tableSort),
-    [filteredItems, tableSort]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const closeUsage = useCallback(() => {
     setUsageFor(null);
@@ -392,18 +390,27 @@ export default function InventoryPageClient() {
       <div className="flex min-h-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedItems}
+          data={items}
           rowKey="id"
           loading={loading}
           fillHeight
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search part, SKU, UOM, location, qty…"
           onRefresh={load}
           sortState={tableSort}
           onSort={handleTableSort}
           onEdit={(row) => openEdit(row)}
           onDelete={handleDeleteRow}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
           emptyMessage={
             items.length === 0
               ? "No parts yet. Use Add part or receive on a vendor PO in Logistics."

@@ -11,7 +11,14 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await connectDB();
-    const plans = await SubscriptionPlan.find({}).sort({ createdAt: -1 }).lean();
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const [totalCount, plans] = await Promise.all([
+      SubscriptionPlan.countDocuments({}),
+      SubscriptionPlan.find({}).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+    ]);
     return NextResponse.json({
       plans: plans.map((p) => ({
         id: String(p._id),
@@ -29,6 +36,9 @@ export async function GET(request) {
         active: p.active,
         createdAt: p.createdAt,
       })),
+      page,
+      pageSize,
+      totalCount,
     });
   } catch (err) {
     console.error("GET subscription-plans:", err);

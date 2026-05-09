@@ -10,7 +10,6 @@ import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 import Badge from "@/components/ui/badge";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 function workOrderStatusVariant(status) {
   const s = (status || "").trim().toLowerCase();
@@ -35,21 +34,38 @@ export default function WorkOrdersPageClient() {
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [employees, setEmployees] = useState([]);
   const [statusOptions, setStatusOptions] = useState(USER_SETTINGS_DEFAULTS.workOrderStatuses);
   const [woModal, setWoModal] = useState(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
       const [woRes, empRes, setRes] = await Promise.all([
-        fetch("/api/dashboard/work-orders", { credentials: "include", cache: "no-store" }),
+        fetch(`/api/dashboard/work-orders?${params.toString()}`, { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/settings", { credentials: "include", cache: "no-store" }),
       ]);
-      if (woRes.ok) setRows(await woRes.json());
+      if (woRes.ok) {
+        const payload = await woRes.json();
+        setRows(Array.isArray(payload?.items) ? payload.items : []);
+        setTotalCount(Number(payload?.totalCount) || 0);
+      } else {
+        setRows([]);
+        setTotalCount(0);
+      }
       if (empRes.ok) {
         const list = await empRes.json();
         setEmployees(Array.isArray(list) ? list : []);
@@ -62,7 +78,7 @@ export default function WorkOrdersPageClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
     load();
@@ -117,47 +133,10 @@ export default function WorkOrdersPageClient() {
     return rows.filter((r) => (r.status || "").trim().toLowerCase() === want);
   }, [rows, statusFilter]);
 
-  const filteredRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return rowsAfterStatus;
-    return rowsAfterStatus.filter((r) => {
-      const tech = (employees.find((e) => e.id === r.technicianEmployeeId)?.name || "").toLowerCase();
-      const jobLabel = (
-        JOB_TYPE_OPTIONS.find((o) => o.value === r.jobType)?.label || ""
-      ).toLowerCase();
-      const hay = [
-        r.workOrderNumber,
-        r.quoteRfqNumber,
-        r.date,
-        r.customerCompany,
-        r.companyName,
-        r.motorClass,
-        r.jobType,
-        jobLabel,
-        r.status,
-        tech,
-      ]
-        .map((x) => String(x ?? "").toLowerCase())
-        .join(" ");
-      return hay.includes(q);
-    });
-  }, [rowsAfterStatus, searchQuery, employees]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedRows = useMemo(
-    () =>
-      sortRowsClient(filteredRows, tableSort, (row, key) => {
-        if (key === "technicianEmployeeId") {
-          return employees.find((e) => e.id === row.technicianEmployeeId)?.name ?? row.technicianEmployeeId ?? "";
-        }
-        if (key === "jobType") {
-          return JOB_TYPE_OPTIONS.find((o) => o.value === row.jobType)?.label ?? row.jobType ?? "";
-        }
-        return row[key];
-      }),
-    [filteredRows, tableSort, employees]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -220,26 +199,33 @@ export default function WorkOrdersPageClient() {
       </div>
       <Table
         columns={columns}
-        data={sortedRows}
+        data={rowsAfterStatus}
         rowKey="id"
         loading={loading}
         fillHeight
         searchable
-        onSearch={setSearchQuery}
+        onSearch={(q) => {
+          setPage(1);
+          setSearchQuery(q);
+        }}
         searchPlaceholder="Search WO#, RFQ#, company, motor, type, status, technician…"
         sortState={tableSort}
         onSort={handleTableSort}
         onCellClick={(row) => setWoModal({ workOrderId: row.id })}
         onDelete={handleDeleteWorkOrder}
         onRefresh={load}
+        pagination={{ page, pageSize, totalCount }}
+        onPageChange={(nextPage, nextPageSize) => {
+          setPage(nextPage);
+          setPageSize(nextPageSize);
+        }}
+        paginateClientSide={false}
         emptyMessage={
           rows.length === 0
             ? "No work orders yet. Create from an approved quote on the Quotes page (row icon) or Job Write-Up."
-            : filteredRows.length === 0 && searchQuery.trim()
-              ? "No work orders match your search."
-              : statusFilter.trim()
+            : statusFilter.trim()
                 ? "No work orders with this status."
-                : "No work orders match."
+                : "No work orders match your search."
         }
       />
 

@@ -21,6 +21,9 @@ export default function AdminLocationPagesPage() {
   const [pages, setPages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [form, setForm] = useState({
     slug: "",
     title: "",
@@ -32,14 +35,18 @@ export default function AdminLocationPagesPage() {
   });
 
   const fetchPages = useCallback(() => {
-    return fetch("/api/location-pages", { credentials: "include", cache: "no-store" })
+    return fetch(`/api/location-pages?page=${page}&pageSize=${pageSize}`, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
-        setPages(Array.isArray(data) ? data : []);
+        setPages(Array.isArray(data?.items) ? data.items : []);
+        setTotalCount(Number(data?.totalCount) || 0);
       })
-      .catch(() => setPages([]))
+      .catch(() => {
+        setPages([]);
+        setTotalCount(0);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, pageSize]);
 
   useEffect(() => {
     setLoading(true);
@@ -239,6 +246,12 @@ export default function AdminLocationPagesPage() {
           rowKey="id"
           loading={loading}
           emptyMessage="No location pages yet. Create one above."
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
     </div>

@@ -21,6 +21,9 @@ export default function AdminSubscriptionPlansPage() {
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [form, setForm] = useState({
     name: "",
     slug: "",
@@ -35,17 +38,19 @@ export default function AdminSubscriptionPlansPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/subscription-plans", { credentials: "include" });
+      const res = await fetch(`/api/admin/subscription-plans?page=${page}&pageSize=${pageSize}`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
       setPlans(data.plans || []);
+      setTotalCount(Number(data.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load plans");
       setPlans([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize]);
 
   useEffect(() => {
     load();
@@ -241,6 +246,12 @@ export default function AdminSubscriptionPlansPage() {
             loading={loading}
             emptyMessage="No plans yet."
             responsive
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+            paginateClientSide={false}
           />
         </div>
       </div>

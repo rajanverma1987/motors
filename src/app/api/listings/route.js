@@ -172,13 +172,33 @@ export async function GET(request) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
     let q = {};
     if (status === "in-review") {
       q = { status: { $in: ["in-review", "pending"] } };
     } else if (status === "approved" || status === "rejected") {
       q = { status };
     }
-    const list = await Listing.find(q).sort({ submittedAt: -1 }).lean();
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q = {
+        ...q,
+        $or: [
+          { companyName: rx },
+          { email: rx },
+          { city: rx },
+          { state: rx },
+          { status: rx },
+        ],
+      };
+    }
+    const [totalCount, list] = await Promise.all([
+      Listing.countDocuments(q),
+      Listing.find(q).sort({ submittedAt: -1 }).skip(skip).limit(pageSize).lean(),
+    ]);
     const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
     const listWithId = list.map((l) => {
       const resolved = resolveListingCrmUserId(l, emailMap);
@@ -189,7 +209,7 @@ export async function GET(request) {
         crmUserId: resolved,
       };
     });
-    return NextResponse.json(listWithId);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("List listings error:", err);
     return NextResponse.json(

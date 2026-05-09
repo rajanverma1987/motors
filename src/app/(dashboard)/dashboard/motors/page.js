@@ -18,7 +18,6 @@ import {
   DC_ARMATURE_FIELDS,
   emptySpecsFromFields,
 } from "@/lib/work-order-fields";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 function mergeSpecsFromMotor(stored, fieldList) {
   const base = emptySpecsFromFields(fieldList);
@@ -192,28 +191,41 @@ export default function DashboardMotorsPage() {
   const [viewingMotor, setViewingMotor] = useState(null);
   const [viewLoadingMotorId, setViewLoadingMotorId] = useState(null);
   const [savingMotor, setSavingMotor] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
   const [form, setForm] = useState(() => freshMotorForm());
   const formRef = useRef(form);
   formRef.current = form;
 
   const loadMotors = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/motors", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/motors?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load motors");
-      setMotors(Array.isArray(data) ? data : []);
+      setMotors(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load motors");
       setMotors([]);
+      setTotalCount(0);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   const loadCustomers = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" });
+      const res = await fetch("/api/dashboard/customers?page=1&pageSize=1000", { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load customers");
-      setCustomers(Array.isArray(data) ? data : []);
+      setCustomers(Array.isArray(data?.items) ? data.items : []);
     } catch (e) {
       setCustomers([]);
     }
@@ -420,28 +432,10 @@ export default function DashboardMotorsPage() {
     }
   };
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredMotors = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return motors;
-    return motors.filter((m) => {
-      const cust = customerNameMap[m.customerId] || "";
-      const serial = (m.serialNumber || "").toLowerCase();
-      const manu = (m.manufacturer || "").toLowerCase();
-      const model = (m.model || "").toLowerCase();
-      return cust.toLowerCase().includes(q) || serial.includes(q) || manu.includes(q) || model.includes(q);
-    });
-  }, [motors, searchQuery, customerNameMap]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedMotors = useMemo(
-    () =>
-      sortRowsClient(filteredMotors, tableSort, (row, key) =>
-        key === "customer" ? customerNameMap[row.customerId] ?? "" : row[key]
-      ),
-    [filteredMotors, tableSort, customerNameMap]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -508,17 +502,26 @@ export default function DashboardMotorsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedMotors}
+          data={motors}
           rowKey="id"
           loading={loading}
           emptyMessage={motors.length === 0 ? "No motors yet. Use “Create Motor” or create from a lead." : "No motors match the search."}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search customer, serial, manufacturer, model…"
           onRefresh={async () => { setLoading(true); await loadMotors(); setLoading(false); }}
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

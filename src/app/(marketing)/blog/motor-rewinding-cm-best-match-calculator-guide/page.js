@@ -173,6 +173,88 @@ export default function BlogCmBestMatchGuidePage() {
           </section>
 
           <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Step-by-step bench workflow with CM Best Match</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              A practical sequence helps teams use the tool consistently:
+              <strong className="text-title"> (1)</strong> confirm original winding takeoff,
+              <strong className="text-title"> (2)</strong> set target CM based on the approved rewind strategy,
+              <strong className="text-title"> (3)</strong> limit candidate wire sizes to realistic stock and approved substitutes,
+              <strong className="text-title"> (4)</strong> review top matches with slot and insulation constraints in mind,
+              <strong className="text-title"> (5)</strong> document the selected combination in the traveler before winding begins.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Consistent sequence is more important than speed. When every technician follows the same decision path, your shop
+              reduces variation, trains faster, and handles audits or warranty discussions with stronger documentation.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">How to choose tolerance bands for your shop</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              The default match bands are intentionally practical, but each shop should define acceptance criteria by motor class,
+              duty profile, and customer requirements. Critical applications may require tighter thresholds and more formal review,
+              while less sensitive service environments can allow broader ranges when validated by experience and testing.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              The important point is governance: write the thresholds down, train to them, and review exceptions. This keeps
+              CM decisions consistent across shifts and avoids subjective “looks close enough” behavior under schedule pressure.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Common errors and how to avoid them</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Most CM mismatch mistakes come from input quality issues: incorrect wires-in-hand count, unit confusion, stale wire
+              catalog selections, or failing to account for insulation/slot realities before choosing a mathematically close row.
+              Another frequent issue is selecting a combination that is technically close in CM but operationally poor due to
+              availability or winding complexity.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Mitigation is straightforward: peer check key inputs, keep the catalog current, and require final selection notes in
+              the traveler. A short checklist before release to winding can prevent expensive rework later.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Training junior technicians with real examples</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              CM Best Match is effective as a training tool when paired with historical jobs. Have trainees recreate known rewind
+              selections from archived travelers, compare alternatives, and explain trade-offs in slot fill, complexity, and
+              material availability. This builds judgment faster than abstract classroom exercises.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Over time, teams develop a shared understanding of what “good” looks like in your shop context. That consistency is
+              a major quality advantage, especially when senior rewinders are not physically present on every shift.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">How CM planning connects to quoting and scheduling</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              CM Best Match is not only a winding decision tool; it also improves front-office planning. Early visibility into
+              viable wire combinations helps estimators set realistic timelines and material assumptions before committing to
+              aggressive due dates. This reduces rework between sales and production.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              When tied to a live catalog, shops can distinguish “ready from stock” vs “requires procurement.” That distinction is
+              often the difference between profitable urgent jobs and schedule disruptions that affect the whole floor.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Quality documentation for future repeat jobs</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Save selected CM combinations with job context so future rewinds on similar assets start from verified baselines.
+              Repeatable documentation shortens setup time, improves consistency across technicians, and helps defend decisions
+              during customer review or warranty investigation.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Even simple notes matter: chosen wire set, percent difference from target, and why alternatives were rejected. Over
+              time, this becomes a valuable shop knowledge base.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Related tools in the same calculator suite</h2>
             <p className="mt-4 text-secondary leading-relaxed">
               After CM planning, shops often jump to <strong className="text-title">HP ↔ kW</strong>, <strong className="text-title">estimated FLA</strong>, <strong className="text-title">synchronous speed</strong>, and <strong className="text-title">torque</strong> for discussions with customers and field techs. See the companion guide:{" "}

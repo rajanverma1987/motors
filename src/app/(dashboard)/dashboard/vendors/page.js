@@ -11,7 +11,6 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import { sortRowsClient } from "@/lib/client-table-sort";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 
 const PARTS_SUPPLIED_COLUMNS = [{ key: "item", label: "Part / material" }];
@@ -62,6 +61,11 @@ export default function DashboardVendorsPage() {
   const [viewingVendor, setViewingVendor] = useState(null);
   const [viewLoadingVendorId, setViewLoadingVendorId] = useState(null);
   const [savingVendor, setSavingVendor] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
   const [form, setForm] = useState(INITIAL_FORM);
   const [pendingAttachmentFiles, setPendingAttachmentFiles] = useState([]);
   const pendingAttachmentFilesRef = useRef([]);
@@ -77,17 +81,25 @@ export default function DashboardVendorsPage() {
 
   const loadVendors = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/vendors", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/vendors?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load vendors");
-      setVendors(Array.isArray(data) ? data : []);
+      setVendors(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load vendors");
       setVendors([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
     loadVendors();
@@ -345,31 +357,10 @@ export default function DashboardVendorsPage() {
     }
   };
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredVendors = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return vendors;
-    return vendors.filter((v) => {
-      const name = (v.name || "").toLowerCase();
-      const contact = (v.contactName || "").toLowerCase();
-      const email = (v.email || "").toLowerCase();
-      const parts = Array.isArray(v.partsSupplied) ? v.partsSupplied.join(" ").toLowerCase() : "";
-      return name.includes(q) || contact.includes(q) || email.includes(q) || parts.includes(q);
-    });
-  }, [vendors, searchQuery]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedVendors = useMemo(
-    () =>
-      sortRowsClient(filteredVendors, tableSort, (row, key) => {
-        if (key !== "partsSupplied") return row[key];
-        const parts = Array.isArray(row.partsSupplied) ? row.partsSupplied : [];
-        const labels = parts.map((p) => (typeof p === "string" ? p : p?.item ?? "")).filter(Boolean);
-        return labels.join(", ");
-      }),
-    [filteredVendors, tableSort]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -461,17 +452,26 @@ export default function DashboardVendorsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedVendors}
+          data={vendors}
           rowKey="id"
           loading={loading}
           emptyMessage={vendors.length === 0 ? "No vendors yet. Use “Add Vendor” to add one." : "No vendors match the search."}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search name, contact, email, parts…"
           onRefresh={async () => { setLoading(true); await loadVendors(); setLoading(false); }}
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

@@ -19,7 +19,6 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import PoPrintPreview from "@/components/dashboard/po-print-preview";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "40%" },
@@ -146,6 +145,11 @@ export default function DashboardPurchaseOrdersPage() {
   const [vendors, setVendors] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -212,24 +216,32 @@ export default function DashboardPurchaseOrdersPage() {
   }, [quotes, form.quoteId]);
   const loadPos = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/purchase-orders", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/purchase-orders?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load purchase orders");
-      setPos(Array.isArray(data) ? data : []);
+      setPos(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load purchase orders");
       setPos([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   const loadVendors = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/vendors", { credentials: "include", cache: "no-store" });
+      const res = await fetch("/api/dashboard/vendors?page=1&pageSize=1000", { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load vendors");
-      setVendors(Array.isArray(data) ? data : []);
+      setVendors(Array.isArray(data?.items) ? data.items : []);
     } catch {
       setVendors([]);
     }
@@ -727,29 +739,10 @@ export default function DashboardPurchaseOrdersPage() {
     }
   };
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredPos = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return pos;
-    return pos.filter((p) => {
-      const vendor = (vendorNameMap[p.vendorId] || "").toLowerCase();
-      const rfq = (p.rfqNumber || "").toLowerCase();
-      const status = (p.status || "").toLowerCase();
-      const deliveryStatus = (p.deliveryStatus || "").toLowerCase();
-      const poNum = (p.poNumber || "").toLowerCase();
-      return vendor.includes(q) || rfq.includes(q) || status.includes(q) || deliveryStatus.includes(q) || poNum.includes(q);
-    });
-  }, [pos, searchQuery, vendorNameMap]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedPos = useMemo(
-    () =>
-      sortRowsClient(filteredPos, tableSort, (row, key) =>
-        key === "vendor" ? vendorNameMap[row.vendorId] ?? "" : row[key]
-      ),
-    [filteredPos, tableSort, vendorNameMap]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -919,17 +912,26 @@ export default function DashboardPurchaseOrdersPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedPos}
+          data={pos}
           rowKey="id"
           loading={loading}
           emptyMessage={pos.length === 0 ? "No purchase orders yet. Use “Create Purchase Order” to add one." : "No purchase orders match the search."}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search PO #, vendor, RFQ#, status…"
           onRefresh={async () => { setLoading(true); await loadPos(); setLoading(false); }}
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

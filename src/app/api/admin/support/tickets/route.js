@@ -13,13 +13,19 @@ export async function GET(request) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const statusRaw = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
     const q = {};
     if (statusRaw && statusRaw !== "all") {
       const st = normalizeStatus(statusRaw);
       if (st) q.status = st;
     }
-    const list = await SupportTicket.find(q).sort({ updatedAt: -1 }).limit(500).lean();
-    return NextResponse.json(list.map(ticketToListRow));
+    const [totalCount, list] = await Promise.all([
+      SupportTicket.countDocuments(q),
+      SupportTicket.find(q).sort({ updatedAt: -1 }).skip(skip).limit(pageSize).lean(),
+    ]);
+    return NextResponse.json({ items: list.map(ticketToListRow), page, pageSize, totalCount });
   } catch (err) {
     console.error("Support tickets list (admin):", err);
     return NextResponse.json({ error: "Failed to list tickets" }, { status: 500 });

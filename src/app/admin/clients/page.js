@@ -528,6 +528,9 @@ export default function AdminClientsPage() {
   const [subClient, setSubClient] = useState(null);
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [deleteClient, setDeleteClient] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const openViewModal = useCallback((client) => {
     setViewClient(client);
@@ -552,7 +555,12 @@ export default function AdminClientsPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { credentials: "include" });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      const res = await fetch(`/api/admin/users?${params.toString()}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load users");
       const data = await res.json();
       const list = (data.users || []).map((u) => ({
@@ -563,6 +571,7 @@ export default function AdminClientsPage() {
         _onDelete: () => setDeleteClient(u),
       }));
       setUsers(list);
+      setTotalCount(Number(data.totalCount) || 0);
 
       const pending =
         typeof sessionStorage !== "undefined" ? sessionStorage.getItem("adminOpenSubUserId") : null;
@@ -579,18 +588,15 @@ export default function AdminClientsPage() {
     } catch (e) {
       toast.error(e.message || "Failed to load clients");
       setUsers([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast, openViewModal, openSubModal]);
+  }, [toast, openViewModal, openSubModal, page, pageSize, searchQuery]);
 
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
-
-  const filteredUsers = searchQuery.trim()
-    ? users.filter((row) => matchClient(row, searchQuery.trim()))
-    : users;
 
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden px-4 py-6">
@@ -605,14 +611,23 @@ export default function AdminClientsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={BASE_COLUMNS}
-          data={filteredUsers}
+          data={users}
           rowKey="id"
           loading={loading}
           emptyMessage="No registered clients."
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search email, shop, contact…"
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

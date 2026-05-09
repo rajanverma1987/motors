@@ -31,10 +31,40 @@ export async function GET(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
-    const list = await InventoryItem.find({ createdByEmail: email })
-      .sort({ name: 1 })
-      .lean();
-    return NextResponse.json(list.map(toRow));
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "name").trim();
+    const sortDir = String(searchParams.get("sortDir") || "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      name: "name",
+      sku: "sku",
+      uom: "uom",
+      onHand: "onHand",
+      reserved: "reserved",
+      available: "onHand",
+      threshold: "threshold",
+      location: "location",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "name";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ name: rx }, { sku: rx }, { uom: rx }, { location: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      InventoryItem.countDocuments(q),
+      InventoryItem.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
+    const items = list.map(toRow);
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("Inventory list:", err);
     return NextResponse.json({ error: "Failed to list inventory" }, { status: 500 });

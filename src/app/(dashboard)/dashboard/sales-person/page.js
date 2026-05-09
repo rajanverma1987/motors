@@ -11,7 +11,6 @@ import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 function formatDateShort(dateValue) {
   if (!dateValue) return "—";
@@ -42,6 +41,10 @@ export default function DashboardSalesPersonPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -54,17 +57,25 @@ export default function DashboardSalesPersonPage() {
 
   const loadSalesPersons = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/sales-persons", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/sales-persons?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load sales persons");
-      setRows(Array.isArray(data) ? data : []);
+      setRows(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (err) {
       toast.error(err.message || "Failed to load sales persons");
       setRows([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
     loadSalesPersons();
@@ -252,22 +263,10 @@ export default function DashboardSalesPersonPage() {
     }
   };
 
-  const filteredRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
-      return (
-        (row.name || "").toLowerCase().includes(q) ||
-        (row.phone || "").toLowerCase().includes(q) ||
-        (row.email || "").toLowerCase().includes(q) ||
-        (row.bankDetail || "").toLowerCase().includes(q)
-      );
-    });
-  }, [rows, searchQuery]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedRows = useMemo(() => sortRowsClient(filteredRows, tableSort), [filteredRows, tableSort]);
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -322,12 +321,15 @@ export default function DashboardSalesPersonPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedRows}
+          data={rows}
           rowKey="id"
           loading={loading}
           emptyMessage={rows.length === 0 ? "No sales persons yet. Use Add New to create one." : "No matching sales persons found."}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search by name, phone, email, bank detail..."
           onRefresh={async () => {
             setLoading(true);
@@ -336,6 +338,12 @@ export default function DashboardSalesPersonPage() {
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

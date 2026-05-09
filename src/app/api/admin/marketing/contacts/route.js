@@ -11,8 +11,19 @@ export async function GET(request) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
     const q = status && status !== "all" ? { status } : {};
-    const list = await MarketingContact.find(q).sort({ createdAt: -1 }).lean();
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ email: rx }, { name: rx }, { companyName: rx }, { notes: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      MarketingContact.countDocuments(q),
+      MarketingContact.find(q).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+    ]);
     const data = list.map((c) => ({
       id: c._id.toString(),
       email: c.email,
@@ -25,7 +36,7 @@ export async function GET(request) {
       notes: c.notes || "",
       createdAt: c.createdAt,
     }));
-    return NextResponse.json(data);
+    return NextResponse.json({ items: data, page, pageSize, totalCount });
   } catch (err) {
     console.error("Marketing contacts list error:", err);
     return NextResponse.json({ error: err.message || "Failed to list" }, { status: 500 });

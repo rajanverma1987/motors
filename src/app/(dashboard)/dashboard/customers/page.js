@@ -15,7 +15,6 @@ import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -147,6 +146,11 @@ export default function DashboardCustomersPage() {
   const [addMotorModalOpen, setAddMotorModalOpen] = useState(false);
   const [motorForm, setMotorForm] = useState(INITIAL_MOTOR_FORM);
   const [savingMotor, setSavingMotor] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "companyName", direction: "asc" });
   const motorFormRef = useRef(motorForm);
   motorFormRef.current = motorForm;
 
@@ -157,19 +161,31 @@ export default function DashboardCustomersPage() {
 
   const loadCustomers = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/customers?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load customers");
-      setCustomers(Array.isArray(data) ? data : []);
+      setCustomers(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load customers");
       setCustomers([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
+    setLoading(true);
     loadCustomers();
   }, [loadCustomers]);
 
@@ -182,12 +198,12 @@ export default function DashboardCustomersPage() {
       try {
         const [leadRes, customersRes] = await Promise.all([
           fetch(`/api/dashboard/leads/${fromLeadId}`, { credentials: "include" }),
-          fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" }),
+          fetch("/api/dashboard/customers?page=1&pageSize=1000", { credentials: "include", cache: "no-store" }),
         ]);
         const lead = await leadRes.json();
         const customersList = await customersRes.json();
         if (cancelled || !leadRes.ok) return;
-        const list = Array.isArray(customersList) ? customersList : [];
+        const list = Array.isArray(customersList?.items) ? customersList.items : [];
         if (user?.listingOnlyAccount && list.length >= LISTING_ONLY_MAX_CUSTOMERS) {
           toast.error(LISTING_ONLY_UPGRADE_MESSAGE);
           router.replace("/dashboard/customers", { scroll: false });
@@ -568,26 +584,10 @@ export default function DashboardCustomersPage() {
     }
   };
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const filteredCustomers = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return customers;
-    return customers.filter(
-      (c) =>
-        (c.companyName || "").toLowerCase().includes(q) ||
-        (c.primaryContactName || "").toLowerCase().includes(q) ||
-        (c.email || "").toLowerCase().includes(q) ||
-        (c.phone || "").toLowerCase().includes(q) ||
-        (c.city || "").toLowerCase().includes(q)
-    );
-  }, [customers, searchQuery]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedCustomers = useMemo(
-    () => sortRowsClient(filteredCustomers, tableSort),
-    [filteredCustomers, tableSort]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -735,17 +735,26 @@ export default function DashboardCustomersPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedCustomers}
+          data={customers}
           rowKey="id"
           loading={loading}
           emptyMessage={customers.length === 0 ? "No customers yet. Use “Enter New Customer” to add one." : "No customers match the search."}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search company, contact, email…"
           onRefresh={() => { setLoading(true); loadCustomers(); }}
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

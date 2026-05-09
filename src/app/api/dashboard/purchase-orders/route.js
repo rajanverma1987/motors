@@ -138,9 +138,33 @@ export async function GET(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
-    const list = await PurchaseOrder.find({ createdByEmail: email })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      poNumber: "poNumber",
+      vendor: "vendorId",
+      type: "type",
+      rfqNumber: "quoteId",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "createdAt";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ poNumber: rx }, { status: rx }, { quoteId: rx }, { deliveryStatus: rx }, { invoicedStatus: rx }, { paidStatus: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      PurchaseOrder.countDocuments(q),
+      PurchaseOrder.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
 
     const Vendor = (await import("@/models/Vendor")).default;
     const Quote = (await import("@/models/Quote")).default;
@@ -152,7 +176,8 @@ export async function GET(request) {
     for (const q of quotes) quoteRfqMap[q._id.toString()] = q.rfqNumber ?? "";
 
     const listWithId = list.map((po) => toPoListItem({ ...po, _id: po._id }, vendorNameMap, quoteRfqMap));
-    return NextResponse.json(listWithId);
+    if (!includePagination) return NextResponse.json(listWithId);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("Dashboard list purchase orders error:", err);
     return NextResponse.json({ error: "Failed to list purchase orders" }, { status: 500 });

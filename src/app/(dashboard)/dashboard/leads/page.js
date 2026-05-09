@@ -14,7 +14,6 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import Badge from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth-context";
-import { sortRowsClient } from "@/lib/client-table-sort";
 
 const SOURCE_LABELS = {
   website: "Website",
@@ -69,6 +68,10 @@ export default function DashboardLeadsPage() {
   const [editMotorPhotoFiles, setEditMotorPhotoFiles] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   // Enter Lead form state
   const [form, setForm] = useState({
@@ -88,21 +91,34 @@ export default function DashboardLeadsPage() {
 
   const loadLeads = async () => {
     try {
-      const res = await fetch("/api/dashboard/leads", { credentials: "include", cache: "no-store" });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+      if (statusFilter) params.set("status", statusFilter);
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (tableSort?.key) {
+        params.set("sortBy", tableSort.key);
+        params.set("sortDir", tableSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/leads?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load leads");
-      setLeads(Array.isArray(data) ? data : []);
+      setLeads(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(Number(data?.totalCount) || 0);
     } catch (e) {
       toast.error(e.message || "Failed to load leads");
       setLeads([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    setLoading(true);
     loadLeads();
-  }, []);
+  }, [page, pageSize, statusFilter, searchQuery]);
 
   const openEnterModal = () => {
     setForm({
@@ -277,37 +293,10 @@ export default function DashboardLeadsPage() {
     }
   };
 
-  const filteredLeads = useMemo(() => {
-    let list = leads;
-    if (statusFilter) {
-      list = list.filter((l) => l.status === statusFilter);
-    }
-    const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter(
-        (l) =>
-          (l.name || "").toLowerCase().includes(q) ||
-          (l.company || "").toLowerCase().includes(q) ||
-          (l.email || "").toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [leads, statusFilter, searchQuery]);
-
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
-  const sortedLeads = useMemo(
-    () =>
-      sortRowsClient(filteredLeads, tableSort, (row, key) => {
-        if (key === "createdAt") {
-          const t = row.createdAt ? new Date(row.createdAt).getTime() : 0;
-          return Number.isFinite(t) ? t : 0;
-        }
-        if (key === "source") return SOURCE_LABELS[row.source] || row.source || "";
-        return row[key];
-      }),
-    [filteredLeads, tableSort]
-  );
-  const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
+  const handleTableSort = useCallback((key, direction) => {
+    setPage(1);
+    setTableSort({ key, direction });
+  }, []);
 
   const columns = useMemo(
     () => [
@@ -405,7 +394,10 @@ export default function DashboardLeadsPage() {
             label="Filter by status"
             options={FILTER_STATUS_OPTIONS}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value);
+            }}
             searchable={false}
             placeholder="All statuses"
             className="w-44"
@@ -419,21 +411,26 @@ export default function DashboardLeadsPage() {
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
-          data={sortedLeads}
+          data={leads}
           rowKey="id"
           loading={loading}
-          emptyMessage={
-            leads.length === 0
-              ? "No leads yet. Use “Enter Lead” to add one, or wait for website inquiries."
-              : "No leads match the search or filter."
-          }
+          emptyMessage="No leads found."
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search name, company, email…"
           onRefresh={() => { setLoading(true); loadLeads(); }}
           sortState={tableSort}
           onSort={handleTableSort}
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

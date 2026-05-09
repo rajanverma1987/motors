@@ -25,10 +25,38 @@ export async function GET(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
-    const list = await Employee.find({ createdByEmail: email })
-      .sort({ name: 1, createdAt: -1 })
-      .lean();
-    return NextResponse.json(list.map((e) => toEmployeeJson(e)));
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "name").trim();
+    const sortDir = String(searchParams.get("sortDir") || "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      name: "name",
+      role: "role",
+      email: "email",
+      phone: "phone",
+      canLogin: "canLogin",
+      technicianAppAccess: "technicianAppAccess",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "name";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ name: rx }, { email: rx }, { role: rx }, { phone: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      Employee.countDocuments(q),
+      Employee.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
+    const items = list.map((e) => toEmployeeJson(e));
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("Dashboard list employees error:", err);
     return NextResponse.json({ error: "Failed to list employees" }, { status: 500 });

@@ -36,7 +36,11 @@ function InvoicesInner() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [invoiceSort, setInvoiceSort] = useState({ key: null, direction: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [invoiceSort, setInvoiceSort] = useState({ key: "createdAt", direction: "desc" });
+  const [summaryByStatus, setSummaryByStatus] = useState({});
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [printPayload, setPrintPayload] = useState(null);
@@ -45,13 +49,27 @@ function InvoicesInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" });
-      if (res.ok) setRows(await res.json());
-      else setRows([]);
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (invoiceSort?.key) {
+        params.set("sortBy", invoiceSort.key);
+        params.set("sortDir", invoiceSort.direction || "asc");
+      }
+      const res = await fetch(`/api/dashboard/invoices?${params.toString()}`, { credentials: "include", cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setRows(Array.isArray(data?.items) ? data.items : []);
+        setTotalCount(Number(data?.totalCount) || 0);
+        setSummaryByStatus(data?.summaryByStatus && typeof data.summaryByStatus === "object" ? data.summaryByStatus : {});
+      } else {
+        setRows([]);
+        setTotalCount(0);
+        setSummaryByStatus({});
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, searchQuery, invoiceSort]);
 
   useEffect(() => {
     load();
@@ -71,61 +89,8 @@ function InvoicesInner() {
     }
   }, [draftQuoteParam, openId, router]);
 
-  const filteredRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => {
-      const hay = [r.invoiceNumber, r.rfqNumber, r.customerName, r.date, r.status, r.id]
-        .map((x) => String(x ?? "").toLowerCase())
-        .join(" ");
-      return hay.includes(q);
-    });
-  }, [rows, searchQuery]);
-
-  const sortedRows = useMemo(() => {
-    const sortKey = invoiceSort?.key;
-    const dir = invoiceSort?.direction === "desc" ? -1 : 1;
-    if (!sortKey) return filteredRows;
-
-    const comparePrimary = (a, b) => {
-      switch (sortKey) {
-        case "invoiceNumber": {
-          const va = String(a.invoiceNumber || "").toLowerCase();
-          const vb = String(b.invoiceNumber || "").toLowerCase();
-          return va.localeCompare(vb, undefined, { numeric: true }) * dir;
-        }
-        case "customerName": {
-          const va = String(a.customerName || "").toLowerCase();
-          const vb = String(b.customerName || "").toLowerCase();
-          return va.localeCompare(vb) * dir;
-        }
-        case "date": {
-          const va = String(a.date || "").trim().toLowerCase();
-          const vb = String(b.date || "").trim().toLowerCase();
-          return va.localeCompare(vb) * dir;
-        }
-        case "totalAmount":
-          return (invoiceLineTotal(a) - invoiceLineTotal(b)) * dir;
-        case "status": {
-          const va = String(a.status || "").toLowerCase();
-          const vb = String(b.status || "").toLowerCase();
-          return va.localeCompare(vb) * dir;
-        }
-        default:
-          return 0;
-      }
-    };
-
-    const list = [...filteredRows];
-    list.sort((a, b) => {
-      const primary = comparePrimary(a, b);
-      if (primary !== 0) return primary;
-      return String(a.id || "").localeCompare(String(b.id || ""));
-    });
-    return list;
-  }, [filteredRows, invoiceSort]);
-
   const handleInvoiceSort = useCallback((key, direction) => {
+    setPage(1);
     setInvoiceSort({ key, direction });
   }, []);
 
@@ -134,29 +99,29 @@ function InvoicesInner() {
       {
         key: "draft",
         label: "Draft",
-        count: rows.filter((r) => r.status === "draft").length,
-        amount: rows.filter((r) => r.status === "draft").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
+        count: Number(summaryByStatus?.draft?.count) || 0,
+        amount: Number(summaryByStatus?.draft?.amount) || 0,
       },
       {
         key: "sent",
         label: "Sent",
-        count: rows.filter((r) => r.status === "sent").length,
-        amount: rows.filter((r) => r.status === "sent").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
+        count: Number(summaryByStatus?.sent?.count) || 0,
+        amount: Number(summaryByStatus?.sent?.amount) || 0,
       },
       {
         key: "partial_paid",
         label: "Partial Paid",
-        count: rows.filter((r) => r.status === "partial_paid").length,
-        amount: rows.filter((r) => r.status === "partial_paid").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
+        count: Number(summaryByStatus?.partial_paid?.count) || 0,
+        amount: Number(summaryByStatus?.partial_paid?.amount) || 0,
       },
       {
         key: "fully_paid",
         label: "Fully Paid",
-        count: rows.filter((r) => r.status === "fully_paid").length,
-        amount: rows.filter((r) => r.status === "fully_paid").reduce((sum, r) => sum + invoiceLineTotal(r), 0),
+        count: Number(summaryByStatus?.fully_paid?.count) || 0,
+        amount: Number(summaryByStatus?.fully_paid?.amount) || 0,
       },
     ];
-  }, [rows]);
+  }, [summaryByStatus]);
 
   const handleDeleteCb = useCallback(
     async (row) => {
@@ -353,23 +318,30 @@ function InvoicesInner() {
 
       <Table
         columns={columns}
-        data={sortedRows}
+        data={rows}
         rowKey="id"
         loading={loading}
         fillHeight
         sortState={invoiceSort}
         onSort={handleInvoiceSort}
         searchable
-        onSearch={setSearchQuery}
+        onSearch={(q) => {
+          setPage(1);
+          setSearchQuery(q);
+        }}
         searchPlaceholder="Search invoice#, customer, date, status…"
         onCellClick={(row) => setInvoiceModal({ invoiceId: row.id })}
         onRefresh={load}
+        pagination={{ page, pageSize, totalCount }}
+        onPageChange={(nextPage, nextPageSize) => {
+          setPage(nextPage);
+          setPageSize(nextPageSize);
+        }}
+        paginateClientSide={false}
         emptyMessage={
           rows.length === 0
             ? "No invoices yet. On Quotes, choose Create invoice — then Save on this page to add a row."
-            : filteredRows.length === 0 && searchQuery.trim()
-              ? "No invoices match your search."
-              : "No invoices match."
+            : "No invoices match your search."
         }
       />
 

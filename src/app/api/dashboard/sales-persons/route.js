@@ -26,8 +26,36 @@ export async function GET(request) {
     }
     await connectDB();
     const ownerEmail = user.email.trim().toLowerCase();
-    const rows = await SalesPerson.find({ createdByEmail: ownerEmail }).sort({ name: 1, createdAt: -1 }).lean();
-    return NextResponse.json(rows.map((row) => toSalesPersonJson(row)));
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "name").trim();
+    const sortDir = String(searchParams.get("sortDir") || "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      name: "name",
+      phone: "phone",
+      email: "email",
+      bankDetail: "bankDetail",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "name";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: ownerEmail };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ name: rx }, { phone: rx }, { email: rx }, { bankDetail: rx }];
+    }
+    const [totalCount, rows] = await Promise.all([
+      SalesPerson.countDocuments(q),
+      SalesPerson.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
+    const items = rows.map((row) => toSalesPersonJson(row));
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("Dashboard list sales persons error:", err);
     return NextResponse.json({ error: "Failed to list sales persons" }, { status: 500 });

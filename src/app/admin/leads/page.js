@@ -81,6 +81,9 @@ export default function AdminLeadsPage() {
   const [assigningLead, setAssigningLead] = useState(null);
   const [assignIds, setAssignIds] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const openViewModal = (lead) => {
     setViewingLead(lead);
@@ -101,20 +104,23 @@ export default function AdminLeadsPage() {
   }, [listings]);
 
   useEffect(() => {
+    setLoading(true);
     Promise.all([
-      fetch("/api/leads", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/listings", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/leads?page=${page}&pageSize=${pageSize}`, { credentials: "include", cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/listings?page=1&pageSize=1000", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([leadsData, listingsData]) => {
-        setLeads(Array.isArray(leadsData) ? leadsData : []);
-        setListings(Array.isArray(listingsData) ? listingsData : []);
+        setLeads(Array.isArray(leadsData?.items) ? leadsData.items : []);
+        setTotalCount(Number(leadsData?.totalCount) || 0);
+        setListings(Array.isArray(listingsData?.items) ? listingsData.items : []);
       })
       .catch(() => {
         setLeads([]);
+        setTotalCount(0);
         setListings([]);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, pageSize]);
 
   const openAssignModal = (lead) => {
     setAssigningLead(lead);
@@ -264,6 +270,12 @@ export default function AdminLeadsPage() {
           loading={loading}
           emptyMessage="No leads yet."
           responsive
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
         />
       </div>
 

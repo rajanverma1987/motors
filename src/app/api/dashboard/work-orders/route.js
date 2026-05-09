@@ -64,9 +64,34 @@ export async function GET(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
-    const list = await WorkOrder.find({ createdByEmail: email })
-      .sort({ createdAt: -1 })
-      .lean();
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      workOrderNumber: "workOrderNumber",
+      quoteRfqNumber: "quoteRfqNumber",
+      status: "status",
+      date: "date",
+      customerCompany: "companyName",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "createdAt";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ workOrderNumber: rx }, { quoteRfqNumber: rx }, { status: rx }, { companyName: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      WorkOrder.countDocuments(q),
+      WorkOrder.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
     const customerIds = [...new Set(list.map((w) => w.customerId).filter(Boolean))];
     const customers = await Customer.find({
       _id: { $in: customerIds },
@@ -77,14 +102,14 @@ export async function GET(request) {
     const custMap = Object.fromEntries(
       (customers || []).map((c) => [c._id.toString(), c.companyName || c.primaryContactName || ""])
     );
-    return NextResponse.json(
-      list.map((w) => ({
+    const items = list.map((w) => ({
         ...w,
         id: w._id.toString(),
         _id: undefined,
         customerCompany: custMap[w.customerId] || "",
-      }))
-    );
+      }));
+    if (!includePagination) return NextResponse.json(items);
+    return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("List work orders:", err);
     return NextResponse.json({ error: "Failed to list work orders" }, { status: 500 });

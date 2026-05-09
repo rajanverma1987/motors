@@ -30,11 +30,16 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await connectDB();
-    const list = await MarketplaceOrder.find({ sellerType: "platform" })
-      .sort({ createdAt: -1 })
-      .limit(500)
-      .lean();
-    return NextResponse.json(list.map((d) => toRow(d)));
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const q = { sellerType: "platform" };
+    const [totalCount, list] = await Promise.all([
+      MarketplaceOrder.countDocuments(q),
+      MarketplaceOrder.find(q).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+    ]);
+    return NextResponse.json({ items: list.map((d) => toRow(d)), page, pageSize, totalCount });
   } catch (err) {
     console.error("Admin marketplace orders GET:", err);
     return NextResponse.json({ error: err.message || "Failed" }, { status: 500 });

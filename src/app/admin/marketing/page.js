@@ -135,17 +135,30 @@ export default function AdminMarketingPage() {
   const [batchSize, setBatchSize] = useState(10);
   const [sending, setSending] = useState(false);
   const [lastSendResult, setLastSendResult] = useState(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const fetchContacts = useCallback(() => {
-    const url = statusFilter === "all"
-      ? "/api/admin/marketing/contacts"
-      : `/api/admin/marketing/contacts?status=${statusFilter}`;
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (searchQuery.trim()) params.set("q", searchQuery.trim());
+    const url = `/api/admin/marketing/contacts?${params.toString()}`;
     return fetch(url, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
-      .then((data) => setContacts(Array.isArray(data) ? data : []))
-      .catch(() => setContacts([]))
+      .then((data) => {
+        setContacts(Array.isArray(data?.items) ? data.items : []);
+        setTotalCount(Number(data?.totalCount) || 0);
+      })
+      .catch(() => {
+        setContacts([]);
+        setTotalCount(0);
+      })
       .finally(() => setLoading(false));
-  }, [statusFilter]);
+  }, [statusFilter, searchQuery, page, pageSize]);
 
   useEffect(() => {
     setLoading(true);
@@ -298,18 +311,6 @@ export default function AdminMarketingPage() {
     { key: "notes", label: "Notes", render: (v) => (v ? String(v).slice(0, 30) + (v.length > 30 ? "…" : "") : "—") },
   ];
 
-  const tableData = contacts
-    .filter((c) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.trim().toLowerCase();
-      const email = (c.email || "").toLowerCase();
-      const name = (c.name || "").toLowerCase();
-      const company = (c.companyName || "").toLowerCase();
-      const notes = (c.notes || "").toLowerCase();
-      return email.includes(q) || name.includes(q) || company.includes(q) || notes.includes(q);
-    })
-    .map((c) => ({ ...c }));
-
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[96rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
@@ -339,13 +340,19 @@ export default function AdminMarketingPage() {
             type="search"
             placeholder="Search email, name, company, notes…"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setPage(1);
+              setSearchQuery(e.target.value);
+            }}
             className="w-64"
           />
           <Select
             options={STATUS_OPTIONS}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value ?? "all")}
+            onChange={(e) => {
+              setPage(1);
+              setStatusFilter(e.target.value ?? "all");
+            }}
             searchable={false}
             className="w-40"
           />
@@ -353,11 +360,17 @@ export default function AdminMarketingPage() {
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <Table
             columns={columns}
-            data={tableData}
+            data={contacts}
             rowKey="id"
             loading={loading}
             emptyMessage="No contacts. Click Add contacts to paste emails."
             responsive
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+            paginateClientSide={false}
           />
         </div>
       </div>

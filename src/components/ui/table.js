@@ -128,6 +128,7 @@ export default function Table({
   }, [resizing]);
   const debouncedSearchRef = useRef(null);
   const isMountedRef = useRef(true);
+  const lastEmittedSearchRef = useRef(null);
   const { settings: dashboardUserSettings } = useUserSettings();
   const preferredPageSize = dashboardUserSettings?.tablePageSize;
   const [internalPage, setInternalPage] = useState(1);
@@ -167,6 +168,8 @@ export default function Table({
     if (!hasSearch) return;
     debouncedSearchRef.current = setTimeout(() => {
       const trimmed = searchInput.trim();
+      if (lastEmittedSearchRef.current === trimmed) return;
+      lastEmittedSearchRef.current = trimmed;
       if (isMountedRef.current) onSearch(trimmed);
     }, searchDebounceMs);
     return () => {

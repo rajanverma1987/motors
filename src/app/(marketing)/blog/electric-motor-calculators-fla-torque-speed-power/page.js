@@ -205,6 +205,86 @@ export default function BlogElectricMotorCalculatorsPage() {
           </section>
 
           <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Using calculator outputs responsibly in customer communication</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Calculators are powerful because they speed conversations, but every output should be framed correctly. Mark values
+              as estimate vs. nameplate-confirmed, especially for current and torque discussions tied to procurement decisions.
+              This protects credibility and prevents customers from treating early estimates as final engineering commitments.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              A simple practice is to include assumptions in quote notes: voltage, phase, efficiency, PF, frequency, and any
+              speed assumptions. When assumptions are explicit, revisions are easier and trust stays intact.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Calculator checks for faster troubleshooting</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Field and bench teams can use a quick sequence to reduce diagnostic time:
+              convert power units, estimate expected current, compare expected vs measured speed behavior, and validate torque
+              plausibility against reported load. This sequence catches obvious mismatches before deeper tear-down work.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              The goal is not replacing advanced diagnostics. The goal is improving first-pass clarity so your experts spend time
+              on the highest-value technical decisions instead of basic conversions.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Common interpretation mistakes in motor math</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Three mistakes appear often: treating synchronous speed as actual loaded RPM, using estimated FLA where nameplate
+              values are required for protection decisions, and applying DC Ohm’s law logic to AC rotating machines. These errors
+              are usually communication gaps, not technical incompetence.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Standardized calculator usage notes in your team SOP can eliminate these problems. Make the “when to use / when not
+              to use” boundaries part of onboarding for estimators and junior technicians.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">How calculator data improves quoting and planning</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Quotes improve when estimators can quickly sanity-check electrical and mechanical assumptions. Speed ratio checks can
+              reveal pulley changes that alter load behavior; torque estimates can flag coupling risks; current estimates can guide
+              early conversations about starter or drive compatibility.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Used this way, calculators become a bridge between customer language and technical workflow. They reduce back-and-forth
+              and help shops commit to realistic scope faster.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Create a repeatable “calculator policy” for your shop</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              High-performing teams define a policy: which tabs are allowed for quoting, what assumptions must be recorded, when
+              engineering review is mandatory, and how outputs are stored in job notes. This keeps decisions auditable and reduces
+              dependency on individual memory.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Over time, policy-driven calculator use increases consistency across estimators, technicians, and managers. That
+              consistency improves both customer confidence and internal training quality.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Recommended calculator sequence by use case</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              For quoting: HP↔kW, estimated FLA, then torque sanity check.
+              <br />
+              For field speed issues: synchronous speed, then belt/pulley ratio checks.
+              <br />
+              For bench electrical tasks: DC Ohm&apos;s law and Δ↔Y conversion where relevant.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              A standard sequence reduces mistakes and helps teams communicate consistently when handing work between office and
+              floor.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Frequently asked questions</h2>
             <div className="mt-6 space-y-6 text-secondary">
               <div>

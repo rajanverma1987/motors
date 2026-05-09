@@ -191,6 +191,107 @@ export default function BlogRewindingMarketingPage() {
           </p>
         </section>
 
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Price strategy: protect margin without disappearing from bids</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Competing on lowest quote alone attracts high-friction work and weakens long-term economics. A better approach is
+            tiered pricing tied to response and documentation quality: standard, expedited, and critical outage service levels.
+            This gives buyers options while protecting your premium capacity for jobs that truly require priority handling.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Include explicit assumptions in every quote: core condition, expected material availability, and change-order
+            triggers. Clear assumptions reduce post-award disputes and help procurement justify your quote internally even when
+            you are not the cheapest line item.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Content that ranks and converts in industrial search</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            High-performing industrial content answers concrete questions: rewind vs replace economics, lead time expectations by
+            motor class, insulation system trade-offs, and typical failure diagnostics. Publish practical guides linked to your
+            core service pages so informational visitors can convert when they are ready to request work.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Focus on evergreen topics updated quarterly instead of chasing high-volume but low-intent keywords. In this niche,
+            trust and relevance beat raw traffic. The right content brings fewer visitors but more qualified RFQs.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Account-based growth for multi-site industrial customers</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Many profitable rewind shops win by expanding inside existing accounts: one plant, then a region, then national
+            maintenance teams. Build account plans with site-level contacts, historical turnaround performance, and recurring
+            equipment families. This is marketing through operational reliability.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Quarterly business reviews help institutionalize trust. Share failure pattern trends, recommended spares, and process
+            improvements. When you provide strategic value beyond repair transactions, you become harder to replace.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">90-day marketing execution plan for rewind owners</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            <strong className="text-title">Month 1:</strong> tighten positioning, update profile/service pages, and publish proof
+            assets.
+            <br />
+            <strong className="text-title">Month 2:</strong> launch vertical-specific pages and proactive quote follow-up cadence.
+            <br />
+            <strong className="text-title">Month 3:</strong> review conversion metrics, improve bottlenecks, and scale account-based
+            outreach.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            This structure keeps growth balanced: marketing increases qualified demand while operations maintain delivery
+            performance. That combination is what compounds revenue year over year in the US industrial market.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Turnaround transparency as a competitive edge</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Many buyers accept premium pricing if lead-time communication is reliable. Publish realistic turnaround ranges by job
+            class and update them as capacity changes. Transparency reduces procurement anxiety and helps customers plan production
+            risk more confidently.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Add a “what changes turnaround” section to quotes: missing approvals, freight delays, special material sourcing, and
+            engineering review requirements. This reduces post-award tension and positions your shop as an organized partner.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Differentiate with reliability metrics, not adjectives</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Replace vague claims like “best quality” with operational metrics: on-time completion rate, typical quote turnaround,
+            repeat customer ratio, and documented warranty handling process. Industrial buyers trust measurable performance over
+            brand language.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            These metrics also help your sales team defend value in competitive bids. When procurement asks “why your quote,” your
+            team can answer with evidence instead of opinion.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Long-term positioning: become the trusted technical partner</h2>
+          <p className="mt-4 text-secondary leading-relaxed">
+            The strongest rewind brands are remembered for predictability: clear intake, disciplined execution, transparent
+            updates, and clean closeout documentation. Marketing should reinforce that identity in every channel so customers see
+            the same message online, in proposals, and in delivered work.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            Over time, positioning around technical partnership changes buying behavior. Instead of asking only for emergency
+            pricing, customers involve your shop earlier in planning, spares strategy, and preventive maintenance decisions. That
+            increases account value and reduces revenue volatility.
+          </p>
+          <p className="mt-4 text-secondary leading-relaxed">
+            In practical terms, this means marketing content, sales conversations, and operations data should all support one
+            promise: your shop helps customers reduce downtime risk, not just complete transactions.
+          </p>
+        </section>
+
         <section className="border-t border-border pt-10 mt-10">
           <h2 className="text-xl font-bold text-title sm:text-2xl">Related</h2>
           <ul className="mt-4 space-y-2 text-secondary">

@@ -27,6 +27,18 @@ function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function currentFinancialYearRange() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0-11
+  const fyStartYear = month >= 3 ? year : year - 1; // FY starts in April
+  const fyEndYear = fyStartYear + 1;
+  return {
+    from: `${fyStartYear}-04-01`,
+    to: `${fyEndYear}-03-31`,
+  };
+}
+
 function formatLedgerDate(value) {
   if (value == null || value === "") return "—";
   let d = null;
@@ -68,8 +80,8 @@ function statusVariant(status) {
 export default function LedgerPageClient() {
   const toast = useToast();
   const fmt = useFormatMoney();
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [fromDate, setFromDate] = useState(() => currentFinancialYearRange().from);
+  const [toDate, setToDate] = useState(() => currentFinancialYearRange().to);
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState({

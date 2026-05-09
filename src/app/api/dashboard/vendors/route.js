@@ -24,9 +24,34 @@ export async function GET(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
-    const list = await Vendor.find({ createdByEmail: email })
-      .sort({ name: 1, createdAt: -1 })
-      .lean();
+    const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+    const page = Math.max(1, Number(searchParams.get("page")) || 1);
+    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
+    const skip = (page - 1) * pageSize;
+    const qText = String(searchParams.get("q") || "").trim();
+    const sortBy = String(searchParams.get("sortBy") || "name").trim();
+    const sortDir = String(searchParams.get("sortDir") || "asc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      name: "name",
+      contactName: "contactName",
+      phone: "phone",
+      email: "email",
+      paymentTerms: "paymentTerms",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "name";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const q = { createdByEmail: email };
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      q.$or = [{ name: rx }, { contactName: rx }, { email: rx }, { partsSupplied: rx }];
+    }
+    const [totalCount, list] = await Promise.all([
+      Vendor.countDocuments(q),
+      Vendor.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
     const listWithId = list.map((v) => {
       let partsSupplied = [];
       if (Array.isArray(v.partsSupplied)) {
@@ -44,7 +69,8 @@ export async function GET(request) {
         attachmentCount,
       };
     });
-    return NextResponse.json(listWithId);
+    if (!includePagination) return NextResponse.json(listWithId);
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("Dashboard list vendors error:", err);
     return NextResponse.json({ error: "Failed to list vendors" }, { status: 500 });

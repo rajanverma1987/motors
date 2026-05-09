@@ -77,36 +77,61 @@ export default function AdminMarketplacePage() {
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef(null);
+  const [itemsPage, setItemsPage] = useState(1);
+  const [itemsPageSize, setItemsPageSize] = useState(25);
+  const [itemsTotalCount, setItemsTotalCount] = useState(0);
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [ordersPageSize, setOrdersPageSize] = useState(25);
+  const [ordersTotalCount, setOrdersTotalCount] = useState(0);
+  const [wantsPage, setWantsPage] = useState(1);
+  const [wantsPageSize, setWantsPageSize] = useState(25);
+  const [wantsTotalCount, setWantsTotalCount] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [iRes, oRes, wRes] = await Promise.all([
-        fetch("/api/admin/marketplace/items", { credentials: "include", cache: "no-store" }),
-        fetch("/api/admin/marketplace/orders", { credentials: "include", cache: "no-store" }),
-        fetch("/api/admin/marketplace/want-requests", { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/items?page=${itemsPage}&pageSize=${itemsPageSize}`, { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/orders?page=${ordersPage}&pageSize=${ordersPageSize}`, { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/want-requests?page=${wantsPage}&pageSize=${wantsPageSize}`, { credentials: "include", cache: "no-store" }),
       ]);
       const iData = await iRes.json();
       const oData = await oRes.json();
       const wData = await wRes.json();
-      if (iRes.ok) setItems(Array.isArray(iData) ? iData : []);
-      else {
+      if (iRes.ok) {
+        setItems(Array.isArray(iData?.items) ? iData.items : []);
+        setItemsTotalCount(Number(iData?.totalCount) || 0);
+      } else {
         setItems([]);
+        setItemsTotalCount(0);
         if (iRes.status === 401) toast.error("Sign in as admin.");
       }
-      if (oRes.ok) setOrders(Array.isArray(oData) ? oData : []);
-      else setOrders([]);
-      if (wRes.ok) setWantRequests(Array.isArray(wData) ? wData : []);
-      else setWantRequests([]);
+      if (oRes.ok) {
+        setOrders(Array.isArray(oData?.items) ? oData.items : []);
+        setOrdersTotalCount(Number(oData?.totalCount) || 0);
+      } else {
+        setOrders([]);
+        setOrdersTotalCount(0);
+      }
+      if (wRes.ok) {
+        setWantRequests(Array.isArray(wData?.items) ? wData.items : []);
+        setWantsTotalCount(Number(wData?.totalCount) || 0);
+      } else {
+        setWantRequests([]);
+        setWantsTotalCount(0);
+      }
     } catch {
       toast.error("Could not load marketplace");
       setItems([]);
       setOrders([]);
       setWantRequests([]);
+      setItemsTotalCount(0);
+      setOrdersTotalCount(0);
+      setWantsTotalCount(0);
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, itemsPage, itemsPageSize, ordersPage, ordersPageSize, wantsPage, wantsPageSize]);
 
   useEffect(() => {
     load();
@@ -475,6 +500,12 @@ export default function AdminMarketplacePage() {
             emptyMessage="No platform listings."
             onRefresh={load}
             responsive
+            pagination={{ page: itemsPage, pageSize: itemsPageSize, totalCount: itemsTotalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setItemsPage(nextPage);
+              setItemsPageSize(nextPageSize);
+            }}
+            paginateClientSide={false}
           />
         ) : tab === "orders" ? (
           <Table
@@ -485,6 +516,12 @@ export default function AdminMarketplacePage() {
             emptyMessage="No orders yet."
             onRefresh={load}
             responsive
+            pagination={{ page: ordersPage, pageSize: ordersPageSize, totalCount: ordersTotalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setOrdersPage(nextPage);
+              setOrdersPageSize(nextPageSize);
+            }}
+            paginateClientSide={false}
           />
         ) : (
           <Table
@@ -495,6 +532,12 @@ export default function AdminMarketplacePage() {
             emptyMessage="No want requests yet. They appear when visitors submit from an empty marketplace search."
             onRefresh={load}
             responsive
+            pagination={{ page: wantsPage, pageSize: wantsPageSize, totalCount: wantsTotalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setWantsPage(nextPage);
+              setWantsPageSize(nextPageSize);
+            }}
+            paginateClientSide={false}
           />
         )}
       </div>
