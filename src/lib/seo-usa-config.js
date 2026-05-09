@@ -51,7 +51,7 @@ export const SEO_USA_STATES = [
       "California’s mix of water infrastructure, food processing, semiconductor supply chains, and logistics hubs keeps demand for certified motor repair and energy-efficient rewinds steady—even as regulations push shops toward tighter documentation.",
     stateIntroParagraphs: [
       "California facilities juggle coastal logistics, Central Valley agriculture, advanced manufacturing, and some of the strictest documentation expectations in the country. Motor shops that spell out insulation systems, efficiency targets, and turnaround windows earn trust faster than shops that rely on word-of-mouth alone.",
-      "If you operate here, use this page to position your shop for California buyers: a complete listing for discovery, plus MotorsWinding.com workflows so every inquiry becomes a traceable quote and job—not a sticky note on a monitor.",
+      "If you operate here, use this page to position your shop for California buyers: a complete listing for discovery, plus IQMotorBase.com workflows so every inquiry becomes a traceable quote and job—not a sticky note on a monitor.",
     ],
     cities: [
       {
@@ -87,7 +87,7 @@ export const SEO_USA_STATES = [
       "Ohio remains a backbone of automotive supply, steel, polymers, and general manufacturing—ideal territory for repair shops that can document quality and shorten customer downtime.",
     stateIntroParagraphs: [
       "Ohio’s plant floors still hum with stamping, plastics, metals, and tiered automotive work—each line stoppage puts pressure on whoever can restore a motor without drama. Visibility matters: maintenance teams compare vendors on proof, repeatability, and how fast you return a call when a spindle or pump motor drops offline.",
-      "This Ohio page is built for owners who want more qualified repair work without adding headcount: show up with a strong profile, then keep intake-to-invoice disciplined inside MotorsWinding.com.",
+      "This Ohio page is built for owners who want more qualified repair work without adding headcount: show up with a strong profile, then keep intake-to-invoice disciplined inside IQMotorBase.com.",
     ],
     cities: [
       {
@@ -117,7 +117,7 @@ export const SEO_USA_STATES = [
       "Illinois concentrates food processing, packaging machinery, metals, and heavy transport around Chicago and regional hubs—motor failures ripple fast through just-in-time schedules.",
     stateIntroParagraphs: [
       "Chicago’s rail, food, and logistics ecosystem—and downstate manufacturing pockets—punish downtime harder than most regions. When a conveyor or mixer motor fails, buyers aren’t browsing for inspiration; they’re looking for a shop that can quote scope, stick to a date, and document what was done.",
-      "Use this Illinois landing page to capture that intent: highlight your service footprint and specialties, then convert leads into structured work inside MotorsWinding.com so your shop floor and office stay aligned.",
+      "Use this Illinois landing page to capture that intent: highlight your service footprint and specialties, then convert leads into structured work inside IQMotorBase.com so your shop floor and office stay aligned.",
     ],
     cities: [
       {
@@ -165,7 +165,7 @@ export const SEO_USA_STATES = [
       "Michigan’s automotive tiers, tool-and-die, and automation integrators keep spindle, pump, and conveyor motor repair in constant motion—especially around Detroit and West Michigan.",
     stateIntroParagraphs: [
       "Michigan shops live in a world of tight production windows, automation retrofits, and repeat motor failures on high-cycle equipment. Winning work isn’t about generic SEO—it’s about proving you can handle the horsepower, balancing, and testing expectations that automotive-adjacent plants demand.",
-      "Start here to reach buyers across Michigan with a profile that reflects real capabilities, then run the business on MotorsWinding.com so quotes, jobs, and invoices stay tied to the same record.",
+      "Start here to reach buyers across Michigan with a profile that reflects real capabilities, then run the business on IQMotorBase.com so quotes, jobs, and invoices stay tied to the same record.",
     ],
     cities: [
       {
@@ -189,7 +189,7 @@ export const SEO_USA_STATES = [
       "Florida’s humidity, tourism infrastructure, and growing advanced manufacturing create unique motor stress—from coastal pump rooms to cold-chain distribution centers.",
     stateIntroParagraphs: [
       "Salt air, heat, and constant HVAC and pump loads punish motors across Florida’s coasts and inland corridors. Facilities want vendors who understand corrosion-adjacent failure modes, rush timelines during peak season, and clear communication when a chiller or process pump motor is down.",
-      "This Florida page connects repair owners with buyers searching for help: publish what you do and where you travel, then keep every lead moving through MotorsWinding.com instead of scattered inboxes.",
+      "This Florida page connects repair owners with buyers searching for help: publish what you do and where you travel, then keep every lead moving through IQMotorBase.com instead of scattered inboxes.",
     ],
     cities: [
       {
@@ -225,7 +225,7 @@ export const SEO_USA_STATES = [
       "New York pairs dense urban infrastructure with upstate manufacturing and food processing—both need motor repair partners who can communicate urgency and compliance.",
     stateIntroParagraphs: [
       "New York’s mix of metro building systems, upstate process plants, and cross-border logistics leaves little patience for vague promises. Buyers often need documentation, tight access windows, and vendors who can coordinate rigging or freight without wasting a maintenance shift.",
-      "Use this New York landing to stand out for the right reasons: a sharp listing for regional discovery, plus MotorsWinding.com to manage inquiries, scope changes, and billing with fewer mistakes.",
+      "Use this New York landing to stand out for the right reasons: a sharp listing for regional discovery, plus IQMotorBase.com to manage inquiries, scope changes, and billing with fewer mistakes.",
     ],
     cities: [
       {
@@ -255,7 +255,7 @@ export const SEO_USA_STATES = [
       "Indiana’s automotive, RV, steel, and logistics footprint keeps motor repair and rewinding demand high—especially near Indianapolis and northeast manufacturing hubs.",
     stateIntroParagraphs: [
       "The Crossroads of America still moves heavy freight, stamped metal, RV assemblies, and supplier plants that can’t afford long motor outages. Shops that respond fast—with clear quotes and realistic shop capacity—earn repeat work from procurement teams who compare three vendors on every failure.",
-      "This Indiana page is for owners who want more of the right jobs: show your specialties and coverage area, then operationalize follow-through with MotorsWinding.com’s job and billing workflow.",
+      "This Indiana page is for owners who want more of the right jobs: show your specialties and coverage area, then operationalize follow-through with IQMotorBase.com’s job and billing workflow.",
     ],
     cities: [
       {
@@ -279,7 +279,7 @@ export const SEO_USA_STATES = [
       "North Carolina’s growth in batteries, automotive, food, and pharma packaging creates a competitive landscape for motor repair shops that can differentiate on speed and service.",
     stateIntroParagraphs: [
       "North Carolina’s manufacturing mix is expanding fast—new plants, tighter production schedules, and more competition for reliable vendors. Motor repair isn’t a commodity here; it’s who can document tests, keep promises on lead time, and communicate when parts slip a day.",
-      "Start on this page to attract buyers across the state: a detailed listing for search visibility, backed by MotorsWinding.com so leads become work orders and invoices without retyping data.",
+      "Start on this page to attract buyers across the state: a detailed listing for search visibility, backed by IQMotorBase.com so leads become work orders and invoices without retyping data.",
     ],
     cities: [
       {
@@ -346,7 +346,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
       "Accounts receivable and payment tracking so past-due work doesn’t hide in the shop floor noise.",
       "Customer-facing professionalism: consistent PDFs, terms, and follow-up history buyers expect from industrial vendors.",
       "Subscription and account options when you’re ready to grow; start with a strong free tier to prove value.",
-      "API access for integrations when you need to sync with accounting or another system—so MotorsWinding.com can stay your operational source of truth.",
+      "API access for integrations when you need to sync with accounting or another system—so IQMotorBase.com can stay your operational source of truth.",
     ],
   },
 ];
@@ -357,7 +357,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
 export function buildSeoLeadFaq(placeLabel) {
   return [
     {
-      q: `What does MotorsWinding.com do for shops in ${placeLabel}?`,
+      q: `What does IQMotorBase.com do for shops in ${placeLabel}?`,
       a: "We combine lead generation with a motor-repair-focused CRM: list your capabilities, capture inquiries, and run jobs with quotes, invoices, and inventory-aware workflows—so you’re not juggling spreadsheets and missed callbacks.",
     },
     {
@@ -366,7 +366,7 @@ export function buildSeoLeadFaq(placeLabel) {
     },
     {
       q: "How is this different from a plain business directory?",
-      a: "A directory alone doesn’t run your shop. MotorsWinding.com is positioned around winning repair jobs and managing the workshop—your listing is the front door; the CRM is where work gets executed.",
+      a: "A directory alone doesn’t run your shop. IQMotorBase.com is positioned around winning repair jobs and managing the workshop—your listing is the front door; the CRM is where work gets executed.",
     },
     {
       q: "Do you integrate payments or only leads?",
@@ -377,7 +377,7 @@ export function buildSeoLeadFaq(placeLabel) {
       a: "Many shops register, complete their listing, and start logging jobs the same week. If you want migration help from paper or another tool, contact us and we’ll align onboarding to your volume.",
     },
     {
-      q: "How does MotorsWinding.com handle data privacy?",
+      q: "How does IQMotorBase.com handle data privacy?",
       a: "Business and contact details submitted through listings and forms are used to deliver inquiries, quote follow-up, and CRM workflows. We do not sell your private contact data as a standalone data product. Access should be limited to authorized users in your team, and we recommend role-based access controls and strong passwords for your account.",
     },
   ];

@@ -6,7 +6,7 @@ import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuide
 const path = "/emergency-motor-repair-what-to-do";
 
 export const metadata = {
-  title: "Emergency Motor Repair: What to Do When a Motor Fails | MotorsWinding.com",
+  title: "Emergency Motor Repair: What to Do When a Motor Fails | IQMotorBase.com",
   description:
     "When you have an emergency motor failure: steps to take, how to find 24/7 or rush repair shops, and how to get a fast quote for repair or rewinding.",
   keywords: [
@@ -17,19 +17,19 @@ export const metadata = {
     "emergency motor rewinding",
     "urgent motor repair",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Emergency Motor Repair: What to Do When a Motor Fails | MotorsWinding.com",
+    title: "Emergency Motor Repair: What to Do When a Motor Fails | IQMotorBase.com",
     description:
       "Practical steps and how to find emergency and rush motor repair and rewinding services.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Emergency Motor Repair: What to Do | MotorsWinding.com",
+    title: "Emergency Motor Repair: What to Do | IQMotorBase.com",
     description: "Practical steps and how to find emergency and rush motor repair services.",
   },
   alternates: { canonical: path },
@@ -109,7 +109,7 @@ export default function EmergencyMotorRepairWhatToDoPage() {
           </h2>
           <p className="mt-4 text-secondary">
             <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
-              Search our directory of electric motor repair centers
+              Search our directory of electric motor repair shops
             </Link>{" "}
             —many list emergency or 24/7 service. You can also submit your motor details and we’ll connect you with shops that can quote your job, including rush turnaround when available.
           </p>

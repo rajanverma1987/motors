@@ -5,56 +5,56 @@ const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
 
 export async function sendListingApproved(to, companyName) {
-  const subject = "Congratulations! Your listing is live on MotorsWinding.com";
+  const subject = "Congratulations! Your listing is live on IQMotorBase.com";
   const html = `
     <p>Congratulations${companyName ? ` from ${companyName}` : ""}!</p>
-    <p>Your repair center listing on MotorsWinding.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
-    <p>Thank you for being part of MotorsWinding.com.</p>
-    <p>— MotorsWinding.com</p>
+    <p>Your repair center listing on IQMotorBase.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
+    <p>Thank you for being part of IQMotorBase.com.</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
 
 export async function sendListingRejected(to, companyName, reason) {
-  const subject = "Update on your MotorsWinding.com listing submission";
+  const subject = "Update on your IQMotorBase.com listing submission";
   const html = `
     <p>Hi${companyName ? ` from ${companyName}` : ""},</p>
-    <p>Thank you for submitting your repair center to MotorsWinding.com. After review, we are unable to approve your listing at this time.</p>
+    <p>Thank you for submitting your repair center to IQMotorBase.com. After review, we are unable to approve your listing at this time.</p>
     ${reason ? `<p><strong>Reason for rejection:</strong> ${reason}</p>` : "<p>No specific reason was provided.</p>"}
     <p>If you have questions or would like to resubmit with updates, please reply to this email or contact us.</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
 
 export async function sendNewReviewNotification(to, companyName, reviewerName, rating, reviewBody) {
-  const subject = `New customer review on MotorsWinding.com – ${companyName}`;
+  const subject = `New customer review on IQMotorBase.com – ${companyName}`;
   const stars = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
   const html = `
     <p>Hi,</p>
-    <p>A customer left a new review for <strong>${companyName}</strong> on MotorsWinding.com.</p>
+    <p>A customer left a new review for <strong>${companyName}</strong> on IQMotorBase.com.</p>
     <p><strong>Rating:</strong> ${stars} (${rating}/5)</p>
     <p><strong>From:</strong> ${reviewerName}</p>
     <p><strong>Review:</strong></p>
     <p>${reviewBody.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")}</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
 
 /** Rewind calculator RFQ — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
 const rewindCalculatorRfqEmail = () =>
-  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@MotorsWinding.com";
+  process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@IQMotorBase.com";
 
 /**
- * Notify MotorsWinding when a visitor submits an RFQ after using the public rewind ballpark calculator.
+ * Notify IQMotorBase when a visitor submits an RFQ after using the public rewind ballpark calculator.
  * @param {{ leadName: string, leadEmail: string, leadPhone?: string, leadCity?: string, leadZip?: string, problemDescription?: string, htmlRows: string }} params
  */
 export async function sendRewindCalculatorRfqToAdmin(params) {
   const to = rewindCalculatorRfqEmail();
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const subject = "Rewind calculator RFQ — MotorsWinding.com";
+  const subject = "Rewind calculator RFQ — IQMotorBase.com";
   const html = `
     <p>A visitor used the <strong>electric motor rewinding cost calculator</strong> and requested quotes from shops in their area.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
@@ -69,15 +69,15 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
     <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
     ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
-    <p>— MotorsWinding.com (automated)</p>
+    <p>— IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, subject, html);
 }
 
-/** Notify contact@MotorsWinding.com when a user has no listings in their area (near-me page). */
+/** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
-  const to = "contact@MotorsWinding.com";
-  const subject = "MotorsWinding.com – No repair centers in this area (near-me page)";
+  const to = "contact@IQMotorBase.com";
+  const subject = "IQMotorBase.com – No repair centers in this area (near-me page)";
   const locationParts = [city, state, zip].filter(Boolean);
   const locationLine = locationParts.length ? locationParts.join(", ") : "Location not provided";
   const html = `
@@ -90,25 +90,25 @@ export async function sendNoListingsNearMeNotification(city, state, zip) {
     </ul>
     <p><strong>Summary:</strong> ${locationLine}</p>
     <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
-    <p>— MotorsWinding.com (automated)</p>
+    <p>— IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, subject, html);
 }
 
 /** Notify a user who signed up for "notify me when there's a listing" that repair centers are now in their area. Links to our site only; no direct shop contact info in the email. */
 export async function sendAreaListedNotification(toEmail, locationLabel, shopListingsPageUrl) {
-  const subject = "Repair centers are now in your area – MotorsWinding.com";
+  const subject = "Repair centers are now in your area – IQMotorBase.com";
   const html = `
     <p>Good news!</p>
-    <p>We've added repair centers near <strong>${locationLabel || "your area"}</strong> on MotorsWinding.com.</p>
+    <p>We've added repair centers near <strong>${locationLabel || "your area"}</strong> on IQMotorBase.com.</p>
     <p>You asked to be notified when new listings are available in your area. View the full list and details on our site:</p>
     <p><a href="${shopListingsPageUrl}">View repair centers in your area</a></p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(toEmail, subject, html);
 }
 
-/** Send demo request to admin as plain HTML table. Subject: RFQ - MotorsWinding CRM Demo. */
+/** Send demo request to admin as plain HTML table. Subject: RFQ - IQMotorBase CRM Demo. */
 export async function sendDemoRequestToAdmin(fields) {
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const rows = [
@@ -135,20 +135,20 @@ export async function sendDemoRequestToAdmin(fields) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">— MotorsWinding.com (contact form)</p>
+    <p style="margin-top:16px;">— IQMotorBase.com (contact form)</p>
   `;
-  return sendEmail("contact@MotorsWinding.com", "RFQ - MotorsWinding CRM Demo.", html);
+  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase CRM Demo.", html);
 }
 
 /** Send thank-you email to client after demo request. */
 export async function sendDemoRequestThankYou(toName, toEmail) {
   const name = toName ? ` ${toName}` : "";
-  const subject = "We received your demo request – MotorsWinding.com";
+  const subject = "We received your demo request – IQMotorBase.com";
   const html = `
     <p>Hi${name},</p>
-    <p>Thank you for requesting a demo of MotorsWinding.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
+    <p>Thank you for requesting a demo of IQMotorBase.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
     <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
-    <p>— The MotorsWinding.com team</p>
+    <p>— The IQMotorBase.com team</p>
   `;
   return sendEmail(toEmail, subject, html);
 }
@@ -157,7 +157,7 @@ export async function sendDemoRequestThankYou(toName, toEmail) {
 const listingNotifyEmail = () =>
   process.env.NOTIFY_LISTING_EMAIL?.trim() ||
   process.env.ADMIN_EMAIL?.trim() ||
-  "contact@MotorsWinding.com";
+  "contact@IQMotorBase.com";
 
 /** Notify admin when someone submits a new listing from list-your-electric-motor-services. */
 export async function sendNewListingSubmittedToAdmin(doc) {
@@ -184,9 +184,9 @@ export async function sendNewListingSubmittedToAdmin(doc) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">— MotorsWinding.com (automated)</p>
+    <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "New listing submitted – MotorsWinding.com", html);
+  return sendEmail(to, "New listing submitted – IQMotorBase.com", html);
 }
 
 /** Notify admin when a listing is approved and the shop is now listed on the website. */
@@ -199,9 +199,9 @@ export async function sendShopListedNotificationToAdmin(doc) {
     <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
     Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || "—"}</p>
     <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-reapir-shops-listings">Public directory</a></p>
-    <p style="margin-top:16px;">— MotorsWinding.com (automated)</p>
+    <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "Shop listed on website – MotorsWinding.com", html);
+  return sendEmail(to, "Shop listed on website – IQMotorBase.com", html);
 }
 
 /**
@@ -220,28 +220,28 @@ export async function sendNewWebsiteLeadNotificationToShop({
   const leadsUrl = `${base}/dashboard/leads`;
   const loginUrl = `${base}/login`;
   const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
-  const subject = `New lead for ${listingCompanyName || "your shop"} – MotorsWinding.com`;
+  const subject = `New lead for ${listingCompanyName || "your shop"} – IQMotorBase.com`;
   const html = `
     <p>Hello,</p>
-    <p>You received a new repair inquiry (RFQ) from your <strong>MotorsWinding.com</strong> directory listing.</p>
+    <p>You received a new repair inquiry (RFQ) from your <strong>IQMotorBase.com</strong> directory listing.</p>
     <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
     <p>Log in to your shop dashboard to view full contact details and respond in your CRM:</p>
     <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in CRM</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
 
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
-  const subject = "Your MotorsWinding.com verification code";
+  const subject = "Your IQMotorBase.com verification code";
   const html = `
-    <p>Your verification code for listing your center on MotorsWinding.com is:</p>
+    <p>Your verification code for listing your center on IQMotorBase.com is:</p>
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
     <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
     <p>If you didn't request this, you can ignore this email.</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
@@ -262,7 +262,7 @@ export async function sendCrmWelcomeEmail({
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const greet = contactName ? ` ${esc(contactName)}` : "";
-  const subject = "Your MotorsWinding.com CRM account is ready";
+  const subject = "Your IQMotorBase.com CRM account is ready";
   const html = `
     <p>Hi${greet},</p>
     <p>Your shop portal account has been created for <strong>${esc(shopName || "your shop")}</strong>.</p>
@@ -276,7 +276,7 @@ export async function sendCrmWelcomeEmail({
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
     <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
     <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
@@ -300,10 +300,10 @@ export async function sendListingFeaturedAccountEmail({
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const company = (shopName && String(shopName).trim()) || "";
   const greet = company ? ` ${esc(company)}` : "";
-  const subject = "Your repair center is featured on MotorsWinding.com";
+  const subject = "Your repair center is featured on IQMotorBase.com";
   const html = `
     <p>Hi${greet},</p>
-    <p>We have added <strong>${esc(shopName || "your business")}</strong> to the MotorsWinding.com public repair shop directory so customers can find you when they search for motor repair services.</p>
+    <p>We have added <strong>${esc(shopName || "your business")}</strong> to the IQMotorBase.com public repair shop directory so customers can find you when they search for motor repair services.</p>
     <p><strong>What you get:</strong> visibility in our directory, incoming leads from the website routed to your account, and a dashboard to review inquiries and manage how your listing appears.</p>
     ${publicListingUrl ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>` : ""}
     <p>Use the credentials below to log in to your shop dashboard. There you can view <a href="${esc(leadsUrl)}">Leads</a> and edit your profile on <a href="${esc(directoryUrl)}">Directory listing</a>.</p>
@@ -317,7 +317,7 @@ export async function sendListingFeaturedAccountEmail({
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
     <p><strong>Security:</strong> Change your password after you sign in under <strong>Settings</strong> → <strong>Account</strong>.</p>
     <p>To unlock the full CRM (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
@@ -345,8 +345,8 @@ export async function sendSubscriptionPlanAttachedEmail({
       ? `${esc(currency || "USD")} ${Number(customPrice).toFixed(2)}`
       : "";
   const subject = isPaypal
-    ? `Subscription plan attached — ${esc(planName || "MotorsWinding")}`
-    : `Your MotorsWinding.com plan: ${esc(planName || "Free Ultimate")}`;
+    ? `Subscription plan attached — ${esc(planName || "IQMotorBase")}`
+    : `Your IQMotorBase.com plan: ${esc(planName || "Free Ultimate")}`;
   const approvalBlock =
     isPaypal && approvalUrl
       ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">CRM → Subscription</a>):</p>
@@ -354,7 +354,7 @@ export async function sendSubscriptionPlanAttachedEmail({
       : "";
   const html = `
     <p>Hello${shopName ? ` from <strong>${esc(shopName)}</strong>` : ""},</p>
-    <p>A subscription plan has been attached to your MotorsWinding.com account.</p>
+    <p>A subscription plan has been attached to your IQMotorBase.com account.</p>
     <table style="border-collapse:collapse;margin:16px 0;">
       <tbody>
         <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || "—")}</td></tr>
@@ -365,7 +365,7 @@ export async function sendSubscriptionPlanAttachedEmail({
     </table>
     ${approvalBlock}
     <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
-    <p>— MotorsWinding.com</p>
+    <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, html);
 }
@@ -401,7 +401,7 @@ export async function sendMarketingEmail(to, subject, html) {
   return sendEmail(to, subject, html, { from: marketingFrom });
 }
 
-/** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no MotorsWinding.com). */
+/** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no IQMotorBase.com). */
 export async function sendQuoteToCustomer(
   toEmail,
   customerName,

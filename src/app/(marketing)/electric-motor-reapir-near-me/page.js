@@ -7,7 +7,7 @@ export const metadata = {
   description:
     "Find electric motor repair and rewinding shops near you. Use your location to see approved repair centers in your city, state, or zip code. Browse the directory of motor repair shops.",
   openGraph: {
-    title: "Electric Motor Repair Shops Near Me | MotorsWinding.com",
+    title: "Electric Motor Repair Shops Near Me | IQMotorBase.com",
     description:
       "Find motor repair centers near you. Use your location to see approved electric motor repair and rewinding shops in your area.",
   },

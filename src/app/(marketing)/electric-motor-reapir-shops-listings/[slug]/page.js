@@ -166,7 +166,7 @@ export async function generateMetadata({ params }) {
       description,
       type: "website",
       url: canonicalUrl,
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       locale: "en_US",
       images: ogImage ? [{ url: ogImage, alt: `${listing.companyName} — electric motor repair` }] : undefined,
     },
@@ -326,7 +326,7 @@ export default async function ListingDetailPage({ params }) {
             <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
               <p className="text-sm text-secondary">
                 <span className="font-medium text-title">Is this your business?</span>{" "}
-                Sign in to your MotorsWinding account to update this directory listing—services, service area, photos,
+                Sign in to your IQMotorBase account to update this directory listing—services, service area, photos,
                 and contact details—whenever they change.{" "}
                 <Link
                   href={`/login?next=${encodeURIComponent("/dashboard/directory-listing")}`}

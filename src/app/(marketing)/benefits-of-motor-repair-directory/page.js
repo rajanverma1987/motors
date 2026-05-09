@@ -9,7 +9,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Benefits of a Motor Repair Directory — Leads, Trust & Visibility for Electric Motor Shops | MotorsWinding.com";
+    "Benefits of a Motor Repair Directory — Leads, Trust & Visibility for Electric Motor Shops | IQMotorBase.com";
   const description =
     "Why electric motor repair and rewinding shops list in a dedicated directory: qualified buyer intent, niche SEO visibility, credibility, lower cost than broad ads, and reach beyond word-of-mouth. USA-focused guide for industrial motor service businesses.";
   return {
@@ -25,7 +25,7 @@ export async function generateMetadata() {
       "motor repair marketing",
       "electric motor shop leads",
     ],
-    authors: [{ name: "MotorsWinding.com" }],
+    authors: [{ name: "IQMotorBase.com" }],
     alternates: { canonical: PAGE_PATH },
     robots: { index: true, follow: true },
     openGraph: {
@@ -33,7 +33,7 @@ export async function generateMetadata() {
       description,
       url: canonical,
       type: "article",
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       locale: "en_US",
     },
     twitter: {
@@ -257,7 +257,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
               Turn visibility into jobs with your CRM
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              The benefit of a lead is only realized when your team converts it. MotorsWinding.com offers{" "}
+              The benefit of a lead is only realized when your team converts it. IQMotorBase.com offers{" "}
               <Link href="/features" className="font-medium text-primary hover:underline">
                 quotes, work orders, and customer records
               </Link>{" "}

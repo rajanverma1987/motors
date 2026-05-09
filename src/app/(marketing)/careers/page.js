@@ -8,10 +8,10 @@ export const revalidate = 300;
 export const metadata = {
   title: "Careers — Motor repair & rewinding jobs",
   description:
-    "Open roles posted by motor repair shops on MotorsWinding.com. Shops publish jobs from the CRM; apply online. Technicians, winders, and shop staff.",
+    "Open roles posted by motor repair shops on IQMotorBase.com. Shops publish jobs from the CRM; apply online. Technicians, winders, and shop staff.",
   alternates: { canonical: "/careers" },
   openGraph: {
-    title: "Careers | MotorsWinding.com",
+    title: "Careers | IQMotorBase.com",
     description:
       "Technician, winder, and shop roles posted by motor repair centers. Shops publish jobs from the CRM; apply online.",
     url: "/careers",
@@ -28,7 +28,7 @@ export default async function CareersPage() {
       <div className="border-b border-border pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
-          Open positions posted by motor repair and rewinding shops on MotorsWinding.com. Shop owners create and manage
+          Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Shop owners create and manage
           listings in the CRM—each role appears here with an SEO-friendly page; candidates select a job to read details and
           apply with contact information and experience.
         </p>

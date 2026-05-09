@@ -125,7 +125,7 @@ export async function createPaypalSubscription({
   returnUrl,
   cancelUrl,
   subscriberEmail,
-  brandName = "MotorsWinding",
+  brandName = "IQMotorBase",
 }) {
   const token = await getPaypalAccessToken();
   const base = paypalBaseUrl();

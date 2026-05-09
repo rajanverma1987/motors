@@ -7,7 +7,7 @@ const path = "/cost-of-motor-repair-and-rewinding";
 export const metadata = {
   title: "Electric Motor Repair & Rewinding Cost Guide (US)",
   description:
-    "How much does electric motor repair or rewinding cost? Factors that drive price, typical US ballpark ranges, how to compare quotes, and links to find qualified repair centers on MotorsWinding.com.",
+    "How much does electric motor repair or rewinding cost? Factors that drive price, typical US ballpark ranges, how to compare quotes, and links to find qualified repair centers on IQMotorBase.com.",
   keywords: [
     "motor repair cost",
     "motor rewinding cost",
@@ -18,19 +18,19 @@ export const metadata = {
     "AC motor repair cost",
     "DC motor rewind price",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Electric Motor Repair & Rewinding Cost Guide | MotorsWinding.com",
+    title: "Electric Motor Repair & Rewinding Cost Guide | IQMotorBase.com",
     description:
       "What drives motor repair and rewind pricing, typical US price bands, and how to get accurate quotes from repair centers.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair & Rewinding Cost Guide | MotorsWinding.com",
+    title: "Electric Motor Repair & Rewinding Cost Guide | IQMotorBase.com",
     description: "Factors, ballpark ranges, and how to compare motor repair quotes.",
   },
   alternates: { canonical: path },
@@ -46,12 +46,12 @@ const faqItems = [
   {
     question: "Is rewinding cheaper than buying a new motor?",
     answer:
-      "Sometimes yes—especially for large or long-lead specialty motors—but not always. Compare the rewind quote to replacement cost, downtime, and efficiency. Use a structured repair vs. replace comparison (such as the MotorsWinding.com guide on when to repair or replace an electric motor) to decide when each option makes economic sense.",
+      "Sometimes yes—especially for large or long-lead specialty motors—but not always. Compare the rewind quote to replacement cost, downtime, and efficiency. Use a structured repair vs. replace comparison (such as the IQMotorBase.com guide on when to repair or replace an electric motor) to decide when each option makes economic sense.",
   },
   {
     question: "Why do motor repair quotes vary between shops?",
     answer:
-      "Shops differ in labor rates, material sources, testing included, warranty terms, and how they scope hidden damage. Always compare line items (labor, materials, testing, rush fees) and ask what is included. A practical checklist for vetting shops is available on MotorsWinding.com under how to choose an electric motor repair shop.",
+      "Shops differ in labor rates, material sources, testing included, warranty terms, and how they scope hidden damage. Always compare line items (labor, materials, testing, rush fees) and ask what is included. A practical checklist for vetting shops is available on IQMotorBase.com under how to choose an electric motor repair shop.",
   },
   {
     question: "What is usually included in a motor repair or rewind quote?",
@@ -61,7 +61,7 @@ const faqItems = [
   {
     question: "How can I get an accurate motor rewind cost estimate?",
     answer:
-      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use MotorsWinding.com to request quotes or browse repair centers by location and contact shops directly.",
+      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use IQMotorBase.com to request quotes or browse repair centers by location and contact shops directly.",
   },
   {
     question: "What happens to the information I submit in quote requests?",
@@ -116,7 +116,7 @@ export default function CostOfMotorRepairPage() {
             <strong className="text-title">motor rewinding cost</strong>, or{" "}
             <strong className="text-title">industrial motor repair pricing</strong>, start here. Use this page with our{" "}
             <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
-              directory of repair centers
+              directory of repair shops
             </Link>
             ,{" "}
             <Link href="/electric-motor-reapir-near-me" className="text-primary font-medium hover:underline">
@@ -301,7 +301,7 @@ export default function CostOfMotorRepairPage() {
               <li>
                 Use{" "}
                 <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
-                  find repair centers
+                  find repair shops
                 </Link>{" "}
                 or{" "}
                 <Link href="/electric-motor-reapir-near-me" className="text-primary font-medium hover:underline">
@@ -324,7 +324,7 @@ export default function CostOfMotorRepairPage() {
             <p className="mt-6 text-secondary">
               You can also{" "}
               <Link href="/contact" className="text-primary font-medium hover:underline">
-                contact MotorsWinding.com
+                contact IQMotorBase.com
               </Link>{" "}
               with your requirement so we can help route you to centers that quote your type of work.
             </p>
@@ -334,7 +334,7 @@ export default function CostOfMotorRepairPage() {
             <h2 className="text-2xl font-bold text-title sm:text-3xl">For repair shop owners</h2>
             <p className="mt-4 text-secondary">
               If you run a motor repair or rewinding center, accurate quoting and job tracking protect margin and
-              customer trust. MotorsWinding.com offers{" "}
+              customer trust. IQMotorBase.com offers{" "}
               <Link href="/motor-repair-shop-management-software" className="text-primary font-medium hover:underline">
                 shop management software
               </Link>
@@ -397,7 +397,7 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 <Link href="/contact" className="text-primary hover:underline">
-                  → Request a quote via MotorsWinding.com
+                  → Request a quote via IQMotorBase.com
                 </Link>
               </li>
             </ul>

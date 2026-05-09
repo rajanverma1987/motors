@@ -121,7 +121,7 @@ export default function RegisterPage() {
         <span className="text-secondary"> — no credit card required. Full access to the portal.</span>
       </div>
       <p className="mt-5 text-base text-secondary">
-        Create your MotorsWinding.com account to log in to your portal, manage work orders,
+        Create your IQMotorBase.com account to log in to your portal, manage work orders,
         track shop parts inventory, and see new repair leads in one place.
       </p>
       <ul className="mt-6 space-y-3 text-sm text-secondary">

@@ -22,11 +22,10 @@ export default function GetQuoteCta({ compact = false }) {
       </Button>
       <Link
         href="/electric-motor-reapir-shops-listings"
-        className={`inline-flex w-full items-center justify-center rounded-md border-[0.5px] border-border bg-transparent text-text transition-opacity hover:bg-card hover:border-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${
-          compact ? "px-3 py-1 text-sm" : "px-6 py-3 text-lg"
-        }`}
+        className={`inline-flex w-full items-center justify-center rounded-md border-[0.5px] border-border bg-transparent text-text transition-opacity hover:bg-card hover:border-primary/20 disabled:cursor-not-allowed disabled:opacity-50 ${compact ? "px-3 py-1 text-sm" : "px-6 py-3 text-lg"
+          }`}
       >
-        Browse repair centers
+        Browse repair shops
       </Link>
       <LeadFormModal open={leadFormOpen} onClose={() => setLeadFormOpen(false)} listing={null} />
     </>

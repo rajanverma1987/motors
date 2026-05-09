@@ -45,7 +45,7 @@ export function listingImageAbsoluteUrls(listing, siteBase) {
  * @returns {{ question: string, answer: string }[]}
  */
 export function buildListingDetailFaqs(listing, ctx, siteBase) {
-  const base = String(siteBase || "https://motorswinding.com").replace(/\/$/, "");
+  const base = String(siteBase || "https://IQMotorBase.com").replace(/\/$/, "");
   const name = String(listing.companyName || "This repair center").trim() || "This repair center";
   const items = [];
 
@@ -78,24 +78,24 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   if (listing.phone) {
     items.push({
       question: `How do I contact ${name}?`,
-      answer: `You can request a quote or reach the shop through the contact options on this MotorsWinding.com listing. Phone on file: ${String(listing.phone).trim()}.`,
+      answer: `You can request a quote or reach the shop through the contact options on this IQMotorBase.com listing. Phone on file: ${String(listing.phone).trim()}.`,
     });
   } else {
     items.push({
       question: `How do I contact ${name}?`,
-      answer: `Use the "Contact / Request quote" button on this page to send your requirement through MotorsWinding.com. The shop receives your inquiry through our directory.`,
+      answer: `Use the "Contact / Request quote" button on this page to send your requirement through IQMotorBase.com. The shop receives your inquiry through our directory.`,
     });
   }
 
   items.push({
     question: "Is this electric motor repair listing verified?",
     answer:
-      "Listings on MotorsWinding.com are submitted by repair centers and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
+      "Listings on IQMotorBase.com are submitted by repair centers and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
   });
 
   items.push({
     question: "How can my motor repair shop appear in this directory?",
-    answer: `Motor repair and rewinding businesses can list their company on MotorsWinding.com to reach industrial and commercial customers. Submit your shop profile at ${base}/list-your-electric-motor-services.`,
+    answer: `Motor repair and rewinding businesses can list their company on IQMotorBase.com to reach industrial and commercial customers. Submit your shop profile at ${base}/list-your-electric-motor-services.`,
   });
 
   return items;
@@ -199,12 +199,12 @@ export function buildListingDetailJsonLdGraph(opts) {
     ...(description ? { description: description.slice(0, 320) } : {}),
     isPartOf: {
       "@type": "WebSite",
-      name: "MotorsWinding.com",
+      name: "IQMotorBase.com",
       url: siteBase,
     },
     publisher: {
       "@type": "Organization",
-      name: "MotorsWinding.com",
+      name: "IQMotorBase.com",
       url: siteBase,
       logo: {
         "@type": "ImageObject",

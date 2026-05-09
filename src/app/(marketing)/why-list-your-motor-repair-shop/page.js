@@ -9,7 +9,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Why List Your Motor Repair Shop in a Directory? Leads, Trust & Local SEO | MotorsWinding.com";
+    "Why List Your Motor Repair Shop in a Directory? Leads, Trust & Local SEO | IQMotorBase.com";
   const description =
     "Qualified electric motor repair and rewinding directories put your shop in front of facility managers and maintenance buyers searching for repair near them. Learn benefits vs generic listings, what to put on your profile, and how to capture leads—USA-focused motor repair marketing.";
   return {
@@ -25,7 +25,7 @@ export async function generateMetadata() {
       "motor repair near me SEO",
       "electric motor shop marketing",
     ],
-    authors: [{ name: "MotorsWinding.com" }],
+    authors: [{ name: "IQMotorBase.com" }],
     alternates: { canonical: PAGE_PATH },
     robots: { index: true, follow: true },
     openGraph: {
@@ -33,7 +33,7 @@ export async function generateMetadata() {
       description,
       url: canonical,
       type: "article",
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       locale: "en_US",
     },
     twitter: {
@@ -71,7 +71,7 @@ const faqItems = [
   },
   {
     q: "Can I manage leads in one place?",
-    a: "On MotorsWinding.com you can pair a directory presence with CRM tools—quotes, work orders, and customer records—so inquiries do not die in a single inbox. See our features and registration paths for details.",
+    a: "On IQMotorBase.com you can pair a directory presence with CRM tools—quotes, work orders, and customer records—so inquiries do not die in a single inbox. See our features and registration paths for details.",
   },
   {
     q: "How do I get started?",
@@ -296,7 +296,7 @@ export default function WhyListYourMotorRepairShopPage() {
               Directory + CRM: keep leads from going cold
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Visibility gets the conversation started; your process wins the job. MotorsWinding.com is built for motor
+              Visibility gets the conversation started; your process wins the job. IQMotorBase.com is built for motor
               repair centers that want{" "}
               <Link href="/features" className="font-medium text-primary hover:underline">
                 quotes, work orders, and customer history

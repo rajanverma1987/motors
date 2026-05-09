@@ -17,19 +17,19 @@ export const metadata = {
     "motor rewinding shop leads",
     "industrial motor repair marketing",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "How Motor Repair Shops Get More Customers | MotorsWinding.com",
+    title: "How Motor Repair Shops Get More Customers | IQMotorBase.com",
     description:
       "Proven strategies for motor repair and rewinding shops to get more leads and customers online.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "How Motor Repair Shops Get More Customers | MotorsWinding.com",
+    title: "How Motor Repair Shops Get More Customers | IQMotorBase.com",
     description: "Proven strategies for motor repair shops to get more leads and customers online.",
   },
   alternates: { canonical: path },

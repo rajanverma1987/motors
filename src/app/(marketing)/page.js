@@ -70,7 +70,7 @@ const managementFeatures = [
   },
   {
     title: "API and CRM integrations",
-    detail: "An API is available to integrate MotorsWinding.com with any other CRM or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—so you can keep one source of truth while using the apps your team already relies on.",
+    detail: "An API is available to integrate IQMotorBase.com with any other CRM or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—so you can keep one source of truth while using the apps your team already relies on.",
   },
   {
     title: "Upload your existing data",
@@ -79,7 +79,7 @@ const managementFeatures = [
   {
     title: "Public marketplace listings",
     detail:
-      "Publish spare parts, surplus motors, and tools to the MotorsWinding.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your CRM alongside work orders and invoices.",
+      "Publish spare parts, surplus motors, and tools to the IQMotorBase.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your CRM alongside work orders and invoices.",
   },
   {
     title: "Employee job postings (public careers)",
@@ -91,7 +91,7 @@ const managementFeatures = [
 const leadFeatures = [
   {
     title: "Lead capture from directory and local SEO",
-    detail: "Repair inquiries come from the MotorsWinding.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads—you see and respond from a single place.",
+    detail: "Repair inquiries come from the IQMotorBase.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads—you see and respond from a single place.",
   },
   {
     title: "Shared and exclusive lead distribution",
@@ -122,7 +122,7 @@ export default function HomePage() {
             {/* Left: copy + CTAs */}
             <div>
               <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-                Built for motor repair centers
+                Built for motor repair shops
               </span>
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
                 A system that manages{" "}
@@ -411,7 +411,7 @@ export default function HomePage() {
               Lead generation network
             </h3>
             <p className="mt-3 max-w-[50.4rem] text-secondary">
-              Get repair inquiries from the MotorsWinding.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up—so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
+              Get repair inquiries from the IQMotorBase.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up—so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
             </p>
             <ul className="mt-8 space-y-6">
               {leadFeatures.map((item) => (
@@ -558,7 +558,7 @@ export default function HomePage() {
                   List your repair company in the directory - Free to list
                 </h2>
                 <p className="mt-3 max-w-[43.2rem] text-secondary">
-                  Add your company to the MotorsWinding.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}
+                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     post employee job openings
                   </Link>{" "}
@@ -582,7 +582,7 @@ export default function HomePage() {
             Ready to streamline your center?
           </h2>
           <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-secondary">
-            Contact us for a demo and see how MotorsWinding.com can help you manage jobs, stock, grow with leads, and hire
+            Contact us for a demo and see how IQMotorBase.com can help you manage jobs, stock, grow with leads, and hire
             through public job postings.
           </p>
           <div className="mt-10">

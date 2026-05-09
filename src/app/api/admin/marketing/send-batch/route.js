@@ -57,13 +57,13 @@ export async function POST(request) {
 
     const initialDoc = await MarketingTemplate.findOne({ type: "initial" }).lean();
     const followupDoc = await MarketingTemplate.findOne({ type: "followup" }).lean();
-    const initialSubject = (initialDoc?.subject || "List your motor repair shop on MotorsWinding.com").trim();
+    const initialSubject = (initialDoc?.subject || "List your motor repair shop on IQMotorBase.com").trim();
     const initialBody = (initialDoc?.body || "").trim();
     const followupSubject = (followupDoc?.subject || "Quick follow-up – list your motor repair shop").trim();
     const followupBody = (followupDoc?.body || "").trim();
 
     const baseUrl = getPublicSiteUrl();
-    const linkReplacer = (html) => html.replace(/https:\/\/motorswinding\.com\//g, baseUrl + "/");
+    const linkReplacer = (html) => html.replace(/https:\/\/iqmotorbase\.com\//g, baseUrl + "/");
 
     let sent = 0;
     const errors = [];

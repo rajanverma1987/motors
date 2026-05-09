@@ -44,7 +44,7 @@ export async function generateMetadata({ params }) {
       title: `${job.title} | Careers`,
       description,
       url: canonicalUrl,
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       locale: "en_US",
       type: "article",
       images: [
@@ -58,7 +58,7 @@ export async function generateMetadata({ params }) {
     },
     twitter: {
       card: "summary_large_image",
-      title: `${job.title} | MotorsWinding.com`,
+      title: `${job.title} | IQMotorBase.com`,
       description,
       images: [`${base}/og-image.png`],
     },

@@ -6,7 +6,7 @@ export function HomePageJsonLd() {
   const webSite = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "MotorsWinding.com",
+    name: "IQMotorBase.com",
     url: siteUrl,
     description:
       "Motor repair center software with Job Write-Up (intake through quote approval on one job number), shop parts inventory and reservations, lead generation, public Careers job postings for hiring technicians, and a public marketplace for surplus parts and equipment. Work orders, repair leads, and SEO-friendly listings for motor repair and rewinding businesses.",
@@ -20,7 +20,7 @@ export function HomePageJsonLd() {
   const softwareApplication = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "MotorsWinding.com",
+    name: "IQMotorBase.com",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:
@@ -36,7 +36,7 @@ export function HomePageJsonLd() {
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "MotorsWinding.com",
+    name: "IQMotorBase.com",
     url: siteUrl,
     logo: `${siteUrl}/og-image.png`,
   };

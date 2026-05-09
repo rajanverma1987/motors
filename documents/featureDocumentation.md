@@ -1506,7 +1506,7 @@ The following items from the process document have been implemented in the codeb
 ## Marketing & Contact
 
 - **Contact page** (`/contact`): Redesigned with hero (gradient, badge, headline, subtext), side info card (“Why reach out?” with demo/pricing/support, direct email, response time note), and send-message form. Success state with “Thanks for reaching out” and links to home and browse repair centers.
-- **Contact email**: Display and mailto use **contact@MotorsWinding.com**.
+- **Contact email**: Display and mailto use **contact@IQMotorBase.com**.
 
 ## Technical / UX
 

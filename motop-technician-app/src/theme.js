@@ -1,5 +1,5 @@
 /**
- * Matches MotorsWinding CRM light theme (globals.css HSL tokens).
+ * Matches IQMotorBase CRM light theme (globals.css HSL tokens).
  * STRICT: keep in sync with web --bg, --card, --primary, --title, --text, --secondary, --border, --form-bg
  */
 export const colors = {

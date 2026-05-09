@@ -6,7 +6,7 @@ import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuide
 const path = "/types-of-electric-motor-repair-services";
 
 export const metadata = {
-  title: "Types of Electric Motor Repair Services | Repair vs Rewind | MotorsWinding.com",
+  title: "Types of Electric Motor Repair Services | Repair vs Rewind | IQMotorBase.com",
   description:
     "Overview of electric motor repair and rewinding services: bearing replacement, rewind, testing, VFD and pump repair. Find the right shop for your motor type.",
   keywords: [
@@ -17,19 +17,19 @@ export const metadata = {
     "motor bearing replacement",
     "industrial motor rewinding",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Types of Electric Motor Repair Services | MotorsWinding.com",
+    title: "Types of Electric Motor Repair Services | IQMotorBase.com",
     description:
       "Understand the main types of motor repair and rewinding services and how to find a qualified shop.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Types of Electric Motor Repair Services | MotorsWinding.com",
+    title: "Types of Electric Motor Repair Services | IQMotorBase.com",
     description: "Overview of motor repair and rewinding services and how to find a qualified shop.",
   },
   alternates: { canonical: path },
@@ -105,7 +105,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
           </h2>
           <p className="mt-4 text-secondary">
             <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
-              Browse our directory of electric motor repair centers
+              Browse our directory of electric motor repair shops
             </Link>{" "}
             to see services, capabilities, and locations. You can filter by service type and region, or{" "}
             <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">

@@ -14,7 +14,7 @@ Before going live, ensure the following.
 
 - Set `NODE_ENV=production`.
 - Set `MONGODB_URI` to your production MongoDB.
-- Set `NEXT_PUBLIC_SITE_URL` for emails and canonical URLs (e.g. `https://motorswinding.com`).
+- Set `NEXT_PUBLIC_SITE_URL` for emails and canonical URLs (e.g. `https://IQMotorBase.com`).
 - Configure email (SMTP or Resend) and `EMAIL_FROM`.
 
 ## Performance

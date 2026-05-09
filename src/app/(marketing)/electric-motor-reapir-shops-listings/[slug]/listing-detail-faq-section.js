@@ -11,7 +11,7 @@ export default function ListingDetailFaqSection({ items }) {
         Frequently asked questions
       </h2>
       <p className="mt-2 max-w-[57.6rem] text-sm text-secondary">
-        Common questions about this electric motor repair listing and how to use the MotorsWinding directory.
+        Common questions about this electric motor repair listing and how to use the IQMotorBase directory.
       </p>
       <div className="mt-6 divide-y divide-border rounded-xl border border-border bg-card">
         {items.map((item, i) => (

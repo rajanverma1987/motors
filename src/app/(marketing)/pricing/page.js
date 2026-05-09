@@ -8,7 +8,7 @@ export const metadata = {
   description:
     "Pricing tailored to your workflow. Monthly, yearly, one-time, and hybrid models based on your process complexity.",
   openGraph: {
-    title: "Custom Pricing | MotorsWinding.com",
+    title: "Custom Pricing | IQMotorBase.com",
     description: "Not a generic SaaS. Built around your workflow.",
   },
 };

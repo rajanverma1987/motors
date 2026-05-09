@@ -11,11 +11,11 @@ export const metadata = {
     "Evaluation checklist for motor repair and rewinding shops: quotes, WIP, parts, invoicing, integrations, and lead capture—skip the bloat.",
   keywords: ["best repair shop software 2026", "motor repair CRM", "rewinding shop software"],
   openGraph: {
-    title: "Best Software for a Repair Shop in 2026 | MotorsWinding.com",
+    title: "Best Software for a Repair Shop in 2026 | IQMotorBase.com",
     description: "What to demand from job shop software this year.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   alternates: { canonical: path },
@@ -29,7 +29,7 @@ export default function BlogBestSoftware2026Page() {
       description="The best system is the one your team actually uses—tied to how motor shops quote, execute, and bill. Use this checklist before you sign a multi-year contract for generic field service software."
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
-      sidebarTitle="Try MotorsWinding.com"
+      sidebarTitle="Try IQMotorBase.com"
       sidebarDescription="Built around motor repair workflows + directory visibility."
       sidebarCta={<ListYourShopCta />}
     >
@@ -143,7 +143,7 @@ export default function BlogBestSoftware2026Page() {
             </li>
             <li>
               <Link href="/pricing" className="text-primary font-medium hover:underline">
-                MotorsWinding.com pricing
+                IQMotorBase.com pricing
               </Link>
             </li>
           </ul>

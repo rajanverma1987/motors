@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { LIMITS, clampString } from "@/lib/validation";
 
 /**
- * POST: Notify contact@MotorsWinding.com when no listings were found for a location (near-me page).
+ * POST: Notify contact@IQMotorBase.com when no listings were found for a location (near-me page).
  * Body: { city?: string, state?: string, zip?: string }
  */
 export async function POST(request) {

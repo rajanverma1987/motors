@@ -21,17 +21,17 @@ export const metadata = {
     "motor shop job management",
   ],
   openGraph: {
-    title: "Motor Repair Business Listing in the USA | MotorsWinding.com",
+    title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
     description:
       "Get more repair jobs and manage your workshop. List your motor shop and run quotes, jobs, and billing in one place.",
     url: path,
     type: "website",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Business Listing in the USA | MotorsWinding.com",
+    title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
     description: "More leads + motor-repair-focused CRM for shops across the United States.",
   },
   alternates: { canonical: path },

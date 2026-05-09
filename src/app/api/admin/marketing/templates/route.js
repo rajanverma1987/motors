@@ -5,19 +5,19 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 
 const DEFAULT_INITIAL = {
   type: "initial",
-  subject: "List your motor repair shop on MotorsWinding.com",
+  subject: "List your motor repair shop on IQMotorBase.com",
   body: `<div style="font-family: sans-serif; max-width: 560px; line-height: 1.5;">
 <p style="margin: 0 0 1em 0;">Hi,</p>
-<p style="margin: 0 0 1em 0;">We’d like to invite you to list your motor repair shop on <strong>MotorsWinding.com</strong> so customers in your area can find you.</p>
+<p style="margin: 0 0 1em 0;">We’d like to invite you to list your motor repair shop on <strong>IQMotorBase.com</strong> so customers in your area can find you.</p>
 <ul style="margin: 1em 0; padding-left: 1.25em;">
 <li>Listing is <strong>free</strong></li>
 <li>Add your services and get more leads</li>
 <li>Manage your presence in one place</li>
 </ul>
 <p style="margin: 1.25em 0;">
-<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
+<a href="https://IQMotorBase.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
 </p>
-<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— MotorsWinding.com</p>
+<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— IQMotorBase.com</p>
 <hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />
 <p style="margin: 0; font-size: 12px; color: #94a3b8;">Don’t want to receive these emails? <a href="{{unsubscribe_url}}" style="color: #64748b;">Unsubscribe</a>.</p>
 </div>`,
@@ -28,12 +28,12 @@ const DEFAULT_FOLLOWUP = {
   subject: "Quick follow-up – list your motor repair shop",
   body: `<div style="font-family: sans-serif; max-width: 560px; line-height: 1.5;">
 <p style="margin: 0 0 1em 0;">Hi,</p>
-<p style="margin: 0 0 1em 0;">Just following up on our previous message about listing your shop on <strong>MotorsWinding.com</strong>.</p>
+<p style="margin: 0 0 1em 0;">Just following up on our previous message about listing your shop on <strong>IQMotorBase.com</strong>.</p>
 <p style="margin: 0 0 1em 0;">If you have a moment, you can add your shop here—it’s free and only takes a few minutes.</p>
 <p style="margin: 1.25em 0;">
-<a href="https://motorswinding.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
+<a href="https://IQMotorBase.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
 </p>
-<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— MotorsWinding.com</p>
+<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">— IQMotorBase.com</p>
 <hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />
 <p style="margin: 0; font-size: 12px; color: #94a3b8;">Don’t want to receive these emails? <a href="{{unsubscribe_url}}" style="color: #64748b;">Unsubscribe</a>.</p>
 </div>`,

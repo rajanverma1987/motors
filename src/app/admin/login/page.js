@@ -41,7 +41,7 @@ export default function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="w-full max-w-sm">
         <h1 className="text-2xl font-bold text-title">Admin login</h1>
-        <p className="mt-1 text-sm text-secondary">MotorsWinding.com listings</p>
+        <p className="mt-1 text-sm text-secondary">IQMotorBase.com listings</p>
         <Form onSubmit={handleSubmit} className="mt-8">
           <Input
             label="Email"

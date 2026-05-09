@@ -4,7 +4,7 @@ import MotorRewindCostCalculator from "@/components/marketing/motor-rewind-cost-
 const path = "/electric-motor-rewinding-cost-calculator";
 
 export const metadata = {
-  title: "Electric motor rewinding cost calculator (US ballpark) | MotorsWinding.com",
+  title: "Electric motor rewinding cost calculator (US ballpark) | IQMotorBase.com",
   description:
     "Free ballpark calculator for electric motor rewinding cost in the US. Enter HP or kW, voltage, RPM, and slots—then request quotes from shops in your area.",
   alternates: { canonical: path },

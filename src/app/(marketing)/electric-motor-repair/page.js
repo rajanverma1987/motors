@@ -9,7 +9,7 @@ const path = "/electric-motor-repair";
 export const metadata = {
   title: "Electric Motor Repair & Rewinding — Buyer Resource Hub",
   description:
-    "Hub for electric motor repair and rewinding: compare costs, choose a shop, repair vs. replace, service types, emergencies, directory, and quote requests—all in one place on MotorsWinding.com.",
+    "Hub for electric motor repair and rewinding: compare costs, choose a shop, repair vs. replace, service types, emergencies, directory, and quote requests—all in one place on IQMotorBase.com.",
   keywords: [
     "electric motor repair",
     "motor rewinding",
@@ -18,18 +18,18 @@ export const metadata = {
     "motor repair quote",
     "electric motor repair near me",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Electric Motor Repair & Rewinding Hub | MotorsWinding.com",
+    title: "Electric Motor Repair & Rewinding Hub | IQMotorBase.com",
     description: "Buyer guides: costs, choosing a shop, repair vs. replace, emergencies, and find repair centers.",
     url: path,
     type: "website",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair Hub | MotorsWinding.com",
+    title: "Electric Motor Repair Hub | IQMotorBase.com",
     description: "Costs, shop selection, repair vs. replace, and directory links for motor repair buyers.",
   },
   alternates: { canonical: path },
@@ -45,7 +45,7 @@ export default function ElectricMotorRepairHubPage() {
     description:
       "Collection of practical guides for facilities and buyers who need electric motor repair, rewinding, quotes, and qualified shops.",
     url: `${siteUrl.replace(/\/$/, "")}${path}`,
-    isPartOf: { "@type": "WebSite", name: "MotorsWinding.com", url: siteUrl.replace(/\/$/, "") },
+    isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: siteUrl.replace(/\/$/, "") },
   };
 
   return (
@@ -68,7 +68,7 @@ export default function ElectricMotorRepairHubPage() {
             Electric motor repair &amp; rewinding
           </h1>
           <p className="mt-4 text-lg text-secondary">
-            MotorsWinding.com connects buyers with motor repair and rewinding shops and publishes{" "}
+            IQMotorBase.com connects buyers with motor repair and rewinding shops and publishes{" "}
             <strong className="text-title">buyer-focused guides</strong> so you can budget, compare quotes, and act
             quickly when equipment fails. Use this hub as your starting point—search engines favor clear structure and
             helpful internal links; we group everything you need below.

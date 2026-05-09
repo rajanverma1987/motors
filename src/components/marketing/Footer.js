@@ -47,7 +47,7 @@ export default function Footer() {
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <Link href="/" className="text-lg font-semibold text-title">
-              MotorsWinding.com
+              IQMotorBase.com
             </Link>
             <p className="mt-2 text-sm text-secondary">
               Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
@@ -76,7 +76,7 @@ export default function Footer() {
           <FooterNavLinks />
         </div>
         <div className="mt-8 text-center text-sm text-secondary">
-          © {year} MotorsWinding.com. All rights reserved.
+          © {year} IQMotorBase.com. All rights reserved.
         </div>
       </div>
     </footer>

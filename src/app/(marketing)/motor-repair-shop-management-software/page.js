@@ -17,17 +17,17 @@ export const metadata = {
     "motor shop job tracking",
   ],
   openGraph: {
-    title: "Motor Repair Shop Management Software | MotorsWinding.com",
+    title: "Motor Repair Shop Management Software | IQMotorBase.com",
     description:
       "Run Job Write-Up, RFQs, work orders on a shared job number, and billing in a system built for motor repair—not generic tickets.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Shop Management Software | MotorsWinding.com",
+    title: "Motor Repair Shop Management Software | IQMotorBase.com",
     description: "Job Write-Up, RFQs, job-linked work orders, and shop workflow tuned for motor repair businesses.",
   },
   alternates: { canonical: path },
@@ -107,7 +107,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
             Visibility + operations: the full stack
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            The best outcomes pair <strong className="text-title">discoverability</strong> with <strong className="text-title">execution</strong>. A directory listing alone doesn’t move WIP; a job system alone doesn’t fill the funnel. That’s why MotorsWinding.com combines lead-oriented profiles with CRM workflows—so you’re not duct-taping two products together.
+            The best outcomes pair <strong className="text-title">discoverability</strong> with <strong className="text-title">execution</strong>. A directory listing alone doesn’t move WIP; a job system alone doesn’t fill the funnel. That’s why IQMotorBase.com combines lead-oriented profiles with CRM workflows—so you’re not duct-taping two products together.
           </p>
           <p className="mt-4 text-secondary leading-relaxed">
             Start from our USA hub:{" "}

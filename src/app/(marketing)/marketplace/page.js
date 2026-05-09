@@ -13,7 +13,7 @@ export async function generateMetadata({ searchParams }) {
   const base = getPublicSiteUrl();
   const title = "Motor repair marketplace — parts, motors & equipment";
   const description =
-    "Browse listings from motor repair shops and MotorsWinding.com. Search parts, motors, tools, and surplus—request items with no online payment; sellers contact you directly.";
+    "Browse listings from motor repair shops and IQMotorBase.com. Search parts, motors, tools, and surplus—request items with no online payment; sellers contact you directly.";
   return {
     title,
     description,
@@ -22,7 +22,7 @@ export async function generateMetadata({ searchParams }) {
       title,
       description,
       url: `${base}/marketplace`,
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       type: "website",
     },
     twitter: {

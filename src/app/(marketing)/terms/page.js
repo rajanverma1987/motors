@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 export const metadata = {
   title: "Terms of Service",
   description:
-    "Terms governing use of MotorsWinding.com, including accounts, software, directory listings, marketplace features, and limitations of liability.",
+    "Terms governing use of IQMotorBase.com, including accounts, software, directory listings, marketplace features, and limitations of liability.",
   alternates: { canonical: "/terms" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Terms of Service | MotorsWinding.com",
-    description: "Terms of use for MotorsWinding.com software and website.",
+    title: "Terms of Service | IQMotorBase.com",
+    description: "Terms of use for IQMotorBase.com software and website.",
     url: "/terms",
   },
 };
@@ -32,7 +32,7 @@ export default function TermsPage() {
       <p className="mt-2 text-sm text-secondary">Last updated: {LAST_UPDATED}</p>
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
         These Terms of Service (“Terms”) govern your access to and use of the website, software, and related services
-        offered by <strong className="text-title">MotorsWinding.com</strong> (“Service”). By accessing or using the
+        offered by <strong className="text-title">IQMotorBase.com</strong> (“Service”). By accessing or using the
         Service, you agree to these Terms. If you do not agree, do not use the Service. See also our{" "}
         <Link href="/privacy" className="text-primary font-medium hover:underline">
           Privacy Policy
@@ -43,7 +43,7 @@ export default function TermsPage() {
       <article className="prose prose-neutral dark:prose-invert mt-10 max-w-none">
         <h2 className="text-xl font-semibold text-title">1. The Service</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          MotorsWinding.com provides cloud-based tools for motor repair and rewinding businesses and related features,
+          IQMotorBase.com provides cloud-based tools for motor repair and rewinding businesses and related features,
           including but not limited to job and customer management, inventory, quotes and invoicing, integrations, lead
           and directory features, marketplace listings, career postings, and public marketing pages. The Service is offered
           at{" "}
@@ -117,7 +117,7 @@ export default function TermsPage() {
 
         <h2 className="mt-10 text-xl font-semibold text-title">9. Limitation of liability</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT WILL MOTORSWINDING.COM OR ITS AFFILIATES, OFFICERS,
+          TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT WILL IQMOTORBASE.COM OR ITS AFFILIATES, OFFICERS,
           DIRECTORS, EMPLOYEES, OR SUPPLIERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
           DAMAGES, OR ANY LOSS OF PROFITS, DATA, GOODWILL, OR BUSINESS OPPORTUNITY, ARISING OUT OF OR RELATED TO THESE
           TERMS OR THE SERVICE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
@@ -131,7 +131,7 @@ export default function TermsPage() {
 
         <h2 className="mt-10 text-xl font-semibold text-title">10. Indemnity</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          You will defend, indemnify, and hold harmless MotorsWinding.com and its affiliates from and against any claims,
+          You will defend, indemnify, and hold harmless IQMotorBase.com and its affiliates from and against any claims,
           damages, losses, and expenses (including reasonable attorneys’ fees) arising out of Your Content, your use of
           the Service in violation of these Terms, or your violation of applicable law or third-party rights.
         </p>

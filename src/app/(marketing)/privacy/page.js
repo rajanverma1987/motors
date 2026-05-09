@@ -4,12 +4,12 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 export const metadata = {
   title: "Privacy Policy",
   description:
-    "How MotorsWinding.com collects, uses, and protects personal information for visitors, repair shops, and buyers using our website and CRM.",
+    "How IQMotorBase.com collects, uses, and protects personal information for visitors, repair shops, and buyers using our website and CRM.",
   alternates: { canonical: "/privacy" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Privacy Policy | MotorsWinding.com",
-    description: "Privacy practices for MotorsWinding.com visitors and customers.",
+    title: "Privacy Policy | IQMotorBase.com",
+    description: "Privacy practices for IQMotorBase.com visitors and customers.",
     url: "/privacy",
   },
 };
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">Privacy Policy</h1>
       <p className="mt-2 text-sm text-secondary">Last updated: {LAST_UPDATED}</p>
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
-        This policy describes how <strong className="text-title">MotorsWinding.com</strong> (“we,” “us,” or “our”)
+        This policy describes how <strong className="text-title">IQMotorBase.com</strong> (“we,” “us,” or “our”)
         handles information when you visit our marketing website, create an account, use our software and services, or
         interact with listings and forms. For legal questions about this policy, contact us via{" "}
         <Link href="/contact" className="text-primary font-medium hover:underline">
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
       <article className="prose prose-neutral dark:prose-invert mt-10 max-w-none">
         <h2 className="text-xl font-semibold text-title">1. Who we are</h2>
         <p className="mt-3 text-secondary leading-relaxed">
-          MotorsWinding.com provides software and related services for electric motor repair and rewinding businesses,
+          IQMotorBase.com provides software and related services for electric motor repair and rewinding businesses,
           including job management, inventory, lead generation, directory and marketplace features, and related tools. Our
           public website is available at{" "}
           <a href={siteUrl} className="text-primary hover:underline">

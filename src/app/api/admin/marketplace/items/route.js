@@ -62,7 +62,7 @@ export async function POST(request) {
     const condition = clampString(body?.condition, 100);
     const images = clampArray(body?.images, 10).map((u) => clampString(u, LIMITS.url.max)).filter(Boolean);
     const status = body?.status === "published" ? "published" : "draft";
-    const shopNameSnapshot = clampString(body?.shopNameSnapshot || "MotorsWinding.com", 300);
+    const shopNameSnapshot = clampString(body?.shopNameSnapshot || "IQMotorBase.com", 300);
 
     await connectDB();
     let slug = generateMarketplaceSlug(title);

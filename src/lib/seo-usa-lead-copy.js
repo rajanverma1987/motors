@@ -16,7 +16,7 @@ export function buildCityLeadCopy(state, city) {
     ],
     solutionTitle: "List your shop where buyers search—then run the job in one system",
     solutionParagraphs: [
-      `MotorsWinding.com helps motor repair businesses in ${city.name} show up with a rich profile (services, voltages, industries, certifications, and service region) so buyers compare you on substance, not guesswork. That listing works as the top of your funnel.`,
+      `IQMotorBase.com helps motor repair businesses in ${city.name} show up with a rich profile (services, voltages, industries, certifications, and service region) so buyers compare you on substance, not guesswork. That listing works as the top of your funnel.`,
       "Behind the listing is a workshop CRM: leads, quotes, job cards, billing, and inventory context so your team executes without dropping handoffs. You’re not paying for “directory vanity metrics”—you’re building a pipeline you can measure.",
       `${state.industryBlurb}`,
     ],
@@ -48,7 +48,7 @@ export function buildStateLeadCopy(state) {
     ],
     solutionTitle: "Get found + stay organized with a motor-repair-first workflow",
     solutionParagraphs: [
-      `Use MotorsWinding.com to publish a complete profile for ${state.name} searches and route inbound leads into structured quotes and job cards. You’re not “buying leads” blindly—you’re converting demand that already exists in industrial corridors like ${cityList}.`,
+      `Use IQMotorBase.com to publish a complete profile for ${state.name} searches and route inbound leads into structured quotes and job cards. You’re not “buying leads” blindly—you’re converting demand that already exists in industrial corridors like ${cityList}.`,
       "Pair visibility with operations: track what’s quoted, what’s in the shop, and what’s billed—so cash flow matches labor and parts on the floor.",
     ],
     introParagraphs,
@@ -65,9 +65,9 @@ export function buildUsaLeadCopy() {
     ],
     solutionTitle: "More repair jobs + a CRM that fits the workshop",
     solutionParagraphs: [
-      "MotorsWinding.com is positioned as a system to get more repair work and manage the workshop—not a passive listing. Start with a rich profile so buyers understand what you do and where you travel, then run leads through quotes, job cards, and billing in the same platform.",
+      "IQMotorBase.com is positioned as a system to get more repair work and manage the workshop—not a passive listing. Start with a rich profile so buyers understand what you do and where you travel, then run leads through quotes, job cards, and billing in the same platform.",
       "Whether you’re a single-location rewind shop or a multi-bay operation with field service, the goal is the same: shorten response time, reduce dropped handoffs, and make revenue predictable.",
-      "You can also plug into broader MotorsWinding.com tooling over time—parts inventory, purchase orders, vendor records, and reporting—without bolting on five disconnected apps that your team refuses to adopt.",
+      "You can also plug into broader IQMotorBase.com tooling over time—parts inventory, purchase orders, vendor records, and reporting—without bolting on five disconnected apps that your team refuses to adopt.",
     ],
     introParagraphs: [
       "If you own or operate an electric motor repair, rewinding, or rotating equipment shop in the United States, you’re competing on trust, speed, and proof—not flashy marketing. Buyers want to know you can handle their voltage range, turnaround, and documentation before they risk downtime.",

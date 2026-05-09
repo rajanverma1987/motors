@@ -8,7 +8,7 @@ const path = "/how-to-choose-electric-motor-repair-shop";
 export const metadata = {
   title: "How to Choose an Electric Motor Repair Shop | Buyer's Guide",
   description:
-    "Choose a qualified electric motor repair or rewinding shop: match capabilities to your motor, compare written quotes and testing scope, check certifications (EASA, ISO), and use MotorsWinding.com’s directory plus cost guide to shortlist shops.",
+    "Choose a qualified electric motor repair or rewinding shop: match capabilities to your motor, compare written quotes and testing scope, check certifications (EASA, ISO), and use IQMotorBase.com’s directory plus cost guide to shortlist shops.",
   keywords: [
     "choose motor repair shop",
     "electric motor repair shop",
@@ -17,19 +17,19 @@ export const metadata = {
     "motor repair certifications",
     "find qualified motor repair",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "How to Choose an Electric Motor Repair Shop | MotorsWinding.com",
+    title: "How to Choose an Electric Motor Repair Shop | IQMotorBase.com",
     description:
       "A practical guide to selecting a qualified motor repair and rewinding shop for your equipment.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "How to Choose an Electric Motor Repair Shop | MotorsWinding.com",
+    title: "How to Choose an Electric Motor Repair Shop | IQMotorBase.com",
     description: "A practical guide to selecting a qualified motor repair and rewinding shop.",
   },
   alternates: { canonical: path },
@@ -109,7 +109,7 @@ export default function HowToChooseElectricMotorRepairShopPage() {
           </h2>
           <p className="mt-4 text-secondary">
             <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
-              Browse our directory of electric motor repair centers
+              Browse our directory of electric motor repair shops
             </Link>{" "}
             by location and service type, or{" "}
             <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">

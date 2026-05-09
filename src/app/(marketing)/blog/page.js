@@ -88,7 +88,7 @@ export default function BlogIndexPage() {
           <aside className="space-y-4 lg:sticky lg:top-24">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
-                Built for motor repair centers
+                Built for motor repair shops
               </span>
               <h2 className="mt-3 text-lg font-bold tracking-tight text-title">
                 Blog for motor repair shop owners

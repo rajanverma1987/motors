@@ -130,8 +130,8 @@ export default function MarketingRelatedGuides({
   const title = audience === "shop" ? "More for repair shops" : "Related guides";
   const blurb =
     audience === "shop"
-      ? "Internal links connect shop owners to software, listings, leads, and marketplace tools on MotorsWinding.com."
-      : "Explore more buyer resources on MotorsWinding.com—clear internal linking helps people and search engines discover related topics.";
+      ? "Internal links connect shop owners to software, listings, leads, and marketplace tools on IQMotorBase.com."
+      : "Explore more buyer resources on IQMotorBase.com—clear internal linking helps people and search engines discover related topics.";
 
   return (
     <section

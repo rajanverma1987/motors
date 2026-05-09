@@ -37,8 +37,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## Production URL for emails and links
 
-Set **`NEXT_PUBLIC_SITE_URL`** (and optionally server-only **`SITE_URL`**) to your live site origin, e.g. `https://motorswinding.com` (no trailing slash).  
-If these are missing or point at **localhost**, outbound emails and share links use **`https://motorswinding.com`** by default, or **`https://$VERCEL_URL`** on Vercel, or the request’s **`Host`** header when it is not localhost (see `src/lib/public-site-url.js`).
+Set **`NEXT_PUBLIC_SITE_URL`** (and optionally server-only **`SITE_URL`**) to your live site origin, e.g. `https://IQMotorBase.com` (no trailing slash).  
+If these are missing or point at **localhost**, outbound emails and share links use **`https://IQMotorBase.com`** by default, or **`https://$VERCEL_URL`** on Vercel, or the request’s **`Host`** header when it is not localhost (see `src/lib/public-site-url.js`).
 
 ## IndexNow (search engines, post-build)
 

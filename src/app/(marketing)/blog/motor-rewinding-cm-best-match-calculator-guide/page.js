@@ -19,7 +19,7 @@ const faqJsonLd = {
     },
     {
       "@type": "Question",
-      name: "What does the CM Best Match calculator do in MotorsWinding?",
+      name: "What does the CM Best Match calculator do in IQMotorBase?",
       acceptedAnswer: {
         "@type": "Answer",
         text: "It searches combinations of up to three wire sizes and quantities from your shop’s selectable wire catalog to approximate a targeted total CM. Results are ranked by how close the combination is to the target, with color bands for tight (~2%) and moderate (~10%) matches. It supports printing for the bench.",
@@ -46,7 +46,7 @@ const faqJsonLd = {
       name: "Where do I open CM Best Match in the dashboard?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Sign in to your MotorsWinding CRM, go to Dashboard → Calculators, and open the CM Best Match tab (default tab). The same calculator logic aligns with common motor-shop bench workflows.",
+        text: "Sign in to your IQMotorBase CRM, go to Dashboard → Calculators, and open the CM Best Match tab (default tab). The same calculator logic aligns with common motor-shop bench workflows.",
       },
     },
   ],
@@ -55,7 +55,7 @@ const faqJsonLd = {
 export const metadata = {
   title: "CM Best Match Calculator for Motor Rewinding (Guide for Repair Shops)",
   description:
-    "How circular mils (CM) work in rewinds, what the MotorsWinding CM Best Match tool does, how it uses your wire catalog, and when rewind shops need it on the bench.",
+    "How circular mils (CM) work in rewinds, what the IQMotorBase CM Best Match tool does, how it uses your wire catalog, and when rewind shops need it on the bench.",
   keywords: [
     "circular mils calculator",
     "motor rewinding wire size",
@@ -65,12 +65,12 @@ export const metadata = {
     "wire catalog motor shop",
   ],
   openGraph: {
-    title: "CM Best Match Calculator for Motor Rewinding | MotorsWinding.com",
+    title: "CM Best Match Calculator for Motor Rewinding | IQMotorBase.com",
     description:
       "Circular mils, targeted CM, and shop-wire combinations—explained for rewind technicians and shop owners.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
@@ -91,7 +91,7 @@ export default function BlogCmBestMatchGuidePage() {
       />
       <BlogPageLayout
         title="CM Best Match calculator for motor rewinding: what it is and how it works"
-        description="Circular mils (CM) drive slot fill and ampacity in rewinds. This guide explains the MotorsWinding CM Best Match tool—catalog-backed combinations, match bands, and where it fits between takeoff data and final engineering review."
+        description="Circular mils (CM) drive slot fill and ampacity in rewinds. This guide explains the IQMotorBase CM Best Match tool—catalog-backed combinations, match bands, and where it fits between takeoff data and final engineering review."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
         sidebarTitle="Calculators in your CRM"
@@ -104,7 +104,7 @@ export default function BlogCmBestMatchGuidePage() {
             <strong className="text-title">target circular mils</strong>, and{" "}
             <strong className="text-title">what is actually on your shelf</strong>. The{" "}
             <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
-              MotorsWinding dashboard calculators
+              IQMotorBase dashboard calculators
             </Link>{" "}
             include <strong className="text-title">CM Best Match</strong> so the computer does the combinatorial search while you keep engineering judgment.
           </p>

@@ -3,7 +3,7 @@ import HeroBackground from "@/components/marketing/HeroBackground";
 import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
 import { FiMessageCircle } from "react-icons/fi";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
 
 function waHref() {
   const raw = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "";
@@ -81,7 +81,7 @@ export default function SeoLeadLandingPage({
   const orgJsonLd = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "MotorsWinding.com",
+    name: "IQMotorBase.com",
     url: siteUrl.replace(/\/$/, ""),
     description:
       "Job management, lead generation, and workshop tools for electric motor repair and rewinding businesses in the USA.",
@@ -91,9 +91,9 @@ export default function SeoLeadLandingPage({
   const localBizJsonLd = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    name: "MotorsWinding.com — Motor repair shop software & leads",
+    name: "IQMotorBase.com — Motor repair shop software & leads",
     url: absoluteUrl,
-    description: `Get more repair jobs and manage your workshop with MotorsWinding.com. Focus: ${localityLabel}.`,
+    description: `Get more repair jobs and manage your workshop with IQMotorBase.com. Focus: ${localityLabel}.`,
     priceRange: "Free tier available",
     address: { "@type": "PostalAddress", addressCountry: "US" },
   };
@@ -153,7 +153,7 @@ export default function SeoLeadLandingPage({
             </section>
 
             <section className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-6 sm:p-8">
-              <h2 className="text-xl font-bold text-title sm:text-2xl">What you get with MotorsWinding.com</h2>
+              <h2 className="text-xl font-bold text-title sm:text-2xl">What you get with IQMotorBase.com</h2>
               <p className="mt-3 text-sm text-secondary leading-relaxed">
                 Benefits span the full journey from discovery to payment—so you&apos;re not paying for a directory badge and
                 juggling the rest elsewhere.

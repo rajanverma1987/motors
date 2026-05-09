@@ -22,7 +22,7 @@ module.exports = {
       backgroundColor: "#f5f7fa",
     },
     ios: {
-      bundleIdentifier: "com.motorswinding.motoptechnician",
+      bundleIdentifier: "com.iqmotorbase.motoptechnician",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription:
@@ -34,7 +34,7 @@ module.exports = {
       },
     },
     android: {
-      package: "com.motorswinding.motoptechnician",
+      package: "com.iqmotorbase.motoptechnician",
       /** Resize window when keyboard opens so inputs stay visible (not covered). */
       softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {

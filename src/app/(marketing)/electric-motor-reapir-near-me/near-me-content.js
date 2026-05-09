@@ -95,7 +95,7 @@ export default function NearMeContent() {
       try {
         const res = await fetch(
           `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
-          { headers: { "Accept-Language": "en", "User-Agent": "MotorsWindingNearMe/1.0" } }
+          { headers: { "Accept-Language": "en", "User-Agent": "IQMotorBaseNearMe/1.0" } }
         );
         if (!res.ok) throw new Error("Nominatim error");
         const data = await res.json();

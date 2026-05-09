@@ -8,7 +8,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Motor Repair Marketplace for Shops — Sell Parts, Surplus Motors & Tools | MotorsWinding.com";
+    "Motor Repair Marketplace for Shops — Sell Parts, Surplus Motors & Tools | IQMotorBase.com";
   const description =
     "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your CRM, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking—separate from job inventory. For industrial motor shops in the USA.";
   return {
@@ -20,7 +20,7 @@ export async function generateMetadata() {
       title,
       description,
       url: canonical,
-      siteName: "MotorsWinding.com",
+      siteName: "IQMotorBase.com",
       type: "website",
       locale: "en_US",
     },
@@ -30,7 +30,7 @@ export async function generateMetadata() {
 
 const faqItems = [
   {
-    q: "What is the MotorsWinding.com motor repair marketplace?",
+    q: "What is the IQMotorBase.com motor repair marketplace?",
     a: "It is a public catalog where motor repair and rewinding shops list spare parts, surplus motors, tools, and related equipment. Visitors browse and submit a request with their contact details—you follow up, quote, and invoice the same way you already run your business. It is built into the same CRM you use for work orders and quotes, not a separate storefront product.",
   },
   {
@@ -39,7 +39,7 @@ const faqItems = [
   },
   {
     q: "Do buyers pay on the website?",
-    a: "No. Buyers submit a request (lead-style order) with their information. You close payment and fulfillment on your terms—invoice, card-on-file, net terms, or pickup—without MotorsWinding.com acting as a payment processor for the transaction.",
+    a: "No. Buyers submit a request (lead-style order) with their information. You close payment and fulfillment on your terms—invoice, card-on-file, net terms, or pickup—without IQMotorBase.com acting as a payment processor for the transaction.",
   },
   {
     q: "Can my listings rank in Google?",
@@ -59,7 +59,7 @@ const faqItems = [
   },
   {
     q: "What about platform-managed listings?",
-    a: "MotorsWinding.com may also surface select listings with coordinated fulfillment and agreed commercial terms. That path is optional and does not require public checkout on the marketing site.",
+    a: "IQMotorBase.com may also surface select listings with coordinated fulfillment and agreed commercial terms. That path is optional and does not require public checkout on the marketing site.",
   },
   {
     q: "How is buyer and seller data handled for privacy?",
@@ -72,13 +72,13 @@ function JsonLd({ baseUrl }) {
   const webPage = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Motor repair marketplace for shops — MotorsWinding.com",
+    name: "Motor repair marketplace for shops — IQMotorBase.com",
     description:
       "B2B-friendly marketplace for motor repair and rewinding shops to list parts, surplus motors, and tools from the CRM with SEO-friendly pages and buyer requests.",
     url,
     isPartOf: {
       "@type": "WebSite",
-      name: "MotorsWinding.com",
+      name: "IQMotorBase.com",
       url: baseUrl,
     },
     about: {
@@ -138,7 +138,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             Motor repair marketplace for electric motor shops — list surplus parts &amp; equipment from your CRM
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
-            MotorsWinding.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}
+            IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}
             designed for <strong className="font-semibold text-title">motor repair centers, rewind shops</strong>, and
             industrial service teams. Publish listings from the same platform you use for quotes and work—buyers submit a{" "}
             <strong className="font-semibold text-title">request</strong>, not a forced online checkout, so you keep
@@ -173,7 +173,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             Most independent shops do not need a full shopping cart for every spare part—but they do need a{" "}
             <strong className="text-title">credible, discoverable place</strong> to move surplus motors, take-out
             cores, specialty bearings, and tooling without listing fees eating margin on every SKU. This page describes
-            how MotorsWinding.com combines{" "}
+            how IQMotorBase.com combines{" "}
             <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               motor repair shop software
             </Link>{" "}
@@ -191,7 +191,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
 
         <section className="border-b border-border py-12" aria-labelledby="section-why">
           <h2 id="section-why" className="text-2xl font-bold text-title sm:text-3xl">
-            Why shops use the MotorsWinding marketplace
+            Why shops use the IQMotorBase marketplace
           </h2>
           <ul className="mt-6 space-y-5 text-secondary">
             <li className="leading-relaxed">
@@ -269,7 +269,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <ol className="mt-6 list-decimal space-y-4 pl-5 text-secondary marker:font-semibold marker:text-primary">
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Activate your CRM</strong> — Register for MotorsWinding.com and open the
+              <strong className="text-title">Activate your CRM</strong> — Register for IQMotorBase.com and open the
               dashboard. Your team uses the same workspace for quotes, jobs, and marketplace listings.
             </li>
             <li className="leading-relaxed pl-1">
@@ -320,7 +320,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             Platform listings &amp; commission paths
           </h2>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
-            MotorsWinding.com may also list or promote select items on your behalf. Those orders are coordinated through
+            IQMotorBase.com may also list or promote select items on your behalf. Those orders are coordinated through
             admin workflows so we can align fulfillment with any commission structure you agree to—still without
             forcing a public checkout experience on the marketing site. Ask about availability when you{" "}
             <Link href="/contact" className="font-medium text-primary hover:underline">

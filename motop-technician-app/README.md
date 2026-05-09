@@ -3,7 +3,7 @@
 Mobile app for shop technicians: sign in with **employee email + password** (same as configured in CRM), scan **Tag QR codes** printed from **Job Write-Up** (encode the repair **Job#**), or type the Job# to open your assigned work orders, update **status**, add **comments**, and use **Calculators** (same tools as the CRM Calculators page, including **CM Best Match** with the shop wire catalog via `GET /api/tech/wire-sizes`).
 
 - **JavaScript only** (no TypeScript).
-- **Theme** colors match the MotorsWinding CRM light theme (`src/theme.js` → same HSL tokens as web `globals.css`).
+- **Theme** colors match the IQMotorBase CRM light theme (`src/theme.js` → same HSL tokens as web `globals.css`).
 
 ## Prerequisites (CRM)
 
@@ -38,7 +38,7 @@ Avoid `npm run release:ota:raw` for production unless you already exported the c
 
 ## Android package & iOS bundle ID
 
-Set in **`app.config.js`** (`android.package`, `ios.bundleIdentifier`). Current value: **`com.motorswinding.motoptechnician`**. Change only if you use a different app ID in Play Console / App Store Connect — **do not change** after publishing without understanding store migration.
+Set in **`app.config.js`** (`android.package`, `ios.bundleIdentifier`). Current value: **`com.iqmotorbase.motoptechnician`**. Change only if you use a different app ID in Play Console / App Store Connect — **do not change** after publishing without understanding store migration.
 
 ## Expo Go vs SDK
 

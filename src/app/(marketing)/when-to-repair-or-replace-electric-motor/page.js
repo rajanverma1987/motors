@@ -8,7 +8,7 @@ const path = "/when-to-repair-or-replace-electric-motor";
 export const metadata = {
   title: "When to Repair or Replace an Electric Motor | Decision Guide",
   description:
-    "Repair or replace an electric motor? Compare rewind and repair quotes to replacement cost, lead time, efficiency, and failure history. Use MotorsWinding.com to find shops and read our cost guide before you decide.",
+    "Repair or replace an electric motor? Compare rewind and repair quotes to replacement cost, lead time, efficiency, and failure history. Use IQMotorBase.com to find shops and read our cost guide before you decide.",
   keywords: [
     "repair or replace electric motor",
     "motor repair vs replace",
@@ -17,19 +17,19 @@ export const metadata = {
     "industrial motor repair decision",
     "when to rewind motor",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
+  authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "When to Repair or Replace an Electric Motor | MotorsWinding.com",
+    title: "When to Repair or Replace an Electric Motor | IQMotorBase.com",
     description:
       "A practical guide to deciding when to repair vs. replace an electric motor.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "When to Repair or Replace an Electric Motor | MotorsWinding.com",
+    title: "When to Repair or Replace an Electric Motor | IQMotorBase.com",
     description: "A practical guide to deciding when to repair vs. replace an electric motor.",
   },
   alternates: { canonical: path },

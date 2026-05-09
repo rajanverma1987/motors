@@ -40,7 +40,7 @@ export default function Navbar() {
           href="/"
           className="shrink-0 text-xl font-semibold tracking-tight text-title transition-colors hover:text-primary"
         >
-          MotorsWinding.com
+          IQMotorBase.com
         </Link>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           <Link href="/login" className="hidden text-sm font-medium text-secondary hover:text-text md:inline-block">

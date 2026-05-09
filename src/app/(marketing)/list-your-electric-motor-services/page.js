@@ -207,7 +207,7 @@ export default function ListYourCenterPage() {
                 Get found by customers who need motor repair
               </h1>
               <p className="mt-4 text-lg text-secondary">
-                List your center on MotorsWinding.com and show up when people search for repair shops in your area. It’s free to list—you get more visibility and more leads.
+                List your center on IQMotorBase.com and show up when people search for repair shops in your area. It’s free to list—you get more visibility and more leads.
               </p>
               <Link
                 href="/electric-motor-reapir-shops-listings"
@@ -250,7 +250,7 @@ export default function ListYourCenterPage() {
                     </span>
                     <div>
                       <span className="font-semibold text-title">Qualified repair leads</span>
-                      <p className="mt-0.5 text-sm text-secondary">Inquiries come from the MotorsWinding.com network and local search—people who need repair work, not random traffic.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Inquiries come from the IQMotorBase.com network and local search—people who need repair work, not random traffic.</p>
                     </div>
                   </li>
                   <li className="flex gap-4">

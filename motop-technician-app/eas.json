@@ -17,7 +17,7 @@
     "production": {
       "channel": "production",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://motorswinding.com/"
+        "EXPO_PUBLIC_API_URL": "https://IQMotorBase.com/"
       }
     }
   },

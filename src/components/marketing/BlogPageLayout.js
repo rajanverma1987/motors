@@ -2,7 +2,7 @@ import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motorswinding.com";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
 
 /**
  * Blog/SEO content page layout: hero + two-column (content + optional sticky sidebar CTA).
@@ -37,10 +37,10 @@ export default function BlogPageLayout({
         url: articleUrl,
         mainEntityOfPage: { "@type": "WebPage", "@id": articleUrl },
         dateModified: MARKETING_CONTENT_DATE,
-        author: { "@type": "Organization", name: "MotorsWinding.com", url: siteUrl.replace(/\/$/, "") },
+        author: { "@type": "Organization", name: "IQMotorBase.com", url: siteUrl.replace(/\/$/, "") },
         publisher: {
           "@type": "Organization",
-          name: "MotorsWinding.com",
+          name: "IQMotorBase.com",
           url: siteUrl.replace(/\/$/, ""),
           logo: {
             "@type": "ImageObject",

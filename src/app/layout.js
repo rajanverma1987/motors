@@ -27,8 +27,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com"
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "MotorsWinding.com – Motor Repair Center Software & Lead Generation",
-    template: "%s | MotorsWinding.com",
+    default: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
+    template: "%s | IQMotorBase.com",
   },
   description:
     "Center management, work orders, and lead generation for motor repair and rewinding businesses. Find local motor repair centers and manage your repair center with one platform.",
@@ -40,14 +40,14 @@ export const metadata = {
     "motor repair leads",
     "industrial motor repair",
   ],
-  authors: [{ name: "MotorsWinding.com" }],
-  creator: "MotorsWinding.com",
+  authors: [{ name: "IQMotorBase.com" }],
+  creator: "IQMotorBase.com",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "MotorsWinding.com",
-    title: "MotorsWinding.com – Motor Repair Center Software & Lead Generation",
+    siteName: "IQMotorBase.com",
+    title: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
     description:
       "Center management, work orders, and lead generation for motor repair and rewinding businesses.",
     images: [
@@ -55,13 +55,13 @@ export const metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "MotorsWinding.com – Motor Repair Center Software",
+        alt: "IQMotorBase.com – Motor Repair Center Software",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MotorsWinding.com – Motor Repair Center Software & Lead Generation",
+    title: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
     description:
       "Center management, work orders, and lead generation for motor repair and rewinding businesses.",
   },

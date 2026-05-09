@@ -27,7 +27,7 @@ const INDUSTRIAL_HP_THRESHOLD = 100;
 const REPLACEMENT_MIDPOINT_MIN_USD = 1500;
 
 const DEFAULT_LEAD_INTRO =
-  "Request quotes from rewinding shops near you. Your details and calculator summary are sent to MotorsWinding so we can help match you with shops.";
+  "Request quotes from rewinding shops near you. Your details and calculator summary are sent to IQMotorBase so we can help match you with shops.";
 
 const NAMEPLATE_FAST_PATH_INTRO =
   "Don't know all the winding specs? Attach clear nameplate photos (and any failure notes). We'll route your request so shops can estimate or advise next steps.";
@@ -317,7 +317,7 @@ export function buildRewindCalculatorLeadPrefill(form, breakdown, rangeOpts = {}
         ? `• Recommendation (rule-of-thumb): rewinding looks cost-effective at this ballpark (typically under ~60% of a generic new-motor benchmark).\n`
         : "";
 
-  const problemDescription = `REQUEST — Motor rewinding quotes (MotorsWinding.com calculator)
+  const problemDescription = `REQUEST — Motor rewinding quotes (IQMotorBase.com calculator)
 
 WHAT I NEED
 Qualified rewind / motor repair shops: please reply with a quote or offer to inspect. Local service or inbound freight is fine if you accept shipped cores.

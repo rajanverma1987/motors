@@ -41,7 +41,7 @@ const EMPTY_ITEM = {
   condition: "",
   images: [],
   status: "draft",
-  shopNameSnapshot: "MotorsWinding.com",
+  shopNameSnapshot: "IQMotorBase.com",
 };
 
 const ORDER_STATUS_OPTS = [
@@ -128,7 +128,7 @@ export default function AdminMarketplacePage() {
       condition: row.condition || "",
       images: Array.isArray(row.images) ? row.images.filter(Boolean).slice(0, 10) : [],
       status: row.status || "draft",
-      shopNameSnapshot: row.shopNameSnapshot || "MotorsWinding.com",
+      shopNameSnapshot: row.shopNameSnapshot || "IQMotorBase.com",
     });
     setModalOpen(true);
   };
@@ -153,7 +153,7 @@ export default function AdminMarketplacePage() {
       condition: form.condition.trim(),
       images,
       status: form.status,
-      shopNameSnapshot: form.shopNameSnapshot.trim() || "MotorsWinding.com",
+      shopNameSnapshot: form.shopNameSnapshot.trim() || "IQMotorBase.com",
     };
     setSaving(true);
     try {
@@ -423,7 +423,7 @@ export default function AdminMarketplacePage() {
       <div className="w-full max-w-[96rem] p-6">
       <h1 className="text-center text-2xl font-bold text-title">Marketplace (platform)</h1>
       <p className="mt-1 text-center text-sm text-secondary">
-        List items on the public marketplace as MotorsWinding.com. Orders appear here for your team to fulfill—no
+        List items on the public marketplace as IQMotorBase.com. Orders appear here for your team to fulfill—no
         payment is collected on the site.
       </p>
 
@@ -517,7 +517,7 @@ export default function AdminMarketplacePage() {
             label="Seller display name"
             value={form.shopNameSnapshot}
             onChange={(e) => setForm((f) => ({ ...f, shopNameSnapshot: e.target.value }))}
-            placeholder="MotorsWinding.com"
+            placeholder="IQMotorBase.com"
           />
           <Input
             label="Title"

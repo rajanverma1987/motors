@@ -95,7 +95,7 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <span className="font-medium text-title">Schedule a demo</span>
-                      <p className="mt-0.5 text-sm text-secondary">See how MotorsWinding.com works for your shop—work orders, leads, and more.</p>
+                      <p className="mt-0.5 text-sm text-secondary">See how IQMotorBase.com works for your shop—work orders, leads, and more.</p>
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -121,7 +121,7 @@ export default function ContactPage() {
                 <div className="mt-8 border-t border-border pt-6">
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-secondary">Direct email</h3>
                   <p className="mt-3 text-sm">
-                    <a href="mailto:contact@MotorsWinding.com" className="font-medium text-primary hover:underline">contact@MotorsWinding.com</a>
+                    <a href="mailto:contact@IQMotorBase.com" className="font-medium text-primary hover:underline">contact@IQMotorBase.com</a>
                   </p>
                 </div>
 

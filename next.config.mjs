@@ -4,6 +4,12 @@ const nextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "(?:www\\.)?motorswinding\\.com" }],
+        destination: "https://IQMotorBase.com/:path*",
+        permanent: true,
+      },
       { source: "/motor-repair-near-me", destination: "/electric-motor-reapir-near-me", permanent: true },
       { source: "/motor-repair-software", destination: "/motor-repair-shop-management-software", permanent: true },
       { source: "/motor-repair-shops", destination: "/electric-motor-reapir-shops-listings", permanent: true },

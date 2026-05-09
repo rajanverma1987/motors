@@ -14,7 +14,7 @@ const faqJsonLd = {
       name: "What is the difference between estimated FLA and nameplate FLA?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Nameplate full-load amps (FLA) is manufacturer data for a specific machine at stated voltage, frequency, and service factor. The MotorsWinding estimated FLA calculator approximates input current from output HP, voltage, phase count, efficiency, and power factor. Use estimates for conversations and rough checks; use nameplate FLA for overloads, starters, and code-driven wire sizing.",
+        text: "Nameplate full-load amps (FLA) is manufacturer data for a specific machine at stated voltage, frequency, and service factor. The IQMotorBase estimated FLA calculator approximates input current from output HP, voltage, phase count, efficiency, and power factor. Use estimates for conversations and rough checks; use nameplate FLA for overloads, starters, and code-driven wire sizing.",
       },
     },
     {
@@ -63,7 +63,7 @@ const faqJsonLd = {
 export const metadata = {
   title: "Electric Motor Calculators: FLA, Torque, HP to kW, Speed & Bench Electrical",
   description:
-    "What each MotorsWinding dashboard calculator does—HP↔kW, estimated FLA, synchronous speed, belt/pulley RPM, torque, DC Ohm’s law, delta–wye—and when motor repair shops use them.",
+    "What each IQMotorBase dashboard calculator does—HP↔kW, estimated FLA, synchronous speed, belt/pulley RPM, torque, DC Ohm’s law, delta–wye—and when motor repair shops use them.",
   keywords: [
     "motor FLA calculator",
     "HP to kW motor",
@@ -74,12 +74,12 @@ export const metadata = {
     "motor shop calculators",
   ],
   openGraph: {
-    title: "Electric Motor Calculators: FLA, Torque, Speed & Power | MotorsWinding.com",
+    title: "Electric Motor Calculators: FLA, Torque, Speed & Power | IQMotorBase.com",
     description:
       "Field-focused math for motor shops: FLA estimates, sync speed, drives, torque, and bench DC tools—explained.",
     url: path,
     type: "article",
-    siteName: "MotorsWinding.com",
+    siteName: "IQMotorBase.com",
     locale: "en_US",
   },
   twitter: {

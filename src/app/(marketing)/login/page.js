@@ -91,7 +91,7 @@ function LoginPageContent() {
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
             <div>
               <p className="text-base text-secondary">
-                Sign in to see your center board, open work orders, and any new repair leads from MotorsWinding.com.
+                Sign in to see your center board, open work orders, and any new repair leads from IQMotorBase.com.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-secondary">
                 <li className="flex gap-2">
