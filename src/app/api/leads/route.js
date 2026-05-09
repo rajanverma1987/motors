@@ -193,10 +193,10 @@ export async function GET(request) {
     const [totalCount, list] = await Promise.all([
       Lead.countDocuments(q),
       Lead.find(q)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean();
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     const listWithId = list.map((l) => ({
       ...l,

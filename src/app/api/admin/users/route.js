@@ -24,11 +24,11 @@ export async function GET(request) {
     const [totalCount, users] = await Promise.all([
       User.countDocuments(q),
       User.find(q)
-      .select("_id email shopName contactName canLogin createdAt")
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(pageSize)
-      .lean();
+        .select("_id email shopName contactName canLogin createdAt")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     const emails = users.map((u) => u.email);
     const subs = await ShopSubscription.find({ ownerEmail: { $in: emails } })

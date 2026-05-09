@@ -135,6 +135,10 @@ export default function AdminMarketingPage() {
   const [batchSize, setBatchSize] = useState(10);
   const [sending, setSending] = useState(false);
   const [lastSendResult, setLastSendResult] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [addContactsOpen, setAddContactsOpen] = useState(false);
+  const [sendBatchOpen, setSendBatchOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -223,11 +227,6 @@ export default function AdminMarketingPage() {
       setSending(false);
     }
   };
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [addContactsOpen, setAddContactsOpen] = useState(false);
-  const [sendBatchOpen, setSendBatchOpen] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
 
   const openEdit = (c) => {
     setEditContact(c);
