@@ -4,7 +4,7 @@ import Footer from "@/components/marketing/Footer";
 import ContextualAiWidget from "@/components/contextual-ai-widget";
 
 const GA_MEASUREMENT_ID = "G-RTSF7V6T7M";
-const CLARITY_PROJECT_ID = "vwab4oi27x";
+const CLARITY_PROJECT_ID = "wota3fv3hy";
 
 export default function MarketingLayout({ children }) {
   return (
