@@ -360,8 +360,15 @@ Thanks — I appreciate responses with clear scope, assumptions, and line items 
 export default function MotorRewindCostCalculator({
   variant = "full",
   calculatorSourcePage = CALCULATOR_SOURCE_PAGE,
+  /** Use with variant="full" when the page already has an h1 (e.g. SEO guide hero). */
+  fullHeadingAsH2 = false,
+  /** Tighter spacing and typography for sidebars / narrow columns. */
+  compact = false,
 }) {
   const isEmbedded = variant === "embedded";
+  const isCompact = !!compact;
+  /** Parent already shows a calculator title (e.g. cost page spotlight + fullHeadingAsH2). */
+  const hideMainTitle = isCompact && fullHeadingAsH2;
   const [form, setForm] = useState(defaultForm);
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
@@ -523,41 +530,61 @@ export default function MotorRewindCostCalculator({
   return (
     <div
       className={`not-prose rounded-xl border border-border bg-card shadow-sm ${
-        isEmbedded ? "p-3 sm:p-4 md:p-5" : "p-4 sm:p-6"
+        isCompact ? "p-3 sm:p-3" : isEmbedded ? "p-3 sm:p-4 md:p-5" : "p-4 sm:p-6"
       }`}
     >
-      <div className="border-b border-border pb-4">
-        {isEmbedded ? (
-          <h2 className="text-lg font-semibold text-title sm:text-xl">
-            Electric motor rewinding cost calculator
-          </h2>
-        ) : (
-          <h1 className="text-xl font-semibold text-title sm:text-2xl">
-            Electric motor rewinding cost calculator
-          </h1>
-        )}
-        <p className="mt-2 text-sm text-secondary">
+      <div className={`border-b border-border ${isCompact ? "pb-3" : "pb-4"}`}>
+        {!hideMainTitle ? (
+          isEmbedded ? (
+            <h2 className="text-lg font-semibold text-title sm:text-xl">
+              Electric motor rewinding cost calculator
+            </h2>
+          ) : fullHeadingAsH2 ? (
+            <h2 className="text-xl font-semibold text-title sm:text-2xl">
+              Electric motor rewinding cost calculator
+            </h2>
+          ) : (
+            <h1 className="text-xl font-semibold text-title sm:text-2xl">
+              Electric motor rewinding cost calculator
+            </h1>
+          )
+        ) : null}
+        <p
+          className={`text-secondary ${hideMainTitle ? "mt-0" : "mt-2"} ${
+            isCompact ? "text-xs leading-snug" : "text-sm"
+          }`}
+        >
           Adjust HP, phase, and optionally RPM—your estimate updates instantly. Not a shop quote; inspection may change
           scope and price.
         </p>
-        <div className="mt-4">
+        <div className={isCompact ? "mt-2" : "mt-4"}>
           <button
             type="button"
             onClick={openNameplateFastPath}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-primary bg-transparent px-4 py-3 text-sm font-semibold text-primary shadow-sm transition-colors hover:bg-primary/10 sm:w-auto sm:justify-start"
+            className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-primary bg-transparent font-semibold text-primary shadow-sm transition-colors hover:bg-primary/10 sm:w-auto sm:justify-start ${
+              isCompact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
+            }`}
           >
-            <FiUpload className="h-4 w-4 shrink-0" aria-hidden />
+            <FiUpload className={`shrink-0 ${isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}`} aria-hidden />
             Upload nameplate for an estimate
           </button>
-          <p className="mt-2 text-center text-xs text-secondary sm:text-left">No specs needed</p>
+          <p
+            className={`text-center text-secondary sm:text-left ${isCompact ? "mt-1 text-[10px]" : "mt-2 text-xs"}`}
+          >
+            No specs needed
+          </p>
         </div>
       </div>
 
-      <Form id="motor-rewind-customer-form" className="mt-4 !border-0 !bg-transparent !p-0 !shadow-none" onSubmit={(e) => e.preventDefault()}>
-        <FormSectionTitle as="h2" className="!mb-3 !text-base sm:!text-lg">
+      <Form
+        id="motor-rewind-customer-form"
+        className={`!border-0 !bg-transparent !p-0 !shadow-none ${isCompact ? "mt-3" : "mt-4"}`}
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <FormSectionTitle as="h2" className={isCompact ? "!mb-2 !text-sm" : "!mb-3 !text-base sm:!text-lg"}>
           Your motor
         </FormSectionTitle>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className={`grid sm:grid-cols-2 ${isCompact ? "gap-3" : "gap-4"}`}>
           <Select label="Motor HP" name="hp" options={HP_OPTIONS} value={form.hp} onChange={handleField("hp")} searchable={false} />
           <Select label="Phase" name="phase" options={PHASE_OPTIONS} value={form.phase} onChange={handleField("phase")} searchable={false} />
           <Select
@@ -570,12 +597,24 @@ export default function MotorRewindCostCalculator({
           />
         </div>
 
-        <details className="mt-5 rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 text-sm font-medium text-title hover:bg-card/80 sm:px-4">
+        <details
+          className={`rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden ${
+            isCompact ? "mt-3" : "mt-5"
+          }`}
+        >
+          <summary
+            className={`flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-title hover:bg-card/80 ${
+              isCompact ? "px-2 py-2 text-xs sm:px-3" : "px-3 py-3 text-sm sm:px-4"
+            }`}
+          >
             <span>Advanced details (optional)</span>
-            <span className="text-xs font-normal text-secondary">Voltage, slots, coil, AWG, copper weight</span>
+            <span className={`font-normal text-secondary ${isCompact ? "max-w-[9rem] text-[10px] leading-tight" : "text-xs"}`}>
+              Voltage, slots, coil, AWG, copper weight
+            </span>
           </summary>
-          <div className="grid gap-4 border-t border-border px-3 pb-4 pt-4 sm:grid-cols-2 sm:px-4">
+          <div
+            className={`grid border-t border-border sm:grid-cols-2 ${isCompact ? "gap-3 px-2 pb-3 pt-3 sm:px-3" : "gap-4 px-3 pb-4 pt-4 sm:px-4"}`}
+          >
             <div className="sm:col-span-2">
               <Select
                 label="Example presets"
@@ -620,41 +659,63 @@ export default function MotorRewindCostCalculator({
         </details>
       </Form>
 
-      <div className="mt-6 rounded-xl border border-primary/30 bg-gradient-to-b from-primary/[0.11] to-primary/[0.04] p-4 shadow-sm sm:p-5">
+      <div
+        className={`rounded-xl border border-primary/30 bg-gradient-to-b from-primary/[0.11] to-primary/[0.04] shadow-sm ${
+          isCompact ? "mt-4 p-3" : "mt-6 p-4 sm:p-5"
+        }`}
+      >
         <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
           <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Ballpark estimate (US)</p>
-            <p className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-title sm:text-3xl">
+            <p
+              className={`font-semibold uppercase tracking-wide text-primary ${
+                isCompact ? "text-[9px]" : "text-[10px]"
+              }`}
+            >
+              Ballpark estimate (US)
+            </p>
+            <p
+              className={`mt-0.5 font-bold tabular-nums tracking-tight text-title ${
+                isCompact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+              }`}
+            >
               {moneyWhole(derived.roughLow)} – {moneyWhole(derived.roughHigh)}
             </p>
           </div>
-          <p className="shrink-0 text-[11px] text-secondary">Turnaround ~2–5 business days</p>
         </div>
 
-        <p className="mt-2 text-[11px] leading-snug text-secondary">
+        <p className={`leading-snug text-secondary ${isCompact ? "mt-1.5 text-[10px]" : "mt-2 text-[11px]"}`}>
           Based on typical US rewind shop pricing (2025).
         </p>
 
         {derived.fractionalHpNote ? (
-          <p className="mt-2 rounded-md border border-border bg-card/80 px-2.5 py-1.5 text-[11px] leading-snug text-secondary">
+          <p
+            className={`mt-2 rounded-md border border-border bg-card/80 leading-snug text-secondary ${
+              isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
+            }`}
+          >
             Many shops charge a <strong className="text-title">minimum bench fee</strong> on fractional-HP motors—the
             total often reflects minimum labor more than copper alone.
           </p>
         ) : null}
 
         {derived.industrial ? (
-          <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/[0.08] px-2.5 py-1.5 text-[11px] leading-snug text-secondary">
+          <p
+            className={`mt-2 rounded-md border border-amber-500/40 bg-amber-500/[0.08] leading-snug text-secondary ${
+              isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
+            }`}
+          >
             <strong className="text-title">Industrial motor:</strong> pricing is usually custom—use quote flow for scope
             after inspection.
           </p>
         ) : null}
 
         <div
-          className={`mt-3 rounded-md border px-2.5 py-2 text-[13px] font-medium leading-snug ${
-            derived.replacementRecommended
+          className={`mt-3 rounded-md border font-medium leading-snug ${
+            isCompact ? "px-2 py-1.5 text-[11px]" : "px-2.5 py-2 text-[13px]"
+          } ${derived.replacementRecommended
               ? "border-warning/40 bg-warning/[0.12] text-title"
               : "border-success/35 bg-success/[0.1] text-title"
-          }`}
+            }`}
         >
           <p>
             <span className="text-secondary">Recommendation:</span>{" "}
@@ -664,7 +725,7 @@ export default function MotorRewindCostCalculator({
               <>Rewinding looks cost-effective at this range.</>
             )}
           </p>
-          <p className="mt-1 text-[11px] font-normal leading-snug text-secondary">
+          <p className={`font-normal leading-snug text-secondary ${isCompact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
             {derived.replacementRecommended ? (
               <>Use written quotes from shops—not online benchmarks alone—to decide.</>
             ) : (
@@ -673,22 +734,42 @@ export default function MotorRewindCostCalculator({
           </p>
         </div>
 
-        <div className="mt-6 border-t border-primary/15 pt-5">
-          <Button type="button" variant="primary" size="md" className="w-full sm:w-auto" onClick={openQuoteModal}>
+        <div className={`border-t border-primary/15 ${isCompact ? "mt-4 pt-3" : "mt-6 pt-5"}`}>
+          <Button
+            type="button"
+            variant="primary"
+            size={isCompact ? "sm" : "md"}
+            className={isCompact ? "w-full" : "w-full sm:w-auto"}
+            onClick={openQuoteModal}
+          >
             Get exact quote in 30 minutes
           </Button>
-          <p className="mt-1.5 text-[11px] leading-snug text-secondary">
+          <p className={`leading-snug text-secondary ${isCompact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]"}`}>
             1–2 min · no commitment · shops often same day
           </p>
         </div>
 
-        <p className="mt-3 text-[11px] leading-snug text-secondary">Final quote may vary after inspection.</p>
+        <p className={`leading-snug text-secondary ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-[11px]"}`}>
+          Final quote may vary after inspection.
+        </p>
 
-        <details className="mt-3 rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden">
-          <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-medium text-title hover:bg-card/80 sm:px-4">
+        <details
+          className={`rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden ${
+            isCompact ? "mt-2" : "mt-3"
+          }`}
+        >
+          <summary
+            className={`cursor-pointer list-none font-medium text-title hover:bg-card/80 ${
+              isCompact ? "px-2 py-2 text-xs sm:px-3" : "px-3 py-2.5 text-sm sm:px-4"
+            }`}
+          >
             How this estimate is calculated — data sources & methodology
           </summary>
-          <div className="space-y-3 border-t border-border px-3 pb-4 pt-3 text-[11px] leading-snug text-secondary sm:px-4">
+          <div
+            className={`space-y-3 border-t border-border leading-snug text-secondary ${
+              isCompact ? "px-2 pb-3 pt-2 text-[10px] sm:px-3" : "px-3 pb-4 pt-3 text-[11px] sm:px-4"
+            }`}
+          >
             <p>
               This calculator uses periodically refreshed <strong className="font-medium text-title">public benchmarks</strong>{" "}
               (commodity copper and motor-industry producer prices) to tune material input and the generic &quot;new

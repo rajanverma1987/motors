@@ -27,6 +27,9 @@ export default function BlogPageLayout({
   stickySidebar = true,
   children,
 }) {
+  const sidebarHasLeader = Boolean(sidebarTitle || sidebarDescription || sidebarCta);
+  const sidebarHasAny = sidebarHasLeader || Boolean(sidebarBelowCta);
+
   const articleUrl = canonicalPath ? `${siteUrl.replace(/\/$/, "")}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}` : null;
   const jsonLd = articleUrl
     ? {
@@ -91,17 +94,19 @@ export default function BlogPageLayout({
             wideSidebar ? "md:grid-cols-[minmax(0,11fr)_minmax(0,13fr)]" : "md:grid-cols-[13fr_7fr]"
           }`}
         >
-          {/* Mobile CTA - above content, only on small screens */}
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
-            <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
-            {sidebarDescription && (
-              <p className="mt-2 text-sm text-secondary">{sidebarDescription}</p>
-            )}
-            {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
-            {sidebarBelowCta ? (
-              <div className={sidebarCta ? "mt-6 border-t border-border pt-6" : "mt-4"}>{sidebarBelowCta}</div>
-            ) : null}
-          </div>
+          {/* Mobile CTA / tools — above content, only on small screens */}
+          {sidebarHasAny ? (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
+              {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
+              {sidebarDescription ? (
+                <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
+              ) : null}
+              {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
+              {sidebarBelowCta ? (
+                <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>{sidebarBelowCta}</div>
+              ) : null}
+            </div>
+          ) : null}
           {/* Main content - left column */}
           <div className="min-w-0 md:col-start-1 md:row-start-1">
             {children}
@@ -114,13 +119,13 @@ export default function BlogPageLayout({
             }`}
           >
             <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
-              <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2>
-              {sidebarDescription && (
-                <p className="mt-2 text-sm text-secondary">{sidebarDescription}</p>
-              )}
+              {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
+              {sidebarDescription ? (
+                <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
+              ) : null}
               {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
               {sidebarBelowCta ? (
-                <div className={sidebarCta ? "mt-6 border-t border-border pt-6" : "mt-4"}>{sidebarBelowCta}</div>
+                <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>{sidebarBelowCta}</div>
               ) : null}
             </div>
           </aside>
