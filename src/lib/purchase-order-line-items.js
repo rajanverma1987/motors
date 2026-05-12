@@ -29,6 +29,7 @@ export function normalizePurchaseOrderLineItems(arr) {
       qty: clampString(String(row?.qty ?? "1"), 50),
       uom: clampString(row?.uom, 20),
       unitPrice: clampString(row?.unitPrice, 50),
+      taxPercent: clampString(String(row?.taxPercent ?? "0"), 50),
       status: normalizeLineItemStatus(row),
     };
     if (invId) o.inventoryItemId = invId;

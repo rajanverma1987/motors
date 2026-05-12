@@ -58,7 +58,8 @@ export async function GET(request) {
     };
     const sortField = sortFieldMap[sortBy] || "createdAt";
     const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
-    const q = { createdByEmail: email };
+    const ownerScope = { createdByEmail: email };
+    const q = { ...ownerScope };
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       q.$or = [{ invoiceNumber: rx }, { rfqNumber: rx }, { status: rx }];
@@ -68,7 +69,7 @@ export async function GET(request) {
       Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
     ]);
     const summaryRows = await Invoice.aggregate([
-      { $match: q },
+      { $match: ownerScope },
       {
         $group: {
           _id: "$status",
@@ -86,11 +87,12 @@ export async function GET(request) {
     ]);
     const summaryByStatus = {};
     for (const row of summaryRows) {
-      const key = String(row?._id || "draft").trim() || "draft";
-      summaryByStatus[key] = {
-        count: Number(row?.count) || 0,
-        amount: Number(row?.amount) || 0,
-      };
+      const key = normalizeInvoiceStatusSlug(row?._id);
+      const count = Number(row?.count) || 0;
+      const amount = Number(row?.amount) || 0;
+      if (!summaryByStatus[key]) summaryByStatus[key] = { count: 0, amount: 0 };
+      summaryByStatus[key].count += count;
+      summaryByStatus[key].amount += amount;
     }
     const customerIds = [...new Set(list.map((i) => String(i.customerId)))];
     const customers = await Customer.find({

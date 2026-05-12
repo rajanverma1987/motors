@@ -29,6 +29,8 @@ export async function GET(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const { searchParams } = new URL(request.url);
+    const includePagination =
+      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
@@ -88,6 +90,7 @@ export async function GET(request) {
         taxPercent: String(normalizeTaxPercent(c.taxPercent)),
       };
     });
+    if (!includePagination) return NextResponse.json(listWithId);
     return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("Dashboard list customers error:", err);

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiEdit2 } from "react-icons/fi";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -12,6 +12,7 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { Form, FormLayout, FormField } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useConfirm } from "@/components/confirm-provider";
 import {
   AC_WORK_ORDER_FIELDS,
   DC_WORK_ORDER_FIELDS,
@@ -177,6 +178,7 @@ function buildMotorPayload(form) {
 
 export default function DashboardMotorsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLeadId = searchParams.get("fromLead");
@@ -196,6 +198,7 @@ export default function DashboardMotorsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
+  const [deletingMotorId, setDeletingMotorId] = useState(null);
   const [form, setForm] = useState(() => freshMotorForm());
   const formRef = useRef(form);
   formRef.current = form;
@@ -437,6 +440,43 @@ export default function DashboardMotorsPage() {
     setTableSort({ key, direction });
   }, []);
 
+  const handleDeleteMotor = useCallback(
+    async (row) => {
+      if (!row?.id) return;
+      const label =
+        String(row.serialNumber || "").trim() ||
+        [row.manufacturer, row.model].filter(Boolean).join(" ").trim() ||
+        "this motor";
+      const ok = await confirm({
+        title: "Delete this motor?",
+        message: `Permanently delete ${label}? Existing quotes, invoices, work orders, or repair jobs may still reference this motor. This cannot be undone.`,
+        confirmLabel: "Delete",
+        variant: "danger",
+      });
+      if (!ok) return;
+      setDeletingMotorId(row.id);
+      try {
+        const res = await fetch(`/api/dashboard/motors/${row.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Delete failed");
+        toast.success("Motor deleted.");
+        if (viewingMotor?.id === row.id) {
+          closeViewModal();
+          closeEditModal();
+        }
+        await loadMotors();
+      } catch (e) {
+        toast.error(e.message || "Failed to delete motor");
+      } finally {
+        setDeletingMotorId(null);
+      }
+    },
+    [confirm, loadMotors, toast, viewingMotor]
+  );
+
   const columns = useMemo(
     () => [
       {
@@ -447,10 +487,20 @@ export default function DashboardMotorsPage() {
             <button
               type="button"
               onClick={() => openEditModal(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              disabled={deletingMotorId === row.id}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-40"
               aria-label="Edit"
             >
-              <FiEdit2 className="h-4 w-4" />
+              <FiEdit2 className="h-4 w-4 shrink-0" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteMotor(row)}
+              disabled={deletingMotorId === row.id}
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:pointer-events-none disabled:opacity-40"
+              aria-label="Delete"
+            >
+              <FiTrash2 className="h-4 w-4 shrink-0" />
             </button>
           </div>
         ),
@@ -482,7 +532,7 @@ export default function DashboardMotorsPage() {
       { key: "voltage", label: "Voltage", sortable: true },
       { key: "frameSize", label: "Frame", sortable: true },
     ],
-    [customerNameMap]
+    [customerNameMap, deletingMotorId, handleDeleteMotor]
   );
 
   return (

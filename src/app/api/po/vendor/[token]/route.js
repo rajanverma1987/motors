@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import { LIMITS, clampString } from "@/lib/validation";
+import { poLineTotalWithTax } from "@/lib/po-line-item-totals";
 
 const MAX_LINE_ITEMS = 100;
 
@@ -19,6 +20,7 @@ function normalizeLineItemsForVendor(arr) {
     qty: clampString(String(row?.qty ?? "1"), 50),
     uom: clampString(row?.uom, 20),
     unitPrice: clampString(row?.unitPrice, 50),
+    taxPercent: clampString(String(row?.taxPercent ?? "0"), 50),
     status:
       row?.status === "Received"
         ? "Received"
@@ -78,6 +80,7 @@ export async function GET(request, context) {
       qty: item?.qty ?? "1",
       uom: item?.uom ?? "",
       unitPrice: item?.unitPrice ?? "",
+      taxPercent: item?.taxPercent ?? "0",
       status:
         item?.status === "Received"
           ? "Received"
@@ -107,9 +110,8 @@ export async function GET(request, context) {
       accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
       accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
       totalOrder: lineItems.reduce((sum, row) => {
-        const q = parseFloat(row?.qty ?? "1");
-        const p = parseFloat(row?.unitPrice ?? "0");
-        return sum + (Number.isFinite(q) && Number.isFinite(p) ? q * p : 0);
+        const t = poLineTotalWithTax(row);
+        return sum + (t != null && Number.isFinite(t) ? t : 0);
       }, 0).toFixed(2),
       createdAt: doc.createdAt,
     });

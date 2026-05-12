@@ -22,6 +22,15 @@ function n(v, fallback = 0) {
   return Number.isFinite(x) ? x : fallback;
 }
 
+/** Empty string returns defaultValue; otherwise true/false from common CSV tokens. */
+function boolish(v, defaultValue = false) {
+  const t = s(v).toLowerCase();
+  if (!t) return defaultValue;
+  if (t === "false" || t === "no" || t === "0" || t === "n") return false;
+  if (t === "true" || t === "yes" || t === "1" || t === "y") return true;
+  return defaultValue;
+}
+
 function parseJsonArrayField(raw, fieldName) {
   const txt = s(raw);
   if (!txt) return [];
@@ -62,6 +71,10 @@ const IMPORT_COLLECTIONS = {
       "shipping_state",
       "shipping_zip_code",
       "shipping_country",
+      "ein",
+      "credit_limit",
+      "tax_exempt",
+      "tax_percent",
       "notes",
     ],
     sample: {
@@ -81,6 +94,10 @@ const IMPORT_COLLECTIONS = {
       shipping_state: "Texas",
       shipping_zip_code: "77002",
       shipping_country: "United States",
+      ein: "12-3456789",
+      credit_limit: "50000.00",
+      tax_exempt: "true",
+      tax_percent: "0",
       notes: "Priority account",
     },
     buildPayload: (r, ctx) => ({
@@ -101,6 +118,10 @@ const IMPORT_COLLECTIONS = {
       shippingState: s(r.shipping_state),
       shippingZipCode: s(r.shipping_zip_code),
       shippingCountry: s(r.shipping_country || "United States"),
+      ein: s(r.ein),
+      creditLimit: s(r.credit_limit),
+      taxExempt: boolish(r.tax_exempt, true),
+      taxPercent: s(r.tax_percent || "0"),
       notes: s(r.notes),
       importBatchId: ctx.batchId,
       importedAt: new Date(),

@@ -3,6 +3,7 @@
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { poBalanceDueVendorFacing } from "@/lib/po-payable";
+import { parsePoLineTaxPercent, poLineTaxAmount, poLineTotalWithTax } from "@/lib/po-line-item-totals";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
@@ -119,15 +120,17 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
               <th className={thCell + " w-10 text-right"}>Qty</th>
               <th className={thCell + " w-12"}>UOM</th>
               <th className={thCell + " w-[4.5rem] text-right"}>Unit price</th>
+              <th className={thCell + " w-10 text-right"}>Tax %</th>
+              <th className={thCell + " w-[4.5rem] text-right"}>Tax</th>
               <th className={thCell + " w-[5rem] text-right"}>Total</th>
               <th className={thCell + " w-[4.5rem]"}>Status</th>
             </tr>
           </thead>
           <tbody>
             {(Array.isArray(po.lineItems) ? po.lineItems : []).map((row, i) => {
-              const q = parseFloat(row?.qty ?? "1");
-              const p = parseFloat(row?.unitPrice ?? "0");
-              const lineNum = Number.isFinite(q) && Number.isFinite(p) ? q * p : null;
+              const taxPct = parsePoLineTaxPercent(row?.taxPercent);
+              const taxVal = poLineTaxAmount(row);
+              const lineTot = poLineTotalWithTax(row);
               return (
                 <tr key={i}>
                   <td className={tdCell + " align-top whitespace-pre-wrap"}>{row?.description || "—"}</td>
@@ -136,8 +139,14 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
                   <td className={tdCell + " text-right tabular-nums"}>
                     {row?.unitPrice != null && row.unitPrice !== "" ? formatMoney(row.unitPrice) : "—"}
                   </td>
+                  <td className={tdCell + " text-right tabular-nums"}>{taxPct ? `${taxPct}%` : "0%"}</td>
                   <td className={tdCell + " text-right tabular-nums"}>
-                    {lineNum != null && Number.isFinite(lineNum) ? formatMoney(lineNum) : "—"}
+                    {taxVal != null && Number.isFinite(taxVal) ? formatMoney(String(taxVal.toFixed(2))) : "—"}
+                  </td>
+                  <td className={tdCell + " text-right tabular-nums"}>
+                    {lineTot != null && Number.isFinite(lineTot)
+                      ? formatMoney(String(lineTot.toFixed(2)))
+                      : "—"}
                   </td>
                   <td className={tdCell}>{row?.status ?? "Ordered"}</td>
                 </tr>

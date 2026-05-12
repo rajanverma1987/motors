@@ -190,6 +190,29 @@ function buildQuotePayload(form) {
   };
 }
 
+/** Dashboard list routes return `{ items, totalCount }` when `page` / `pageSize` are sent; max pageSize is 100. */
+async function fetchAllPaginatedDashboardItems(basePath) {
+  const pageSize = 100;
+  let page = 1;
+  const all = [];
+  for (;;) {
+    const sep = basePath.includes("?") ? "&" : "?";
+    const res = await fetch(`${basePath}${sep}page=${page}&pageSize=${pageSize}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Request failed");
+    const items = Array.isArray(data?.items) ? data.items : [];
+    all.push(...items);
+    const total = Number(data?.totalCount);
+    if (items.length < pageSize || (Number.isFinite(total) && all.length >= total)) break;
+    page += 1;
+    if (page > 500) break;
+  }
+  return all;
+}
+
 export default function DashboardQuotesPage() {
   const toast = useToast();
   const confirm = useConfirm();
@@ -275,18 +298,14 @@ export default function DashboardQuotesPage() {
 
   const loadQuotes = useCallback(async () => {
     try {
-      const [quotesRes, invoicesRes] = await Promise.all([
-        fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
-        fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
+      const [quotesList, invoicesList] = await Promise.all([
+        fetchAllPaginatedDashboardItems("/api/dashboard/quotes"),
+        fetchAllPaginatedDashboardItems("/api/dashboard/invoices"),
       ]);
-      const [quotesData, invoicesData] = await Promise.all([quotesRes.json(), invoicesRes.json()]);
-      if (!quotesRes.ok) throw new Error(quotesData.error || "Failed to load quotes");
       const invoiceQuoteIds = new Set(
-        (Array.isArray(invoicesData) ? invoicesData : [])
-          .map((inv) => String(inv?.quoteId || "").trim())
-          .filter(Boolean),
+        invoicesList.map((inv) => String(inv?.quoteId || "").trim()).filter(Boolean),
       );
-      const visibleQuotes = (Array.isArray(quotesData) ? quotesData : []).filter(
+      const visibleQuotes = quotesList.filter(
         (q) => !invoiceQuoteIds.has(String(q?.id || "").trim()),
       );
       setQuotes(visibleQuotes);
@@ -298,10 +317,8 @@ export default function DashboardQuotesPage() {
 
   const loadCustomers = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load customers");
-      setCustomers(Array.isArray(data) ? data : []);
+      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/customers");
+      setCustomers(list);
     } catch (e) {
       setCustomers([]);
     }
@@ -309,10 +326,8 @@ export default function DashboardQuotesPage() {
 
   const loadMotors = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/motors", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load motors");
-      setMotors(Array.isArray(data) ? data : []);
+      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/motors");
+      setMotors(list);
     } catch (e) {
       setMotors([]);
     }
@@ -320,10 +335,8 @@ export default function DashboardQuotesPage() {
 
   const loadEmployees = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load employees");
-      setEmployees(Array.isArray(data) ? data : []);
+      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/employees");
+      setEmployees(list);
     } catch (e) {
       setEmployees([]);
     }
@@ -445,7 +458,12 @@ export default function DashboardQuotesPage() {
   const motorLabelMap = useMemo(() => {
     const m = {};
     motors.forEach((mtr) => {
-      m[mtr.id] = [mtr.serialNumber, mtr.manufacturer, mtr.model].filter(Boolean).join(" · ") || mtr.id;
+      const id = String(mtr.id ?? "").trim();
+      if (!id) return;
+      const parts = [mtr.serialNumber, mtr.manufacturer, mtr.model]
+        .map((x) => String(x ?? "").trim())
+        .filter(Boolean);
+      m[id] = parts.length ? parts.join(" · ") : "";
     });
     return m;
   }, [motors]);
@@ -631,7 +649,7 @@ export default function DashboardQuotesPage() {
       (qt) =>
         (qt.rfqNumber || "").toLowerCase().includes(q) ||
         (customerNameMap[qt.customerId] || "").toLowerCase().includes(q) ||
-        (motorLabelMap[qt.motorId] || "").toLowerCase().includes(q) ||
+        (motorLabelMap[String(qt.motorId ?? "").trim()] || "").toLowerCase().includes(q) ||
         (qt.status || "").toLowerCase().includes(q) ||
         labelFor(qt).toLowerCase().includes(q) ||
         (qt.repairScope || "").toLowerCase().includes(q)
@@ -669,8 +687,8 @@ export default function DashboardQuotesPage() {
           return va.localeCompare(vb) * dir;
         }
         case "motor": {
-          const va = String(motorLabelMap[a.motorId] || a.motorId || "").toLowerCase();
-          const vb = String(motorLabelMap[b.motorId] || b.motorId || "").toLowerCase();
+          const va = String(motorLabelMap[String(a.motorId ?? "").trim()] || a.motorId || "").toLowerCase();
+          const vb = String(motorLabelMap[String(b.motorId ?? "").trim()] || b.motorId || "").toLowerCase();
           return va.localeCompare(vb) * dir;
         }
         case "status": {
@@ -848,7 +866,10 @@ export default function DashboardQuotesPage() {
         key: "motor",
         label: "Motor",
         sortable: true,
-        render: (_, row) => motorLabelMap[row.motorId] || row.motorId || "—",
+        render: (_, row) => {
+          const mid = String(row.motorId ?? "").trim();
+          return motorLabelMap[mid] || mid || "—";
+        },
       },
       {
         key: "status",
@@ -1174,7 +1195,9 @@ export default function DashboardQuotesPage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Customer &amp; motor</h3>
               <p className="text-title font-medium">{customerNameMap[viewingQuote.customerId] || viewingQuote.customerId || "—"}</p>
-              <p className="mt-1 text-sm text-secondary">{motorLabelMap[viewingQuote.motorId] || viewingQuote.motorId || "—"}</p>
+              <p className="mt-1 text-sm text-secondary">
+                {motorLabelMap[String(viewingQuote.motorId ?? "").trim()] || viewingQuote.motorId || "—"}
+              </p>
             </div>
             <QuoteFormRepairJobInspections
               repairFlowJobId={viewingQuote.repairFlowJobId}
@@ -1525,14 +1548,42 @@ export default function DashboardQuotesPage() {
             </div>
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote notes</h3>
-            <Textarea
-              label="Notes / terms"
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              rows={4}
-              placeholder="Terms, technician notes, and caveats…"
-            />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="min-w-0">
+                <label
+                  htmlFor="edit-quote-internal-notes"
+                  className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
+                >
+                  Internal Notes
+                </label>
+                <Textarea
+                  id="edit-quote-internal-notes"
+                  name="internalNotes"
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={4}
+                  placeholder="Terms, technician notes, and caveats…"
+                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
+                />
+              </div>
+              <div className="min-w-0">
+                <label
+                  htmlFor="edit-quote-customer-notes"
+                  className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
+                >
+                  Customer Notes
+                </label>
+                <Textarea
+                  id="edit-quote-customer-notes"
+                  name="customerNotes"
+                  value={form.customerNotes}
+                  onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
+                  rows={4}
+                  placeholder="Shown on the proposal and documents sent to the customer…"
+                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
+                />
+              </div>
+            </div>
           </div>
         </Form>
       </Modal>

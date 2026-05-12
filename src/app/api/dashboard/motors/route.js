@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Motor from "@/models/Motor";
+import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString, clampArray } from "@/lib/validation";
 import { sanitizeSpecs } from "@/lib/sanitize-specs";
@@ -40,7 +41,18 @@ export async function GET(request) {
     const q = { createdByEmail: email };
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [{ serialNumber: rx }, { manufacturer: rx }, { model: rx }];
+      const matchingCustomers = await Customer.find({
+        createdByEmail: email,
+        $or: [{ companyName: rx }, { primaryContactName: rx }],
+      })
+        .select("_id")
+        .lean();
+      const customerIds = matchingCustomers.map((c) => c._id.toString());
+      const orConditions = [{ serialNumber: rx }, { manufacturer: rx }, { model: rx }];
+      if (customerIds.length) {
+        orConditions.push({ customerId: { $in: customerIds } });
+      }
+      q.$or = orConditions;
     }
     const [totalCount, list] = await Promise.all([
       Motor.countDocuments(q),

@@ -15,6 +15,7 @@ import {
   normalizePurchaseOrderLineItems,
   normalizeLineItemStatus,
 } from "@/lib/purchase-order-line-items";
+import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
 
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
@@ -60,13 +61,7 @@ function normalizePayments(arr) {
 }
 
 function sumLineItems(lines) {
-  let sum = 0;
-  for (const row of lines) {
-    const q = parseFloat(row?.qty ?? "1");
-    const p = parseFloat(row?.unitPrice ?? "0");
-    if (Number.isFinite(q) && Number.isFinite(p)) sum += q * p;
-  }
-  return sum;
+  return sumPoLineItemsTaxInclusive(lines);
 }
 
 function sumAmounts(items, key = "amount") {
@@ -148,6 +143,7 @@ export async function GET(request, context) {
       vendorName: vendorDoc?.name?.trim() || doc.vendorId || "—",
       type: doc.type ?? "shop",
       quoteId: doc.quoteId ?? "",
+      repairFlowJobId: doc.repairFlowJobId ?? "",
       lineItems: lineItemsWithStatus,
       vendorInvoices,
       payments,
@@ -226,6 +222,7 @@ export async function PATCH(request, context) {
       vendorId,
       type,
       quoteId,
+      repairFlowJobId: bodyRepairFlowJobId,
       lineItems,
       vendorInvoices,
       payments,
@@ -255,6 +252,17 @@ export async function PATCH(request, context) {
     }
     if (type !== undefined) doc.type = type === "job" ? "job" : "shop";
     if (quoteId !== undefined) doc.quoteId = doc.type === "job" ? clampString(quoteId, 100) : "";
+    if (bodyRepairFlowJobId !== undefined) {
+      doc.repairFlowJobId = doc.type === "job" ? clampString(bodyRepairFlowJobId, 100) : "";
+    }
+    if (doc.type === "job" && doc.repairFlowJobId) {
+      const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
+      const email = user.email.trim().toLowerCase();
+      const job = await MotorRepairJob.findOne({ _id: doc.repairFlowJobId, createdByEmail: email }).select("_id").lean();
+      if (!job) {
+        return NextResponse.json({ error: "Repair job not found" }, { status: 400 });
+      }
+    }
     if (lineItems !== undefined) {
       doc.lineItems = normalizePurchaseOrderLineItems(lineItems);
       doc.markModified("lineItems");
@@ -272,6 +280,10 @@ export async function PATCH(request, context) {
       doc.attachments = normalizePurchaseOrderAttachmentsFromClient(attachments);
       doc.markModified("attachments");
     }
+    if (doc.type !== "job") {
+      doc.quoteId = "";
+      doc.repairFlowJobId = "";
+    }
     await doc.save();
     const po = doc.toObject();
     const totalOrder = sumLineItems(po.lineItems ?? []);
@@ -285,6 +297,7 @@ export async function PATCH(request, context) {
         vendorId: po.vendorId,
         type: po.type,
         quoteId: po.quoteId ?? "",
+        repairFlowJobId: po.repairFlowJobId ?? "",
         lineItems: (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) })),
         vendorInvoices: po.vendorInvoices ?? [],
         payments: po.payments ?? [],

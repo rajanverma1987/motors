@@ -19,28 +19,41 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import PoPrintPreview from "@/components/dashboard/po-print-preview";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import { sumPoLineItemsTaxInclusive, poLineTaxAmount, poLineTotalWithTax, parsePoLineTaxPercent, sumPoLineExtendedPreTax, sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
 
 const PO_LINE_COLUMNS = [
-  { key: "description", label: "Description", width: "40%" },
-  { key: "qty", label: "Qty", type: "number", width: "10%" },
-  { key: "uom", label: "UOM", width: "12%" },
-  { key: "unitPrice", label: "Unit price", type: "number", width: "15%" },
+  { key: "description", label: "Description", width: "30%" },
+  { key: "qty", label: "Qty", type: "number", width: "8%" },
+  { key: "uom", label: "UOM", width: "10%" },
+  { key: "unitPrice", label: "Unit price", type: "number", width: "12%" },
+  { key: "taxPercent", label: "Tax %", type: "number", width: "9%" },
+  {
+    key: "lineTax",
+    label: "Tax",
+    calculated: true,
+    type: "number",
+    formula: (row) => {
+      const v = poLineTaxAmount(row);
+      if (v == null || !Number.isFinite(v)) return "";
+      return Math.round(v * 1e6) / 1e6;
+    },
+  },
   {
     key: "total",
     label: "Total",
     calculated: true,
     type: "number",
     formula: (row) => {
-      const q = parseFloat(row?.qty ?? "1");
-      const p = parseFloat(row?.unitPrice ?? "0");
-      return Number.isFinite(q) && Number.isFinite(p) ? q * p : "";
+      const v = poLineTotalWithTax(row);
+      if (v == null || !Number.isFinite(v)) return "";
+      return Math.round(v * 1e6) / 1e6;
     },
   },
 ];
 
 const PO_TYPE_OPTIONS = [
   { value: "shop", label: "Shop PO" },
-  { value: "job", label: "Job PO (linked to RFQ)" },
+  { value: "job", label: "Job PO (linked to repair job or quote)" },
 ];
 
 const PARTS_SUPPLIED_COLUMNS = [{ key: "item", label: "Part / material" }];
@@ -106,6 +119,7 @@ const INITIAL_FORM = {
   vendorId: "",
   type: "shop",
   quoteId: "",
+  repairFlowJobId: "",
   lineItems: [],
   notes: "",
   attachments: [],
@@ -116,21 +130,62 @@ function buildPayload(form) {
   return {
     vendorId: f.vendorId ?? "",
     type: f.type === "job" ? "job" : "shop",
-    quoteId: f.type === "job" ? (f.quoteId ?? "") : "",
+    quoteId: f.type === "job" ? String(f.quoteId ?? "").trim() : "",
+    repairFlowJobId: f.type === "job" ? String(f.repairFlowJobId ?? "").trim() : "",
     lineItems: Array.isArray(f.lineItems) ? f.lineItems : [],
     notes: f.notes ?? "",
     attachments: Array.isArray(f.attachments) ? f.attachments : [],
   };
 }
 
-function sumLineItems(lines) {
-  let sum = 0;
-  for (const row of lines) {
-    const q = parseFloat(row?.qty ?? "1");
-    const p = parseFloat(row?.unitPrice ?? "0");
-    if (Number.isFinite(q) && Number.isFinite(p)) sum += q * p;
+/** Dashboard list routes return `{ items, totalCount }` when `page` / `pageSize` are sent. */
+async function fetchAllPaginatedItems(basePath) {
+  const pageSize = 100;
+  let page = 1;
+  const all = [];
+  for (;;) {
+    const sep = basePath.includes("?") ? "&" : "?";
+    const res = await fetch(`${basePath}${sep}page=${page}&pageSize=${pageSize}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to load");
+    const items = Array.isArray(data?.items) ? data.items : [];
+    all.push(...items);
+    const total = Number(data?.totalCount);
+    if (items.length < pageSize || (Number.isFinite(total) && all.length >= total)) break;
+    page += 1;
+    if (page > 500) break;
   }
-  return sum.toFixed(2);
+  return all;
+}
+
+function PoLineItemsTotalsTable({ lines, fmt }) {
+  const arr = Array.isArray(lines) ? lines : [];
+  const orderSubtotal = sumPoLineExtendedPreTax(arr);
+  const totalTax = sumPoLineTaxAmount(arr);
+  const grandTotal = sumPoLineItemsTaxInclusive(arr);
+  return (
+    <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card">
+      <table className="ml-auto w-full max-w-md text-sm">
+        <tbody>
+          <tr className="border-b border-border">
+            <td className="px-3 py-2 text-secondary">Order total</td>
+            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(orderSubtotal)}</td>
+          </tr>
+          <tr className="border-b border-border">
+            <td className="px-3 py-2 text-secondary">Total tax</td>
+            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
+          </tr>
+          <tr className="border-t border-border bg-muted/30">
+            <td className="px-3 py-2 font-semibold text-title">Grand total</td>
+            <td className="px-3 py-2 text-right font-semibold tabular-nums text-title">{fmt(grandTotal)}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 export default function DashboardPurchaseOrdersPage() {
@@ -144,6 +199,7 @@ export default function DashboardPurchaseOrdersPage() {
   const [pos, setPos] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [quotes, setQuotes] = useState([]);
+  const [repairJobs, setRepairJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -207,13 +263,82 @@ export default function DashboardPurchaseOrdersPage() {
     const fallbackLabel = vendorNameMap[selectedVendorId] || selectedVendorId;
     return [{ value: selectedVendorId, label: fallbackLabel }, ...base];
   }, [vendors, form.vendorId, vendorNameMap]);
-  const quoteOptions = useMemo(() => {
-    const base = quotes.map((q) => ({ value: q.id, label: q.rfqNumber || q.id || "—" }));
-    const selectedQuoteId = String(form.quoteId ?? "").trim();
-    if (!selectedQuoteId) return base;
-    if (base.some((opt) => opt.value === selectedQuoteId)) return base;
-    return [{ value: selectedQuoteId, label: selectedQuoteId }, ...base];
-  }, [quotes, form.quoteId]);
+
+  const jobLinkOptions = useMemo(() => {
+    const jobOpts = repairJobs.map((j) => {
+      const jn = String(j.jobNumber || "").trim() || String(j.id);
+      return {
+        value: `job|${j.id}`,
+        label: jn,
+        ts: new Date(j.createdAt || 0).getTime() || 0,
+      };
+    });
+
+    const quoteLinkRows = [];
+    for (const q of quotes) {
+      const qid = String(q?.id ?? "").trim();
+      if (!qid) continue;
+      const rfq = String(q?.rfqNumber ?? "").trim();
+      quoteLinkRows.push({
+        value: `quote|${qid}`,
+        label: rfq || qid,
+        ts: new Date(q?.createdAt || 0).getTime() || 0,
+      });
+    }
+
+    jobOpts.sort((a, b) => b.ts - a.ts);
+    quoteLinkRows.sort((a, b) => b.ts - a.ts);
+    const merged = [
+      ...jobOpts.map(({ value, label }) => ({ value, label })),
+      ...quoteLinkRows.map(({ value, label }) => ({ value, label })),
+    ];
+
+    const selJob = String(form.repairFlowJobId ?? "").trim();
+    const selQuote = String(form.quoteId ?? "").trim();
+    const selVal = selJob ? `job|${selJob}` : selQuote ? `quote|${selQuote}` : "";
+    if (!selVal) return merged;
+    if (merged.some((o) => o.value === selVal)) return merged;
+    if (selJob) {
+      return [{ value: `job|${selJob}`, label: selJob }, ...merged];
+    }
+    return [{ value: `quote|${selQuote}`, label: selQuote }, ...merged];
+  }, [repairJobs, quotes, form.repairFlowJobId, form.quoteId]);
+
+  const jobLinkSelectValue = useMemo(() => {
+    const j = String(form.repairFlowJobId || "").trim();
+    if (j) return `job|${j}`;
+    const q = String(form.quoteId || "").trim();
+    if (q) return `quote|${q}`;
+    return "";
+  }, [form.repairFlowJobId, form.quoteId]);
+
+  const handleJobLinkChange = useCallback((e) => {
+    const v = String(e.target?.value ?? "");
+    if (!v) {
+      setForm((f) => ({ ...f, quoteId: "", repairFlowJobId: "" }));
+      return;
+    }
+    if (v.startsWith("job|")) {
+      const jid = v.slice(4);
+      const q = quotes.find((x) => String(x.repairFlowJobId || "").trim() === jid);
+      setForm((f) => ({
+        ...f,
+        repairFlowJobId: jid,
+        quoteId: q?.id ? String(q.id) : "",
+      }));
+      return;
+    }
+    if (v.startsWith("quote|")) {
+      const qid = v.slice(6);
+      const q = quotes.find((x) => String(x.id) === qid);
+      setForm((f) => ({
+        ...f,
+        quoteId: qid,
+        repairFlowJobId: q ? String(q.repairFlowJobId || "").trim() : "",
+      }));
+    }
+  }, [quotes]);
+
   const loadPos = useCallback(async () => {
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -247,14 +372,19 @@ export default function DashboardPurchaseOrdersPage() {
     }
   }, []);
 
-  const loadQuotes = useCallback(async () => {
+  const loadJobLinkLists = useCallback(async () => {
     try {
-      const res = await fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load quotes");
-      setQuotes(Array.isArray(data) ? data : []);
+      const [qList, jobsRes] = await Promise.all([
+        fetchAllPaginatedItems("/api/dashboard/quotes"),
+        fetch("/api/dashboard/repair-flow/jobs", { credentials: "include", cache: "no-store" }).then((r) =>
+          r.ok ? r.json() : []
+        ),
+      ]);
+      setQuotes(qList);
+      setRepairJobs(Array.isArray(jobsRes) ? jobsRes : []);
     } catch {
       setQuotes([]);
+      setRepairJobs([]);
     }
   }, []);
 
@@ -262,11 +392,11 @@ export default function DashboardPurchaseOrdersPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      await Promise.all([loadPos(), loadVendors(), loadQuotes()]);
+      await Promise.all([loadPos(), loadVendors(), loadJobLinkLists()]);
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [loadPos, loadVendors, loadQuotes]);
+  }, [loadPos, loadVendors, loadJobLinkLists]);
 
   useEffect(() => {
     const id = openPoId?.trim();
@@ -558,6 +688,7 @@ export default function DashboardPurchaseOrdersPage() {
       vendorId: String(dataToUse.vendorId ?? "").trim(),
       type: normalizedType,
       quoteId: normalizedType === "job" ? String(dataToUse.quoteId ?? "").trim() : "",
+      repairFlowJobId: normalizedType === "job" ? String(dataToUse.repairFlowJobId ?? "").trim() : "",
       lineItems: Array.isArray(dataToUse.lineItems) ? dataToUse.lineItems : [],
       notes: dataToUse.notes ?? "",
       attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
@@ -627,8 +758,8 @@ export default function DashboardPurchaseOrdersPage() {
       if (!res.ok) throw new Error(data.error || "Failed to update purchase order");
       toast.success("Purchase order updated.");
       setViewingPo(data.purchaseOrder);
-      setPos((prev) => prev.map((p) => (p.id === viewingPo.id ? { ...p, ...data.purchaseOrder } : p)));
       closeEditModal();
+      loadPos();
     } catch (err) {
       toast.error(err.message || "Failed to update purchase order");
     } finally {
@@ -684,6 +815,7 @@ export default function DashboardPurchaseOrdersPage() {
           vendorId: viewingPo.vendorId,
           type: viewingPo.type,
           quoteId: viewingPo.quoteId,
+          repairFlowJobId: viewingPo.repairFlowJobId ?? "",
           lineItems: viewingPo.lineItems ?? [],
           vendorInvoices: newInvoices,
           payments: viewingPo.payments ?? [],
@@ -719,6 +851,7 @@ export default function DashboardPurchaseOrdersPage() {
           vendorId: viewingPo.vendorId,
           type: viewingPo.type,
           quoteId: viewingPo.quoteId,
+          repairFlowJobId: viewingPo.repairFlowJobId ?? "",
           lineItems: viewingPo.lineItems ?? [],
           vendorInvoices: viewingPo.vendorInvoices ?? [],
           payments: newPayments,
@@ -832,7 +965,7 @@ export default function DashboardPurchaseOrdersPage() {
       },
       {
         key: "rfqNumber",
-        label: "RFQ#",
+        label: "Job #",
         sortable: true,
         render: (_, row) => (row.type === "job" ? (row.rfqNumber || "—") : "—"),
       },
@@ -921,7 +1054,7 @@ export default function DashboardPurchaseOrdersPage() {
             setPage(1);
             setSearchQuery(q);
           }}
-          searchPlaceholder="Search PO #, vendor, RFQ#, status…"
+          searchPlaceholder="Search PO #, vendor, job #, status…"
           onRefresh={async () => { setLoading(true); await loadPos(); setLoading(false); }}
           sortState={tableSort}
           onSort={handleTableSort}
@@ -983,17 +1116,24 @@ export default function DashboardPurchaseOrdersPage() {
                 label="Type"
                 options={PO_TYPE_OPTIONS}
                 value={form.type}
-                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value ?? "shop" }))}
+                onChange={(e) => {
+                  const next = e.target.value ?? "shop";
+                  setForm((f) =>
+                    next === "job"
+                      ? { ...f, type: next }
+                      : { ...f, type: next, quoteId: "", repairFlowJobId: "" }
+                  );
+                }}
                 searchable={false}
                 className="lg:col-span-2 min-w-[200px]"
               />
               {form.type === "job" && (
                 <Select
-                  label="Quote (RFQ#)"
-                  options={quoteOptions}
-                  value={form.quoteId}
-                  onChange={(e) => setForm((f) => ({ ...f, quoteId: e.target.value ?? "" }))}
-                  placeholder="Select quote (optional)"
+                  label="Job # / RFQ#"
+                  options={jobLinkOptions}
+                  value={jobLinkSelectValue}
+                  onChange={handleJobLinkChange}
+                  placeholder="Select job # or RFQ# (optional)"
                   searchable
                   className="lg:col-span-2"
                 />
@@ -1008,7 +1148,7 @@ export default function DashboardPurchaseOrdersPage() {
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
             />
-            <p className="mt-2 text-sm text-secondary">Order total: {fmt(parseFloat(sumLineItems(form.lineItems)) || 0)}</p>
+            <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
           </div>
           <div>
             <Textarea
@@ -1208,7 +1348,22 @@ export default function DashboardPurchaseOrdersPage() {
                 <div><dt className="text-secondary">Vendor</dt><dd className="text-title font-medium">{vendorNameMap[viewingPo.vendorId] || viewingPo.vendorId || "—"}</dd></div>
                 <div><dt className="text-secondary">Type</dt><dd className="text-title">{viewingPo.type === "job" ? "Job PO" : "Shop PO"}</dd></div>
                 {viewingPo.type === "job" && (
-                  <div><dt className="text-secondary">RFQ#</dt><dd className="text-title">{viewingPo.quoteId ? (quotes.find((q) => q.id === viewingPo.quoteId)?.rfqNumber || viewingPo.quoteId) : "—"}</dd></div>
+                  <div>
+                    <dt className="text-secondary">Job #</dt>
+                    <dd className="text-title">
+                      {(() => {
+                        const jid = String(viewingPo.repairFlowJobId || "").trim();
+                        if (jid) {
+                          const j = repairJobs.find((x) => String(x.id) === jid);
+                          if (j?.jobNumber) return String(j.jobNumber).trim();
+                        }
+                        if (viewingPo.quoteId) {
+                          return quotes.find((q) => q.id === viewingPo.quoteId)?.rfqNumber || viewingPo.quoteId;
+                        }
+                        return "—";
+                      })()}
+                    </dd>
+                  </div>
                 )}
                 <div><dt className="text-secondary">Delivered</dt><dd><Badge variant={DELIVERY_STATUS_VARIANT[viewingPo.deliveryStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.deliveryStatus ?? "Partial"}</Badge></dd></div>
                 <div><dt className="text-secondary">Invoiced</dt><dd><Badge variant={INVOICED_STATUS_VARIANT[viewingPo.invoicedStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.invoicedStatus ?? "—"}</Badge></dd></div>
@@ -1237,15 +1392,19 @@ export default function DashboardPurchaseOrdersPage() {
                         <th className="px-3 py-2 text-right text-secondary">Qty</th>
                         <th className="px-3 py-2 text-left text-secondary">UOM</th>
                         <th className="px-3 py-2 text-right text-secondary">Unit price</th>
+                        <th className="px-3 py-2 text-right text-secondary">Tax %</th>
+                        <th className="px-3 py-2 text-right text-secondary">Tax</th>
                         <th className="px-3 py-2 text-right text-secondary">Total</th>
                         <th className="px-3 py-2 text-left text-secondary">Status</th>
                       </tr>
                     </thead>
                     <tbody>
                       {viewingPo.lineItems.map((row, i) => {
-                        const q = parseFloat(row?.qty ?? "1");
-                        const p = parseFloat(row?.unitPrice ?? "0");
-                        const total = Number.isFinite(q) && Number.isFinite(p) ? (q * p).toFixed(2) : "—";
+                        const taxAmt = poLineTaxAmount(row);
+                        const lineTot = poLineTotalWithTax(row);
+                        const taxPct = parsePoLineTaxPercent(row?.taxPercent);
+                        const total =
+                          lineTot != null && Number.isFinite(lineTot) ? lineTot.toFixed(2) : "—";
                         const itemStatus =
                           row?.status === "Received"
                             ? "Received"
@@ -1268,6 +1427,10 @@ export default function DashboardPurchaseOrdersPage() {
                             <td className="px-3 py-2 text-right tabular-nums">{row?.qty ?? "—"}</td>
                             <td className="px-3 py-2 text-title">{row?.uom || "—"}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{row?.unitPrice ? fmt(row.unitPrice) : "—"}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{`${taxPct || 0}%`}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">
+                              {taxAmt != null && Number.isFinite(taxAmt) ? fmt(taxAmt) : "—"}
+                            </td>
                             <td className="px-3 py-2 text-right tabular-nums">{total !== "—" ? fmt(parseFloat(total)) : "—"}</td>
                             <td className="px-3 py-2">
                               <Badge variant={itemBadgeVariant} className="rounded-full px-2 py-0.5 text-xs">
@@ -1283,7 +1446,7 @@ export default function DashboardPurchaseOrdersPage() {
               ) : (
                 <p className="text-sm text-secondary">No line items.</p>
               )}
-              <p className="mt-2 text-sm font-medium text-title">Order total: {fmt(viewingPo.totalOrder || 0)}</p>
+              <PoLineItemsTotalsTable lines={viewingPo.lineItems} fmt={fmt} />
             </div>
             {(Number(viewingPo.attachmentCount) > 0 ||
               (Array.isArray(viewingPo.attachments) && viewingPo.attachments.length > 0)) && (
@@ -1516,17 +1679,24 @@ export default function DashboardPurchaseOrdersPage() {
                 label="Type"
                 options={PO_TYPE_OPTIONS}
                 value={form.type}
-                onChange={(e) => setForm((f) => ({ ...f, type: e.target.value ?? "shop" }))}
+                onChange={(e) => {
+                  const next = e.target.value ?? "shop";
+                  setForm((f) =>
+                    next === "job"
+                      ? { ...f, type: next }
+                      : { ...f, type: next, quoteId: "", repairFlowJobId: "" }
+                  );
+                }}
                 searchable={false}
                 className="lg:col-span-2 min-w-[200px]"
               />
               {form.type === "job" && (
                 <Select
-                  label="Quote (RFQ#)"
-                  options={quoteOptions}
-                  value={form.quoteId}
-                  onChange={(e) => setForm((f) => ({ ...f, quoteId: e.target.value ?? "" }))}
-                  placeholder="Select quote (optional)"
+                  label="Job # / RFQ#"
+                  options={jobLinkOptions}
+                  value={jobLinkSelectValue}
+                  onChange={handleJobLinkChange}
+                  placeholder="Select job # or RFQ# (optional)"
                   searchable
                   className="lg:col-span-2"
                 />
@@ -1541,7 +1711,7 @@ export default function DashboardPurchaseOrdersPage() {
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
             />
-            <p className="mt-2 text-sm text-secondary">Order total: {fmt(parseFloat(sumLineItems(form.lineItems)) || 0)}</p>
+            <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
           </div>
           <div>
             <Textarea

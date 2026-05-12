@@ -1,3 +1,5 @@
+import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
+
 /** Sum vendor invoice amounts on a PO (lean or API shape). */
 export function sumVendorInvoiced(po) {
   const inv = Array.isArray(po?.vendorInvoices) ? po.vendorInvoices : [];
@@ -20,14 +22,7 @@ export function sumVendorPayments(po) {
 }
 
 export function poLineOrderTotal(po) {
-  const lines = Array.isArray(po?.lineItems) ? po.lineItems : [];
-  let sum = 0;
-  for (const row of lines) {
-    const q = parseFloat(row?.qty ?? "1");
-    const p = parseFloat(row?.unitPrice ?? "0");
-    if (Number.isFinite(q) && Number.isFinite(p)) sum += q * p;
-  }
-  return Math.round(sum * 100) / 100;
+  return Math.round(sumPoLineItemsTaxInclusive(po?.lineItems) * 100) / 100;
 }
 
 /** Amount still owed to vendor on recorded vendor invoices. */

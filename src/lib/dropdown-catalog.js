@@ -38,6 +38,10 @@ function validTileColor(raw) {
   return String(n);
 }
 
+function clampDropdownLabel(raw) {
+  return String(raw ?? "").slice(0, 120);
+}
+
 /**
  * @param {{ value: string, label?: string, tileColor?: string }} entry
  */
@@ -48,7 +52,7 @@ function normalizeWoEntry(entry) {
   if (!value) return null;
   return {
     value,
-    label: String(entry?.label ?? "").trim().slice(0, 120),
+    label: clampDropdownLabel(entry?.label),
     tileColor: validTileColor(entry?.tileColor),
   };
 }
@@ -66,7 +70,7 @@ function normalizeQuoteEntries(rawEntries) {
       ...row,
       value: valueLower,
       label:
-        String(row.label ?? "").trim().slice(0, 120) ||
+        clampDropdownLabel(row.label) ||
         DEFAULT_QUOTE_LABELS[valueLower] ||
         valueLower,
     });

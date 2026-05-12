@@ -10,8 +10,10 @@ const purchaseOrderSchema = new mongoose.Schema(
     vendorExternalRef: { type: String, default: "", trim: true },
     /** job = linked to Quote (RFQ#); shop = not linked */
     type: { type: String, required: true, enum: ["job", "shop"], default: "shop", trim: true },
-    /** Quote id (optional; for type "job") */
+    /** Quote id (optional; for type "job") — CRM RFQ when present */
     quoteId: { type: String, default: "", trim: true },
+    /** MotorRepairJob id (optional; for type "job") — job write-up number */
+    repairFlowJobId: { type: String, default: "", trim: true },
     /** Line items: description, qty, unit price, status for vendor delivery tracking */
     lineItems: [
       {
@@ -19,6 +21,8 @@ const purchaseOrderSchema = new mongoose.Schema(
         qty: { type: String, default: "1", trim: true },
         uom: { type: String, default: "", trim: true },
         unitPrice: { type: String, default: "", trim: true },
+        /** Tax rate for this line (percent, e.g. 8.25); line total = qty×unit×(1+tax%/100) */
+        taxPercent: { type: String, default: "0", trim: true },
         /** When set, logistics receiving this line adds qty to this inventory SKU */
         inventoryItemId: { type: String, default: "", trim: true },
         status: {
@@ -78,6 +82,7 @@ purchaseOrderSchema.index(
 );
 purchaseOrderSchema.index({ createdByEmail: 1, vendorId: 1 });
 purchaseOrderSchema.index({ createdByEmail: 1, quoteId: 1 });
+purchaseOrderSchema.index({ createdByEmail: 1, repairFlowJobId: 1 });
 purchaseOrderSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }

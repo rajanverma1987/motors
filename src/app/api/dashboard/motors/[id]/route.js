@@ -161,3 +161,29 @@ export async function PATCH(request, context) {
     return NextResponse.json({ error: err.message || "Failed to update motor" }, { status: 500 });
   }
 }
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const deleted = await Motor.findOneAndDelete({
+      _id: id,
+      createdByEmail: user.email.trim().toLowerCase(),
+    });
+    if (!deleted) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Dashboard delete motor error:", err);
+    return NextResponse.json({ error: "Failed to delete motor" }, { status: 500 });
+  }
+}

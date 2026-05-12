@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { parsePoLineTaxPercent, poLineTaxAmount, poLineTotalWithTax } from "@/lib/po-line-item-totals";
 
 export default function PoVendorViewPage() {
   const params = useParams();
@@ -164,15 +165,19 @@ export default function PoVendorViewPage() {
                   <th className="pb-2 pr-4 text-right font-medium text-secondary">Qty</th>
                   <th className="pb-2 pr-4 text-left font-medium text-secondary">UOM</th>
                   <th className="pb-2 pr-4 text-right font-medium text-secondary">Unit price</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-secondary">Tax %</th>
+                  <th className="pb-2 pr-4 text-right font-medium text-secondary">Tax</th>
                   <th className="pb-2 pr-4 text-right font-medium text-secondary">Total</th>
                   <th className="pb-2 text-left font-medium text-secondary print:hidden">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {lineItems.map((row, i) => {
-                  const q = parseFloat(row?.qty ?? "1");
-                  const p = parseFloat(row?.unitPrice ?? "0");
-                  const total = Number.isFinite(q) && Number.isFinite(p) ? (q * p).toFixed(2) : "—";
+                  const taxPct = parsePoLineTaxPercent(row?.taxPercent);
+                  const taxVal = poLineTaxAmount(row);
+                  const lineTot = poLineTotalWithTax(row);
+                  const total =
+                    lineTot != null && Number.isFinite(lineTot) ? lineTot.toFixed(2) : "—";
                   const status = row?.status ?? "Ordered";
                   return (
                     <tr key={i} className="border-b border-border">
@@ -180,6 +185,10 @@ export default function PoVendorViewPage() {
                       <td className="py-2 pr-4 text-right tabular-nums">{row?.qty ?? "—"}</td>
                       <td className="py-2 pr-4 text-title">{row?.uom || "—"}</td>
                       <td className="py-2 pr-4 text-right tabular-nums">{row?.unitPrice ? `$${row.unitPrice}` : "—"}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">{`${taxPct || 0}%`}</td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {taxVal != null && Number.isFinite(taxVal) ? `$${taxVal.toFixed(2)}` : "—"}
+                      </td>
                       <td className="py-2 pr-4 text-right tabular-nums">${total}</td>
                       <td className="py-2 print:hidden">
                         <select

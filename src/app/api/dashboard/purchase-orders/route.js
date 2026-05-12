@@ -6,6 +6,7 @@ import { LIMITS, clampString } from "@/lib/validation";
 import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items";
 import { getNextPoNumber } from "@/lib/purchase-order-numbers";
 import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
+import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
 
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
@@ -32,13 +33,7 @@ function normalizePayments(arr) {
 }
 
 function sumLineItems(lines) {
-  let sum = 0;
-  for (const row of lines) {
-    const q = parseFloat(row?.qty ?? "1");
-    const p = parseFloat(row?.unitPrice ?? "0");
-    if (Number.isFinite(q) && Number.isFinite(p)) sum += q * p;
-  }
-  return sum;
+  return sumPoLineItemsTaxInclusive(lines);
 }
 
 function sumAmounts(items, key = "amount") {
@@ -82,7 +77,7 @@ function computeDeliveryStatus(lineItems) {
   return allReceived ? "Delivered" : "Partial";
 }
 
-function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}) {
+function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {}) {
   const lineItems = Array.isArray(po.lineItems) ? po.lineItems : [];
   const vendorInvoices = Array.isArray(po.vendorInvoices) ? po.vendorInvoices : [];
   const payments = Array.isArray(po.payments) ? po.payments : [];
@@ -104,14 +99,18 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}) {
             : "Ordered",
   }));
   const deliveryStatus = computeDeliveryStatus(lineItemsWithStatus);
+  const qrf = po.quoteId ? (quoteRfqMap[String(po.quoteId)] ?? "") : "";
+  const jn = po.repairFlowJobId ? (jobNumberMap[String(po.repairFlowJobId)] ?? "") : "";
+  const linkLabel = jn || qrf || "—";
   return {
     id: po._id.toString(),
     poNumber: po.poNumber ?? "",
     vendorId: po.vendorId ?? "",
     type: po.type ?? "shop",
     quoteId: po.quoteId ?? "",
+    repairFlowJobId: po.repairFlowJobId ?? "",
     vendorName: vendorNameMap[po.vendorId] ?? po.vendorId ?? "—",
-    rfqNumber: quoteRfqMap[po.quoteId] ?? (po.quoteId ? "—" : ""),
+    rfqNumber: linkLabel,
     lineItems: lineItemsWithStatus,
     vendorInvoices,
     payments,
@@ -175,7 +174,16 @@ export async function GET(request) {
     for (const v of vendors) vendorNameMap[v._id.toString()] = v.name ?? "";
     for (const q of quotes) quoteRfqMap[q._id.toString()] = q.rfqNumber ?? "";
 
-    const listWithId = list.map((po) => toPoListItem({ ...po, _id: po._id }, vendorNameMap, quoteRfqMap));
+    const jobIds = [...new Set(list.map((p) => String(p.repairFlowJobId || "").trim()).filter(Boolean))];
+    const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
+    const jobsLean =
+      jobIds.length > 0
+        ? await MotorRepairJob.find({ _id: { $in: jobIds }, createdByEmail: email }).select("_id jobNumber").lean()
+        : [];
+    const jobNumberMap = {};
+    for (const j of jobsLean) jobNumberMap[j._id.toString()] = j.jobNumber ?? "";
+
+    const listWithId = list.map((po) => toPoListItem({ ...po, _id: po._id }, vendorNameMap, quoteRfqMap, jobNumberMap));
     if (!includePagination) return NextResponse.json(listWithId);
     return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
@@ -192,18 +200,38 @@ export async function POST(request) {
     }
     await connectDB();
     const body = await request.json();
-    const { vendorId, type, quoteId, lineItems, vendorInvoices, payments, notes, attachments } = body;
+    const {
+      vendorId,
+      type,
+      quoteId,
+      repairFlowJobId: bodyRepairFlowJobId,
+      lineItems,
+      vendorInvoices,
+      payments,
+      notes,
+      attachments,
+    } = body;
     if (!vendorId?.trim()) {
       return NextResponse.json({ error: "Vendor is required" }, { status: 400 });
     }
     const email = user.email.trim().toLowerCase();
     const poNumber = await getNextPoNumber(email);
     const typeVal = type === "job" ? "job" : "shop";
+    let qId = typeVal === "job" ? clampString(quoteId, 100) : "";
+    let rjId = typeVal === "job" ? clampString(bodyRepairFlowJobId, 100) : "";
+    if (typeVal === "job" && rjId) {
+      const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
+      const job = await MotorRepairJob.findOne({ _id: rjId, createdByEmail: email }).select("_id").lean();
+      if (!job) {
+        return NextResponse.json({ error: "Repair job not found" }, { status: 400 });
+      }
+    }
     const doc = await PurchaseOrder.create({
       poNumber,
       vendorId: vendorId.trim(),
       type: typeVal,
-      quoteId: typeVal === "job" ? clampString(quoteId, 100) : "",
+      quoteId: qId,
+      repairFlowJobId: rjId,
       lineItems: normalizePurchaseOrderLineItems(lineItems),
       vendorInvoices: normalizeVendorInvoices(vendorInvoices ?? []),
       payments: normalizePayments(payments ?? []),
@@ -223,6 +251,7 @@ export async function POST(request) {
         vendorId: po.vendorId,
         type: po.type,
         quoteId: po.quoteId ?? "",
+        repairFlowJobId: po.repairFlowJobId ?? "",
         lineItems: (po.lineItems ?? []).map((item) => ({ ...item, status: (item?.status === "Delivered" || item?.status === "Dispatch") ? "Dispatch" : "Ordered" })),
         vendorInvoices: po.vendorInvoices ?? [],
         payments: po.payments ?? [],
