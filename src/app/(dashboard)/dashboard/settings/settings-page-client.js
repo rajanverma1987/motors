@@ -468,7 +468,7 @@ export default function SettingsPageClient() {
                 Applied when creating new repair jobs, invoices (from a quote), and work orders. Letters, digits, hyphen,
                 and underscore only (max 16 characters). Hyphens are added automatically if you omit one (e.g.{" "}
                 <span className="font-mono text-title">ACME</span> becomes <span className="font-mono text-title">ACME-</span>
-                ).
+                ). If a quote RFQ# or work-order segment already starts with your prefix, it is not added again.
               </p>
               <div className="flex max-w-md flex-col gap-4">
                 <Input

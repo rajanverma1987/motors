@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import Invoice from "@/models/Invoice";
+import WorkOrder from "@/models/WorkOrder";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
@@ -42,10 +43,17 @@ export async function GET(request) {
     const motorLabel =
       [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ") || String(motor._id);
 
+    const wo = await WorkOrder.findOne({ createdByEmail: email, quoteId })
+      .sort({ createdAt: -1 })
+      .select("_id")
+      .lean();
+    const workOrderId = wo?._id?.toString() ?? null;
+
     return NextResponse.json({
       isDraft: true,
       draftQuoteId: quoteId,
       quoteId,
+      workOrderId,
       customerId: String(quote.customerId),
       motorId: String(quote.motorId),
       invoiceNumber: rfq,

@@ -109,20 +109,69 @@ export default function DashboardSalesCommissionPage() {
           ])
         );
         const quoteList = Array.isArray(qData) ? qData : [];
+        const invList = Array.isArray(invData) ? invData : Array.isArray(invData?.items) ? invData.items : [];
+        const invoiceByQuoteId = new Map();
+        for (const inv of invList) {
+          const qid = String(inv.quoteId || "").trim();
+          if (!qid) continue;
+          const invId = String(inv.id || "").trim();
+          const invNum = String(inv.invoiceNumber || "").trim();
+          if (!invNum) continue;
+          const createdMs = inv.createdAt ? new Date(inv.createdAt).getTime() : 0;
+          const prev = invoiceByQuoteId.get(qid);
+          if (!prev || createdMs >= prev.createdMs) {
+            invoiceByQuoteId.set(qid, { id: invId, invoiceNumber: invNum, createdMs });
+          }
+        }
+        const quoteIds = new Set(quoteList.map((q) => String(q.id || "").trim()).filter(Boolean));
         const fromQuotes = quoteList
           .filter((q) => String(q.rfqNumber || "").trim())
-          .map((q) => ({
-            value: `rfq:${q.id}`,
-            label: String(q.rfqNumber),
-            meta: {
-              jobNumber: String(q.rfqNumber),
-              quoteId: String(q.id || ""),
-              rfqNumber: String(q.rfqNumber || ""),
-              customerName: customerMap[String(q.customerId || "")] || "—",
-              jobStatus: String(q.status || "draft"),
-            },
-          }));
-        setJobOptions(fromQuotes);
+          .map((q) => {
+            const qid = String(q.id || "").trim();
+            const rfq = String(q.rfqNumber || "").trim();
+            const invMeta = invoiceByQuoteId.get(qid);
+            const invNum = invMeta?.invoiceNumber || "";
+            const label = invNum ? `${rfq} · Inv ${invNum}` : rfq;
+            return {
+              value: `rfq:${q.id}`,
+              label,
+              meta: {
+                jobNumber: invNum || rfq,
+                quoteId: qid,
+                rfqNumber: rfq,
+                invoiceId: invMeta?.id || "",
+                invoiceNumber: invNum,
+                customerName: customerMap[String(q.customerId || "")] || "—",
+                jobStatus: String(q.status || "draft"),
+              },
+            };
+          });
+        const fromInvoiceOnly = invList
+          .filter((inv) => {
+            const invNum = String(inv.invoiceNumber || "").trim();
+            const qid = String(inv.quoteId || "").trim();
+            return invNum && qid && !quoteIds.has(qid);
+          })
+          .map((inv) => {
+            const invNum = String(inv.invoiceNumber || "").trim();
+            const qid = String(inv.quoteId || "").trim();
+            const rfq = String(inv.rfqNumber || "").trim();
+            const label = rfq ? `${rfq} · Inv ${invNum}` : invNum;
+            return {
+              value: `inv:${String(inv.id || "").trim()}`,
+              label,
+              meta: {
+                jobNumber: invNum,
+                quoteId: qid,
+                rfqNumber: rfq,
+                invoiceId: String(inv.id || "").trim(),
+                invoiceNumber: invNum,
+                customerName: customerMap[String(inv.customerId || "")] || "—",
+                jobStatus: String(inv.status || "invoiced"),
+              },
+            };
+          });
+        setJobOptions([...fromQuotes, ...fromInvoiceOnly]);
       } catch {
         if (!cancelled) {
           setSalesPersons([]);
@@ -149,11 +198,16 @@ export default function DashboardSalesCommissionPage() {
     (row) => {
       const quoteId = String(row?.quoteId || "").trim();
       const rfqNumber = String(row?.rfqNumber || "").trim();
-      return (
-        jobOptions.find((opt) => String(opt?.meta?.quoteId || "") === quoteId)?.meta ||
-        jobOptions.find((opt) => String(opt?.meta?.rfqNumber || "") === rfqNumber)?.meta ||
-        null
-      );
+      const jobNum = String(row?.jobNumber || "").trim();
+      const opt =
+        jobOptions.find((opt) => String(opt?.meta?.quoteId || "") === quoteId && quoteId) ||
+        jobOptions.find((opt) => String(opt?.meta?.rfqNumber || "") === rfqNumber && rfqNumber) ||
+        (jobNum
+          ? jobOptions.find((opt) => String(opt?.meta?.invoiceNumber || "").trim() === jobNum)
+          : null) ||
+        (jobNum ? jobOptions.find((opt) => String(opt?.meta?.jobNumber || "").trim() === jobNum) : null) ||
+        null;
+      return opt?.meta || null;
     },
     [jobOptions]
   );
@@ -231,9 +285,14 @@ export default function DashboardSalesCommissionPage() {
   };
 
   const openEditModal = async (row) => {
+    const jobNum = String(row.jobNumber || "").trim();
     const matchedOption =
       jobOptions.find((opt) => opt.meta?.quoteId && opt.meta.quoteId === String(row.quoteId || "")) ||
-      jobOptions.find((opt) => opt.meta?.rfqNumber && opt.meta.rfqNumber === String(row.rfqNumber || ""));
+      jobOptions.find((opt) => opt.meta?.rfqNumber && opt.meta.rfqNumber === String(row.rfqNumber || "")) ||
+      (jobNum
+        ? jobOptions.find((opt) => String(opt.meta?.invoiceNumber || "").trim() === jobNum)
+        : null) ||
+      (jobNum ? jobOptions.find((opt) => String(opt.meta?.jobNumber || "").trim() === jobNum) : null);
     const fallbackJobNumber = String(row.jobNumber || row.rfqNumber || "").trim();
     const jobKey = matchedOption?.value || (fallbackJobNumber ? `manual:${row.id}` : "");
     if (jobKey.startsWith("manual:")) {

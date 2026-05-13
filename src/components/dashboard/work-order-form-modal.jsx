@@ -378,7 +378,7 @@ export default function WorkOrderFormModal({
         <Form
           id="wo-form-modal"
           onSubmit={handleSave}
-          className="flex max-h-[82vh] flex-col gap-5 overflow-y-auto pr-1 !space-y-0"
+          className="flex min-h-0 flex-col gap-5 !space-y-0"
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Input

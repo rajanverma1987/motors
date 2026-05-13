@@ -12,6 +12,7 @@ import {
   FiFileText,
   FiDollarSign,
   FiTool,
+  FiClipboard,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -1340,8 +1341,25 @@ export default function DashboardQuotesPage() {
         headerClassName="flex-wrap"
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEditModal} disabled={savingQuote}>
-              Cancel
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={savingQuote || !String(viewingQuote?.workOrderId || "").trim()}
+              className="inline-flex shrink-0 items-center gap-1.5"
+              title={
+                String(viewingQuote?.workOrderId || "").trim()
+                  ? "Open work order for this quote"
+                  : "Create a work order from the quote row first"
+              }
+              onClick={() => {
+                const wid = String(viewingQuote?.workOrderId || "").trim();
+                if (!wid) return;
+                setWorkOrderModal({ workOrderId: wid });
+              }}
+            >
+              <FiClipboard className="h-4 w-4 shrink-0" aria-hidden />
+              View Job
             </Button>
             <Button
               type="submit"
@@ -1599,7 +1617,7 @@ export default function DashboardQuotesPage() {
       <WorkOrderFormModal
         open={!!workOrderModal}
         draftQuoteId={workOrderModal?.draftQuoteId ?? null}
-        workOrderId={null}
+        workOrderId={workOrderModal?.workOrderId ?? null}
         onClose={() => setWorkOrderModal(null)}
         zIndex={60}
       />

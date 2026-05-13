@@ -82,6 +82,14 @@ export async function GET(request, context) {
     const motorRepairFlowQuoteId = String(obj.motorRepairFlowQuoteId ?? "").trim();
     const repairFlowJobId = await resolveRepairFlowJobIdForQuote(obj, user.email);
     const email = user.email.trim().toLowerCase();
+    const quoteIdStr = obj._id?.toString?.() ?? String(obj._id);
+    const workOrderForQuote = await WorkOrder.findOne({
+      createdByEmail: email,
+      quoteId: quoteIdStr,
+    })
+      .sort({ createdAt: -1 })
+      .select("_id")
+      .lean();
     const [customer, motor, owner, settingsDoc, preparedByDisplay] = await Promise.all([
       obj.customerId
         ? Customer.findOne({ _id: obj.customerId, createdByEmail: email }).lean()
@@ -107,6 +115,7 @@ export async function GET(request, context) {
     const fromShopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
     const out = {
       id: obj._id?.toString?.() ?? String(obj._id),
+      workOrderId: workOrderForQuote?._id?.toString() ?? null,
       customerId: obj.customerId ?? "",
       motorId: obj.motorId ?? "",
       leadId: obj.leadId ?? "",

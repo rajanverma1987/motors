@@ -3,13 +3,14 @@ import crypto from "crypto";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import Invoice from "@/models/Invoice";
+import WorkOrder from "@/models/WorkOrder";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { effectiveInvoiceNumberPrefix } from "@/lib/document-number-prefixes";
+import { effectiveInvoiceNumberPrefix, applyDocumentPrefixIfAbsent } from "@/lib/document-number-prefixes";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -169,7 +170,7 @@ export async function POST(request) {
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const u = mergeUserSettings(settingsDoc?.settings);
     const invPrefix = effectiveInvoiceNumberPrefix(u);
-    const invoiceNumber = invPrefix ? `${invPrefix}${rfq}` : rfq;
+    const invoiceNumber = applyDocumentPrefixIfAbsent(invPrefix, rfq);
     const doc = await Invoice.create({
       quoteId,
       customerId: String(quote.customerId || ""),
@@ -194,7 +195,12 @@ export async function POST(request) {
       createdByEmail: email,
     });
     const o = doc.toObject();
-    return NextResponse.json({ ok: true, invoice: { ...o, id: doc._id.toString(), _id: undefined } });
+    const wo = await WorkOrder.findOne({ createdByEmail: email, quoteId })
+      .sort({ createdAt: -1 })
+      .select("_id")
+      .lean();
+    const workOrderId = wo?._id?.toString() ?? null;
+    return NextResponse.json({ ok: true, invoice: { ...o, id: doc._id.toString(), _id: undefined, workOrderId } });
   } catch (err) {
     console.error("Invoice create:", err);
     if (err.code === 11000) {

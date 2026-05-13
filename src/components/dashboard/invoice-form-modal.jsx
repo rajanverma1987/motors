@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Modal from "@/components/ui/modal";
 import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Button from "@/components/ui/button";
@@ -16,11 +16,12 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
-import { FiSave, FiEdit2, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
+import { FiSave, FiSend, FiPrinter, FiTrash2, FiRotateCw, FiClipboard } from "react-icons/fi";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
@@ -87,6 +88,7 @@ const emptyForm = () => ({
   customerNotes: "",
   notes: "",
   status: "draft",
+  workOrderId: null,
 });
 
 export default function InvoiceFormModal({
@@ -108,7 +110,6 @@ export default function InvoiceFormModal({
     [mergedAccountSettings]
   );
   const fmt = useFormatMoney();
-  const formScrollRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [headerBusy, setHeaderBusy] = useState(false);
@@ -119,6 +120,7 @@ export default function InvoiceFormModal({
   const [savedId, setSavedId] = useState(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [printPayload, setPrintPayload] = useState(null);
+  const [invoiceWorkOrderModalId, setInvoiceWorkOrderModalId] = useState(null);
 
   const persistedId = invoiceId || savedId;
   const canUseRecordActions = !!persistedId && !loading;
@@ -149,6 +151,7 @@ export default function InvoiceFormModal({
     if (!open) {
       setForm(emptyForm());
       setSavedId(null);
+      setInvoiceWorkOrderModalId(null);
       return;
     }
     let cancelled = false;
@@ -210,6 +213,7 @@ export default function InvoiceFormModal({
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
             status: normalizeInvoiceStatusSlug(d.status, mergedAccountSettings),
+            workOrderId: d.workOrderId ?? null,
           });
         } catch (e) {
           if (!cancelled) toast.error(e.message || "Could not load invoice draft");
@@ -248,6 +252,7 @@ export default function InvoiceFormModal({
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
             status: normalizeInvoiceStatusSlug(d.status, mergedAccountSettings),
+            workOrderId: d.workOrderId ?? null,
           });
         } catch (e) {
           if (!cancelled) toast.error(e.message || "Could not load invoice");
@@ -260,10 +265,6 @@ export default function InvoiceFormModal({
       cancelled = true;
     };
   }, [open, draftQuoteId, invoiceId, onSwitchToInvoice, toast, mergedAccountSettings]);
-
-  const scrollToForm = () => {
-    formScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   const handleHeaderSend = async () => {
     if (!persistedId) return;
@@ -397,6 +398,10 @@ export default function InvoiceFormModal({
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || "Save failed");
         toast.success("Invoice saved.");
+        setForm((f) => ({
+          ...f,
+          workOrderId: d.invoice?.workOrderId ?? f.workOrderId ?? null,
+        }));
       } else {
         const res = await fetch("/api/dashboard/invoices", {
           method: "POST",
@@ -426,7 +431,13 @@ export default function InvoiceFormModal({
         toast.success("Invoice saved.");
         setSavedId(d.invoice?.id || null);
         if (d.invoice?.id) {
-          setForm((f) => ({ ...f, ...d.invoice, customerName: f.customerName, motorLabel: f.motorLabel }));
+          setForm((f) => ({
+            ...f,
+            ...d.invoice,
+            customerName: f.customerName,
+            motorLabel: f.motorLabel,
+            workOrderId: d.invoice?.workOrderId ?? f.workOrderId ?? null,
+          }));
         }
       }
       onAfterSave?.();
@@ -451,14 +462,6 @@ export default function InvoiceFormModal({
   const invoiceActionsMenuItems = useMemo(() => {
     if (!canUseRecordActions) return [];
     return [
-      {
-        key: "scroll",
-        label: "Scroll to form",
-        icon: <FiEdit2 className={MENU_IC} />,
-        disabled: headerDisabled,
-        title: "Scroll to form",
-        onClick: scrollToForm,
-      },
       {
         key: "send",
         label: isSendingToClient ? "Sending…" : "Send to client",
@@ -492,7 +495,6 @@ export default function InvoiceFormModal({
     canUseRecordActions,
     headerDisabled,
     isSendingToClient,
-    scrollToForm,
     handleHeaderSend,
     handleHeaderPrint,
     handleHeaderDelete,
@@ -509,6 +511,26 @@ export default function InvoiceFormModal({
       zIndex={zIndex}
       actions={
         <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={headerDisabled || !String(form.workOrderId || "").trim()}
+            className="inline-flex shrink-0 items-center gap-1.5"
+            title={
+              String(form.workOrderId || "").trim()
+                ? "Open work order for this quote"
+                : "No work order linked to this quote’s RFQ yet"
+            }
+            onClick={() => {
+              const wid = String(form.workOrderId || "").trim();
+              if (!wid) return;
+              setInvoiceWorkOrderModalId(wid);
+            }}
+          >
+            <FiClipboard className="h-4 w-4 shrink-0" aria-hidden />
+            View Job
+          </Button>
           {canUseRecordActions ? (
             <ModalActionsDropdown items={invoiceActionsMenuItems} menuZIndex={zIndex + 25} />
           ) : null}
@@ -524,7 +546,7 @@ export default function InvoiceFormModal({
               "Saving…"
             ) : (
               <>
-                <FiSave className="h-4 w-4 shrink-0" />
+                <FiSave className="h-4 w-4 shrink-0" aria-hidden />
                 Save
               </>
             )}
@@ -536,7 +558,7 @@ export default function InvoiceFormModal({
         <div className="flex justify-center py-16 text-secondary">Loading…</div>
       ) : (
         <Form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-          <div ref={formScrollRef} className="rounded-lg border border-border bg-card/50 p-4">
+          <div className="rounded-lg border border-border bg-card/50 p-4">
             <p className="text-sm font-medium text-title">Invoice # {form.invoiceNumber || "—"}</p>
             <p className="text-sm text-secondary">{isNew ? "Not saved until you click Save." : ""}</p>
             <p className="mt-2 text-sm">
@@ -679,6 +701,14 @@ export default function InvoiceFormModal({
         </Form>
       )}
     </Modal>
+
+    <WorkOrderFormModal
+      open={!!invoiceWorkOrderModalId}
+      draftQuoteId={null}
+      workOrderId={invoiceWorkOrderModalId}
+      onClose={() => setInvoiceWorkOrderModalId(null)}
+      zIndex={(zIndex ?? 50) + 10}
+    />
 
     <InvoicePrintOffscreen
       open={printOpen}

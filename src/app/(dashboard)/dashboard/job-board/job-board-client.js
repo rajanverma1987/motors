@@ -62,7 +62,11 @@ export default function JobBoardClient({
         fetch("/api/dashboard/work-orders", { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/settings", { credentials: "include", cache: "no-store" }),
       ]);
-      if (woRes.ok) setWorkOrders(await woRes.json());
+      if (woRes.ok) {
+        const raw = await woRes.json();
+        const list = Array.isArray(raw) ? raw : Array.isArray(raw?.items) ? raw.items : [];
+        setWorkOrders(list);
+      }
       if (setRes.ok) {
         const d = await setRes.json();
         const u = mergeUserSettings(d.settings);
@@ -185,7 +189,7 @@ export default function JobBoardClient({
             Shop floor job board
           </h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-secondary">
-            Kanban columns from Settings → Display (shop floor order).
+            Kanban columns follow your work order statuses in Settings → Dropdowns (order with ↑ / ↓).
           </p>
         </div>
         <div className="flex items-center gap-3">

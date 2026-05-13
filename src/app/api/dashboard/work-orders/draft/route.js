@@ -10,6 +10,7 @@ import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { effectiveWorkOrderNumberPrefix } from "@/lib/document-number-prefixes";
+import { nextWorkOrderNumberSuggestion } from "@/lib/work-order-factory";
 import {
   motorClassFromMotorType,
   prefillSpecsFromMotor,
@@ -27,32 +28,9 @@ function initialStatusFromSettings(settingsDoc) {
 }
 
 /**
- * Suggest the next work order number for this account + Job#/RFQ slug.
- * Purely read-only; actual creation happens in POST /api/dashboard/work-orders.
+ * Preview work order fields from quote — does not persist.
+ * Actual creation happens in POST /api/dashboard/work-orders.
  */
-async function suggestWorkOrderNumber(email, safeSegment, woHead) {
-  const head = String(woHead || "W-");
-  const escHead = head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escSeg = String(safeSegment).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = `^${escHead}${escSeg}-\\d+$`;
-  const latest = await WorkOrder.findOne({
-    createdByEmail: email,
-    workOrderNumber: { $regex: pattern },
-  })
-    .sort({ createdAt: -1, workOrderNumber: -1 })
-    .lean();
-
-  let next = 1;
-  if (latest?.workOrderNumber) {
-    const parts = String(latest.workOrderNumber).split("-");
-    const suffixRaw = parts[parts.length - 1];
-    const parsed = Number.parseInt(suffixRaw, 10);
-    if (Number.isFinite(parsed) && parsed > 0) next = parsed + 1;
-  }
-  return `${head}${safeSegment}-${next}`;
-}
-
-/** Preview work order fields from quote — does not persist. */
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -104,7 +82,7 @@ export async function GET(request) {
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const merged = mergeUserSettings(settingsDoc?.settings);
     const woHead = effectiveWorkOrderNumberPrefix(merged);
-    const workOrderNumber = await suggestWorkOrderNumber(email, safeSegment, woHead);
+    const workOrderNumber = await nextWorkOrderNumberSuggestion(email, safeSegment, woHead);
     const motorClass = motorClassFromMotorType(motor.motorType);
     const today = new Date().toISOString().slice(0, 10);
 

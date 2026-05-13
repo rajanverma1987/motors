@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useModalStack } from "@/components/modal-provider";
 
@@ -23,6 +23,28 @@ function toCssValue(v) {
   if (v == null) return undefined;
   if (typeof v === "number") return `${v}px`;
   return String(v);
+}
+
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "textarea:not([disabled])",
+  'input:not([disabled]):not([type="hidden"])',
+  "select:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
+/** Visible, keyboard-focusable nodes inside a dialog (for Tab wrap). */
+function getFocusableElements(container) {
+  if (!container || typeof container.querySelectorAll !== "function") return [];
+  const elements = Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
+  return elements.filter((el) => {
+    if (el.closest("[inert]") != null) return false;
+    const style = window.getComputedStyle(el);
+    if (style.visibility === "hidden" || style.display === "none") return false;
+    if (el.getAttribute("aria-hidden") === "true") return false;
+    return el.offsetParent !== null || style.position === "fixed";
+  });
 }
 
 export default function Modal({
@@ -51,6 +73,11 @@ export default function Modal({
   const [dragging, setDragging] = useState(false);
   const dragStartRef = useRef({ clientX: 0, clientY: 0, posX: 0, posY: 0 });
   const dialogRef = useRef(null);
+  const modalStackRef = useRef([]);
+
+  useLayoutEffect(() => {
+    modalStackRef.current = stackContext?.stack ?? [];
+  }, [stackContext?.stack]);
 
   const handleHeaderMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -93,20 +120,87 @@ export default function Modal({
     };
   }, [dragging]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (addModal && removeModal) {
-      const id = addModal(onClose);
-      // Defer so we don't sync-setState in the effect body (react-hooks/set-state-in-effect).
-      queueMicrotask(() => setModalId(id));
-      return () => {
-        removeModal(id);
-        queueMicrotask(() => setModalId(null));
-      };
+  /** Move focus into the dialog when it opens; restore previous focus when it closes. */
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const root = dialogRef.current;
+    if (!root) return undefined;
+    const prev = document.activeElement;
+    const nodes = getFocusableElements(root);
+    if (nodes.length > 0) {
+      nodes[0].focus({ preventScroll: true });
+    } else {
+      try {
+        root.focus({ preventScroll: true });
+      } catch {
+        /* ignore */
+      }
     }
-    const handler = (e) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => {
+      if (prev && typeof prev.focus === "function" && document.body.contains(prev)) {
+        try {
+          prev.focus({ preventScroll: true });
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    let registeredId = null;
+    if (addModal && removeModal) {
+      registeredId = addModal(onClose);
+      queueMicrotask(() => setModalId(registeredId));
+    }
+
+    const isTopModal = () => {
+      if (!registeredId) return true;
+      const s = modalStackRef.current;
+      if (!s?.length) return true;
+      return s[s.length - 1].id === registeredId;
+    };
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        if (!addModal) {
+          onClose();
+        }
+        return;
+      }
+      if (e.key !== "Tab") return;
+      if (!isTopModal()) return;
+
+      const root = dialogRef.current;
+      if (!root) return;
+      if (!root.contains(document.activeElement)) return;
+
+      const nodes = getFocusableElements(root);
+      if (nodes.length === 0) return;
+
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown, true);
+      if (registeredId != null && removeModal) {
+        removeModal(registeredId);
+        queueMicrotask(() => setModalId(null));
+      }
+    };
   }, [open, onClose, addModal, removeModal]);
 
   if (!open) return null;
@@ -144,8 +238,9 @@ export default function Modal({
       />
       <div
         ref={dialogRef}
+        tabIndex={-1}
         style={dialogStyle}
-        className={`absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
+        className={`absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title != null || showClose || actions) && (

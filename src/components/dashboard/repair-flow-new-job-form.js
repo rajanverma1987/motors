@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { FiEye } from "react-icons/fi";
+import { FiEye, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Select from "@/components/ui/select";
@@ -60,7 +60,6 @@ async function postJson(url, body) {
   return data;
 }
 
-const ADD_CUSTOMER_VALUE = "__add_customer__";
 const ADD_MOTOR_VALUE = "__add_motor__";
 
 const INITIAL_NEW_CUSTOMER = {
@@ -210,16 +209,14 @@ export default function RepairFlowNewJobForm({
 
   const customerOptions = useMemo(() => {
     const placeholderLabel =
-      customers.length > 0 ? "Select customer…" : "No customers yet — use Add new or pick below";
+      customers.length > 0 ? "Select customer…" : "No customers yet — use + beside this field to add one";
     const head = [{ value: "", label: placeholderLabel }];
     const rows = customers.map((c) => ({
       value: c.id,
       label: c.companyName || c.primaryContactName || c.email || c.id,
     }));
-    const addRow =
-      !createLocked && !loading ? [{ value: ADD_CUSTOMER_VALUE, label: "Add new customer…" }] : [];
-    return head.concat(rows).concat(addRow);
-  }, [customers, createLocked, loading]);
+    return head.concat(rows);
+  }, [customers]);
 
   const motorOptions = useMemo(() => {
     if (!customerId) {
@@ -237,14 +234,14 @@ export default function RepairFlowNewJobForm({
     return head.concat(rows).concat(addRow);
   }, [customerId, motorsForCustomer, createLocked, loading]);
 
+  function openAddCustomerModal() {
+    if (createLocked || loading) return;
+    setNewCustomerForm({ ...INITIAL_NEW_CUSTOMER });
+    setAddCustomerOpen(true);
+  }
+
   function handleCustomerSelect(e) {
-    const v = e.target.value ?? "";
-    if (v === ADD_CUSTOMER_VALUE) {
-      setNewCustomerForm({ ...INITIAL_NEW_CUSTOMER });
-      setAddCustomerOpen(true);
-      return;
-    }
-    setCustomerId(v);
+    setCustomerId(e.target.value ?? "");
     setMotorId("");
   }
 
@@ -551,15 +548,28 @@ export default function RepairFlowNewJobForm({
     <div className="w-full min-w-0 max-w-none space-y-8">
       <Form id={formId} onSubmit={handleCreateSubmit} className="w-full min-w-0 max-w-none space-y-6">
         <div className="grid grid-cols-1 gap-4 min-w-0 md:grid-cols-2 md:gap-6">
-          <div className="min-w-0">
-            <Select
-              label="Customer"
-              options={customerOptions}
-              value={customerId}
-              onChange={handleCustomerSelect}
+          <div className="flex min-w-0 gap-2 items-end">
+            <div className="min-w-0 flex-1">
+              <Select
+                label="Customer"
+                options={customerOptions}
+                value={customerId}
+                onChange={handleCustomerSelect}
+                disabled={loading || createLocked}
+                searchable
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 min-h-[2.5rem] w-10 shrink-0 !p-0 text-primary hover:bg-primary/10"
+              title="Add new customer"
+              aria-label="Add new customer"
               disabled={loading || createLocked}
-              searchable
-            />
+              onClick={openAddCustomerModal}
+            >
+              <FiUserPlus className="h-4 w-4 shrink-0" aria-hidden />
+            </Button>
           </div>
           <div className="min-w-0">
             <Select

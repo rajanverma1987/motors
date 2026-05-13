@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Invoice from "@/models/Invoice";
+import WorkOrder from "@/models/WorkOrder";
 import Customer from "@/models/Customer";
 import Motor from "@/models/Motor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
@@ -79,10 +80,21 @@ export async function GET(request, context) {
     const invPaid = invoiceTotalPaid(inv);
     const invBal = invoiceBalance(inv);
 
+    const quoteIdStr = String(inv.quoteId || "").trim();
+    let workOrderId = null;
+    if (quoteIdStr) {
+      const wo = await WorkOrder.findOne({ createdByEmail: email, quoteId: quoteIdStr })
+        .sort({ createdAt: -1 })
+        .select("_id")
+        .lean();
+      workOrderId = wo?._id?.toString() ?? null;
+    }
+
     return NextResponse.json({
       ...inv,
       id: inv._id.toString(),
       _id: undefined,
+      workOrderId,
       customerName,
       customerToName,
       customerBillingAddress,
@@ -140,7 +152,19 @@ export async function PATCH(request, context) {
     if (partsLines) doc.partsLines = partsLines;
     await doc.save();
     const o = doc.toObject();
-    return NextResponse.json({ ok: true, invoice: { ...o, id: doc._id.toString(), _id: undefined } });
+    const quoteIdStr = String(doc.quoteId || "").trim();
+    let workOrderId = null;
+    if (quoteIdStr) {
+      const wo = await WorkOrder.findOne({ createdByEmail: email, quoteId: quoteIdStr })
+        .sort({ createdAt: -1 })
+        .select("_id")
+        .lean();
+      workOrderId = wo?._id?.toString() ?? null;
+    }
+    return NextResponse.json({
+      ok: true,
+      invoice: { ...o, id: doc._id.toString(), _id: undefined, workOrderId },
+    });
   } catch (err) {
     console.error("Invoice PATCH:", err);
     return NextResponse.json({ error: err.message || "Failed" }, { status: 500 });

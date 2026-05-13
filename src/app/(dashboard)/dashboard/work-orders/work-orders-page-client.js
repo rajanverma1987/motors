@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { FiLayers } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Select from "@/components/ui/select";
+import Button from "@/components/ui/button";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
@@ -43,12 +45,14 @@ export default function WorkOrdersPageClient() {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
+  const [backfillBusy, setBackfillBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (statusFilter.trim()) params.set("status", statusFilter.trim());
       if (tableSort?.key) {
         params.set("sortBy", tableSort.key);
         params.set("sortDir", tableSort.direction || "asc");
@@ -78,7 +82,7 @@ export default function WorkOrdersPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort]);
+  }, [page, pageSize, searchQuery, tableSort, statusFilter]);
 
   useEffect(() => {
     load();
@@ -127,16 +131,58 @@ export default function WorkOrdersPageClient() {
     [confirm, toast, load]
   );
 
-  const rowsAfterStatus = useMemo(() => {
-    if (!statusFilter.trim()) return rows;
-    const want = statusFilter.trim().toLowerCase();
-    return rows.filter((r) => (r.status || "").trim().toLowerCase() === want);
-  }, [rows, statusFilter]);
-
   const handleTableSort = useCallback((key, direction) => {
     setPage(1);
     setTableSort({ key, direction });
   }, []);
+
+  const handleBackfillFromInvoices = useCallback(async () => {
+    setBackfillBusy(true);
+    try {
+      const dryRes = await fetch("/api/dashboard/work-orders/backfill-from-invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dryRun: true }),
+      });
+      const dry = await dryRes.json().catch(() => ({}));
+      if (!dryRes.ok) throw new Error(dry.error || "Preview failed");
+      const previewCount = Number(dry.previewCount) || 0;
+      const closedStatusUsed = String(dry.closedStatusUsed || "").trim() || "—";
+      if (previewCount === 0) {
+        toast.info("No invoice-linked quotes are missing a work order. Nothing to create.");
+        return;
+      }
+      const ok = await confirm({
+        title: "Create work orders from invoices?",
+        message: `Found ${previewCount} invoice(s) whose quote has no work order yet. Each will get a new work order with status “${closedStatusUsed}” (from your Settings → work order statuses). Inventory reservation and board notifications are skipped. Continue?`,
+        confirmLabel: "Create work orders",
+      });
+      if (!ok) return;
+      const runRes = await fetch("/api/dashboard/work-orders/backfill-from-invoices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ dryRun: false }),
+      });
+      const run = await runRes.json().catch(() => ({}));
+      if (!runRes.ok) throw new Error(run.error || "Backfill failed");
+      const createdCount = Number(run.createdCount) || 0;
+      const errCount = Number(run.errorCount) || 0;
+      toast.success(
+        `Created ${createdCount} work order(s).${errCount ? ` ${errCount} row(s) failed — see browser console for details.` : ""}`
+      );
+      if (errCount > 0) {
+        console.warn("Work order backfill errors:", run.errors);
+      }
+      setPage(1);
+      await load();
+    } catch (e) {
+      toast.error(e.message || "Backfill failed");
+    } finally {
+      setBackfillBusy(false);
+    }
+  }, [confirm, load, toast]);
 
   const columns = useMemo(
     () => [
@@ -179,13 +225,34 @@ export default function WorkOrdersPageClient() {
   return (
     <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
       <div className="mb-4 shrink-0 border-b border-border pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h1 className="text-2xl font-bold text-title">Work orders</h1>
-          <div className="shrink-0 min-w-0">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-title">Work orders</h1>
+            <p className="mt-2 text-sm text-secondary">
+              Shop jobs from approved quotes—filter by status below. Use{" "}
+              <span className="font-medium text-title">Create from invoices</span> if you invoiced quotes before
+              creating work orders: it adds one closed-style work order per missing quote.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={backfillBusy || loading}
+              onClick={handleBackfillFromInvoices}
+              className="whitespace-nowrap"
+            >
+              <FiLayers className="h-4 w-4 shrink-0" aria-hidden />
+              {backfillBusy ? "Working…" : "Create from invoices"}
+            </Button>
             <Select
               id="wo-table-status-filter"
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value ?? "")}
+              onChange={(e) => {
+                setPage(1);
+                setStatusFilter(e.target.value ?? "");
+              }}
               options={[{ value: "", label: "All statuses" }, ...statusSelectOptions]}
               searchable={false}
               placeholder="All statuses"
@@ -193,13 +260,10 @@ export default function WorkOrdersPageClient() {
             />
           </div>
         </div>
-        <p className="mt-2 text-sm text-secondary">
-          Shop jobs from approved quotes—filter by status below.
-        </p>
       </div>
       <Table
         columns={columns}
-        data={rowsAfterStatus}
+        data={rows}
         rowKey="id"
         loading={loading}
         fillHeight
@@ -222,10 +286,12 @@ export default function WorkOrdersPageClient() {
         paginateClientSide={false}
         emptyMessage={
           rows.length === 0
-            ? "No work orders yet. Create from an approved quote on the Quotes page (row icon) or Job Write-Up."
-            : statusFilter.trim()
-                ? "No work orders with this status."
-                : "No work orders match your search."
+            ? statusFilter.trim()
+              ? "No work orders with this status."
+              : searchQuery.trim()
+                ? "No work orders match your search."
+                : "No work orders yet. Create from an approved quote on the Quotes page (row icon) or Job Write-Up."
+            : ""
         }
       />
 
