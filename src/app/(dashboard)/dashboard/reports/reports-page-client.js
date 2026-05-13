@@ -5,8 +5,9 @@ import Link from "next/link";
 import { FiRefreshCw, FiPackage } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { invoiceStatusLabel } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
 import DashboardPeriodFilter from "@/components/dashboard/dashboard-period-filter";
 import { rangeToQueryParams } from "@/lib/dashboard-period";
 
@@ -137,6 +138,8 @@ function ReportTable({ columns, rows, empty }) {
 export default function ReportsPageClient() {
   const toast = useToast();
   const fmt = useFormatMoney();
+  const { settings: accountSettings } = useUserSettings();
+  const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
   const [data, setData] = useState(null);
   const [commissionRows, setCommissionRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -478,7 +481,7 @@ export default function ReportsPageClient() {
                 {
                   key: "status",
                   label: "Status",
-                  render: (slug) => invoiceStatusLabel(slug) || slug,
+                  render: (slug) => invoiceStatusLabel(slug, mergedAccountSettings) || slug,
                 },
                 { key: "count", label: "Count", align: "right" },
               ]}

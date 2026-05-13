@@ -20,6 +20,17 @@ const DEFAULT_QUOTE_LABELS = {
 };
 
 const MAX_QUOTE_STATUS_OPTIONS = 25;
+const MAX_INVOICE_STATUS_OPTIONS = 25;
+
+/** Default invoice statuses when Settings → Dropdowns has never been configured. */
+export const DEFAULT_INVOICE_STATUS_VALUES = ["draft", "sent", "partial_paid", "fully_paid"];
+
+const DEFAULT_INVOICE_LABELS = {
+  draft: "Draft",
+  sent: "Sent",
+  partial_paid: "Partial Paid",
+  fully_paid: "Fully Paid",
+};
 
 export const DROPDOWN_DEFINITIONS = {
   quote_status: {
@@ -29,6 +40,10 @@ export const DROPDOWN_DEFINITIONS = {
   work_order_status: {
     key: "work_order_status",
     label: "Work order status",
+  },
+  invoice_status: {
+    key: "invoice_status",
+    label: "Invoice status",
   },
 };
 
@@ -87,6 +102,37 @@ function normalizeQuoteEntries(rawEntries) {
   return uniq;
 }
 
+function normalizeInvoiceEntries(rawEntries) {
+  let list = Array.isArray(rawEntries) ? rawEntries.map(normalizeWoEntry).filter(Boolean) : [];
+
+  const seen = new Set();
+  const uniq = [];
+  for (const row of list) {
+    const valueLower = row.value.toLowerCase();
+    if (seen.has(valueLower)) continue;
+    seen.add(valueLower);
+    uniq.push({
+      ...row,
+      value: valueLower,
+      label:
+        clampDropdownLabel(row.label) ||
+        DEFAULT_INVOICE_LABELS[valueLower] ||
+        valueLower,
+      tileColor: validTileColor(row.tileColor),
+    });
+    if (uniq.length >= MAX_INVOICE_STATUS_OPTIONS) break;
+  }
+
+  if (!uniq.length) {
+    return DEFAULT_INVOICE_STATUS_VALUES.map((value) => ({
+      value,
+      label: DEFAULT_INVOICE_LABELS[value] || value,
+      tileColor: "",
+    }));
+  }
+  return uniq;
+}
+
 function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles) {
   const tiles =
     legacyTiles && typeof legacyTiles === "object" && !Array.isArray(legacyTiles) ? legacyTiles : {};
@@ -129,6 +175,7 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
   const obj = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const quoteRaw = obj.quote_status && typeof obj.quote_status === "object" ? obj.quote_status : {};
   const woRaw = obj.work_order_status && typeof obj.work_order_status === "object" ? obj.work_order_status : {};
+  const invRaw = obj.invoice_status && typeof obj.invoice_status === "object" ? obj.invoice_status : {};
 
   return {
     quote_status: {
@@ -136,6 +183,9 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
     },
     work_order_status: {
       entries: normalizeWoEntries(woRaw.entries, legacyWoStatuses, legacyWoTiles),
+    },
+    invoice_status: {
+      entries: normalizeInvoiceEntries(invRaw.entries),
     },
   };
 }
@@ -175,6 +225,32 @@ export function quoteStatusTileColorForValue(mergedSettings, value, fallbackInde
   const idx = list.findIndex((e) => String(e.value ?? "").toLowerCase().trim() === v);
   const tile = idx >= 0 ? list[idx].tileColor : "";
   return { tileColor: tile, index: idx >= 0 ? idx : fallbackIndex };
+}
+
+/** Allowed invoice status slugs (lowercase) from merged settings. */
+export function invoiceStatusAllowedSlugs(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.invoice_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeInvoiceEntries([]);
+  return list.map((e) => String(e.value ?? "").trim().toLowerCase()).filter(Boolean);
+}
+
+export function invoiceStatusSelectOptionsFromMerged(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.invoice_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeInvoiceEntries([]);
+  return list.map((e) => {
+    const value = String(e.value ?? "").trim().toLowerCase();
+    return {
+      value,
+      label: clampDropdownLabel(e.label) || DEFAULT_INVOICE_LABELS[value] || value,
+    };
+  });
+}
+
+export function invoiceStatusEntryForSlug(mergedSettings, slug) {
+  const v = String(slug ?? "").trim().toLowerCase();
+  const entries = mergedSettings?.controlledDropdowns?.invoice_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeInvoiceEntries([]);
+  return list.find((e) => String(e.value ?? "").trim().toLowerCase() === v) || null;
 }
 
 /** @param {unknown} bodyVal */

@@ -19,7 +19,9 @@ import {
 } from "react-icons/fi";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
-import { normalizeInvoiceStatusSlug, INVOICE_STATUS_OPTIONS } from "@/lib/invoice-status";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import DashboardPeriodFilter from "@/components/dashboard/dashboard-period-filter";
 import { isOpenInvoiceOverdueForTerms } from "@/lib/accounts-payment-terms";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
@@ -60,14 +62,15 @@ function countByStatus(items, statusKey, labels) {
   return out;
 }
 
-function countInvoiceBySlug(items) {
+function countInvoiceBySlug(items, mergedSettings) {
+  const merged = mergeUserSettings(mergedSettings);
   const out = {};
-  INVOICE_STATUS_OPTIONS.forEach((o) => {
+  invoiceStatusSelectOptionsFromMerged(merged).forEach((o) => {
     out[o.value] = 0;
   });
   if (!Array.isArray(items)) return out;
   items.forEach((inv) => {
-    const slug = normalizeInvoiceStatusSlug(inv.status);
+    const slug = normalizeInvoiceStatusSlug(inv.status, merged);
     if (out[slug] !== undefined) out[slug]++;
   });
   return out;
@@ -421,7 +424,7 @@ export default function DashboardPage() {
         },
         invoices: {
           total: invList.length,
-          bySlug: countInvoiceBySlug(invList),
+          bySlug: countInvoiceBySlug(invList, settings),
         },
         ar: arBlock,
         ap: accountsPayableFromPOs(poList),
@@ -451,16 +454,15 @@ export default function DashboardPage() {
         },
       },
     };
-  }, [raw, periodRange, arTermsSlug]);
+  }, [raw, periodRange, arTermsSlug, settings]);
 
-  const invoiceStatusEntries = useMemo(
-    () =>
-      INVOICE_STATUS_OPTIONS.map((o) => ({
-        label: o.label,
-        value: extra.invoices.bySlug[o.value] ?? 0,
-      })),
-    [extra.invoices.bySlug]
-  );
+  const invoiceStatusEntries = useMemo(() => {
+    const merged = mergeUserSettings(settings);
+    return invoiceStatusSelectOptionsFromMerged(merged).map((o) => ({
+      label: o.label,
+      value: extra.invoices.bySlug[o.value] ?? 0,
+    }));
+  }, [extra.invoices.bySlug, settings]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">

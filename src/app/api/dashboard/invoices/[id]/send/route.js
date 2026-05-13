@@ -8,6 +8,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendInvoiceToCustomer } from "@/lib/email";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
 
 function getParams(context) {
@@ -88,7 +89,7 @@ export async function POST(request, context) {
     if (!result.ok) {
       return NextResponse.json({ error: result.error || "Email failed" }, { status: 502 });
     }
-    inv.status = "sent";
+    inv.status = normalizeInvoiceStatusSlug("sent", uSettings);
     await inv.save();
     return NextResponse.json({ ok: true, message: "Invoice sent to customer." });
   } catch (err) {

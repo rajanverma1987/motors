@@ -970,6 +970,11 @@ export default function DashboardPurchaseOrdersPage() {
         render: (_, row) => (row.type === "job" ? (row.rfqNumber || "—") : "—"),
       },
       {
+        key: "customerName",
+        label: "Customer",
+        render: (_, row) => (row.type === "job" ? (row.customerName || "—") : "—"),
+      },
+      {
         key: "deliveryStatus",
         label: "Delivered",
         sortable: true,
@@ -1054,7 +1059,7 @@ export default function DashboardPurchaseOrdersPage() {
             setPage(1);
             setSearchQuery(q);
           }}
-          searchPlaceholder="Search PO #, vendor, job #, status…"
+          searchPlaceholder="Search PO #, vendor, job #, customer, status…"
           onRefresh={async () => { setLoading(true); await loadPos(); setLoading(false); }}
           sortState={tableSort}
           onSort={handleTableSort}

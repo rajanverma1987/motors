@@ -17,7 +17,9 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import { FiSave, FiEdit2, FiSend, FiPrinter, FiTrash2, FiRotateCw } from "react-icons/fi";
-import { INVOICE_STATUS_OPTIONS, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
@@ -100,6 +102,11 @@ export default function InvoiceFormModal({
   const confirm = useConfirm();
   const { user } = useAuth();
   const { settings: accountSettings } = useUserSettings();
+  const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
+  const invoiceStatusOptions = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedAccountSettings),
+    [mergedAccountSettings]
+  );
   const fmt = useFormatMoney();
   const formScrollRef = useRef(null);
   const [loading, setLoading] = useState(false);
@@ -202,7 +209,7 @@ export default function InvoiceFormModal({
             customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
-            status: normalizeInvoiceStatusSlug(d.status),
+            status: normalizeInvoiceStatusSlug(d.status, mergedAccountSettings),
           });
         } catch (e) {
           if (!cancelled) toast.error(e.message || "Could not load invoice draft");
@@ -240,7 +247,7 @@ export default function InvoiceFormModal({
             customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
-            status: normalizeInvoiceStatusSlug(d.status),
+            status: normalizeInvoiceStatusSlug(d.status, mergedAccountSettings),
           });
         } catch (e) {
           if (!cancelled) toast.error(e.message || "Could not load invoice");
@@ -252,7 +259,7 @@ export default function InvoiceFormModal({
     return () => {
       cancelled = true;
     };
-  }, [open, draftQuoteId, invoiceId, onSwitchToInvoice, toast]);
+  }, [open, draftQuoteId, invoiceId, onSwitchToInvoice, toast, mergedAccountSettings]);
 
   const scrollToForm = () => {
     formScrollRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -276,7 +283,7 @@ export default function InvoiceFormModal({
       const d = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(d.error || "Send failed");
       toast.success(d.message || "Sent.");
-      setForm((f) => ({ ...f, status: "sent" }));
+      setForm((f) => ({ ...f, status: normalizeInvoiceStatusSlug("sent", mergedAccountSettings) }));
       onAfterSave?.();
     } catch (e) {
       toast.error(e.message || "Could not send");
@@ -574,10 +581,13 @@ export default function InvoiceFormModal({
             />
             <Select
               label="Status"
-              options={INVOICE_STATUS_OPTIONS}
+              options={invoiceStatusOptions}
               value={form.status}
               onChange={(e) =>
-                setForm((f) => ({ ...f, status: normalizeInvoiceStatusSlug(e.target.value) }))
+                setForm((f) => ({
+                  ...f,
+                  status: normalizeInvoiceStatusSlug(e.target.value, mergedAccountSettings),
+                }))
               }
             />
             <Input

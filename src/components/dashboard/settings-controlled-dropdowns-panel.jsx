@@ -54,6 +54,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   const merged = useMemo(() => mergeUserSettings(draft), [draft]);
   const quoteEntries = merged.controlledDropdowns?.quote_status?.entries ?? [];
   const woEntries = merged.controlledDropdowns?.work_order_status?.entries ?? [];
+  const invoiceEntries = merged.controlledDropdowns?.invoice_status?.entries ?? [];
 
   const dropdownSelectOptions = useMemo(
     () =>
@@ -63,6 +64,16 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       })),
     []
   );
+
+  const patchInvoiceEntries = (nextEntries) => {
+    setDraft((prev) => ({
+      ...prev,
+      controlledDropdowns: {
+        ...(prev.controlledDropdowns && typeof prev.controlledDropdowns === "object" ? prev.controlledDropdowns : {}),
+        invoice_status: { entries: nextEntries },
+      },
+    }));
+  };
 
   const patchQuoteEntries = (nextEntries) => {
     setDraft((prev) => ({
@@ -79,15 +90,17 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   };
 
   const selectedDef = DROPDOWN_DEFINITIONS[selectedKey];
-  const entries = selectedKey === "quote_status" ? quoteEntries : woEntries;
-  const showQuoteLabels = selectedKey === "quote_status";
+  const entries =
+    selectedKey === "quote_status" ? quoteEntries : selectedKey === "invoice_status" ? invoiceEntries : woEntries;
+  const showEntryLabels = selectedKey === "quote_status" || selectedKey === "invoice_status";
 
   const patchEntries = (next) => {
     if (selectedKey === "quote_status") patchQuoteEntries(next);
+    else if (selectedKey === "invoice_status") patchInvoiceEntries(next);
     else patchWoEntries(next);
   };
 
-  const chipLabel = (row) => (showQuoteLabels ? row.label || row.value : row.value);
+  const chipLabel = (row) => (showEntryLabels ? row.label || row.value : row.value);
 
   const addValue = () => {
     const nextVal = (drafts[selectedKey] || "").trim();
@@ -112,7 +125,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     }
     const ok = await confirm({
       title: "Remove option?",
-      message: `Remove "${value}" from ${selectedDef?.label || "this dropdown"}? Existing quotes or work orders may still show this value until you edit them.`,
+      message: `Remove "${value}" from ${selectedDef?.label || "this dropdown"}? Existing quotes, work orders, or invoices may still show this value until you edit them.`,
       confirmLabel: "Remove",
       variant: "danger",
     });
@@ -166,7 +179,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         <FormSectionTitle as="h2">Controlled dropdowns</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
           Same idea as ornament-manufacturing → admin → dropdowns: define option lists for your shop. Add or remove values,
-          reorder them, set optional display labels (quotes), and pick tile colors for badges and the shop floor.
+          reorder them, set optional display labels (quotes and invoices), and pick tile colors for badges and the shop floor.
         </p>
         <div className="max-w-md">
           <Select
@@ -185,7 +198,10 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           <p className="mb-4 text-xs text-secondary">
             Total values: {entries.length}. Quote statuses are stored on each RFQ; keep an{" "}
             <span className="font-medium text-title">approved</span>-labeled option if you use{" "}
-            <span className="font-medium text-title">Create work order</span> from Quotes (API checks that slug).
+            <span className="font-medium text-title">Create work order</span> from Quotes (API checks that slug). For
+            invoices, keep slugs like <span className="font-medium text-title">sent</span>,{" "}
+            <span className="font-medium text-title">partial_paid</span>, and{" "}
+            <span className="font-medium text-title">fully_paid</span> if you use email send and payment recording.
           </p>
           <div className="mb-4 flex flex-wrap gap-2">
             {entries.map((row, chipIdx) => (
@@ -212,7 +228,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                 <tr>
                   <th className="w-24 px-3 py-2">Order</th>
                   <th className="px-3 py-2">Value</th>
-                  {showQuoteLabels ? <th className="px-3 py-2">Display label</th> : null}
+                  {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
                   <th className="px-3 py-2">Tile color</th>
                   <th className="px-3 py-2 text-right">Preview</th>
                 </tr>
@@ -243,7 +259,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                       </div>
                     </td>
                     <td className="px-3 py-2 font-mono text-xs font-medium text-title">{row.value}</td>
-                    {showQuoteLabels ? (
+                    {showEntryLabels ? (
                       <td className="px-3 py-2">
                         <Input
                           value={row.label ?? ""}
@@ -289,7 +305,13 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               className="min-w-[240px] flex-1"
               value={drafts[selectedKey] || ""}
               onChange={(e) => setDrafts((p) => ({ ...p, [selectedKey]: e.target.value }))}
-              placeholder={showQuoteLabels ? "e.g. pending_review" : "New status"}
+              placeholder={
+                selectedKey === "quote_status"
+                  ? "e.g. pending_review"
+                  : selectedKey === "invoice_status"
+                    ? "e.g. awaiting_payment"
+                    : "New status"
+              }
             />
             <Button type="button" variant="outline" onClick={addValue}>
               Add
@@ -316,7 +338,13 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             rows={14}
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
-            placeholder={showQuoteLabels ? "draft\nsent\napproved" : "Assigned\nIn Progress\nQC"}
+            placeholder={
+              selectedKey === "quote_status"
+                ? "draft\nsent\napproved"
+                : selectedKey === "invoice_status"
+                  ? "draft\nsent\npartial_paid\nfully_paid"
+                  : "Assigned\nIn Progress\nQC"
+            }
           />
         </div>
         <div className="mt-4 flex justify-end gap-2">

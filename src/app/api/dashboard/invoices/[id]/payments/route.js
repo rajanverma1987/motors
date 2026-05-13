@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/db";
 import Invoice from "@/models/Invoice";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceBalance, invoiceLineTotal, invoiceTotalPaid } from "@/lib/invoice-amounts";
 
 function getParams(context) {
@@ -40,8 +42,12 @@ export async function POST(request, context) {
     const notes = String(body.notes ?? "").trim().slice(0, 2000);
 
     await connectDB();
-    const doc = await Invoice.findOne({ _id: id, createdByEmail: email });
+    const [doc, settingsDoc] = await Promise.all([
+      Invoice.findOne({ _id: id, createdByEmail: email }),
+      UserSettings.findOne({ ownerEmail: email }).lean(),
+    ]);
     if (!doc) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    const merged = mergeUserSettings(settingsDoc?.settings);
 
     const total = invoiceLineTotal(doc.toObject());
     const paidBefore = invoiceTotalPaid(doc.toObject());
@@ -66,9 +72,9 @@ export async function POST(request, context) {
     const paidAfter = paidBefore + Math.round(amount * 100) / 100;
     const newBalance = Math.max(0, Math.round((total - paidAfter) * 100) / 100);
     if (newBalance <= 0.005) {
-      doc.status = "fully_paid";
+      doc.status = normalizeInvoiceStatusSlug("fully_paid", merged);
     } else if (paidAfter > 0) {
-      doc.status = "partial_paid";
+      doc.status = normalizeInvoiceStatusSlug("partial_paid", merged);
     }
 
     await doc.save();

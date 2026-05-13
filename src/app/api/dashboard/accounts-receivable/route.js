@@ -19,7 +19,7 @@ import {
 } from "@/lib/invoice-amounts";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 
-function buildRows(list, custMap) {
+function buildRows(list, custMap, mergedSettings) {
   return list.map((inv) => {
     const total = invoiceLineTotal(inv);
     const paid = invoiceTotalPaid(inv);
@@ -32,7 +32,7 @@ function buildRows(list, custMap) {
       customerId: String(inv.customerId),
       customerName: custMap[String(inv.customerId)] || inv.customerId,
       date: inv.date || "",
-      status: normalizeInvoiceStatusSlug(inv.status),
+      status: normalizeInvoiceStatusSlug(inv.status, mergedSettings),
       invoiceTotal: total,
       amountPaid: paid,
       balance,
@@ -89,7 +89,7 @@ export async function GET(request) {
       ])
     );
 
-    let rows = buildRows(list, custMap);
+    let rows = buildRows(list, custMap, userSettings);
 
     if (include === "open") {
       rows = rows.filter((r) => r.balance > 0.009);

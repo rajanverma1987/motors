@@ -4,8 +4,10 @@ import Customer from "@/models/Customer";
 import Motor from "@/models/Motor";
 import Quote from "@/models/Quote";
 import Invoice from "@/models/Invoice";
+import UserSettings from "@/models/UserSettings";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import { normalizeInvoiceStatusSlug, invoiceStatusLabel } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -45,7 +47,9 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "Link not found or expired" }, { status: 404 });
     }
     const customerId = customer._id.toString();
-    const [motors, quotes, invoices] = await Promise.all([
+    const ownerEmail = String(customer.createdByEmail || "").trim().toLowerCase();
+    const [settingsDoc, motors, quotes, invoices] = await Promise.all([
+      ownerEmail ? UserSettings.findOne({ ownerEmail }).lean() : Promise.resolve(null),
       Motor.find({ customerId, createdByEmail: customer.createdByEmail })
         .sort({ createdAt: -1 })
         .lean(),
@@ -59,6 +63,7 @@ export async function GET(request, context) {
         )
         .lean(),
     ]);
+    const portalMerged = mergeUserSettings(settingsDoc?.settings);
 
     const motorById = new Map(motors.map((m) => [m._id.toString(), m]));
 
@@ -150,7 +155,7 @@ export async function GET(request, context) {
         taxExempt: inv.customerTaxExempt,
         taxPercent: inv.customerTaxPercent,
       });
-      const statusSlug = normalizeInvoiceStatusSlug(inv.status);
+      const statusSlug = normalizeInvoiceStatusSlug(inv.status, portalMerged);
       const payments = (Array.isArray(inv.payments) ? inv.payments : []).map((p) => ({
         amount: p.amount ?? "",
         paymentDate: p.paymentDate ?? "",
@@ -167,7 +172,7 @@ export async function GET(request, context) {
         rfqNumber: inv.rfqNumber ?? "",
         date: inv.date ?? "",
         status: statusSlug,
-        statusLabel: invoiceStatusLabel(statusSlug),
+        statusLabel: invoiceStatusLabel(statusSlug, portalMerged),
         customerPo: inv.customerPo ?? "",
         estimatedCompletion: inv.estimatedCompletion ?? "",
         motorLabel: motorLabelFromDoc(motor),

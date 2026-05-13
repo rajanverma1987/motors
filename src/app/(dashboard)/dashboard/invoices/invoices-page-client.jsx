@@ -12,7 +12,6 @@ import {
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
-import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -20,7 +19,9 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
-import { invoiceStatusLabel, invoiceStatusBadgeVariant } from "@/lib/invoice-status";
+import { invoiceStatusLabel, invoiceStatusPillClassName } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { invoiceLineTotal } from "@/lib/invoice-amounts";
 
 function InvoicesInner() {
@@ -31,6 +32,7 @@ function InvoicesInner() {
   const openId = searchParams.get("open");
   const draftQuoteParam = searchParams.get("draftQuote");
   const { settings: accountSettings } = useUserSettings();
+  const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
   const fmt = useFormatMoney();
 
   const [rows, setRows] = useState([]);
@@ -95,33 +97,13 @@ function InvoicesInner() {
   }, []);
 
   const statusSummaryCards = useMemo(() => {
-    return [
-      {
-        key: "draft",
-        label: "Draft",
-        count: Number(summaryByStatus?.draft?.count) || 0,
-        amount: Number(summaryByStatus?.draft?.amount) || 0,
-      },
-      {
-        key: "sent",
-        label: "Sent",
-        count: Number(summaryByStatus?.sent?.count) || 0,
-        amount: Number(summaryByStatus?.sent?.amount) || 0,
-      },
-      {
-        key: "partial_paid",
-        label: "Partial Paid",
-        count: Number(summaryByStatus?.partial_paid?.count) || 0,
-        amount: Number(summaryByStatus?.partial_paid?.amount) || 0,
-      },
-      {
-        key: "fully_paid",
-        label: "Fully Paid",
-        count: Number(summaryByStatus?.fully_paid?.count) || 0,
-        amount: Number(summaryByStatus?.fully_paid?.amount) || 0,
-      },
-    ];
-  }, [summaryByStatus]);
+    return invoiceStatusSelectOptionsFromMerged(mergedAccountSettings).map((opt) => ({
+      key: opt.value,
+      label: opt.label,
+      count: Number(summaryByStatus?.[opt.value]?.count) || 0,
+      amount: Number(summaryByStatus?.[opt.value]?.amount) || 0,
+    }));
+  }, [summaryByStatus, mergedAccountSettings]);
 
   const handleDeleteCb = useCallback(
     async (row) => {
@@ -287,11 +269,15 @@ function InvoicesInner() {
         label: "Status",
         sortable: true,
         render: (v) => (
-          <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>
+          <span
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+          >
+            {invoiceStatusLabel(v, mergedAccountSettings)}
+          </span>
         ),
       },
     ],
-    [fmt, handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId]
+    [fmt, handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId, mergedAccountSettings]
   );
 
   return (
@@ -303,7 +289,7 @@ function InvoicesInner() {
         </p>
       </div>
 
-      <div className="mb-4 grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid shrink-0 auto-rows-fr gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
         {statusSummaryCards.map((card) => (
           <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
             <div className="flex items-center gap-2 text-sm text-secondary">

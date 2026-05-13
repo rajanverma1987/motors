@@ -13,14 +13,14 @@ import {
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
-import Badge from "@/components/ui/badge";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
-import { invoiceStatusLabel, invoiceStatusBadgeVariant } from "@/lib/invoice-status";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { invoiceStatusLabel, invoiceStatusPillClassName } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
 const TABS = [
@@ -55,6 +55,8 @@ export default function AccountsReceivablePageClient() {
   const toast = useToast();
   const router = useRouter();
   const fmt = useFormatMoney();
+  const { settings: accountSettings } = useUserSettings();
+  const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
   const [tab, setTab] = useState("open");
   const [agingFilter, setAgingFilter] = useState("all");
   const [rows, setRows] = useState([]);
@@ -326,10 +328,16 @@ export default function AccountsReceivablePageClient() {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (v) => <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>,
+        render: (v) => (
+          <span
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+          >
+            {invoiceStatusLabel(v, mergedAccountSettings)}
+          </span>
+        ),
       },
     ],
-    [fmt, router]
+    [fmt, router, mergedAccountSettings]
   );
 
   const paidHistoryColumns = useMemo(
@@ -373,10 +381,16 @@ export default function AccountsReceivablePageClient() {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (v) => <Badge variant={invoiceStatusBadgeVariant(v)}>{invoiceStatusLabel(v)}</Badge>,
+        render: (v) => (
+          <span
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+          >
+            {invoiceStatusLabel(v, mergedAccountSettings)}
+          </span>
+        ),
       },
     ],
-    [fmt, router]
+    [fmt, router, mergedAccountSettings]
   );
 
   return (

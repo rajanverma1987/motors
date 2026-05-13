@@ -77,7 +77,7 @@ function computeDeliveryStatus(lineItems) {
   return allReceived ? "Delivered" : "Partial";
 }
 
-function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {}) {
+function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {}, jobCustomerName = "—") {
   const lineItems = Array.isArray(po.lineItems) ? po.lineItems : [];
   const vendorInvoices = Array.isArray(po.vendorInvoices) ? po.vendorInvoices : [];
   const payments = Array.isArray(po.payments) ? po.payments : [];
@@ -102,15 +102,17 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {
   const qrf = po.quoteId ? (quoteRfqMap[String(po.quoteId)] ?? "") : "";
   const jn = po.repairFlowJobId ? (jobNumberMap[String(po.repairFlowJobId)] ?? "") : "";
   const linkLabel = jn || qrf || "—";
+  const typeNorm = (po.type ?? "shop") === "job" ? "job" : "shop";
   return {
     id: po._id.toString(),
     poNumber: po.poNumber ?? "",
     vendorId: po.vendorId ?? "",
-    type: po.type ?? "shop",
+    type: typeNorm,
     quoteId: po.quoteId ?? "",
     repairFlowJobId: po.repairFlowJobId ?? "",
     vendorName: vendorNameMap[po.vendorId] ?? po.vendorId ?? "—",
     rfqNumber: linkLabel,
+    customerName: typeNorm === "job" ? jobCustomerName : "—",
     lineItems: lineItemsWithStatus,
     vendorInvoices,
     payments,
@@ -158,7 +160,33 @@ export async function GET(request) {
     const q = { createdByEmail: email };
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [{ poNumber: rx }, { status: rx }, { quoteId: rx }, { deliveryStatus: rx }, { invoicedStatus: rx }, { paidStatus: rx }];
+      const orParts = [
+        { poNumber: rx },
+        { status: rx },
+        { quoteId: rx },
+        { deliveryStatus: rx },
+        { invoicedStatus: rx },
+        { paidStatus: rx },
+      ];
+      const CustomerSearch = (await import("@/models/Customer")).default;
+      const QuoteSearch = (await import("@/models/Quote")).default;
+      const MotorRepairJobSearch = (await import("@/models/MotorRepairJob")).default;
+      const custMatch = await CustomerSearch.find({
+        createdByEmail: email,
+        $or: [{ companyName: rx }, { primaryContactName: rx }],
+      })
+        .select("_id")
+        .lean();
+      const custIds = custMatch.map((c) => c._id);
+      if (custIds.length > 0) {
+        const [quotesByCust, jobsByCust] = await Promise.all([
+          QuoteSearch.find({ createdByEmail: email, customerId: { $in: custIds } }).select("_id").lean(),
+          MotorRepairJobSearch.find({ createdByEmail: email, customerId: { $in: custIds } }).select("_id").lean(),
+        ]);
+        for (const qq of quotesByCust) orParts.push({ quoteId: qq._id.toString() });
+        for (const jj of jobsByCust) orParts.push({ repairFlowJobId: jj._id.toString() });
+      }
+      q.$or = orParts;
     }
     const [totalCount, list] = await Promise.all([
       PurchaseOrder.countDocuments(q),
@@ -167,23 +195,84 @@ export async function GET(request) {
 
     const Vendor = (await import("@/models/Vendor")).default;
     const Quote = (await import("@/models/Quote")).default;
+    const Customer = (await import("@/models/Customer")).default;
     const vendors = await Vendor.find({ createdByEmail: email }).select("_id name").lean();
-    const quotes = await Quote.find({ createdByEmail: email }).select("_id rfqNumber").lean();
+    const quotes = await Quote.find({ createdByEmail: email }).select("_id rfqNumber customerId").lean();
     const vendorNameMap = {};
     const quoteRfqMap = {};
+    const quoteCustomerIdMap = {};
     for (const v of vendors) vendorNameMap[v._id.toString()] = v.name ?? "";
-    for (const q of quotes) quoteRfqMap[q._id.toString()] = q.rfqNumber ?? "";
+    for (const q of quotes) {
+      const id = q._id.toString();
+      quoteRfqMap[id] = q.rfqNumber ?? "";
+      quoteCustomerIdMap[id] = String(q.customerId ?? "").trim();
+    }
 
     const jobIds = [...new Set(list.map((p) => String(p.repairFlowJobId || "").trim()).filter(Boolean))];
     const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
     const jobsLean =
       jobIds.length > 0
-        ? await MotorRepairJob.find({ _id: { $in: jobIds }, createdByEmail: email }).select("_id jobNumber").lean()
+        ? await MotorRepairJob.find({ _id: { $in: jobIds }, createdByEmail: email })
+            .select("_id jobNumber customerId")
+            .lean()
         : [];
     const jobNumberMap = {};
-    for (const j of jobsLean) jobNumberMap[j._id.toString()] = j.jobNumber ?? "";
+    const jobCustomerIdMap = {};
+    for (const j of jobsLean) {
+      const id = j._id.toString();
+      jobNumberMap[id] = j.jobNumber ?? "";
+      jobCustomerIdMap[id] = String(j.customerId ?? "").trim();
+    }
 
-    const listWithId = list.map((po) => toPoListItem({ ...po, _id: po._id }, vendorNameMap, quoteRfqMap, jobNumberMap));
+    const customerIdSet = new Set();
+    for (const j of jobsLean) {
+      const cid = jobCustomerIdMap[j._id.toString()];
+      if (cid && /^[a-f0-9]{24}$/i.test(cid)) customerIdSet.add(cid);
+    }
+    for (const po of list) {
+      const qid = String(po.quoteId || "").trim();
+      if (qid) {
+        const cid = quoteCustomerIdMap[qid];
+        if (cid && /^[a-f0-9]{24}$/i.test(cid)) customerIdSet.add(cid);
+      }
+    }
+    const customerIds = [...customerIdSet];
+    const customers =
+      customerIds.length > 0
+        ? await Customer.find({ _id: { $in: customerIds }, createdByEmail: email })
+            .select("_id companyName primaryContactName")
+            .lean()
+        : [];
+    const customerNameMap = {};
+    for (const c of customers) {
+      customerNameMap[c._id.toString()] =
+        String(c.companyName || "").trim() || String(c.primaryContactName || "").trim() || "—";
+    }
+
+    function resolveJobPoCustomerName(po) {
+      if ((po.type ?? "shop") !== "job") return "—";
+      const jid = String(po.repairFlowJobId || "").trim();
+      if (jid) {
+        const cid = jobCustomerIdMap[jid];
+        if (cid && customerNameMap[cid]) return customerNameMap[cid];
+      }
+      const qid = String(po.quoteId || "").trim();
+      if (qid) {
+        const cid = quoteCustomerIdMap[qid];
+        if (cid && customerNameMap[cid]) return customerNameMap[cid];
+      }
+      return "—";
+    }
+
+    const listWithId = list.map((po) =>
+      toPoListItem(
+        { ...po, _id: po._id },
+        vendorNameMap,
+        quoteRfqMap,
+        jobNumberMap,
+        resolveJobPoCustomerName(po)
+      )
+    );
     if (!includePagination) return NextResponse.json(listWithId);
     return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {

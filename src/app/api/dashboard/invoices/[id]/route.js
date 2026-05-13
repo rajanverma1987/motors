@@ -121,6 +121,8 @@ export async function PATCH(request, context) {
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
     const body = await request.json().catch(() => ({}));
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const merged = mergeUserSettings(settingsDoc?.settings);
     const { scopeLines, partsLines } = normalizeLines(body);
     if (body.customerPo !== undefined) doc.customerPo = String(body.customerPo ?? "").slice(0, 200);
     if (body.date !== undefined) doc.date = String(body.date ?? "").slice(0, 50);
@@ -131,7 +133,7 @@ export async function PATCH(request, context) {
       doc.estimatedCompletion = String(body.estimatedCompletion ?? "").slice(0, 200);
     if (body.customerNotes !== undefined) doc.customerNotes = String(body.customerNotes ?? "").slice(0, 8000);
     if (body.notes !== undefined) doc.notes = String(body.notes ?? "").slice(0, 8000);
-    if (body.status !== undefined) doc.status = normalizeInvoiceStatusSlug(body.status);
+    if (body.status !== undefined) doc.status = normalizeInvoiceStatusSlug(body.status, merged);
     if (body.customerTaxExempt !== undefined) doc.customerTaxExempt = normalizeTaxExempt(body.customerTaxExempt);
     if (body.customerTaxPercent !== undefined) doc.customerTaxPercent = String(normalizeTaxPercent(body.customerTaxPercent));
     if (scopeLines) doc.scopeLines = scopeLines;

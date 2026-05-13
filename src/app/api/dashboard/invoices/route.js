@@ -64,10 +64,12 @@ export async function GET(request) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       q.$or = [{ invoiceNumber: rx }, { rfqNumber: rx }, { status: rx }];
     }
-    const [totalCount, list] = await Promise.all([
+    const [totalCount, list, settingsDoc] = await Promise.all([
       Invoice.countDocuments(q),
       Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      UserSettings.findOne({ ownerEmail: email }).lean(),
     ]);
+    const mergedForStatus = mergeUserSettings(settingsDoc?.settings);
     const summaryRows = await Invoice.aggregate([
       { $match: ownerScope },
       {
@@ -87,7 +89,7 @@ export async function GET(request) {
     ]);
     const summaryByStatus = {};
     for (const row of summaryRows) {
-      const key = normalizeInvoiceStatusSlug(row?._id);
+      const key = normalizeInvoiceStatusSlug(row?._id, mergedForStatus);
       const count = Number(row?.count) || 0;
       const amount = Number(row?.amount) || 0;
       if (!summaryByStatus[key]) summaryByStatus[key] = { count: 0, amount: 0 };
@@ -186,7 +188,7 @@ export async function POST(request) {
       estimatedCompletion: String(body.estimatedCompletion ?? "").slice(0, 200),
       customerNotes: String(body.customerNotes ?? "").slice(0, 8000),
       notes: String(body.notes ?? "").slice(0, 8000),
-      status: normalizeInvoiceStatusSlug(body.status),
+      status: normalizeInvoiceStatusSlug(body.status, u),
       // Keep non-empty to avoid duplicate-key conflicts on legacy customerViewToken indexes.
       customerViewToken: createCustomerViewToken(),
       createdByEmail: email,

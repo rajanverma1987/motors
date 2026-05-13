@@ -38,7 +38,7 @@ export const USER_SETTINGS_DEFAULTS = {
    * Omitted statuses use automatic rotation by column order.
    */
   workOrderStatusTileColors: {},
-  /** Controlled dropdown definitions (quote_status, work_order_status) — see dropdown-catalog.js */
+  /** Controlled dropdown definitions (quote_status, work_order_status, invoice_status) — see dropdown-catalog.js */
   controlledDropdowns: {},
   /** Optional prefix for new repair-flow job numbers (blank = RF-00001 style). */
   prefixRepairJob: "",

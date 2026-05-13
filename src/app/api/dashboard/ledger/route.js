@@ -8,8 +8,10 @@ import Vendor from "@/models/Vendor";
 import SalesCommission from "@/models/SalesCommission";
 import SalesPerson from "@/models/SalesPerson";
 import LedgerEntry from "@/models/LedgerEntry";
+import UserSettings from "@/models/UserSettings";
 import { invoiceBalance, invoiceLineTotal } from "@/lib/invoice-amounts";
 import { invoiceStatusLabel, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { poLineOrderTotal, sumVendorPayments } from "@/lib/po-payable";
 import { clampString } from "@/lib/validation";
 
@@ -56,15 +58,18 @@ export async function GET(request) {
     const to = clampString(searchParams.get("to"), 20).slice(0, 10);
 
     await connectDB();
-    const [invoices, customers, purchaseOrders, vendors, commissions, salesPersons, manualEntries] = await Promise.all([
-      Invoice.find({ createdByEmail: ownerEmail }).lean(),
-      Customer.find({ createdByEmail: ownerEmail }).select("_id companyName primaryContactName").lean(),
-      PurchaseOrder.find({ createdByEmail: ownerEmail }).lean(),
-      Vendor.find({ createdByEmail: ownerEmail }).select("_id name").lean(),
-      SalesCommission.find({ createdByEmail: ownerEmail }).lean(),
-      SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),
-      LedgerEntry.find({ createdByEmail: ownerEmail }).sort({ date: -1, createdAt: -1 }).lean(),
-    ]);
+    const [invoices, customers, purchaseOrders, vendors, commissions, salesPersons, manualEntries, settingsDoc] =
+      await Promise.all([
+        Invoice.find({ createdByEmail: ownerEmail }).lean(),
+        Customer.find({ createdByEmail: ownerEmail }).select("_id companyName primaryContactName").lean(),
+        PurchaseOrder.find({ createdByEmail: ownerEmail }).lean(),
+        Vendor.find({ createdByEmail: ownerEmail }).select("_id name").lean(),
+        SalesCommission.find({ createdByEmail: ownerEmail }).lean(),
+        SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),
+        LedgerEntry.find({ createdByEmail: ownerEmail }).sort({ date: -1, createdAt: -1 }).lean(),
+        UserSettings.findOne({ ownerEmail: ownerEmail }).lean(),
+      ]);
+    const mergedShop = mergeUserSettings(settingsDoc?.settings);
 
     const customerMap = Object.fromEntries(
       (customers || []).map((c) => [String(c._id), c.companyName || c.primaryContactName || String(c._id)])
@@ -80,19 +85,22 @@ export async function GET(request) {
       const invoiceDate = toIsoDate(inv.date);
       const billedDate = invoiceDate || toIsoDate(inv.createdAt);
       const billedAmount = round2(invoiceLineTotal(inv));
-      const statusSlug = normalizeInvoiceStatusSlug(inv.status);
-      const invoiceStatus = invoiceStatusLabel(statusSlug);
+      const statusSlug = normalizeInvoiceStatusSlug(inv.status, mergedShop);
+      const isFullyPaidSemantic =
+        statusSlug === "fully_paid" || (statusSlug.includes("fully") && statusSlug.includes("paid"));
+      const isPartialPaidSemantic =
+        statusSlug === "partial_paid" || (statusSlug.includes("partial") && statusSlug.includes("paid"));
+      const invoiceStatus = invoiceStatusLabel(statusSlug, mergedShop);
       const outstandingBalance = round2(invoiceBalance(inv));
       const pays = Array.isArray(inv.payments) ? inv.payments : [];
       const hasPaymentRows = pays.length > 0;
       const creditFallbackForPaid =
-        statusSlug === "fully_paid" && !hasPaymentRows ? billedAmount : 0;
-      const receivableForBilledRow =
-        statusSlug === "fully_paid"
-          ? 0
-          : statusSlug === "partial_paid"
-            ? outstandingBalance
-            : billedAmount;
+        isFullyPaidSemantic && !hasPaymentRows ? billedAmount : 0;
+      const receivableForBilledRow = isFullyPaidSemantic
+        ? 0
+        : isPartialPaidSemantic
+          ? outstandingBalance
+          : billedAmount;
 
       rows.push({
         id: `inv-billed-${inv._id}`,

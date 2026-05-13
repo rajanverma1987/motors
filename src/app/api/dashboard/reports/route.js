@@ -25,6 +25,7 @@ import {
 } from "@/lib/accounts-payment-terms";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { invoiceStatusAllowedSlugs } from "@/lib/dropdown-catalog";
 import {
   poLineOrderTotal,
   sumVendorInvoiced,
@@ -227,11 +228,14 @@ export async function GET(request) {
     let invoiceBilled = 0;
     let invoiceCollected = 0;
     let invoiceOutstanding = 0;
-    const invByStatus = { draft: 0, sent: 0, partial_paid: 0, fully_paid: 0 };
+    const invByStatus = {};
+    for (const slug of invoiceStatusAllowedSlugs(mergedSettings)) {
+      invByStatus[slug] = 0;
+    }
     const invSeries = initSeries(chartMeta, false, true);
     const revenuePerCustomer = {};
     for (const inv of invoices) {
-      const slug = normalizeInvoiceStatusSlug(inv.status);
+      const slug = normalizeInvoiceStatusSlug(inv.status, mergedSettings);
       if (invByStatus[slug] !== undefined) invByStatus[slug]++;
       const total = invoiceLineTotal(inv);
       const paid = invoiceTotalPaid(inv);
