@@ -143,14 +143,14 @@ export default function HomePage() {
                 </Link>{" "}
                 are built in too.
               </p>
-              <div className="mt-10 flex flex-wrap items-center gap-4">
-                <Link href="/contact">
-                  <Button variant="primary" size="lg">
+              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+                  <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
                     Get a demo
                   </Button>
                 </Link>
-                <a href="#features">
-                  <Button variant="outline" size="lg">
+                <a href="#features" className="w-full min-w-0 sm:w-auto">
+                  <Button variant="outline" size="lg" className="w-full min-w-0 sm:w-auto">
                     See what’s included
                   </Button>
                 </a>
@@ -426,9 +426,9 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-8">
-              <Link href="/list-your-electric-motor-services">
-                <Button variant="primary" size="lg">
+            <div className="mt-8 w-full min-w-0 max-w-full">
+              <Link href="/list-your-electric-motor-services" className="block w-full min-w-0">
+                <Button variant="primary" size="lg" className="w-full">
                   List your repair center on the public directory
                 </Button>
               </Link>
@@ -565,8 +565,8 @@ export default function HomePage() {
                   on our public Careers page.
                 </p>
               </div>
-              <Link href="/list-your-electric-motor-services" className="shrink-0">
-                <Button variant="primary" size="lg">
+              <Link href="/list-your-electric-motor-services" className="w-full min-w-0 shrink-0 sm:w-auto">
+                <Button variant="primary" size="lg" className="w-full sm:w-auto">
                   List your center
                 </Button>
               </Link>
@@ -585,9 +585,9 @@ export default function HomePage() {
             Contact us for a demo and see how IQMotorBase.com can help you manage jobs, stock, grow with leads, and hire
             through public job postings.
           </p>
-          <div className="mt-10">
-            <Link href="/contact">
-              <Button variant="primary" size="lg">
+          <div className="mt-10 flex justify-center px-2 sm:px-0">
+            <Link href="/contact" className="w-full max-w-md min-w-0 sm:max-w-none sm:w-auto">
+              <Button variant="primary" size="lg" className="w-full sm:w-auto">
                 Contact for demo
               </Button>
             </Link>

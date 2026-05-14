@@ -1,5 +1,6 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
@@ -47,7 +48,7 @@ export default function BlogPageLayout({
           url: siteUrl.replace(/\/$/, ""),
           logo: {
             "@type": "ImageObject",
-            url: `${siteUrl.replace(/\/$/, "")}/og-image.png`,
+            url: `${siteUrl.replace(/\/$/, "")}${BRAND_LOGO_PUBLIC_PATH}`,
           },
         },
       }

@@ -1,8 +1,22 @@
 import { getTransporter } from "@/lib/email-transport";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
 
 const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
+
+function escHtmlEmail(v) {
+  return v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/** IQ Motorbase header for platform / admin emails (logo from `public/logo.png`). */
+function wrapPlatformBrandedHtml(bodyHtml) {
+  const site = getPublicSiteUrl();
+  const logoUrl = getBrandLogoAbsoluteUrl();
+  if (!logoUrl.startsWith("http")) return bodyHtml;
+  const header = `<div style="margin:0 0 24px 0;padding-bottom:16px;border-bottom:1px solid #e5e7eb"><a href="${escHtmlEmail(site)}" style="text-decoration:none;display:inline-block"><img src="${escHtmlEmail(logoUrl)}" alt="IQ Motorbase" width="280" style="max-width:100%;width:280px;height:auto;display:block;border:0" /></a></div>`;
+  return header + bodyHtml;
+}
 
 export async function sendListingApproved(to, companyName) {
   const subject = "Congratulations! Your listing is live on IQMotorBase.com";
@@ -12,7 +26,7 @@ export async function sendListingApproved(to, companyName) {
     <p>Thank you for being part of IQMotorBase.com.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 export async function sendListingRejected(to, companyName, reason) {
@@ -24,7 +38,7 @@ export async function sendListingRejected(to, companyName, reason) {
     <p>If you have questions or would like to resubmit with updates, please reply to this email or contact us.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 export async function sendNewReviewNotification(to, companyName, reviewerName, rating, reviewBody) {
@@ -39,7 +53,7 @@ export async function sendNewReviewNotification(to, companyName, reviewerName, r
     <p>${reviewBody.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")}</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Rewind calculator RFQ — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
@@ -71,7 +85,7 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
     ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
     <p>— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
@@ -92,7 +106,7 @@ export async function sendNoListingsNearMeNotification(city, state, zip) {
     <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
     <p>— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Notify a user who signed up for "notify me when there's a listing" that repair centers are now in their area. Links to our site only; no direct shop contact info in the email. */
@@ -105,7 +119,7 @@ export async function sendAreaListedNotification(toEmail, locationLabel, shopLis
     <p><a href="${shopListingsPageUrl}">View repair centers in your area</a></p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(toEmail, subject, html);
+  return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Send demo request to admin as plain HTML table. Subject: RFQ - IQMotorBase CRM Demo. */
@@ -137,7 +151,7 @@ export async function sendDemoRequestToAdmin(fields) {
     </table>
     <p style="margin-top:16px;">— IQMotorBase.com (contact form)</p>
   `;
-  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase CRM Demo.", html);
+  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase CRM Demo.", wrapPlatformBrandedHtml(html));
 }
 
 /** Send thank-you email to client after demo request. */
@@ -150,7 +164,7 @@ export async function sendDemoRequestThankYou(toName, toEmail) {
     <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
     <p>— The IQMotorBase.com team</p>
   `;
-  return sendEmail(toEmail, subject, html);
+  return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Email address to receive "new listing submitted" and "shop listed" notifications. */
@@ -186,7 +200,7 @@ export async function sendNewListingSubmittedToAdmin(doc) {
     </table>
     <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "New listing submitted – IQMotorBase.com", html);
+  return sendEmail(to, "New listing submitted – IQMotorBase.com", wrapPlatformBrandedHtml(html));
 }
 
 /** Notify admin when a listing is approved and the shop is now listed on the website. */
@@ -201,7 +215,7 @@ export async function sendShopListedNotificationToAdmin(doc) {
     <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-reapir-shops-listings">Public directory</a></p>
     <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "Shop listed on website – IQMotorBase.com", html);
+  return sendEmail(to, "Shop listed on website – IQMotorBase.com", wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -230,7 +244,7 @@ export async function sendNewWebsiteLeadNotificationToShop({
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Send verification code for list-your-electric-motor-services email verification. */
@@ -243,7 +257,7 @@ export async function sendVerificationCodeEmail(to, code) {
     <p>If you didn't request this, you can ignore this email.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -278,7 +292,7 @@ export async function sendCrmWelcomeEmail({
     <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -319,7 +333,7 @@ export async function sendListingFeaturedAccountEmail({
     <p>To unlock the full CRM (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -367,7 +381,7 @@ export async function sendSubscriptionPlanAttachedEmail({
     <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
     <p>— IQMotorBase.com</p>
   `;
-  return sendEmail(to, subject, html);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -398,7 +412,7 @@ async function sendEmail(to, subject, html, options = {}) {
 
 /** Send email using the marketing "from" address (EMAIL_MARKETING_FROM). Use for admin marketing campaigns. */
 export async function sendMarketingEmail(to, subject, html) {
-  return sendEmail(to, subject, html, { from: marketingFrom });
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { from: marketingFrom });
 }
 
 /** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no IQMotorBase.com). */

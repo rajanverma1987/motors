@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 const btnPrimary =
-  "inline-flex w-full items-center justify-center rounded-md bg-primary px-6 py-3 text-lg text-white transition-opacity hover:opacity-90";
+  "inline-flex w-full min-w-0 max-w-full items-center justify-center whitespace-normal text-center text-pretty rounded-md bg-primary px-4 py-2.5 text-base text-white transition-opacity hover:opacity-90 sm:px-6 sm:py-3 sm:text-lg";
 const btnOutline =
-  "inline-flex w-full items-center justify-center rounded-md border-[0.5px] border-border bg-transparent px-6 py-3 text-lg text-text transition-opacity hover:bg-card hover:border-primary/20";
+  "inline-flex w-full min-w-0 max-w-full items-center justify-center whitespace-normal text-center text-pretty rounded-md border-[0.5px] border-border bg-transparent px-4 py-2.5 text-base text-text transition-opacity hover:bg-card hover:border-primary/20 sm:px-6 sm:py-3 sm:text-lg";
 
 /**
  * CTA for company-listing SEO pages: list your center + register.

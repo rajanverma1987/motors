@@ -23,12 +23,16 @@ export default function ContactThankYouPage() {
           <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-secondary">
             We&apos;ve received your demo request and sent a confirmation to your email. We&apos;ll get back to you within 1–2 business days to schedule a time that works for you.
           </p>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <Link href="/">
-              <Button variant="primary">Back to Home</Button>
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+            <Link href="/" className="w-full min-w-0 sm:w-auto">
+              <Button variant="primary" className="w-full sm:w-auto">
+                Back to Home
+              </Button>
             </Link>
-            <Link href="/list-your-electric-motor-services">
-              <Button variant="outline">List your shop</Button>
+            <Link href="/list-your-electric-motor-services" className="w-full min-w-0 sm:w-auto">
+              <Button variant="outline" className="w-full sm:w-auto">
+                List your shop
+              </Button>
             </Link>
           </div>
         </div>

@@ -154,14 +154,14 @@ export default function NearMeContent() {
 
   return (
     <>
-      <div className="mt-6 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {(locationStatus === "denied" || locationStatus === "error") && (
-          <Button variant="primary" size="lg" onClick={detectLocation}>
+          <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto" onClick={detectLocation}>
             Find shops near me
           </Button>
         )}
-        <Link href="/electric-motor-reapir-shops-listings">
-          <Button variant="outline" size="lg">
+        <Link href="/electric-motor-reapir-shops-listings" className="w-full min-w-0 sm:w-auto">
+          <Button variant="outline" size="lg" className="w-full sm:w-auto">
             Browse all listings
           </Button>
         </Link>
@@ -175,8 +175,10 @@ export default function NearMeContent() {
               <p className="mt-2 text-sm text-secondary">
                 To see shops near you, allow location in your browser and click &quot;Find shops near me&quot; above, or browse all listings.
               </p>
-              <Link href="/electric-motor-reapir-shops-listings" className="mt-4 inline-block">
-                <Button variant="outline">Browse all listings</Button>
+              <Link href="/electric-motor-reapir-shops-listings" className="mt-4 block w-full max-w-xs min-w-0 mx-auto sm:inline-block sm:max-w-none sm:mx-0">
+                <Button variant="outline" className="w-full sm:w-auto">
+                  Browse all listings
+                </Button>
               </Link>
             </div>
           )}
@@ -187,7 +189,7 @@ export default function NearMeContent() {
               <p className="mt-2 text-sm text-secondary">
                 Your browser may not support location, or there was a temporary error. Try again or browse all listings.
               </p>
-              <Button variant="outline" className="mt-4" onClick={detectLocation}>
+              <Button variant="outline" className="mt-4 w-full max-w-xs min-w-0 mx-auto sm:mx-0 sm:max-w-none sm:w-auto" onClick={detectLocation}>
                 Try again
               </Button>
             </div>
@@ -228,9 +230,11 @@ export default function NearMeContent() {
               <p className="mt-2 text-sm text-secondary">
                 Try browsing all listings or search by another city or state.
               </p>
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <Link href="/electric-motor-reapir-shops-listings">
-                  <Button variant="outline">Browse all listings</Button>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+                <Link href="/electric-motor-reapir-shops-listings" className="w-full min-w-0 sm:w-auto">
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    Browse all listings
+                  </Button>
                 </Link>
               </div>
               <div className="mt-8 max-w-sm mx-auto">

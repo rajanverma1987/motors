@@ -1,5 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 import FooterNavLinks from "./FooterNavLinks";
+import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 
 const footerLinks = {
   "For repair shops": [
@@ -46,8 +48,14 @@ export default function Footer() {
       <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
           <div>
-            <Link href="/" className="text-lg font-semibold text-title">
-              IQMotorBase.com
+            <Link href="/" className="inline-block transition-opacity hover:opacity-90" aria-label="IQ Motorbase — home">
+              <Image
+                src={BRAND_LOGO_PUBLIC_PATH}
+                alt="IQ Motorbase"
+                width={476}
+                height={143}
+                className="h-[5.4rem] w-auto max-w-[min(100%,432px)] object-contain object-left"
+              />
             </Link>
             <p className="mt-2 text-sm text-secondary">
               Job management, shop parts inventory, lead generation, and public employee job postings for motor repair

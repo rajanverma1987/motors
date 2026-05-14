@@ -8,8 +8,13 @@ export default function ListingsHeroCta() {
   const [leadFormOpen, setLeadFormOpen] = useState(false);
   return (
     <>
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Button variant="primary" size="lg" onClick={() => setLeadFormOpen(true)}>
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <Button
+          variant="primary"
+          size="lg"
+          className="w-full min-w-0 sm:w-auto"
+          onClick={() => setLeadFormOpen(true)}
+        >
           Submit your requirement / Request quote
         </Button>
       </div>

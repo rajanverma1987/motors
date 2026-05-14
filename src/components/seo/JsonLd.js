@@ -1,3 +1,4 @@
+import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 export function HomePageJsonLd() {
@@ -38,7 +39,7 @@ export function HomePageJsonLd() {
     "@type": "Organization",
     name: "IQMotorBase.com",
     url: siteUrl,
-    logo: `${siteUrl}/og-image.png`,
+    logo: getBrandLogoAbsoluteUrl(),
   };
 
   return (

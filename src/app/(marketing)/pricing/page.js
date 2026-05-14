@@ -26,12 +26,16 @@ export default function PricingPage() {
             <p className="mt-4 text-lg text-secondary">
               Every business is different. We analyze your process and offer the best pricing model - monthly, yearly, or one-time.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link href="/contact">
-                <Button variant="primary" size="sm">Book a Demo</Button>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+                <Button variant="primary" size="sm" className="w-full sm:w-auto">
+                  Book a Demo
+                </Button>
               </Link>
-              <Link href="/contact">
-                <Button variant="outline" size="sm">Get Pricing</Button>
+              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+                <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                  Get Pricing
+                </Button>
               </Link>
             </div>
             <p className="mt-4 text-sm font-medium text-primary">

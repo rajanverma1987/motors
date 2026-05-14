@@ -19,7 +19,7 @@ export default function Button({
   const sizes = {
     sm: "px-3 py-1 text-sm",
     md: "px-4 py-2",
-    lg: "px-6 py-3 text-lg",
+    lg: "px-4 py-2.5 text-base sm:px-6 sm:py-3 sm:text-lg",
   };
 
   return (
@@ -28,7 +28,7 @@ export default function Button({
       onClick={onClick}
       disabled={disabled}
       form={form}
-      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 whitespace-normal text-center text-pretty rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
       {...rest}
     >
       {children}

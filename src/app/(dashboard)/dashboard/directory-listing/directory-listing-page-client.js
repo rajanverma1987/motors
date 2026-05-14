@@ -334,12 +334,12 @@ export default function DirectoryListingPageClient() {
             />
 
             {submitError && <p className="text-sm text-danger">{submitError}</p>}
-            <div className="flex flex-wrap gap-4">
-              <Button type="submit" variant="primary" size="lg" disabled={submitting}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto" disabled={submitting}>
                 {submitting ? "Saving…" : listingId ? "Save changes" : "Submit listing"}
               </Button>
-              <Link href="/dashboard">
-                <Button type="button" variant="outline" size="lg">
+              <Link href="/dashboard" className="w-full sm:w-auto">
+                <Button type="button" variant="outline" size="lg" className="w-full sm:w-auto">
                   Back to dashboard
                 </Button>
               </Link>

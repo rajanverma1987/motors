@@ -425,12 +425,14 @@ export default function ListYourCenterPage() {
           />
 
           {submitError && <p className="text-sm text-danger">{submitError}</p>}
-          <div className="flex flex-wrap gap-4">
-            <Button type="submit" variant="primary" size="lg" disabled={submitting}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <Button type="submit" variant="primary" size="lg" className="w-full sm:w-auto" disabled={submitting}>
               {submitting ? "Submitting…" : "Submit listing"}
             </Button>
-            <Link href="/">
-              <Button type="button" variant="outline" size="lg">Cancel</Button>
+            <Link href="/" className="w-full sm:w-auto">
+              <Button type="button" variant="outline" size="lg" className="w-full sm:w-auto">
+                Cancel
+              </Button>
             </Link>
           </div>
         </div>

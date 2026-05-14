@@ -20,7 +20,7 @@ function WaButton() {
       href={href}
       target={isWa ? "_blank" : undefined}
       rel={isWa ? "noopener noreferrer" : undefined}
-      className="inline-flex w-full items-center justify-center gap-2 rounded-md border-[0.5px] border-emerald-600/50 bg-transparent px-6 py-3 text-lg text-emerald-700 transition-opacity hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40"
+      className="inline-flex w-full min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-pretty rounded-md border-[0.5px] border-emerald-600/50 bg-transparent px-4 py-2.5 text-base text-emerald-700 transition-opacity hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40 sm:px-6 sm:py-3 sm:text-lg"
     >
       <FiMessageCircle className="h-5 w-5 shrink-0" aria-hidden />
       {isWa ? "WhatsApp us" : "Message us (contact)"}

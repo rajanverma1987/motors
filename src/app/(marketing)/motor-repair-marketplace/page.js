@@ -144,19 +144,19 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <strong className="font-semibold text-title">request</strong>, not a forced online checkout, so you keep
             control of pricing, credit, and fulfillment while still reaching new demand online.
           </p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <Link href="/register">
-              <Button variant="primary" size="lg">
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <Link href="/register" className="w-full min-w-0 sm:w-auto">
+              <Button variant="primary" size="lg" className="w-full sm:w-auto">
                 Get CRM access
               </Button>
             </Link>
-            <Link href="/marketplace">
-              <Button variant="outline" size="lg">
+            <Link href="/marketplace" className="w-full min-w-0 sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 Browse live listings
               </Button>
             </Link>
-            <Link href="/contact">
-              <Button variant="outline" size="lg">
+            <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+              <Button variant="outline" size="lg" className="w-full sm:w-auto">
                 Talk to sales
               </Button>
             </Link>
@@ -359,19 +359,19 @@ export default function MotorRepairMarketplaceMarketingPage() {
             </Link>{" "}
             and onboarding.
           </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link href="/register">
-              <Button variant="primary" size="sm">
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <Link href="/register" className="w-full min-w-0 sm:w-auto">
+              <Button variant="primary" size="sm" className="w-full sm:w-auto">
                 Create account
               </Button>
             </Link>
-            <Link href="/contact">
-              <Button variant="outline" size="sm">
+            <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 Talk to us
               </Button>
             </Link>
-            <Link href="/marketplace">
-              <Button variant="outline" size="sm">
+            <Link href="/marketplace" className="w-full min-w-0 sm:w-auto">
+              <Button variant="outline" size="sm" className="w-full sm:w-auto">
                 Browse listings
               </Button>
             </Link>
