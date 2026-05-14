@@ -8,6 +8,84 @@ import { useToast } from "@/components/toast-provider";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 import { resolveWorkOrderStatusTileClass } from "@/lib/work-order-status-tiles";
 
+/**
+ * Column order always follows Settings → Dropdowns (canonical) row order.
+ * Stored `shopFloorBoardOrder` only limits which statuses appear when it is a strict subset
+ * of canonical; any status used on a work order is included and slotted by canonical order
+ * (never appended in API / “first seen” order).
+ */
+function computeJobBoardColumns(canonical, boardSubset, workOrders) {
+  const canon = Array.isArray(canonical)
+    ? canonical.map((s) => String(s ?? "").trim()).filter(Boolean)
+    : [];
+  const board = Array.isArray(boardSubset)
+    ? boardSubset.map((s) => String(s ?? "").trim()).filter(Boolean)
+    : [];
+  const woList = Array.isArray(workOrders) ? workOrders : [];
+
+  if (!canon.length) {
+    const fromBoard = board.length ? [...board] : [];
+    const seen = new Set(fromBoard.map((s) => s.toLowerCase()));
+    const tail = [];
+    for (const wo of woList) {
+      const s = String(wo.status ?? "").trim();
+      if (!s) continue;
+      const sl = s.toLowerCase();
+      if (!seen.has(sl)) {
+        seen.add(sl);
+        tail.push(s);
+      }
+    }
+    return [...fromBoard, ...tail];
+  }
+
+  const canonLowerSet = new Set(canon.map((c) => c.toLowerCase()));
+  const boardLowerSet = new Set(board.map((b) => b.toLowerCase()));
+
+  const sameStatusSetAsCanon =
+    boardLowerSet.size === canonLowerSet.size &&
+    [...canonLowerSet].every((c) => boardLowerSet.has(c));
+
+  const fullBoardSignal =
+    !board.length || board.length >= canon.length || sameStatusSetAsCanon;
+
+  const pickLower = new Set();
+  if (fullBoardSignal) {
+    for (const c of canon) pickLower.add(c.toLowerCase());
+  } else {
+    for (const b of board) pickLower.add(b.toLowerCase());
+  }
+  for (const wo of woList) {
+    const sl = String(wo.status ?? "").trim().toLowerCase();
+    if (sl) pickLower.add(sl);
+  }
+
+  const ordered = canon.filter((c) => pickLower.has(c.toLowerCase()));
+
+  const seenLower = new Set(ordered.map((s) => s.toLowerCase()));
+  const unknownTail = [];
+  for (const wo of woList) {
+    const s = String(wo.status ?? "").trim();
+    if (!s) continue;
+    const sl = s.toLowerCase();
+    if (!canonLowerSet.has(sl) && !seenLower.has(sl)) {
+      seenLower.add(sl);
+      unknownTail.push(s);
+    }
+  }
+  return [...ordered, ...unknownTail];
+}
+
+function resolveStatusToColumnKey(status, columnTitles) {
+  const t = String(status ?? "").trim();
+  if (!t) return "";
+  const tl = t.toLowerCase();
+  for (const col of columnTitles) {
+    if (String(col ?? "").trim().toLowerCase() === tl) return String(col).trim();
+  }
+  return t;
+}
+
 function applyBoardEvent(setWorkOrders, msg) {
   if (!msg || typeof msg !== "object") return;
   if (msg.type === "workOrderUpdated" && msg.workOrder?.id) {
@@ -33,6 +111,7 @@ function applyBoardEvent(setWorkOrders, msg) {
 export default function JobBoardClient({
   initialWorkOrders,
   initialBoardOrder,
+  initialWorkOrderStatuses,
   initialStatusTileColors,
   publicMode = false,
   shareToken = "",
@@ -50,6 +129,11 @@ export default function JobBoardClient({
     if (Array.isArray(initialBoardOrder) && initialBoardOrder.length) return [...initialBoardOrder];
     return [...USER_SETTINGS_DEFAULTS.shopFloorBoardOrder];
   });
+  const [canonicalWoStatuses, setCanonicalWoStatuses] = useState(() =>
+    Array.isArray(initialWorkOrderStatuses) && initialWorkOrderStatuses.length
+      ? [...initialWorkOrderStatuses]
+      : [...USER_SETTINGS_DEFAULTS.workOrderStatuses]
+  );
   const [loading, setLoading] = useState(!publicMode || !Array.isArray(initialWorkOrders));
   const [compact, setCompact] = useState(false);
   const [hideEmptyStatuses, setHideEmptyStatuses] = useState(false);
@@ -70,8 +154,13 @@ export default function JobBoardClient({
       if (setRes.ok) {
         const d = await setRes.json();
         const u = mergeUserSettings(d.settings);
+        const canon =
+          Array.isArray(u.workOrderStatuses) && u.workOrderStatuses.length
+            ? [...u.workOrderStatuses]
+            : [...USER_SETTINGS_DEFAULTS.workOrderStatuses];
+        setCanonicalWoStatuses(canon);
         const order = u.shopFloorBoardOrder?.length ? u.shopFloorBoardOrder : u.workOrderStatuses;
-        setBoardColumns(Array.isArray(order) && order.length ? order : u.workOrderStatuses);
+        setBoardColumns(Array.isArray(order) && order.length ? order : canon);
         setStatusTileColors(
           u.workOrderStatusTileColors && typeof u.workOrderStatusTileColors === "object"
             ? { ...u.workOrderStatusTileColors }
@@ -93,6 +182,9 @@ export default function JobBoardClient({
     if (Array.isArray(initialBoardOrder) && initialBoardOrder.length) {
       setBoardColumns([...initialBoardOrder]);
     }
+    if (Array.isArray(initialWorkOrderStatuses) && initialWorkOrderStatuses.length) {
+      setCanonicalWoStatuses([...initialWorkOrderStatuses]);
+    }
     if (
       initialStatusTileColors &&
       typeof initialStatusTileColors === "object" &&
@@ -100,7 +192,13 @@ export default function JobBoardClient({
     ) {
       setStatusTileColors({ ...initialStatusTileColors });
     }
-  }, [publicMode, initialWorkOrders, initialBoardOrder, initialStatusTileColors]);
+  }, [
+    publicMode,
+    initialWorkOrders,
+    initialBoardOrder,
+    initialWorkOrderStatuses,
+    initialStatusTileColors,
+  ]);
 
   // Live updates via SSE when work orders change (no polling)
   useEffect(() => {
@@ -131,25 +229,19 @@ export default function JobBoardClient({
     return () => es.close();
   }, [publicMode, shareToken, loading]);
 
-  const columns = useMemo(() => {
-    const base = [...boardColumns];
-    const seen = new Set(base);
-    for (const wo of workOrders) {
-      const s = wo.status?.trim();
-      if (s && !seen.has(s)) {
-        seen.add(s);
-        base.push(s);
-      }
-    }
-    return base;
-  }, [boardColumns, workOrders]);
+  const columns = useMemo(
+    () => computeJobBoardColumns(canonicalWoStatuses, boardColumns, workOrders),
+    [canonicalWoStatuses, boardColumns, workOrders]
+  );
 
   const byStatus = useMemo(() => {
     const map = Object.fromEntries(columns.map((s) => [s, []]));
+    const fallback = columns[0] || "Assigned";
     for (const wo of workOrders) {
-      const s = wo.status?.trim() || columns[0] || "Assigned";
-      if (!map[s]) map[s] = [];
-      map[s].push(wo);
+      const raw = String(wo.status ?? "").trim();
+      let key = raw ? resolveStatusToColumnKey(raw, columns) : fallback;
+      if (map[key] === undefined) key = fallback;
+      map[key].push(wo);
     }
     return map;
   }, [workOrders, columns]);

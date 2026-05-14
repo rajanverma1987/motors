@@ -30,6 +30,7 @@ import {
   FiRepeat,
   FiKey,
   FiGitBranch,
+  FiPercent,
 } from "react-icons/fi";
 import { ImPencil2 } from "react-icons/im";
 
@@ -49,6 +50,7 @@ const JOBS_NAV = [
 const ACCOUNTING_NAV = [
   { href: "/dashboard/invoices", label: "Invoices", icon: FiDollarSign },
   { href: "/dashboard/accounts-receivable", label: "Accounts receivable", icon: FiTrendingUp },
+  { href: "/dashboard/taxes", label: "Taxes", icon: FiPercent },
   { href: "/dashboard/ledger", label: "Ledger", icon: FiCreditCard },
 ];
 

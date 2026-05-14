@@ -210,34 +210,61 @@ export default function LedgerPageClient() {
 
   const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
 
+  const moneyCsv = useCallback((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n.toFixed(2) : "";
+  }, []);
+
   const columns = useMemo(
     () => [
-      { key: "date", label: "Date", sortable: true, render: (v) => formatLedgerDate(v) },
-      { key: "description", label: "Description", sortable: true, render: (v) => v || "—" },
-      { key: "party", label: "Party", sortable: true, render: (v) => v || "—" },
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        render: (v) => formatLedgerDate(v),
+        exportValue: (v) => formatLedgerDate(v),
+      },
+      {
+        key: "description",
+        label: "Description",
+        sortable: true,
+        render: (v) => v || "—",
+        exportValue: (v) => v ?? "",
+      },
+      {
+        key: "party",
+        label: "Party",
+        sortable: true,
+        render: (v) => v || "—",
+        exportValue: (v) => v ?? "",
+      },
       {
         key: "debit",
         label: "Debit",
         sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
+        exportValue: (v) => moneyCsv(v),
       },
       {
         key: "credit",
         label: "Credit",
         sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
+        exportValue: (v) => moneyCsv(v),
       },
       {
         key: "receivable",
         label: "Receivable",
         sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
+        exportValue: (v) => moneyCsv(v),
       },
       {
         key: "payable",
         label: "Payable",
         sortable: true,
         render: (v) => (Number(v) > 0 ? <span className="tabular">{fmt(v)}</span> : " - "),
+        exportValue: (v) => moneyCsv(v),
       },
       {
         key: "status",
@@ -251,9 +278,15 @@ export default function LedgerPageClient() {
           ) : (
             "—"
           ),
+        exportValue: (v) => v ?? "",
       },
     ],
-    [fmt]
+    [fmt, moneyCsv]
+  );
+
+  const ledgerExportFilename = useMemo(
+    () => `ledger-${fromDate || "all"}-to-${toDate || "all"}.csv`,
+    [fromDate, toDate]
   );
 
   const handleTableSort = useCallback((key, direction) => setTableSort({ key, direction }), []);
@@ -403,6 +436,10 @@ export default function LedgerPageClient() {
         sortState={tableSort}
         onSort={handleTableSort}
         emptyMessage="No ledger transactions found for this date range."
+        exportable
+        exportIconOnly
+        exportFilename={ledgerExportFilename}
+        exportButtonTitle="Excel export (CSV)"
       />
 
       <Modal

@@ -115,6 +115,7 @@ function JobBoardSharePageInner() {
       <JobBoardClient
         initialWorkOrders={data.workOrders}
         initialBoardOrder={data.shopFloorBoardOrder}
+        initialWorkOrderStatuses={data.workOrderStatuses}
         initialStatusTileColors={data.workOrderStatusTileColors}
         publicMode
         shareToken={token}

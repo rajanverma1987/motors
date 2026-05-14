@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FiEdit2, FiTrash2, FiRotateCw } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiRotateCw, FiDownload } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
@@ -83,6 +83,9 @@ export default function Table({
   // Optional: export CSV
   exportable = false,
   exportFilename = "export.csv",
+  /** When true with exportable, show an icon button (e.g. Ledger / Taxes) instead of text "Export CSV". */
+  exportIconOnly = false,
+  exportButtonTitle = "Excel export (CSV)",
   // Optional: responsive (horizontal scroll wrapper)
   responsive = false,
   // Optional: column visibility settings (icon opens modal to hide/show columns)
@@ -651,11 +654,22 @@ export default function Table({
               aria-label="Loading"
             />
           )}
-          {exportable && data.length > 0 && (
-            <Button size="sm" variant="outline" onClick={handleExportCsv} className="shrink-0">
-              Export CSV
-            </Button>
-          )}
+          {exportable && data.length > 0 &&
+            (exportIconOnly ? (
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-primary outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label={exportButtonTitle}
+                title={exportButtonTitle}
+              >
+                <FiDownload className="h-5 w-5 shrink-0" aria-hidden />
+              </button>
+            ) : (
+              <Button size="sm" variant="outline" onClick={handleExportCsv} className="shrink-0">
+                Export CSV
+              </Button>
+            ))}
           {hasColumnSettings && (
             <button
               type="button"

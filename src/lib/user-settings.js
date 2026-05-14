@@ -130,15 +130,26 @@ export function normalizeWorkOrderStatusList(raw) {
  * @param {string[]} statusList allowed labels (normalized)
  */
 export function normalizeShopFloorBoardOrder(boardRaw, statusList) {
-  const allowed = new Set(statusList);
+  const list = Array.isArray(statusList) ? statusList : [];
+  /** @type {Map<string, string>} lower → canonical spelling from dropdown */
+  const allowedCanon = new Map();
+  for (const x of list) {
+    const raw = String(x ?? "").trim();
+    const k = raw.toLowerCase();
+    if (k && !allowedCanon.has(k)) allowedCanon.set(k, raw);
+  }
   const arr = Array.isArray(boardRaw) ? boardRaw : [];
-  const seen = new Set();
+  const seenLower = new Set();
   const out = [];
   for (const item of arr) {
     const label = String(item ?? "").trim();
-    if (!label || !allowed.has(label) || seen.has(label)) continue;
-    seen.add(label);
-    out.push(label);
+    if (!label) continue;
+    const lower = label.toLowerCase();
+    if (seenLower.has(lower)) continue;
+    const canonical = allowedCanon.get(lower);
+    if (!canonical) continue;
+    seenLower.add(lower);
+    out.push(canonical);
     if (out.length >= 25) break;
   }
   return out;
@@ -167,6 +178,31 @@ export function mergeUserSettings(stored) {
     const rawBoard = Array.isArray(s.shopFloorBoardOrder) ? s.shopFloorBoardOrder : [];
     merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(rawBoard, merged.workOrderStatuses);
   }
+
+  /**
+   * Shop floor columns must follow work order status (Settings → Dropdowns) order.
+   * `shopFloorBoardOrder` may still reflect an older sequence after statuses were reordered in the table.
+   * Matching is case-insensitive so stored board labels align with canonical dropdown values.
+   */
+  {
+    const canonical = merged.workOrderStatuses;
+    const board = merged.shopFloorBoardOrder;
+    if (Array.isArray(canonical) && canonical.length) {
+      if (!Array.isArray(board) || !board.length) {
+        merged.shopFloorBoardOrder = [...canonical];
+      } else {
+        const boardLower = new Set(
+          board.map((b) => String(b ?? "").trim().toLowerCase()).filter(Boolean)
+        );
+        const next = [];
+        for (const s of canonical) {
+          if (boardLower.has(String(s ?? "").trim().toLowerCase())) next.push(s);
+        }
+        merged.shopFloorBoardOrder = next.length ? next : [...canonical];
+      }
+    }
+  }
+
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);

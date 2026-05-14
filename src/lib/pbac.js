@@ -16,6 +16,7 @@ export const PAGES = [
   { id: "work-orders", label: "Work orders" },
   { id: "invoices", label: "Invoices" },
   { id: "accounts-receivable", label: "Accounts receivable" },
+  { id: "taxes", label: "Taxes" },
   { id: "job-board", label: "Shop floor job board" },
   { id: "motor-tag", label: "Motor tag (Job Write-Up)" },
   { id: "vendors", label: "Vendors" },
