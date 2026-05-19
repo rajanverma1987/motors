@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
-import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
+import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
 
 const primaryNav = [
   { href: "/#features", label: "Features" },
@@ -37,11 +37,10 @@ function DesktopNavLink({ href, label, pathname }) {
   return (
     <Link
       href={href}
-      className={`relative whitespace-nowrap px-2 py-2 text-sm transition-colors ${
-        active
+      className={`relative whitespace-nowrap px-2 py-2 text-sm transition-colors ${active
           ? "font-semibold text-primary after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:rounded-full after:bg-primary dark:text-[hsl(26_48%_28%)] dark:after:bg-[hsl(26_48%_28%)]"
           : "font-medium text-secondary hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
-      }`}
+        }`}
     >
       {label}
     </Link>
@@ -90,9 +89,9 @@ export default function Navbar() {
             <Image
               src={BRAND_LOGO_PUBLIC_PATH}
               alt="IQ Motorbase"
-              width={519}
-              height={155}
-              className="h-[3rem] w-auto max-w-[min(100%,calc(100vw-5.5rem))] object-contain object-left sm:h-[3.25rem] md:h-[4.86rem] md:max-w-[min(100vw-12rem,476px)]"
+              width={BRAND_LOGO_WIDTH}
+              height={BRAND_LOGO_HEIGHT}
+              className="h-[1.5rem] w-auto max-w-[min(100%,calc(100vw-5.5rem))] object-contain object-left sm:h-[1.625rem] md:h-[2.43rem] md:max-w-[min(100vw-12rem,238px)]"
               priority
             />
           </Link>
@@ -146,18 +145,16 @@ export default function Navbar() {
       {/* Fixed layers stay outside header (backdrop-filter containing block). */}
       <div className="md:hidden">
         <div
-          className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200 ${
-            mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-          }`}
+          className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200 ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+            }`}
           aria-hidden={!mobileOpen}
           inert={!mobileOpen ? true : undefined}
           onClick={closeMobile}
         />
         <aside
           id="marketing-mobile-drawer"
-          className={`fixed inset-y-0 right-0 z-[110] flex h-dvh max-h-dvh w-[min(100%,20rem)] flex-col border-l border-border bg-card shadow-xl transition-transform duration-200 ease-out ${
-            mobileOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
-          }`}
+          className={`fixed inset-y-0 right-0 z-[110] flex h-dvh max-h-dvh w-[min(100%,20rem)] flex-col border-l border-border bg-card shadow-xl transition-transform duration-200 ease-out ${mobileOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
+            }`}
           aria-hidden={!mobileOpen}
           inert={!mobileOpen ? true : undefined}
         >
@@ -181,9 +178,8 @@ export default function Navbar() {
                     key={`m-${href}-${label}`}
                     href={href}
                     onClick={closeMobile}
-                    className={`block px-4 py-3 text-sm font-medium transition-colors ${
-                      active ? "bg-primary/8 text-primary" : "text-title hover:bg-form-bg"
-                    }`}
+                    className={`block px-4 py-3 text-sm font-medium transition-colors ${active ? "bg-primary/8 text-primary" : "text-title hover:bg-form-bg"
+                      }`}
                   >
                     {label}
                   </Link>

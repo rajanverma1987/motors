@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import FooterNavLinks from "./FooterNavLinks";
-import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
+import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
 
 const footerLinks = {
   "For repair shops": [
@@ -52,9 +52,9 @@ export default function Footer() {
               <Image
                 src={BRAND_LOGO_PUBLIC_PATH}
                 alt="IQ Motorbase"
-                width={476}
-                height={143}
-                className="h-[5.4rem] w-auto max-w-[min(100%,432px)] object-contain object-left"
+                width={BRAND_LOGO_WIDTH}
+                height={BRAND_LOGO_HEIGHT}
+                className="h-[2.7rem] w-auto max-w-[min(100%,216px)] object-contain object-left"
               />
             </Link>
             <p className="mt-2 text-sm text-secondary">
