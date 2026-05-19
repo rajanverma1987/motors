@@ -6,6 +6,7 @@ import { getPublicJobPostingSlugs } from "@/lib/job-postings-public";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
+import { isListingUrlSlugExportSafe } from "@/lib/listing-slug";
 
 /**
  * Shared sitemap URL list (same sources as `src/app/sitemap.js`).
@@ -122,12 +123,14 @@ export async function getSitemapEntries() {
     const listings = await Listing.find({ status: "approved", urlSlug: { $ne: "" } })
       .select("urlSlug updatedAt")
       .lean();
-    listingPages = listings.map((l) => ({
-      url: `${baseUrl}/electric-motor-reapir-shops-listings/${l.urlSlug}`,
-      lastModified: l.updatedAt ? new Date(l.updatedAt) : new Date(),
-      changeFrequency: "weekly",
-      priority: 0.72,
-    }));
+    listingPages = listings
+      .filter((l) => isListingUrlSlugExportSafe(l.urlSlug))
+      .map((l) => ({
+        url: `${baseUrl}/electric-motor-reapir-shops-listings/${l.urlSlug}`,
+        lastModified: l.updatedAt ? new Date(l.updatedAt) : new Date(),
+        changeFrequency: "weekly",
+        priority: 0.72,
+      }));
   } catch (err) {
     console.error("Sitemap listing pages error:", err);
   }

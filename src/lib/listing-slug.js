@@ -5,13 +5,38 @@
 
 const ID_REGEX = /[a-f0-9]{24}$/i;
 
-export function slugify(companyName) {
-  if (!companyName || typeof companyName !== "string") return "";
-  return companyName
+/** Max path segment length (Windows .next export paths; SEO-friendly cap). */
+export const MAX_LISTING_URL_SLUG_LENGTH = 80;
+
+export function slugify(text, maxLen = MAX_LISTING_URL_SLUG_LENGTH) {
+  if (!text || typeof text !== "string") return "";
+  let slug = text
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+  if (maxLen > 0 && slug.length > maxLen) {
+    slug = slug.slice(0, maxLen).replace(/-+$/g, "");
+  }
+  return slug;
+}
+
+/** First line / sentence of company name before slugify (avoids paragraph-length company fields). */
+export function companyNameToUrlSlugBase(companyName) {
+  if (!companyName || typeof companyName !== "string") return "";
+  const firstLine = companyName.trim().split(/[\n\r|]/)[0].trim();
+  const firstSentence = firstLine.split(/[.!?]/)[0].trim() || firstLine;
+  const capped = firstSentence.length > 100 ? firstSentence.slice(0, 100) : firstSentence;
+  return slugify(capped, MAX_LISTING_URL_SLUG_LENGTH);
+}
+
+/** Safe for Next.js static export on Windows (path length under .next/server/app/...). */
+export function isListingUrlSlugExportSafe(slug) {
+  if (!slug || typeof slug !== "string") return false;
+  const s = slug.trim();
+  if (!s || s.length > MAX_LISTING_URL_SLUG_LENGTH) return false;
+  if (/[<>:"\\|?*\x00-\x1f]/.test(s)) return false;
+  return true;
 }
 
 /**

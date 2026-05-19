@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getPublicListings, resolvePublicListingFromSlugParam } from "@/lib/listings-public";
 import { getListingReviewStats } from "@/lib/reviews-public";
 import { getLocationPageForArea } from "@/lib/location-pages-public";
-import { getListingPublicPathSegment } from "@/lib/listing-slug";
+import { getListingPublicPathSegment, isListingUrlSlugExportSafe } from "@/lib/listing-slug";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import {
   buildListingDetailFaqs,
@@ -19,7 +19,9 @@ import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/compone
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
   const listings = await getPublicListings();
-  return listings.filter((l) => l.urlSlug).map((l) => ({ slug: l.urlSlug }));
+  return listings
+    .filter((l) => l.urlSlug && isListingUrlSlugExportSafe(l.urlSlug))
+    .map((l) => ({ slug: l.urlSlug }));
 }
 
 /** Allow new slugs not in generateStaticParams (e.g. newly approved) to be generated on demand */

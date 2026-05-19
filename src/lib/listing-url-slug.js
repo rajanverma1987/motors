@@ -1,13 +1,17 @@
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
-import { slugify } from "@/lib/listing-slug";
+import {
+  companyNameToUrlSlugBase,
+  isListingUrlSlugExportSafe,
+  slugify,
+} from "@/lib/listing-slug";
 
 /**
  * Generate a unique urlSlug for a listing (approved public URL path segment).
  */
 export async function generateUniqueListingUrlSlug(companyName, excludeListingId) {
   await connectDB();
-  const base = slugify(companyName) || "repair-center";
+  const base = companyNameToUrlSlugBase(companyName) || "repair-center";
   let candidate = base;
   for (let attempt = 0; attempt < 80; attempt++) {
     const query = { urlSlug: candidate };
@@ -37,6 +41,27 @@ export async function ensureApprovedListingsHaveUrlSlug() {
         .select("_id companyName")
         .lean();
       for (const doc of docs) {
+        const slug = await generateUniqueListingUrlSlug(doc.companyName, doc._id);
+        try {
+          await Listing.updateOne({ _id: doc._id }, { $set: { urlSlug: slug } });
+        } catch (e) {
+          if (e?.code === 11000) {
+            const slug2 = await generateUniqueListingUrlSlug(
+              `${doc.companyName} ${doc._id.toString().slice(-6)}`,
+              doc._id
+            );
+            await Listing.updateOne({ _id: doc._id }, { $set: { urlSlug: slug2 } });
+          } else throw e;
+        }
+      }
+      const invalidSlugDocs = await Listing.find({
+        status: "approved",
+        urlSlug: { $type: "string", $ne: "" },
+      })
+        .select("_id companyName urlSlug")
+        .lean();
+      for (const doc of invalidSlugDocs) {
+        if (isListingUrlSlugExportSafe(doc.urlSlug)) continue;
         const slug = await generateUniqueListingUrlSlug(doc.companyName, doc._id);
         try {
           await Listing.updateOne({ _id: doc._id }, { $set: { urlSlug: slug } });
