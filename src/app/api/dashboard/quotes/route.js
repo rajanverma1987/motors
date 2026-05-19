@@ -6,12 +6,14 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { defaultNewRfqStatusSlug, normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
 import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
-import { normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
@@ -120,7 +122,9 @@ export async function POST(request) {
       .lean();
     const customerTaxExempt = normalizeTaxExempt(customer?.taxExempt);
     const customerTaxPercent = String(normalizeTaxPercent(customer?.taxPercent));
-    const rfqNumber = await getNextRfqNumber(email);
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const rfqNumber = await getNextRfqNumber(email, merged);
     const dateStr = String(date ?? "").trim() || todayQuoteDateString();
     let preparedByStr = String(preparedBy ?? "").trim();
     if (!preparedByStr) {
@@ -130,7 +134,7 @@ export async function POST(request) {
       customerId: customerId.trim(),
       motorId: motorId.trim(),
       leadId: clampString(leadId, 100),
-      status: normalizeDashboardQuoteStatusSlug(status),
+      status: normalizeDashboardQuoteStatusSlug(status, { defaultStatus: defaultNewRfqStatusSlug() }),
       customerPo: clampString(customerPo, 100),
       date: clampString(dateStr, 20),
       preparedBy: clampString(preparedByStr, 200),

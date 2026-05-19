@@ -16,6 +16,8 @@ import { preliminaryLineItemsToScopeLines } from "@/lib/repair-flow-quote-form-m
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
 import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
@@ -149,7 +151,9 @@ export async function POST(request, context) {
       scopeLinesForLegacy = preliminaryLineItemsToScopeLines(lineItems).filter((r) => String(r.scope || "").trim());
     }
 
-    const rfqNumber = await getNextRfqNumber(email);
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const rfqNumber = await getNextRfqNumber(email, merged);
     const laborFromLines = scopeLinesForLegacy.length ? sumPrices(scopeLinesForLegacy) : "";
     const partsFromLines = partsLinesForLegacy.length ? sumPartsLines(partsLinesForLegacy) : "";
 

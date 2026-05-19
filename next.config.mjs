@@ -14,6 +14,8 @@ const nextConfig = {
       { source: "/motor-repair-software", destination: "/motor-repair-shop-management-software", permanent: true },
       { source: "/motor-repair-shops", destination: "/electric-motor-reapir-shops-listings", permanent: true },
       { source: "/emergency-motor-repair", destination: "/emergency-motor-repair-what-to-do", permanent: true },
+      { source: "/dashboard/quotes", destination: "/dashboard/rfq", permanent: true },
+      { source: "/dashboard/quotes/:path*", destination: "/dashboard/rfq/:path*", permanent: true },
     ];
   },
   images: {

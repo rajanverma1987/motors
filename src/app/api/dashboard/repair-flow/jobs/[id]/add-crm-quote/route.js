@@ -6,6 +6,8 @@ import MotorRepairJob from "@/models/MotorRepairJob";
 import Quote from "@/models/Quote";
 import Customer from "@/models/Customer";
 import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
 import {
   todayQuoteDateString,
   defaultPreparedByEmployeeIdForPortalUser,
@@ -41,7 +43,9 @@ export async function POST(request, context) {
       );
     }
 
-    const rfqNumber = await getNextRfqNumber(email);
+    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+    const merged = mergeUserSettings(settingsDoc?.settings);
+    const rfqNumber = await getNextRfqNumber(email, merged);
     const quoteDate = todayQuoteDateString();
     const preparedByEmpId = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
     const customer = await Customer.findOne({ _id: customerId, createdByEmail: email })

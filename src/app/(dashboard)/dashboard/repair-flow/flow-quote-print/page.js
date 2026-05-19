@@ -87,7 +87,7 @@ function FlowQuotePrintInner() {
   }
 
   return (
-    <div className="mx-auto max-w-[57.6rem] p-6 text-sm text-title print:p-4">
+    <div className="w-full min-w-0 p-6 text-sm text-title print:p-4">
       <div className="flow-quote-print-no-print mb-4 flex flex-wrap justify-end gap-2 border-b border-border pb-4">
         <button
           type="button"

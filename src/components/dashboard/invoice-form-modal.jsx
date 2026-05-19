@@ -14,7 +14,6 @@ import { useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
-import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import { FiSave, FiSend, FiPrinter, FiTrash2, FiRotateCw, FiClipboard } from "react-icons/fi";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
@@ -187,11 +186,6 @@ export default function InvoiceFormModal({
           );
           const d = await res.json();
           if (cancelled) return;
-          if (d.existingInvoiceId) {
-            onSwitchToInvoice?.(d.existingInvoiceId);
-            toast.info("Invoice already exists for this quote — opening it to edit.");
-            return;
-          }
           if (!res.ok) throw new Error(d.error || "Failed to load draft");
           setSavedId(null);
           setForm({
@@ -410,23 +404,6 @@ export default function InvoiceFormModal({
           body: JSON.stringify(payload),
         });
         const d = await res.json();
-        if (res.status === 409 && d.existingId) {
-          onSwitchToInvoice?.(d.existingId);
-          toast.info("Invoice already exists — opened for editing.");
-          return;
-        }
-        if (res.status === 409 && payload.quoteId) {
-          const draftRes = await fetch(
-            `/api/dashboard/invoices/draft?quoteId=${encodeURIComponent(payload.quoteId)}`,
-            { credentials: "include", cache: "no-store" },
-          );
-          const draftData = await draftRes.json().catch(() => ({}));
-          if (draftRes.ok && draftData?.existingInvoiceId) {
-            onSwitchToInvoice?.(draftData.existingInvoiceId);
-            toast.info("Invoice already exists — opened for editing.");
-            return;
-          }
-        }
         if (!res.ok) throw new Error(d.error || "Save failed");
         toast.success("Invoice saved.");
         setSavedId(d.invoice?.id || null);
@@ -568,19 +545,6 @@ export default function InvoiceFormModal({
             <p className="text-sm">
               <span className="text-secondary">Motor: </span>
               {form.motorLabel || "—"}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border bg-card/50 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
-              Company &amp; terms (print / email)
-            </p>
-            <p className="mb-2 text-sm font-medium text-title">{user?.shopName || "—"}</p>
-            <CompanyAccountsPrint
-              billingAddress={accountSettings?.accountsBillingAddress}
-              paymentTermsLabel={accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms)}
-            />
-            <p className="mt-3 text-xs text-secondary">
-              Edit in Settings → Accounts.
             </p>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

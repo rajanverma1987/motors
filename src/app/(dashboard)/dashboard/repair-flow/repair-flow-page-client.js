@@ -373,7 +373,7 @@ export default function RepairFlowPageClient() {
   const handleJobsSort = useCallback((key, direction) => setJobsSort({ key, direction }), []);
 
   return (
-    <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
+    <div className="w-full min-w-0 flex-1">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Job Write-Up</h1>

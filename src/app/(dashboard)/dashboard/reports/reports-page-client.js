@@ -180,7 +180,7 @@ export default function ReportsPageClient() {
       { label: "Leads", value: s.leads, href: "/dashboard/leads" },
       { label: "Customers", value: s.customers, href: "/dashboard/customers" },
       { label: "Motors", value: s.motors, href: "/dashboard/motors" },
-      { label: "Quotes", value: s.quotes, href: "/dashboard/quotes" },
+      { label: "RFQ", value: s.quotes, href: "/dashboard/rfq" },
       { label: "Work orders", value: s.workOrders, href: "/dashboard/work-orders" },
       { label: "Invoices", value: s.invoices, href: "/dashboard/invoices" },
       { label: "Purchase orders", value: s.purchaseOrders, href: "/dashboard/purchase-orders" },
@@ -236,7 +236,7 @@ export default function ReportsPageClient() {
 
   if (loading && !data) {
     return (
-      <div className="mx-auto flex max-w-[86.4rem] flex-1 flex-col px-4 py-6">
+      <div className="flex w-full min-w-0 flex-1 flex-col">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 rounded bg-border" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -250,7 +250,7 @@ export default function ReportsPageClient() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[86.4rem] flex-1 flex-col px-4 py-6 pb-12">
+    <div className="flex w-full min-w-0 flex-1 flex-col pb-12">
       <div className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-title">Reports</h1>

@@ -223,7 +223,7 @@ export default function WorkOrdersPageClient() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
@@ -290,7 +290,7 @@ export default function WorkOrdersPageClient() {
               ? "No work orders with this status."
               : searchQuery.trim()
                 ? "No work orders match your search."
-                : "No work orders yet. Create from an approved quote on the Quotes page (row icon) or Job Write-Up."
+                : "No work orders yet. Create from an approved quote on the RFQ page (row icon) or Job Write-Up."
             : ""
         }
       />

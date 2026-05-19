@@ -85,7 +85,7 @@ export async function POST(request, context) {
         return NextResponse.json(
           {
             error:
-              "No RFQ found for this job’s primary final quote. Open the Quotes page and ensure the repair job is linked.",
+              "No RFQ found for this job’s primary final quote. Open the RFQ page and ensure the repair job is linked.",
           },
           { status: 400 }
         );

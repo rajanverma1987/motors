@@ -290,7 +290,7 @@ export default function RepairFlowCreateQuoteModal({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to create quote");
       if (mode === "final" && data.legacyQuote?.rfqNumber) {
-        toast.success(`Final quote saved. RFQ ${data.legacyQuote.rfqNumber} is on the Quotes page.`);
+        toast.success(`Final quote saved. RFQ ${data.legacyQuote.rfqNumber} is on the RFQ page.`);
       } else {
         toast.success(mode === "final" ? "Final quote created." : "Quote created.");
       }
@@ -351,7 +351,7 @@ export default function RepairFlowCreateQuoteModal({
         <p className="text-sm text-secondary">
           {mode === "final" ? (
             <>
-              Saving creates a draft RFQ on the Quotes page with the same scope and costs. Pick customer and motor, then
+              Saving creates a draft RFQ on the RFQ page with the same scope and costs. Pick customer and motor, then
               enter Scope &amp; Other Cost and notes below — nothing is copied from pre-inspections or detailed
               inspections; use component labels only to open readings for reference.
             </>

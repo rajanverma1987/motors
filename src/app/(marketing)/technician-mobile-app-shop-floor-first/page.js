@@ -84,8 +84,8 @@ export default function TechnicianMobileAppPage() {
               Job Write-Up
             </Link>{" "}
             through{" "}
-            <Link href="/dashboard/quotes" className="font-medium text-primary hover:underline">
-              Quotes (RFQs)
+            <Link href="/dashboard/rfq" className="font-medium text-primary hover:underline">
+              RFQ
             </Link>{" "}
             to{" "}
             <Link href="/dashboard/work-orders" className="font-medium text-primary hover:underline">

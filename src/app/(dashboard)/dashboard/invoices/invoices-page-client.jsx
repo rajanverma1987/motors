@@ -2,14 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import {
-  FiEdit2,
-  FiTrash2,
-  FiSend,
-  FiPrinter,
-  FiRotateCw,
-  FiDollarSign,
-} from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiSend, FiPrinter, FiRotateCw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
@@ -21,8 +14,13 @@ import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscree
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
 import { invoiceStatusLabel, invoiceStatusPillClassName } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
+import {
+  invoiceStatusSelectOptionsFromMerged,
+  invoiceStatusTileColorForValue,
+} from "@/lib/dropdown-catalog";
 import { invoiceLineTotal } from "@/lib/invoice-amounts";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
 
 function InvoicesInner() {
   const toast = useToast();
@@ -43,6 +41,7 @@ function InvoicesInner() {
   const [totalCount, setTotalCount] = useState(0);
   const [invoiceSort, setInvoiceSort] = useState({ key: "createdAt", direction: "desc" });
   const [summaryByStatus, setSummaryByStatus] = useState({});
+  const [statusFilter, setStatusFilter] = useState("");
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [printOpen, setPrintOpen] = useState(false);
   const [printPayload, setPrintPayload] = useState(null);
@@ -57,6 +56,7 @@ function InvoicesInner() {
         params.set("sortBy", invoiceSort.key);
         params.set("sortDir", invoiceSort.direction || "asc");
       }
+      if (statusFilter.trim()) params.set("status", statusFilter.trim());
       const res = await fetch(`/api/dashboard/invoices?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -71,7 +71,7 @@ function InvoicesInner() {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, invoiceSort]);
+  }, [page, pageSize, searchQuery, invoiceSort, statusFilter]);
 
   useEffect(() => {
     load();
@@ -96,14 +96,74 @@ function InvoicesInner() {
     setInvoiceSort({ key, direction });
   }, []);
 
+  const statusSelectOptions = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedAccountSettings),
+    [mergedAccountSettings]
+  );
+
   const statusSummaryCards = useMemo(() => {
-    return invoiceStatusSelectOptionsFromMerged(mergedAccountSettings).map((opt) => ({
-      key: opt.value,
-      label: opt.label,
-      count: Number(summaryByStatus?.[opt.value]?.count) || 0,
-      amount: Number(summaryByStatus?.[opt.value]?.amount) || 0,
-    }));
-  }, [summaryByStatus, mergedAccountSettings]);
+    const keysLower = new Set(statusSelectOptions.map((o) => o.value.toLowerCase()));
+    const buttons = [];
+    const tileClassForKey = (statusKey, fallbackIndex) => {
+      if (statusKey === "") return resolveTilePresetClass("", 0);
+      if (statusKey === "__other__") return resolveTilePresetClass("", 17);
+      const optIdx = statusSelectOptions.findIndex(
+        (o) => o.value.toLowerCase() === String(statusKey).toLowerCase()
+      );
+      const { tileColor, index } = invoiceStatusTileColorForValue(
+        mergedAccountSettings,
+        statusKey,
+        optIdx >= 0 ? optIdx : fallbackIndex
+      );
+      return resolveTilePresetClass(tileColor, index);
+    };
+
+    statusSelectOptions.forEach((opt, optIdx) => {
+      buttons.push({
+        key: opt.value,
+        label: opt.label,
+        count: Number(summaryByStatus?.[opt.value]?.count) || 0,
+        amount: Number(summaryByStatus?.[opt.value]?.amount) || 0,
+        tileClassName: tileClassForKey(opt.value, optIdx),
+      });
+    });
+
+    let orphanCount = 0;
+    let orphanAmount = 0;
+    for (const [rawKey, agg] of Object.entries(summaryByStatus || {})) {
+      const norm = normalizeInvoiceStatusSlug(rawKey, mergedAccountSettings);
+      if (!keysLower.has(norm)) {
+        orphanCount += Number(agg?.count) || 0;
+        orphanAmount += Number(agg?.amount) || 0;
+      }
+    }
+    if (orphanCount > 0) {
+      buttons.push({
+        key: "__other__",
+        label: "Other",
+        count: orphanCount,
+        amount: orphanAmount,
+        tileClassName: tileClassForKey("__other__", 17),
+      });
+    }
+
+    const allCount = Object.values(summaryByStatus || {}).reduce(
+      (sum, agg) => sum + (Number(agg?.count) || 0),
+      0
+    );
+    const allAmount = Object.values(summaryByStatus || {}).reduce(
+      (sum, agg) => sum + (Number(agg?.amount) || 0),
+      0
+    );
+    buttons.unshift({
+      key: "",
+      label: "All",
+      count: allCount,
+      amount: allAmount,
+      tileClassName: tileClassForKey("", 0),
+    });
+    return buttons;
+  }, [summaryByStatus, statusSelectOptions, mergedAccountSettings]);
 
   const handleDeleteCb = useCallback(
     async (row) => {
@@ -281,7 +341,7 @@ function InvoicesInner() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="mb-4 shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Invoices</h1>
         <p className="mt-2 text-sm text-secondary">
@@ -289,47 +349,62 @@ function InvoicesInner() {
         </p>
       </div>
 
-      <div className="mb-4 grid shrink-0 auto-rows-fr gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
-        {statusSummaryCards.map((card) => (
-          <div key={card.key} className="rounded-lg border border-border bg-card/50 p-4">
-            <div className="flex items-center gap-2 text-sm text-secondary">
-              <FiDollarSign className="h-4 w-4" aria-hidden />
-              {card.label}
-            </div>
-            <p className="mt-1 text-2xl font-bold tabular text-title">{fmt(card.amount)}</p>
-            <p className="text-xs text-secondary">Count: {card.count}</p>
-          </div>
-        ))}
-      </div>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-2 flex shrink-0 flex-wrap gap-1">
+          {statusSummaryCards.map((card) => {
+            const active = (statusFilter || "") === (card.key || "");
+            return (
+              <button
+                key={card.key || "__all__"}
+                type="button"
+                onClick={() => {
+                  setPage(1);
+                  setStatusFilter(card.key || "");
+                }}
+                className={`job-board-status-pill rounded-md border border-border px-2 py-1 text-left ring-1 ring-inset transition-all ${card.tileClassName} ${
+                  active ? "ring-2 ring-primary/50 shadow-sm" : "hover:brightness-[0.97] dark:hover:brightness-110"
+                }`}
+              >
+                <span className="block whitespace-nowrap text-xs font-semibold leading-tight">{card.label}</span>
+                <span className="mt-0.5 block whitespace-nowrap text-[10px] leading-none tabular-nums opacity-85">
+                  {card.count} · {fmt(card.amount)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      <Table
-        columns={columns}
-        data={rows}
-        rowKey="id"
-        loading={loading}
-        fillHeight
-        sortState={invoiceSort}
-        onSort={handleInvoiceSort}
-        searchable
-        onSearch={(q) => {
-          setPage(1);
-          setSearchQuery(q);
-        }}
-        searchPlaceholder="Search invoice#, customer, date, status…"
-        onCellClick={(row) => setInvoiceModal({ invoiceId: row.id })}
-        onRefresh={load}
-        pagination={{ page, pageSize, totalCount }}
-        onPageChange={(nextPage, nextPageSize) => {
-          setPage(nextPage);
-          setPageSize(nextPageSize);
-        }}
-        paginateClientSide={false}
-        emptyMessage={
-          rows.length === 0
-            ? "No invoices yet. On Quotes, choose Create invoice — then Save on this page to add a row."
-            : "No invoices match your search."
-        }
-      />
+        <Table
+          columns={columns}
+          data={rows}
+          rowKey="id"
+          loading={loading}
+          fillHeight
+          sortState={invoiceSort}
+          onSort={handleInvoiceSort}
+          searchable
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
+          searchPlaceholder="Search invoice#, customer, date, status…"
+          onCellClick={(row) => setInvoiceModal({ invoiceId: row.id })}
+          onRefresh={load}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
+          emptyMessage={
+            totalCount === 0 && !searchQuery.trim() && !statusFilter
+              ? "No invoices yet. Create an invoice from an approved quote on the RFQ page."
+              : statusFilter
+                ? "No invoices with this status."
+                : "No invoices match your search."
+          }
+        />
+      </div>
 
       <InvoiceFormModal
         open={!!invoiceModal}

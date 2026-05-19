@@ -8,8 +8,8 @@ const quoteSchema = new mongoose.Schema(
     motorId: { type: String, required: true, trim: true },
     /** Optional: lead this quote was created from */
     leadId: { type: String, default: "", trim: true },
-    /** RFQ lifecycle slug — configurable under Settings → Dropdowns (default set includes draft, sent, approved, …). */
-    status: { type: String, default: "draft", trim: true },
+    /** RFQ lifecycle slug — configurable under Settings → Dropdowns; new RFQs default to write-up. */
+    status: { type: String, default: "write-up", trim: true },
     /** Customer PO number */
     customerPo: { type: String, default: "", trim: true },
     /** Quote date (e.g. YYYY-MM-DD) */

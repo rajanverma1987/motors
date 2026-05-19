@@ -150,7 +150,7 @@ export default function AdminSubscriptionPlansPage() {
   ];
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[76.8rem] flex-1 flex-col overflow-auto px-4 py-6">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-auto">
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Subscription plans</h1>
         <p className="mt-1 text-sm text-secondary">

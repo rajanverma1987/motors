@@ -481,14 +481,17 @@ export default function SettingsPageClient() {
                 />
                 <p className="-mt-2 text-xs text-secondary">Leave blank for default RF-00001 style.</p>
                 <Input
-                  label="Invoice prefix"
+                  label="Job / RFQ / quote ID prefix"
                   value={draft.prefixInvoice ?? ""}
                   onChange={(e) => updateDraft({ prefixInvoice: e.target.value })}
-                  placeholder="Optional"
+                  placeholder="CEMR"
                   autoComplete="off"
                   maxLength={16}
                 />
-                <p className="-mt-2 text-xs text-secondary">Prepended to the quote RFQ# on new invoices (e.g. INV- + A00001).</p>
+                <p className="-mt-2 text-xs text-secondary">
+                  Unified job number prefix (e.g. CEMR- + A00001). Same ID on RFQ, quote, then invoices (CEMR-A00001-1) and work orders
+                  (W-CEMR-A00001-1).
+                </p>
                 <Input
                   label="Work order prefix"
                   value={draft.prefixWorkOrder ?? ""}
@@ -587,14 +590,14 @@ export default function SettingsPageClient() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-[50.4rem] px-4 py-10">
+      <div className="w-full min-w-0 py-10">
         <p className="text-secondary">Loading settings…</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex min-h-0 w-full max-w-[76.8rem] flex-1 flex-col px-4 py-8">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
       <div className="mb-8 shrink-0 border-b border-border pb-6">
         <h1 className="text-2xl font-bold text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">

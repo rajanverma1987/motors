@@ -41,7 +41,7 @@ const ENDPOINTS = [
   { key: "leads", url: "/api/dashboard/leads", href: "/dashboard/leads", label: "Leads", icon: FiInbox, statusKey: "status", statusLabels: LEAD_STATUS_LABELS },
   { key: "customers", url: "/api/dashboard/customers", href: "/dashboard/customers", label: "Customers", icon: FiUsers },
   { key: "motors", url: "/api/dashboard/motors", href: "/dashboard/motors", label: "Customer's motors", icon: FiPackage },
-  { key: "quotes", url: "/api/dashboard/quotes", href: "/dashboard/quotes", label: "Quotes", icon: FiFileText, statusKey: "status", statusLabels: QUOTE_STATUS_LABELS },
+  { key: "quotes", url: "/api/dashboard/quotes", href: "/dashboard/rfq", label: "RFQ", icon: FiFileText, statusKey: "status", statusLabels: QUOTE_STATUS_LABELS },
   { key: "vendors", url: "/api/dashboard/vendors", href: "/dashboard/vendors", label: "Vendors", icon: FiTruck },
   { key: "purchaseOrders", url: "/api/dashboard/purchase-orders", href: "/dashboard/purchase-orders", label: "Purchase orders", icon: FiShoppingCart, statusKey: "status", statusLabels: PO_STATUS_LABELS },
   { key: "employees", url: "/api/dashboard/employees", href: "/dashboard/employees", label: "Employees", icon: FiUserPlus },
@@ -466,7 +466,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-bg">
-      <main className="mx-auto w-full max-w-[76.8rem] flex-1 px-4 py-8">
+      <main className="w-full min-w-0 flex-1">
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-title">Dashboard</h1>
@@ -662,7 +662,7 @@ export default function DashboardPage() {
               Add customer
             </Link>
             <Link
-              href="/dashboard/quotes"
+              href="/dashboard/rfq"
               className="inline-flex items-center gap-2 rounded-md border border-border bg-bg px-3 py-2 text-sm font-medium text-title hover:border-primary/30 hover:bg-primary/10"
             >
               <FiFileText className="h-4 w-4" aria-hidden />

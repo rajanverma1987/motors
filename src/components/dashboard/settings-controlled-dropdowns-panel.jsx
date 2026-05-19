@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -124,14 +125,14 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       return;
     }
     const ok = await confirm({
-      title: "Remove option?",
-      message: `Remove "${value}" from ${selectedDef?.label || "this dropdown"}? Existing quotes, work orders, or invoices may still show this value until you edit them.`,
-      confirmLabel: "Remove",
+      title: "Delete option?",
+      message: `Delete "${value}" from ${selectedDef?.label || "this dropdown"}? Existing quotes, work orders, or invoices may still use this value until you edit them.`,
+      confirmLabel: "Delete",
       variant: "danger",
     });
     if (!ok) return;
     patchEntries(entries.filter((e) => e.value !== value));
-    toast.success("Removed.");
+    toast.success("Value deleted.");
   };
 
   const moveEntry = (idx, delta) => {
@@ -178,8 +179,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       <FormContainer>
         <FormSectionTitle as="h2">Controlled dropdowns</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Same idea as ornament-manufacturing → admin → dropdowns: define option lists for your shop. Add or remove values,
-          reorder them, set optional display labels (quotes and invoices), and pick tile colors for badges and the shop floor.
+          Define option lists for your shop. Add values below, delete with the trash icon or × on each chip, reorder rows,
+          set display labels (quotes and invoices), and pick tile colors for badges and the shop floor. Save settings when finished.
         </p>
         <div className="max-w-md">
           <Select
@@ -214,7 +215,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                   type="button"
                   onClick={() => removeValue(row.value)}
                   className="rounded p-0.5 text-secondary hover:bg-card hover:text-danger"
-                  aria-label={`Remove ${chipLabel(row)}`}
+                  aria-label={`Delete ${chipLabel(row)}`}
+                  title={`Delete ${chipLabel(row)}`}
                 >
                   ×
                 </button>
@@ -226,6 +228,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             <table className="w-full min-w-[36rem] text-sm">
               <thead className="border-b border-border bg-form-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-secondary">
                 <tr>
+                  <th className="w-12 px-3 py-2" aria-label="Actions" />
                   <th className="w-24 px-3 py-2">Order</th>
                   <th className="px-3 py-2">Value</th>
                   {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
@@ -236,6 +239,18 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               <tbody className="divide-y divide-border">
                 {entries.map((row, idx) => (
                   <tr key={row.value}>
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        onClick={() => removeValue(row.value)}
+                        disabled={entries.length <= 1}
+                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Delete ${chipLabel(row)}`}
+                        title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
+                      >
+                        <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                      </button>
+                    </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
                         <button

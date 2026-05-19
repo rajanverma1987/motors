@@ -294,7 +294,7 @@ export default function AdminListingDetailPage() {
 
   if (loading || !listing) {
     return (
-      <div className="mx-auto max-w-[86.4rem] px-4 py-12">
+      <div className="w-full min-w-0 py-12">
         {loading && <p className="text-secondary">Loading…</p>}
         {!loading && fetchError && <p className="text-secondary">{fetchError}</p>}
         {!loading && !listing && !fetchError && <p className="text-secondary">Listing not found.</p>}
@@ -315,7 +315,7 @@ export default function AdminListingDetailPage() {
   const statusLabel = listing.status === "pending" ? "In-review" : listing.status === "in-review" ? "In-review" : listing.status;
 
   return (
-    <div className="mx-auto max-w-[86.4rem] px-4 py-8">
+    <div className="w-full min-w-0">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link href="/admin/listings" className="text-sm text-primary hover:underline">

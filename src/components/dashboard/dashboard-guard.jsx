@@ -12,10 +12,10 @@ const PROTECTED_PAGE_COPY = {
     detail:
       "Live board view of current work orders with lane status tracking, customer context, and progress visibility for office and floor teams.",
   },
-  "/dashboard/quotes": {
-    title: "Quotes",
+  "/dashboard/rfq": {
+    title: "RFQ",
     detail:
-      "Create and track RFQs, pricing, approvals, and conversion from quote to downstream operations in one workflow.",
+      "Create and track RFQs, quotes, pricing, approvals, and conversion to work orders and invoices in one workflow.",
   },
   "/dashboard/work-orders": {
     title: "Work orders",

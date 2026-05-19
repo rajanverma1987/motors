@@ -11,7 +11,8 @@
     "lint": "eslint",
     "sitemap": "node scripts/generate-sitemap.js",
     "git": "node scripts/git-push.js",
-    "backfill:listing-scores": "node scripts/backfill-listing-directory-scores.js"
+    "backfill:listing-scores": "node scripts/backfill-listing-directory-scores.js",
+    "backfill:quote-write-up": "node scripts/backfill-quote-draft-to-write-up.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

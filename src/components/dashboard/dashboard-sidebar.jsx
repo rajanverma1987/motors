@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -7,7 +8,6 @@ import {
   FiUsers,
   FiUser,
   FiPackage,
-  FiFileText,
   FiClipboard,
   FiDollarSign,
   FiTrendingUp,
@@ -22,17 +22,19 @@ import {
   FiSliders,
   FiBarChart2,
   FiGlobe,
-  FiSettings,
   FiLayout,
   FiShoppingBag,
   FiLifeBuoy,
   FiMapPin,
   FiRepeat,
   FiKey,
-  FiGitBranch,
   FiPercent,
+  FiChevronRight,
+  FiChevronLeft,
 } from "react-icons/fi";
 import { ImPencil2 } from "react-icons/im";
+
+const SIDEBAR_COLLAPSED_KEY = "dashboard-sidebar-collapsed";
 
 const CUSTOMERS_NAV = [
   { href: "/dashboard/leads", label: "Leads", icon: FiInbox },
@@ -42,7 +44,7 @@ const CUSTOMERS_NAV = [
 
 const JOBS_NAV = [
   { href: "/dashboard/repair-flow", label: "Job Write-Up", icon: ImPencil2 },
-  { href: "/dashboard/quotes", label: "Quotes", icon: FiFileText },
+  { href: "/dashboard/rfq", label: "RFQ", icon: FiInbox },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
   { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
 ];
@@ -94,41 +96,247 @@ const NAV_GROUPS = [
   { title: "Tools & reports", items: TOOLS_NAV },
 ];
 
+function navItemIsActive(pathname, href) {
+  return pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
+}
+
+function groupContainsActive(pathname, group) {
+  return group.items.some((item) => navItemIsActive(pathname, item.href));
+}
+
+function slugify(title) {
+  return title.replace(/\s+/g, "-").toLowerCase();
+}
+
+function NavItemLink({ href, label, icon: Icon, isActive, collapsed }) {
+  return (
+    <Link
+      href={href}
+      title={collapsed ? label : undefined}
+      className={`group flex items-center rounded-md text-xs font-medium transition-colors ${
+        collapsed ? "justify-center p-1" : "gap-2 py-1 pl-1.5 pr-2"
+      } ${
+        isActive
+          ? "bg-primary/12 text-primary"
+          : "text-secondary hover:bg-muted/40 hover:text-title"
+      }`}
+    >
+      <span
+        className={`flex shrink-0 items-center justify-center rounded transition-colors ${
+          collapsed ? "h-7 w-7" : "h-6 w-6"
+        } ${
+          isActive
+            ? "bg-primary text-white"
+            : "bg-muted/30 text-secondary group-hover:bg-muted/50 group-hover:text-title"
+        }`}
+      >
+        <Icon className="h-3.5 w-3.5" aria-hidden />
+      </span>
+      {!collapsed ? <span className="min-w-0 truncate leading-tight">{label}</span> : null}
+    </Link>
+  );
+}
+
 export default function DashboardSidebar() {
   const pathname = usePathname();
 
-  const linkClass = (href) => {
-    const isActive = pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
-    return `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-      isActive ? "bg-primary/10 text-primary" : "text-secondary hover:bg-muted/50 hover:text-title"
-    }`;
-  };
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set(NAV_GROUPS.map((g) => g.title)));
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setSidebarCollapsed(true);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    const activeGroup = NAV_GROUPS.find((g) => groupContainsActive(pathname, g));
+    if (!activeGroup) return;
+    setExpandedGroups((prev) => {
+      if (prev.has(activeGroup.title)) return prev;
+      const next = new Set(prev);
+      next.add(activeGroup.title);
+      return next;
+    });
+  }, [pathname]);
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleGroup = useCallback((title) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  }, []);
+
+  const dashboardActive = pathname === "/dashboard";
 
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-border bg-card overflow-hidden">
-      <div className="flex h-14 shrink-0 items-center border-b border-border px-4">
-        <span className="font-semibold text-title">CRM</span>
+    <aside
+      className={`flex h-full shrink-0 flex-col overflow-hidden border-r border-border bg-bg transition-[width] duration-200 ease-out ${
+        sidebarCollapsed ? "w-[4.25rem]" : "w-64"
+      }`}
+    >
+      <div
+        className={`flex h-11 shrink-0 items-center border-b border-border bg-card ${
+          sidebarCollapsed ? "justify-center px-1.5" : "justify-between gap-1.5 px-2"
+        }`}
+      >
+        {!sidebarCollapsed ? (
+          <span className="truncate text-sm font-semibold tracking-tight text-title">CRM</span>
+        ) : null}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-secondary transition-colors hover:bg-muted/50 hover:text-title"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? (
+            <FiChevronRight className="h-4 w-4" aria-hidden />
+          ) : (
+            <FiChevronLeft className="h-4 w-4" aria-hidden />
+          )}
+        </button>
       </div>
-      <nav className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 flex flex-col gap-4">
-        <div className="flex flex-col gap-0.5">
-          <Link href="/dashboard" className={`whitespace-nowrap ${linkClass("/dashboard")}`}>
-            <FiLayout className="h-5 w-5 shrink-0" aria-hidden />
-            Dashboard
-          </Link>
-        </div>
-        {NAV_GROUPS.map((group) => (
-          <div key={group.title} className="flex flex-col gap-0.5 border-b border-border pb-3 last:border-b-0 last:pb-0">
-            <p className="whitespace-nowrap px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-secondary">
-              {group.title}
-            </p>
-            {group.items.map((item) => (
-              <Link key={item.href} href={item.href} className={`whitespace-nowrap ${linkClass(item.href)}`}>
-                <item.icon className="h-5 w-5 shrink-0" aria-hidden />
-                {item.label}
-              </Link>
+
+      <nav
+        className={`flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden ${
+          sidebarCollapsed ? "gap-0.5 p-1.5" : "gap-1.5 p-2"
+        }`}
+      >
+        <Link
+          href="/dashboard"
+          title={sidebarCollapsed ? "Dashboard" : undefined}
+          className={`flex items-center rounded-md text-xs font-medium transition-colors ${
+            sidebarCollapsed ? "justify-center p-1.5" : "gap-2 px-2 py-1.5"
+          } ${
+            dashboardActive
+              ? "bg-primary text-white shadow-sm"
+              : "text-title hover:bg-card"
+          }`}
+        >
+          <FiLayout
+            className={`shrink-0 opacity-90 ${sidebarCollapsed ? "h-4 w-4" : "h-4 w-4"}`}
+            aria-hidden
+          />
+          {!sidebarCollapsed ? <span>Dashboard</span> : null}
+        </Link>
+
+        {sidebarCollapsed ? (
+          <div className="flex flex-col gap-0.5">
+            {NAV_GROUPS.map((group, groupIdx) => (
+              <div key={group.title}>
+                {groupIdx > 0 ? <div className="mx-auto my-0.5 h-px w-5 bg-border" aria-hidden /> : null}
+                <ul className="flex flex-col gap-px">
+                  {group.items.map((item) => (
+                    <li key={item.href}>
+                      <NavItemLink
+                        href={item.href}
+                        label={item.label}
+                        icon={item.icon}
+                        isActive={navItemIsActive(pathname, item.href)}
+                        collapsed
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
           </div>
-        ))}
+        ) : (
+          <div className="flex flex-col gap-1">
+            {NAV_GROUPS.map((group) => {
+              const isExpanded = expandedGroups.has(group.title);
+              const groupActive = groupContainsActive(pathname, group);
+              const panelId = `sidebar-group-${slugify(group.title)}`;
+
+              return (
+                <section
+                  key={group.title}
+                  className={`overflow-hidden rounded-lg border transition-shadow ${
+                    groupActive
+                      ? "border-primary/25 bg-card shadow-sm"
+                      : "border-border/80 bg-card/60"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    id={`${panelId}-trigger`}
+                    aria-expanded={isExpanded}
+                    aria-controls={panelId}
+                    onClick={() => toggleGroup(group.title)}
+                    className={`flex w-full items-center gap-1.5 border-l-[3px] px-2 py-1.5 text-left transition-colors ${
+                      groupActive
+                        ? "border-l-primary bg-primary text-white"
+                        : "border-l-primary/50 bg-primary/10 text-primary hover:bg-primary/15"
+                    }`}
+                  >
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded ${
+                        groupActive ? "bg-white/15" : "bg-primary/10"
+                      }`}
+                    >
+                      <FiChevronRight
+                        className={`h-3 w-3 transition-transform duration-200 ${
+                          isExpanded ? "rotate-90" : ""
+                        }`}
+                        aria-hidden
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[10px] font-semibold uppercase tracking-wide leading-tight">
+                      {group.title}
+                    </span>
+                    {groupActive ? (
+                      <span
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-white/90"
+                        aria-hidden
+                        title="Current section"
+                      />
+                    ) : null}
+                  </button>
+
+                  {isExpanded ? (
+                    <div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={`${panelId}-trigger`}
+                      className="border-t border-border/70 px-1 py-1"
+                    >
+                      <ul className="flex flex-col gap-px">
+                        {group.items.map((item) => (
+                          <li key={item.href}>
+                            <NavItemLink
+                              href={item.href}
+                              label={item.label}
+                              icon={item.icon}
+                              isActive={navItemIsActive(pathname, item.href)}
+                              collapsed={false}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                </section>
+              );
+            })}
+          </div>
+        )}
       </nav>
     </aside>
   );

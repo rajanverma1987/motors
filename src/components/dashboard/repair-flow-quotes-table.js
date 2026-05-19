@@ -25,7 +25,7 @@ function statusVariant(s) {
 }
 
 /**
- * Pipeline flow quotes for a repair job: compact table with link to CRM quote (RFQ) on Quotes page when present.
+ * Pipeline flow quotes for a repair job: compact table with link to CRM quote (RFQ) on the RFQ page when present.
  */
 export default function RepairFlowQuotesTable({
   quotes,
@@ -48,13 +48,13 @@ export default function RepairFlowQuotesTable({
               <button
                 type="button"
                 disabled={!id}
-                onClick={() => id && router.push(`/dashboard/quotes?edit=${encodeURIComponent(id)}`)}
+                onClick={() => id && router.push(`/dashboard/rfq?edit=${encodeURIComponent(id)}`)}
                 className="inline-flex rounded-md p-2 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label={id ? "Open quote on Quotes page to view and edit" : "No RFQ linked"}
+                aria-label={id ? "Open RFQ to view and edit" : "No RFQ linked"}
                 title={
                   id
-                    ? "Open on Quotes page (full quote, view and edit)"
-                    : "Preliminary pipeline quotes only — create a final quote or add an RFQ to get a linked Quotes row."
+                    ? "Open on RFQ page (full quote, view and edit)"
+                    : "Preliminary pipeline quotes only — create a final quote or add an RFQ to get a linked row."
                 }
               >
                 <FiEye className="h-4 w-4 shrink-0" />

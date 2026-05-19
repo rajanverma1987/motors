@@ -270,8 +270,8 @@ export default function JobBoardClient({
     : "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2";
 
   const rootClass = publicMode
-    ? "mx-auto flex min-h-dvh w-full max-w-[100vw] flex-1 flex-col overflow-hidden bg-bg px-4 py-4 sm:px-6 sm:py-6"
-    : "mx-auto flex h-full min-h-0 w-full max-w-[1600px] flex-1 flex-col overflow-hidden px-4 py-6";
+    ? "flex min-h-dvh w-full flex-1 flex-col overflow-hidden bg-bg"
+    : "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden";
 
   return (
     <div className={rootClass}>

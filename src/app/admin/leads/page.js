@@ -238,7 +238,7 @@ export default function AdminLeadsPage() {
   );
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

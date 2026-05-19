@@ -253,6 +253,20 @@ export function invoiceStatusEntryForSlug(mergedSettings, slug) {
   return list.find((e) => String(e.value ?? "").trim().toLowerCase() === v) || null;
 }
 
+/**
+ * @param {unknown} mergedSettings
+ * @param {string} value slug
+ * @param {number} [fallbackIndex]
+ */
+export function invoiceStatusTileColorForValue(mergedSettings, value, fallbackIndex = 0) {
+  const entries = mergedSettings?.controlledDropdowns?.invoice_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeInvoiceEntries([]);
+  const v = String(value ?? "").toLowerCase().trim();
+  const idx = list.findIndex((e) => String(e.value ?? "").toLowerCase().trim() === v);
+  const tile = idx >= 0 ? list[idx].tileColor : "";
+  return { tileColor: tile, index: idx >= 0 ? idx : fallbackIndex };
+}
+
 /** @param {unknown} bodyVal */
 export function sanitizeControlledDropdownsPatch(bodyVal, legacyWoStatuses, legacyWoTiles) {
   return normalizeControlledDropdowns(bodyVal, legacyWoStatuses, legacyWoTiles);

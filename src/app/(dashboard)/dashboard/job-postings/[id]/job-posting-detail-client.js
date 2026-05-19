@@ -163,7 +163,7 @@ function JobPostingApplicantsSection({ job, applications }) {
         </p>
       </div>
 
-      <div className="mx-auto w-full max-w-[67.2rem]">
+      <div className="w-full min-w-0">
         <h2 className="text-lg font-semibold text-title">Applicants ({applications.length})</h2>
         <p className="mt-1 text-sm text-secondary">
           Candidates who applied online.

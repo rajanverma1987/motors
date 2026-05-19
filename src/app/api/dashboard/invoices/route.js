@@ -7,10 +7,11 @@ import WorkOrder from "@/models/WorkOrder";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { invoiceStatusAllowedSlugs } from "@/lib/dropdown-catalog";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { effectiveInvoiceNumberPrefix, applyDocumentPrefixIfAbsent } from "@/lib/document-number-prefixes";
+import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -49,6 +50,7 @@ export async function GET(request) {
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
     const qText = String(searchParams.get("q") || "").trim();
+    const statusFilter = String(searchParams.get("status") || "").trim().toLowerCase();
     const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
     const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const sortFieldMap = {
@@ -65,12 +67,25 @@ export async function GET(request) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       q.$or = [{ invoiceNumber: rx }, { rfqNumber: rx }, { status: rx }];
     }
-    const [totalCount, list, settingsDoc] = await Promise.all([
-      Invoice.countDocuments(q),
-      Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    const [settingsDocEarly] = await Promise.all([
       UserSettings.findOne({ ownerEmail: email }).lean(),
     ]);
-    const mergedForStatus = mergeUserSettings(settingsDoc?.settings);
+    const mergedForStatus = mergeUserSettings(settingsDocEarly?.settings);
+    if (statusFilter === "__other__") {
+      const allowed = invoiceStatusAllowedSlugs(mergedForStatus);
+      if (allowed.length) {
+        q.$nor = allowed.map((slug) => ({
+          status: { $regex: new RegExp(`^${String(slug).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+        }));
+      }
+    } else if (statusFilter) {
+      const statusRx = new RegExp(`^${statusFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
+      q.status = statusRx;
+    }
+    const [totalCount, list] = await Promise.all([
+      Invoice.countDocuments(q),
+      Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+    ]);
     const summaryRows = await Invoice.aggregate([
       { $match: ownerScope },
       {
@@ -151,13 +166,6 @@ export async function POST(request) {
       return NextResponse.json({ error: "quoteId required" }, { status: 400 });
     }
     await connectDB();
-    const dup = await Invoice.findOne({ createdByEmail: email, quoteId }).lean();
-    if (dup) {
-      return NextResponse.json(
-        { error: "An invoice already exists for this quote. Open it to edit.", existingId: dup._id.toString() },
-        { status: 409 }
-      );
-    }
     const quote = await Quote.findOne({ _id: quoteId, createdByEmail: email }).lean();
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
@@ -166,11 +174,10 @@ export async function POST(request) {
       .select("taxExempt taxPercent")
       .lean();
     const { scopeLines, partsLines } = normalizeLines(body);
-    const rfq = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
+    const baseJob = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const u = mergeUserSettings(settingsDoc?.settings);
-    const invPrefix = effectiveInvoiceNumberPrefix(u);
-    const invoiceNumber = applyDocumentPrefixIfAbsent(invPrefix, rfq);
+    const invoiceNumber = await nextInvoiceNumberForQuote(email, quoteId, baseJob);
     const doc = await Invoice.create({
       quoteId,
       customerId: String(quote.customerId || ""),

@@ -358,7 +358,7 @@ export default function JobPostingsClient() {
   }
 
   return (
-    <div className="mx-auto flex h-full min-h-0 w-full max-w-[86.4rem] flex-1 flex-col overflow-hidden px-4 py-6">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
         <div className="text-center sm:text-left">
           <h1 className="text-2xl font-bold text-title">Job postings</h1>

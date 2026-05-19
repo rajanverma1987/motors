@@ -119,7 +119,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: `RFQ ${qDoc.rfqNumber || qDoc._id}`,
-          openHref: `/dashboard/quotes?open=${qid}`,
+          openHref: `/dashboard/rfq?open=${qid}`,
         });
         for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === qid).slice(0, 5)) {
           linked.push({
@@ -180,7 +180,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || qu._id}`,
-          openHref: `/dashboard/quotes?open=${qu._id}`,
+          openHref: `/dashboard/rfq?open=${qu._id}`,
         })),
         ...custInvoices.map((inv) => ({
           type: "invoice",
@@ -234,7 +234,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || qu._id}`,
-          openHref: `/dashboard/quotes?open=${qu._id}`,
+          openHref: `/dashboard/rfq?open=${qu._id}`,
         });
       }
       const motorInvoices = invoices.filter((inv) => (inv.motorId || "").toString() === id).slice(0, 5);
@@ -338,7 +338,7 @@ export async function GET(request) {
           id,
           title: `RFQ ${qu.rfqNumber || id}`,
           subtitle: [qu.status, qu.date].filter(Boolean).join(" · ") || undefined,
-          openHref: `/dashboard/quotes?open=${id}`,
+          openHref: `/dashboard/rfq?open=${id}`,
           linked,
         },
         LIMIT,
@@ -367,7 +367,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || w.quoteId}`,
-          openHref: `/dashboard/quotes?open=${qu._id}`,
+          openHref: `/dashboard/rfq?open=${qu._id}`,
         });
       }
       const motor = motors.find((mo) => mo._id.toString() === (w.motorId || "").toString());
@@ -428,7 +428,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: `RFQ ${qu.rfqNumber || inv.quoteId}`,
-          openHref: `/dashboard/quotes?open=${qu._id}`,
+          openHref: `/dashboard/rfq?open=${qu._id}`,
         });
       }
       const motor = motors.find((mo) => mo._id.toString() === (inv.motorId || "").toString());
@@ -516,7 +516,7 @@ export async function GET(request) {
           type: "quote",
           label: "Quote",
           title: qu ? `RFQ ${qu.rfqNumber}` : `Quote ${p.quoteId}`,
-          openHref: `/dashboard/quotes?open=${pqid}`,
+          openHref: `/dashboard/rfq?open=${pqid}`,
         });
         for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === pqid).slice(0, 5)) {
           linked.push({

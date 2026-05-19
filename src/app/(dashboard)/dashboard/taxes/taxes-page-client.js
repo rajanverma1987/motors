@@ -250,7 +250,7 @@ export default function TaxesPageClient() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[86.4rem] px-4 py-8">
+    <div className="w-full min-w-0 flex-1">
       <div className="mb-6 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Taxes</h1>
         <p className="mt-1 text-sm text-secondary">

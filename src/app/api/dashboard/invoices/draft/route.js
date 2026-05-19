@@ -6,8 +6,9 @@ import WorkOrder from "@/models/WorkOrder";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
 
-/** Draft invoice from quote — does not persist. One invoice per quote: if exists, return id. */
+/** Draft invoice from quote — does not persist; suggests next invoice number (CEMR-A00001-1, -2, …). */
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -22,11 +23,6 @@ export async function GET(request) {
     const email = user.email.trim().toLowerCase();
     await connectDB();
 
-    const existing = await Invoice.findOne({ createdByEmail: email, quoteId }).lean();
-    if (existing) {
-      return NextResponse.json({ existingInvoiceId: existing._id.toString() });
-    }
-
     const quote = await Quote.findOne({ _id: quoteId, createdByEmail: email }).lean();
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
@@ -37,7 +33,8 @@ export async function GET(request) {
       return NextResponse.json({ error: "Motor or customer not found" }, { status: 404 });
     }
 
-    const rfq = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
+    const baseJob = (quote.rfqNumber || "").trim() || String(quoteId).slice(-8);
+    const invoiceNumber = await nextInvoiceNumberForQuote(email, quoteId, baseJob);
     const today = new Date().toISOString().slice(0, 10);
     const companyName = customer.companyName || customer.primaryContactName || "";
     const motorLabel =
@@ -56,7 +53,7 @@ export async function GET(request) {
       workOrderId,
       customerId: String(quote.customerId),
       motorId: String(quote.motorId),
-      invoiceNumber: rfq,
+      invoiceNumber,
       rfqNumber: quote.rfqNumber || "",
       customerPo: quote.customerPo || "",
       date: quote.date || today,

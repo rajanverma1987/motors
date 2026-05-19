@@ -443,7 +443,7 @@ export default function RepairFlowJobDetailClient({
         body: JSON.stringify({}),
       });
       const rfq = data.quote?.rfqNumber;
-      toast.success(rfq ? `Draft RFQ ${rfq} added — edit it on the Quotes page or via the table.` : "Draft RFQ added.");
+      toast.success(rfq ? `Draft RFQ ${rfq} added — edit it on the RFQ page or via the table.` : "Draft RFQ added.");
       await loadAll({ notifyList: true });
     } catch (err) {
       toast.error(err.message || "Failed to add RFQ");
@@ -625,7 +625,7 @@ export default function RepairFlowJobDetailClient({
       return <p className="text-sm text-secondary">Loading…</p>;
     }
     return (
-      <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
+      <div className="w-full min-w-0 flex-1">
         <p className="text-secondary">Loading…</p>
       </div>
     );
@@ -645,7 +645,7 @@ export default function RepairFlowJobDetailClient({
       );
     }
     return (
-      <div className="mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-8">
+      <div className="w-full min-w-0 flex-1">
         <p className="text-secondary">Job not found.</p>
         <Link href="/dashboard/repair-flow" className="mt-4 inline-block text-primary hover:underline">
           Back to list
@@ -671,7 +671,7 @@ export default function RepairFlowJobDetailClient({
   const showCompleteFromExecution = phase === "work_execution" || phase === "testing_qa";
 
   return (
-    <div className={isModal ? "w-full min-w-0 space-y-6" : "mx-auto w-full max-w-[86.4rem] min-w-0 px-4 py-6"}>
+    <div className={isModal ? "w-full min-w-0 space-y-6" : "w-full min-w-0 flex-1"}>
       {!isModal ? (
         <div className="shrink-0 border-b border-border pb-4">
           <Link href="/dashboard/repair-flow" className="text-sm text-secondary hover:text-primary">
