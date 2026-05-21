@@ -14,6 +14,7 @@ import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 
 const NEW_COMMISSION_INITIAL = {
   jobKey: "",
@@ -88,28 +89,21 @@ export default function DashboardSalesCommissionPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [spRes, qRes, invRes, customerRes] = await Promise.all([
+        const [spRes, quoteList, invList, customerList] = await Promise.all([
           fetch("/api/dashboard/sales-persons", { credentials: "include", cache: "no-store" }),
-          fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
-          fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
-          fetch("/api/dashboard/customers", { credentials: "include", cache: "no-store" }),
+          fetchAllPaginatedDashboardItems("/api/dashboard/quotes"),
+          fetchAllPaginatedDashboardItems("/api/dashboard/invoices"),
+          fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         ]);
-        const [spData, qData, invData, customerData] = await Promise.all([
-          spRes.json().catch(() => []),
-          qRes.json().catch(() => []),
-          invRes.json().catch(() => []),
-          customerRes.json().catch(() => []),
-        ]);
+        const spData = spRes.ok ? await spRes.json().catch(() => []) : [];
         if (cancelled) return;
         if (spRes.ok) setSalesPersons(Array.isArray(spData) ? spData : []);
         const customerMap = Object.fromEntries(
-          (Array.isArray(customerData) ? customerData : []).map((c) => [
+          (Array.isArray(customerList) ? customerList : []).map((c) => [
             String(c.id || ""),
             c.companyName || c.primaryContactName || "—",
           ])
         );
-        const quoteList = Array.isArray(qData) ? qData : [];
-        const invList = Array.isArray(invData) ? invData : Array.isArray(invData?.items) ? invData.items : [];
         const invoiceByQuoteId = new Map();
         for (const inv of invList) {
           const qid = String(inv.quoteId || "").trim();
