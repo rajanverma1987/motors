@@ -117,8 +117,8 @@ export default function Table({
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
 
-  const cellPy = dense ? "py-1.5" : "py-2";
-  const headerPy = dense ? "py-1.5" : "py-2";
+  const cellPy = dense ? "py-1" : "py-1.5";
+  const headerPy = dense ? "py-1" : "py-1.5";
 
   const [searchInput, setSearchInput] = useState("");
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -138,6 +138,22 @@ export default function Table({
   const [internalPageSize, setInternalPageSize] = useState(() =>
     [10, 25, 50, 100].includes(Number(preferredPageSize)) ? Number(preferredPageSize) : 25
   );
+  const [cellHover, setCellHover] = useState({ row: null, col: null });
+
+  const clearCellHover = () => setCellHover({ row: null, col: null });
+
+  /** Row/column cross-highlight on hover (rowIndex null = header row). */
+  const cellHoverClass = (rowIndex, colIndex) => {
+    const { row, col } = cellHover;
+    const hitRow = rowIndex != null && row === rowIndex;
+    const hitCol = col === colIndex;
+    if (hitRow && hitCol) return "bg-primary/12";
+    if (hitRow) return "bg-muted/40";
+    if (hitCol) return "bg-muted/30";
+    return "";
+  };
+
+  const cellBorderClass = "border-r border-border";
 
   useEffect(() => {
     if (!enableClientPagination) return;
@@ -432,11 +448,13 @@ export default function Table({
     URL.revokeObjectURL(url);
   };
 
-  const tableClass = (hasColumnWidths || resizableColumns || responsive) ? "min-w-full w-max table-auto" : "w-full";
+  const tableClass = (hasColumnWidths || resizableColumns || responsive)
+    ? "min-w-full w-max table-auto border-collapse"
+    : "w-full border-collapse";
   const thClass = (col) => {
     const align = col.isSelect ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
     const px = col.isSelect ? "px-2" : "px-4";
-    return `${px} ${headerPy} text-sm font-medium text-title outline-none whitespace-nowrap ${align}`;
+    return `${px} ${headerPy} text-sm font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
   };
   const thStickyStyle = effectiveStickyHeader
     ? { position: "sticky", top: 0, zIndex: 10, backgroundColor: "hsl(var(--card))", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" }
@@ -451,7 +469,7 @@ export default function Table({
   );
 
   const tableContent = (
-    <table className={tableClass}>
+    <table className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
       <thead className="bg-card border-b border-border outline-none">
         <tr>
@@ -464,8 +482,9 @@ export default function Table({
             return (
               <th
                 key={col.key ?? i}
-                className={`${thClass(col)} ${canResize ? "relative" : ""}`}
+                className={`${thClass(col)} ${cellHoverClass(null, i)} ${canResize ? "relative" : ""} transition-colors`}
                 style={effectiveStickyHeader ? { ...thStickyStyle, ...style } : style}
+                onMouseEnter={() => setCellHover({ row: null, col: i })}
               >
                 {col.isSelect ? (
                   <input
@@ -543,7 +562,7 @@ export default function Table({
           displayData.map((row, i) => (
             <tr
               key={getRowId(row, i, rowKey)}
-              className={`border-b border-border last:border-b-0 hover:bg-bg transition-colors ${striped && i % 2 === 1 ? "bg-card" : ""}`}
+              className={`border-b border-border last:border-b-0 ${striped && i % 2 === 1 ? "bg-card/50" : ""}`}
             >
               {displayColumns.map((col, j) => {
                 const isPlaceholder = isCellPlaceholder(col, row, i);
@@ -557,8 +576,9 @@ export default function Table({
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`${cellPx} ${cellPy} text-sm text-text tabular whitespace-nowrap ${align}${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}`}
+                    className={`${cellPx} ${cellPy} text-sm leading-snug text-text tabular whitespace-nowrap ${align} ${cellBorderClass} ${cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}`}
                     style={style}
+                    onMouseEnter={() => setCellHover({ row: i, col: j })}
                   >
                     {renderCell(col, row, i)}
                   </td>
@@ -573,12 +593,22 @@ export default function Table({
           {(Array.isArray(footer) ? footer : [footer]).map((row, ri) => (
             <tr key={ri} className="border-b border-border last:border-b-0">
               {displayColumns.map((col, j) => {
-                if (col.isSelect || col.isAction) return <td key={col.key ?? j} className={`px-2 ${cellPy} whitespace-nowrap`} />;
+                if (col.isSelect || col.isAction)
+                  return (
+                    <td
+                      key={col.key ?? j}
+                      className={`px-2 ${cellPy} whitespace-nowrap ${cellBorderClass}`}
+                    />
+                  );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
                 const isPlaceholder = val == null || val === "";
                 const align = isPlaceholder ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
                 return (
-                  <td key={col.key ?? j} className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align}`} style={getEffectiveColStyle(col)}>
+                  <td
+                    key={col.key ?? j}
+                    className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align} ${cellBorderClass}`}
+                    style={getEffectiveColStyle(col)}
+                  >
                     {val ?? emptyCell}
                   </td>
                 );
@@ -592,18 +622,28 @@ export default function Table({
 
   const footerTable =
     effectiveStickyHeader && hasFooter ? (
-      <table className={`${tableClass} w-full table-fixed`} style={{ tableLayout: "fixed" }}>
+      <table className={`${tableClass} w-full table-fixed`} style={{ tableLayout: "fixed" }} onMouseLeave={clearCellHover}>
         {colgroup}
         <tbody>
           {(Array.isArray(footer) ? footer : [footer]).map((row, ri) => (
             <tr key={ri} className="border-t-2 border-border bg-card font-medium text-title">
               {displayColumns.map((col, j) => {
-                if (col.isSelect || col.isAction) return <td key={col.key ?? j} className={`px-2 ${cellPy} whitespace-nowrap`} />;
+                if (col.isSelect || col.isAction)
+                  return (
+                    <td
+                      key={col.key ?? j}
+                      className={`px-2 ${cellPy} whitespace-nowrap ${cellBorderClass}`}
+                    />
+                  );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
                 const isPlaceholder = val == null || val === "";
                 const align = isPlaceholder ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
                 return (
-                  <td key={col.key ?? j} className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align}`} style={getEffectiveColStyle(col)}>
+                  <td
+                    key={col.key ?? j}
+                    className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align} ${cellBorderClass}`}
+                    style={getEffectiveColStyle(col)}
+                  >
                     {val ?? emptyCell}
                   </td>
                 );

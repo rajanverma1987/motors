@@ -290,7 +290,7 @@ export default function WorkOrdersPageClient() {
               ? "No work orders with this status."
               : searchQuery.trim()
                 ? "No work orders match your search."
-                : "No work orders yet. Create from an approved quote on the RFQ page (row icon) or Job Write-Up."
+                : "No work orders yet. Create from an approved quote on the RFQ page (work order icon in the row)."
             : ""
         }
       />

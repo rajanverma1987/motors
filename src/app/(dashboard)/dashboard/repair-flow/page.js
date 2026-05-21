@@ -1,10 +1,6 @@
-import RepairFlowPageClient from "./repair-flow-page-client";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Job Write-Up",
-  description: "Inspections, quotes, approvals, and work-order handoff.",
-};
-
+/** Job Write-Up was removed; inspections and jobs live under Work orders and RFQ. */
 export default function RepairFlowPage() {
-  return <RepairFlowPageClient />;
+  redirect("/dashboard/work-orders");
 }

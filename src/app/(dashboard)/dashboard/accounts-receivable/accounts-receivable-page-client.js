@@ -19,7 +19,7 @@ import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
-import { invoiceStatusLabel, invoiceStatusPillClassName } from "@/lib/invoice-status";
+import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
@@ -328,13 +328,17 @@ export default function AccountsReceivablePageClient() {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (v) => (
+        render: (v) => {
+          const pill = invoiceStatusPillAppearance(v, mergedAccountSettings);
+          return (
           <span
-            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+            style={pill.style}
           >
             {invoiceStatusLabel(v, mergedAccountSettings)}
           </span>
-        ),
+          );
+        },
       },
     ],
     [fmt, router, mergedAccountSettings]
@@ -381,13 +385,17 @@ export default function AccountsReceivablePageClient() {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (v) => (
+        render: (v) => {
+          const pill = invoiceStatusPillAppearance(v, mergedAccountSettings);
+          return (
           <span
-            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+            style={pill.style}
           >
             {invoiceStatusLabel(v, mergedAccountSettings)}
           </span>
-        ),
+          );
+        },
       },
     ],
     [fmt, router, mergedAccountSettings]

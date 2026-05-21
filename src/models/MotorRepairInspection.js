@@ -5,7 +5,10 @@ import mongoose from "mongoose";
  */
 const motorRepairInspectionSchema = new mongoose.Schema(
   {
-    jobId: { type: String, required: true, trim: true },
+    /** Legacy Job Write-Up repair job id */
+    jobId: { type: String, default: "", trim: true },
+    /** Work order this inspection belongs to */
+    workOrderId: { type: String, default: "", trim: true },
     jobSourceSystem: { type: String, default: "", trim: true },
     jobExternalRef: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true, lowercase: true },
@@ -32,7 +35,9 @@ const motorRepairInspectionSchema = new mongoose.Schema(
 );
 
 motorRepairInspectionSchema.index({ jobId: 1, createdAt: -1 });
+motorRepairInspectionSchema.index({ workOrderId: 1, createdAt: -1 });
 motorRepairInspectionSchema.index({ createdByEmail: 1, jobId: 1 });
+motorRepairInspectionSchema.index({ createdByEmail: 1, workOrderId: 1 });
 motorRepairInspectionSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }

@@ -6,7 +6,7 @@ import Button from "@/components/ui/button";
 import ThemeToggle from "@/components/theme-toggle";
 import { useToast } from "@/components/toast-provider";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
-import { resolveWorkOrderStatusTileClass } from "@/lib/work-order-status-tiles";
+import { resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 
 /**
  * Column order always follows Settings → Dropdowns (canonical) row order.
@@ -353,6 +353,11 @@ export default function JobBoardClient({
           {displayColumns.map((status) => {
             const list = byStatus[status] || [];
             const colorIdx = columns.indexOf(status);
+            const headerTile = resolveWorkOrderStatusTileProps(
+              status,
+              colorIdx >= 0 ? colorIdx : 0,
+              statusTileColors
+            );
             return (
               <div
                 key={status}
@@ -360,7 +365,8 @@ export default function JobBoardClient({
               >
                 <div className="shrink-0 border-b border-border px-3 py-2 flex items-center justify-between gap-2">
                   <span
-                    className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset sm:max-w-[min(100%,260px)] ${resolveWorkOrderStatusTileClass(status, colorIdx >= 0 ? colorIdx : 0, statusTileColors)}`}
+                    className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold sm:max-w-[min(100%,260px)] ${headerTile.className}`}
+                    style={headerTile.style}
                     title={status}
                   >
                     {status}
@@ -383,7 +389,9 @@ export default function JobBoardClient({
                               {wo.workOrderNumber}
                             </span>
                             <span className="mx-1 text-secondary">·</span>
-                            <span>{wo.customerCompany || wo.companyName || "—"}</span>
+                            <span className="text-sm font-semibold text-title">
+                              {wo.customerCompany || wo.companyName || "—"}
+                            </span>
                           </p>
                         ) : (
                           <>
@@ -391,7 +399,7 @@ export default function JobBoardClient({
                               {wo.workOrderNumber}
                             </p>
                             <p className="mt-1 text-xs text-secondary">{wo.quoteRfqNumber || "—"}</p>
-                            <p className="mt-0.5 truncate text-sm text-title">
+                            <p className="mt-0.5 truncate text-base font-semibold text-title">
                               {wo.customerCompany || wo.companyName || "—"}
                             </p>
                             <p className="mt-1 text-xs text-secondary">{wo.motorClass} motor</p>

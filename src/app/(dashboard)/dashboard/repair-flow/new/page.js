@@ -1,10 +1,5 @@
-import RepairFlowNewPageClient from "./repair-flow-new-page-client";
-
-export const metadata = {
-  title: "New repair job",
-  description: "Create a new inspection-driven repair job.",
-};
+import { redirect } from "next/navigation";
 
 export default function RepairFlowNewPage() {
-  return <RepairFlowNewPageClient />;
+  redirect("/dashboard/work-orders");
 }

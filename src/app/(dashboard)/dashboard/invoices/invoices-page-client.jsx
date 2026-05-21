@@ -12,7 +12,7 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
-import { invoiceStatusLabel, invoiceStatusPillClassName } from "@/lib/invoice-status";
+import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
   invoiceStatusSelectOptionsFromMerged,
@@ -21,8 +21,9 @@ import {
 import { invoiceLineTotal, invoiceTaxAmount } from "@/lib/invoice-amounts";
 import { normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
-import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatDateMdy } from "@/lib/format-date";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 
 function InvoicesInner() {
   const toast = useToast();
@@ -106,18 +107,22 @@ function InvoicesInner() {
   const statusSummaryCards = useMemo(() => {
     const keysLower = new Set(statusSelectOptions.map((o) => o.value.toLowerCase()));
     const buttons = [];
-    const tileClassForKey = (statusKey, fallbackIndex) => {
-      if (statusKey === "") return resolveTilePresetClass("", 0);
-      if (statusKey === "__other__") return resolveTilePresetClass("", 17);
+    const tileAppearanceForKey = (statusKey, fallbackIndex) => {
+      if (statusKey === "") return resolveStatusTileProps("", 0);
+      if (statusKey === "__other__") return resolveStatusTileProps("", 17);
       const optIdx = statusSelectOptions.findIndex(
         (o) => o.value.toLowerCase() === String(statusKey).toLowerCase()
       );
-      const { tileColor, index } = invoiceStatusTileColorForValue(
+      const { tileColor, tileBgColor, tileTextColor, index } = invoiceStatusTileColorForValue(
         mergedAccountSettings,
         statusKey,
         optIdx >= 0 ? optIdx : fallbackIndex
       );
-      return resolveTilePresetClass(tileColor, index);
+      return resolveStatusTileProps(tileColor, index, {
+        tileBgColor,
+        tileTextColor,
+        tileColor,
+      });
     };
 
     statusSelectOptions.forEach((opt, optIdx) => {
@@ -126,7 +131,7 @@ function InvoicesInner() {
         label: opt.label,
         count: Number(summaryByStatus?.[opt.value]?.count) || 0,
         amount: Number(summaryByStatus?.[opt.value]?.amount) || 0,
-        tileClassName: tileClassForKey(opt.value, optIdx),
+        tileAppearance: tileAppearanceForKey(opt.value, optIdx),
       });
     });
 
@@ -145,7 +150,7 @@ function InvoicesInner() {
         label: "Other",
         count: orphanCount,
         amount: orphanAmount,
-        tileClassName: tileClassForKey("__other__", 17),
+        tileAppearance: tileAppearanceForKey("__other__", 17),
       });
     }
 
@@ -162,7 +167,7 @@ function InvoicesInner() {
       label: "All",
       count: allCount,
       amount: allAmount,
-      tileClassName: tileClassForKey("", 0),
+      tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
   }, [summaryByStatus, statusSelectOptions, mergedAccountSettings]);
@@ -345,13 +350,17 @@ function InvoicesInner() {
         key: "status",
         label: "Status",
         sortable: true,
-        render: (v) => (
+        render: (v) => {
+          const pill = invoiceStatusPillAppearance(v, mergedAccountSettings);
+          return (
           <span
-            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(v, mergedAccountSettings)}`}
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+            style={pill.style}
           >
             {invoiceStatusLabel(v, mergedAccountSettings)}
           </span>
-        ),
+          );
+        },
       },
     ],
     [fmt, handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId, mergedAccountSettings]
@@ -367,28 +376,19 @@ function InvoicesInner() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-2 flex shrink-0 flex-wrap gap-1">
-          {statusSummaryCards.map((card) => {
-            const active = (statusFilter || "") === (card.key || "");
-            return (
-              <button
-                key={card.key || "__all__"}
-                type="button"
-                onClick={() => {
-                  setPage(1);
-                  setStatusFilter(card.key || "");
-                }}
-                className={`job-board-status-pill rounded-md border border-border px-2 py-1 text-left ring-1 ring-inset transition-all ${card.tileClassName} ${
-                  active ? "ring-2 ring-primary/50 shadow-sm" : "hover:brightness-[0.97] dark:hover:brightness-110"
-                }`}
-              >
-                <span className="block whitespace-nowrap text-xs font-semibold leading-tight">{card.label}</span>
-                <span className="mt-0.5 block whitespace-nowrap text-[10px] leading-none tabular-nums opacity-85">
-                  {card.count} · {fmt(card.amount)}
-                </span>
-              </button>
-            );
-          })}
+        <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
+          {statusSummaryCards.map((card) => (
+            <StatusFilterPillButton
+              key={card.key || "__all__"}
+              card={card}
+              active={(statusFilter || "") === (card.key || "")}
+              onClick={() => {
+                setPage(1);
+                setStatusFilter(card.key || "");
+              }}
+              formatAmount={fmt}
+            />
+          ))}
         </div>
 
         <Table

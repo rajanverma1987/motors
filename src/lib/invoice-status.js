@@ -4,7 +4,7 @@ import {
   invoiceStatusSelectOptionsFromMerged,
 } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
 /** @param {unknown} merged */
 function resolvedMerged(merged) {
@@ -79,12 +79,16 @@ export function invoiceStatusBadgeVariant(slug, mergedSettings) {
  * @param {unknown} slug
  * @param {unknown} [mergedSettings]
  */
-export function invoiceStatusPillClassName(slug, mergedSettings) {
+export function invoiceStatusPillAppearance(slug, mergedSettings) {
   const merged = resolvedMerged(mergedSettings);
   const s = normalizeInvoiceStatusSlug(slug, merged);
   const entry = invoiceStatusEntryForSlug(merged, s);
   const opts = invoiceStatusSelectOptionsFromMerged(merged);
   const idx = opts.findIndex((o) => o.value === s);
   const fallbackIdx = idx >= 0 ? idx : 0;
-  return resolveTilePresetClass(entry?.tileColor, fallbackIdx);
+  return resolveStatusTileProps(entry?.tileColor, fallbackIdx, entry);
+}
+
+export function invoiceStatusPillClassName(slug, mergedSettings) {
+  return invoiceStatusPillAppearance(slug, mergedSettings).className;
 }

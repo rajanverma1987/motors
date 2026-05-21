@@ -18,7 +18,7 @@ export const PAGES = [
   { id: "accounts-receivable", label: "Accounts receivable" },
   { id: "taxes", label: "Taxes" },
   { id: "job-board", label: "Shop floor job board" },
-  { id: "motor-tag", label: "Motor tag (Job Write-Up)" },
+  { id: "motor-tag", label: "Motor tag (work orders)" },
   { id: "vendors", label: "Vendors" },
   { id: "purchase-orders", label: "Purchase orders" },
   { id: "accounts-payable", label: "Accounts payable" },

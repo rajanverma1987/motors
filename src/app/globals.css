@@ -75,14 +75,18 @@ html.dark body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Shop floor job board: status pills — black label in light theme, white in dark (beats inherited body color). */
-html:not(.dark) .job-board-status-pill {
+/* Status pills: default label color (Settings → Dropdowns custom bg/text use .tile-colors-custom instead). */
+html:not(.dark) .job-board-status-pill:not(.tile-colors-custom) {
   color: #000000 !important;
   -webkit-text-fill-color: #000000;
 }
-html.dark .job-board-status-pill {
+html.dark .job-board-status-pill:not(.tile-colors-custom) {
   color: hsl(var(--title)) !important;
   -webkit-text-fill-color: hsl(var(--title));
+}
+html:not(.dark) .job-board-status-pill.tile-colors-custom,
+html.dark .job-board-status-pill.tile-colors-custom {
+  -webkit-text-fill-color: currentColor;
 }
 
 /* Tabular numbers for tables (aligns numbers in columns) */

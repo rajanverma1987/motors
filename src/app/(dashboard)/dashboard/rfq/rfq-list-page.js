@@ -29,13 +29,14 @@ import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { quoteStatusSelectOptionsFromMerged, quoteStatusTileColorForValue } from "@/lib/dropdown-catalog";
-import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { useAuth } from "@/contexts/auth-context";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import {
@@ -392,7 +393,7 @@ export default function DashboardRfqListPage() {
 
   useEffect(() => {
     if (!fromLeadId) return;
-    toast.info("You can also add RFQs from Job Write-Up when working on a repair job.");
+    toast.info("Create work orders from approved RFQs to record inspections on the shop floor.");
     router.replace("/dashboard/rfq", { scroll: false });
   }, [fromLeadId, toast, router]);
 
@@ -816,18 +817,22 @@ export default function DashboardRfqListPage() {
     const pool = quotes;
     const keysLower = new Set(statusSelectOptions.map((o) => o.value.toLowerCase()));
     const buttons = [];
-    const tileClassForKey = (statusKey, fallbackIndex) => {
-      if (statusKey === "") return resolveTilePresetClass("", 0);
-      if (statusKey === "__other__") return resolveTilePresetClass("", 17);
+    const tileAppearanceForKey = (statusKey, fallbackIndex) => {
+      if (statusKey === "") return resolveStatusTileProps("", 0);
+      if (statusKey === "__other__") return resolveStatusTileProps("", 17);
       const optIdx = statusSelectOptions.findIndex(
         (o) => o.value.toLowerCase() === String(statusKey).toLowerCase()
       );
-      const { tileColor, index } = quoteStatusTileColorForValue(
+      const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
         mergedSettings,
         statusKey,
         optIdx >= 0 ? optIdx : fallbackIndex
       );
-      return resolveTilePresetClass(tileColor, index);
+      return resolveStatusTileProps(tileColor, index, {
+        tileBgColor,
+        tileTextColor,
+        tileColor,
+      });
     };
 
     statusSelectOptions.forEach((opt, optIdx) => {
@@ -838,7 +843,7 @@ export default function DashboardRfqListPage() {
         label: opt.label,
         count: pool.filter(matches).length,
         amount: pool.filter(matches).reduce((sum, q) => sum + calcAmount(q), 0),
-        tileClassName: tileClassForKey(opt.value, optIdx),
+        tileAppearance: tileAppearanceForKey(opt.value, optIdx),
       });
     });
     const orphans = pool.filter((q) => !keysLower.has((q.status || "draft").toLowerCase()) && !isWriteUpStatus(q.status));
@@ -848,7 +853,7 @@ export default function DashboardRfqListPage() {
         label: "Other",
         count: orphans.length,
         amount: orphans.reduce((sum, q) => sum + calcAmount(q), 0),
-        tileClassName: tileClassForKey("__other__", 17),
+        tileAppearance: tileAppearanceForKey("__other__", 17),
       });
     }
     buttons.unshift({
@@ -856,7 +861,7 @@ export default function DashboardRfqListPage() {
       label: "All",
       count: pool.length,
       amount: pool.reduce((sum, q) => sum + calcAmount(q), 0),
-      tileClassName: tileClassForKey("", 0),
+      tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
   }, [quotes, statusSelectOptions, mergedSettings]);
@@ -982,18 +987,23 @@ export default function DashboardRfqListPage() {
         render: (_, row) => {
           const s = (row.status || "draft").toLowerCase();
           const optIdx = statusSelectOptions.findIndex((o) => o.value.toLowerCase() === s);
-          const { tileColor, index } = quoteStatusTileColorForValue(
+          const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
             mergedSettings,
             s,
             optIdx >= 0 ? optIdx : 0
           );
-          const pillClass = resolveTilePresetClass(tileColor, index);
+          const pill = resolveStatusTileProps(tileColor, index, {
+            tileBgColor,
+            tileTextColor,
+            tileColor,
+          });
           const label =
             statusSelectOptions.find((o) => o.value === s)?.label ??
             s.charAt(0).toUpperCase() + s.slice(1);
           return (
             <span
-              className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs ring-1 ring-inset ${pillClass}`}
+              className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs ${pill.className}`}
+              style={pill.style}
             >
               {label}
             </span>
@@ -1108,24 +1118,16 @@ export default function DashboardRfqListPage() {
       </div>
 
       <div className="mt-4 flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-2 flex shrink-0 flex-wrap gap-1">
-          {statusSummaryCards.map((card) => {
-            const active = (statusFilter || "") === (card.key || "");
-            return (
-              <button
-                key={card.key || "__all__"}
-                type="button"
-                onClick={() => setStatusFilter(card.key || "")}
-                className={`job-board-status-pill rounded-md border border-border px-2 py-1 text-left ring-1 ring-inset transition-all ${card.tileClassName} ${active ? "ring-2 ring-primary/50 shadow-sm" : "hover:brightness-[0.97] dark:hover:brightness-110"
-                  }`}
-              >
-                <span className="block whitespace-nowrap text-xs font-semibold leading-tight">{card.label}</span>
-                <span className="mt-0.5 block whitespace-nowrap text-[10px] leading-none tabular-nums opacity-85">
-                  {card.count} · {fmt(card.amount)}
-                </span>
-              </button>
-            );
-          })}
+        <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
+          {statusSummaryCards.map((card) => (
+            <StatusFilterPillButton
+              key={card.key || "__all__"}
+              card={card}
+              active={(statusFilter || "") === (card.key || "")}
+              onClick={() => setStatusFilter(card.key || "")}
+              formatAmount={fmt}
+            />
+          ))}
         </div>
         <Table
           columns={columns}
@@ -1305,8 +1307,7 @@ export default function DashboardRfqListPage() {
               </p>
             </div>
             <QuoteFormRepairJobInspections
-              repairFlowJobId={viewingQuote.repairFlowJobId}
-              motorRepairFlowQuoteId={viewingQuote.motorRepairFlowQuoteId}
+              workOrderId={viewingQuote.workOrderId}
               quoteMotorId={viewingQuote.motorId}
             />
             <div>
@@ -1615,8 +1616,7 @@ export default function DashboardRfqListPage() {
             )}
           </div>
           <QuoteFormRepairJobInspections
-            repairFlowJobId={form.repairFlowJobId}
-            motorRepairFlowQuoteId={form.motorRepairFlowQuoteId}
+            workOrderId={form.workOrderId}
             quoteMotorId={form.motorId}
             disabled={savingQuote}
           />

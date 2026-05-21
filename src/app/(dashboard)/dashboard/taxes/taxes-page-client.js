@@ -12,7 +12,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { invoiceStatusPillClassName } from "@/lib/invoice-status";
+import { invoiceStatusPillAppearance } from "@/lib/invoice-status";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -110,13 +110,17 @@ export default function TaxesPageClient() {
         key: "statusLabel",
         label: "Invoice status",
         sortable: true,
-        render: (_, row) => (
+        render: (_, row) => {
+          const pill = invoiceStatusPillAppearance(row.statusSlug, mergedAccountSettings);
+          return (
           <span
-            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${invoiceStatusPillClassName(row.statusSlug, mergedAccountSettings)}`}
+            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+            style={pill.style}
           >
             {row.statusLabel}
           </span>
-        ),
+          );
+        },
         exportValue: (_, row) => row.statusLabel ?? "",
       },
       {

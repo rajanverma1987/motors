@@ -1,13 +1,5 @@
-import RepairFlowJobDetailClient from "./repair-flow-job-detail-client";
-
-export async function generateMetadata({ params }) {
-  const resolved = typeof params?.then === "function" ? await params : params ?? {};
-  return {
-    title: resolved?.id ? `Repair job` : "Repair job",
-    description: "Inspection-driven repair job detail.",
-  };
-}
+import { redirect } from "next/navigation";
 
 export default function RepairFlowJobDetailPage() {
-  return <RepairFlowJobDetailClient />;
+  redirect("/dashboard/work-orders");
 }

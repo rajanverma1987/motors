@@ -32,7 +32,6 @@ import {
   FiChevronRight,
   FiChevronLeft,
 } from "react-icons/fi";
-import { ImPencil2 } from "react-icons/im";
 
 const SIDEBAR_COLLAPSED_KEY = "dashboard-sidebar-collapsed";
 
@@ -43,7 +42,6 @@ const CUSTOMERS_NAV = [
 ];
 
 const JOBS_NAV = [
-  { href: "/dashboard/repair-flow", label: "Job Write-Up", icon: ImPencil2 },
   { href: "/dashboard/rfq", label: "RFQ", icon: FiInbox },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
   { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
@@ -113,12 +111,12 @@ function NavItemLink({ href, label, icon: Icon, isActive, collapsed }) {
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      className={`group flex items-center rounded-md text-xs font-medium transition-colors ${
-        collapsed ? "justify-center p-1" : "gap-2 py-1 pl-1.5 pr-2"
+      className={`group flex items-center rounded-md text-sm font-semibold transition-colors ${
+        collapsed ? "justify-center p-1" : "gap-2 py-1.5 pl-1.5 pr-2"
       } ${
         isActive
           ? "bg-primary/12 text-primary"
-          : "text-secondary hover:bg-muted/40 hover:text-title"
+          : "text-title hover:bg-muted/40"
       }`}
     >
       <span
@@ -127,12 +125,12 @@ function NavItemLink({ href, label, icon: Icon, isActive, collapsed }) {
         } ${
           isActive
             ? "bg-primary text-white"
-            : "bg-muted/30 text-secondary group-hover:bg-muted/50 group-hover:text-title"
+            : "bg-muted/30 text-title/70 group-hover:bg-muted/50 group-hover:text-title"
         }`}
       >
         <Icon className="h-3.5 w-3.5" aria-hidden />
       </span>
-      {!collapsed ? <span className="min-w-0 truncate leading-tight">{label}</span> : null}
+      {!collapsed ? <span className="min-w-0 truncate leading-snug">{label}</span> : null}
     </Link>
   );
 }
@@ -222,7 +220,7 @@ export default function DashboardSidebar() {
         <Link
           href="/dashboard"
           title={sidebarCollapsed ? "Dashboard" : undefined}
-          className={`flex items-center rounded-md text-xs font-medium transition-colors ${
+          className={`flex items-center rounded-md text-sm font-semibold transition-colors ${
             sidebarCollapsed ? "justify-center p-1.5" : "gap-2 px-2 py-1.5"
           } ${
             dashboardActive

@@ -8,27 +8,22 @@ import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import Checkbox from "@/components/ui/checkbox";
+import TileColorPicker from "@/components/ui/tile-color-picker";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { DROPDOWN_DEFINITIONS } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { WORK_ORDER_STATUS_TILE_PRESETS, resolveTilePresetClass } from "@/lib/work-order-status-tiles";
-
-const TILE_SELECT_OPTIONS = [
-  { value: "", label: "Auto (by position)" },
-  ...WORK_ORDER_STATUS_TILE_PRESETS.map((p, i) => ({
-    value: String(i),
-    label: p.label,
-  })),
-];
+import { resolveStatusTileProps, serializeTileColorForMap } from "@/lib/work-order-status-tiles";
 
 const MAX_OPTIONS = 25;
 
 function syncWorkOrderLegacy(setDraft, woEntries) {
   const tc = {};
   for (const e of woEntries) {
-    if (e.value && e.tileColor) tc[e.value] = String(e.tileColor);
+    if (!e.value) continue;
+    const serialized = serializeTileColorForMap(e);
+    if (serialized) tc[e.value] = serialized;
   }
   setDraft((prev) => ({
     ...prev,
@@ -116,7 +111,14 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     }
     patchEntries([
       ...entries,
-      { value: nextVal.slice(0, 80), label: "", tileColor: "", showOnShopFloor: true },
+      {
+        value: nextVal.slice(0, 80),
+        label: "",
+        tileBgColor: "",
+        tileTextColor: "",
+        tileColor: "",
+        showOnShopFloor: true,
+      },
     ]);
     setDrafts((p) => ({ ...p, [selectedKey]: "" }));
     toast.success("Value added.");
@@ -167,6 +169,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       return {
         value: value.slice(0, 80),
         label: prev?.label ?? "",
+        tileBgColor: prev?.tileBgColor ?? "",
+        tileTextColor: prev?.tileTextColor ?? "",
         tileColor: prev?.tileColor || "",
         showOnShopFloor: prev?.showOnShopFloor !== false,
       };
@@ -184,7 +188,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         <FormSectionTitle as="h2">Controlled dropdowns</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
           Define option lists for your shop. Add values below, delete with the trash icon or × on each chip, reorder rows,
-          set display labels (quotes and invoices), and pick tile colors for badges and the shop floor. Save settings when finished.
+          set display labels (quotes and invoices), and pick tile background and text colors for badges and the shop floor.
+          Save settings when finished.
         </p>
         <div className="max-w-md">
           <Select
@@ -217,10 +222,13 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             <span className="font-medium text-title">fully_paid</span> if you use email send and payment recording.
           </p>
           <div className="mb-4 flex flex-wrap gap-2">
-            {entries.map((row, chipIdx) => (
+            {entries.map((row, chipIdx) => {
+              const chipTile = resolveStatusTileProps(row.tileColor, chipIdx, row);
+              return (
               <span
                 key={row.value}
-                className={`job-board-status-pill inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm ring-1 ring-inset ${resolveTilePresetClass(row.tileColor, chipIdx)}`}
+                className={`job-board-status-pill inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm ${chipTile.className}`}
+                style={chipTile.style}
               >
                 {chipLabel(row)}
                 <button
@@ -233,7 +241,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                   ×
                 </button>
               </span>
-            ))}
+            );
+            })}
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border">
@@ -247,7 +256,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                   {showShopFloorColumn ? (
                     <th className="px-3 py-2 text-center">Shop floor</th>
                   ) : null}
-                  <th className="px-3 py-2">Tile color</th>
+                  <th className="min-w-[14rem] px-3 py-2">Tile colors</th>
                   <th className="px-3 py-2 text-right">Preview</th>
                 </tr>
               </thead>
@@ -317,25 +326,34 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                         />
                       </td>
                     ) : null}
-                    <td className="px-3 py-2">
-                      <Select
-                        options={TILE_SELECT_OPTIONS}
-                        value={row.tileColor ?? ""}
-                        onChange={(e) => {
+                    <td className="px-3 py-2 align-top">
+                      <TileColorPicker
+                        bgColor={row.tileBgColor ?? ""}
+                        textColor={row.tileTextColor ?? ""}
+                        onChange={({ tileBgColor, tileTextColor, tileColor }) => {
                           const next = [...entries];
-                          next[idx] = { ...next[idx], tileColor: e.target.value ?? "" };
+                          next[idx] = {
+                            ...next[idx],
+                            tileBgColor: tileBgColor ?? "",
+                            tileTextColor: tileTextColor ?? "",
+                            tileColor: tileColor ?? "",
+                          };
                           patchEntries(next);
                         }}
-                        searchable={false}
-                        className="min-w-[11rem]"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right align-top">
+                      {(() => {
+                        const preview = resolveStatusTileProps(row.tileColor, idx, row);
+                        return (
                       <span
-                        className={`job-board-status-pill inline-flex max-w-[10rem] truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${resolveTilePresetClass(row.tileColor, idx)}`}
+                        className={`job-board-status-pill inline-flex max-w-[10rem] truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ${preview.className}`}
+                        style={preview.style}
                       >
                         {chipLabel(row)}
                       </span>
+                        );
+                      })()}
                     </td>
                   </tr>
                 ))}

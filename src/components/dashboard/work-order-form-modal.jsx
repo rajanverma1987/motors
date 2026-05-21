@@ -17,6 +17,7 @@ import {
   normalizeWorkOrderJobType,
 } from "@/lib/work-order-fields";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
+import WorkOrderInspectionsPanel from "@/components/dashboard/work-order-inspections-panel";
 
 function QuoteReferenceNoPrices({ scopeLines = [], otherCostLines = [] }) {
   const hasScope = scopeLines.length > 0;
@@ -479,6 +480,13 @@ export default function WorkOrderFormModal({
               />
             </div>
           )}
+          {!editing.isDraft && editing.id ? (
+            <WorkOrderInspectionsPanel
+              workOrderId={editing.id}
+              motorClass={editing.motorClass || "AC"}
+              disabled={saving}
+            />
+          ) : null}
           {editing.motorClass === "DC" && form.jobType !== "armature_only" && (
             <Tabs
               defaultTab="dc"

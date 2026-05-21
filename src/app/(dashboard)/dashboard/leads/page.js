@@ -819,7 +819,7 @@ export default function DashboardLeadsPage() {
                 Actions
               </h3>
               <p className="mb-3 text-sm text-secondary">
-                Create a customer or motor from this lead, then use Job Write-Up to add repair jobs and RFQs. You will
+                Create a customer or motor from this lead, then use RFQ and Work orders for quotes and shop-floor jobs. You will
                 review and save each step manually.
               </p>
               <div className="flex flex-wrap gap-2">
@@ -833,9 +833,9 @@ export default function DashboardLeadsPage() {
                     Create Motor from Lead
                   </Button>
                 </Link>
-                <Link href="/dashboard/repair-flow">
+                <Link href="/dashboard/work-orders">
                   <Button variant="outline" size="sm">
-                    Job Write-Up (quotes)
+                    Work orders
                   </Button>
                 </Link>
               </div>

@@ -4,12 +4,10 @@
  */
 
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
-import { WORK_ORDER_STATUS_TILE_PRESETS } from "@/lib/work-order-status-tiles";
+import { tileFieldsFromEntry, serializeTileColorForMap } from "@/lib/work-order-status-tiles";
 
 /** Default quote statuses when Settings → Dropdowns has never been configured (legacy). */
 export const QUOTE_STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
-
-const PRESET_COUNT = WORK_ORDER_STATUS_TILE_PRESETS.length;
 
 const DEFAULT_QUOTE_LABELS = {
   draft: "Draft",
@@ -47,12 +45,6 @@ export const DROPDOWN_DEFINITIONS = {
   },
 };
 
-function validTileColor(raw) {
-  const n = parseInt(String(raw ?? "").trim(), 10);
-  if (!Number.isFinite(n) || n < 0 || n >= PRESET_COUNT) return "";
-  return String(n);
-}
-
 function clampDropdownLabel(raw) {
   return String(raw ?? "").slice(0, 120);
 }
@@ -64,7 +56,7 @@ function normalizeShowOnShopFloor(raw) {
 
 /**
  * @param {{ value: string, label?: string, tileColor?: string, showOnShopFloor?: boolean }} entry
- * @param {{ boardLowerSet?: Set<string>, canonCount?: number }} [ctx]
+ * @param {{ boardLowerSet?: Set<string>, canonCount?: number, tiles?: Record<string, string> }} [ctx]
  */
 function normalizeWoEntry(entry, ctx = {}) {
   const value = String(entry?.value ?? "")
@@ -79,16 +71,24 @@ function normalizeWoEntry(entry, ctx = {}) {
   } else if (boardLowerSet && boardLowerSet.size > 0 && canonCount > 0 && boardLowerSet.size < canonCount) {
     showOnShopFloor = boardLowerSet.has(value.toLowerCase());
   }
+  const tiles = ctx.tiles && typeof ctx.tiles === "object" ? ctx.tiles : {};
+  const legacyTile = tiles[value];
+  const tile = tileFieldsFromEntry(entry, legacyTile);
   return {
     value,
     label: clampDropdownLabel(entry?.label),
-    tileColor: validTileColor(entry?.tileColor),
+    tileBgColor: tile.tileBgColor,
+    tileTextColor: tile.tileTextColor,
+    tileColor: tile.tileColor,
     showOnShopFloor,
   };
 }
 
 function normalizeQuoteEntries(rawEntries) {
-  let list = Array.isArray(rawEntries) ? rawEntries.map(normalizeWoEntry).filter(Boolean) : [];
+  const quoteCtx = { tiles: {} };
+  let list = Array.isArray(rawEntries)
+    ? rawEntries.map((e) => normalizeWoEntry(e, quoteCtx)).filter(Boolean)
+    : [];
 
   const seen = new Set();
   const uniq = [];
@@ -111,6 +111,8 @@ function normalizeQuoteEntries(rawEntries) {
     return QUOTE_STATUS_VALUES.map((value) => ({
       value,
       label: DEFAULT_QUOTE_LABELS[value] || value,
+      tileBgColor: "",
+      tileTextColor: "",
       tileColor: "",
     }));
   }
@@ -118,7 +120,10 @@ function normalizeQuoteEntries(rawEntries) {
 }
 
 function normalizeInvoiceEntries(rawEntries) {
-  let list = Array.isArray(rawEntries) ? rawEntries.map(normalizeWoEntry).filter(Boolean) : [];
+  const invCtx = { tiles: {} };
+  let list = Array.isArray(rawEntries)
+    ? rawEntries.map((e) => normalizeWoEntry(e, invCtx)).filter(Boolean)
+    : [];
 
   const seen = new Set();
   const uniq = [];
@@ -133,7 +138,6 @@ function normalizeInvoiceEntries(rawEntries) {
         clampDropdownLabel(row.label) ||
         DEFAULT_INVOICE_LABELS[valueLower] ||
         valueLower,
-      tileColor: validTileColor(row.tileColor),
     });
     if (uniq.length >= MAX_INVOICE_STATUS_OPTIONS) break;
   }
@@ -142,6 +146,8 @@ function normalizeInvoiceEntries(rawEntries) {
     return DEFAULT_INVOICE_STATUS_VALUES.map((value) => ({
       value,
       label: DEFAULT_INVOICE_LABELS[value] || value,
+      tileBgColor: "",
+      tileTextColor: "",
       tileColor: "",
     }));
   }
@@ -156,7 +162,7 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoard
     boardArr.map((b) => String(b ?? "").trim().toLowerCase()).filter(Boolean)
   );
   const legacyList = Array.isArray(legacyStatuses) ? legacyStatuses : [];
-  const woCtx = { boardLowerSet, canonCount: legacyList.length };
+  const woCtx = { boardLowerSet, canonCount: legacyList.length, tiles };
 
   let list = Array.isArray(rawEntries)
     ? rawEntries.map((e) => normalizeWoEntry(e, woCtx)).filter(Boolean)
@@ -167,10 +173,11 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoard
       .map((v) => {
         const value = String(v ?? "").trim().slice(0, 80);
         if (!value) return null;
+        const tile = tileFieldsFromEntry({ value }, tiles[value]);
         return {
           value,
           label: "",
-          tileColor: validTileColor(tiles[value]),
+          ...tile,
           showOnShopFloor:
             !boardLowerSet.size || boardLowerSet.size >= legacyList.length
               ? true
@@ -194,6 +201,8 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoard
     return DEFAULT_WORK_ORDER_STATUSES.map((value) => ({
       value,
       label: "",
+      tileBgColor: "",
+      tileTextColor: "",
       tileColor: "",
       showOnShopFloor: true,
     }));
@@ -231,7 +240,9 @@ export function deriveWorkOrderFieldsFromControlledEntries(entries) {
   /** @type {Record<string, string>} */
   const tileColors = {};
   for (const e of list) {
-    if (e.value && e.tileColor) tileColors[e.value] = String(e.tileColor);
+    if (!e.value) continue;
+    const serialized = serializeTileColorForMap(e);
+    if (serialized) tileColors[e.value] = serialized;
   }
   return {
     statuses,
@@ -275,8 +286,13 @@ export function quoteStatusTileColorForValue(mergedSettings, value, fallbackInde
   const list = Array.isArray(entries) ? entries : normalizeQuoteEntries([]);
   const v = String(value ?? "").toLowerCase().trim();
   const idx = list.findIndex((e) => String(e.value ?? "").toLowerCase().trim() === v);
-  const tile = idx >= 0 ? list[idx].tileColor : "";
-  return { tileColor: tile, index: idx >= 0 ? idx : fallbackIndex };
+  const entry = idx >= 0 ? list[idx] : null;
+  return {
+    tileColor: entry?.tileColor ?? "",
+    tileBgColor: entry?.tileBgColor ?? "",
+    tileTextColor: entry?.tileTextColor ?? "",
+    index: idx >= 0 ? idx : fallbackIndex,
+  };
 }
 
 /** Allowed invoice status slugs (lowercase) from merged settings. */
@@ -315,8 +331,13 @@ export function invoiceStatusTileColorForValue(mergedSettings, value, fallbackIn
   const list = Array.isArray(entries) && entries.length ? entries : normalizeInvoiceEntries([]);
   const v = String(value ?? "").toLowerCase().trim();
   const idx = list.findIndex((e) => String(e.value ?? "").toLowerCase().trim() === v);
-  const tile = idx >= 0 ? list[idx].tileColor : "";
-  return { tileColor: tile, index: idx >= 0 ? idx : fallbackIndex };
+  const entry = idx >= 0 ? list[idx] : null;
+  return {
+    tileColor: entry?.tileColor ?? "",
+    tileBgColor: entry?.tileBgColor ?? "",
+    tileTextColor: entry?.tileTextColor ?? "",
+    index: idx >= 0 ? idx : fallbackIndex,
+  };
 }
 
 /** @param {unknown} bodyVal */
