@@ -635,18 +635,6 @@ export default function InvoiceFormModal({
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Input
-                label="Scope total (on invoice)"
-                value={form.laborTotal}
-                onChange={(e) => setForm((f) => ({ ...f, laborTotal: e.target.value }))}
-              />
-              <Input
-                label="Other cost total (on invoice)"
-                value={form.partsTotal}
-                onChange={(e) => setForm((f) => ({ ...f, partsTotal: e.target.value }))}
-              />
-            </div>
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Textarea

@@ -1,13 +1,22 @@
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
-/** Numeric invoice total from labor + parts (same as UI). */
-export function invoiceLineTotal(inv) {
+function invoiceTotals(inv) {
   return computeTotalsFromLaborAndParts({
     laborTotal: inv?.laborTotal,
     partsTotal: inv?.partsTotal,
     taxExempt: inv?.customerTaxExempt,
     taxPercent: inv?.customerTaxPercent,
-  }).grandTotal;
+  });
+}
+
+/** Tax amount from labor + parts (same as invoice form / print). */
+export function invoiceTaxAmount(inv) {
+  return invoiceTotals(inv).taxAmount ?? 0;
+}
+
+/** Numeric invoice total from labor + parts (same as UI). */
+export function invoiceLineTotal(inv) {
+  return invoiceTotals(inv).grandTotal;
 }
 
 /** Sum of recorded payment amounts. */

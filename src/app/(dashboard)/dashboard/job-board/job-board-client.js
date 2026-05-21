@@ -10,9 +10,8 @@ import { resolveWorkOrderStatusTileClass } from "@/lib/work-order-status-tiles";
 
 /**
  * Column order always follows Settings → Dropdowns (canonical) row order.
- * Stored `shopFloorBoardOrder` only limits which statuses appear when it is a strict subset
- * of canonical; any status used on a work order is included and slotted by canonical order
- * (never appended in API / “first seen” order).
+ * Stored `shopFloorBoardOrder` (from Settings → Work order status → Shop floor) limits which
+ * status columns appear. Work orders in hidden statuses are omitted from the board.
  */
 function computeJobBoardColumns(canonical, boardSubset, workOrders) {
   const canon = Array.isArray(canonical)
@@ -57,7 +56,7 @@ function computeJobBoardColumns(canonical, boardSubset, workOrders) {
   }
   for (const wo of woList) {
     const sl = String(wo.status ?? "").trim().toLowerCase();
-    if (sl) pickLower.add(sl);
+    if (sl && !canonLowerSet.has(sl)) pickLower.add(sl);
   }
 
   const ordered = canon.filter((c) => pickLower.has(c.toLowerCase()));
@@ -239,8 +238,8 @@ export default function JobBoardClient({
     const fallback = columns[0] || "Assigned";
     for (const wo of workOrders) {
       const raw = String(wo.status ?? "").trim();
-      let key = raw ? resolveStatusToColumnKey(raw, columns) : fallback;
-      if (map[key] === undefined) key = fallback;
+      const key = raw ? resolveStatusToColumnKey(raw, columns) : fallback;
+      if (map[key] === undefined) continue;
       map[key].push(wo);
     }
     return map;
@@ -251,27 +250,21 @@ export default function JobBoardClient({
     return columns.filter((s) => (byStatus[s] || []).length > 0);
   }, [columns, byStatus, hideEmptyStatuses]);
 
-  /** Full-viewport column strip (share board has no dashboard chrome). */
-  const boardMinH = publicMode
-    ? "min-h-[calc(100dvh-10.5rem)]"
-    : "min-h-[calc(100dvh-13rem)]";
+  /** Wrap status columns; width fills row without horizontal scroll. */
+  const boardGridClass = compact
+    ? "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] items-start gap-3 pb-4"
+    : "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] items-start gap-3 pb-4";
 
-  const containerClass = compact
-    ? `flex min-h-0 flex-1 flex-wrap content-stretch gap-3 overflow-auto pb-4 [align-items:stretch] ${boardMinH}`
-    : `flex min-h-0 flex-1 items-stretch gap-3 overflow-x-auto overflow-y-hidden pb-4 ${boardMinH}`;
-
-  /** Compact: ~5 columns per row (shared row width minus 4× gap-3). */
-  const columnClass = compact
-    ? "flex min-h-0 h-full w-full shrink-0 flex-col rounded-lg border border-border bg-card sm:w-[calc((100%-3rem)/5)]"
-    : "flex min-h-0 h-full w-[min(100%,280px)] shrink-0 flex-col rounded-lg border border-border bg-card";
+  const columnClass =
+    "flex h-auto w-full min-w-0 flex-col rounded-lg border border-border bg-card";
 
   const listClass = compact
-    ? "flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2"
-    : "flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2";
+    ? "flex flex-col gap-1 p-2"
+    : "flex flex-col gap-2 p-2";
 
   const rootClass = publicMode
-    ? "flex min-h-dvh w-full flex-1 flex-col overflow-hidden bg-bg"
-    : "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden";
+    ? "flex w-full min-w-0 flex-col bg-bg px-4 py-6 sm:px-6"
+    : "flex w-full min-w-0 flex-col";
 
   return (
     <div className={rootClass}>
@@ -281,7 +274,8 @@ export default function JobBoardClient({
             Shop floor job board
           </h1>
           <p className="mt-1 text-sm text-neutral-600 dark:text-secondary">
-            Kanban columns follow your work order statuses in Settings → Dropdowns (order with ↑ / ↓).
+            Kanban columns follow work order status order in Settings → Dropdowns (↑ / ↓). Toggle{" "}
+            <span className="font-medium text-title">Shop floor</span> per status to show or hide a column.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -355,7 +349,7 @@ export default function JobBoardClient({
             : "No status columns to show."}
         </p>
       ) : (
-        <div className={containerClass}>
+        <div className={boardGridClass}>
           {displayColumns.map((status) => {
             const list = byStatus[status] || [];
             const colorIdx = columns.indexOf(status);
@@ -375,9 +369,7 @@ export default function JobBoardClient({
                 </div>
                 <div className={listClass}>
                   {list.length === 0 ? (
-                    <p className="flex flex-1 items-center justify-center px-1 py-8 text-center text-xs text-secondary">
-                      —
-                    </p>
+                    <p className="px-1 py-4 text-center text-xs text-secondary">—</p>
                   ) : (
                     list.map((wo) => {
                       const cardClass =

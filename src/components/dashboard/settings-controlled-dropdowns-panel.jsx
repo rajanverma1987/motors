@@ -7,6 +7,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
+import Checkbox from "@/components/ui/checkbox";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
@@ -37,9 +38,7 @@ function syncWorkOrderLegacy(setDraft, woEntries) {
     },
     workOrderStatuses: woEntries.map((e) => e.value).filter(Boolean).slice(0, MAX_OPTIONS),
     workOrderStatusTileColors: tc,
-    shopFloorBoardOrder: (Array.isArray(prev.shopFloorBoardOrder) ? prev.shopFloorBoardOrder : []).filter((x) =>
-      woEntries.some((e) => e.value === x)
-    ),
+    shopFloorBoardOrder: woEntries.filter((e) => e.showOnShopFloor !== false).map((e) => e.value),
   }));
 }
 
@@ -94,6 +93,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   const entries =
     selectedKey === "quote_status" ? quoteEntries : selectedKey === "invoice_status" ? invoiceEntries : woEntries;
   const showEntryLabels = selectedKey === "quote_status" || selectedKey === "invoice_status";
+  const showShopFloorColumn = selectedKey === "work_order_status";
 
   const patchEntries = (next) => {
     if (selectedKey === "quote_status") patchQuoteEntries(next);
@@ -114,7 +114,10 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       toast.error(`Maximum ${MAX_OPTIONS} values.`);
       return;
     }
-    patchEntries([...entries, { value: nextVal.slice(0, 80), label: "", tileColor: "" }]);
+    patchEntries([
+      ...entries,
+      { value: nextVal.slice(0, 80), label: "", tileColor: "", showOnShopFloor: true },
+    ]);
     setDrafts((p) => ({ ...p, [selectedKey]: "" }));
     toast.success("Value added.");
   };
@@ -165,6 +168,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         value: value.slice(0, 80),
         label: prev?.label ?? "",
         tileColor: prev?.tileColor || "",
+        showOnShopFloor: prev?.showOnShopFloor !== false,
       };
     });
     setBulkSaving(true);
@@ -197,7 +201,15 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         <FormContainer>
           <FormSectionTitle as="h2">{selectedDef.label}</FormSectionTitle>
           <p className="mb-4 text-xs text-secondary">
-            Total values: {entries.length}. Quote statuses are stored on each RFQ; keep an{" "}
+            Total values: {entries.length}.
+            {showShopFloorColumn ? (
+              <>
+                {" "}
+                Use <span className="font-medium text-title">Shop floor</span> to show or hide each status as a column on
+                the shop floor job board (work orders in hidden statuses are not listed there).
+              </>
+            ) : null}{" "}
+            Quote statuses are stored on each RFQ; keep an{" "}
             <span className="font-medium text-title">approved</span>-labeled option if you use{" "}
             <span className="font-medium text-title">Create work order</span> from Quotes (API checks that slug). For
             invoices, keep slugs like <span className="font-medium text-title">sent</span>,{" "}
@@ -232,6 +244,9 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                   <th className="w-24 px-3 py-2">Order</th>
                   <th className="px-3 py-2">Value</th>
                   {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
+                  {showShopFloorColumn ? (
+                    <th className="px-3 py-2 text-center">Shop floor</th>
+                  ) : null}
                   <th className="px-3 py-2">Tile color</th>
                   <th className="px-3 py-2 text-right">Preview</th>
                 </tr>
@@ -285,6 +300,20 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           }}
                           className="!gap-0"
                           placeholder={row.value}
+                        />
+                      </td>
+                    ) : null}
+                    {showShopFloorColumn ? (
+                      <td className="px-3 py-2 text-center">
+                        <Checkbox
+                          checked={row.showOnShopFloor !== false}
+                          onChange={(e) => {
+                            const next = [...entries];
+                            next[idx] = { ...next[idx], showOnShopFloor: e.target.checked };
+                            patchEntries(next);
+                          }}
+                          className="inline-flex justify-center"
+                          aria-label={`Show ${row.value} on shop floor job board`}
                         />
                       </td>
                     ) : null}

@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function JobBoardPage() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col md:min-h-[calc(100dvh-5.5rem)]">
+    <div className="w-full min-w-0">
       <Suspense fallback={<div className="p-8 text-secondary">Loading…</div>}>
         <JobBoardClient />
       </Suspense>

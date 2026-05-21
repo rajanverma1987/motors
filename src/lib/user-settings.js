@@ -160,48 +160,22 @@ export function mergeUserSettings(stored) {
   const merged = { ...USER_SETTINGS_DEFAULTS, ...s };
   merged.workOrderStatuses = normalizeWorkOrderStatusList(merged.workOrderStatuses);
 
+  const rawBoardForMigrate = Array.isArray(s.shopFloorBoardOrder) ? s.shopFloorBoardOrder : [];
   merged.controlledDropdowns = normalizeControlledDropdowns(
     merged.controlledDropdowns,
     merged.workOrderStatuses,
-    merged.workOrderStatusTileColors
+    merged.workOrderStatusTileColors,
+    rawBoardForMigrate
   );
   const woDerived = deriveWorkOrderFieldsFromControlledEntries(
     merged.controlledDropdowns.work_order_status.entries
   );
   merged.workOrderStatuses = woDerived.statuses;
   merged.workOrderStatusTileColors = woDerived.tileColors;
-
-  const storedHasBoard = Object.prototype.hasOwnProperty.call(s, "shopFloorBoardOrder");
-  if (!storedHasBoard) {
-    merged.shopFloorBoardOrder = [...merged.workOrderStatuses];
-  } else {
-    const rawBoard = Array.isArray(s.shopFloorBoardOrder) ? s.shopFloorBoardOrder : [];
-    merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(rawBoard, merged.workOrderStatuses);
-  }
-
-  /**
-   * Shop floor columns must follow work order status (Settings → Dropdowns) order.
-   * `shopFloorBoardOrder` may still reflect an older sequence after statuses were reordered in the table.
-   * Matching is case-insensitive so stored board labels align with canonical dropdown values.
-   */
-  {
-    const canonical = merged.workOrderStatuses;
-    const board = merged.shopFloorBoardOrder;
-    if (Array.isArray(canonical) && canonical.length) {
-      if (!Array.isArray(board) || !board.length) {
-        merged.shopFloorBoardOrder = [...canonical];
-      } else {
-        const boardLower = new Set(
-          board.map((b) => String(b ?? "").trim().toLowerCase()).filter(Boolean)
-        );
-        const next = [];
-        for (const s of canonical) {
-          if (boardLower.has(String(s ?? "").trim().toLowerCase())) next.push(s);
-        }
-        merged.shopFloorBoardOrder = next.length ? next : [...canonical];
-      }
-    }
-  }
+  merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
+    woDerived.shopFloorBoardOrder,
+    merged.workOrderStatuses
+  );
 
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
@@ -294,7 +268,21 @@ export function sanitizeUserSettingsPatch(body) {
         body.workOrderStatusTileColors && typeof body.workOrderStatusTileColors === "object"
           ? body.workOrderStatusTileColors
           : {};
-      out.controlledDropdowns = sanitizeControlledDropdownsPatch(body.controlledDropdowns, woLeg, tilesLeg);
+      const boardLeg = Array.isArray(body.shopFloorBoardOrder) ? body.shopFloorBoardOrder : [];
+      const normalized = sanitizeControlledDropdownsPatch(
+        body.controlledDropdowns,
+        woLeg,
+        tilesLeg,
+        boardLeg
+      );
+      out.controlledDropdowns = normalized;
+      const derived = deriveWorkOrderFieldsFromControlledEntries(normalized.work_order_status.entries);
+      out.workOrderStatuses = derived.statuses;
+      out.workOrderStatusTileColors = derived.tileColors;
+      out.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
+        derived.shopFloorBoardOrder,
+        derived.statuses
+      );
       continue;
     }
     if (typeof body[key] === "boolean") {

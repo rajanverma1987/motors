@@ -57,18 +57,33 @@ function clampDropdownLabel(raw) {
   return String(raw ?? "").slice(0, 120);
 }
 
+function normalizeShowOnShopFloor(raw) {
+  if (raw === false || raw === "false" || raw === 0) return false;
+  return true;
+}
+
 /**
- * @param {{ value: string, label?: string, tileColor?: string }} entry
+ * @param {{ value: string, label?: string, tileColor?: string, showOnShopFloor?: boolean }} entry
+ * @param {{ boardLowerSet?: Set<string>, canonCount?: number }} [ctx]
  */
-function normalizeWoEntry(entry) {
+function normalizeWoEntry(entry, ctx = {}) {
   const value = String(entry?.value ?? "")
     .trim()
     .slice(0, 80);
   if (!value) return null;
+  const boardLowerSet = ctx.boardLowerSet;
+  const canonCount = ctx.canonCount ?? 0;
+  let showOnShopFloor = true;
+  if (entry && Object.prototype.hasOwnProperty.call(entry, "showOnShopFloor")) {
+    showOnShopFloor = normalizeShowOnShopFloor(entry.showOnShopFloor);
+  } else if (boardLowerSet && boardLowerSet.size > 0 && canonCount > 0 && boardLowerSet.size < canonCount) {
+    showOnShopFloor = boardLowerSet.has(value.toLowerCase());
+  }
   return {
     value,
     label: clampDropdownLabel(entry?.label),
     tileColor: validTileColor(entry?.tileColor),
+    showOnShopFloor,
   };
 }
 
@@ -133,17 +148,36 @@ function normalizeInvoiceEntries(rawEntries) {
   return uniq;
 }
 
-function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles) {
+function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoardOrder) {
   const tiles =
     legacyTiles && typeof legacyTiles === "object" && !Array.isArray(legacyTiles) ? legacyTiles : {};
-  let list = Array.isArray(rawEntries) ? rawEntries.map(normalizeWoEntry).filter(Boolean) : [];
+  const boardArr = Array.isArray(legacyBoardOrder) ? legacyBoardOrder : [];
+  const boardLowerSet = new Set(
+    boardArr.map((b) => String(b ?? "").trim().toLowerCase()).filter(Boolean)
+  );
+  const legacyList = Array.isArray(legacyStatuses) ? legacyStatuses : [];
+  const woCtx = { boardLowerSet, canonCount: legacyList.length };
 
-  if (!list.length && Array.isArray(legacyStatuses) && legacyStatuses.length) {
-    list = legacyStatuses.map((v) => ({
-      value: String(v ?? "").trim().slice(0, 80),
-      label: "",
-      tileColor: validTileColor(tiles[String(v ?? "").trim()]),
-    })).filter((r) => r.value);
+  let list = Array.isArray(rawEntries)
+    ? rawEntries.map((e) => normalizeWoEntry(e, woCtx)).filter(Boolean)
+    : [];
+
+  if (!list.length && legacyList.length) {
+    list = legacyList
+      .map((v) => {
+        const value = String(v ?? "").trim().slice(0, 80);
+        if (!value) return null;
+        return {
+          value,
+          label: "",
+          tileColor: validTileColor(tiles[value]),
+          showOnShopFloor:
+            !boardLowerSet.size || boardLowerSet.size >= legacyList.length
+              ? true
+              : boardLowerSet.has(value.toLowerCase()),
+        };
+      })
+      .filter(Boolean);
   }
 
   const seen = new Set();
@@ -161,6 +195,7 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles) {
       value,
       label: "",
       tileColor: "",
+      showOnShopFloor: true,
     }));
   }
   return uniq;
@@ -171,7 +206,7 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles) {
  * @param {string[]} legacyWoStatuses
  * @param {Record<string, string>} legacyWoTiles
  */
-export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTiles) {
+export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTiles, legacyBoardOrder) {
   const obj = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
   const quoteRaw = obj.quote_status && typeof obj.quote_status === "object" ? obj.quote_status : {};
   const woRaw = obj.work_order_status && typeof obj.work_order_status === "object" ? obj.work_order_status : {};
@@ -182,7 +217,7 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
       entries: normalizeQuoteEntries(quoteRaw.entries),
     },
     work_order_status: {
-      entries: normalizeWoEntries(woRaw.entries, legacyWoStatuses, legacyWoTiles),
+      entries: normalizeWoEntries(woRaw.entries, legacyWoStatuses, legacyWoTiles, legacyBoardOrder),
     },
     invoice_status: {
       entries: normalizeInvoiceEntries(invRaw.entries),
@@ -198,7 +233,24 @@ export function deriveWorkOrderFieldsFromControlledEntries(entries) {
   for (const e of list) {
     if (e.value && e.tileColor) tileColors[e.value] = String(e.tileColor);
   }
-  return { statuses, tileColors };
+  return {
+    statuses,
+    tileColors,
+    shopFloorBoardOrder: deriveShopFloorBoardOrderFromEntries(list, statuses),
+  };
+}
+
+/** Statuses to show as columns on the shop floor job board (dropdown row order). */
+export function deriveShopFloorBoardOrderFromEntries(entries, fallbackStatuses) {
+  const list = Array.isArray(entries) ? entries : [];
+  const allValues = list.map((e) => e.value).filter(Boolean);
+  const shown = list.filter((e) => e.value && e.showOnShopFloor !== false).map((e) => e.value);
+  if (shown.length) return shown.slice(0, 25);
+  if (allValues.length) return allValues.slice(0, 25);
+  const fb = Array.isArray(fallbackStatuses)
+    ? fallbackStatuses.map((s) => String(s ?? "").trim()).filter(Boolean)
+    : [];
+  return fb.length ? fb.slice(0, 25) : [...DEFAULT_WORK_ORDER_STATUSES];
 }
 
 /**
@@ -268,6 +320,11 @@ export function invoiceStatusTileColorForValue(mergedSettings, value, fallbackIn
 }
 
 /** @param {unknown} bodyVal */
-export function sanitizeControlledDropdownsPatch(bodyVal, legacyWoStatuses, legacyWoTiles) {
-  return normalizeControlledDropdowns(bodyVal, legacyWoStatuses, legacyWoTiles);
+export function sanitizeControlledDropdownsPatch(
+  bodyVal,
+  legacyWoStatuses,
+  legacyWoTiles,
+  legacyBoardOrder
+) {
+  return normalizeControlledDropdowns(bodyVal, legacyWoStatuses, legacyWoTiles, legacyBoardOrder);
 }

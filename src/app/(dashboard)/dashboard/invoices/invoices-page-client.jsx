@@ -18,9 +18,11 @@ import {
   invoiceStatusSelectOptionsFromMerged,
   invoiceStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
-import { invoiceLineTotal } from "@/lib/invoice-amounts";
+import { invoiceLineTotal, invoiceTaxAmount } from "@/lib/invoice-amounts";
+import { normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { resolveTilePresetClass } from "@/lib/work-order-status-tiles";
+import { formatDateMdy } from "@/lib/format-date";
 
 function InvoicesInner() {
   const toast = useToast();
@@ -317,7 +319,22 @@ function InvoicesInner() {
       },
       { key: "invoiceNumber", label: "Invoice#", clickable: true, sortable: true },
       { key: "customerName", label: "Customer", sortable: true },
-      { key: "date", label: "Date", sortable: true },
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        render: (v) => formatDateMdy(v),
+      },
+      {
+        key: "taxAmount",
+        label: "Tax",
+        render: (_, row) =>
+          normalizeTaxExempt(row.customerTaxExempt) ? (
+            <span className="text-secondary">Exempt</span>
+          ) : (
+            fmt(invoiceTaxAmount(row))
+          ),
+      },
       {
         key: "totalAmount",
         label: "Total Amount",
