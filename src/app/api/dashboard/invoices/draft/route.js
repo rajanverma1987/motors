@@ -7,6 +7,7 @@ import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
+import { resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
 /** Draft invoice from quote — does not persist; suggests next invoice number (CEMR-A00001-1, -2, …). */
 export async function GET(request) {
@@ -45,6 +46,7 @@ export async function GET(request) {
       .select("_id")
       .lean();
     const workOrderId = wo?._id?.toString() ?? null;
+    const tax = resolveInvoiceTaxFields({ customer, quote });
 
     return NextResponse.json({
       isDraft: true,
@@ -62,8 +64,8 @@ export async function GET(request) {
       partsLines: Array.isArray(quote.partsLines) ? quote.partsLines.map((r) => ({ ...r })) : [],
       laborTotal: quote.laborTotal || "",
       partsTotal: quote.partsTotal || "",
-      customerTaxExempt: quote.customerTaxExempt ?? customer.taxExempt ?? true,
-      customerTaxPercent: quote.customerTaxPercent ?? customer.taxPercent ?? "0",
+      customerTaxExempt: tax.customerTaxExempt,
+      customerTaxPercent: tax.customerTaxPercent,
       customerNotes: quote.customerNotes || "",
       notes: quote.notes || "",
       status: "draft",

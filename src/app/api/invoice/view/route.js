@@ -9,7 +9,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
-import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
 /** Public GET ?token= — invoice for customer view/print (no internal notes). */
 export async function GET(request) {
@@ -35,17 +35,19 @@ export async function GET(request) {
     let customerToName = "";
     let customerBillingAddress = "";
     let motorLabel = "";
+    let customer = null;
     if (doc.customerId) {
-      const cust = await Customer.findOne({
+      customer = await Customer.findOne({
         _id: doc.customerId,
         createdByEmail: ownerEmail,
       }).lean();
-      if (cust) {
-        const block = customerInvoiceToBlock(cust);
+      if (customer) {
+        const block = customerInvoiceToBlock(customer);
         customerToName = block.toName;
         customerBillingAddress = block.billingAddress;
       }
     }
+    const tax = resolveInvoiceTaxFields({ customer });
     if (doc.motorId) {
       const motor = await Motor.findOne({
         _id: doc.motorId,
@@ -70,8 +72,8 @@ export async function GET(request) {
       partsLines: Array.isArray(doc.partsLines) ? doc.partsLines : [],
       laborTotal: doc.laborTotal ?? "",
       partsTotal: doc.partsTotal ?? "",
-      customerTaxExempt: normalizeTaxExempt(doc.customerTaxExempt),
-      customerTaxPercent: String(normalizeTaxPercent(doc.customerTaxPercent)),
+      customerTaxExempt: tax.customerTaxExempt,
+      customerTaxPercent: tax.customerTaxPercent,
       customerNotes: doc.customerNotes ?? "",
       motorLabel,
       fromShopName: owner?.shopName?.trim() || "",

@@ -8,7 +8,7 @@ import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { invoiceStatusAllowedSlugs } from "@/lib/dropdown-catalog";
-import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
@@ -55,6 +55,8 @@ export async function GET(request) {
     const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const sortFieldMap = {
       invoiceNumber: "invoiceNumber",
+      rfqNumber: "rfqNumber",
+      customerPo: "customerPo",
       date: "date",
       status: "status",
       createdAt: "createdAt",
@@ -64,8 +66,26 @@ export async function GET(request) {
     const ownerScope = { createdByEmail: email };
     const q = { ...ownerScope };
     if (qText) {
-      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [{ invoiceNumber: rx }, { rfqNumber: rx }, { status: rx }];
+      const escaped = qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const rx = new RegExp(escaped, "i");
+      const orClauses = [
+        { invoiceNumber: rx },
+        { rfqNumber: rx },
+        { customerPo: rx },
+        { status: rx },
+        { date: rx },
+      ];
+      const matchingCustomers = await Customer.find({
+        createdByEmail: email,
+        $or: [{ companyName: rx }, { primaryContactName: rx }, { email: rx }],
+      })
+        .select("_id")
+        .lean();
+      const customerIds = matchingCustomers.map((c) => String(c._id));
+      if (customerIds.length) {
+        orClauses.push({ customerId: { $in: customerIds } });
+      }
+      q.$or = orClauses;
     }
     const [settingsDocEarly] = await Promise.all([
       UserSettings.findOne({ ownerEmail: email }).lean(),
@@ -119,28 +139,30 @@ export async function GET(request) {
     })
       .lean()
       .catch(() => []);
-    const custMap = Object.fromEntries(
-      (customers || []).map((c) => [
-        String(c._id),
-        c.companyName || c.primaryContactName || String(c._id),
-      ])
-    );
-    const items = list.map((inv) => ({
+    const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
+    const items = list.map((inv) => {
+      const tax = resolveInvoiceTaxFields({ customer: custById[String(inv.customerId)] });
+      return {
         id: inv._id.toString(),
         quoteId: inv.quoteId,
         invoiceNumber: inv.invoiceNumber,
-        rfqNumber: inv.rfqNumber,
+        rfqNumber: inv.rfqNumber || "",
+        customerPo: inv.customerPo || "",
         date: inv.date,
         status: inv.status,
         laborTotal: inv.laborTotal,
         partsTotal: inv.partsTotal,
-        customerTaxExempt: normalizeTaxExempt(inv.customerTaxExempt),
-        customerTaxPercent: String(normalizeTaxPercent(inv.customerTaxPercent)),
+        customerTaxExempt: tax.customerTaxExempt,
+        customerTaxPercent: tax.customerTaxPercent,
         customerId: inv.customerId,
         motorId: inv.motorId,
-        customerName: custMap[String(inv.customerId)] || inv.customerId,
+        customerName:
+          custById[String(inv.customerId)]?.companyName ||
+          custById[String(inv.customerId)]?.primaryContactName ||
+          inv.customerId,
         createdAt: inv.createdAt,
-      }));
+      };
+    });
     if (!includePagination) return NextResponse.json(items);
     return NextResponse.json({ items, page, pageSize, totalCount, summaryByStatus });
   } catch (err) {
@@ -178,6 +200,7 @@ export async function POST(request) {
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const u = mergeUserSettings(settingsDoc?.settings);
     const invoiceNumber = await nextInvoiceNumberForQuote(email, quoteId, baseJob);
+    const tax = resolveInvoiceTaxFields({ customer, quote });
     const doc = await Invoice.create({
       quoteId,
       customerId: String(quote.customerId || ""),
@@ -191,8 +214,8 @@ export async function POST(request) {
       partsLines,
       laborTotal: String(body.laborTotal ?? "").slice(0, 50),
       partsTotal: String(body.partsTotal ?? "").slice(0, 50),
-      customerTaxExempt: normalizeTaxExempt(quote.customerTaxExempt ?? customer?.taxExempt),
-      customerTaxPercent: String(normalizeTaxPercent(quote.customerTaxPercent ?? customer?.taxPercent)),
+      customerTaxExempt: tax.customerTaxExempt,
+      customerTaxPercent: tax.customerTaxPercent,
       estimatedCompletion: String(body.estimatedCompletion ?? "").slice(0, 200),
       customerNotes: String(body.customerNotes ?? "").slice(0, 8000),
       notes: String(body.notes ?? "").slice(0, 8000),

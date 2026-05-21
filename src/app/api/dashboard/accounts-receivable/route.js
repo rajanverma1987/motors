@@ -18,19 +18,25 @@ import {
   agingBucket,
 } from "@/lib/invoice-amounts";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import { resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
-function buildRows(list, custMap, mergedSettings) {
+function buildRows(list, custById, mergedSettings) {
   return list.map((inv) => {
-    const total = invoiceLineTotal(inv);
+    const tax = resolveInvoiceTaxFields({ customer: custById[String(inv.customerId)] });
+    const invForTotals = { ...inv, ...tax };
+    const total = invoiceLineTotal(invForTotals);
     const paid = invoiceTotalPaid(inv);
-    const balance = invoiceBalance(inv);
+    const balance = invoiceBalance(invForTotals);
     const days = daysOutstanding(inv.date);
     return {
       id: inv._id.toString(),
       invoiceNumber: inv.invoiceNumber || inv.rfqNumber || "",
       rfqNumber: inv.rfqNumber || "",
       customerId: String(inv.customerId),
-      customerName: custMap[String(inv.customerId)] || inv.customerId,
+      customerName:
+        custById[String(inv.customerId)]?.companyName ||
+        custById[String(inv.customerId)]?.primaryContactName ||
+        inv.customerId,
       date: inv.date || "",
       status: normalizeInvoiceStatusSlug(inv.status, mergedSettings),
       invoiceTotal: total,
@@ -82,14 +88,9 @@ export async function GET(request) {
       _id: { $in: customerIds },
       createdByEmail: email,
     }).lean();
-    const custMap = Object.fromEntries(
-      (customers || []).map((c) => [
-        String(c._id),
-        c.companyName || c.primaryContactName || String(c._id),
-      ])
-    );
+    const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
 
-    let rows = buildRows(list, custMap, userSettings);
+    let rows = buildRows(list, custById, userSettings);
 
     if (include === "open") {
       rows = rows.filter((r) => r.balance > 0.009);
@@ -101,7 +102,7 @@ export async function GET(request) {
       createdByEmail: email,
       status: { $in: ["sent", "partial_paid"] },
     }).lean();
-    const openRowsFull = buildRows(openForSummary, custMap).filter((r) => r.balance > 0.009);
+    const openRowsFull = buildRows(openForSummary, custById).filter((r) => r.balance > 0.009);
     const totalOutstanding =
       Math.round(openRowsFull.reduce((s, r) => s + r.balance, 0) * 100) / 100;
     const openCount = openRowsFull.length;

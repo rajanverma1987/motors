@@ -323,6 +323,18 @@ function InvoicesInner() {
         ),
       },
       { key: "invoiceNumber", label: "Invoice#", clickable: true, sortable: true },
+      {
+        key: "rfqNumber",
+        label: "Job#",
+        sortable: true,
+        render: (v) => v || "—",
+      },
+      {
+        key: "customerPo",
+        label: "Customer PO#",
+        sortable: true,
+        render: (v) => v || "—",
+      },
       { key: "customerName", label: "Customer", sortable: true },
       {
         key: "date",
@@ -376,7 +388,7 @@ function InvoicesInner() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
+        <div className="mb-2 flex shrink-0 flex-wrap gap-2">
           {statusSummaryCards.map((card) => (
             <StatusFilterPillButton
               key={card.key || "__all__"}
@@ -404,7 +416,7 @@ function InvoicesInner() {
             setPage(1);
             setSearchQuery(q);
           }}
-          searchPlaceholder="Search invoice#, customer, date, status…"
+          searchPlaceholder="Search invoice#, job#, customer PO#, customer, date, status…"
           onCellClick={(row) => setInvoiceModal({ invoiceId: row.id })}
           onRefresh={load}
           pagination={{ page, pageSize, totalCount }}

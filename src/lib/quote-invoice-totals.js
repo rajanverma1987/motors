@@ -49,3 +49,17 @@ export function computeTotalsFromLaborAndParts({
     grandTotal: roundMoney(subtotal + taxAmount),
   };
 }
+
+/** Invoices use the linked customer’s tax settings when a customer record exists. */
+export function resolveInvoiceTaxFields({ customer, quote } = {}) {
+  if (customer && typeof customer === "object") {
+    return {
+      customerTaxExempt: normalizeTaxExempt(customer.taxExempt),
+      customerTaxPercent: String(normalizeTaxPercent(customer.taxPercent)),
+    };
+  }
+  return {
+    customerTaxExempt: normalizeTaxExempt(quote?.customerTaxExempt),
+    customerTaxPercent: String(normalizeTaxPercent(quote?.customerTaxPercent)),
+  };
+}

@@ -19,7 +19,7 @@ import { FiSave, FiSend, FiPrinter, FiTrash2, FiRotateCw, FiClipboard } from "re
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
-import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import { computeTotalsFromLaborAndParts, normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
@@ -202,7 +202,7 @@ export default function InvoiceFormModal({
             partsLines: Array.isArray(d.partsLines) ? d.partsLines : [],
             laborTotal: d.laborTotal || "",
             partsTotal: d.partsTotal || "",
-            customerTaxExempt: d.customerTaxExempt !== false,
+            customerTaxExempt: normalizeTaxExempt(d.customerTaxExempt),
             customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
@@ -241,7 +241,7 @@ export default function InvoiceFormModal({
             partsLines: Array.isArray(d.partsLines) ? d.partsLines : [],
             laborTotal: d.laborTotal || "",
             partsTotal: d.partsTotal || "",
-            customerTaxExempt: d.customerTaxExempt !== false,
+            customerTaxExempt: normalizeTaxExempt(d.customerTaxExempt),
             customerTaxPercent: d.customerTaxPercent || "0",
             customerNotes: d.customerNotes || "",
             notes: d.notes || "",
@@ -376,8 +376,8 @@ export default function InvoiceFormModal({
         partsLines: form.partsLines,
         laborTotal: form.laborTotal,
         partsTotal: form.partsTotal,
-        customerTaxExempt: form.customerTaxExempt !== false,
-        customerTaxPercent: form.customerTaxExempt ? "0" : form.customerTaxPercent,
+        customerTaxExempt: normalizeTaxExempt(form.customerTaxExempt),
+        customerTaxPercent: normalizeTaxExempt(form.customerTaxExempt) ? "0" : form.customerTaxPercent,
         customerNotes: form.customerNotes,
         notes: form.notes,
         status: form.status,

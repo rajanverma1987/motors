@@ -964,6 +964,16 @@ export default function DashboardPurchaseOrdersPage() {
         render: (_, row) => (row.type === "job" ? "Job PO" : "Shop PO"),
       },
       {
+        key: "status",
+        label: "PO status",
+        sortable: true,
+        render: (_, row) => (
+          <Badge variant={STATUS_VARIANT[row.status] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">
+            {row.status ?? "Open"}
+          </Badge>
+        ),
+      },
+      {
         key: "rfqNumber",
         label: "Job #",
         sortable: true,
@@ -1012,7 +1022,7 @@ export default function DashboardPurchaseOrdersPage() {
       },
       {
         key: "totalInvoiced",
-        label: "Invoiced",
+        label: "Vendor invoiced",
         sortable: true,
         render: (_, row) => (row.totalInvoiced ? fmt(row.totalInvoiced) : "—"),
       },

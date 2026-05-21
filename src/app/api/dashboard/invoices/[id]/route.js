@@ -13,7 +13,7 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
-import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -76,9 +76,11 @@ export async function GET(request, context) {
     const fromShopName = (owner?.shopName || "").trim();
     const fromShopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
 
-    const invTotal = invoiceLineTotal(inv);
+    const tax = resolveInvoiceTaxFields({ customer });
+    const invForTotals = { ...inv, ...tax };
+    const invTotal = invoiceLineTotal(invForTotals);
     const invPaid = invoiceTotalPaid(inv);
-    const invBal = invoiceBalance(inv);
+    const invBal = invoiceBalance(invForTotals);
 
     const quoteIdStr = String(inv.quoteId || "").trim();
     let workOrderId = null;
@@ -105,8 +107,8 @@ export async function GET(request, context) {
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
-      customerTaxExempt: normalizeTaxExempt(inv.customerTaxExempt),
-      customerTaxPercent: String(normalizeTaxPercent(inv.customerTaxPercent)),
+      customerTaxExempt: tax.customerTaxExempt,
+      customerTaxPercent: tax.customerTaxPercent,
       invoiceTotal: invTotal,
       amountPaid: invPaid,
       balance: invBal,
@@ -146,8 +148,12 @@ export async function PATCH(request, context) {
     if (body.customerNotes !== undefined) doc.customerNotes = String(body.customerNotes ?? "").slice(0, 8000);
     if (body.notes !== undefined) doc.notes = String(body.notes ?? "").slice(0, 8000);
     if (body.status !== undefined) doc.status = normalizeInvoiceStatusSlug(body.status, merged);
-    if (body.customerTaxExempt !== undefined) doc.customerTaxExempt = normalizeTaxExempt(body.customerTaxExempt);
-    if (body.customerTaxPercent !== undefined) doc.customerTaxPercent = String(normalizeTaxPercent(body.customerTaxPercent));
+    const customer = await Customer.findOne({ _id: doc.customerId, createdByEmail: email })
+      .select("taxExempt taxPercent")
+      .lean();
+    const tax = resolveInvoiceTaxFields({ customer });
+    doc.customerTaxExempt = tax.customerTaxExempt;
+    doc.customerTaxPercent = tax.customerTaxPercent;
     if (scopeLines) doc.scopeLines = scopeLines;
     if (partsLines) doc.partsLines = partsLines;
     await doc.save();
