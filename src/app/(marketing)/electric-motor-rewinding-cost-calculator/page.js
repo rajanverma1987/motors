@@ -25,7 +25,7 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
         </div>
       </section>
       <div className="mx-auto max-w-[67.2rem] px-4 py-10 sm:px-6 sm:py-12">
-        <MotorRewindCostCalculator />
+        <MotorRewindCostCalculator requirePaidAccess allowGuestSingleUse showAllCalculatorsCta />
       </div>
     </>
   );

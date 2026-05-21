@@ -33,6 +33,7 @@ import Vendor from "@/models/Vendor";
 import VerificationCode from "@/models/VerificationCode";
 import WireSize from "@/models/WireSize";
 import WorkOrder from "@/models/WorkOrder";
+import CalculatorEntitlement from "@/models/CalculatorEntitlement";
 
 function escapeRegex(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -80,6 +81,23 @@ export async function deleteAllDataForRegisteredClient(user) {
   const shopQ = { createdByEmail: emailMatch };
 
   await cancelPaypalSubscriptionsForShopEmail(email);
+
+  try {
+    const calcEnt = await CalculatorEntitlement.findOne({ ownerEmail: email })
+      .select("paypalSubscriptionId")
+      .lean();
+    const calcSubId = String(calcEnt?.paypalSubscriptionId || "").trim();
+    if (calcSubId) {
+      const { cancelPaypalSubscription } = await import("@/lib/paypal-api");
+      try {
+        await cancelPaypalSubscription(calcSubId, "Calculators account removed by admin");
+      } catch (e) {
+        console.warn(`PayPal cancel for calculator subscription ${calcSubId}:`, e?.message || e);
+      }
+    }
+  } catch (e) {
+    console.warn("Calculator PayPal cancel before shop delete:", e?.message || e);
+  }
 
   const listingOr = [{ email: emailMatch }, { crmUserId: userId }];
   const listingDocs = await Listing.find({ $or: listingOr }).select("_id urlSlug").lean();
@@ -146,5 +164,6 @@ export async function deleteAllDataForRegisteredClient(user) {
     VerificationCode.deleteMany({ email }),
     MarketingContact.deleteMany({ email }),
     AreaNotifyRequest.deleteMany({ email }),
+    CalculatorEntitlement.deleteMany({ ownerEmail: email }),
   ]);
 }

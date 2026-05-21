@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
         setUser({
           ...data.user,
           listingOnlyAccount: !!data.user?.listingOnlyAccount,
+          calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
         });
       } else {
         setUser(null);
@@ -43,16 +44,23 @@ export function AuthProvider({ children }) {
     setUser({
       ...data.user,
       listingOnlyAccount: !!data.user?.listingOnlyAccount,
+      calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
     });
-    return { ok: true };
+    return { ok: true, user: data.user };
   }, []);
 
-  const register = useCallback(async (shopName, contactName, email, password) => {
+  const register = useCallback(async (shopName, contactName, email, password, options = {}) => {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify({ shopName, contactName, email, password }),
+      body: JSON.stringify({
+        shopName,
+        contactName,
+        email,
+        password,
+        calculatorOnly: !!options.calculatorOnly,
+      }),
     });
     const data = await res.json();
     if (!res.ok) {
@@ -61,8 +69,9 @@ export function AuthProvider({ children }) {
     setUser({
       ...data.user,
       listingOnlyAccount: !!data.user?.listingOnlyAccount,
+      calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
     });
-    return { ok: true };
+    return { ok: true, user: data.user };
   }, []);
 
   const logout = useCallback(async () => {

@@ -19,7 +19,7 @@ export default function ListingUpgradeBanner() {
     }
   }, []);
 
-  if (!user?.listingOnlyAccount || dismissed) return null;
+  if (!user?.listingOnlyAccount || user?.calculatorOnlyAccount || dismissed) return null;
 
   return (
     <div className="border-b border-amber-300/80 bg-amber-100/90 px-4 py-2.5 text-amber-950 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-50">

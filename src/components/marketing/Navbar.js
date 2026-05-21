@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
+import { useAuth } from "@/contexts/auth-context";
 import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
 
 const primaryNav = [
@@ -49,7 +50,9 @@ function DesktopNavLink({ href, label, pathname }) {
 
 export default function Navbar() {
   const pathname = usePathname() || "";
+  const { user, mounted } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const dashboardHref = user?.calculatorOnlyAccount ? "/dashboard/calculators" : "/dashboard";
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -106,18 +109,29 @@ export default function Navbar() {
 
           <div className="flex shrink-0 items-center gap-2 sm:gap-3">
             <div className="hidden items-center gap-2 sm:gap-3 md:flex">
-              <Link
-                href="/login"
-                className="whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/register"
-                className="whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg dark:border-[hsl(28_20%_68%)] dark:text-[hsl(22_35%_14%)] dark:hover:border-primary/40 dark:hover:bg-[hsl(32_28%_96%)]"
-              >
-                Register
-              </Link>
+              {mounted && user ? (
+                <Link
+                  href={dashboardHref}
+                  className="whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg dark:border-[hsl(28_20%_68%)] dark:text-[hsl(22_35%_14%)] dark:hover:border-primary/40 dark:hover:bg-[hsl(32_28%_96%)]"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
               <Link
                 href="/contact"
                 className="whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92"
@@ -187,20 +201,32 @@ export default function Navbar() {
               })}
             </div>
             <div className="flex flex-col gap-2 p-4">
-              <Link
-                href="/login"
-                onClick={closeMobile}
-                className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/register"
-                onClick={closeMobile}
-                className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
-              >
-                Register
-              </Link>
+              {mounted && user ? (
+                <Link
+                  href={dashboardHref}
+                  onClick={closeMobile}
+                  className="flex min-h-11 items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                >
+                  Dashboard
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={closeMobile}
+                    className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
+                  >
+                    Log in
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={closeMobile}
+                    className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
+                  >
+                    Register
+                  </Link>
+                </>
+              )}
               <Link
                 href="/contact"
                 onClick={closeMobile}

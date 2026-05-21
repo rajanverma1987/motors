@@ -1,16 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import {
+  calculatorAuthUrls,
+  CALCULATOR_EXISTING_ACCOUNT_MESSAGE,
+  safeCalculatorNextPath,
+} from "@/lib/calculator-auth-flow";
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intent = searchParams.get("intent") || "";
+  const nextPath = useMemo(() => safeCalculatorNextPath(searchParams.get("next")), [searchParams]);
+  const calcUrls = useMemo(() => calculatorAuthUrls(nextPath), [nextPath]);
   const { register, user, mounted } = useAuth();
   const [step, setStep] = useState("email"); // email | verify | form
   const [email, setEmail] = useState("");
@@ -25,12 +34,13 @@ export default function RegisterPage() {
     confirmPassword: "",
   });
   const [error, setError] = useState("");
+  const [portalExists, setPortalExists] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!mounted) return;
-    if (user) router.replace("/dashboard");
-  }, [mounted, user, router]);
+    if (user) router.replace(nextPath);
+  }, [mounted, user, router, nextPath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -41,8 +51,22 @@ export default function RegisterPage() {
   const sendVerificationCode = async () => {
     if (!email.trim()) return;
     setError("");
+    setPortalExists(false);
     setSendingCode(true);
     try {
+      if (intent === "calculators") {
+        const checkRes = await fetch("/api/calculators/account/status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        const checkData = await checkRes.json();
+        if (checkRes.ok && checkData.portalAccountExists) {
+          setPortalExists(true);
+          setSendingCode(false);
+          return;
+        }
+      }
       const res = await fetch("/api/verify-email/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -93,9 +117,16 @@ export default function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      const result = await register(form.shopName, form.contactName, form.email, form.password);
+      const result = await register(form.shopName, form.contactName, form.email, form.password, {
+        calculatorOnly: intent === "calculators",
+      });
       if (result.ok) {
-        router.push("/dashboard");
+        router.push(nextPath);
+        return;
+      }
+      if (intent === "calculators" && String(result.error || "").toLowerCase().includes("already exists")) {
+        setPortalExists(true);
+        setError("");
         return;
       }
       setError(result.error || "Registration failed.");
@@ -201,15 +232,30 @@ export default function RegisterPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
+                  {portalExists ? (
+                    <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-3 text-sm text-secondary">
+                      <p>{CALCULATOR_EXISTING_ACCOUNT_MESSAGE}</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Link href={calcUrls.loginUrl}>
+                          <Button type="button" variant="primary" size="sm">
+                            Log in
+                          </Button>
+                        </Link>
+                        <Link href="/contact" className="text-sm font-medium text-primary hover:underline self-center">
+                          Reset password
+                        </Link>
+                      </div>
+                    </div>
+                  ) : null}
                   {error && <p className="mt-2 text-sm text-danger">{error}</p>}
                   <div className="mt-6">
-                    <Button type="submit" variant="primary" size="lg" className="w-full" disabled={!email.trim() || sendingCode}>
+                    <Button type="submit" variant="primary" size="lg" className="w-full" disabled={!email.trim() || sendingCode || portalExists}>
                       {sendingCode ? "Sending…" : "Send verification code"}
                     </Button>
                   </div>
                   <p className="mt-6 text-center text-sm text-secondary">
                     Already have an account?{" "}
-                    <Link href="/login" className="font-medium text-primary hover:underline">
+                    <Link href={calcUrls.loginUrl} className="font-medium text-primary hover:underline">
                       Log in
                     </Link>
                   </p>
@@ -324,7 +370,7 @@ export default function RegisterPage() {
                     </Button>
                     <p className="text-center text-sm text-secondary">
                       Already have an account?{" "}
-                      <Link href="/login" className="font-medium text-primary hover:underline">
+                      <Link href={calcUrls.loginUrl} className="font-medium text-primary hover:underline">
                         Log in
                       </Link>
                     </p>
@@ -336,5 +382,19 @@ export default function RegisterPage() {
         </div>
       </section>
     </>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[40vh] items-center justify-center">
+          <p className="text-secondary">Loading…</p>
+        </div>
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
   );
 }

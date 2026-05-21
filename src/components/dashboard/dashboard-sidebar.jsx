@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 import {
   FiInbox,
   FiUsers,
@@ -94,6 +95,8 @@ const NAV_GROUPS = [
   { title: "Tools & reports", items: TOOLS_NAV },
 ];
 
+const CALCULATOR_ONLY_NAV = [{ href: "/dashboard/calculators", label: "Calculators", icon: FiSliders }];
+
 function navItemIsActive(pathname, href) {
   return pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
 }
@@ -137,9 +140,12 @@ function NavItemLink({ href, label, icon: Icon, isActive, collapsed }) {
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
+  const { user } = useAuth();
+  const calculatorOnly = !!user?.calculatorOnlyAccount;
+  const navGroups = calculatorOnly ? [{ title: "Calculators", items: CALCULATOR_ONLY_NAV }] : NAV_GROUPS;
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState(() => new Set(NAV_GROUPS.map((g) => g.title)));
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set(navGroups.map((g) => g.title)));
 
   useEffect(() => {
     try {
@@ -150,7 +156,7 @@ export default function DashboardSidebar() {
   }, []);
 
   useEffect(() => {
-    const activeGroup = NAV_GROUPS.find((g) => groupContainsActive(pathname, g));
+    const activeGroup = navGroups.find((g) => groupContainsActive(pathname, g));
     if (!activeGroup) return;
     setExpandedGroups((prev) => {
       if (prev.has(activeGroup.title)) return prev;
@@ -195,7 +201,9 @@ export default function DashboardSidebar() {
         }`}
       >
         {!sidebarCollapsed ? (
-          <span className="truncate text-sm font-semibold tracking-tight text-title">CRM</span>
+          <span className="truncate text-sm font-semibold tracking-tight text-title">
+            {calculatorOnly ? "Calculators" : "CRM"}
+          </span>
         ) : null}
         <button
           type="button"
@@ -217,27 +225,29 @@ export default function DashboardSidebar() {
           sidebarCollapsed ? "gap-0.5 p-1.5" : "gap-1.5 p-2"
         }`}
       >
-        <Link
-          href="/dashboard"
-          title={sidebarCollapsed ? "Dashboard" : undefined}
-          className={`flex items-center rounded-md text-sm font-semibold transition-colors ${
-            sidebarCollapsed ? "justify-center p-1.5" : "gap-2 px-2 py-1.5"
-          } ${
-            dashboardActive
-              ? "bg-primary text-white shadow-sm"
-              : "text-title hover:bg-card"
-          }`}
-        >
-          <FiLayout
-            className={`shrink-0 opacity-90 ${sidebarCollapsed ? "h-4 w-4" : "h-4 w-4"}`}
-            aria-hidden
-          />
-          {!sidebarCollapsed ? <span>Dashboard</span> : null}
-        </Link>
+        {!calculatorOnly ? (
+          <Link
+            href="/dashboard"
+            title={sidebarCollapsed ? "Dashboard" : undefined}
+            className={`flex items-center rounded-md text-sm font-semibold transition-colors ${
+              sidebarCollapsed ? "justify-center p-1.5" : "gap-2 px-2 py-1.5"
+            } ${
+              dashboardActive
+                ? "bg-primary text-white shadow-sm"
+                : "text-title hover:bg-card"
+            }`}
+          >
+            <FiLayout
+              className={`shrink-0 opacity-90 ${sidebarCollapsed ? "h-4 w-4" : "h-4 w-4"}`}
+              aria-hidden
+            />
+            {!sidebarCollapsed ? <span>Dashboard</span> : null}
+          </Link>
+        ) : null}
 
         {sidebarCollapsed ? (
           <div className="flex flex-col gap-0.5">
-            {NAV_GROUPS.map((group, groupIdx) => (
+            {navGroups.map((group, groupIdx) => (
               <div key={group.title}>
                 {groupIdx > 0 ? <div className="mx-auto my-0.5 h-px w-5 bg-border" aria-hidden /> : null}
                 <ul className="flex flex-col gap-px">
@@ -258,7 +268,7 @@ export default function DashboardSidebar() {
           </div>
         ) : (
           <div className="flex flex-col gap-1">
-            {NAV_GROUPS.map((group) => {
+            {navGroups.map((group) => {
               const isExpanded = expandedGroups.has(group.title);
               const groupActive = groupContainsActive(pathname, group);
               const panelId = `sidebar-group-${slugify(group.title)}`;

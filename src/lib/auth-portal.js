@@ -14,6 +14,33 @@ function getPortalJwtSecret() {
   return _portalSecret;
 }
 const COOKIE_NAME = "motors_portal";
+const PORTAL_TIER_COOKIE = "motors_portal_tier";
+const PORTAL_TIER_CALCULATOR_ONLY = "calculator_only";
+const PORTAL_TIER_FULL = "full";
+
+export function getPortalTierCookieName() {
+  return PORTAL_TIER_COOKIE;
+}
+
+export function getPortalTokenFromCookieHeader(cookieHeader) {
+  const match = (cookieHeader || "").match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
+  return match ? match[1] : null;
+}
+
+export function getPortalTierFromCookieHeader(cookieHeader) {
+  const match = (cookieHeader || "").match(new RegExp(`${PORTAL_TIER_COOKIE}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+export function isCalculatorOnlyPortalTierCookie(tier) {
+  return tier === PORTAL_TIER_CALCULATOR_ONLY;
+}
+
+export async function getPortalPayloadFromRequest(request) {
+  const token = getPortalTokenFromCookieHeader(request.headers.get("cookie") || "");
+  if (!token) return null;
+  return verifyPortalToken(token);
+}
 
 export async function hashPassword(password) {
   return bcrypt.hash(password, 10);
@@ -43,17 +70,34 @@ export function getPortalCookieName() {
   return COOKIE_NAME;
 }
 
+export async function setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal }) {
+  const common = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+  };
+  cookieStore.set(getPortalCookieName(), token, { ...common, maxAge: 60 * 60 * 24 * 7 });
+  cookieStore.set(
+    getPortalTierCookieName(),
+    calculatorOnlyPortal ? PORTAL_TIER_CALCULATOR_ONLY : PORTAL_TIER_FULL,
+    { ...common, maxAge: 60 * 60 * 24 * 7 }
+  );
+}
+
+export function clearPortalSessionCookies(cookieStore) {
+  cookieStore.delete(getPortalCookieName());
+  cookieStore.delete(getPortalTierCookieName());
+}
+
 export async function getPortalUserFromRequest(request) {
-  const cookieHeader = request.headers.get("cookie") || "";
-  const match = cookieHeader.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-  const token = match ? match[1] : null;
-  if (!token) return null;
-  const payload = await verifyPortalToken(token);
+  const payload = await getPortalPayloadFromRequest(request);
   if (!payload || !payload.email) return null;
   return {
     email: payload.email,
     shopName: payload.shopName || "",
     contactName: payload.contactName || "",
+    calculatorOnlyPortal: payload.calculatorOnlyPortal === true,
   };
 }
 

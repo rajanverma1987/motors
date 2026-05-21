@@ -3,13 +3,12 @@ import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Employee from "@/models/Employee";
-import { verifyPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
+import { verifyPassword, createPortalToken, setPortalSessionCookies } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getLoginBlockReason } from "@/lib/subscription-access";
 import { syncSubscriptionWithAccountTier } from "@/lib/subscription-service";
 import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
-
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "portal-login", 10);
@@ -86,6 +85,9 @@ export async function POST(request) {
       );
     }
 
+    const listingOnly = await userIsListingOnlyAccount(ownerEmail);
+    const calculatorOnlyAccount = await userIsCalculatorOnlyPortalAccount(ownerEmail);
+
     const token = await createPortalToken({
       email: ownerEmail,
       shopName: ownerUser.shopName,
@@ -93,17 +95,10 @@ export async function POST(request) {
       authType: actingEmployee ? "employee" : "owner",
       employeeId: actingEmployee?.id || "",
       employeeEmail: actingEmployee?.email || "",
+      calculatorOnlyPortal: calculatorOnlyAccount,
     });
     const cookieStore = await cookies();
-    cookieStore.set(getPortalCookieName(), token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: COOKIE_MAX_AGE,
-      path: "/",
-    });
-
-    const listingOnly = await userIsListingOnlyAccount(ownerEmail);
+    await setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal: calculatorOnlyAccount });
 
     return NextResponse.json({
       ok: true,
@@ -112,6 +107,7 @@ export async function POST(request) {
         shopName: ownerUser.shopName,
         contactName: ownerUser.contactName,
         listingOnlyAccount: listingOnly,
+        calculatorOnlyAccount,
         isEmployeeSession: Boolean(actingEmployee),
         employee: actingEmployee,
       },

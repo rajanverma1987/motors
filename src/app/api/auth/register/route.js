@@ -3,15 +3,14 @@ import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Listing from "@/models/Listing";
-import { hashPassword, createPortalToken, getPortalCookieName } from "@/lib/auth-portal";
+import { hashPassword, createPortalToken, setPortalSessionCookies } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import {
   applyListingOnlySubscriptionToShop,
   ensureShopSubscriptionOnRegister,
 } from "@/lib/subscription-service";
-
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+import { getOrCreateEntitlementForEmail } from "@/lib/calculator-access";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "register", 5);
@@ -20,7 +19,7 @@ export async function POST(request) {
   }
   try {
     const body = await request.json();
-    const { email, password, shopName, contactName } = body || {};
+    const { email, password, shopName, contactName, calculatorOnly } = body || {};
     if (!email || !password) {
       return NextResponse.json(
         { error: "Email and password required" },
@@ -60,6 +59,7 @@ export async function POST(request) {
       .select("_id")
       .lean();
     const listingOnly = !!approvedListing;
+    const calculatorOnlyAccount = !!calculatorOnly && !listingOnly;
 
     const passwordHash = await hashPassword(password);
     const user = await User.create({
@@ -68,11 +68,14 @@ export async function POST(request) {
       shopName: clampString(shopName, LIMITS.name.max),
       contactName: clampString(contactName, LIMITS.name.max),
       listingOnlyAccount: listingOnly,
+      calculatorOnlyAccount,
     });
 
     try {
       if (listingOnly) {
         await applyListingOnlySubscriptionToShop(user.email);
+      } else if (calculatorOnlyAccount) {
+        await getOrCreateEntitlementForEmail(user.email);
       } else {
         await ensureShopSubscriptionOnRegister(user.email);
       }
@@ -84,14 +87,12 @@ export async function POST(request) {
       email: user.email,
       shopName: user.shopName,
       contactName: user.contactName,
+      calculatorOnlyPortal: calculatorOnlyAccount,
     });
     const cookieStore = await cookies();
-    cookieStore.set(getPortalCookieName(), token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: COOKIE_MAX_AGE,
-      path: "/",
+    await setPortalSessionCookies(cookieStore, {
+      token,
+      calculatorOnlyPortal: calculatorOnlyAccount,
     });
 
     return NextResponse.json({
@@ -101,6 +102,7 @@ export async function POST(request) {
         shopName: user.shopName,
         contactName: user.contactName,
         listingOnlyAccount: listingOnly,
+        calculatorOnlyAccount,
       },
     });
   } catch (err) {

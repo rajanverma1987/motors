@@ -8,6 +8,11 @@ import {
   applySubscriptionActivated,
   applySubscriptionCancelled,
 } from "@/lib/subscription-service";
+import {
+  applyCalculatorSubscriptionActivated,
+  applyCalculatorSubscriptionCancelled,
+} from "@/lib/calculator-access";
+import CalculatorEntitlement from "@/models/CalculatorEntitlement";
 
 export const dynamic = "force-dynamic";
 
@@ -76,23 +81,45 @@ export async function POST(request) {
 
     let errMsg = "";
     try {
+      let isCalculatorSub = false;
+      if (subId) {
+        await connectDB();
+        isCalculatorSub = !!(await CalculatorEntitlement.findOne({ paypalSubscriptionId: subId })
+          .select("_id")
+          .lean());
+      }
+
       if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" && subId) {
-        await applySubscriptionActivated({ subscriptionId: subId, eventId });
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else {
+          await applySubscriptionActivated({ subscriptionId: subId, eventId });
+        }
       } else if (eventType === "BILLING.SUBSCRIPTION.CANCELLED" && subId) {
-        await applySubscriptionCancelled({ subscriptionId: subId, eventId });
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionCancelled({ paypalSubscriptionId: subId });
+        } else {
+          await applySubscriptionCancelled({ subscriptionId: subId, eventId });
+        }
       } else if (eventType === "PAYMENT.SALE.COMPLETED" && subId) {
-        const amt = event.resource?.amount?.total != null ? Number(event.resource.amount.total) : undefined;
-        const currency = event.resource?.amount?.currency || "USD";
-        const saleId = event.resource?.id || "";
-        await applyPaymentSaleCompleted({
-          subscriptionId: subId,
-          amount: amt,
-          currency,
-          saleId,
-          eventId,
-        });
+        if (isCalculatorSub) {
+          await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else {
+          const amt = event.resource?.amount?.total != null ? Number(event.resource.amount.total) : undefined;
+          const currency = event.resource?.amount?.currency || "USD";
+          const saleId = event.resource?.id || "";
+          await applyPaymentSaleCompleted({
+            subscriptionId: subId,
+            amount: amt,
+            currency,
+            saleId,
+            eventId,
+          });
+        }
       } else if (eventType === "PAYMENT.SALE.DENIED" && subId) {
-        await applyPaymentSaleDenied({ subscriptionId: subId, eventId });
+        if (!isCalculatorSub) {
+          await applyPaymentSaleDenied({ subscriptionId: subId, eventId });
+        }
       }
     } catch (e) {
       errMsg = e.message || String(e);

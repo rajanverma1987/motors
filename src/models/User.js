@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema(
      * Self-registered users have this false.
      */
     listingOnlyAccount: { type: Boolean, default: false },
+    /** Signup from calculators marketing: calculators-only portal until CalculatorEntitlement is active. */
+    calculatorOnlyAccount: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

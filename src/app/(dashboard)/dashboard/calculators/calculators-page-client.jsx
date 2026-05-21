@@ -5,6 +5,8 @@ import Tabs from "@/components/ui/tabs";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import CmBestMatchCalculator from "@/components/dashboard/cm-best-match-calculator";
+import MotorRewindCostCalculator from "@/components/marketing/motor-rewind-cost-calculator";
+import CalculatorSubscriptionGate from "@/components/dashboard/calculator-subscription-gate";
 
 const SQRT3 = Math.sqrt(3);
 const HP_TO_KW = 0.745699872;
@@ -472,6 +474,33 @@ export default function CalculatorsPageClient() {
   const tabs = useMemo(
     () => [
       {
+        id: "rewind_cost",
+        label: "Rewind cost",
+        children: (
+          <div className="flex flex-col gap-4">
+            <div className="max-w-3xl">
+              <h2 className="text-lg font-semibold text-title">Motor rewind &amp; repair cost calculator</h2>
+              <p className="mt-1 text-sm text-secondary">
+                US ballpark pricing—the same model as the public{" "}
+                <a
+                  href="/cost-of-motor-repair-and-rewinding"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-primary hover:underline"
+                >
+                  cost guide
+                </a>
+                . Planning only; confirm with inspection and your written quote.
+              </p>
+            </div>
+            <MotorRewindCostCalculator
+              variant="dashboard"
+              calculatorSourcePage="/dashboard/calculators"
+            />
+          </div>
+        ),
+      },
+      {
         id: "cm_best_match",
         label: "CM Best Match",
         children: <CmBestMatchCalculator />,
@@ -528,7 +557,9 @@ export default function CalculatorsPageClient() {
         </p>
       </header>
       <div className="min-h-0 flex-1 overflow-auto pb-8">
-        <Tabs tabs={tabs} defaultTab="cm_best_match" listClassName="gap-x-0" />
+        <CalculatorSubscriptionGate>
+          <Tabs tabs={tabs} defaultTab="rewind_cost" listClassName="gap-x-0" />
+        </CalculatorSubscriptionGate>
       </div>
     </div>
   );

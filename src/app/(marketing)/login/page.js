@@ -32,7 +32,9 @@ function LoginPageContent() {
     () => safeNextPath(searchParams.get("next")),
     [searchParams]
   );
-  const afterLoginPath = nextPath || "/dashboard";
+  const intent = searchParams.get("intent") || "";
+  const defaultAfterLogin = "/dashboard";
+  const afterLoginPath = nextPath || defaultAfterLogin;
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -40,8 +42,13 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (!mounted) return;
-    if (user) router.replace(afterLoginPath);
-  }, [mounted, user, router, afterLoginPath]);
+    if (user) {
+      const dest = user.calculatorOnlyAccount
+        ? nextPath || "/dashboard/calculators"
+        : afterLoginPath;
+      router.replace(dest);
+    }
+  }, [mounted, user, router, afterLoginPath, nextPath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -56,7 +63,10 @@ function LoginPageContent() {
     try {
       const result = await login(form.email, form.password);
       if (result.ok) {
-        router.push(afterLoginPath);
+        const dest = result.user?.calculatorOnlyAccount
+          ? nextPath || "/dashboard/calculators"
+          : afterLoginPath;
+        router.push(dest);
         return;
       }
       setError(result.error || "Login failed.");
@@ -90,6 +100,19 @@ function LoginPageContent() {
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-start">
             <div>
+              {intent === "calculators" ? (
+                <div className="mb-6 rounded-xl border border-primary/35 bg-primary/[0.08] px-4 py-3 text-sm text-secondary">
+                  <p className="font-semibold text-title">Already listed on our portal?</p>
+                  <p className="mt-1">
+                    Log in with your shop email and password, then you can complete calculator payment. Forgot your
+                    password?{" "}
+                    <Link href="/contact" className="font-medium text-primary hover:underline">
+                      Contact us
+                    </Link>{" "}
+                    and we&apos;ll help you reset it.
+                  </p>
+                </div>
+              ) : null}
               <p className="text-base text-secondary">
                 Sign in to see your center board, open work orders, and any new repair leads from IQMotorBase.com.
               </p>

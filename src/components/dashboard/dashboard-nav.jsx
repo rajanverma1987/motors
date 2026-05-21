@@ -14,6 +14,8 @@ export default function DashboardNav() {
   const { settings } = useUserSettings();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
+  const calculatorOnly = !!user?.calculatorOnlyAccount;
+  const homeHref = calculatorOnly ? "/dashboard/calculators" : "/dashboard";
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -38,7 +40,7 @@ export default function DashboardNav() {
     <nav className="border-b border-border bg-card px-4 py-3 sm:px-6">
       <div className="flex w-full items-center justify-between gap-4">
         <Link
-          href="/dashboard"
+          href={homeHref}
           className="flex min-w-0 max-w-[min(100%,28rem)] shrink-0 items-center gap-3"
           title={user?.email}
         >
@@ -55,32 +57,36 @@ export default function DashboardNav() {
           </span>
         </Link>
         <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4 max-w-[50.4rem] ml-4">
-          <button
-            type="button"
-            onClick={() => setSearchOpen(true)}
-            className="relative flex w-full min-w-0 max-w-[33.6rem] flex-1 cursor-text items-center rounded-md border border-border bg-bg py-2 pl-9 pr-3 text-left text-sm text-secondary transition-colors hover:border-primary/30 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="Open search (⌘K or Ctrl+K)"
-          >
-            <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" aria-hidden />
-            <span className="min-w-0 flex-1 truncate pr-2 text-left">Search…</span>
-            <kbd
-              className="pointer-events-none hidden shrink-0 rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-secondary sm:inline"
-              aria-hidden
-            >
-              {typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent || "")
-                ? "⌘K"
-                : "Ctrl+K"}
-            </kbd>
-          </button>
-          <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-          <Link
-            href="/dashboard/settings"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white"
-            title="Settings"
-            aria-label="Settings"
-          >
-            <FiSettings className="h-5 w-5" aria-hidden />
-          </Link>
+          {!calculatorOnly ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setSearchOpen(true)}
+                className="relative flex w-full min-w-0 max-w-[33.6rem] flex-1 cursor-text items-center rounded-md border border-border bg-bg py-2 pl-9 pr-3 text-left text-sm text-secondary transition-colors hover:border-primary/30 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary"
+                aria-label="Open search (⌘K or Ctrl+K)"
+              >
+                <FiSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary" aria-hidden />
+                <span className="min-w-0 flex-1 truncate pr-2 text-left">Search…</span>
+                <kbd
+                  className="pointer-events-none hidden shrink-0 rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-secondary sm:inline"
+                  aria-hidden
+                >
+                  {typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent || "")
+                    ? "⌘K"
+                    : "Ctrl+K"}
+                </kbd>
+              </button>
+              <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+              <Link
+                href="/dashboard/settings"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white"
+                title="Settings"
+                aria-label="Settings"
+              >
+                <FiSettings className="h-5 w-5" aria-hidden />
+              </Link>
+            </>
+          ) : null}
           <ThemeToggle />
           <button
             type="button"

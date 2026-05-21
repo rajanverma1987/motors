@@ -1,6 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FiUpload } from "react-icons/fi";
 import {
   computeCustomerRewindBallpark,
@@ -11,6 +13,10 @@ import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { Form, FormSectionTitle } from "@/components/ui/form-layout";
 import LeadFormModal from "@/components/lead-form-modal";
+import CalculatorPaywallModal from "@/components/marketing/calculator-paywall-modal";
+import { useCalculatorAccess } from "@/hooks/use-calculator-access";
+import { useAuth } from "@/contexts/auth-context";
+import { calculatorAuthUrls } from "@/lib/calculator-auth-flow";
 
 const LS_DRAFT = "motorRewindCustomerDraft_v2";
 
@@ -357,6 +363,54 @@ Thanks — I appreciate responses with clear scope, assumptions, and line items 
   };
 }
 
+/** RFQ prefill from calculator inputs when ballpark price was not unlocked. */
+function buildRewindQuoteLeadPrefillFromForm(form) {
+  const phaseLabel = form.phase === "1" ? "Single-phase" : "Three-phase";
+  const coilLabel =
+    form.coilType === "lap"
+      ? "Lap"
+      : form.coilType === "wave"
+        ? "Wave"
+        : form.coilType === "concentric"
+          ? "Concentric"
+          : String(form.coilType || "—");
+  const ratingLine = `${form.hp || "—"} HP on nameplate`;
+  const problemDescription = `REQUEST — Motor rewinding quotes (IQMotorBase.com calculator)
+
+WHAT I NEED
+Qualified rewind / motor repair shops: please reply with a quote or offer to inspect. Local service or inbound freight is fine if you accept shipped cores.
+
+MOTOR / WINDING (from calculator form — verify against nameplate)
+• Rating: ${ratingLine}
+• Phase: ${phaseLabel}
+• Voltage: ${form.voltage || "—"} V | RPM (as entered / typical): ${rpmLabelForCopy(form)}
+• Slots: ${form.slots} | AWG: ${form.wireGauge} | Coil type: ${coilLabel}
+
+BALLPARK
+• Website ballpark range was not unlocked on the cost calculator; please quote from inspection and nameplate.
+
+NAMEPLATE / DOCUMENTS
+• I can attach clear nameplate photos using “Motor photos” on this form if that helps your first pass.
+
+PLEASE FILL IN THE LINES BELOW (anything you already know helps)
+• Application (pump, fan, compressor, etc.):
+• Failure / symptoms (trip, smoke, ground, bearings, environment):
+• Frame, enclosure (TEFC/ODP), insulation class if known:
+• Timeline (standard vs rush):
+• Can you quote from photos + nameplate, or must the motor be in your shop first?
+• Service area / willingness to accept shipped motor:
+• Special construction (vertical, explosion-proof, washdown, inverter-duty, etc.) if applicable:
+
+Thanks — I appreciate responses with clear scope, assumptions, and line items (labor, materials, testing, warranty).`;
+
+  return {
+    motorHp: `${form.hp || ""} HP`,
+    voltage: form.voltage ? `${form.voltage} V` : "",
+    motorType: "AC motor rewinding",
+    problemDescription,
+  };
+}
+
 export default function MotorRewindCostCalculator({
   variant = "full",
   calculatorSourcePage = CALCULATOR_SOURCE_PAGE,
@@ -364,16 +418,33 @@ export default function MotorRewindCostCalculator({
   fullHeadingAsH2 = false,
   /** Tighter spacing and typography for sidebars / narrow columns. */
   compact = false,
+  /** When true, ballpark prices only load from the server after payment or subscription. */
+  requirePaidAccess = false,
+  /** Show link to calculators subscription page under the price CTA. */
+  showAllCalculatorsCta = false,
+  /** Cost guide: $5 PayPal unlock without registration. */
+  allowGuestSingleUse = false,
 }) {
   const isEmbedded = variant === "embedded";
-  const isCompact = !!compact;
+  const isDashboard = variant === "dashboard";
+  const isCompact = !!compact || isDashboard;
   /** Parent already shows a calculator title (e.g. cost page spotlight + fullHeadingAsH2). */
-  const hideMainTitle = isCompact && fullHeadingAsH2;
+  const hideMainTitle = (isCompact && fullHeadingAsH2) || isDashboard;
+  const router = useRouter();
+  const { user } = useAuth();
+  const calcAccess = useCalculatorAccess();
   const [form, setForm] = useState(defaultForm);
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
   const [leadPrefill, setLeadPrefill] = useState(null);
   const [leadIntroOverride, setLeadIntroOverride] = useState(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const priceUnlockedReturnHandled = useRef(false);
+  const [priceRevealed, setPriceRevealed] = useState(false);
+  const [serverDerived, setServerDerived] = useState(null);
+  const [estimateLoading, setEstimateLoading] = useState(false);
+  const [teaserPreview, setTeaserPreview] = useState("");
+  const [teaserLoading, setTeaserLoading] = useState(false);
   const [market, setMarket] = useState(() => ({
     copperUsdPerKg: DEFAULT_CUSTOMER_COPPER_USD_PER_KG,
     motorPpiMultiplier: 1,
@@ -449,6 +520,7 @@ export default function MotorRewindCostCalculator({
   }, [form]);
 
   const derived = useMemo(() => {
+    if (requirePaidAccess) return null;
     const breakdown = computeCustomerRewindBallpark({
       ...form,
       slots: Number(form.slots),
@@ -483,7 +555,231 @@ export default function MotorRewindCostCalculator({
       copperSourceLabel: market.copperSourceLabel,
       motorSourceLabel: market.motorSourceLabel,
     };
-  }, [form, market]);
+  }, [form, market, requirePaidAccess]);
+
+  const displayDerived = requirePaidAccess ? serverDerived : derived;
+  const priceLocked = requirePaidAccess && !priceRevealed;
+
+  const fetchServerEstimate = useCallback(
+    async ({ consumeCredit = true, guest = false } = {}) => {
+      setEstimateLoading(true);
+      try {
+        const useGuest = guest || (allowGuestSingleUse && !user);
+        const endpoint = useGuest ? "/api/calculators/estimate/guest" : "/api/calculators/estimate";
+        const res = await fetch(endpoint, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form, consumeCredit: useGuest ? false : consumeCredit }),
+        });
+        const data = await res.json();
+        if (res.status === 401 && !allowGuestSingleUse) {
+          const urls = calculatorAuthUrls(
+            typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.hash || ""}`
+              : "/cost-of-motor-repair-and-rewinding"
+          );
+          router.push(urls.loginUrl);
+          return { locked: true };
+        }
+        if (res.status === 403 && useGuest) {
+          setPriceRevealed(false);
+          setServerDerived(null);
+          return { locked: true };
+        }
+        if (!res.ok) throw new Error(data.error || "Estimate failed");
+        if (data.locked) {
+          setPriceRevealed(false);
+          setServerDerived(null);
+          return { locked: true };
+        }
+        const est = data.estimate;
+        setServerDerived({
+          breakdown: est.breakdown,
+          low: est.low,
+          high: est.high,
+          roughLow: est.roughLow,
+          roughHigh: est.roughHigh,
+          newMotorEstimate: est.newMotorEstimate,
+          replacementRecommended: est.replacementRecommended,
+          industrial: est.industrial,
+          fractionalHpNote: est.fractionalHpNote,
+          copperLive: est.market?.copperLive,
+          motorLive: est.market?.motorLive,
+          copperSourceLabel: est.market?.copperSourceLabel,
+          motorSourceLabel: est.market?.motorSourceLabel,
+        });
+        if (est.market) setMarket((m) => ({ ...m, ...est.market }));
+        setPriceRevealed(true);
+        if (!useGuest) await calcAccess.refresh();
+        return { locked: false };
+      } catch {
+        return { locked: true, error: true };
+      } finally {
+        setEstimateLoading(false);
+      }
+    },
+    [form, calcAccess, router, allowGuestSingleUse, user]
+  );
+
+  useEffect(() => {
+    if (!requirePaidAccess || priceUnlockedReturnHandled.current) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("price_unlocked") !== "1") return;
+      priceUnlockedReturnHandled.current = true;
+
+      (async () => {
+        if (user) await calcAccess.refresh();
+        const result = await fetchServerEstimate({
+          consumeCredit: true,
+          guest: allowGuestSingleUse && !user,
+        });
+        if (!result?.locked && !result?.error) {
+          setPriceRevealed(true);
+        }
+        params.delete("price_unlocked");
+        const path = window.location.pathname;
+        const hash = window.location.hash || "#motor-rewind-cost-calculator";
+        const qs = params.toString();
+        const next = `${path}${qs ? `?${qs}` : ""}${hash}`;
+        window.history.replaceState({}, "", next);
+        const el = document.getElementById("motor-rewind-cost-calculator");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      })();
+    } catch {
+      /* ignore */
+    }
+  }, [requirePaidAccess, fetchServerEstimate, calcAccess, allowGuestSingleUse, user]);
+
+  useEffect(() => {
+    if (!requirePaidAccess || !allowGuestSingleUse || user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/calculators/guest-access", { credentials: "include", cache: "no-store" });
+        const data = await res.json();
+        if (cancelled || !data?.hasGuestUnlock) return;
+        await fetchServerEstimate({ guest: true });
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [requirePaidAccess, allowGuestSingleUse, user, fetchServerEstimate]);
+
+  useEffect(() => {
+    if (!requirePaidAccess || !calcAccess.isSubscription || !calcAccess.hasAccess) return;
+    const t = setTimeout(() => {
+      fetchServerEstimate({ consumeCredit: false });
+    }, 450);
+    return () => clearTimeout(t);
+  }, [
+    requirePaidAccess,
+    calcAccess.isSubscription,
+    calcAccess.hasAccess,
+    form.hp,
+    form.phase,
+    form.rpm,
+    form.voltage,
+    form.slots,
+    form.coilType,
+    form.wireGauge,
+    form.manualCuKg,
+    fetchServerEstimate,
+  ]);
+
+  useEffect(() => {
+    if (!requirePaidAccess || calcAccess.isSubscription) return;
+    setPriceRevealed(false);
+    setServerDerived(null);
+  }, [
+    requirePaidAccess,
+    calcAccess.isSubscription,
+    form.hp,
+    form.phase,
+    form.rpm,
+    form.voltage,
+    form.slots,
+    form.coilType,
+    form.wireGauge,
+    form.manualCuKg,
+  ]);
+
+  useEffect(() => {
+    if (!requirePaidAccess || !priceLocked) {
+      setTeaserPreview("");
+      return;
+    }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setTeaserLoading(true);
+      try {
+        const res = await fetch("/api/calculators/estimate/teaser", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ form }),
+        });
+        const data = await res.json();
+        if (!cancelled && res.ok && typeof data.previewText === "string") {
+          setTeaserPreview(data.previewText);
+        }
+      } catch {
+        if (!cancelled) setTeaserPreview("");
+      } finally {
+        if (!cancelled) setTeaserLoading(false);
+      }
+    }, 450);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [
+    requirePaidAccess,
+    priceLocked,
+    form.hp,
+    form.phase,
+    form.rpm,
+    form.voltage,
+    form.slots,
+    form.coilType,
+    form.wireGauge,
+    form.manualCuKg,
+  ]);
+
+  const handleSeePrice = useCallback(async () => {
+    if (!requirePaidAccess) return;
+    if (allowGuestSingleUse && !user) {
+      setPaywallOpen(true);
+      return;
+    }
+    if (!user) {
+      const urls = calculatorAuthUrls(
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.hash || ""}`
+          : "/cost-of-motor-repair-and-rewinding"
+      );
+      router.push(urls.loginUrl);
+      return;
+    }
+    if (calcAccess.hasAccess) {
+      const result = await fetchServerEstimate({ consumeCredit: !calcAccess.isSubscription });
+      if (result?.locked) setPaywallOpen(true);
+      return;
+    }
+    setPaywallOpen(true);
+  }, [
+    requirePaidAccess,
+    allowGuestSingleUse,
+    user,
+    router,
+    calcAccess.hasAccess,
+    calcAccess.isSubscription,
+    fetchServerEstimate,
+  ]);
 
   const applyTemplate = useCallback((id) => {
     setTemplateId(id);
@@ -498,16 +794,21 @@ export default function MotorRewindCostCalculator({
   };
 
   const openQuoteModal = useCallback(() => {
+    const d = displayDerived;
     setLeadIntroOverride(null);
-    setLeadPrefill(
-      buildRewindCalculatorLeadPrefill(form, derived.breakdown, {
-        low: derived.low,
-        high: derived.high,
-        replacementRecommended: derived.replacementRecommended,
-      })
-    );
+    if (d?.breakdown) {
+      setLeadPrefill(
+        buildRewindCalculatorLeadPrefill(form, d.breakdown, {
+          low: d.low,
+          high: d.high,
+          replacementRecommended: d.replacementRecommended,
+        })
+      );
+    } else {
+      setLeadPrefill(buildRewindQuoteLeadPrefillFromForm(form));
+    }
     setLeadOpen(true);
-  }, [form, derived]);
+  }, [form, displayDerived]);
 
   const openNameplateFastPath = useCallback(() => {
     setLeadIntroOverride(NAMEPLATE_FAST_PATH_INTRO);
@@ -557,23 +858,25 @@ export default function MotorRewindCostCalculator({
           Adjust HP, phase, and optionally RPM—your estimate updates instantly. Not a shop quote; inspection may change
           scope and price.
         </p>
-        <div className={isCompact ? "mt-2" : "mt-4"}>
-          <button
-            type="button"
-            onClick={openNameplateFastPath}
-            className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-primary bg-transparent font-semibold text-primary shadow-sm transition-colors hover:bg-primary/10 sm:w-auto sm:justify-start ${
-              isCompact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
-            }`}
-          >
-            <FiUpload className={`shrink-0 ${isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}`} aria-hidden />
-            Upload nameplate for an estimate
-          </button>
-          <p
-            className={`text-center text-secondary sm:text-left ${isCompact ? "mt-1 text-[10px]" : "mt-2 text-xs"}`}
-          >
-            No specs needed
-          </p>
-        </div>
+        {!isDashboard ? (
+          <div className={isCompact ? "mt-2" : "mt-4"}>
+            <button
+              type="button"
+              onClick={openNameplateFastPath}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border-2 border-primary bg-transparent font-semibold text-primary shadow-sm transition-colors hover:bg-primary/10 sm:w-auto sm:justify-start ${
+                isCompact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm"
+              }`}
+            >
+              <FiUpload className={`shrink-0 ${isCompact ? "h-3.5 w-3.5" : "h-4 w-4"}`} aria-hidden />
+              Upload nameplate for an estimate
+            </button>
+            <p
+              className={`text-center text-secondary sm:text-left ${isCompact ? "mt-1 text-[10px]" : "mt-2 text-xs"}`}
+            >
+              No specs needed
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <Form
@@ -664,8 +967,8 @@ export default function MotorRewindCostCalculator({
           isCompact ? "mt-4 p-3" : "mt-6 p-4 sm:p-5"
         }`}
       >
-        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
-          <div className="min-w-0">
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <div className="relative min-w-0 flex-1">
             <p
               className={`font-semibold uppercase tracking-wide text-primary ${
                 isCompact ? "text-[9px]" : "text-[10px]"
@@ -673,21 +976,78 @@ export default function MotorRewindCostCalculator({
             >
               Ballpark estimate (US)
             </p>
-            <p
-              className={`mt-0.5 font-bold tabular-nums tracking-tight text-title ${
-                isCompact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
-              }`}
-            >
-              {moneyWhole(derived.roughLow)} – {moneyWhole(derived.roughHigh)}
-            </p>
+            {priceLocked ? (
+              <div
+                className="relative mt-1 overflow-hidden rounded-md select-none"
+                aria-label="Ballpark price preview — unlock for exact range"
+              >
+                <p
+                  className={`pointer-events-none font-bold tabular-nums tracking-tight text-title blur-[14px] brightness-90 contrast-[0.35] saturate-50 ${
+                    isCompact ? "min-h-[2rem] text-xl sm:min-h-[2.25rem] sm:text-2xl" : "min-h-[2.25rem] text-2xl sm:min-h-[2.75rem] sm:text-3xl"
+                  } ${teaserLoading && !teaserPreview ? "opacity-40" : ""}`}
+                  style={{ WebkitFilter: "blur(14px)", filter: "blur(14px)" }}
+                >
+                  {teaserPreview || "$000 – $000"}
+                </p>
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/55 via-card/25 to-card/55"
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 opacity-[0.45] mix-blend-overlay"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(-12deg, transparent, transparent 3px, rgba(128,128,128,0.12) 3px, rgba(128,128,128,0.12) 4px)",
+                  }}
+                  aria-hidden
+                />
+              </div>
+            ) : (
+              <p
+                className={`mt-0.5 font-bold tabular-nums tracking-tight text-title ${
+                  isCompact ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+                }`}
+              >
+                {estimateLoading
+                  ? "Calculating…"
+                  : `${moneyWhole(displayDerived?.roughLow)} – ${moneyWhole(displayDerived?.roughHigh)}`}
+              </p>
+            )}
           </div>
+          {priceLocked ? (
+            <Button
+              type="button"
+              variant="primary"
+              size={isCompact ? "sm" : "md"}
+              className="shrink-0"
+              disabled={estimateLoading || calcAccess.loading}
+              onClick={handleSeePrice}
+            >
+              {estimateLoading ? "Loading…" : "Unlock price"}
+            </Button>
+          ) : null}
         </div>
 
-        <p className={`leading-snug text-secondary ${isCompact ? "mt-1.5 text-[10px]" : "mt-2 text-[11px]"}`}>
-          Based on typical US rewind shop pricing (2025).
-        </p>
+        {priceLocked ? (
+          <p className={`leading-snug text-secondary ${isCompact ? "mt-2 text-[10px]" : "mt-2 text-[11px]"}`}>
+            Preview is intentionally blurred—log in, then unlock for the exact ballpark range (${calcAccess.pricing.singleUseUsd.toFixed(2)}{" "}
+            single use or monthly subscription).
+            {showAllCalculatorsCta ? (
+              <>
+                {" "}
+                <Link href="/calculators-subscription" className="font-medium text-primary hover:underline">
+                  See all calculators →
+                </Link>
+              </>
+            ) : null}
+          </p>
+        ) : (
+          <p className={`leading-snug text-secondary ${isCompact ? "mt-1.5 text-[10px]" : "mt-2 text-[11px]"}`}>
+            Based on typical US rewind shop pricing (2025).
+          </p>
+        )}
 
-        {derived.fractionalHpNote ? (
+        {!priceLocked && displayDerived?.fractionalHpNote ? (
           <p
             className={`mt-2 rounded-md border border-border bg-card/80 leading-snug text-secondary ${
               isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
@@ -698,7 +1058,7 @@ export default function MotorRewindCostCalculator({
           </p>
         ) : null}
 
-        {derived.industrial ? (
+        {!priceLocked && displayDerived?.industrial ? (
           <p
             className={`mt-2 rounded-md border border-amber-500/40 bg-amber-500/[0.08] leading-snug text-secondary ${
               isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
@@ -709,49 +1069,66 @@ export default function MotorRewindCostCalculator({
           </p>
         ) : null}
 
-        <div
-          className={`mt-3 rounded-md border font-medium leading-snug ${
-            isCompact ? "px-2 py-1.5 text-[11px]" : "px-2.5 py-2 text-[13px]"
-          } ${derived.replacementRecommended
-              ? "border-warning/40 bg-warning/[0.12] text-title"
-              : "border-success/35 bg-success/[0.1] text-title"
-            }`}
-        >
-          <p>
-            <span className="text-secondary">Recommendation:</span>{" "}
-            {derived.replacementRecommended ? (
-              <>Compare rewind vs new motor quotes.</>
-            ) : (
-              <>Rewinding looks cost-effective at this range.</>
-            )}
-          </p>
-          <p className={`font-normal leading-snug text-secondary ${isCompact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
-            {derived.replacementRecommended ? (
-              <>Use written quotes from shops—not online benchmarks alone—to decide.</>
-            ) : (
-              <>Typically under ~60% of a generic new-motor benchmark.</>
-            )}
-          </p>
-        </div>
-
-        <div className={`border-t border-primary/15 ${isCompact ? "mt-4 pt-3" : "mt-6 pt-5"}`}>
-          <Button
-            type="button"
-            variant="primary"
-            size={isCompact ? "sm" : "md"}
-            className={isCompact ? "w-full" : "w-full sm:w-auto"}
-            onClick={openQuoteModal}
+        {!priceLocked && displayDerived ? (
+          <div
+            className={`mt-3 rounded-md border font-medium leading-snug ${
+              isCompact ? "px-2 py-1.5 text-[11px]" : "px-2.5 py-2 text-[13px]"
+            } ${displayDerived.replacementRecommended
+                ? "border-warning/40 bg-warning/[0.12] text-title"
+                : "border-success/35 bg-success/[0.1] text-title"
+              }`}
           >
-            Get exact quote in 30 minutes
-          </Button>
-          <p className={`leading-snug text-secondary ${isCompact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]"}`}>
-            1–2 min · no commitment · shops often same day
-          </p>
-        </div>
+            <p>
+              <span className="text-secondary">Recommendation:</span>{" "}
+              {displayDerived.replacementRecommended ? (
+                <>Compare rewind vs new motor quotes.</>
+              ) : (
+                <>Rewinding looks cost-effective at this range.</>
+              )}
+            </p>
+            <p className={`font-normal leading-snug text-secondary ${isCompact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
+              {displayDerived.replacementRecommended ? (
+                <>Use written quotes from shops—not online benchmarks alone—to decide.</>
+              ) : (
+                <>Typically under ~60% of a generic new-motor benchmark.</>
+              )}
+            </p>
+          </div>
+        ) : null}
 
-        <p className={`leading-snug text-secondary ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-[11px]"}`}>
-          Final quote may vary after inspection.
-        </p>
+        {!isDashboard ? (
+          <div className={`border-t border-primary/15 ${isCompact ? "mt-4 pt-3" : "mt-6 pt-5"}`}>
+            <Button
+              type="button"
+              variant="primary"
+              size={isCompact ? "sm" : "md"}
+              className={isCompact ? "w-full" : "w-full sm:w-auto"}
+              onClick={openQuoteModal}
+            >
+              Get exact quote in 30 minutes
+            </Button>
+            <p className={`leading-snug text-secondary ${isCompact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]"}`}>
+              1–2 min · no commitment · shops often same day
+            </p>
+          </div>
+        ) : null}
+
+        {!priceLocked ? (
+          <p className={`leading-snug text-secondary ${isCompact ? "mt-2 text-[10px]" : "mt-3 text-[11px]"}`}>
+            Final quote may vary after inspection.
+          </p>
+        ) : null}
+
+        {showAllCalculatorsCta && priceLocked ? (
+          <div className={`${isCompact ? "mt-3" : "mt-4"}`}>
+            <Link
+              href="/calculators-subscription"
+              className="inline-flex w-full items-center justify-center rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-primary shadow-sm hover:bg-muted/40 sm:w-auto"
+            >
+              Explore all shop calculators (subscription)
+            </Link>
+          </div>
+        ) : null}
 
         <details
           className={`rounded-lg border border-border bg-card/40 [&_summary::-webkit-details-marker]:hidden ${
@@ -807,9 +1184,9 @@ export default function MotorRewindCostCalculator({
               ) : null}
             </div>
 
-            {(derived.copperLive || derived.motorLive) && (
+            {!priceLocked && (displayDerived?.copperLive || displayDerived?.motorLive) && (
               <ul className="list-disc space-y-1 pl-4 text-[11px] text-secondary">
-                {derived.copperLive ? (
+                {displayDerived.copperLive ? (
                   <li>
                     Copper materials: IMF copper benchmark via{" "}
                     <abbr title="Federal Reserve Economic Data" className="cursor-help no-underline">
@@ -818,7 +1195,7 @@ export default function MotorRewindCostCalculator({
                     (USD/kg), with a wire-purchasing adjustment factor.
                   </li>
                 ) : null}
-                {derived.motorLive ? (
+                {displayDerived.motorLive ? (
                   <li>
                     New-motor comparison: U.S. producer price index for motor & generator manufacturing vs a configured
                     baseline index (also via FRED).
@@ -827,31 +1204,40 @@ export default function MotorRewindCostCalculator({
               </ul>
             )}
 
-            <div>
-              <p className="font-medium text-title">Typical cost components (rule-of-thumb)</p>
-              <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-0.5">
-                <li>Copper/wire ~{money(derived.breakdown.copperCost)}</li>
-                <li>Insulation ~{money(derived.breakdown.materialCost)}</li>
-                <li>Labor ~{money(derived.breakdown.laborUsd)}</li>
-              </ul>
-            </div>
-
-            {derived.newMotorEstimate != null ? (
+            {!priceLocked && displayDerived?.breakdown ? (
+              <div>
+                <p className="font-medium text-title">Typical cost components (rule-of-thumb)</p>
+                <ul className="mt-1.5 flex flex-wrap gap-x-5 gap-y-0.5">
+                  <li>Copper/wire ~{money(displayDerived.breakdown.copperCost)}</li>
+                  <li>Insulation ~{money(displayDerived.breakdown.materialCost)}</li>
+                  <li>Labor ~{money(displayDerived.breakdown.laborUsd)}</li>
+                </ul>
+              </div>
+            ) : priceLocked ? (
               <p className="text-[11px] text-secondary">
-                <span className="font-medium text-title">Replacement benchmark (planning only):</span> generic new motor
-                ~{moneyWhole(derived.newMotorEstimate)}
-                {derived.motorLive ? " (index-adjusted)" : ""}; your band midpoint ~
-                {moneyWhole((derived.roughLow + derived.roughHigh) / 2)}.
+                Cost breakdown unlocks with the same single-use or monthly calculators access as the ballpark range
+                above.
               </p>
             ) : null}
 
-            {(derived.copperLive || derived.motorLive) && (derived.copperSourceLabel || derived.motorSourceLabel) ? (
+            {!priceLocked && displayDerived?.newMotorEstimate != null ? (
+              <p className="text-[11px] text-secondary">
+                <span className="font-medium text-title">Replacement benchmark (planning only):</span> generic new motor
+                ~{moneyWhole(displayDerived.newMotorEstimate)}
+                {displayDerived.motorLive ? " (index-adjusted)" : ""}; your band midpoint ~
+                {moneyWhole((displayDerived.roughLow + displayDerived.roughHigh) / 2)}.
+              </p>
+            ) : null}
+
+            {!priceLocked &&
+            (displayDerived?.copperLive || displayDerived?.motorLive) &&
+            (displayDerived?.copperSourceLabel || displayDerived?.motorSourceLabel) ? (
               <div className="rounded-md border border-border/80 bg-card/50 px-2 py-1.5 text-[10px] leading-snug">
-                {derived.copperLive && derived.copperSourceLabel ? (
-                  <span className="block">{derived.copperSourceLabel}</span>
+                {displayDerived.copperLive && displayDerived.copperSourceLabel ? (
+                  <span className="block">{displayDerived.copperSourceLabel}</span>
                 ) : null}
-                {derived.motorLive && derived.motorSourceLabel ? (
-                  <span className="mt-0.5 block">{derived.motorSourceLabel}</span>
+                {displayDerived.motorLive && displayDerived.motorSourceLabel ? (
+                  <span className="mt-0.5 block">{displayDerived.motorSourceLabel}</span>
                 ) : null}
               </div>
             ) : null}
@@ -859,15 +1245,36 @@ export default function MotorRewindCostCalculator({
         </details>
       </div>
 
-      <LeadFormModal
-        open={leadOpen}
-        onClose={closeLeadModal}
-        listing={null}
-        prefill={leadPrefill}
-        introTextOverride={leadIntroOverride ?? DEFAULT_LEAD_INTRO}
-        calculatorFormSnapshot={leadIntroOverride ? null : form}
-        calculatorSourcePage={calculatorSourcePage}
-      />
+      {requirePaidAccess ? (
+        <CalculatorPaywallModal
+          open={paywallOpen}
+          onClose={() => setPaywallOpen(false)}
+          showSingleUse
+          allowGuestSingleUse={allowGuestSingleUse}
+          nextPath={
+            typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.search || ""}${window.location.hash || ""}`
+              : "/cost-of-motor-repair-and-rewinding"
+          }
+          pricing={{
+            ...calcAccess.pricing,
+            loginUrl: calcAccess.loginUrl,
+            registerUrl: calcAccess.registerUrl,
+          }}
+        />
+      ) : null}
+
+      {!isDashboard ? (
+        <LeadFormModal
+          open={leadOpen}
+          onClose={closeLeadModal}
+          listing={null}
+          prefill={leadPrefill}
+          introTextOverride={leadIntroOverride ?? DEFAULT_LEAD_INTRO}
+          calculatorFormSnapshot={leadIntroOverride ? null : form}
+          calculatorSourcePage={calculatorSourcePage}
+        />
+      ) : null}
     </div>
   );
 }
