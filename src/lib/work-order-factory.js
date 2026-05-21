@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import WorkOrder from "@/models/WorkOrder";
 import MotorRepairJob from "@/models/MotorRepairJob";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -105,8 +106,8 @@ export async function createWorkOrderForQuote({
   } = options;
 
   const quoteId = String(quote._id);
-  const quoteStatus = String(quote.status || "draft").trim().toLowerCase();
-  if (!skipQuoteApprovalCheck && quoteStatus !== "approved") {
+  const quoteStatus = String(quote.status || "draft").trim();
+  if (!skipQuoteApprovalCheck && !quoteStatusAllowsWorkOrder(quoteStatus)) {
     return { ok: false, error: "Quote must be approved before creating a work order", httpStatus: 400 };
   }
 

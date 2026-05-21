@@ -34,6 +34,59 @@ function getColStyle(col) {
 
 const alignClass = { left: "text-left", center: "text-center", right: "text-right" };
 
+/** Keys that end with "number" but are identifiers, not quantities. */
+const NON_NUMERIC_NUMBER_KEY_RE =
+  /(?:rfq|workorder|invoice|job|serial|phone|account|quote|motor|customer|employee|reference|ref|po|line|part)s?number$/i;
+
+const NUMERIC_KEY_SEGMENT_RE =
+  /(?:^|[_-])(amount|total|subtotal|balance|price|cost|taxamount|taxpercent|taxpaid|qty|quantity|count|rate|percent|margin|discount|fee|paid|due|credit|debit|labor|parts|grand|value|sum|unpaid|remaining|unitprice|lineamount|ordertotal|invoicetotal|totalamount|grandtotal|labortotal|partstotal|invoiceamount|poamount)(?:$|[_-])/i;
+
+const NUMERIC_KEY_SUFFIX_RE =
+  /(?:total|amount|price|cost|qty|balance|paid|due|tax|fee|rate|labor|parts|grand|count|value|sum)s?$/i;
+
+const NON_NUMERIC_KEY_RE = /taxexempt|paidstatus|paidat|paiddate|createdat|updatedat|date$/i;
+
+function isNumericColumnType(type) {
+  const t = String(type || "").trim().toLowerCase();
+  return t === "number" || t === "numeric" || t === "money" || t === "currency" || t === "decimal";
+}
+
+function isNumericColumnKey(key) {
+  const k = String(key || "").trim();
+  if (!k || k.startsWith("__") || k === "actions" || k === "_actions") return false;
+  if (NON_NUMERIC_NUMBER_KEY_RE.test(k) || NON_NUMERIC_KEY_RE.test(k)) return false;
+  const norm = k.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  return NUMERIC_KEY_SEGMENT_RE.test(k) || NUMERIC_KEY_SUFFIX_RE.test(k) || NUMERIC_KEY_SUFFIX_RE.test(norm);
+}
+
+function isNumericColumnLabel(label) {
+  const l = String(label || "").trim().toLowerCase();
+  if (!l) return false;
+  return /\b(amount|total|totals|subtotal|price|qty|quantity|tax|cost|balance|labor|paid|due|count|rate|fee|margin|discount|grand|parts|other cost|unit price|order total|invoice total|tax amount|balance due|unpaid|remaining|credit|debit|value|sum)\b/.test(
+    l
+  );
+}
+
+function isNumericRawValue(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return true;
+  if (typeof value !== "string") return false;
+  const s = value.trim();
+  if (!s || s === "—" || s === "-") return false;
+  return /^[$€£]?\s*-?[\d,]+\.?\d*%?$/.test(s) || /^-?\d+(\.\d+)?$/.test(s);
+}
+
+/** Resolve text alignment for a column (explicit align wins). */
+function resolveColumnAlign(col, { value, isPlaceholder } = {}) {
+  if (col.isSelect) return "center";
+  if (col.isAction || col.key === "actions" || col.key === "_actions") return "left";
+  if (col.align && alignClass[col.align]) return col.align;
+  if (col.numeric === true || isNumericColumnType(col.type)) return "right";
+  if (isNumericColumnKey(col.key) || isNumericColumnLabel(col.label)) return "right";
+  if (isPlaceholder) return "center";
+  if (value !== undefined && typeof col.render !== "function" && isNumericRawValue(value)) return "right";
+  return "left";
+}
+
 function escapeCsvCell(str) {
   if (str == null) return "";
   const s = String(str);
@@ -401,6 +454,7 @@ export default function Table({
 
     const isClickable = col.clickable && hasCellClick;
     if (isClickable) {
+      const cellAlign = resolveColumnAlign(col, { value, isPlaceholder: isCellPlaceholder(col, row, i) });
       content = (
         <button
           type="button"
@@ -408,7 +462,7 @@ export default function Table({
             e.stopPropagation();
             onCellClick(row, col.key, value, i);
           }}
-          className="w-full min-w-0 text-left rounded px-0 py-0 border-0 bg-transparent text-primary cursor-pointer underline decoration-primary/50 hover:decoration-primary hover:opacity-90 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1"
+          className={`w-full min-w-0 rounded px-0 py-0 border-0 bg-transparent text-primary cursor-pointer underline decoration-primary/50 hover:decoration-primary hover:opacity-90 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 ${cellAlign === "right" ? "text-right" : "text-left"}`}
         >
           {content}
         </button>
@@ -452,7 +506,7 @@ export default function Table({
     ? "min-w-full w-max table-auto border-collapse"
     : "w-full border-collapse";
   const thClass = (col) => {
-    const align = col.isSelect ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
+    const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
     const px = col.isSelect ? "px-2" : "px-4";
     return `${px} ${headerPy} text-sm font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
   };
@@ -474,7 +528,7 @@ export default function Table({
       <thead className="bg-card border-b border-border outline-none">
         <tr>
           {displayColumns.map((col, i) => {
-            const align = col.align ? alignClass[col.align] : "text-left";
+            const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
             const style = getEffectiveColStyle(col);
             const isSortable = col.sortable && hasSort;
             const isFilterable = col.filterable && hasFilter && !col.isSelect && !col.isAction;
@@ -566,7 +620,8 @@ export default function Table({
             >
               {displayColumns.map((col, j) => {
                 const isPlaceholder = isCellPlaceholder(col, row, i);
-                const align = col.isSelect ? "text-center" : (col.isAction ? "text-left" : (isPlaceholder ? "text-center" : (col.align ? alignClass[col.align] : "text-left")));
+                const align =
+                  alignClass[resolveColumnAlign(col, { value: row[col.key], isPlaceholder })] ?? "text-left";
                 const style = getEffectiveColStyle(col);
                 const cellPx = col.isSelect || col.isAction ? "px-2" : "px-4";
                 const isActionLikeColumn =
@@ -602,7 +657,8 @@ export default function Table({
                   );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
                 const isPlaceholder = val == null || val === "";
-                const align = isPlaceholder ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
+                const align =
+                  alignClass[resolveColumnAlign(col, { value: val, isPlaceholder })] ?? "text-left";
                 return (
                   <td
                     key={col.key ?? j}
@@ -637,7 +693,8 @@ export default function Table({
                   );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
                 const isPlaceholder = val == null || val === "";
-                const align = isPlaceholder ? "text-center" : (col.align ? alignClass[col.align] : "text-left");
+                const align =
+                  alignClass[resolveColumnAlign(col, { value: val, isPlaceholder })] ?? "text-left";
                 return (
                   <td
                     key={col.key ?? j}

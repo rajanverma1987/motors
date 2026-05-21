@@ -14,6 +14,7 @@ import {
   FiTool,
   FiClipboard,
   FiPlus,
+  FiEye,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -39,6 +40,7 @@ import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import {
   WRITE_UP_QUOTE_STATUS,
   filterQuotesForRfqList,
@@ -251,6 +253,8 @@ export default function DashboardRfqListPage() {
   const [quotePrintId, setQuotePrintId] = useState(null);
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [workOrderModal, setWorkOrderModal] = useState(null);
+  const [openWoPrompt, setOpenWoPrompt] = useState(null);
+  const [checkingOpenWoQuoteId, setCheckingOpenWoQuoteId] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -461,6 +465,38 @@ export default function DashboardRfqListPage() {
       /* keep current labels */
     }
   }, []);
+
+  const handleCreateWorkOrderClick = useCallback(
+    async (row) => {
+      const quoteId = String(row?.id || "").trim();
+      if (!quoteId) return;
+      setCheckingOpenWoQuoteId(quoteId);
+      try {
+        const res = await fetch(
+          `/api/dashboard/work-orders/open-for-quote?quoteId=${encodeURIComponent(quoteId)}`,
+          { credentials: "include", cache: "no-store" }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not check work orders");
+        const open = Array.isArray(data.openWorkOrders) ? data.openWorkOrders : [];
+        if (open.length > 0) {
+          const primary = open[0];
+          setOpenWoPrompt({
+            quoteId,
+            workOrderId: primary.id,
+            workOrderNumber: primary.workOrderNumber || "",
+          });
+          return;
+        }
+        setWorkOrderModal({ draftQuoteId: quoteId });
+      } catch (e) {
+        toast.error(e.message || "Could not check work orders");
+      } finally {
+        setCheckingOpenWoQuoteId(null);
+      }
+    },
+    [toast]
+  );
 
   const openCreateRfqModal = useCallback(() => {
     setViewingQuote(null);
@@ -874,7 +910,8 @@ export default function DashboardRfqListPage() {
         render: (_, row) => {
           const isSending = sendingQuoteId === row.id;
           const isDeleting = deletingQuoteId === row.id;
-          const isApproved = (row.status || "draft").toLowerCase() === "approved";
+          const canCreateWorkOrder = quoteStatusAllowsWorkOrder(row.status);
+          const isCheckingOpenWo = checkingOpenWoQuoteId === row.id;
           return (
             <div className="flex items-center gap-1">
               <button
@@ -920,17 +957,21 @@ export default function DashboardRfqListPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setWorkOrderModal({ draftQuoteId: row.id })}
-                disabled={!isApproved}
+                onClick={() => handleCreateWorkOrderClick(row)}
+                disabled={!canCreateWorkOrder || isCheckingOpenWo}
                 className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label={isApproved ? "Create work order" : "Create work order (approved quotes only)"}
+                aria-label={canCreateWorkOrder ? "Create work order" : "Create work order (approved or accepted quotes only)"}
                 title={
-                  isApproved
+                  canCreateWorkOrder
                     ? "Create work order"
-                    : "Set status to Approved to create a work order"
+                    : "Set status to approved or accepted to create a work order"
                 }
               >
-                <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+                {isCheckingOpenWo ? (
+                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+                )}
               </button>
               <button
                 type="button"
@@ -1051,6 +1092,8 @@ export default function DashboardRfqListPage() {
       openEditModal,
       handlePrintQuote,
       handleSendToCustomer,
+      handleCreateWorkOrderClick,
+      checkingOpenWoQuoteId,
       jobIdLabel,
     ]
   );
@@ -1723,6 +1766,61 @@ export default function DashboardRfqListPage() {
           onClose={() => setQuotePrintId(null)}
         />
       ) : null}
+
+      <Modal
+        open={!!openWoPrompt}
+        onClose={() => setOpenWoPrompt(null)}
+        title="Open work order"
+        size="md"
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="inline-flex shrink-0 items-center gap-1.5"
+              onClick={() => {
+                const wid = String(openWoPrompt?.workOrderId || "").trim();
+                if (!wid) return;
+                setOpenWoPrompt(null);
+                setWorkOrderModal({ workOrderId: wid });
+              }}
+            >
+              <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+              View
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex shrink-0 items-center gap-1.5"
+              onClick={() => {
+                const qid = String(openWoPrompt?.quoteId || "").trim();
+                if (!qid) return;
+                setOpenWoPrompt(null);
+                setWorkOrderModal({ draftQuoteId: qid });
+              }}
+            >
+              <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+              Create
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => setOpenWoPrompt(null)}>
+              Cancel
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-text">
+          There is an open work order
+          {openWoPrompt?.workOrderNumber ? (
+            <>
+              {" "}
+              (<span className="font-medium text-title">{openWoPrompt.workOrderNumber}</span>)
+            </>
+          ) : null}
+          . Do you want to create one?
+        </p>
+      </Modal>
 
       <WorkOrderFormModal
         open={!!workOrderModal}

@@ -10,6 +10,7 @@ import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { effectiveWorkOrderNumberPrefix } from "@/lib/document-number-prefixes";
+import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import { nextWorkOrderNumberSuggestion } from "@/lib/work-order-factory";
 import {
   motorClassFromMotorType,
@@ -48,8 +49,8 @@ export async function GET(request) {
     if (!quote) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 });
     }
-    const quoteStatus = String(quote.status || "draft").trim().toLowerCase();
-    if (quoteStatus !== "approved") {
+    const quoteStatus = String(quote.status || "draft").trim();
+    if (!quoteStatusAllowsWorkOrder(quoteStatus)) {
       return NextResponse.json(
         { error: "Quote must be approved before creating a work order" },
         { status: 400 }

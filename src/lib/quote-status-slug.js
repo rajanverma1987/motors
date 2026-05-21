@@ -15,3 +15,11 @@ export function normalizeDashboardQuoteStatusSlug(raw, { defaultStatus = "draft"
 export function defaultNewRfqStatusSlug() {
   return WRITE_UP_QUOTE_STATUS;
 }
+
+/** Whether quote status (slug or dropdown label) allows creating a work order. */
+export function quoteStatusAllowsWorkOrder(rawStatus) {
+  const s = String(rawStatus ?? "").trim().toLowerCase();
+  if (!s) return false;
+  if (s === "approved") return true;
+  return s.includes("approve") || s.includes("accept");
+}
