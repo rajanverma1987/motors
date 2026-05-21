@@ -20,10 +20,10 @@ const IMPORT_TREE = [
         children: [
           {
             collection: "quotes",
-            label: "Quotes",
+            label: "RFQs",
             children: [
-              { collection: "quoteScopeLines", label: "Quote Scope Lines", children: [] },
-              { collection: "quotePartLines", label: "Quote Parts Lines", children: [] },
+              { collection: "quoteScopeLines", label: "RFQ Scope Lines (labor)", children: [] },
+              { collection: "quotePartLines", label: "RFQ Other Cost Lines", children: [] },
               { collection: "workOrders", label: "Work Orders", children: [] },
               { collection: "invoices", label: "Invoices", children: [] },
             ],
@@ -282,7 +282,9 @@ export default function SettingsDataUploadPanel() {
         <FormSectionTitle as="h2">Data Upload</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
           Import data collection-by-collection in parent-child order. Download the template, fill it, upload CSV, and
-          only valid records will be imported. Invalid rows are exported immediately with error reasons.
+          only valid records will be imported. Invalid rows are exported immediately with error reasons. RFQ templates
+          match the RFQ page: write-up status, tax fields, scope lines (labor), other-cost lines, then work orders or
+          invoices linked by <span className="font-medium text-title">quote_external_ref</span>.
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
           <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>
@@ -298,8 +300,8 @@ export default function SettingsDataUploadPanel() {
           </Button>
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
-          Recommended sequence: parent records first (for example Customers), then child records (Motors, Quotes, and
-          line items).
+          Recommended sequence: parent records first (for example Customers), then child records (Motors, RFQs, scope /
+          other-cost line items, then work orders or invoices).
         </div>
         <p className="mb-4 text-xs text-secondary">
           Use the <FiFilePlus className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> icon to choose a CSV file, then{" "}

@@ -13,6 +13,12 @@ import Employee from "@/models/Employee";
 import SalesPerson from "@/models/SalesPerson";
 import SalesCommission from "@/models/SalesCommission";
 import { parseCsv, toCsv } from "@/lib/import/csv";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { getNextRfqNumber } from "@/lib/dashboard-quote-rfq";
+import { defaultNewRfqStatusSlug, normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
+import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 
 function s(v) {
   return String(v ?? "").trim();
@@ -273,7 +279,7 @@ const IMPORT_COLLECTIONS = {
     },
   },
   quotes: {
-    label: "Quotes",
+    label: "RFQs",
     model: Quote,
     headers: [
       ...BASE_HEADERS,
@@ -287,36 +293,49 @@ const IMPORT_COLLECTIONS = {
       "status_options_hint",
       "customer_po",
       "prepared_by",
+      "prepared_by_employee_external_ref",
+      "prepared_by_source_system",
       "estimated_completion",
+      "customer_tax_exempt",
+      "customer_tax_percent",
       "customer_notes",
+      "repair_scope",
       "labor_total",
       "parts_total",
       "notes",
     ],
     sample: {
       source_system: "manual_csv",
-      external_ref: "QT-3001",
+      external_ref: "RFQ-3001",
       customer_external_ref: "CUST-1001",
       customer_source_system: "manual_csv",
       motor_external_ref: "MTR-0001",
       motor_source_system: "manual_csv",
-      rfq_number: "A00001",
+      rfq_number: "",
       date: "2026-04-28",
-      status: "draft",
-      status_options_hint: "draft|sent|approved|rejected|rnr",
+      status: "write-up",
+      status_options_hint: "write-up (new RFQ) or slugs from Settings → Dropdowns → Quote status (e.g. draft, sent, customer-accepted)",
       customer_po: "PO-9001",
-      prepared_by: "Mike Turner",
-      estimated_completion: "2026-05-03",
-      customer_notes: "Standard lead time applies.",
-      labor_total: "1200",
-      parts_total: "650",
-      notes: "",
+      prepared_by: "",
+      prepared_by_employee_external_ref: "EMP-1001",
+      prepared_by_source_system: "manual_csv",
+      estimated_completion: "2 weeks",
+      customer_tax_exempt: "",
+      customer_tax_percent: "",
+      customer_notes: "Shown on proposal sent to customer.",
+      repair_scope: "",
+      labor_total: "",
+      parts_total: "",
+      notes: "Internal shop notes only.",
     },
     validateRow: (r) => {
       const errs = [];
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.customer_external_ref)) errs.push("customer_external_ref is required");
       if (!s(r.motor_external_ref)) errs.push("motor_external_ref is required");
+      if (s(r.customer_tax_percent) && Number.isNaN(Number(s(r.customer_tax_percent)))) {
+        errs.push("customer_tax_percent must be numeric");
+      }
       return errs;
     },
     buildPayload: (r, ctx) => {
@@ -324,6 +343,19 @@ const IMPORT_COLLECTIONS = {
       if (!customerId) throw new Error("customer_external_ref not found");
       const motorId = ctx.resolveRef("motors", s(r.motor_source_system || "manual_csv"), s(r.motor_external_ref));
       if (!motorId) throw new Error("motor_external_ref not found");
+      let preparedBy = s(r.prepared_by);
+      const prepEmpRef = s(r.prepared_by_employee_external_ref);
+      if (prepEmpRef) {
+        const empId = ctx.resolveRef(
+          "employees",
+          s(r.prepared_by_source_system || "manual_csv"),
+          prepEmpRef,
+        );
+        if (!empId) throw new Error("prepared_by_employee_external_ref not found");
+        preparedBy = empId;
+      }
+      const taxExemptRaw = s(r.customer_tax_exempt);
+      const taxPercentRaw = s(r.customer_tax_percent);
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -336,29 +368,65 @@ const IMPORT_COLLECTIONS = {
         motorSourceSystem: s(r.motor_source_system || "manual_csv"),
         rfqNumber: s(r.rfq_number),
         date: s(r.date),
-        status: s(r.status || "draft"),
+        status: normalizeDashboardQuoteStatusSlug(s(r.status) || defaultNewRfqStatusSlug()),
         customerPo: s(r.customer_po),
-        preparedBy: s(r.prepared_by),
+        preparedBy,
         estimatedCompletion: s(r.estimated_completion),
         customerNotes: s(r.customer_notes),
+        repairScope: s(r.repair_scope),
         laborTotal: s(r.labor_total),
         partsTotal: s(r.parts_total),
         notes: s(r.notes),
+        customerTaxExempt: taxExemptRaw ? boolish(taxExemptRaw, true) : null,
+        customerTaxPercent: taxPercentRaw,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
       };
     },
+    importRow: async ({ payload, ownerEmail }) => {
+      const settingsDoc = await UserSettings.findOne({ ownerEmail }).lean();
+      const merged = mergeUserSettings(settingsDoc?.settings);
+      if (!payload.rfqNumber) {
+        payload.rfqNumber = await getNextRfqNumber(ownerEmail, merged);
+      }
+      payload.status = normalizeDashboardQuoteStatusSlug(payload.status, {
+        defaultStatus: defaultNewRfqStatusSlug(),
+      });
+      const customer = await Customer.findOne({ _id: payload.customerId, createdByEmail: ownerEmail })
+        .select("taxExempt taxPercent")
+        .lean();
+      if (payload.customerTaxExempt == null) {
+        payload.customerTaxExempt = normalizeTaxExempt(customer?.taxExempt);
+      } else {
+        payload.customerTaxExempt = normalizeTaxExempt(payload.customerTaxExempt);
+      }
+      if (!s(payload.customerTaxPercent)) {
+        payload.customerTaxPercent = String(normalizeTaxPercent(customer?.taxPercent));
+      } else {
+        payload.customerTaxPercent = String(normalizeTaxPercent(payload.customerTaxPercent));
+      }
+      await Quote.updateOne(
+        {
+          createdByEmail: ownerEmail,
+          sourceSystem: payload.sourceSystem,
+          externalRef: payload.externalRef,
+        },
+        { $set: payload },
+        { upsert: true },
+      );
+      return { imported: true };
+    },
   },
   quoteScopeLines: {
-    label: "Quote Scope Lines",
+    label: "RFQ Scope Lines",
     model: Quote,
     skipModelValidation: true,
     headers: [...BASE_HEADERS, "quote_external_ref", "quote_source_system", "scope", "price"],
     sample: {
       source_system: "manual_csv",
       external_ref: "QSL-1",
-      quote_external_ref: "QT-3001",
+      quote_external_ref: "RFQ-3001",
       quote_source_system: "manual_csv",
       scope: "Rewind labor",
       price: "1200",
@@ -396,14 +464,14 @@ const IMPORT_COLLECTIONS = {
     },
   },
   quotePartLines: {
-    label: "Quote Parts Lines",
+    label: "RFQ Other Cost Lines",
     model: Quote,
     skipModelValidation: true,
     headers: [...BASE_HEADERS, "quote_external_ref", "quote_source_system", "item", "qty", "uom", "price"],
     sample: {
       source_system: "manual_csv",
       external_ref: "QPL-1",
-      quote_external_ref: "QT-3001",
+      quote_external_ref: "RFQ-3001",
       quote_source_system: "manual_csv",
       item: "Copper wire",
       qty: "12",
@@ -479,7 +547,7 @@ const IMPORT_COLLECTIONS = {
     sample: {
       source_system: "manual_csv",
       external_ref: "WO-5001",
-      quote_external_ref: "QT-3001",
+      quote_external_ref: "RFQ-3001",
       quote_source_system: "manual_csv",
       motor_external_ref: "MTR-0001",
       motor_source_system: "manual_csv",
@@ -553,6 +621,32 @@ const IMPORT_COLLECTIONS = {
         importStatus: "imported",
       };
     },
+    importRow: async ({ payload, ownerEmail }) => {
+      const quote = await Quote.findOne({ _id: payload.quoteId, createdByEmail: ownerEmail })
+        .select("rfqNumber customerId")
+        .lean();
+      if (!quote) throw new Error("quote_external_ref not found");
+      if (!s(payload.quoteRfqNumber)) {
+        payload.quoteRfqNumber = String(quote.rfqNumber || "").trim();
+      }
+      if (!s(payload.companyName) && s(quote.customerId)) {
+        const customer = await Customer.findOne({ _id: quote.customerId, createdByEmail: ownerEmail })
+          .select("companyName primaryContactName")
+          .lean();
+        payload.companyName =
+          String(customer?.companyName || customer?.primaryContactName || "").trim();
+      }
+      await WorkOrder.updateOne(
+        {
+          createdByEmail: ownerEmail,
+          sourceSystem: payload.sourceSystem,
+          externalRef: payload.externalRef,
+        },
+        { $set: payload },
+        { upsert: true },
+      );
+      return { imported: true };
+    },
   },
   invoices: {
     label: "Invoices",
@@ -575,13 +669,15 @@ const IMPORT_COLLECTIONS = {
       "estimated_completion",
       "customer_notes",
       "notes",
+      "customer_tax_exempt",
+      "customer_tax_percent",
       "labor_total",
       "parts_total",
     ],
     sample: {
       source_system: "manual_csv",
       external_ref: "INV-9101",
-      quote_external_ref: "QT-3001",
+      quote_external_ref: "RFQ-3001",
       quote_source_system: "manual_csv",
       customer_external_ref: "CUST-1001",
       customer_source_system: "manual_csv",
@@ -597,6 +693,8 @@ const IMPORT_COLLECTIONS = {
       estimated_completion: "2026-05-03",
       customer_notes: "Payment due in 30 days.",
       notes: "Internal billing note.",
+      customer_tax_exempt: "",
+      customer_tax_percent: "",
       labor_total: "1200",
       parts_total: "650",
     },
@@ -607,6 +705,9 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.customer_external_ref)) errs.push("customer_external_ref is required");
       if (!s(r.motor_external_ref)) errs.push("motor_external_ref is required");
       if (!s(r.invoice_number)) errs.push("invoice_number is required");
+      if (s(r.customer_tax_percent) && Number.isNaN(Number(s(r.customer_tax_percent)))) {
+        errs.push("customer_tax_percent must be numeric");
+      }
       return errs;
     },
     buildPayload: (r, ctx) => {
@@ -616,6 +717,8 @@ const IMPORT_COLLECTIONS = {
       if (!customerId) throw new Error("customer_external_ref not found");
       const motorId = ctx.resolveRef("motors", s(r.motor_source_system || "manual_csv"), s(r.motor_external_ref));
       if (!motorId) throw new Error("motor_external_ref not found");
+      const taxExemptRaw = s(r.customer_tax_exempt);
+      const taxPercentRaw = s(r.customer_tax_percent);
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -640,10 +743,64 @@ const IMPORT_COLLECTIONS = {
         notes: s(r.notes),
         laborTotal: s(r.labor_total),
         partsTotal: s(r.parts_total),
+        customerTaxExempt: taxExemptRaw ? boolish(taxExemptRaw, true) : null,
+        customerTaxPercent: taxPercentRaw,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
       };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const settingsDoc = await UserSettings.findOne({ ownerEmail }).lean();
+      const merged = mergeUserSettings(settingsDoc?.settings);
+      payload.status = normalizeInvoiceStatusSlug(payload.status, merged);
+      const quote = await Quote.findOne({ _id: payload.quoteId, createdByEmail: ownerEmail })
+        .select("rfqNumber customerTaxExempt customerTaxPercent scopeLines partsLines laborTotal partsTotal")
+        .lean();
+      if (!quote) throw new Error("quote_external_ref not found");
+      if (!s(payload.rfqNumber)) {
+        payload.rfqNumber = String(quote.rfqNumber || "").trim();
+      }
+      const customer = await Customer.findOne({ _id: payload.customerId, createdByEmail: ownerEmail })
+        .select("taxExempt taxPercent")
+        .lean();
+      if (payload.customerTaxExempt == null) {
+        payload.customerTaxExempt =
+          quote.customerTaxExempt != null
+            ? normalizeTaxExempt(quote.customerTaxExempt)
+            : normalizeTaxExempt(customer?.taxExempt);
+      } else {
+        payload.customerTaxExempt = normalizeTaxExempt(payload.customerTaxExempt);
+      }
+      if (!s(payload.customerTaxPercent)) {
+        payload.customerTaxPercent = String(
+          normalizeTaxPercent(
+            quote.customerTaxPercent != null && String(quote.customerTaxPercent).trim() !== ""
+              ? quote.customerTaxPercent
+              : customer?.taxPercent,
+          ),
+        );
+      } else {
+        payload.customerTaxPercent = String(normalizeTaxPercent(payload.customerTaxPercent));
+      }
+      if (!s(payload.laborTotal) && Array.isArray(quote.scopeLines) && quote.scopeLines.length) {
+        payload.laborTotal = quote.laborTotal || "";
+        payload.scopeLines = quote.scopeLines;
+      }
+      if (!s(payload.partsTotal) && Array.isArray(quote.partsLines) && quote.partsLines.length) {
+        payload.partsTotal = quote.partsTotal || "";
+        payload.partsLines = quote.partsLines;
+      }
+      await Invoice.updateOne(
+        {
+          createdByEmail: ownerEmail,
+          sourceSystem: payload.sourceSystem,
+          externalRef: payload.externalRef,
+        },
+        { $set: payload },
+        { upsert: true },
+      );
+      return { imported: true };
     },
   },
   vendors: {
