@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import { View, Text, Pressable, StyleSheet, Platform } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { colors, spacing } from "../theme";
+import { parseMotorTagQrPayload } from "../lib/motor-tag-qr";
 
 export default function ScanScreen({ navigation }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -13,8 +14,16 @@ export default function ScanScreen({ navigation }) {
       const raw = String(data || "").trim();
       if (!raw) return;
       setLocked(true);
-      const jobNumber = raw.split(/[\n\r]/)[0].trim();
-      navigation.replace("RfqWorkOrders", { jobNumber });
+      const parsed = parseMotorTagQrPayload(raw);
+      if (!parsed) {
+        setLocked(false);
+        return;
+      }
+      if (parsed.type === "customer") {
+        navigation.replace("RfqWorkOrders", { customerId: parsed.customerId });
+        return;
+      }
+      navigation.replace("RfqWorkOrders", { jobNumber: parsed.jobNumber });
     },
     [locked, navigation]
   );
@@ -30,7 +39,7 @@ export default function ScanScreen({ navigation }) {
   if (!permission.granted) {
     return (
       <View style={styles.center}>
-        <Text style={styles.info}>Camera access is needed to scan Tag QR codes (repair Job#).</Text>
+        <Text style={styles.info}>Camera access is needed to scan customer Tag QR codes from the shop.</Text>
         <Pressable style={styles.btn} onPress={requestPermission}>
           <Text style={styles.btnText}>Allow camera</Text>
         </Pressable>
@@ -52,7 +61,7 @@ export default function ScanScreen({ navigation }) {
         onBarcodeScanned={locked ? undefined : onBarcodeScanned}
       />
       <View style={styles.overlay}>
-        <Text style={styles.hint}>Point at the motor tag QR (Job#)</Text>
+        <Text style={styles.hint}>Point at the customer motor tag QR</Text>
         <Pressable style={styles.cancel} onPress={() => navigation.goBack()}>
           <Text style={styles.cancelText}>Cancel</Text>
         </Pressable>

@@ -25,7 +25,7 @@ export default function BookmarksScreen({ navigation }) {
         <Text style={styles.muted}>Loading…</Text>
       ) : bookmarks.length === 0 ? (
         <Text style={styles.empty}>
-          No bookmarks yet. Open a work order and tap <Text style={styles.emptyStrong}>Bookmark</Text> in
+          No bookmarks yet. Open a work order and tap the <Text style={styles.emptyStrong}>bookmark icon</Text> in
           the header to save it here.
         </Text>
       ) : (

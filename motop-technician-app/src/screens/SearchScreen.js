@@ -16,7 +16,7 @@ import { colors, spacing } from "../theme";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
 
 /**
- * Search tab: scan QR (Job#), type Job#, or motor serial — find work orders.
+ * Search tab: scan customer Tag QR, type legacy job#, or motor serial — find work orders.
  */
 export default function SearchScreen({ navigation }) {
   const headerHeight = useHeaderHeight();
@@ -71,12 +71,12 @@ export default function SearchScreen({ navigation }) {
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
           onPress={() => navigation.navigate("Scan")}
         >
-          <Text style={styles.primaryBtnText}>Scan QR tag (Job#)</Text>
+          <Text style={styles.primaryBtnText}>Scan customer Tag QR</Text>
         </Pressable>
 
-        <Text style={styles.sectionLabel}>Find by Job#</Text>
+        <Text style={styles.sectionLabel}>Find by job number (legacy)</Text>
         <Text style={styles.sectionHint}>
-          Use the same job number shown on Job Write-Up and encoded on the Tag QR.
+          Older tags may encode a job number instead of a customer. Enter that number here if needed.
         </Text>
         <View collapsable={false} ref={jobInputWrapRef}>
           <TextInput

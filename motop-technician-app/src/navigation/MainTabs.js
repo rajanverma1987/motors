@@ -84,7 +84,11 @@ function SearchStackNavigator() {
         name="RfqWorkOrders"
         component={RfqWorkOrdersScreen}
         options={({ route }) => ({
-          title: route.params?.serial ? "Open work orders" : "Work orders",
+          title: route.params?.serial
+            ? "Open work orders"
+            : route.params?.customerId
+              ? "Customer work orders"
+              : "Work orders",
         })}
       />
       <Stack.Screen name="WorkOrderDetail" component={WorkOrderDetailScreen} options={{ title: "Work order" }} />

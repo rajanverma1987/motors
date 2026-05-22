@@ -13,16 +13,17 @@ import { techFetch } from "../api";
 import { colors, spacing } from "../theme";
 
 export default function RfqWorkOrdersScreen({ route, navigation }) {
-  const { jobNumber, serial } = route.params || {};
+  const { jobNumber, serial, customerId } = route.params || {};
   const { token } = useTechAuth();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const [jobInfo, setJobInfo] = useState(null);
+  const [customerInfo, setCustomerInfo] = useState(null);
   const [motorInfo, setMotorInfo] = useState(null);
   const [rows, setRows] = useState([]);
 
-  const mode = serial ? "serial" : "job";
+  const mode = serial ? "serial" : customerId ? "customer" : "job";
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -32,7 +33,20 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
       const path = `/api/tech/motor-serial/${encodeURIComponent(s)}/work-orders`;
       const data = await techFetch(path, { token });
       setJobInfo(null);
+      setCustomerInfo(null);
       setMotorInfo(data.motor || null);
+      setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
+      return;
+    }
+    if (mode === "customer") {
+      const cid = String(customerId || "").trim();
+      if (!cid) throw new Error("Customer required");
+      const data = await techFetch(`/api/tech/customer/${encodeURIComponent(cid)}/work-orders`, {
+        token,
+      });
+      setJobInfo(null);
+      setCustomerInfo(data.customer || null);
+      setMotorInfo(null);
       setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
       return;
     }
@@ -40,9 +54,10 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
     if (!r) throw new Error("Job number required");
     const jData = await techFetch(`/api/tech/job/${encodeURIComponent(r)}/work-orders`, { token });
     setJobInfo(jData.job || null);
+    setCustomerInfo(null);
     setMotorInfo(null);
     setRows(Array.isArray(jData.workOrders) ? jData.workOrders : []);
-  }, [token, mode, jobNumber, serial]);
+  }, [token, mode, jobNumber, serial, customerId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -97,7 +112,9 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
   const emptyMessage =
     mode === "serial"
       ? "No open work orders assigned to you for this motor."
-      : "No work orders assigned to you for this job.";
+      : mode === "customer"
+        ? "No work orders assigned to you for this customer."
+        : "No work orders assigned to you for this job.";
 
   return (
     <View style={styles.container}>
@@ -117,6 +134,12 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
               </Text>
             ) : null}
             <Text style={styles.openHint}>Only open (active) work orders are listed.</Text>
+          </>
+        ) : mode === "customer" ? (
+          <>
+            <Text style={styles.rfqLabel}>Customer</Text>
+            <Text style={styles.rfqValue}>{customerInfo?.name || "—"}</Text>
+            <Text style={styles.openHint}>Work orders assigned to you for this customer.</Text>
           </>
         ) : (
           <>

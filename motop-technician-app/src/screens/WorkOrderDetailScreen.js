@@ -15,11 +15,13 @@ import {
   Alert,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { useHeaderHeight } from "@react-navigation/elements";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { HeaderButton, useHeaderHeight } from "@react-navigation/elements";
 import { useTechAuth } from "../TechAuthContext";
 import { useBookmarks } from "../BookmarksContext";
 import { techFetch, techFetchForm, getMediaUrl } from "../api";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
+import WorkOrderInspectionsSection from "../components/WorkOrderInspectionsSection";
 import { colors, spacing } from "../theme";
 
 const DEFAULT_JOB_TYPES = [
@@ -33,7 +35,7 @@ function WorkOrderBookmarkControl({ woId, wo }) {
   if (!woId || !wo) return null;
   const saved = isBookmarked(woId);
   return (
-    <Pressable
+    <HeaderButton
       onPress={() =>
         toggleBookmark({
           id: woId,
@@ -43,38 +45,76 @@ function WorkOrderBookmarkControl({ woId, wo }) {
           repairJobNumber: wo.repairJobNumber,
         })
       }
-      style={{ paddingHorizontal: 14, paddingVertical: 8 }}
+      accessibilityLabel={saved ? "Remove bookmark" : "Bookmark work order"}
     >
-      <Text style={{ color: colors.primary, fontWeight: "700", fontSize: 16 }}>
-        {saved ? "Saved" : "Bookmark"}
-      </Text>
-    </Pressable>
+      <Ionicons
+        name={saved ? "bookmark" : "bookmark-outline"}
+        size={24}
+        color={colors.primary}
+      />
+    </HeaderButton>
+  );
+}
+
+function WorkOrderPhotoThumb({ photo, canDelete, isDeleting, onOpen, onDelete }) {
+  return (
+    <View style={styles.photoThumbWrap}>
+      <Pressable onPress={onOpen} style={styles.photoThumbPress}>
+        <Image source={{ uri: getMediaUrl(photo.url) }} style={styles.photoThumb} />
+        {isDeleting ? (
+          <View style={styles.photoThumbBusy}>
+            <ActivityIndicator color="#fff" size="small" />
+          </View>
+        ) : null}
+      </Pressable>
+      {canDelete ? (
+        <Pressable
+          style={styles.photoDeleteBtn}
+          onPress={onDelete}
+          disabled={isDeleting}
+          hitSlop={8}
+          accessibilityLabel="Delete photo"
+        >
+          <Text style={styles.photoDeleteBtnText}>×</Text>
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
 function SpecFieldGrid({ fields, values, onChange, onFieldFocus }) {
   const rowRefs = useRef({});
   if (!fields || fields.length === 0) return null;
+
+  const rows = [];
+  for (let i = 0; i < fields.length; i += 2) {
+    rows.push(fields.slice(i, i + 2));
+  }
+
   return (
     <View>
-      {fields.map(({ key, label }) => (
-        <View
-          key={key}
-          style={styles.fieldRow}
-          collapsable={false}
-          ref={(el) => {
-            rowRefs.current[key] = el;
-          }}
-        >
-          <Text style={styles.fieldLabel}>{label}</Text>
-          <TextInput
-            style={styles.fieldInput}
-            value={String(values[key] ?? "")}
-            onChangeText={(t) => onChange(key, t)}
-            onFocus={() => onFieldFocus?.(rowRefs.current[key])}
-            placeholder="—"
-            placeholderTextColor={colors.secondary}
-          />
+      {rows.map((pair, rowIndex) => (
+        <View key={`row-${rowIndex}`} style={styles.fieldGridRow}>
+          {pair.map(({ key, label }) => (
+            <View
+              key={key}
+              style={styles.fieldCol}
+              collapsable={false}
+              ref={(el) => {
+                rowRefs.current[key] = el;
+              }}
+            >
+              <Text style={styles.fieldLabel}>{label}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={String(values[key] ?? "")}
+                onChangeText={(t) => onChange(key, t)}
+                onFocus={() => onFieldFocus?.(rowRefs.current[key])}
+                placeholder="—"
+                placeholderTextColor={colors.secondary}
+              />
+            </View>
+          ))}
         </View>
       ))}
     </View>
@@ -92,12 +132,16 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
   const [comment, setComment] = useState("");
   const [statusPickerOpen, setStatusPickerOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState("");
+  const [technicians, setTechnicians] = useState([]);
+  const [techPickerOpen, setTechPickerOpen] = useState(false);
+  const [pendingTechnicianId, setPendingTechnicianId] = useState("");
   const [acSpecs, setAcSpecs] = useState({});
   const [dcSpecs, setDcSpecs] = useState({});
   const [armatureSpecs, setArmatureSpecs] = useState({});
   const [dcSection, setDcSection] = useState("dc");
   const [uploadingKind, setUploadingKind] = useState(null);
-  const [photoPreviewUri, setPhotoPreviewUri] = useState(null);
+  const [deletingPhotoKey, setDeletingPhotoKey] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const commentFieldWrapRef = useRef(null);
 
   const { scrollRef, onScroll, scrollFieldToCenter } = useCenterFieldInScroll(headerHeight);
@@ -111,6 +155,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     }
     navigation.setOptions({
       headerRight: () => <WorkOrderBookmarkControl woId={woId} wo={wo} />,
+      headerRightContainerStyle: { backgroundColor: "transparent" },
     });
   }, [navigation, loading, wo, woId]);
 
@@ -119,6 +164,7 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     const data = await techFetch(`/api/tech/work-orders/${id}`, { token });
     setWo(data);
     setPendingStatus(data.status || "");
+    setPendingTechnicianId(String(data.technicianEmployeeId || "").trim());
     setAcSpecs({ ...(data.acSpecs && typeof data.acSpecs === "object" ? data.acSpecs : {}) });
     setDcSpecs({ ...(data.dcSpecs && typeof data.dcSpecs === "object" ? data.dcSpecs : {}) });
     setArmatureSpecs({
@@ -144,6 +190,22 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     };
   }, [load]);
 
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await techFetch("/api/tech/technicians", { token });
+        if (!cancelled) setTechnicians(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setTechnicians([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
   const saveStatus = async (nextStatus) => {
     if (!token || !id) return;
     setSaving(true);
@@ -160,6 +222,41 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
     } finally {
       setSaving(false);
       setStatusPickerOpen(false);
+    }
+  };
+
+  const saveTechnician = async (nextTechnicianId) => {
+    if (!token || !id) return;
+    const nextId = String(nextTechnicianId ?? "").trim();
+    const prevId = String(wo?.technicianEmployeeId || "").trim();
+    if (nextId === prevId) {
+      setTechPickerOpen(false);
+      return;
+    }
+    setSaving(true);
+    setError("");
+    try {
+      await techFetch(`/api/tech/work-orders/${id}`, {
+        token,
+        method: "PATCH",
+        body: { technicianEmployeeId: nextId },
+      });
+      setPendingTechnicianId(nextId);
+      const meId = String(employee?.id || "").trim();
+      if (meId && prevId === meId && nextId !== meId) {
+        Alert.alert(
+          "Reassigned",
+          "This work order is no longer assigned to you. It will be removed from your work order list.",
+          [{ text: "OK", onPress: () => navigation.goBack() }]
+        );
+        return;
+      }
+      await load();
+    } catch (e) {
+      setError(e.message || "Could not reassign");
+    } finally {
+      setSaving(false);
+      setTechPickerOpen(false);
     }
   };
 
@@ -230,6 +327,52 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
       { text: "Photo library", onPress: () => uploadPhotoForKind(kind, "library") },
     ]);
   };
+
+  const deletePhoto = useCallback(
+    async (kind, url) => {
+      if (!token || !id || !url) return;
+      const photoKey = `${kind}:${url}`;
+      setDeletingPhotoKey(photoKey);
+      setError("");
+      try {
+        const out = await techFetch(`/api/tech/work-orders/${id}/photos`, {
+          token,
+          method: "DELETE",
+          body: { kind, url },
+        });
+        setWo((prev) =>
+          prev
+            ? {
+                ...prev,
+                technicianBeforePhotos: out.technicianBeforePhotos || [],
+                technicianAfterPhotos: out.technicianAfterPhotos || [],
+              }
+            : prev
+        );
+        setPhotoPreview((prev) => (prev?.url === url ? null : prev));
+      } catch (e) {
+        setError(e.message || "Delete failed");
+      } finally {
+        setDeletingPhotoKey(null);
+      }
+    },
+    [token, id]
+  );
+
+  const confirmDeletePhoto = useCallback(
+    (kind, url) => {
+      const label = kind === "before" ? "before" : "after";
+      Alert.alert("Delete photo", `Remove this ${label} photo?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => deletePhoto(kind, url),
+        },
+      ]);
+    },
+    [deletePhoto]
+  );
 
   const saveWorkOrder = async () => {
     if (!token || !id || !wo) return;
@@ -309,9 +452,16 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
 
   const beforePhotos = Array.isArray(wo?.technicianBeforePhotos) ? wo.technicianBeforePhotos : [];
   const afterPhotos = Array.isArray(wo?.technicianAfterPhotos) ? wo.technicianAfterPhotos : [];
-  const assigneeId = String(wo?.technicianEmployeeId || "").trim();
+  const assigneeId = String(pendingTechnicianId || wo?.technicianEmployeeId || "").trim();
   const meId = String(employee?.id || "").trim();
   const canUploadPhotos = Boolean(meId && assigneeId && meId === assigneeId);
+
+  const assigneeName =
+    wo?.technicianName ||
+    technicians.find((t) => t.id === assigneeId)?.name ||
+    (assigneeId ? "Technician" : "Unassigned");
+
+  const technicianPickerOptions = [{ id: "", name: "Unassigned" }, ...technicians];
 
   return (
     <KeyboardAvoidingView
@@ -382,9 +532,31 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Assigned technician</Text>
+        <Text style={styles.photoHelp}>
+          Hand off this work order to another technician with app access. Saves immediately and
+          notifies the new assignee.
+        </Text>
+        <Pressable
+          style={styles.statusBtn}
+          onPress={() => setTechPickerOpen(true)}
+          disabled={saving || technicians.length === 0}
+        >
+          <Text style={styles.statusBtnText}>{assigneeName}</Text>
+          <Text style={styles.statusChevron}>Reassign</Text>
+        </Pressable>
+        {technicians.length === 0 ? (
+          <Text style={styles.photoEmpty}>No technicians with app access are set up in Employees.</Text>
+        ) : null}
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Before photos</Text>
         <Text style={styles.photoHelp}>
-          Condition before repair. {canUploadPhotos ? "Tap + Add to upload." : "Only the assigned technician can add photos."}
+          Condition before repair.{" "}
+          {canUploadPhotos
+            ? "Tap + Add to upload. Tap a photo to view; tap × to delete."
+            : "Only the assigned technician can add or remove photos."}
         </Text>
         <ScrollView
           horizontal
@@ -393,13 +565,14 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           {beforePhotos.map((p, i) => (
-            <Pressable
+            <WorkOrderPhotoThumb
               key={`b-${p.url}-${i}`}
-              onPress={() => setPhotoPreviewUri(getMediaUrl(p.url))}
-              style={styles.photoThumbWrap}
-            >
-              <Image source={{ uri: getMediaUrl(p.url) }} style={styles.photoThumb} />
-            </Pressable>
+              photo={p}
+              canDelete={canUploadPhotos}
+              isDeleting={deletingPhotoKey === `before:${p.url}`}
+              onOpen={() => setPhotoPreview({ kind: "before", url: p.url })}
+              onDelete={() => confirmDeletePhoto("before", p.url)}
+            />
           ))}
           {canUploadPhotos ? (
             <Pressable
@@ -423,7 +596,10 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>After photos</Text>
         <Text style={styles.photoHelp}>
-          Condition after repair. {canUploadPhotos ? "Tap + Add to upload." : "Only the assigned technician can add photos."}
+          Condition after repair.{" "}
+          {canUploadPhotos
+            ? "Tap + Add to upload. Tap a photo to view; tap × to delete."
+            : "Only the assigned technician can add or remove photos."}
         </Text>
         <ScrollView
           horizontal
@@ -432,13 +608,14 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           keyboardShouldPersistTaps="handled"
         >
           {afterPhotos.map((p, i) => (
-            <Pressable
+            <WorkOrderPhotoThumb
               key={`a-${p.url}-${i}`}
-              onPress={() => setPhotoPreviewUri(getMediaUrl(p.url))}
-              style={styles.photoThumbWrap}
-            >
-              <Image source={{ uri: getMediaUrl(p.url) }} style={styles.photoThumb} />
-            </Pressable>
+              photo={p}
+              canDelete={canUploadPhotos}
+              isDeleting={deletingPhotoKey === `after:${p.url}`}
+              onOpen={() => setPhotoPreview({ kind: "after", url: p.url })}
+              onDelete={() => confirmDeletePhoto("after", p.url)}
+            />
           ))}
           {canUploadPhotos ? (
             <Pressable
@@ -559,6 +736,14 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
         </View>
       )}
 
+      <WorkOrderInspectionsSection
+        workOrderId={woId}
+        motorClass={wo?.motorClass || "AC"}
+        token={token}
+        disabled={saving}
+        onFieldFocus={scrollFieldToCenter}
+      />
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notes (optional)</Text>
         <View collapsable={false} ref={commentFieldWrapRef}>
@@ -599,24 +784,39 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
       ) : null}
 
       <Modal
-        visible={!!photoPreviewUri}
+        visible={!!photoPreview}
         transparent
         animationType="fade"
-        onRequestClose={() => setPhotoPreviewUri(null)}
+        onRequestClose={() => setPhotoPreview(null)}
       >
-        <Pressable style={styles.previewBackdrop} onPress={() => setPhotoPreviewUri(null)}>
-          {photoPreviewUri ? (
+        <View style={styles.previewBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setPhotoPreview(null)} />
+          {photoPreview ? (
             <Image
               pointerEvents="none"
-              source={{ uri: photoPreviewUri }}
+              source={{ uri: getMediaUrl(photoPreview.url) }}
               style={styles.previewImage}
               resizeMode="contain"
             />
           ) : null}
+          {photoPreview && canUploadPhotos ? (
+            <Pressable
+              style={[
+                styles.previewDeleteBtn,
+                deletingPhotoKey === `${photoPreview.kind}:${photoPreview.url}` && styles.btnDisabled,
+              ]}
+              onPress={() => confirmDeletePhoto(photoPreview.kind, photoPreview.url)}
+              disabled={!!deletingPhotoKey}
+            >
+              <Text style={styles.previewDeleteBtnText}>
+                {deletingPhotoKey === `${photoPreview.kind}:${photoPreview.url}` ? "Deleting…" : "Delete photo"}
+              </Text>
+            </Pressable>
+          ) : null}
           <Text style={styles.previewHint} pointerEvents="none">
-            Tap anywhere to close
+            Tap outside the image to close
           </Text>
-        </Pressable>
+        </View>
       </Modal>
 
       <Modal visible={statusPickerOpen} transparent animationType="fade">
@@ -638,6 +838,34 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
               )}
             />
             <Pressable style={styles.modalCancel} onPress={() => setStatusPickerOpen(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={techPickerOpen} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setTechPickerOpen(false)} />
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Assign technician</Text>
+            <FlatList
+              data={technicianPickerOptions}
+              keyExtractor={(t) => t.id || "__unassigned__"}
+              renderItem={({ item }) => (
+                <Pressable
+                  style={styles.statusRow}
+                  onPress={() => saveTechnician(item.id)}
+                  disabled={saving}
+                >
+                  <Text style={styles.statusRowText}>
+                    {item.name}
+                    {item.id === assigneeId ? " (current)" : ""}
+                  </Text>
+                </Pressable>
+              )}
+            />
+            <Pressable style={styles.modalCancel} onPress={() => setTechPickerOpen(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </Pressable>
           </View>
@@ -821,8 +1049,14 @@ const styles = StyleSheet.create({
   tabBtnTextActive: {
     color: colors.primary,
   },
-  fieldRow: {
+  fieldGridRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
     marginBottom: spacing.md,
+  },
+  fieldCol: {
+    flex: 1,
+    minWidth: 0,
   },
   fieldLabel: {
     fontSize: 12,
@@ -941,6 +1175,9 @@ const styles = StyleSheet.create({
   },
   photoThumbWrap: {
     marginRight: 10,
+    position: "relative",
+  },
+  photoThumbPress: {
     borderRadius: 8,
     overflow: "hidden",
     borderWidth: 1,
@@ -950,6 +1187,33 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     backgroundColor: colors.formBg,
+  },
+  photoThumbBusy: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoDeleteBtn: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: colors.card,
+    zIndex: 2,
+  },
+  photoDeleteBtnText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: -1,
   },
   addPhotoTile: {
     marginRight: 10,
@@ -987,10 +1251,25 @@ const styles = StyleSheet.create({
   previewImage: {
     width: "100%",
     height: "72%",
+    zIndex: 1,
+  },
+  previewDeleteBtn: {
+    marginTop: spacing.lg,
+    paddingVertical: 12,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 8,
+    backgroundColor: colors.danger,
+    zIndex: 2,
+  },
+  previewDeleteBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
   previewHint: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     color: "rgba(255,255,255,0.7)",
     fontSize: 14,
+    zIndex: 1,
   },
 });
