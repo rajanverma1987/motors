@@ -33,6 +33,7 @@ import {
   FiChevronRight,
   FiChevronLeft,
 } from "react-icons/fi";
+import { ImPencil2 } from "react-icons/im";
 
 const SIDEBAR_COLLAPSED_KEY = "dashboard-sidebar-collapsed";
 
@@ -43,7 +44,7 @@ const CUSTOMERS_NAV = [
 ];
 
 const JOBS_NAV = [
-  { href: "/dashboard/rfq", label: "RFQ", icon: FiInbox },
+  { href: "/dashboard/rfq", label: "RFQ", icon: ImPencil2 },
   { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
   { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
 ];

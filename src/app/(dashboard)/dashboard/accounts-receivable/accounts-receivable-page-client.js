@@ -454,36 +454,38 @@ export default function AccountsReceivablePageClient() {
         ))}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {showAging && (
-            <div className="flex min-w-[200px] flex-col gap-1 sm:min-w-[220px]">
-              <span className="flex items-center gap-1 text-xs font-medium text-secondary">
-                <FiClock className="h-3.5 w-3.5" aria-hidden />
+            <label className="flex items-center gap-2">
+              <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-secondary">
+                <FiClock className="h-4 w-4 shrink-0" aria-hidden />
                 Aging
               </span>
               <Select
                 label=""
-                className="!mb-0"
+                className="!mb-0 !gap-0 w-[11rem] sm:w-[12rem] [&>div]:h-8 [&>div]:min-h-8 [&>div]:py-1"
                 options={AGING.map((a) => ({ value: a.id, label: a.label }))}
                 value={agingFilter}
                 onChange={(e) => setAgingFilter(e.target.value)}
                 searchable={false}
               />
-            </div>
+            </label>
           )}
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="h-8 shrink-0"
             onClick={exportCsv}
             disabled={tab === "customer" ? customerGroups.length === 0 : rows.length === 0}
           >
-            <FiDownload className="mr-1.5 inline h-4 w-4" />
+            <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
             Export CSV
           </Button>
           <Link
             href="/dashboard/invoices"
-            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-primary hover:bg-card"
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 text-sm font-medium text-primary transition-opacity hover:bg-card hover:border-primary/20"
           >
-            Invoices <FiExternalLink className="h-3.5 w-3.5" />
+            Invoices
+            <FiExternalLink className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         </div>
       </div>
@@ -519,17 +521,20 @@ export default function AccountsReceivablePageClient() {
                     <td className="px-4 py-3 text-right tabular">{g.invoices.length}</td>
                     <td className="px-4 py-3 text-right tabular font-medium">{fmt(g.balance)}</td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-2">
                         {g.invoices.map((inv) => (
                           <Button
                             key={inv.id}
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             size="sm"
-                            className="h-7 text-xs"
+                            className="h-8 cursor-pointer border-primary/40 bg-primary/5 px-2.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
+                            title={`Record payment — invoice #${inv.invoiceNumber}`}
                             onClick={() => openPaymentModal(inv)}
                           >
-                            #{inv.invoiceNumber} ({fmt(inv.balance)})
+                            <FiDollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                            <span>#{inv.invoiceNumber}</span>
+                            <span className="tabular opacity-90">({fmt(inv.balance)})</span>
                           </Button>
                         ))}
                       </div>

@@ -191,24 +191,43 @@ export default function RepairFlowPageClient() {
         key: "tagQr",
         label: "Tag QR",
         icon: <LuQrCode className={MENU_IC} aria-hidden />,
-        title: !viewJobHeader?.jobNumber
-          ? "Job number required"
-          : "Print QR motor tag (technician scans → work order)",
+        title: !viewJobHeader?.customerId
+          ? "Customer required"
+          : "Print QR motor tag (technician scans → work orders for customer)",
         onClick: async () => {
-          const code = String(viewJobHeader?.jobNumber || "").trim();
-          if (!code) {
-            toast.error("Job number is required to print the tag.");
-            return;
+          if (!viewJobId) return;
+          try {
+            const res = await fetch(`/api/dashboard/repair-flow/jobs/${viewJobId}/motor-tag`, {
+              credentials: "include",
+              cache: "no-store",
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to load tag data");
+            const customerId = String(data.customerId || "").trim();
+            if (!customerId) {
+              toast.error("This job must have a customer to print the tag.");
+              return;
+            }
+            const ok = await printQuoteMotorTagQr({
+              customerId,
+              customerName: data.customerName || viewJobHeader?.customerLabel || "",
+              motor: data.motor && typeof data.motor === "object" ? data.motor : null,
+              motorFallbackLine: data.motorFallbackLine || viewJobHeader?.motorLabel || "",
+              rfqNumber: data.rfqNumber || viewJobHeader?.jobNumber || "",
+              technicianName: data.technicianName || "",
+              workOrderNumber: data.workOrderNumber || "",
+              workOrderStatus: data.workOrderStatus || "",
+              jobTypeLabel: data.jobTypeLabel || "",
+              motorClass: data.motorClass || "",
+              repairJobNumber: data.repairJobNumber || "",
+              estimatedCompletion: data.estimatedCompletion || "",
+              customerPo: data.customerPo || "",
+              scopeBrief: data.scopeBrief || "",
+            });
+            if (!ok) toast.error("Could not print Tag QR.");
+          } catch (e) {
+            toast.error(e.message || "Could not print Tag QR");
           }
-          const ok = await printQuoteMotorTagQr(code, {
-            customerName: viewJobHeader?.customerLabel || "",
-            motor:
-              viewJobHeader?.motorNameplate && typeof viewJobHeader.motorNameplate === "object"
-                ? viewJobHeader.motorNameplate
-                : null,
-            motorFallbackLine: viewJobHeader?.motorLabel || "",
-          });
-          if (!ok) toast.error("Allow pop-ups to print the tag, or try again.");
         },
       },
     ];

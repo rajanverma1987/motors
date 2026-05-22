@@ -11,6 +11,8 @@ import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
 const EMPTY_ENTRY = {
   date: "",
@@ -314,6 +316,21 @@ export default function LedgerPageClient() {
     [filteredRows, tableSort]
   );
 
+  const fyDefault = useMemo(() => currentFinancialYearRange(), []);
+  const isCurrentFy = fromDate === fyDefault.from && toDate === fyDefault.to;
+  const isAllDates = !fromDate && !toDate;
+
+  const applyCurrentFy = useCallback(() => {
+    const range = currentFinancialYearRange();
+    setFromDate(range.from);
+    setToDate(range.to);
+  }, []);
+
+  const applyAllDates = useCallback(() => {
+    setFromDate("");
+    setToDate("");
+  }, []);
+
   const handleSaveEntry = async () => {
     if (saving) return;
     if (!entryForm.date) {
@@ -390,6 +407,29 @@ export default function LedgerPageClient() {
       </div>
 
       <div className="mb-3 flex shrink-0 flex-wrap items-end gap-2">
+        <StatusFilterPillButton
+          card={{
+            key: "fy",
+            label: "Current FY",
+            subtitle:
+              isCurrentFy && fromDate && toDate
+                ? `${fromDate} → ${toDate}`
+                : "April – March",
+            tileAppearance: resolveStatusTileProps("", 5),
+          }}
+          active={isCurrentFy}
+          onClick={applyCurrentFy}
+        />
+        <StatusFilterPillButton
+          card={{
+            key: "all",
+            label: "All dates",
+            subtitle: isAllDates ? "No date filter" : "Custom range",
+            tileAppearance: resolveStatusTileProps("", 6),
+          }}
+          active={isAllDates}
+          onClick={applyAllDates}
+        />
         <Input
           label="From"
           type="date"
@@ -407,15 +447,7 @@ export default function LedgerPageClient() {
         <Button type="button" variant="primary" size="sm" onClick={load}>
           Go
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            setFromDate("");
-            setToDate("");
-          }}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={applyAllDates}>
           Clear
         </Button>
         <Button type="button" variant="outline" size="sm" onClick={load}>

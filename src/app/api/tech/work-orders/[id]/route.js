@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
 import Customer from "@/models/Customer";
 import Quote from "@/models/Quote";
 import Motor from "@/models/Motor";
+import Employee from "@/models/Employee";
 import { getTechnicianFromRequest } from "@/lib/auth-portal";
+import { notifyTechnicianWorkOrderAssigned } from "@/lib/notify-technician-work-order";
 import { sanitizeSpecs } from "@/lib/sanitize-specs";
 import {
   AC_WORK_ORDER_FIELDS,
@@ -37,6 +40,29 @@ function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
     : Promise.resolve(context.params || {});
+}
+
+async function employeeDisplayName(shopEmail, employeeId) {
+  const id = String(employeeId || "").trim();
+  if (!id || !mongoose.isValidObjectId(id)) return "";
+  const emp = await Employee.findOne({ _id: id, createdByEmail: shopEmail })
+    .select({ name: 1, email: 1 })
+    .lean();
+  return String(emp?.name || "").trim() || String(emp?.email || "").trim();
+}
+
+async function isAssignableTechnician(shopEmail, employeeId) {
+  const id = String(employeeId || "").trim();
+  if (!id) return true;
+  if (!mongoose.isValidObjectId(id)) return false;
+  const emp = await Employee.findOne({
+    _id: id,
+    createdByEmail: shopEmail,
+    technicianAppAccess: true,
+  })
+    .select({ _id: 1 })
+    .lean();
+  return Boolean(emp);
 }
 
 export async function GET(request, context) {
@@ -109,10 +135,16 @@ export async function GET(request, context) {
           .filter((n) => n.text.trim())
       : [];
 
+    const technicianName = await employeeDisplayName(
+      tech.shopEmail,
+      doc.technicianEmployeeId
+    );
+
     return NextResponse.json({
       ...doc,
       id: doc._id.toString(),
       _id: undefined,
+      technicianName,
       customerCompany:
         customer?.companyName || customer?.primaryContactName || doc.companyName || "",
       quoteScopeForTech,
@@ -183,7 +215,54 @@ export async function PATCH(request, context) {
       }
     }
 
-    // WO date, job type, and assignment fields are CRM-only from the technician app.
+    if (body.technicianEmployeeId !== undefined) {
+      const previousTechnicianId = String(doc.technicianEmployeeId || "").trim();
+      const nextId = String(body.technicianEmployeeId || "").trim();
+      if (!(await isAssignableTechnician(tech.shopEmail, nextId))) {
+        return NextResponse.json(
+          { error: "Choose a technician with app access enabled in Employees." },
+          { status: 400 }
+        );
+      }
+      if (nextId !== previousTechnicianId) {
+        const [fromName, toName] = await Promise.all([
+          employeeDisplayName(tech.shopEmail, previousTechnicianId),
+          employeeDisplayName(tech.shopEmail, nextId),
+        ]);
+        const fromLabel = fromName || (previousTechnicianId ? "Technician" : "Unassigned");
+        const toLabel = toName || (nextId ? "Technician" : "Unassigned");
+        const actor = tech.name || tech.employeeEmail || "Technician";
+        if (!Array.isArray(doc.technicianAppNotes)) doc.technicianAppNotes = [];
+        doc.technicianAppNotes.push({
+          at: new Date(),
+          text: `Reassigned from ${fromLabel} to ${toLabel} by ${actor}.`,
+          authorId: tech.employeeId,
+          authorName: actor,
+        });
+        doc.markModified("technicianAppNotes");
+        doc.technicianEmployeeId = nextId;
+        if (nextId) {
+          const customer = await Customer.findOne({
+            _id: doc.customerId,
+            createdByEmail: tech.shopEmail,
+          })
+            .select({ companyName: 1, primaryContactName: 1 })
+            .lean();
+          const customerCompany =
+            customer?.companyName || customer?.primaryContactName || doc.companyName || "";
+          notifyTechnicianWorkOrderAssigned({
+            shopEmail: tech.shopEmail,
+            assigneeEmployeeId: nextId,
+            workOrderId: doc._id.toString(),
+            workOrderNumber: doc.workOrderNumber,
+            companyName: customerCompany,
+            quoteRfqNumber: doc.quoteRfqNumber,
+            repairJobNumber: doc.repairJobNumber,
+          }).catch(() => {});
+        }
+      }
+    }
+
     if (body.acSpecs !== undefined && doc.motorClass === "AC") {
       doc.acSpecs = sanitizeSpecs(body.acSpecs);
     }

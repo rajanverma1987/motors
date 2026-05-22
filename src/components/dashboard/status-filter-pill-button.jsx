@@ -28,7 +28,14 @@ function darkerShade(color, amount = 0.28) {
 /**
  * Status summary filter chip (RFQ, Invoices, etc.) with tile colors from Settings.
  */
-export default function StatusFilterPillButton({ card, active, onClick, formatAmount }) {
+export default function StatusFilterPillButton({
+  card,
+  active,
+  onClick,
+  formatAmount,
+  readOnly = false,
+  amountOnly = false,
+}) {
   const amountText =
     typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
   const tileStyle = card.tileAppearance?.style || {};
@@ -39,17 +46,41 @@ export default function StatusFilterPillButton({ card, active, onClick, formatAm
         color: tileStyle.color || "#fff",
       }
     : undefined;
+  const subtitle =
+    card.subtitle != null && String(card.subtitle).trim() !== ""
+      ? String(card.subtitle)
+      : amountOnly
+        ? amountText
+        : `${card.count ?? 0} · ${amountText}`;
+  const pillClass = `status-filter-pill job-board-status-pill relative min-w-[5.5rem] rounded-lg border px-3 py-2 text-left transition-all duration-150 ${card.tileAppearance?.className ?? ""} ${
+    active
+      ? "z-[1] opacity-100 saturate-100 pr-8"
+      : "border-border opacity-[0.88] saturate-[0.92] hover:opacity-100 hover:saturate-100 hover:shadow-sm pr-3"
+  }`;
+  const pillStyle = card.tileAppearance?.style;
+
+  if (readOnly) {
+    return (
+      <div
+        className={`status-filter-pill job-board-status-pill relative min-w-[5.5rem] rounded-lg border px-3 py-2 pr-3 text-left opacity-100 saturate-100 ${card.tileAppearance?.className ?? ""}`}
+        style={pillStyle}
+        role="group"
+        aria-label={card.label}
+      >
+        <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
+        <span className="mt-1 block whitespace-nowrap text-xs font-medium leading-snug tabular-nums">
+          {subtitle}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`status-filter-pill job-board-status-pill relative min-w-[5.5rem] rounded-lg border px-3 py-2 pr-8 text-left transition-all duration-150 ${card.tileAppearance?.className ?? ""} ${
-        active
-          ? "z-[1] opacity-100 saturate-100"
-          : "border-border opacity-[0.88] saturate-[0.92] hover:opacity-100 hover:saturate-100 hover:shadow-sm"
-      }`}
-      style={card.tileAppearance?.style}
+      className={pillClass}
+      style={pillStyle}
       aria-pressed={active}
     >
       {active ? (
@@ -69,7 +100,7 @@ export default function StatusFilterPillButton({ card, active, onClick, formatAm
           active ? "opacity-100" : "opacity-90"
         }`}
       >
-        {card.count} · {amountText}
+        {subtitle}
       </span>
     </button>
   );

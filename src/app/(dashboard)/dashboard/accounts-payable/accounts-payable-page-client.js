@@ -391,38 +391,40 @@ export default function AccountsPayablePageClient() {
         ))}
         <div className="ml-auto flex flex-wrap items-center gap-2">
           {showAging && (
-            <div className="flex min-w-[200px] flex-col gap-1 sm:min-w-[220px]">
-              <span className="flex items-center gap-1 text-xs font-medium text-secondary">
-                <FiClock className="h-3.5 w-3.5" aria-hidden />
+            <label className="flex items-center gap-2">
+              <span className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-sm font-medium text-secondary">
+                <FiClock className="h-4 w-4 shrink-0" aria-hidden />
                 Aging
               </span>
               <Select
                 label=""
-                className="!mb-0"
+                className="!mb-0 !gap-0 w-[11rem] sm:w-[12rem] [&>div]:h-8 [&>div]:min-h-8 [&>div]:py-1"
                 options={AGING.map((a) => ({ value: a.id, label: a.label }))}
                 value={agingFilter}
                 onChange={(e) => setAgingFilter(e.target.value)}
                 searchable={false}
               />
-            </div>
+            </label>
           )}
           <Button
             type="button"
             variant="outline"
             size="sm"
+            className="h-8 shrink-0"
             onClick={exportCsv}
             disabled={
               tab === "vendor" ? vendorGroups.length === 0 : rows.length === 0
             }
           >
-            <FiDownload className="mr-1.5 inline h-4 w-4" />
+            <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
             Export CSV
           </Button>
           <Link
             href="/dashboard/purchase-orders"
-            className="inline-flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm font-medium text-primary hover:bg-card"
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 text-sm font-medium text-primary transition-opacity hover:bg-card hover:border-primary/20"
           >
-            Purchase orders <FiExternalLink className="h-3.5 w-3.5" />
+            Purchase orders
+            <FiExternalLink className="h-4 w-4 shrink-0" aria-hidden />
           </Link>
         </div>
       </div>

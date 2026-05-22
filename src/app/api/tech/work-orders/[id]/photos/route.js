@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { mkdirSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
@@ -26,6 +26,112 @@ function mapTechPhoto(p) {
   };
 }
 
+function photoArrayKey(kind) {
+  return kind === "after" ? "technicianAfterPhotos" : "technicianBeforePhotos";
+}
+
+function resolveWoPhotoFile(woId, url) {
+  const u = String(url || "").trim();
+  const prefix = `/uploads/work-orders/${woId}/`;
+  if (!u.startsWith(prefix) || u.includes("..")) return null;
+  const rel = u.replace(/^\//, "");
+  const full = path.resolve(path.join(process.cwd(), "public", rel));
+  const allowedDir = path.resolve(path.join(process.cwd(), "public", "uploads", "work-orders", woId));
+  if (!full.startsWith(`${allowedDir}${path.sep}`)) return null;
+  return full;
+}
+
+async function assertAssignedTechnician(request, woId) {
+  const tech = await getTechnicianFromRequest(request);
+  if (!tech) {
+    return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  }
+  await connectDB();
+  const doc = await WorkOrder.findOne({
+    _id: woId,
+    createdByEmail: tech.shopEmail,
+  });
+  if (!doc) {
+    return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
+  }
+  const assigneeId = String(doc.technicianEmployeeId || "").trim();
+  const techId = String(tech.employeeId || "").trim();
+  if (!assigneeId || assigneeId !== techId) {
+    return {
+      error: NextResponse.json(
+        { error: "Only the technician assigned to this work order can manage photos." },
+        { status: 403 }
+      ),
+    };
+  }
+  return { tech, doc };
+}
+
+export async function DELETE(request, context) {
+  const { allowed } = checkRateLimit(request, "tech-wo-photo-del", 60);
+  if (!allowed) {
+    return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  }
+
+  try {
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
+
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const kindRaw = String(body?.kind || "").trim().toLowerCase();
+    const kind = kindRaw === "after" ? "after" : kindRaw === "before" ? "before" : null;
+    const url = String(body?.url || "").trim();
+    if (!kind) {
+      return NextResponse.json({ error: 'kind must be "before" or "after"' }, { status: 400 });
+    }
+    if (!url) {
+      return NextResponse.json({ error: "url is required" }, { status: 400 });
+    }
+
+    const gate = await assertAssignedTechnician(request, id);
+    if (gate.error) return gate.error;
+    const { doc } = gate;
+
+    const key = photoArrayKey(kind);
+    const list = Array.isArray(doc[key]) ? doc[key] : [];
+    const idx = list.findIndex((p) => String(p?.url || "").trim() === url);
+    if (idx < 0) {
+      return NextResponse.json({ error: "Photo not found" }, { status: 404 });
+    }
+
+    const filePath = resolveWoPhotoFile(id, url);
+    if (filePath && existsSync(filePath)) {
+      try {
+        unlinkSync(filePath);
+      } catch (unlinkErr) {
+        console.warn("Tech WO photo unlink:", unlinkErr);
+      }
+    }
+
+    list.splice(idx, 1);
+    doc[key] = list;
+    doc.markModified(key);
+    await doc.save();
+
+    return NextResponse.json({
+      ok: true,
+      kind,
+      technicianBeforePhotos: (doc.technicianBeforePhotos || []).map(mapTechPhoto),
+      technicianAfterPhotos: (doc.technicianAfterPhotos || []).map(mapTechPhoto),
+    });
+  } catch (err) {
+    console.error("Tech WO photo delete:", err);
+    return NextResponse.json({ error: err.message || "Delete failed" }, { status: 500 });
+  }
+}
+
 export async function POST(request, context) {
   const { allowed } = checkRateLimit(request, "tech-wo-photo", 40);
   if (!allowed) {
@@ -33,29 +139,13 @@ export async function POST(request, context) {
   }
 
   try {
-    const tech = await getTechnicianFromRequest(request);
-    if (!tech) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
     const params = await getParams(context);
     const id = params?.id;
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
 
-    await connectDB();
-    const doc = await WorkOrder.findOne({
-      _id: id,
-      createdByEmail: tech.shopEmail,
-    });
-    if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    const assigneeId = String(doc.technicianEmployeeId || "").trim();
-    const techId = String(tech.employeeId || "").trim();
-    if (!assigneeId || assigneeId !== techId) {
-      return NextResponse.json(
-        { error: "Only the technician assigned to this work order can upload photos." },
-        { status: 403 }
-      );
-    }
+    const gate = await assertAssignedTechnician(request, id);
+    if (gate.error) return gate.error;
+    const { tech, doc } = gate;
 
     const formData = await request.formData();
     const file = formData.get("file");
@@ -85,7 +175,7 @@ export async function POST(request, context) {
       );
     }
 
-    const key = kind === "before" ? "technicianBeforePhotos" : "technicianAfterPhotos";
+    const key = photoArrayKey(kind);
     if (!Array.isArray(doc[key])) doc[key] = [];
     if (doc[key].length >= MAX_PHOTOS_PER_KIND) {
       return NextResponse.json(

@@ -16,6 +16,8 @@ import {
   FiPlus,
   FiEye,
 } from "react-icons/fi";
+import { LuQrCode } from "react-icons/lu";
+import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -233,6 +235,7 @@ export default function DashboardRfqListPage() {
   const [workOrderModal, setWorkOrderModal] = useState(null);
   const [openWoPrompt, setOpenWoPrompt] = useState(null);
   const [checkingOpenWoQuoteId, setCheckingOpenWoQuoteId] = useState(null);
+  const [printingTagQrQuoteId, setPrintingTagQrQuoteId] = useState(null);
   const [form, setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
   formRef.current = form;
@@ -726,6 +729,50 @@ export default function DashboardRfqListPage() {
     setQuotePrintId(q.id);
   }, [viewingQuote]);
 
+  const handlePrintTagQr = useCallback(
+    async (quoteFromTable) => {
+      const q = quoteFromTable ?? viewingQuote;
+      const quoteId = String(q?.id || "").trim();
+      if (!quoteId) return;
+      setPrintingTagQrQuoteId(quoteId);
+      try {
+        const res = await fetch(`/api/dashboard/quotes/${quoteId}/motor-tag`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to load tag data");
+        const customerId = String(data.customerId || q?.customerId || "").trim();
+        if (!customerId) {
+          toast.error("Select a customer on this RFQ before printing Tag QR.");
+          return;
+        }
+        const ok = await printQuoteMotorTagQr({
+          customerId,
+          customerName: data.customerName || customerNameMap[customerId] || "",
+          motor: data.motor && typeof data.motor === "object" ? data.motor : null,
+          motorFallbackLine: data.motorFallbackLine || "",
+          rfqNumber: data.rfqNumber || q?.rfqNumber || "",
+          technicianName: data.technicianName || "",
+          workOrderNumber: data.workOrderNumber || "",
+          workOrderStatus: data.workOrderStatus || "",
+          jobTypeLabel: data.jobTypeLabel || "",
+          motorClass: data.motorClass || "",
+          repairJobNumber: data.repairJobNumber || "",
+          estimatedCompletion: data.estimatedCompletion || "",
+          customerPo: data.customerPo || "",
+          scopeBrief: data.scopeBrief || "",
+        });
+        if (!ok) toast.error("Could not print Tag QR.");
+      } catch (e) {
+        toast.error(e.message || "Could not print Tag QR");
+      } finally {
+        setPrintingTagQrQuoteId(null);
+      }
+    },
+    [viewingQuote, toast, customerNameMap]
+  );
+
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [quoteSort, setQuoteSort] = useState({ key: null, direction: "asc" });
@@ -890,6 +937,7 @@ export default function DashboardRfqListPage() {
           const isDeleting = deletingQuoteId === row.id;
           const canCreateWorkOrder = quoteStatusAllowsWorkOrder(row.status);
           const isCheckingOpenWo = checkingOpenWoQuoteId === row.id;
+          const isPrintingTagQr = printingTagQrQuoteId === row.id;
           return (
             <div className="flex items-center gap-1">
               <button
@@ -918,10 +966,24 @@ export default function DashboardRfqListPage() {
                 type="button"
                 onClick={() => handlePrintQuote(row)}
                 className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Print"
-                title="Print"
+                aria-label="Print RFQ"
+                title="Print RFQ"
               >
-                <FiPrinter className="h-4 w-4" />
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePrintTagQr(row)}
+                disabled={isPrintingTagQr}
+                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+                aria-label="Print Tag QR"
+                title="Print Tag QR (technician scans → assigned work orders for customer)"
+              >
+                {isPrintingTagQr ? (
+                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
+                )}
               </button>
               <button
                 type="button"
@@ -960,11 +1022,18 @@ export default function DashboardRfqListPage() {
                     sourceQuoteId: row.id,
                   })
                 }
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Create invoice"
-                title="Create invoice"
+                disabled={!canCreateWorkOrder}
+                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label={
+                  canCreateWorkOrder ? "Create invoice" : "Create invoice (approved or accepted quotes only)"
+                }
+                title={
+                  canCreateWorkOrder
+                    ? "Create invoice"
+                    : "Set status to approved or accepted to create an invoice"
+                }
               >
-                <FiFileText className="h-4 w-4 shrink-0" />
+                <FiFileText className="h-4 w-4 shrink-0" aria-hidden />
               </button>
             </div>
           );
@@ -1069,9 +1138,11 @@ export default function DashboardRfqListPage() {
       openViewModal,
       openEditModal,
       handlePrintQuote,
+      handlePrintTagQr,
       handleSendToCustomer,
       handleCreateWorkOrderClick,
       checkingOpenWoQuoteId,
+      printingTagQrQuoteId,
       jobIdLabel,
     ]
   );
@@ -1120,8 +1191,23 @@ export default function DashboardRfqListPage() {
           openEditModal(vq);
         },
       },
+      {
+        key: "printRfq",
+        label: "Print RFQ",
+        icon: <FiPrinter className={MENU_IC} aria-hidden />,
+        disabled: !vq?.id,
+        onClick: () => handlePrintQuote(vq),
+      },
+      {
+        key: "tagQr",
+        label: "Tag QR",
+        icon: <LuQrCode className={MENU_IC} aria-hidden />,
+        disabled: !vq?.id || printingTagQrQuoteId === vq?.id,
+        title: "Print QR motor tag (technician scans → work orders for customer)",
+        onClick: () => handlePrintTagQr(vq),
+      },
     ];
-  }, [viewingQuote, closeViewModal, openEditModal]);
+  }, [viewingQuote, closeViewModal, openEditModal, handlePrintQuote, handlePrintTagQr, printingTagQrQuoteId]);
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
