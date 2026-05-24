@@ -63,7 +63,10 @@ export async function POST(request) {
     const followupBody = (followupDoc?.body || "").trim();
 
     const baseUrl = getPublicSiteUrl();
-    const linkReplacer = (html) => html.replace(/https:\/\/iqmotorbase\.com\//g, baseUrl + "/");
+    const linkReplacer = (html) =>
+      html
+        .replace(/https:\/\/iqmotorbase\.com\//gi, `${baseUrl}/`)
+        .replace(/(?:https?:\/\/)?(?:www\.)?motorswinding\.com\/?/gi, `${baseUrl}/`);
 
     let sent = 0;
     const errors = [];

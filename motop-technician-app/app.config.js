@@ -17,9 +17,9 @@ module.exports = {
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
     splash: {
-      image: "./assets/splash-icon.png",
+      image: "./assets/splash-screen.png",
       resizeMode: "contain",
-      backgroundColor: "#f5f7fa",
+      backgroundColor: "#FDFCFB",
     },
     ios: {
       bundleIdentifier: "com.iqmotorbase.motoptechnician",
@@ -38,13 +38,21 @@ module.exports = {
       /** Resize window when keyboard opens so inputs stay visible (not covered). */
       softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {
-        backgroundColor: "#E6F4FE",
+        backgroundColor: "#FDFCFB",
         foregroundImage: "./assets/android-icon-foreground.png",
         backgroundImage: "./assets/android-icon-background.png",
         monochromeImage: "./assets/android-icon-monochrome.png",
       },
     },
     plugins: [
+      [
+        "expo-splash-screen",
+        {
+          backgroundColor: "#FDFCFB",
+          image: "./assets/splash-screen.png",
+          resizeMode: "contain",
+        },
+      ],
       "expo-secure-store",
       [
         "expo-camera",
@@ -63,7 +71,7 @@ module.exports = {
         "expo-notifications",
         {
           icon: "./assets/icon.png",
-          color: "#1e5a8a",
+          color: "#9a5d33",
           sounds: [],
           enableBackgroundRemoteNotifications: true,
         },

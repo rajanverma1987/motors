@@ -9,6 +9,16 @@ function escHtmlEmail(v) {
   return v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** Replace legacy motorswinding.com domain in outgoing email HTML (templates, env URLs, DB content). */
+function sanitizeEmailBodyHtml(html) {
+  if (!html) return html;
+  return String(html)
+    .replace(/(?:https?:\/\/)?(?:www\.)?motorswinding\.com/gi, (match) =>
+      /^https?:\/\//i.test(match) ? "https://iqmotorbase.com" : "iqmotorbase.com"
+    )
+    .replace(/@(?:www\.)?motorswinding\.com/gi, "@iqmotorbase.com");
+}
+
 /** IQ Motorbase header for platform / admin emails (logo from `public/logo.png`). */
 function wrapPlatformBrandedHtml(bodyHtml) {
   const site = getPublicSiteUrl();
@@ -391,6 +401,7 @@ async function sendEmail(to, subject, html, options = {}) {
   const from = options.from || fromEmail || process.env.SMTP_USER;
   const attachments = options.attachments;
   const transport = getTransporter();
+  const sanitizedHtml = sanitizeEmailBodyHtml(html);
   if (!transport) {
     console.error("[Email not configured] Set SMTP_USER and SMTP_PASS. To:", to, "Subject:", subject);
     return { ok: false, error: "Email not configured. Set SMTP_USER and SMTP_PASS." };
@@ -400,7 +411,7 @@ async function sendEmail(to, subject, html, options = {}) {
       from,
       to,
       subject,
-      html,
+      html: sanitizedHtml,
       ...(attachments && attachments.length ? { attachments } : {}),
     });
     return { ok: true };

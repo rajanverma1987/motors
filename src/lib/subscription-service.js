@@ -4,6 +4,7 @@ import SubscriptionPlan from "@/models/SubscriptionPlan";
 import ShopSubscription from "@/models/ShopSubscription";
 import SubscriptionTransaction from "@/models/SubscriptionTransaction";
 import { sendSubscriptionPlanAttachedEmail } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { createPaypalProductAndPlan, createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
 import { gracePeriodAfterFailure } from "@/lib/subscription-access";
 import { LISTING_ONLY_PLAN_SLUG } from "@/lib/listing-account-messages";
@@ -287,14 +288,6 @@ export async function createPaypalBackedPlan(body, adminEmail) {
   });
 
   return plan;
-}
-
-function getPublicSiteUrl() {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
-    "http://localhost:3000"
-  ).replace(/\/$/, "");
 }
 
 /**

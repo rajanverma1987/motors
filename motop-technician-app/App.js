@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { ActivityIndicator, View, StyleSheet } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
+import * as SplashScreen from "expo-splash-screen";
 import { TechAuthProvider, useTechAuth } from "./src/TechAuthContext";
 import { BookmarksProvider } from "./src/BookmarksContext";
 import { navigationRef } from "./src/navigationRef";
@@ -11,6 +11,9 @@ import { subscribeWorkOrderNotificationNavigation } from "./src/pushNotification
 import MainTabs from "./src/navigation/MainTabs";
 import { colors } from "./src/theme";
 import LoginScreen from "./src/screens/LoginScreen";
+import AppSplashScreen from "./src/components/AppSplashScreen";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Stack = createNativeStackNavigator();
 
@@ -34,12 +37,14 @@ function NavigationRoot() {
     return subscribeWorkOrderNotificationNavigation(isLoggedIn);
   }, [isLoggedIn]);
 
+  useEffect(() => {
+    if (!loading) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [loading]);
+
   if (loading) {
-    return (
-      <View style={styles.boot}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <AppSplashScreen />;
   }
 
   return (
@@ -72,12 +77,3 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  boot: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
