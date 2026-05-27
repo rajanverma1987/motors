@@ -41,7 +41,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
     <BlogPageLayout
       title="When to repair or replace an electric motor"
       description="Motor failure or repeated issues force a choice: repair or replace? The right decision depends on cost, lead time, efficiency, and how critical the application is. Here’s a practical way to think it through."
-      breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
       canonicalPath={path}
       sidebarTitle="Get a repair quote"
       sidebarDescription="Send your motor details and we’ll connect you with repair centers that can inspect and quote your job."
@@ -113,7 +113,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Get a quote and decide with real numbers
           </h2>
           <p className="mt-4 text-secondary">
-            <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
+            <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
               Find electric motor repair shops
             </Link>{" "}
             in our directory, or{" "}

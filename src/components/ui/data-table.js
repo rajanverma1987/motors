@@ -29,7 +29,13 @@ function getRowsFromData(data, columns) {
   });
 }
 
-export default function DataTable({ columns = [], data = [], onChange, striped = false }) {
+export default function DataTable({
+  columns = [],
+  data = [],
+  onChange,
+  striped = false,
+  headerClassName = "px-3 py-2 text-left text-xs font-medium text-title",
+}) {
   const [rows, setRows] = useState(() => getRowsFromData(data, columns));
   const tableRef = useRef(null);
 
@@ -138,7 +144,7 @@ export default function DataTable({ columns = [], data = [], onChange, striped =
             {columns.map((col, i) => (
               <th
                 key={col.key ?? i}
-                className="px-3 py-2 text-left text-xs font-medium text-title"
+                className={headerClassName}
                 style={getColStyle(col)}
               >
                 {col.label}

@@ -18,10 +18,13 @@ import RepairFlowQuotesTable from "@/components/dashboard/repair-flow-quotes-tab
 import { emptyMotorNameplate } from "@/lib/motor-nameplate-patch";
 import { inspectionComponentsForMotorType } from "@/lib/repair-flow-constants";
 import {
-  emptyPreliminaryFindings,
-  buildPreliminaryFindingsPayload,
   getPreliminaryViewEntries,
 } from "@/lib/repair-flow-preliminary-fields";
+import {
+  emptyMotorInspectionFindings,
+  buildMotorInspectionFindingsPayload,
+} from "@/lib/motor-inspection-fields";
+import { inspectionComponentForSave } from "@/lib/motor-inspection-api";
 
 const DETAILED_VIEW_LABELS = [
   ["windingCondition", "Winding condition"],
@@ -102,7 +105,7 @@ export default function RepairFlowNewJobForm({
   const [saving, setSaving] = useState(false);
   const [createdJob, setCreatedJob] = useState(null);
   const [inspComponent, setInspComponent] = useState("stator");
-  const [prelimFindings, setPrelimFindings] = useState(() => emptyPreliminaryFindings("stator"));
+  const [prelimFindings, setPrelimFindings] = useState(() => emptyMotorInspectionFindings());
   const [savingPreinspect, setSavingPreinspect] = useState(false);
   const [prelimModalOpen, setPrelimModalOpen] = useState(false);
   const [inspections, setInspections] = useState([]);
@@ -335,7 +338,7 @@ export default function RepairFlowNewJobForm({
 
   useEffect(() => {
     if (!prelimModalOpen) return;
-    setPrelimFindings(emptyPreliminaryFindings(inspComponent));
+    setPrelimFindings(emptyMotorInspectionFindings());
   }, [inspComponent, prelimModalOpen]);
 
   const refreshJobData = useCallback(async (jobId) => {
@@ -529,12 +532,12 @@ export default function RepairFlowNewJobForm({
     try {
       await postJson(`/api/dashboard/repair-flow/jobs/${createdJob.id}/inspections`, {
         kind: "preliminary",
-        component: inspComponent,
-        findings: buildPreliminaryFindingsPayload(inspComponent, prelimFindings),
+        component: inspectionComponentForSave(),
+        findings: buildMotorInspectionFindingsPayload(prelimFindings),
       });
       toast.success("Pre-inspection saved.");
       setPrelimModalOpen(false);
-      setPrelimFindings(emptyPreliminaryFindings(inspComponent));
+      setPrelimFindings(emptyMotorInspectionFindings());
       await refreshJobData(createdJob.id);
       onJobCreated?.(createdJob);
     } catch (err) {

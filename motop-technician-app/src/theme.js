@@ -22,3 +22,11 @@ export const spacing = {
   lg: 16,
   xl: 24,
 };
+
+/** Label text above form inputs (work orders, inspections, calculators). */
+export const formFieldLabel = {
+  fontSize: 15,
+  fontWeight: "700",
+  color: colors.title,
+  marginBottom: 6,
+};

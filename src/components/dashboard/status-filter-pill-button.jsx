@@ -68,7 +68,7 @@ export default function StatusFilterPillButton({
         aria-label={card.label}
       >
         <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
-        <span className="mt-1 block whitespace-nowrap text-xs font-medium leading-snug tabular-nums">
+        <span className="mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums">
           {subtitle}
         </span>
       </div>
@@ -96,8 +96,8 @@ export default function StatusFilterPillButton({
       ) : null}
       <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
       <span
-        className={`mt-1 block whitespace-nowrap text-xs font-medium leading-snug tabular-nums ${
-          active ? "opacity-100" : "opacity-90"
+        className={`mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums ${
+          active ? "opacity-100" : "opacity-95"
         }`}
       >
         {subtitle}

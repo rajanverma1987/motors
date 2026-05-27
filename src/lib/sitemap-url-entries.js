@@ -21,6 +21,7 @@ export async function getSitemapEntries() {
     { url: baseUrl, lastModified: new Date(), changeFrequency: "weekly", priority: 1 },
     { url: `${baseUrl}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/contact`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    { url: `${baseUrl}/about`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.7 },
     { url: `${baseUrl}/privacy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
     { url: `${baseUrl}/terms`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.5 },
     { url: `${baseUrl}/marketplace`, lastModified: new Date(), changeFrequency: "daily", priority: 0.85 },
@@ -55,8 +56,8 @@ export async function getSitemapEntries() {
       changeFrequency: "monthly",
       priority: 0.85,
     },
-    { url: `${baseUrl}/electric-motor-reapir-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
-    { url: `${baseUrl}/electric-motor-reapir-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/electric-motor-repair-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
+    { url: `${baseUrl}/electric-motor-repair-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}${SEO_USA_HUB_PATH}`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.92 },
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.82 },
     { url: `${baseUrl}/motor-repair-shop-management-software`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
@@ -132,7 +133,7 @@ export async function getSitemapEntries() {
     listingPages = listings
       .filter((l) => isListingUrlSlugExportSafe(l.urlSlug))
       .map((l) => ({
-        url: `${baseUrl}/electric-motor-reapir-shops-listings/${l.urlSlug}`,
+        url: `${baseUrl}/electric-motor-repair-shops-listings/${l.urlSlug}`,
         lastModified: l.updatedAt ? new Date(l.updatedAt) : new Date(),
         changeFrequency: "weekly",
         priority: 0.72,

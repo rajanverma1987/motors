@@ -32,12 +32,12 @@ const BUYER_LINKS = [
     hint: "All buyer guides in one place",
   },
   {
-    href: "/electric-motor-reapir-shops-listings",
+    href: "/electric-motor-repair-shops-listings",
     label: "Find repair centers",
     hint: "Directory by location",
   },
   {
-    href: "/electric-motor-reapir-near-me",
+    href: "/electric-motor-repair-near-me",
     label: "Repair shops near me",
     hint: "Local search intent",
   },

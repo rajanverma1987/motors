@@ -210,7 +210,7 @@ export default function ListYourCenterPage() {
                 List your center on IQMotorBase.com and show up when people search for repair shops in your area. It’s free to list—you get more visibility and more leads.
               </p>
               <Link
-                href="/electric-motor-reapir-shops-listings"
+                href="/electric-motor-repair-shops-listings"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-6 inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90"

@@ -14,6 +14,11 @@ import {
   defaultPreparedByEmployeeIdForPortalUser,
 } from "@/lib/quote-defaults-shop";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import {
+  syncQuoteTechnicianToWorkOrders,
+  validateTechnicianEmployeeId,
+} from "@/lib/quote-technician-work-order-sync";
+import { quoteToDashboardJson } from "@/lib/quote-api-response";
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
@@ -70,6 +75,7 @@ export async function GET(request) {
       ...q,
       id: q._id.toString(),
       _id: undefined,
+      technicianEmployeeId: String(q.technicianEmployeeId ?? "").trim(),
       customerTaxExempt: normalizeTaxExempt(q.customerTaxExempt),
       customerTaxPercent: String(normalizeTaxPercent(q.customerTaxPercent)),
     }));
@@ -104,7 +110,7 @@ export async function POST(request) {
       notes,
       customerPo,
       date,
-      preparedBy,
+      technicianEmployeeId,
     } = body;
     if (!customerId?.trim()) {
       return NextResponse.json({ error: "Customer is required" }, { status: 400 });
@@ -126,9 +132,16 @@ export async function POST(request) {
     const merged = mergeUserSettings(settingsDoc?.settings);
     const rfqNumber = await getNextRfqNumber(email, merged);
     const dateStr = String(date ?? "").trim() || todayQuoteDateString();
-    let preparedByStr = String(preparedBy ?? "").trim();
-    if (!preparedByStr) {
-      preparedByStr = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    const preparedByStr = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    const techValidated = await validateTechnicianEmployeeId(email, technicianEmployeeId);
+    if (techValidated === null) {
+      return NextResponse.json(
+        {
+          error:
+            "Technician not found. Pick an employee from the dropdown, or leave the field blank.",
+        },
+        { status: 400 }
+      );
     }
     const doc = await Quote.create({
       customerId: customerId.trim(),
@@ -138,6 +151,7 @@ export async function POST(request) {
       customerPo: clampString(customerPo, 100),
       date: clampString(dateStr, 20),
       preparedBy: clampString(preparedByStr, 200),
+      technicianEmployeeId: techValidated,
       rfqNumber,
       repairScope: clampString(repairScope, LIMITS.message.max),
       laborTotal: laborFromLines || clampString(laborTotal, 50),
@@ -151,13 +165,14 @@ export async function POST(request) {
       notes: clampString(notes, LIMITS.message.max),
       createdByEmail: email,
     });
+    try {
+      await syncQuoteTechnicianToWorkOrders(email, doc);
+    } catch (syncErr) {
+      console.error("Quote technician work order sync:", syncErr);
+    }
     return NextResponse.json({
       ok: true,
-      quote: {
-        ...doc.toObject(),
-        id: doc._id.toString(),
-        _id: undefined,
-      },
+      quote: quoteToDashboardJson(doc),
     });
   } catch (err) {
     console.error("Dashboard create quote error:", err);

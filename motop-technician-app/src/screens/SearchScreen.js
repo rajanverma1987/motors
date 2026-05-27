@@ -166,8 +166,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   sectionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     color: colors.primary,
     textTransform: "uppercase",
     letterSpacing: 0.5,

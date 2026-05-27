@@ -21,7 +21,6 @@ import {
 } from "@/lib/repair-flow-constants";
 import MotorNameplateFormSections from "@/components/dashboard/motor-nameplate-form-sections";
 import MotorNameplateCompactView from "@/components/dashboard/motor-nameplate-compact-view";
-import RepairFlowPreliminaryInspectionModal from "@/components/dashboard/repair-flow-preliminary-inspection-modal";
 import RepairFlowCreateQuoteModal from "@/components/dashboard/repair-flow-create-quote-modal";
 import RepairFlowQuotesTable from "@/components/dashboard/repair-flow-quotes-table";
 import RepairFlowJobAttachmentsModal from "@/components/dashboard/repair-flow-job-attachments-modal";
@@ -36,10 +35,19 @@ import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import { emptyMotorNameplate } from "@/lib/motor-nameplate-patch";
 import {
-  emptyPreliminaryFindings,
-  buildPreliminaryFindingsPayload,
   getPreliminaryViewEntries,
+  getDetailedViewEntries,
 } from "@/lib/repair-flow-preliminary-fields";
+import {
+  emptyMotorInspectionFindings,
+  buildMotorInspectionFindingsPayload,
+  mergeMotorInspectionFindings,
+  usesUnifiedMotorInspectionFindings,
+  getMotorInspectionViewEntries,
+  motorInspectionSummary,
+} from "@/lib/motor-inspection-fields";
+import { inspectionComponentForSave } from "@/lib/motor-inspection-api";
+import MotorInspectionModal from "@/components/dashboard/motor-inspection-modal";
 
 async function fetchJson(url, options) {
   const res = await fetch(url, { credentials: "include", ...options });
@@ -48,21 +56,6 @@ async function fetchJson(url, options) {
   return data;
 }
 
-const INITIAL_DETAILED_FINDINGS = {
-  windingCondition: "",
-  coreDamage: "",
-  bearingFailure: "",
-  shaftIssues: "",
-  additionalFindings: "",
-};
-
-const DETAILED_VIEW_LABELS = [
-  ["windingCondition", "Winding condition"],
-  ["coreDamage", "Core / lamination damage"],
-  ["bearingFailure", "Bearing"],
-  ["shaftIssues", "Shaft / mechanical"],
-  ["additionalFindings", "Additional findings"],
-];
 
 function componentLabel(motorType, value) {
   const opts = inspectionComponentsForMotorType(motorType || "");
@@ -72,6 +65,9 @@ function componentLabel(motorType, value) {
 const PAGE_MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
 function inspectionSummaryRow(row) {
+  if (usesUnifiedMotorInspectionFindings(row?.findings)) {
+    return motorInspectionSummary(row.findings);
+  }
   const f = row.findings && typeof row.findings === "object" ? row.findings : {};
   const chunks = [];
   for (const [, v] of Object.entries(f)) {
@@ -109,13 +105,8 @@ export default function RepairFlowJobDetailClient({
   const [motorNameplate, setMotorNameplate] = useState(() => emptyMotorNameplate());
   const [intakeNotes, setIntakeNotes] = useState("");
 
-  const [inspComponent, setInspComponent] = useState("stator");
-  const [detComponent, setDetComponent] = useState("stator");
-  const [prelimFindings, setPrelimFindings] = useState(() => emptyPreliminaryFindings("stator"));
-  const [detailedFindings, setDetailedFindings] = useState(() => ({ ...INITIAL_DETAILED_FINDINGS }));
-
-  const [prelimModalOpen, setPrelimModalOpen] = useState(false);
-  const [detailedModalOpen, setDetailedModalOpen] = useState(false);
+  const [inspFindings, setInspFindings] = useState(() => emptyMotorInspectionFindings());
+  const [inspModalKind, setInspModalKind] = useState(null);
   const [viewingInspection, setViewingInspection] = useState(null);
   const [createQuoteModalOpen, setCreateQuoteModalOpen] = useState(false);
   const [createFinalQuoteModalOpen, setCreateFinalQuoteModalOpen] = useState(false);
@@ -225,31 +216,12 @@ export default function RepairFlowJobDetailClient({
     }
   }, [sendEligibility, onCustomerSendEligibility]);
 
-  const componentOptions = useMemo(() => {
-    const opts = inspectionComponentsForMotorType(job?.motorType || "");
-    return opts.map((o) => ({ value: o.value, label: o.label }));
-  }, [job?.motorType]);
-
-  useEffect(() => {
-    if (componentOptions.length) {
-      if (!componentOptions.some((o) => o.value === inspComponent)) {
-        setInspComponent(componentOptions[0].value);
-      }
-      if (!componentOptions.some((o) => o.value === detComponent)) {
-        setDetComponent(componentOptions[0].value);
-      }
-    }
-  }, [componentOptions, inspComponent, detComponent]);
-
-  useEffect(() => {
-    if (!prelimModalOpen) return;
-    setPrelimFindings(emptyPreliminaryFindings(inspComponent));
-  }, [inspComponent, prelimModalOpen]);
-
-  useEffect(() => {
-    if (!detailedModalOpen) return;
-    setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
-  }, [detComponent, detailedModalOpen]);
+  const latestPreliminaryFindings = useMemo(() => {
+    const pre = inspections.filter((i) => i.kind === "preliminary");
+    if (!pre.length) return null;
+    const sorted = [...pre].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return sorted[0]?.findings;
+  }, [inspections]);
 
   const preliminaryInspectionsForQuote = useMemo(
     () => inspections.filter((i) => i.kind === "preliminary"),
@@ -346,23 +318,31 @@ export default function RepairFlowJobDetailClient({
   );
 
   function openPrelimModal() {
-    const first = componentOptions[0]?.value;
-    if (first) setInspComponent(first);
-    setPrelimModalOpen(true);
+    setInspFindings(emptyMotorInspectionFindings());
+    setInspModalKind("preliminary");
   }
 
   function openDetailedModal() {
-    const first = componentOptions[0]?.value;
-    if (first) setDetComponent(first);
-    setDetailedModalOpen(true);
+    setInspFindings(
+      latestPreliminaryFindings
+        ? mergeMotorInspectionFindings(latestPreliminaryFindings)
+        : emptyMotorInspectionFindings()
+    );
+    setInspModalKind("detailed");
   }
 
-  function closePrelimModal() {
-    setPrelimModalOpen(false);
+  function closeInspModal() {
+    setInspModalKind(null);
   }
 
-  function closeDetailedModal() {
-    setDetailedModalOpen(false);
+  function viewEntriesFor(row) {
+    if (usesUnifiedMotorInspectionFindings(row?.findings)) {
+      return getMotorInspectionViewEntries(row.findings);
+    }
+    if (row.kind === "detailed") {
+      return getDetailedViewEntries(row.findings);
+    }
+    return getPreliminaryViewEntries(row.component, row.findings);
   }
 
   async function saveIntake(e) {
@@ -392,46 +372,23 @@ export default function RepairFlowJobDetailClient({
     setMotorNameplate((prev) => ({ ...prev, [key]: value }));
   }
 
-  async function submitPreliminaryInspection(e) {
+  async function submitInspection(e, kind) {
     e.preventDefault();
     setSavingInspection(true);
     try {
-      const f = buildPreliminaryFindingsPayload(inspComponent, prelimFindings);
+      const f = buildMotorInspectionFindingsPayload(inspFindings);
       await fetchJson(`/api/dashboard/repair-flow/jobs/${id}/inspections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "preliminary", component: inspComponent, findings: f }),
+        body: JSON.stringify({
+          kind,
+          component: inspectionComponentForSave(),
+          findings: f,
+        }),
       });
-      toast.success("Inspection saved.");
-      setPrelimModalOpen(false);
-      setPrelimFindings(emptyPreliminaryFindings(inspComponent));
-      await loadAll({ notifyList: true });
-    } catch (err) {
-      toast.error(err.message || "Failed");
-    } finally {
-      setSavingInspection(false);
-    }
-  }
-
-  async function submitDetailedInspection(e) {
-    e.preventDefault();
-    setSavingInspection(true);
-    try {
-      const f = {
-        windingCondition: detailedFindings.windingCondition,
-        coreDamage: detailedFindings.coreDamage,
-        bearingFailure: detailedFindings.bearingFailure,
-        shaftIssues: detailedFindings.shaftIssues,
-        additionalFindings: detailedFindings.additionalFindings,
-      };
-      await fetchJson(`/api/dashboard/repair-flow/jobs/${id}/inspections`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind: "detailed", component: detComponent, findings: f }),
-      });
-      toast.success("Detailed inspection saved.");
-      setDetailedModalOpen(false);
-      setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
+      toast.success(kind === "detailed" ? "Detailed inspection saved." : "Pre-inspection saved.");
+      setInspModalKind(null);
+      setInspFindings(emptyMotorInspectionFindings());
       await loadAll({ notifyList: true });
     } catch (err) {
       toast.error(err.message || "Failed");
@@ -1079,72 +1036,27 @@ export default function RepairFlowJobDetailClient({
         ) : null}
       </div>
 
-      <RepairFlowPreliminaryInspectionModal
-        open={prelimModalOpen}
-        onClose={closePrelimModal}
-        formId="prelim-insp-form"
+      <MotorInspectionModal
+        open={inspModalKind === "preliminary"}
+        onClose={closeInspModal}
+        title="Add pre-inspection"
+        formId="job-prelim-insp-form"
         saving={savingInspection}
-        componentOptions={componentOptions}
-        inspComponent={inspComponent}
-        onInspComponentChange={setInspComponent}
-        prelimFindings={prelimFindings}
-        onPrelimFieldChange={(key, value) => setPrelimFindings((f) => ({ ...f, [key]: value }))}
-        onSubmit={submitPreliminaryInspection}
+        values={inspFindings}
+        onFieldChange={(key, value) => setInspFindings((f) => ({ ...f, [key]: value }))}
+        onSubmit={(e) => submitInspection(e, "preliminary")}
       />
 
-      <Modal
-        open={detailedModalOpen}
-        onClose={closeDetailedModal}
+      <MotorInspectionModal
+        open={inspModalKind === "detailed"}
+        onClose={closeInspModal}
         title="Add detailed inspection"
-        width="min(960px, 94vw)"
-        actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeDetailedModal}>
-              Cancel
-            </Button>
-            <Button type="submit" form="detailed-insp-form" variant="primary" size="sm" disabled={savingInspection}>
-              {savingInspection ? "Saving…" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <Form id="detailed-insp-form" onSubmit={submitDetailedInspection} className="space-y-3">
-          <p className="text-xs text-secondary">Confirmed findings after the motor is opened — one entry per component.</p>
-          <Select
-            label="Component"
-            options={componentOptions}
-            value={detComponent}
-            onChange={(e) => setDetComponent(e.target.value)}
-            searchable={false}
-          />
-          <Input
-            label="Winding condition"
-            value={detailedFindings.windingCondition}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, windingCondition: e.target.value }))}
-          />
-          <Input
-            label="Core / lamination damage"
-            value={detailedFindings.coreDamage}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, coreDamage: e.target.value }))}
-          />
-          <Input
-            label="Bearing"
-            value={detailedFindings.bearingFailure}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, bearingFailure: e.target.value }))}
-          />
-          <Input
-            label="Shaft / mechanical"
-            value={detailedFindings.shaftIssues}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, shaftIssues: e.target.value }))}
-          />
-          <Textarea
-            label="Additional findings"
-            value={detailedFindings.additionalFindings}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, additionalFindings: e.target.value }))}
-            rows={2}
-          />
-        </Form>
-      </Modal>
+        formId="job-detailed-insp-form"
+        saving={savingInspection}
+        values={inspFindings}
+        onFieldChange={(key, value) => setInspFindings((f) => ({ ...f, [key]: value }))}
+        onSubmit={(e) => submitInspection(e, "detailed")}
+      />
 
       <Modal
         open={!!viewingInspection}
@@ -1177,26 +1089,20 @@ export default function RepairFlowJobDetailClient({
                 {viewingInspection.createdAt ? new Date(viewingInspection.createdAt).toLocaleString() : ""}
               </span>
             </div>
-            <dl className="space-y-3">
-              {viewingInspection.kind === "detailed"
-                ? DETAILED_VIEW_LABELS.map(([key, label]) => {
-                    const val = viewingInspection.findings?.[key];
-                    const text = val != null && String(val).trim() ? String(val) : "—";
-                    return (
-                      <div key={key}>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
-                        <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
-                      </div>
-                    );
-                  })
-                : getPreliminaryViewEntries(viewingInspection.component, viewingInspection.findings).map(
-                    ({ key, label, text }) => (
-                      <div key={key}>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
-                        <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
-                      </div>
-                    )
-                  )}
+            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {viewEntriesFor(viewingInspection).map(({ key, label, text }) => (
+                <div
+                  key={key}
+                  className={
+                    key === "finalNotes" || key === "brokenPartsNotes" || key === "otherNotes"
+                      ? "sm:col-span-2"
+                      : ""
+                  }
+                >
+                  <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
+                </div>
+              ))}
             </dl>
           </div>
         ) : null}

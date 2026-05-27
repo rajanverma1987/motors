@@ -252,8 +252,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   label: {
-    fontSize: 12,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
     color: colors.primary,
     textTransform: "uppercase",
     letterSpacing: 0.6,

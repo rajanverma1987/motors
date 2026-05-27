@@ -105,12 +105,12 @@ export async function PATCH(request, context) {
           console.warn("ensureLocationPageForArea failed:", e);
         }
         const pathSlug = (doc.urlSlug || "").trim();
-        revalidatePath("/electric-motor-reapir-shops-listings");
+        revalidatePath("/electric-motor-repair-shops-listings");
         revalidatePath("/sitemap.xml");
-        if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+        if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
       } else {
         await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
-        revalidatePath("/electric-motor-reapir-shops-listings");
+        revalidatePath("/electric-motor-repair-shops-listings");
         revalidatePath("/sitemap.xml");
       }
 
@@ -179,10 +179,10 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     const pathSlug = (saved.urlSlug || "").trim();
-    if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+    if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
 
     return NextResponse.json({
       ok: true,
@@ -222,10 +222,10 @@ export async function DELETE(request, context) {
     const pathSlug = (existing.urlSlug || "").trim();
     await Listing.findByIdAndDelete(id);
 
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     if (pathSlug) {
-      revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+      revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
     }
 
     return NextResponse.json({ ok: true, id: String(existing._id) });

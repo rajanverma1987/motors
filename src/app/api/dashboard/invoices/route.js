@@ -133,18 +133,34 @@ export async function GET(request) {
       summaryByStatus[key].amount += amount;
     }
     const customerIds = [...new Set(list.map((i) => String(i.customerId)))];
-    const customers = await Customer.find({
-      _id: { $in: customerIds },
-      createdByEmail: email,
-    })
-      .lean()
-      .catch(() => []);
+    const quoteIds = [
+      ...new Set(list.map((i) => String(i.quoteId || "").trim()).filter(Boolean)),
+    ];
+    const [customers, quotes] = await Promise.all([
+      Customer.find({
+        _id: { $in: customerIds },
+        createdByEmail: email,
+      })
+        .lean()
+        .catch(() => []),
+      quoteIds.length > 0
+        ? Quote.find({ _id: { $in: quoteIds }, createdByEmail: email })
+            .select("_id repairFlowJobId")
+            .lean()
+            .catch(() => [])
+        : Promise.resolve([]),
+    ]);
     const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
+    const quoteJobById = Object.fromEntries(
+      (quotes || []).map((q) => [String(q._id), String(q.repairFlowJobId || "").trim()])
+    );
     const items = list.map((inv) => {
       const tax = resolveInvoiceTaxFields({ customer: custById[String(inv.customerId)] });
+      const qid = String(inv.quoteId || "").trim();
       return {
         id: inv._id.toString(),
         quoteId: inv.quoteId,
+        repairFlowJobId: qid ? quoteJobById[qid] || "" : "",
         invoiceNumber: inv.invoiceNumber,
         rfqNumber: inv.rfqNumber || "",
         customerPo: inv.customerPo || "",

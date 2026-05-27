@@ -2,16 +2,20 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiLayers } from "react-icons/fi";
 import Table from "@/components/ui/table";
-import Select from "@/components/ui/select";
-import Button from "@/components/ui/button";
+import { formatDateMdy } from "@/lib/format-date";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
-import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import Badge from "@/components/ui/badge";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+import QuoteFormModal from "@/components/dashboard/quote-form-modal";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+
+const WO_RECORD_LINK_CLASS =
+  "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
 function workOrderStatusVariant(status) {
   const s = (status || "").trim().toLowerCase();
@@ -39,33 +43,42 @@ export default function WorkOrdersPageClient() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const [summaryBuckets, setSummaryBuckets] = useState({ open: 0, closed: 0 });
   const [employees, setEmployees] = useState([]);
-  const [statusOptions, setStatusOptions] = useState(USER_SETTINGS_DEFAULTS.workOrderStatuses);
   const [woModal, setWoModal] = useState(null);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [openQuoteId, setOpenQuoteId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [bucketFilter, setBucketFilter] = useState("open");
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
-  const [backfillBusy, setBackfillBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
-      if (statusFilter.trim()) params.set("status", statusFilter.trim());
+      params.set("bucket", bucketFilter === "closed" ? "closed" : "open");
       if (tableSort?.key) {
         params.set("sortBy", tableSort.key);
         params.set("sortDir", tableSort.direction || "asc");
       }
-      const [woRes, empRes, setRes] = await Promise.all([
+      const [woRes, empRes] = await Promise.all([
         fetch(`/api/dashboard/work-orders?${params.toString()}`, { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" }),
-        fetch("/api/dashboard/settings", { credentials: "include", cache: "no-store" }),
       ]);
       if (woRes.ok) {
         const payload = await woRes.json();
         setRows(Array.isArray(payload?.items) ? payload.items : []);
         setTotalCount(Number(payload?.totalCount) || 0);
+        if (payload?.summaryBuckets && typeof payload.summaryBuckets === "object") {
+          setSummaryBuckets({
+            open: Number(payload.summaryBuckets.open) || 0,
+            closed: Number(payload.summaryBuckets.closed) || 0,
+          });
+        }
       } else {
         setRows([]);
         setTotalCount(0);
@@ -74,15 +87,10 @@ export default function WorkOrdersPageClient() {
         const list = await empRes.json();
         setEmployees(Array.isArray(list) ? list : []);
       }
-      if (setRes.ok) {
-        const d = await setRes.json();
-        const st = mergeUserSettings(d.settings).workOrderStatuses;
-        if (Array.isArray(st) && st.length) setStatusOptions(st);
-      }
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort, statusFilter]);
+  }, [page, pageSize, searchQuery, tableSort, bucketFilter]);
 
   useEffect(() => {
     load();
@@ -102,7 +110,31 @@ export default function WorkOrdersPageClient() {
     }
   }, [draftQuoteParam, openId, router]);
 
-  const statusSelectOptions = statusOptions.map((s) => ({ value: s, label: s }));
+  const bucketSummaryCards = useMemo(
+    () => [
+      {
+        key: "open",
+        label: "Open",
+        count: summaryBuckets.open,
+        subtitle: String(summaryBuckets.open),
+        tileAppearance: resolveStatusTileProps("", 0),
+      },
+      {
+        key: "closed",
+        label: "Closed",
+        count: summaryBuckets.closed,
+        subtitle: String(summaryBuckets.closed),
+        tileAppearance: resolveStatusTileProps("", 5),
+      },
+    ],
+    [summaryBuckets]
+  );
+
+  const emptyMessage = useMemo(() => {
+    if (searchQuery.trim()) return "No work orders match your search.";
+    if (bucketFilter === "closed") return "No work orders with Close status.";
+    return "No work orders yet. Create from an approved quote on the RFQ page.";
+  }, [searchQuery, bucketFilter]);
 
   const handleDeleteWorkOrder = useCallback(
     async (row) => {
@@ -136,60 +168,61 @@ export default function WorkOrdersPageClient() {
     setTableSort({ key, direction });
   }, []);
 
-  const handleBackfillFromInvoices = useCallback(async () => {
-    setBackfillBusy(true);
-    try {
-      const dryRes = await fetch("/api/dashboard/work-orders/backfill-from-invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ dryRun: true }),
-      });
-      const dry = await dryRes.json().catch(() => ({}));
-      if (!dryRes.ok) throw new Error(dry.error || "Preview failed");
-      const previewCount = Number(dry.previewCount) || 0;
-      const closedStatusUsed = String(dry.closedStatusUsed || "").trim() || "—";
-      if (previewCount === 0) {
-        toast.info("No invoice-linked quotes are missing a work order. Nothing to create.");
-        return;
-      }
-      const ok = await confirm({
-        title: "Create work orders from invoices?",
-        message: `Found ${previewCount} invoice(s) whose quote has no work order yet. Each will get a new work order with status “${closedStatusUsed}” (from your Settings → work order statuses). Inventory reservation and board notifications are skipped. Continue?`,
-        confirmLabel: "Create work orders",
-      });
-      if (!ok) return;
-      const runRes = await fetch("/api/dashboard/work-orders/backfill-from-invoices", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ dryRun: false }),
-      });
-      const run = await runRes.json().catch(() => ({}));
-      if (!runRes.ok) throw new Error(run.error || "Backfill failed");
-      const createdCount = Number(run.createdCount) || 0;
-      const errCount = Number(run.errorCount) || 0;
-      toast.success(
-        `Created ${createdCount} work order(s).${errCount ? ` ${errCount} row(s) failed — see browser console for details.` : ""}`
-      );
-      if (errCount > 0) {
-        console.warn("Work order backfill errors:", run.errors);
-      }
-      setPage(1);
-      await load();
-    } catch (e) {
-      toast.error(e.message || "Backfill failed");
-    } finally {
-      setBackfillBusy(false);
-    }
-  }, [confirm, load, toast]);
-
   const columns = useMemo(
     () => [
       { key: "workOrderNumber", label: "WO#", clickable: true, sortable: true },
-      { key: "quoteRfqNumber", label: "RFQ#", sortable: true },
-      { key: "date", label: "Date", sortable: true },
-      { key: "customerCompany", label: "Company", sortable: true },
+      {
+        key: "quoteRfqNumber",
+        label: "RFQ#",
+        sortable: true,
+        render: (v, row) => {
+          const label = v || row.quoteRfqNumber || "—";
+          const quoteId = String(row.quoteId || "").trim();
+          if (!quoteId || label === "—") return label;
+          return (
+            <button
+              type="button"
+              className={WO_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenQuoteId(quoteId);
+              }}
+              title="Open RFQ"
+            >
+              {label}
+            </button>
+          );
+        },
+      },
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        render: (v) => formatDateMdy(v),
+      },
+      {
+        key: "customerCompany",
+        label: "Company",
+        sortable: true,
+        render: (v, row) => {
+          const label = v || row.customerCompany || "—";
+          const customerId = String(row.customerId || "").trim();
+          if (!customerId || label === "—") return label;
+          return (
+            <button
+              type="button"
+              className={WO_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {label}
+            </button>
+          );
+        },
+      },
       { key: "motorClass", label: "Motor", sortable: true },
       {
         key: "jobType",
@@ -225,75 +258,55 @@ export default function WorkOrdersPageClient() {
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="mb-4 shrink-0 border-b border-border pb-4">
-        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold text-title">Work orders</h1>
-            <p className="mt-2 text-sm text-secondary">
-              Shop jobs from approved quotes—filter by status below. Use{" "}
-              <span className="font-medium text-title">Create from invoices</span> if you invoiced quotes before
-              creating work orders: it adds one closed-style work order per missing quote.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={backfillBusy || loading}
-              onClick={handleBackfillFromInvoices}
-              className="whitespace-nowrap"
-            >
-              <FiLayers className="h-4 w-4 shrink-0" aria-hidden />
-              {backfillBusy ? "Working…" : "Create from invoices"}
-            </Button>
-            <Select
-              id="wo-table-status-filter"
-              value={statusFilter}
-              onChange={(e) => {
-                setPage(1);
-                setStatusFilter(e.target.value ?? "");
-              }}
-              options={[{ value: "", label: "All statuses" }, ...statusSelectOptions]}
-              searchable={false}
-              placeholder="All statuses"
-              className="w-64 sm:w-72"
-            />
-          </div>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-title">Work orders</h1>
+          <p className="mt-2 text-sm text-secondary">
+            Shop jobs from approved quotes. Open excludes Close status; Closed shows only work orders with Close status.
+          </p>
         </div>
       </div>
-      <Table
-        columns={columns}
-        data={rows}
-        rowKey="id"
-        loading={loading}
-        fillHeight
-        searchable
-        onSearch={(q) => {
-          setPage(1);
-          setSearchQuery(q);
-        }}
-        searchPlaceholder="Search WO#, RFQ#, company, motor, type, status, technician…"
-        sortState={tableSort}
-        onSort={handleTableSort}
-        onCellClick={(row) => setWoModal({ workOrderId: row.id })}
-        onDelete={handleDeleteWorkOrder}
-        onRefresh={load}
-        pagination={{ page, pageSize, totalCount }}
-        onPageChange={(nextPage, nextPageSize) => {
-          setPage(nextPage);
-          setPageSize(nextPageSize);
-        }}
-        paginateClientSide={false}
-        emptyMessage={
-          rows.length === 0
-            ? statusFilter.trim()
-              ? "No work orders with this status."
-              : searchQuery.trim()
-                ? "No work orders match your search."
-                : "No work orders yet. Create from an approved quote on the RFQ page (work order icon in the row)."
-            : ""
-        }
-      />
+
+      <div className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
+          {bucketSummaryCards.map((card) => (
+            <StatusFilterPillButton
+              key={card.key}
+              card={card}
+              active={bucketFilter === card.key}
+              onClick={() => {
+                setPage(1);
+                setBucketFilter(card.key);
+              }}
+            />
+          ))}
+        </div>
+        <Table
+          columns={columns}
+          data={rows}
+          rowKey="id"
+          loading={loading}
+          fillHeight
+          searchable
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
+          searchPlaceholder="Search WO#, RFQ#, company, motor, type, status, technician…"
+          sortState={tableSort}
+          onSort={handleTableSort}
+          onCellClick={(row) => setWoModal({ workOrderId: row.id })}
+          onDelete={handleDeleteWorkOrder}
+          actionsColumnLabel=""
+          onRefresh={load}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+          paginateClientSide={false}
+          emptyMessage={emptyMessage}
+        />
+      </div>
 
       <WorkOrderFormModal
         open={!!woModal}
@@ -301,6 +314,23 @@ export default function WorkOrdersPageClient() {
         workOrderId={woModal?.workOrderId ?? null}
         onClose={() => setWoModal(null)}
         onAfterSave={load}
+        onOpenQuote={(id) => setOpenQuoteId(String(id || "").trim() || null)}
+        onOpenCustomer={(id) => setOpenCustomerId(String(id || "").trim() || null)}
+      />
+
+      <QuoteFormModal
+        open={!!openQuoteId}
+        quoteId={openQuoteId}
+        onClose={() => setOpenQuoteId(null)}
+        onAfterSave={load}
+        zIndex={120}
+      />
+
+      <CustomerQuickViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
       />
     </div>
   );

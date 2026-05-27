@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  serverExternalPackages: ["pdfkit"],
   async redirects() {
     return [
       {
@@ -10,9 +11,29 @@ const nextConfig = {
         destination: "https://IQMotorBase.com/:path*",
         permanent: true,
       },
-      { source: "/motor-repair-near-me", destination: "/electric-motor-reapir-near-me", permanent: true },
+      { source: "/motor-repair-near-me", destination: "/electric-motor-repair-near-me", permanent: true },
       { source: "/motor-repair-software", destination: "/motor-repair-shop-management-software", permanent: true },
-      { source: "/motor-repair-shops", destination: "/electric-motor-reapir-shops-listings", permanent: true },
+      { source: "/motor-repair-shops", destination: "/electric-motor-repair-shops-listings", permanent: true },
+      {
+        source: "/electric-motor-reapir-shops-listings",
+        destination: "/electric-motor-repair-shops-listings",
+        permanent: true,
+      },
+      {
+        source: "/electric-motor-reapir-shops-listings/:path*",
+        destination: "/electric-motor-repair-shops-listings/:path*",
+        permanent: true,
+      },
+      {
+        source: "/electric-motor-reapir-near-me",
+        destination: "/electric-motor-repair-near-me",
+        permanent: true,
+      },
+      {
+        source: "/electric-motor-reapir-near-me/:path*",
+        destination: "/electric-motor-repair-near-me/:path*",
+        permanent: true,
+      },
       { source: "/emergency-motor-repair", destination: "/emergency-motor-repair-what-to-do", permanent: true },
       { source: "/dashboard/quotes", destination: "/dashboard/rfq", permanent: true },
       { source: "/dashboard/quotes/:path*", destination: "/dashboard/rfq/:path*", permanent: true },

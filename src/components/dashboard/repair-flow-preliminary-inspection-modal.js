@@ -1,67 +1,30 @@
 "use client";
 
-import Button from "@/components/ui/button";
-import Modal from "@/components/ui/modal";
-import Select from "@/components/ui/select";
-import { Form } from "@/components/ui/form-layout";
-import RepairFlowPreliminaryFieldsGrid from "@/components/dashboard/repair-flow-preliminary-fields";
+import MotorInspectionModal from "@/components/dashboard/motor-inspection-modal";
 
 /**
- * Same pre-inspection entry as the intake job page: full-width modal, component select, preliminary fields grid, header actions.
+ * Pre-inspection modal — unified motor inspection fields (legacy prop names kept for callers).
  */
 export default function RepairFlowPreliminaryInspectionModal({
   open,
   onClose,
   formId = "prelim-insp-form",
   saving = false,
-  componentOptions = [],
-  inspComponent,
-  onInspComponentChange,
   prelimFindings,
   onPrelimFieldChange,
   onSubmit,
+  title = "Add pre-inspection",
 }) {
-  function handleClose() {
-    if (saving) return;
-    onClose();
-  }
-
   return (
-    <Modal
+    <MotorInspectionModal
       open={open}
-      onClose={handleClose}
-      title="Add pre-inspection"
-      width="min(1100px, 96vw)"
-      showClose={!saving}
-      actions={
-        <>
-          <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
-          <Button type="submit" form={formId} variant="primary" size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </>
-      }
-    >
-      <Form id={formId} onSubmit={onSubmit} className="space-y-4">
-        <div className="min-w-0 max-w-[33.6rem]">
-          <Select
-            label="Component"
-            options={componentOptions}
-            value={inspComponent}
-            onChange={(e) => onInspComponentChange(e.target.value ?? "")}
-            searchable={false}
-            disabled={saving}
-          />
-        </div>
-        <RepairFlowPreliminaryFieldsGrid
-          component={inspComponent}
-          values={prelimFindings}
-          onFieldChange={onPrelimFieldChange}
-          disabled={saving}
-        />
-      </Form>
-    </Modal>
+      onClose={onClose}
+      title={title}
+      formId={formId}
+      saving={saving}
+      values={prelimFindings}
+      onFieldChange={onPrelimFieldChange}
+      onSubmit={onSubmit}
+    />
   );
 }

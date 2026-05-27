@@ -13,6 +13,25 @@ Notifications.setNotificationHandler({
   }),
 });
 
+function navigateToPreInspectionIfPossible(quoteId) {
+  const id = quoteId ? String(quoteId).trim() : "";
+  if (!id) return;
+  const go = () => {
+    if (navigationRef.isReady()) {
+      navigationRef.navigate("MainTabs", {
+        screen: "Jobs",
+        params: {
+          screen: "PreInspectionDetail",
+          params: { quoteId: id },
+        },
+      });
+    }
+  };
+  go();
+  requestAnimationFrame(go);
+  setTimeout(go, 400);
+}
+
 function navigateToWorkOrderIfPossible(workOrderId) {
   const id = workOrderId ? String(workOrderId).trim() : "";
   if (!id) return;
@@ -88,6 +107,10 @@ export async function registerExpoPushForTechnician(authToken) {
  */
 export function openWorkOrderFromNotificationResponse(response) {
   const data = response?.notification?.request?.content?.data;
+  if (data?.type === "pre_inspection_assigned" && data.quoteId) {
+    navigateToPreInspectionIfPossible(data.quoteId);
+    return;
+  }
   if (data?.type === "work_order_assigned" && data.workOrderId) {
     navigateToWorkOrderIfPossible(data.workOrderId);
   }

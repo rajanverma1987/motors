@@ -7,7 +7,6 @@ import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
 import Modal from "@/components/ui/modal";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -19,7 +18,18 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import PoPrintPreview from "@/components/dashboard/po-print-preview";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+import VendorQuickViewModal from "@/components/dashboard/vendor-quick-view-modal";
+import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
+import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[id]/repair-flow-job-detail-client";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+
+const PO_RECORD_LINK_CLASS =
+  "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 import { sumPoLineItemsTaxInclusive, poLineTaxAmount, poLineTotalWithTax, parsePoLineTaxPercent, sumPoLineExtendedPreTax, sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
+import { formatDateMdy } from "@/lib/format-date";
+import { poAmountDueForPayment, sumVendorInvoiced } from "@/lib/po-payable";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "30%" },
@@ -143,7 +153,7 @@ async function fetchAllPaginatedItems(basePath) {
   const pageSize = 100;
   let page = 1;
   const all = [];
-  for (;;) {
+  for (; ;) {
     const sep = basePath.includes("?") ? "&" : "?";
     const res = await fetch(`${basePath}${sep}page=${page}&pageSize=${pageSize}`, {
       credentials: "include",
@@ -159,6 +169,160 @@ async function fetchAllPaginatedItems(basePath) {
     if (page > 500) break;
   }
   return all;
+}
+
+const poViewPanel = "overflow-hidden rounded-lg border border-border bg-card";
+const poViewSectionTitle = "text-[10px] font-semibold uppercase tracking-wide text-secondary";
+
+function PoViewMetaField({ label, children, className = "", prominent = false }) {
+  return (
+    <div className={`min-w-0 ${className}`.trim()}>
+      <dt
+        className={
+          prominent
+            ? "text-xs font-semibold uppercase tracking-wide text-secondary"
+            : poViewSectionTitle
+        }
+      >
+        {label}
+      </dt>
+      <dd
+        className={
+          prominent
+            ? "mt-1 text-lg font-semibold leading-snug text-title sm:text-xl"
+            : "mt-0.5 text-sm font-medium text-title"
+        }
+      >
+        {children}
+      </dd>
+    </div>
+  );
+}
+
+function PoViewAmountCard({ label, amount, fmt, emphasis = false }) {
+  return (
+    <div
+      className={`rounded-lg border border-border px-3 py-2 ${emphasis ? "bg-primary/5 ring-1 ring-primary/15" : "bg-muted/20"
+        }`}
+    >
+      <p className="text-sm font-bold uppercase tracking-wide text-title">{label}</p>
+      <p
+        className={`mt-0.5 text-right tabular-nums ${emphasis ? "text-lg font-bold text-title" : "text-base font-semibold text-title"
+          }`}
+      >
+        {fmt(amount)}
+      </p>
+    </div>
+  );
+}
+
+function lineItemStatusMeta(row) {
+  const itemStatus =
+    row?.status === "Received"
+      ? "Received"
+      : row?.status === "Back Order"
+        ? "Back Order"
+        : row?.status === "Delivered" || row?.status === "Dispatch"
+          ? "Dispatch"
+          : "Ordered";
+  const itemBadgeVariant =
+    itemStatus === "Received"
+      ? "success"
+      : itemStatus === "Back Order"
+        ? "warning"
+        : itemStatus === "Dispatch"
+          ? "primary"
+          : "default";
+  return { itemStatus, itemBadgeVariant };
+}
+
+function PoViewLineItemsTable({ lineItems, fmt }) {
+  const rows = Array.isArray(lineItems) ? lineItems : [];
+  const orderSubtotal = sumPoLineExtendedPreTax(rows);
+  const totalTax = sumPoLineTaxAmount(rows);
+  const grandTotal = sumPoLineItemsTaxInclusive(rows);
+  const thClass =
+    "px-3 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-title";
+
+  if (!rows.length) {
+    return <p className="px-4 py-6 text-center text-sm text-secondary">No line items.</p>;
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[720px] text-sm">
+        <thead className="border-b border-border bg-muted/30">
+          <tr>
+            <th className={`${thClass} min-w-[12rem]`}>Description</th>
+            <th className={`${thClass} text-right`}>Qty</th>
+            <th className={thClass}>UOM</th>
+            <th className={`${thClass} text-right`}>Unit price</th>
+            <th className={`${thClass} text-right`}>Tax %</th>
+            <th className={`${thClass} text-right`}>Tax</th>
+            <th className={`${thClass} text-right`}>Total</th>
+            <th className={thClass}>Status</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border">
+          {rows.map((row, i) => {
+            const taxAmt = poLineTaxAmount(row);
+            const lineTot = poLineTotalWithTax(row);
+            const taxPct = parsePoLineTaxPercent(row?.taxPercent);
+            const total =
+              lineTot != null && Number.isFinite(lineTot) ? lineTot.toFixed(2) : "—";
+            const { itemStatus, itemBadgeVariant } = lineItemStatusMeta(row);
+            return (
+              <tr key={i} className="bg-card hover:bg-muted/15">
+                <td className="px-3 py-2.5 font-medium text-title">{row?.description || "—"}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-title">{row?.qty ?? "—"}</td>
+                <td className="px-3 py-2.5 text-title">{row?.uom || "—"}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-title">
+                  {row?.unitPrice ? fmt(row.unitPrice) : "—"}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-secondary">{`${taxPct || 0}%`}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums text-title">
+                  {taxAmt != null && Number.isFinite(taxAmt) ? fmt(taxAmt) : "—"}
+                </td>
+                <td className="px-3 py-2.5 text-right font-medium tabular-nums text-title">
+                  {total !== "—" ? fmt(parseFloat(total)) : "—"}
+                </td>
+                <td className="px-3 py-2.5">
+                  <Badge variant={itemBadgeVariant} className="rounded-full px-2.5 py-0.5 text-xs">
+                    {itemStatus}
+                  </Badge>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+        <tfoot className="border-t-2 border-border bg-muted/25">
+          <tr>
+            <td colSpan={6} className="px-3 py-2 text-right text-secondary">
+              Order total
+            </td>
+            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(orderSubtotal)}</td>
+            <td />
+          </tr>
+          <tr>
+            <td colSpan={6} className="px-3 py-2 text-right text-secondary">
+              Total tax
+            </td>
+            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
+            <td />
+          </tr>
+          <tr className="bg-muted/40">
+            <td colSpan={6} className="px-3 py-2.5 text-right font-semibold text-title">
+              Grand total
+            </td>
+            <td className="px-3 py-2.5 text-right text-base font-bold tabular-nums text-title">
+              {fmt(grandTotal)}
+            </td>
+            <td />
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
 }
 
 function PoLineItemsTotalsTable({ lines, fmt }) {
@@ -188,6 +352,125 @@ function PoLineItemsTotalsTable({ lines, fmt }) {
   );
 }
 
+function PoViewDetailBody({
+  viewingPo,
+  vendorName,
+  onOpenVendor,
+  jobLabel,
+  onOpenJobLink,
+  fmt,
+  accountSettings,
+}) {
+  const poStatusVariant = STATUS_VARIANT[viewingPo.status] || "default";
+
+  return (
+    <div className="space-y-4">
+      <div className={`${poViewPanel} p-4 sm:p-5`}>
+        <header className="min-w-0">
+          <p className={poViewSectionTitle}>Vendor</p>
+          {String(viewingPo?.vendorId || "").trim() && vendorName && vendorName !== "—" ? (
+            <button
+              type="button"
+              className="mt-0.5 block text-left text-2xl font-bold leading-tight tracking-tight text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded sm:text-[1.65rem]"
+              onClick={() => onOpenVendor?.(viewingPo.vendorId)}
+              title="Open vendor"
+            >
+              {vendorName}
+            </button>
+          ) : (
+            <h2 className="mt-0.5 text-2xl font-bold leading-tight tracking-tight text-title sm:text-[1.65rem]">
+              {vendorName}
+            </h2>
+          )}
+          <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <PoViewMetaField label="PO #" prominent>
+              <span className="font-mono text-xl font-bold text-primary sm:text-2xl">
+                {viewingPo.poNumber || "—"}
+              </span>
+            </PoViewMetaField>
+            <PoViewMetaField label="PO date" prominent>
+              <span className="tabular-nums">{formatDateMdy(viewingPo.createdAt)}</span>
+            </PoViewMetaField>
+            <PoViewMetaField label="Type" prominent>
+              <Badge variant="default" className="rounded-full px-3 py-1 text-sm font-semibold">
+                {viewingPo.type === "job" ? "Job PO" : "Shop PO"}
+              </Badge>
+            </PoViewMetaField>
+            {viewingPo.type === "job" ? (
+              <PoViewMetaField label="Job #" prominent>
+                {jobLabel && jobLabel !== "—" &&
+                  (String(viewingPo.repairFlowJobId || "").trim() || String(viewingPo.quoteId || "").trim()) ? (
+                  <button
+                    type="button"
+                    className={`font-mono tabular-nums ${PO_RECORD_LINK_CLASS}`}
+                    onClick={() => onOpenJobLink?.(viewingPo)}
+                    title="Open job or RFQ"
+                  >
+                    {jobLabel}
+                  </button>
+                ) : (
+                  <span className="font-mono tabular-nums">{jobLabel}</span>
+                )}
+              </PoViewMetaField>
+            ) : null}
+            <PoViewMetaField label="PO status" prominent>
+              <Badge variant={poStatusVariant} className="rounded-full px-3 py-1 text-sm font-semibold">
+                {viewingPo.status ?? "Open"}
+              </Badge>
+            </PoViewMetaField>
+            <PoViewMetaField label="Delivered" prominent>
+              <Badge
+                variant={DELIVERY_STATUS_VARIANT[viewingPo.deliveryStatus] || "default"}
+                className="rounded-full px-3 py-1 text-sm font-semibold"
+              >
+                {viewingPo.deliveryStatus ?? "—"}
+              </Badge>
+            </PoViewMetaField>
+            <PoViewMetaField label="Invoiced" prominent>
+              <Badge
+                variant={INVOICED_STATUS_VARIANT[viewingPo.invoicedStatus] || "default"}
+                className="rounded-full px-3 py-1 text-sm font-semibold"
+              >
+                {viewingPo.invoicedStatus ?? "—"}
+              </Badge>
+            </PoViewMetaField>
+            <PoViewMetaField label="Paid" prominent>
+              <Badge
+                variant={PAID_STATUS_VARIANT[viewingPo.paidStatus] || "default"}
+                className="rounded-full px-3 py-1 text-sm font-semibold"
+              >
+                {viewingPo.paidStatus ?? "—"}
+              </Badge>
+            </PoViewMetaField>
+          </dl>
+        </header>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:max-w-md sm:gap-3">
+        <PoViewAmountCard label="Vendor invoiced" amount={viewingPo.totalInvoiced || 0} fmt={fmt} />
+        <PoViewAmountCard label="Paid" amount={viewingPo.totalPaid || 0} fmt={fmt} emphasis />
+      </div>
+
+      {(accountSettings?.accountsBillingAddress || accountSettings?.accountsShippingAddress) && (
+        <div className={`${poViewPanel} p-4 sm:p-5`}>
+          <h3 className={`mb-3 ${poViewSectionTitle}`}>Your billing &amp; ship-to (shown to vendor)</h3>
+          <PoVendorAccountsSection
+            billingAddress={accountSettings?.accountsBillingAddress}
+            shippingAddress={accountSettings?.accountsShippingAddress}
+          />
+        </div>
+      )}
+
+      <div className={poViewPanel}>
+        <div className="border-b border-border px-4 py-3 sm:px-5">
+          <h3 className="text-sm font-bold text-title">Line items</h3>
+        </div>
+        <PoViewLineItemsTable lineItems={viewingPo.lineItems} fmt={fmt} />
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPurchaseOrdersPage() {
   const toast = useToast();
   const router = useRouter();
@@ -202,6 +485,17 @@ export default function DashboardPurchaseOrdersPage() {
   const [repairJobs, setRepairJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [poTypeFilter, setPoTypeFilter] = useState("");
+  const [summaryByType, setSummaryByType] = useState({
+    all: { count: 0, amount: 0 },
+    shop: { count: 0, amount: 0 },
+    job: { count: 0, amount: 0 },
+  });
+  const [openVendorId, setOpenVendorId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [openQuoteId, setOpenQuoteId] = useState(null);
+  const [linkedJobId, setLinkedJobId] = useState(null);
+  const [linkedJobHeader, setLinkedJobHeader] = useState(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -224,12 +518,14 @@ export default function DashboardPurchaseOrdersPage() {
     attachmentUrl: "",
     attachmentName: "",
   });
+  const [editingVendorInvoiceIndex, setEditingVendorInvoiceIndex] = useState(null);
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [uploadingInvoiceFile, setUploadingInvoiceFile] = useState(false);
   const invoiceFileInputRef = useRef(null);
 
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: "", date: "", method: "", reference: "" });
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState(null);
   const [savingPayment, setSavingPayment] = useState(false);
 
   const [addVendorModalOpen, setAddVendorModalOpen] = useState(false);
@@ -343,6 +639,7 @@ export default function DashboardPurchaseOrdersPage() {
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      if (poTypeFilter === "shop" || poTypeFilter === "job") params.set("type", poTypeFilter);
       if (tableSort?.key) {
         params.set("sortBy", tableSort.key);
         params.set("sortDir", tableSort.direction || "asc");
@@ -352,14 +649,59 @@ export default function DashboardPurchaseOrdersPage() {
       if (!res.ok) throw new Error(data.error || "Failed to load purchase orders");
       setPos(Array.isArray(data?.items) ? data.items : []);
       setTotalCount(Number(data?.totalCount) || 0);
+      const summary = data?.summaryByType;
+      if (summary && typeof summary === "object") {
+        setSummaryByType({
+          all: {
+            count: Number(summary.all?.count) || 0,
+            amount: Number(summary.all?.amount) || 0,
+          },
+          shop: {
+            count: Number(summary.shop?.count) || 0,
+            amount: Number(summary.shop?.amount) || 0,
+          },
+          job: {
+            count: Number(summary.job?.count) || 0,
+            amount: Number(summary.job?.amount) || 0,
+          },
+        });
+      }
     } catch (e) {
       toast.error(e.message || "Failed to load purchase orders");
       setPos([]);
       setTotalCount(0);
+      setSummaryByType({ all: { count: 0, amount: 0 }, shop: { count: 0, amount: 0 }, job: { count: 0, amount: 0 } });
     } finally {
       setLoading(false);
     }
-  }, [toast, page, pageSize, searchQuery, tableSort]);
+  }, [toast, page, pageSize, searchQuery, poTypeFilter, tableSort]);
+
+  const poTypeSummaryCards = useMemo(() => {
+    const tileFor = (index) => resolveStatusTileProps("", index);
+    return [
+      {
+        key: "",
+        label: "All",
+        count: summaryByType.all?.count ?? 0,
+        amount: summaryByType.all?.amount ?? 0,
+        tileAppearance: tileFor(0),
+      },
+      {
+        key: "shop",
+        label: "Shop PO",
+        count: summaryByType.shop?.count ?? 0,
+        amount: summaryByType.shop?.amount ?? 0,
+        tileAppearance: tileFor(1),
+      },
+      {
+        key: "job",
+        label: "Job PO",
+        count: summaryByType.job?.count ?? 0,
+        amount: summaryByType.job?.amount ?? 0,
+        tileAppearance: tileFor(2),
+      },
+    ];
+  }, [summaryByType]);
 
   const loadVendors = useCallback(async () => {
     try {
@@ -569,7 +911,17 @@ export default function DashboardPurchaseOrdersPage() {
       setViewingPo(null);
       setViewLoadingPoId(null);
       setAttachInvoiceOpen(false);
+      setEditingVendorInvoiceIndex(null);
+      setInvoiceForm({
+        invoiceNumber: "",
+        date: "",
+        amount: "",
+        attachmentUrl: "",
+        attachmentName: "",
+      });
       setRecordPaymentOpen(false);
+      setEditingPaymentIndex(null);
+      setPaymentForm({ amount: "", date: "", method: "", reference: "" });
     });
   };
 
@@ -677,7 +1029,7 @@ export default function DashboardPurchaseOrdersPage() {
       try {
         const res = await fetch(`/api/dashboard/purchase-orders/${po.id}`, { credentials: "include" });
         if (res.ok) dataToUse = await res.json();
-      } catch {}
+      } catch { }
     }
     const normalizedType = String(dataToUse.type ?? "")
       .trim()
@@ -794,46 +1146,241 @@ export default function DashboardPurchaseOrdersPage() {
     }
   };
 
+  const todayString = () => {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  };
+
+  const balanceDueForPo = useCallback((po) => {
+    if (!po) return 0;
+    return poAmountDueForPayment(po);
+  }, []);
+
+  const defaultPaymentAmount = useCallback(
+    (po) => {
+      const bal = balanceDueForPo(po);
+      if (bal <= 0.009) return "";
+      return (Math.round(bal * 100) / 100).toFixed(2);
+    },
+    [balanceDueForPo]
+  );
+
+  const emptyPaymentForm = (dateDefault = "", amountDefault = "") => ({
+    amount: amountDefault,
+    date: dateDefault,
+    method: "",
+    reference: "",
+  });
+
+  const emptyInvoiceForm = (dateDefault = "") => ({
+    invoiceNumber: "",
+    date: dateDefault,
+    amount: "",
+    attachmentUrl: "",
+    attachmentName: "",
+  });
+
+  const closeAttachInvoiceModal = () => {
+    setAttachInvoiceOpen(false);
+    setEditingVendorInvoiceIndex(null);
+    setInvoiceForm(emptyInvoiceForm());
+    if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = "";
+  };
+
+  const openAttachInvoiceModal = () => {
+    setEditingVendorInvoiceIndex(null);
+    setInvoiceForm(emptyInvoiceForm(todayString()));
+    setAttachInvoiceOpen(true);
+  };
+
+  const persistPoVendorInvoices = async (vendorInvoices) => {
+    if (!viewingPo?.id) throw new Error("No purchase order");
+    const res = await fetch(`/api/dashboard/purchase-orders/${viewingPo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        vendorId: viewingPo.vendorId,
+        type: viewingPo.type,
+        quoteId: viewingPo.quoteId,
+        repairFlowJobId: viewingPo.repairFlowJobId ?? "",
+        lineItems: viewingPo.lineItems ?? [],
+        vendorInvoices,
+        payments: viewingPo.payments ?? [],
+        notes: viewingPo.notes,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to update vendor invoices");
+    setViewingPo(data.purchaseOrder);
+    loadPos();
+    return data.purchaseOrder;
+  };
+
+  const handleEditVendorInvoice = (index) => {
+    const inv = viewingPo?.vendorInvoices?.[index];
+    if (!inv) return;
+    setEditingVendorInvoiceIndex(index);
+    setInvoiceForm({
+      invoiceNumber: inv.invoiceNumber ?? "",
+      date: inv.date ?? "",
+      amount: inv.amount ?? "",
+      attachmentUrl: inv.attachmentUrl ?? "",
+      attachmentName: inv.attachmentName ?? "",
+    });
+    if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = "";
+  };
+
+  const handleDeleteVendorInvoice = async (index) => {
+    if (!viewingPo?.id) return;
+    const inv = viewingPo.vendorInvoices?.[index];
+    const ok = await confirm({
+      title: "Delete vendor invoice",
+      message: `Remove vendor invoice${inv?.invoiceNumber ? ` #${inv.invoiceNumber}` : ""}${inv?.amount ? ` (${fmt(inv.amount)})` : ""}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setSavingInvoice(true);
+    try {
+      const next = (viewingPo.vendorInvoices || []).filter((_, i) => i !== index);
+      await persistPoVendorInvoices(next);
+      if (editingVendorInvoiceIndex === index) {
+        setEditingVendorInvoiceIndex(null);
+        setInvoiceForm(emptyInvoiceForm(todayString()));
+        if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = "";
+      } else if (editingVendorInvoiceIndex != null && editingVendorInvoiceIndex > index) {
+        setEditingVendorInvoiceIndex(editingVendorInvoiceIndex - 1);
+      }
+      toast.success("Vendor invoice removed.");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete vendor invoice");
+    } finally {
+      setSavingInvoice(false);
+    }
+  };
+
   const handleAttachInvoice = async (e) => {
     e.preventDefault();
     if (!viewingPo?.id) return;
     setSavingInvoice(true);
     try {
-      const newInvoice = {
+      const entry = {
         invoiceNumber: invoiceForm.invoiceNumber,
         date: invoiceForm.date,
         amount: invoiceForm.amount,
         attachmentUrl: invoiceForm.attachmentUrl ?? "",
         attachmentName: invoiceForm.attachmentName ?? "",
       };
-      const newInvoices = [...(viewingPo.vendorInvoices || []), newInvoice];
-      const res = await fetch(`/api/dashboard/purchase-orders/${viewingPo.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          vendorId: viewingPo.vendorId,
-          type: viewingPo.type,
-          quoteId: viewingPo.quoteId,
-          repairFlowJobId: viewingPo.repairFlowJobId ?? "",
-          lineItems: viewingPo.lineItems ?? [],
-          vendorInvoices: newInvoices,
-          payments: viewingPo.payments ?? [],
-          notes: viewingPo.notes,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to attach invoice");
-      toast.success("Vendor invoice attached.");
-      setViewingPo(data.purchaseOrder);
-      setInvoiceForm({ invoiceNumber: "", date: "", amount: "", attachmentUrl: "", attachmentName: "" });
-      setAttachInvoiceOpen(false);
+      const current = [...(viewingPo.vendorInvoices || [])];
+      const isEdit = editingVendorInvoiceIndex != null && editingVendorInvoiceIndex >= 0;
+      const next = isEdit
+        ? current.map((inv, i) => (i === editingVendorInvoiceIndex ? entry : inv))
+        : [...current, entry];
+      await persistPoVendorInvoices(next);
+      toast.success(isEdit ? "Vendor invoice updated." : "Vendor invoice attached.");
+      setEditingVendorInvoiceIndex(null);
+      setInvoiceForm(emptyInvoiceForm(todayString()));
       if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = "";
-      loadPos();
+      if (!isEdit) closeAttachInvoiceModal();
     } catch (err) {
-      toast.error(err.message || "Failed to attach invoice");
+      toast.error(err.message || "Failed to save vendor invoice");
     } finally {
       setSavingInvoice(false);
+    }
+  };
+
+  const closeRecordPaymentModal = () => {
+    setRecordPaymentOpen(false);
+    setEditingPaymentIndex(null);
+    setPaymentForm(emptyPaymentForm());
+  };
+
+  const openRecordPaymentModal = async () => {
+    setEditingPaymentIndex(null);
+    const date = todayString();
+    setRecordPaymentOpen(true);
+    setPaymentForm(emptyPaymentForm(date, defaultPaymentAmount(viewingPo)));
+
+    if (!viewingPo?.id) return;
+    try {
+      const res = await fetch(`/api/dashboard/purchase-orders/${viewingPo.id}`, {
+        credentials: "include",
+        cache: "no-store",
+        headers: { Pragma: "no-cache", "Cache-Control": "no-cache" },
+      });
+      if (!res.ok) return;
+      const po = await res.json();
+      setViewingPo(po);
+      setPaymentForm(emptyPaymentForm(date, defaultPaymentAmount(po)));
+    } catch {
+      /* keep amount from current viewingPo */
+    }
+  };
+
+  const persistPoPayments = async (payments) => {
+    if (!viewingPo?.id) throw new Error("No purchase order");
+    const res = await fetch(`/api/dashboard/purchase-orders/${viewingPo.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        vendorId: viewingPo.vendorId,
+        type: viewingPo.type,
+        quoteId: viewingPo.quoteId,
+        repairFlowJobId: viewingPo.repairFlowJobId ?? "",
+        lineItems: viewingPo.lineItems ?? [],
+        vendorInvoices: viewingPo.vendorInvoices ?? [],
+        payments,
+        notes: viewingPo.notes,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to update payments");
+    setViewingPo(data.purchaseOrder);
+    loadPos();
+    return data.purchaseOrder;
+  };
+
+  const handleEditPayment = (index) => {
+    const pay = viewingPo?.payments?.[index];
+    if (!pay) return;
+    setEditingPaymentIndex(index);
+    setPaymentForm({
+      amount: pay.amount ?? "",
+      date: pay.date ?? "",
+      method: pay.method ?? "",
+      reference: pay.reference ?? "",
+    });
+  };
+
+  const handleDeletePayment = async (index) => {
+    if (!viewingPo?.id) return;
+    const pay = viewingPo.payments?.[index];
+    const ok = await confirm({
+      title: "Delete payment",
+      message: `Remove this payment${pay?.amount ? ` (${fmt(pay.amount)})` : ""}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setSavingPayment(true);
+    try {
+      const next = (viewingPo.payments || []).filter((_, i) => i !== index);
+      await persistPoPayments(next);
+      if (editingPaymentIndex === index) {
+        setEditingPaymentIndex(null);
+        setPaymentForm(emptyPaymentForm(todayString()));
+      } else if (editingPaymentIndex != null && editingPaymentIndex > index) {
+        setEditingPaymentIndex(editingPaymentIndex - 1);
+      }
+      toast.success("Payment removed.");
+    } catch (err) {
+      toast.error(err.message || "Failed to delete payment");
+    } finally {
+      setSavingPayment(false);
     }
   };
 
@@ -842,31 +1389,18 @@ export default function DashboardPurchaseOrdersPage() {
     if (!viewingPo?.id) return;
     setSavingPayment(true);
     try {
-      const newPayments = [...(viewingPo.payments || []), { ...paymentForm }];
-      const res = await fetch(`/api/dashboard/purchase-orders/${viewingPo.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          vendorId: viewingPo.vendorId,
-          type: viewingPo.type,
-          quoteId: viewingPo.quoteId,
-          repairFlowJobId: viewingPo.repairFlowJobId ?? "",
-          lineItems: viewingPo.lineItems ?? [],
-          vendorInvoices: viewingPo.vendorInvoices ?? [],
-          payments: newPayments,
-          notes: viewingPo.notes,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to record payment");
-      toast.success("Payment recorded.");
-      setViewingPo(data.purchaseOrder);
-      setPaymentForm({ amount: "", date: "", method: "", reference: "" });
-      setRecordPaymentOpen(false);
-      loadPos();
+      const current = [...(viewingPo.payments || [])];
+      const entry = { ...paymentForm };
+      const isEdit = editingPaymentIndex != null && editingPaymentIndex >= 0;
+      const next = isEdit
+        ? current.map((p, i) => (i === editingPaymentIndex ? entry : p))
+        : [...current, entry];
+      const updated = await persistPoPayments(next);
+      toast.success(isEdit ? "Payment updated." : "Payment recorded.");
+      setEditingPaymentIndex(null);
+      setPaymentForm(emptyPaymentForm(todayString(), defaultPaymentAmount(updated)));
     } catch (err) {
-      toast.error(err.message || "Failed to record payment");
+      toast.error(err.message || "Failed to save payment");
     } finally {
       setSavingPayment(false);
     }
@@ -877,62 +1411,49 @@ export default function DashboardPurchaseOrdersPage() {
     setTableSort({ key, direction });
   }, []);
 
+  const openPoJobLink = useCallback((row) => {
+    const jobId = String(row?.repairFlowJobId || "").trim();
+    const quoteId = String(row?.quoteId || "").trim();
+    if (jobId) {
+      setLinkedJobHeader(null);
+      setLinkedJobId(jobId);
+      return;
+    }
+    if (quoteId) setOpenQuoteId(quoteId);
+  }, []);
+
+  const closeLinkedJobModal = useCallback(() => {
+    setLinkedJobId(null);
+    setLinkedJobHeader(null);
+  }, []);
+
   const columns = useMemo(
     () => [
       {
         key: "actions",
         label: "",
+        width: 72,
+        minWidth: 72,
+        maxWidth: 80,
         render: (_, row) => (
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => openDocsPoModal(row)}
-              disabled={!(Number(row.attachmentCount) > 0)}
-              className="rounded p-1.5 text-secondary hover:bg-card hover:text-title focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-30"
-              aria-label="View documents"
-              title={row.attachmentCount ? "View documents" : "No documents"}
+              onClick={() => openEditModal(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Edit purchase order"
+              title="Edit"
             >
-              <FiPaperclip className="h-4 w-4 shrink-0" />
+              <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
             </button>
             <button
               type="button"
               onClick={() => handleDeletePo(row)}
               className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
-              aria-label="Delete"
+              aria-label="Delete purchase order"
               title="Delete"
             >
-              <FiTrash2 className="h-4 w-4 shrink-0" />
-            </button>
-            <button
-              type="button"
-              onClick={() => openEditModal(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Edit"
-            >
-              <FiEdit2 className="h-4 w-4 shrink-0" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setPrintPoId(row.id)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Print"
-              title="Print"
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSendToVendor(row)}
-              disabled={sendingVendor}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
-              aria-label="Send to vendor"
-              title="Send to vendor"
-            >
-              {sendingVendorId === row.id ? (
-                <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-              ) : (
-                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-              )}
+              <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
             </button>
           </div>
         ),
@@ -941,21 +1462,47 @@ export default function DashboardPurchaseOrdersPage() {
         key: "poNumber",
         label: "PO #",
         sortable: true,
-        render: (_, row) => row.poNumber || "—",
+        render: (_, row) =>
+          row?.id ? (
+            <button
+              type="button"
+              onClick={() => openViewModal(row)}
+              className={PO_RECORD_LINK_CLASS}
+            >
+              {row.poNumber || "—"}
+            </button>
+          ) : (
+            row.poNumber || "—"
+          ),
+      },
+      {
+        key: "createdAt",
+        label: "PO Date",
+        sortable: true,
+        render: (_, row) => formatDateMdy(row.createdAt),
       },
       {
         key: "vendor",
         label: "Vendor",
         sortable: true,
-        render: (_, row) => (
-          <button
-            type="button"
-            onClick={() => openViewModal(row)}
-            className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
-          >
-            {vendorNameMap[row.vendorId] || row.vendorId || "—"}
-          </button>
-        ),
+        render: (_, row) => {
+          const vendorId = String(row.vendorId || "").trim();
+          const name = row.vendorName || vendorNameMap[vendorId] || vendorId || "—";
+          if (!vendorId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className={PO_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenVendorId(vendorId);
+              }}
+              title="Open vendor"
+            >
+              {name}
+            </button>
+          );
+        },
       },
       {
         key: "type",
@@ -977,12 +1524,50 @@ export default function DashboardPurchaseOrdersPage() {
         key: "rfqNumber",
         label: "Job #",
         sortable: true,
-        render: (_, row) => (row.type === "job" ? (row.rfqNumber || "—") : "—"),
+        render: (_, row) => {
+          if (row.type !== "job") return "—";
+          const label = row.rfqNumber || "—";
+          if (label === "—") return "—";
+          const jobId = String(row.repairFlowJobId || "").trim();
+          const quoteId = String(row.quoteId || "").trim();
+          if (!jobId && !quoteId) return label;
+          return (
+            <button
+              type="button"
+              className={PO_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                openPoJobLink(row);
+              }}
+              title={jobId ? "Open repair job" : "Open RFQ"}
+            >
+              {label}
+            </button>
+          );
+        },
       },
       {
         key: "customerName",
         label: "Customer",
-        render: (_, row) => (row.type === "job" ? (row.customerName || "—") : "—"),
+        render: (_, row) => {
+          if (row.type !== "job") return "—";
+          const name = row.customerName || "—";
+          const customerId = String(row.customerId || "").trim();
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className={PO_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
       },
       {
         key: "deliveryStatus",
@@ -990,7 +1575,7 @@ export default function DashboardPurchaseOrdersPage() {
         sortable: true,
         render: (_, row) => (
           <Badge variant={DELIVERY_STATUS_VARIANT[row.deliveryStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">
-            {row.deliveryStatus ?? "Partial"}
+            {row.deliveryStatus ?? "—"}
           </Badge>
         ),
       },
@@ -1018,30 +1603,32 @@ export default function DashboardPurchaseOrdersPage() {
         key: "totalOrder",
         label: "Order total",
         sortable: true,
-        render: (_, row) => (row.totalOrder ? fmt(row.totalOrder) : "—"),
+        align: "right",
+        render: (_, row) => (
+          <span className="tabular-nums">{row.totalOrder ? fmt(row.totalOrder) : "—"}</span>
+        ),
       },
       {
         key: "totalInvoiced",
         label: "Vendor invoiced",
         sortable: true,
-        render: (_, row) => (row.totalInvoiced ? fmt(row.totalInvoiced) : "—"),
+        align: "right",
+        render: (_, row) => (
+          <span className="tabular-nums">{row.totalInvoiced ? fmt(row.totalInvoiced) : "—"}</span>
+        ),
       },
       {
         key: "totalPaid",
         label: "Paid",
         sortable: true,
-        render: (_, row) => (row.totalPaid ? fmt(row.totalPaid) : "—"),
+        align: "right",
+        render: (_, row) => (
+          <span className="tabular-nums">{row.totalPaid ? fmt(row.totalPaid) : "—"}</span>
+        ),
       },
     ],
-    [vendorNameMap, sendingVendorId, fmt, handleDeletePo, openDocsPoModal]
+    [vendorNameMap, fmt, handleDeletePo, openEditModal, openViewModal, openPoJobLink]
   );
-
-  const todayString = () => {
-    const d = new Date();
-    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  };
-
-  const PO_MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -1057,13 +1644,35 @@ export default function DashboardPurchaseOrdersPage() {
         </p>
       </div>
 
-      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="mt-4 flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
+          {poTypeSummaryCards.map((card) => (
+            <StatusFilterPillButton
+              key={card.key || "__all__"}
+              card={card}
+              active={(poTypeFilter || "") === (card.key || "")}
+              onClick={() => {
+                setPage(1);
+                setPoTypeFilter(card.key || "");
+              }}
+              formatAmount={fmt}
+            />
+          ))}
+        </div>
         <Table
           columns={columns}
           data={pos}
           rowKey="id"
           loading={loading}
-          emptyMessage={pos.length === 0 ? "No purchase orders yet. Use “Create Purchase Order” to add one." : "No purchase orders match the search."}
+          emptyMessage={
+            poTypeFilter === "shop"
+              ? "No shop purchase orders match your filters."
+              : poTypeFilter === "job"
+                ? "No job purchase orders match your filters."
+                : pos.length === 0
+                  ? "No purchase orders yet. Use “Create Purchase Order” to add one."
+                  : "No purchase orders match the search."
+          }
           searchable
           onSearch={(q) => {
             setPage(1);
@@ -1091,22 +1700,16 @@ export default function DashboardPurchaseOrdersPage() {
         size="4xl"
         actions={
           <>
-            <ModalActionsDropdown
-              items={[
-                {
-                  key: "send",
-                  label: "Send To Vendor",
-                  disabled: true,
-                  title: "Save the PO first to send to vendor",
-                },
-                {
-                  key: "vendor",
-                  label: "Add New Vendor",
-                  icon: <FiPlus className={PO_MENU_IC} />,
-                  onClick: openAddVendorModal,
-                },
-              ]}
-            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex shrink-0 items-center gap-1.5"
+              onClick={openAddVendorModal}
+            >
+              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+              Add vendor
+            </Button>
             <Button type="submit" form="create-po-form" variant="primary" size="sm" disabled={savingPo}>
               {savingPo ? "Saving…" : "Save"}
             </Button>
@@ -1156,12 +1759,13 @@ export default function DashboardPurchaseOrdersPage() {
             </div>
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Line items</h3>
+            <h3 className="mb-2 text-base font-bold text-title">Line items</h3>
             <DataTable
               columns={PO_LINE_COLUMNS}
               data={form.lineItems}
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
+              headerClassName="px-3 py-2.5 text-left text-sm font-semibold text-title"
             />
             <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
           </div>
@@ -1304,202 +1908,155 @@ export default function DashboardPurchaseOrdersPage() {
         onClose={closeViewModal}
         title={viewingPo?.poNumber ? `Purchase order ${viewingPo.poNumber}` : "Purchase order"}
         size="4xl"
+        headerClassName="flex-wrap items-center gap-2"
         actions={
-          <ModalActionsDropdown
-            items={[
-              {
-                key: "attachInv",
-                label: "Attach Vendor Invoice",
-                onClick: () => {
-                  setInvoiceForm((f) => ({ ...f, date: todayString() }));
-                  setAttachInvoiceOpen(true);
-                },
-              },
-              {
-                key: "pay",
-                label: "Record Payment",
-                onClick: () => {
-                  setPaymentForm((f) => ({ ...f, date: todayString() }));
-                  setRecordPaymentOpen(true);
-                },
-              },
-              {
-                key: "send",
-                label: sendingVendor ? "Sending…" : "Send To Vendor",
-                icon: sendingVendor ? (
-                  <FiRotateCw className={`${PO_MENU_IC} animate-spin`} aria-hidden />
+          viewingPo?.id && !viewLoadingPoId ? (
+            <div className="flex max-w-full flex-wrap items-center justify-end gap-2">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+                onClick={openRecordPaymentModal}
+              >
+                Record payment
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+                onClick={openAttachInvoiceModal}
+              >
+                Attach vendor invoice
+              </Button>
+              <span className="hidden h-6 w-px shrink-0 bg-border sm:block" aria-hidden />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="inline-flex shrink-0 items-center gap-1.5"
+                onClick={() => openDocsPoModal(viewingPo)}
+              >
+                <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
+                Documents
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="inline-flex shrink-0 items-center gap-1.5"
+                onClick={() => setPrintPoId(viewingPo.id)}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={sendingVendor}
+                className="inline-flex shrink-0 items-center gap-1.5"
+                onClick={() => handleSendToVendor(viewingPo)}
+              >
+                {sendingVendor && sendingVendorId === viewingPo.id ? (
+                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
                 ) : (
-                  <FiSend className={PO_MENU_IC} />
-                ),
-                disabled: !viewingPo?.id || sendingVendor,
-                onClick: () => handleSendToVendor(viewingPo),
-              },
-              { key: "d1", type: "divider" },
-              {
-                key: "edit",
-                label: "Edit",
-                icon: <FiEdit2 className={PO_MENU_IC} />,
-                onClick: () => {
-                  closeViewModal();
-                  openEditModal(viewingPo);
-                },
-              },
-            ]}
-          />
+                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                {sendingVendor && sendingVendorId === viewingPo.id ? "Sending…" : "Send"}
+              </Button>
+            </div>
+          ) : null
         }
       >
         {viewLoadingPoId ? (
-          <div className="flex justify-center py-12">
-            <span className="text-secondary">Loading…</span>
+          <div className="flex flex-col items-center justify-center gap-3 py-16">
+            <span
+              className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary"
+              aria-hidden
+            />
+            <span className="text-sm text-secondary">Loading purchase order…</span>
           </div>
         ) : viewingPo ? (
-          <div className="space-y-6">
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Vendor & type</h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                {viewingPo.poNumber && (
-                  <div><dt className="text-secondary">PO #</dt><dd className="text-title font-medium">{viewingPo.poNumber}</dd></div>
-                )}
-                <div><dt className="text-secondary">Vendor</dt><dd className="text-title font-medium">{vendorNameMap[viewingPo.vendorId] || viewingPo.vendorId || "—"}</dd></div>
-                <div><dt className="text-secondary">Type</dt><dd className="text-title">{viewingPo.type === "job" ? "Job PO" : "Shop PO"}</dd></div>
-                {viewingPo.type === "job" && (
-                  <div>
-                    <dt className="text-secondary">Job #</dt>
-                    <dd className="text-title">
-                      {(() => {
-                        const jid = String(viewingPo.repairFlowJobId || "").trim();
-                        if (jid) {
-                          const j = repairJobs.find((x) => String(x.id) === jid);
-                          if (j?.jobNumber) return String(j.jobNumber).trim();
-                        }
-                        if (viewingPo.quoteId) {
-                          return quotes.find((q) => q.id === viewingPo.quoteId)?.rfqNumber || viewingPo.quoteId;
-                        }
-                        return "—";
-                      })()}
-                    </dd>
-                  </div>
-                )}
-                <div><dt className="text-secondary">Delivered</dt><dd><Badge variant={DELIVERY_STATUS_VARIANT[viewingPo.deliveryStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.deliveryStatus ?? "Partial"}</Badge></dd></div>
-                <div><dt className="text-secondary">Invoiced</dt><dd><Badge variant={INVOICED_STATUS_VARIANT[viewingPo.invoicedStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.invoicedStatus ?? "—"}</Badge></dd></div>
-                <div><dt className="text-secondary">Paid</dt><dd><Badge variant={PAID_STATUS_VARIANT[viewingPo.paidStatus] || "default"} className="rounded-full px-2.5 py-0.5 text-xs">{viewingPo.paidStatus ?? "—"}</Badge></dd></div>
-              </dl>
-            </div>
-            {(accountSettings?.accountsBillingAddress || accountSettings?.accountsShippingAddress) && (
-              <div className="rounded-lg border border-border bg-form-bg/50 p-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Your billing &amp; ship-to (shown to vendor)
-                </h3>
-                <PoVendorAccountsSection
-                  billingAddress={accountSettings?.accountsBillingAddress}
-                  shippingAddress={accountSettings?.accountsShippingAddress}
-                />
-              </div>
-            )}
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Line items</h3>
-              {Array.isArray(viewingPo.lineItems) && viewingPo.lineItems.length > 0 ? (
-                <div className="overflow-x-auto rounded border border-border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-card">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-secondary">Description</th>
-                        <th className="px-3 py-2 text-right text-secondary">Qty</th>
-                        <th className="px-3 py-2 text-left text-secondary">UOM</th>
-                        <th className="px-3 py-2 text-right text-secondary">Unit price</th>
-                        <th className="px-3 py-2 text-right text-secondary">Tax %</th>
-                        <th className="px-3 py-2 text-right text-secondary">Tax</th>
-                        <th className="px-3 py-2 text-right text-secondary">Total</th>
-                        <th className="px-3 py-2 text-left text-secondary">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {viewingPo.lineItems.map((row, i) => {
-                        const taxAmt = poLineTaxAmount(row);
-                        const lineTot = poLineTotalWithTax(row);
-                        const taxPct = parsePoLineTaxPercent(row?.taxPercent);
-                        const total =
-                          lineTot != null && Number.isFinite(lineTot) ? lineTot.toFixed(2) : "—";
-                        const itemStatus =
-                          row?.status === "Received"
-                            ? "Received"
-                            : row?.status === "Back Order"
-                              ? "Back Order"
-                              : row?.status === "Delivered" || row?.status === "Dispatch"
-                                ? "Dispatch"
-                                : "Ordered";
-                        const itemBadgeVariant =
-                          itemStatus === "Received"
-                            ? "success"
-                            : itemStatus === "Back Order"
-                              ? "warning"
-                              : itemStatus === "Dispatch"
-                                ? "primary"
-                                : "default";
-                        return (
-                          <tr key={i} className="border-t border-border">
-                            <td className="px-3 py-2 text-title">{row?.description || "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{row?.qty ?? "—"}</td>
-                            <td className="px-3 py-2 text-title">{row?.uom || "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{row?.unitPrice ? fmt(row.unitPrice) : "—"}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">{`${taxPct || 0}%`}</td>
-                            <td className="px-3 py-2 text-right tabular-nums">
-                              {taxAmt != null && Number.isFinite(taxAmt) ? fmt(taxAmt) : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-right tabular-nums">{total !== "—" ? fmt(parseFloat(total)) : "—"}</td>
-                            <td className="px-3 py-2">
-                              <Badge variant={itemBadgeVariant} className="rounded-full px-2 py-0.5 text-xs">
-                                {itemStatus}
-                              </Badge>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-sm text-secondary">No line items.</p>
-              )}
-              <PoLineItemsTotalsTable lines={viewingPo.lineItems} fmt={fmt} />
-            </div>
+          <>
+            <PoViewDetailBody
+              viewingPo={viewingPo}
+              vendorName={vendorNameMap[viewingPo.vendorId] || viewingPo.vendorId || "—"}
+              onOpenVendor={(vendorId) => setOpenVendorId(String(vendorId || "").trim() || null)}
+              onOpenJobLink={openPoJobLink}
+              jobLabel={(() => {
+                const jid = String(viewingPo.repairFlowJobId || "").trim();
+                if (jid) {
+                  const j = repairJobs.find((x) => String(x.id) === jid);
+                  if (j?.jobNumber) return String(j.jobNumber).trim();
+                }
+                if (viewingPo.quoteId) {
+                  return quotes.find((q) => q.id === viewingPo.quoteId)?.rfqNumber || viewingPo.quoteId;
+                }
+                return "—";
+              })()}
+              fmt={fmt}
+              accountSettings={accountSettings}
+            />
             {(Number(viewingPo.attachmentCount) > 0 ||
               (Array.isArray(viewingPo.attachments) && viewingPo.attachments.length > 0)) && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Documents</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    closeViewModal();
-                    openDocsPoModal(viewingPo);
-                  }}
-                >
-                  View {viewingPo.attachmentCount || viewingPo.attachments?.length || 0} document(s)
-                </Button>
+                <div className={`${poViewPanel} mt-4 flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5`}>
+                  <div>
+                    <h3 className="text-sm font-bold text-title">Documents</h3>
+                    <p className="mt-0.5 text-xs text-secondary">
+                      {viewingPo.attachmentCount || viewingPo.attachments?.length || 0} file(s) attached
+                    </p>
+                  </div>
+                  <Button type="button" variant="outline" size="sm" onClick={() => openDocsPoModal(viewingPo)}>
+                    <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
+                    View documents
+                  </Button>
+                </div>
+              )}
+            {(viewingPo.notes || "").trim() ? (
+              <div className={`${poViewPanel} mt-4 p-4 sm:p-5`}>
+                <h3 className={`mb-2 ${poViewSectionTitle}`}>Notes</h3>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-title">{viewingPo.notes}</p>
               </div>
-            )}
-            {(viewingPo.notes || "").trim() && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                <p className="whitespace-pre-wrap text-sm text-title">{viewingPo.notes}</p>
-              </div>
-            )}
-          </div>
+            ) : null}
+          </>
         ) : null}
       </Modal>
 
       {/* Attach Vendor Invoice modal */}
       <Modal
         open={attachInvoiceOpen}
-        onClose={() => setAttachInvoiceOpen(false)}
-        title="Attach vendor invoice"
+        onClose={closeAttachInvoiceModal}
+        title={editingVendorInvoiceIndex != null ? "Edit vendor invoice" : "Attach vendor invoice"}
         size="2xl"
         actions={
-          <Button type="submit" form="attach-invoice-form" variant="primary" size="sm" disabled={savingInvoice}>
-            {savingInvoice ? "Saving…" : "Attach"}
-          </Button>
+          <>
+            {editingVendorInvoiceIndex != null ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={savingInvoice || uploadingInvoiceFile}
+                onClick={() => {
+                  setEditingVendorInvoiceIndex(null);
+                  setInvoiceForm(emptyInvoiceForm(todayString()));
+                  if (invoiceFileInputRef.current) invoiceFileInputRef.current.value = "";
+                }}
+              >
+                Cancel edit
+              </Button>
+            ) : null}
+            <Button
+              type="submit"
+              form="attach-invoice-form"
+              variant="primary"
+              size="sm"
+              disabled={savingInvoice || uploadingInvoiceFile}
+            >
+              {savingInvoice ? "Saving…" : editingVendorInvoiceIndex != null ? "Update" : "Attach"}
+            </Button>
+          </>
         }
       >
         <Form id="attach-invoice-form" onSubmit={handleAttachInvoice} className="flex flex-col gap-4 !space-y-0">
@@ -1522,6 +2079,7 @@ export default function DashboardPurchaseOrdersPage() {
             value={invoiceForm.amount}
             onChange={(e) => setInvoiceForm((f) => ({ ...f, amount: e.target.value }))}
             placeholder="0.00"
+            inputClassName="text-right tabular-nums [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
           <div>
             <label className="mb-1 block text-sm font-medium text-title">Invoice file (optional)</label>
@@ -1556,6 +2114,9 @@ export default function DashboardPurchaseOrdersPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-card">
                       <tr>
+                        <th className="w-0 px-2 py-2 text-left text-secondary">
+                          <span className="sr-only">Actions</span>
+                        </th>
                         <th className="px-3 py-2 text-left text-secondary">Invoice #</th>
                         <th className="px-3 py-2 text-left text-secondary">Date</th>
                         <th className="px-3 py-2 text-right text-secondary">Amount</th>
@@ -1564,10 +2125,37 @@ export default function DashboardPurchaseOrdersPage() {
                     </thead>
                     <tbody>
                       {viewingPo.vendorInvoices.map((inv, i) => (
-                        <tr key={i} className="border-t border-border">
+                        <tr
+                          key={i}
+                          className={`border-t border-border ${editingVendorInvoiceIndex === i ? "bg-primary/5" : ""}`}
+                        >
+                          <td className="px-2 py-2">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={savingInvoice || uploadingInvoiceFile}
+                                onClick={() => handleEditVendorInvoice(i)}
+                                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                aria-label="Edit vendor invoice"
+                                title="Edit"
+                              >
+                                <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={savingInvoice || uploadingInvoiceFile}
+                                onClick={() => handleDeleteVendorInvoice(i)}
+                                className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+                                aria-label="Delete vendor invoice"
+                                title="Delete"
+                              >
+                                <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-title">{inv?.invoiceNumber || "—"}</td>
                           <td className="px-3 py-2 text-secondary">{inv?.date || "—"}</td>
-                          <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(inv?.amount || 0)}</td>
+                          <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(inv?.amount || 0)}</td>
                           <td className="px-3 py-2">
                             {inv?.attachmentUrl ? (
                               <a href={inv.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
@@ -1585,7 +2173,9 @@ export default function DashboardPurchaseOrdersPage() {
               ) : (
                 <p className="text-sm text-secondary">No vendor invoices attached yet.</p>
               )}
-              <p className="mt-1 text-sm text-secondary">Total invoiced: {fmt(viewingPo.totalInvoiced || 0)}</p>
+              <p className="mt-1 text-right text-sm tabular-nums text-secondary">
+                Total invoiced: {fmt(viewingPo.totalInvoiced || 0)}
+              </p>
             </div>
           )}
         </Form>
@@ -1594,13 +2184,29 @@ export default function DashboardPurchaseOrdersPage() {
       {/* Record Payment modal */}
       <Modal
         open={recordPaymentOpen}
-        onClose={() => setRecordPaymentOpen(false)}
-        title="Record payment"
+        onClose={closeRecordPaymentModal}
+        title={editingPaymentIndex != null ? "Edit payment" : "Record payment"}
         size="2xl"
         actions={
-          <Button type="submit" form="record-payment-form" variant="primary" size="sm" disabled={savingPayment}>
-            {savingPayment ? "Saving…" : "Record"}
-          </Button>
+          <>
+            {editingPaymentIndex != null ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={savingPayment}
+                onClick={() => {
+                  setEditingPaymentIndex(null);
+                  setPaymentForm(emptyPaymentForm(todayString(), defaultPaymentAmount(viewingPo)));
+                }}
+              >
+                Cancel edit
+              </Button>
+            ) : null}
+            <Button type="submit" form="record-payment-form" variant="primary" size="sm" disabled={savingPayment}>
+              {savingPayment ? "Saving…" : editingPaymentIndex != null ? "Update" : "Record"}
+            </Button>
+          </>
         }
       >
         <Form id="record-payment-form" onSubmit={handleRecordPayment} className="flex flex-col gap-4 !space-y-0">
@@ -1611,6 +2217,12 @@ export default function DashboardPurchaseOrdersPage() {
             value={paymentForm.amount}
             onChange={(e) => setPaymentForm((f) => ({ ...f, amount: e.target.value }))}
             placeholder="0.00"
+            help={
+              editingPaymentIndex == null && viewingPo
+                ? `Balance due: ${fmt(balanceDueForPo(viewingPo) || 0)}${sumVendorInvoiced(viewingPo) > 0 ? " (vendor invoices)" : " (PO total)"
+                }`
+                : undefined
+            }
           />
           <Input
             label="Date"
@@ -1638,6 +2250,9 @@ export default function DashboardPurchaseOrdersPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-card">
                       <tr>
+                        <th className="w-0 px-2 py-2 text-left text-secondary">
+                          <span className="sr-only">Actions</span>
+                        </th>
                         <th className="px-3 py-2 text-right text-secondary">Amount</th>
                         <th className="px-3 py-2 text-left text-secondary">Date</th>
                         <th className="px-3 py-2 text-left text-secondary">Method</th>
@@ -1646,7 +2261,34 @@ export default function DashboardPurchaseOrdersPage() {
                     </thead>
                     <tbody>
                       {viewingPo.payments.map((pay, i) => (
-                        <tr key={i} className="border-t border-border">
+                        <tr
+                          key={i}
+                          className={`border-t border-border ${editingPaymentIndex === i ? "bg-primary/5" : ""}`}
+                        >
+                          <td className="px-2 py-2">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={savingPayment}
+                                onClick={() => handleEditPayment(i)}
+                                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                aria-label="Edit payment"
+                                title="Edit"
+                              >
+                                <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={savingPayment}
+                                onClick={() => handleDeletePayment(i)}
+                                className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+                                aria-label="Delete payment"
+                                title="Delete"
+                              >
+                                <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(pay?.amount || 0)}</td>
                           <td className="px-3 py-2 text-secondary">{pay?.date || "—"}</td>
                           <td className="px-3 py-2 text-title">{pay?.method || "—"}</td>
@@ -1719,12 +2361,13 @@ export default function DashboardPurchaseOrdersPage() {
             </div>
           </div>
           <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Line items</h3>
+            <h3 className="mb-2 text-base font-bold text-title">Line items</h3>
             <DataTable
               columns={PO_LINE_COLUMNS}
               data={form.lineItems}
               onChange={(rows) => setForm((f) => ({ ...f, lineItems: rows }))}
               striped
+              headerClassName="px-3 py-2.5 text-left text-sm font-semibold text-title"
             />
             <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
           </div>
@@ -1744,7 +2387,7 @@ export default function DashboardPurchaseOrdersPage() {
             attachments={form.attachments}
             onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
             pendingFiles={[]}
-            onPendingFilesChange={() => {}}
+            onPendingFilesChange={() => { }}
             uploading={attachmentPoUploading}
             onPickFilesForUpload={handlePoFileUpload}
           />
@@ -1770,7 +2413,7 @@ export default function DashboardPurchaseOrdersPage() {
             attachments={docsPoAttachments}
             onAttachmentsChange={setDocsPoAttachments}
             pendingFiles={[]}
-            onPendingFilesChange={() => {}}
+            onPendingFilesChange={() => { }}
             uploading={docsPoSaving}
             hideUpload
             onRemoveSavedRow={handleDocsPoRemoveRow}
@@ -1779,6 +2422,56 @@ export default function DashboardPurchaseOrdersPage() {
       </Modal>
 
       <PoPrintPreview purchaseOrderId={printPoId} open={!!printPoId} onClose={() => setPrintPoId(null)} />
+
+      <VendorQuickViewModal
+        open={!!openVendorId}
+        vendorId={openVendorId}
+        onClose={() => setOpenVendorId(null)}
+        zIndex={120}
+      />
+
+      <CustomerQuickViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+      />
+
+      <QuoteQuickViewModal
+        open={!!openQuoteId}
+        quoteId={openQuoteId}
+        onClose={() => setOpenQuoteId(null)}
+        zIndex={120}
+      />
+
+      <Modal
+        open={!!linkedJobId}
+        onClose={closeLinkedJobModal}
+        title={
+          linkedJobHeader?.jobNumber
+            ? `${linkedJobHeader.jobNumber} · ${linkedJobHeader.customerLabel || "Customer"}`
+            : "Repair job"
+        }
+        width="min(1200px, 94vw)"
+        zIndex={115}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={closeLinkedJobModal}>
+            Close
+          </Button>
+        }
+      >
+        <div className="w-full min-w-0 max-w-none">
+          {linkedJobId ? (
+            <RepairFlowJobDetailClient
+              key={linkedJobId}
+              jobId={linkedJobId}
+              variant="modal"
+              onClose={closeLinkedJobModal}
+              onJobMeta={setLinkedJobHeader}
+            />
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }

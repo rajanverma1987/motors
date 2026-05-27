@@ -12,19 +12,20 @@ import {
   Platform,
   Alert,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { techFetch } from "../api";
-import { colors, spacing } from "../theme";
+import { colors, spacing, formFieldLabel } from "../theme";
 import {
-  inspectionComponentsForMotorClass,
-  preliminaryFieldDefs,
-  emptyPreliminaryFindings,
-  buildPreliminaryFindingsPayload,
+  MOTOR_INSPECTION_COMPONENT,
+  MOTOR_INSPECTION_FIELD_DEFS,
+  VISUAL_STATUS_OPTIONS,
+  PASS_FAIL_OPTIONS,
+  SURGE_FAILURE_CHECKBOXES,
+  emptyMotorInspectionFindings,
+  mergeMotorInspectionFindings,
+  buildMotorInspectionFindingsPayload,
   getPreliminaryViewEntries,
-  getDetailedViewEntries,
-  INITIAL_DETAILED_FINDINGS,
-  DETAILED_INSPECTION_FIELDS,
   componentLabel,
   inspectionSummaryRow,
   kindLabel,
@@ -117,10 +118,111 @@ function InspectionFormFields({ fields, values, onChange, onFieldFocus, disabled
   return <View>{elements}</View>;
 }
 
-function FormModal({ visible, title, onClose, onSave, saving, children }) {
+function PassFailRadios({ label, name, value, options, onChange, disabled }) {
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={styles.modalSafeArea} edges={["top", "bottom"]}>
+    <View style={styles.radioBlock}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.chipRow}>
+        {options.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <Pressable
+              key={opt.value}
+              style={[styles.chip, active && styles.chipActive, disabled && styles.chipDisabled]}
+              onPress={() => onChange(opt.value)}
+              disabled={disabled}
+            >
+              <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export function MotorInspectionFieldsBlock({ values, onChange, onFieldFocus, disabled }) {
+  const boolChecked = (v) => {
+    const s = String(v ?? "").trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  };
+
+  return (
+    <View>
+      <PassFailRadios
+        label="Visual Status"
+        value={values.visualStatus ?? ""}
+        options={VISUAL_STATUS_OPTIONS}
+        onChange={(v) => onChange("visualStatus", v)}
+        disabled={disabled}
+      />
+      <InspectionFormFields
+        fields={MOTOR_INSPECTION_FIELD_DEFS}
+        values={values}
+        onChange={onChange}
+        onFieldFocus={onFieldFocus}
+        disabled={disabled}
+      />
+      <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>Magger Test</Text>
+      <PassFailRadios
+        label="Result"
+        value={values.maggerTest ?? ""}
+        options={PASS_FAIL_OPTIONS}
+        onChange={(v) => onChange("maggerTest", v)}
+        disabled={disabled}
+      />
+      <Text style={[styles.fieldLabel, { marginTop: spacing.md }]}>Surge Test</Text>
+      <PassFailRadios
+        label="Result"
+        value={values.surgeTest ?? ""}
+        options={PASS_FAIL_OPTIONS}
+        onChange={(v) => onChange("surgeTest", v)}
+        disabled={disabled}
+      />
+      <View style={{ marginTop: spacing.sm }}>
+        {SURGE_FAILURE_CHECKBOXES.map(({ key, label }) => (
+          <Pressable
+            key={key}
+            style={styles.checkRow}
+            onPress={() => onChange(key, boolChecked(values[key]) ? "false" : "true")}
+            disabled={disabled}
+          >
+            <Ionicons
+              name={boolChecked(values[key]) ? "checkbox" : "square-outline"}
+              size={22}
+              color={colors.primary}
+            />
+            <Text style={styles.checkLabel}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+export function InspectionFormModal({ visible, title, onClose, onSave, saving, children }) {
+  const insets = useSafeAreaInsets();
+  const edgePad = Math.max(spacing.md, insets.left, insets.right);
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View
+        style={[
+          styles.modalSafeArea,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            paddingLeft: edgePad,
+            paddingRight: edgePad,
+          },
+        ]}
+      >
         <KeyboardAvoidingView
           style={styles.modalScreen}
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -138,14 +240,74 @@ function FormModal({ visible, title, onClose, onSave, saving, children }) {
           </View>
           <ScrollView
             style={styles.modalScroll}
-            contentContainerStyle={styles.modalScrollContent}
+            contentContainerStyle={[
+              styles.modalScrollContent,
+              { paddingBottom: spacing.lg + Math.max(insets.bottom, spacing.md) },
+            ]}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
           >
             {children}
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
+    </Modal>
+  );
+}
+
+function ViewInspectionModal({ visible, inspection, motorClass, onClose }) {
+  const insets = useSafeAreaInsets();
+  const edgePad = Math.max(spacing.lg, insets.left, insets.right);
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+      <View
+        style={[
+          styles.viewModalRoot,
+          {
+            paddingTop: insets.top,
+            paddingBottom: insets.bottom,
+            paddingLeft: edgePad,
+            paddingRight: edgePad,
+          },
+        ]}
+      >
+        <View style={styles.viewModalBackdrop}>
+          <View style={styles.viewModalCard}>
+            <View style={styles.viewModalHeader}>
+              <Text style={styles.viewModalTitle}>Inspection</Text>
+              <Pressable onPress={onClose} hitSlop={12}>
+                <Text style={styles.modalHeaderBtn}>Close</Text>
+              </Pressable>
+            </View>
+            <ScrollView
+              style={styles.viewModalScroll}
+              contentContainerStyle={{ paddingBottom: spacing.lg }}
+              keyboardShouldPersistTaps="handled"
+            >
+              {inspection ? (
+                <>
+                  <View style={styles.viewModalMeta}>
+                    <KindBadge kind={inspection.kind} />
+                    <Text style={styles.inspComponent}>{componentLabel(motorClass, inspection.component)}</Text>
+                  </View>
+                  <Text style={styles.inspDate}>
+                    {inspection.createdAt ? new Date(inspection.createdAt).toLocaleString() : ""}
+                  </Text>
+                  {getPreliminaryViewEntries(inspection.component, inspection.findings).map(
+                    ({ key, label, text }) => (
+                      <View key={key} style={styles.viewField}>
+                        <Text style={styles.viewFieldLabel}>{label}</Text>
+                        <Text style={styles.viewFieldText}>{text}</Text>
+                      </View>
+                    )
+                  )}
+                </>
+              ) : null}
+            </ScrollView>
+          </View>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -166,16 +328,7 @@ export default function WorkOrderInspectionsSection({
   const [detailedModalOpen, setDetailedModalOpen] = useState(false);
   const [viewingInspection, setViewingInspection] = useState(null);
 
-  const componentOptions = useMemo(
-    () => inspectionComponentsForMotorClass(motorClass),
-    [motorClass]
-  );
-  const defaultComponent = componentOptions[0]?.value || "stator";
-
-  const [inspComponent, setInspComponent] = useState(defaultComponent);
-  const [detComponent, setDetComponent] = useState(defaultComponent);
-  const [prelimFindings, setPrelimFindings] = useState(() => emptyPreliminaryFindings(defaultComponent));
-  const [detailedFindings, setDetailedFindings] = useState(() => ({ ...INITIAL_DETAILED_FINDINGS }));
+  const [findings, setFindings] = useState(() => emptyMotorInspectionFindings());
 
   const load = useCallback(async () => {
     if (!token || !woId) {
@@ -197,72 +350,46 @@ export default function WorkOrderInspectionsSection({
     load();
   }, [load]);
 
-  useEffect(() => {
-    const first = componentOptions[0]?.value;
-    if (first) {
-      setInspComponent(first);
-      setDetComponent(first);
-    }
-  }, [motorClass, componentOptions]);
-
-  useEffect(() => {
-    if (!prelimModalOpen) return;
-    setPrelimFindings(emptyPreliminaryFindings(inspComponent));
-  }, [inspComponent, prelimModalOpen]);
-
-  useEffect(() => {
-    if (!detailedModalOpen) return;
-    setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
-  }, [detComponent, detailedModalOpen]);
+  const latestPreliminaryFindings = useMemo(() => {
+    const pre = inspections.filter((i) => i.kind === "preliminary");
+    if (!pre.length) return null;
+    const sorted = [...pre].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return sorted[0]?.findings;
+  }, [inspections]);
 
   const openPrelim = () => {
-    setInspComponent(defaultComponent);
-    setPrelimFindings(emptyPreliminaryFindings(defaultComponent));
+    setFindings(emptyMotorInspectionFindings());
     setPrelimModalOpen(true);
   };
 
   const openDetailed = () => {
-    setDetComponent(defaultComponent);
-    setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
+    setFindings(
+      latestPreliminaryFindings
+        ? mergeMotorInspectionFindings(latestPreliminaryFindings)
+        : emptyMotorInspectionFindings()
+    );
     setDetailedModalOpen(true);
   };
 
-  const submitPreliminary = async () => {
+  const submitInspection = async (kind) => {
     if (!token || !woId) return;
     setSavingInspection(true);
     try {
-      const findings = buildPreliminaryFindingsPayload(inspComponent, prelimFindings);
-      await techFetch(`/api/tech/work-orders/${woId}/inspections`, {
-        token,
-        method: "POST",
-        body: { kind: "preliminary", component: inspComponent, findings },
-      });
-      setPrelimModalOpen(false);
-      await load();
-    } catch (e) {
-      Alert.alert("Save failed", e.message || "Could not save pre-inspection");
-    } finally {
-      setSavingInspection(false);
-    }
-  };
-
-  const submitDetailed = async () => {
-    if (!token || !woId) return;
-    setSavingInspection(true);
-    try {
+      const payload = buildMotorInspectionFindingsPayload(findings);
       await techFetch(`/api/tech/work-orders/${woId}/inspections`, {
         token,
         method: "POST",
         body: {
-          kind: "detailed",
-          component: detComponent,
-          findings: { ...detailedFindings },
+          kind,
+          component: MOTOR_INSPECTION_COMPONENT,
+          findings: payload,
         },
       });
-      setDetailedModalOpen(false);
+      if (kind === "preliminary") setPrelimModalOpen(false);
+      else setDetailedModalOpen(false);
       await load();
     } catch (e) {
-      Alert.alert("Save failed", e.message || "Could not save detailed inspection");
+      Alert.alert("Save failed", e.message || "Could not save inspection");
     } finally {
       setSavingInspection(false);
     }
@@ -270,7 +397,6 @@ export default function WorkOrderInspectionsSection({
 
   if (!woId) return null;
 
-  const prelimFieldList = preliminaryFieldDefs(inspComponent);
   const busy = disabled || savingInspection;
 
   return (
@@ -330,101 +456,43 @@ export default function WorkOrderInspectionsSection({
         ))
       )}
 
-      <FormModal
+      <InspectionFormModal
         visible={prelimModalOpen}
         title="Add pre-inspection"
         saving={savingInspection}
         onClose={() => !savingInspection && setPrelimModalOpen(false)}
-        onSave={submitPreliminary}
+        onSave={() => submitInspection("preliminary")}
       >
-        <Text style={styles.modalHint}>Component</Text>
-        <ComponentChips
-          options={componentOptions}
-          value={inspComponent}
-          onChange={setInspComponent}
-          disabled={savingInspection}
-        />
-        <InspectionFormFields
-          fields={prelimFieldList}
-          values={prelimFindings}
-          onChange={(key, value) => setPrelimFindings((f) => ({ ...f, [key]: value }))}
+        <MotorInspectionFieldsBlock
+          values={findings}
+          onChange={(key, value) => setFindings((f) => ({ ...f, [key]: value }))}
           onFieldFocus={onFieldFocus}
           disabled={savingInspection}
         />
-      </FormModal>
+      </InspectionFormModal>
 
-      <FormModal
+      <InspectionFormModal
         visible={detailedModalOpen}
         title="Add detailed inspection"
         saving={savingInspection}
         onClose={() => !savingInspection && setDetailedModalOpen(false)}
-        onSave={submitDetailed}
+        onSave={() => submitInspection("detailed")}
       >
-        <Text style={styles.modalHint}>Confirmed findings after the motor is opened.</Text>
-        <Text style={[styles.modalHint, { marginTop: spacing.sm }]}>Component</Text>
-        <ComponentChips
-          options={componentOptions}
-          value={detComponent}
-          onChange={setDetComponent}
-          disabled={savingInspection}
-        />
-        <InspectionFormFields
-          fields={DETAILED_INSPECTION_FIELDS}
-          values={detailedFindings}
-          onChange={(key, value) => setDetailedFindings((f) => ({ ...f, [key]: value }))}
+        <Text style={styles.modalHint}>Same fields as pre-inspection; update after the motor is opened.</Text>
+        <MotorInspectionFieldsBlock
+          values={findings}
+          onChange={(key, value) => setFindings((f) => ({ ...f, [key]: value }))}
           onFieldFocus={onFieldFocus}
           disabled={savingInspection}
         />
-      </FormModal>
+      </InspectionFormModal>
 
-      <Modal
+      <ViewInspectionModal
         visible={!!viewingInspection}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setViewingInspection(null)}
-      >
-        <SafeAreaView style={styles.viewModalSafeArea} edges={["top", "bottom", "left", "right"]}>
-          <View style={styles.viewModalBackdrop}>
-            <View style={styles.viewModalCard}>
-              <View style={styles.viewModalHeader}>
-                <Text style={styles.viewModalTitle}>Inspection</Text>
-                <Pressable onPress={() => setViewingInspection(null)} hitSlop={12}>
-                  <Text style={styles.modalHeaderBtn}>Close</Text>
-                </Pressable>
-              </View>
-              <ScrollView style={styles.viewModalScroll} keyboardShouldPersistTaps="handled">
-                {viewingInspection ? (
-                  <>
-                    <View style={styles.viewModalMeta}>
-                      <KindBadge kind={viewingInspection.kind} />
-                      <Text style={styles.inspComponent}>
-                        {componentLabel(motorClass, viewingInspection.component)}
-                      </Text>
-                    </View>
-                    <Text style={styles.inspDate}>
-                      {viewingInspection.createdAt
-                        ? new Date(viewingInspection.createdAt).toLocaleString()
-                        : ""}
-                    </Text>
-                    {(viewingInspection.kind === "detailed"
-                      ? getDetailedViewEntries(viewingInspection.findings)
-                      : getPreliminaryViewEntries(
-                          viewingInspection.component,
-                          viewingInspection.findings
-                        )
-                    ).map(({ key, label, text }) => (
-                      <View key={key} style={styles.viewField}>
-                        <Text style={styles.viewFieldLabel}>{label}</Text>
-                        <Text style={styles.viewFieldText}>{text}</Text>
-                      </View>
-                    ))}
-                  </>
-                ) : null}
-              </ScrollView>
-            </View>
-          </View>
-        </SafeAreaView>
-      </Modal>
+        inspection={viewingInspection}
+        motorClass={motorClass}
+        onClose={() => setViewingInspection(null)}
+      />
     </View>
   );
 }
@@ -595,12 +663,7 @@ const styles = StyleSheet.create({
   formFieldFull: {
     marginBottom: spacing.md,
   },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.secondary,
-    marginBottom: 4,
-  },
+  fieldLabel: formFieldLabel,
   fieldInput: {
     backgroundColor: colors.formBg,
     borderWidth: 1,
@@ -623,7 +686,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
-  viewModalSafeArea: {
+  viewModalRoot: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
   },
@@ -658,8 +721,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScrollContent: {
-    padding: spacing.lg,
-    paddingBottom: 48,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   modalHint: {
     fontSize: 13,
@@ -670,7 +733,6 @@ const styles = StyleSheet.create({
   viewModalBackdrop: {
     flex: 1,
     justifyContent: "center",
-    padding: spacing.lg,
   },
   viewModalCard: {
     backgroundColor: colors.card,
@@ -717,5 +779,19 @@ const styles = StyleSheet.create({
     color: colors.title,
     marginTop: 4,
     lineHeight: 22,
+  },
+  radioBlock: {
+    marginBottom: spacing.md,
+  },
+  checkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 8,
+  },
+  checkLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.title,
   },
 });

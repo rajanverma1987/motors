@@ -4,52 +4,40 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
-import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
-import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
-import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import RepairFlowPreliminaryInspectionModal from "@/components/dashboard/repair-flow-preliminary-inspection-modal";
-import { inspectionComponentsForMotorType } from "@/lib/repair-flow-constants";
+import MotorInspectionModal from "@/components/dashboard/motor-inspection-modal";
+import MotorInspectionViewContent from "@/components/dashboard/motor-inspection-view-content";
 import {
-  emptyPreliminaryFindings,
-  buildPreliminaryFindingsPayload,
-  getPreliminaryViewEntries,
+  buildMotorInspectionFindingsPayload,
+  emptyMotorInspectionFindings,
+  getMotorInspectionViewEntries,
+  mergeMotorInspectionFindings,
+  motorInspectionSummary,
+  usesUnifiedMotorInspectionFindings,
+} from "@/lib/motor-inspection-fields";
+import { inspectionComponentForSave } from "@/lib/motor-inspection-api";
+import {
   getDetailedViewEntries,
+  getPreliminaryViewEntries,
 } from "@/lib/repair-flow-preliminary-fields";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
-const INITIAL_DETAILED_FINDINGS = {
-  windingCondition: "",
-  coreDamage: "",
-  bearingFailure: "",
-  shaftIssues: "",
-  additionalFindings: "",
-};
-
-function componentLabel(motorType, value) {
-  const opts = inspectionComponentsForMotorType(motorType || "");
-  return opts.find((o) => o.value === value)?.label || value || "—";
-}
-
-function inspectionSummaryRow(row) {
-  const f = row.findings && typeof row.findings === "object" ? row.findings : {};
-  const chunks = [];
-  for (const [, v] of Object.entries(f)) {
-    const t = String(v || "").trim();
-    if (t) chunks.push(t.length > 48 ? `${t.slice(0, 48)}…` : t);
-  }
-  if (!chunks.length) return "—";
-  const joined = chunks.slice(0, 2).join(" · ");
-  return chunks.length > 2 ? `${joined}…` : joined;
+function kindLabel(kind) {
+  if (kind === "preliminary") return "Pre-inspection";
+  if (kind === "detailed") return "Detailed";
+  return kind || "—";
 }
 
 /**
- * Pre-inspection and detailed inspections for a saved work order.
+ * Pre-inspection and detailed inspections for a saved work order (unified motor form).
  */
-export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "AC", disabled = false }) {
+export default function WorkOrderInspectionsPanel({
+  workOrderId,
+  disabled = false,
+  secondary = false,
+}) {
   const toast = useToast();
   const woId = String(workOrderId || "").trim();
 
@@ -57,20 +45,13 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
   const [loading, setLoading] = useState(false);
   const [savingInspection, setSavingInspection] = useState(false);
 
-  const [inspComponent, setInspComponent] = useState("stator");
-  const [detComponent, setDetComponent] = useState("stator");
-  const [prelimFindings, setPrelimFindings] = useState(() => emptyPreliminaryFindings("stator"));
-  const [detailedFindings, setDetailedFindings] = useState(() => ({ ...INITIAL_DETAILED_FINDINGS }));
-
-  const [prelimModalOpen, setPrelimModalOpen] = useState(false);
-  const [detailedModalOpen, setDetailedModalOpen] = useState(false);
+  const [findings, setFindings] = useState(() => emptyMotorInspectionFindings());
+  const [modalKind, setModalKind] = useState(null);
   const [viewingInspection, setViewingInspection] = useState(null);
   const [inspectionSort, setInspectionSort] = useState({ key: null, direction: "asc" });
 
-  const componentOptions = useMemo(
-    () => inspectionComponentsForMotorType(motorClass || "AC"),
-    [motorClass]
-  );
+  const prelimModalOpen = modalKind === "preliminary";
+  const detailedModalOpen = modalKind === "detailed";
 
   const load = useCallback(async () => {
     if (!woId) {
@@ -98,28 +79,36 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
     load();
   }, [load]);
 
-  useEffect(() => {
-    if (!prelimModalOpen) return;
-    setPrelimFindings(emptyPreliminaryFindings(inspComponent));
-  }, [inspComponent, prelimModalOpen]);
+  const latestPreliminaryFindings = useMemo(() => {
+    const pre = inspections.filter((i) => i.kind === "preliminary");
+    if (!pre.length) return null;
+    const sorted = [...pre].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return sorted[0]?.findings;
+  }, [inspections]);
 
-  useEffect(() => {
-    if (!detailedModalOpen) return;
-    setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
-  }, [detComponent, detailedModalOpen]);
+  function openPrelimModal() {
+    setFindings(emptyMotorInspectionFindings());
+    setModalKind("preliminary");
+  }
 
-  const getInspectionSortValue = useCallback(
-    (row, key) => {
-      if (key === "recorded") {
-        const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
-        return Number.isFinite(t) ? t : null;
-      }
-      if (key === "summary") return inspectionSummaryRow(row);
-      if (key === "component") return componentLabel(motorClass, row.component);
-      return row?.[key];
-    },
-    [motorClass]
-  );
+  function openDetailedModal() {
+    setFindings(
+      latestPreliminaryFindings
+        ? mergeMotorInspectionFindings(latestPreliminaryFindings)
+        : emptyMotorInspectionFindings()
+    );
+    setModalKind("detailed");
+  }
+
+  const getInspectionSortValue = useCallback((row, key) => {
+    if (key === "recorded") {
+      const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    if (key === "summary") return motorInspectionSummary(row.findings);
+    if (key === "kind") return kindLabel(row.kind);
+    return row?.[key];
+  }, []);
 
   const sortedInspections = useMemo(
     () => sortRowsClient(inspections, inspectionSort, getInspectionSortValue),
@@ -153,15 +142,9 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
             variant={row.kind === "detailed" ? "warning" : "primary"}
             className="rounded-full px-2.5 py-0.5 text-xs capitalize"
           >
-            {row.kind === "preliminary" ? "Pre-inspection" : row.kind === "detailed" ? "Detailed" : row.kind || "—"}
+            {kindLabel(row.kind)}
           </Badge>
         ),
-      },
-      {
-        key: "component",
-        label: "Component",
-        sortable: true,
-        render: (_, row) => componentLabel(motorClass, row.component),
       },
       {
         key: "recorded",
@@ -173,38 +156,21 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
         key: "summary",
         label: "Summary",
         sortable: true,
-        render: (_, row) => <span className="text-secondary">{inspectionSummaryRow(row)}</span>,
+        render: (_, row) => (
+          <span className="text-secondary">
+            {usesUnifiedMotorInspectionFindings(row.findings)
+              ? motorInspectionSummary(row.findings)
+              : motorInspectionSummary(row.findings) !== "—"
+                ? motorInspectionSummary(row.findings)
+                : "—"}
+          </span>
+        ),
       },
     ],
-    [motorClass, disabled]
+    [disabled]
   );
 
-  async function submitPreliminaryInspection(e) {
-    e.preventDefault();
-    if (!woId) return;
-    setSavingInspection(true);
-    try {
-      const f = buildPreliminaryFindingsPayload(inspComponent, prelimFindings);
-      const res = await fetch(`/api/dashboard/work-orders/${woId}/inspections`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ kind: "preliminary", component: inspComponent, findings: f }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed");
-      toast.success("Pre-inspection saved.");
-      setPrelimModalOpen(false);
-      setPrelimFindings(emptyPreliminaryFindings(inspComponent));
-      await load();
-    } catch (err) {
-      toast.error(err.message || "Failed to save");
-    } finally {
-      setSavingInspection(false);
-    }
-  }
-
-  async function submitDetailedInspection(e) {
+  async function submitInspection(e, kind) {
     e.preventDefault();
     if (!woId) return;
     setSavingInspection(true);
@@ -214,22 +180,32 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          kind: "detailed",
-          component: detComponent,
-          findings: { ...detailedFindings },
+          kind,
+          component: inspectionComponentForSave(),
+          findings: buildMotorInspectionFindingsPayload(findings),
         }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed");
-      toast.success("Detailed inspection saved.");
-      setDetailedModalOpen(false);
-      setDetailedFindings({ ...INITIAL_DETAILED_FINDINGS });
+      toast.success(kind === "detailed" ? "Detailed inspection saved." : "Pre-inspection saved.");
+      setModalKind(null);
+      setFindings(emptyMotorInspectionFindings());
       await load();
     } catch (err) {
       toast.error(err.message || "Failed to save");
     } finally {
       setSavingInspection(false);
     }
+  }
+
+  function viewEntriesFor(row) {
+    if (usesUnifiedMotorInspectionFindings(row.findings)) {
+      return getMotorInspectionViewEntries(row.findings);
+    }
+    if (row.kind === "detailed") {
+      return getDetailedViewEntries(row.findings);
+    }
+    return getPreliminaryViewEntries(row.component, row.findings);
   }
 
   if (!woId) {
@@ -241,25 +217,36 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
   }
 
   return (
-    <section className="w-full min-w-0 rounded-lg border border-border bg-card p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <section
+      className={`w-full min-w-0 rounded-lg border border-border bg-card/70 ${
+        secondary ? "p-2.5" : "p-4"
+      }`}
+    >
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${secondary ? "mb-2" : "mb-3"}`}>
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Inspections</h3>
-          <p className="mt-1 text-xs text-secondary">
-            Pre-inspection before teardown; detailed inspection after the motor is opened.
+          <h3
+            className={
+              secondary
+                ? "text-xs font-semibold text-title"
+                : "text-sm font-semibold uppercase tracking-wide text-title"
+            }
+          >
+            Inspections
+            {secondary ? (
+              <span className="ml-1.5 font-normal text-secondary">(optional)</span>
+            ) : null}
+          </h3>
+          <p className={`text-secondary ${secondary ? "mt-0.5 text-[10px] leading-snug" : "mt-1 text-xs"}`}>
+            Pre-inspection before teardown; detailed after the motor is opened. Same fields for both.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           <Button
             type="button"
             variant="primary"
             size="sm"
             disabled={disabled || savingInspection}
-            onClick={() => {
-              const first = componentOptions[0]?.value;
-              if (first) setInspComponent(first);
-              setPrelimModalOpen(true);
-            }}
+            onClick={openPrelimModal}
           >
             Add pre-inspection
           </Button>
@@ -268,11 +255,7 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
             variant="outline"
             size="sm"
             disabled={disabled || savingInspection}
-            onClick={() => {
-              const first = componentOptions[0]?.value;
-              if (first) setDetComponent(first);
-              setDetailedModalOpen(true);
-            }}
+            onClick={openDetailedModal}
           >
             Add detailed inspection
           </Button>
@@ -292,98 +275,36 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
         onSort={(key, direction) => setInspectionSort({ key, direction })}
       />
 
-      <RepairFlowPreliminaryInspectionModal
+      <MotorInspectionModal
         open={prelimModalOpen}
-        onClose={() => !savingInspection && setPrelimModalOpen(false)}
+        onClose={() => !savingInspection && setModalKind(null)}
+        title="Add pre-inspection"
+        subtitle="Record condition before teardown. Same fields as the RFQ Write-Up pre-inspection."
         formId="wo-prelim-insp-form"
         saving={savingInspection}
-        componentOptions={componentOptions}
-        inspComponent={inspComponent}
-        onInspComponentChange={setInspComponent}
-        prelimFindings={prelimFindings}
-        onPrelimFieldChange={(key, value) => setPrelimFindings((f) => ({ ...f, [key]: value }))}
-        onSubmit={submitPreliminaryInspection}
+        values={findings}
+        onFieldChange={(key, value) => setFindings((f) => ({ ...f, [key]: value }))}
+        onSubmit={(e) => submitInspection(e, "preliminary")}
       />
 
-      <Modal
+      <MotorInspectionModal
         open={detailedModalOpen}
-        onClose={() => !savingInspection && setDetailedModalOpen(false)}
+        onClose={() => !savingInspection && setModalKind(null)}
         title="Add detailed inspection"
-        width="min(960px, 94vw)"
-        actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setDetailedModalOpen(false)}
-              disabled={savingInspection}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="wo-detailed-insp-form"
-              variant="primary"
-              size="sm"
-              disabled={savingInspection}
-            >
-              {savingInspection ? "Saving…" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <Form id="wo-detailed-insp-form" onSubmit={submitDetailedInspection} className="space-y-3">
-          <p className="text-xs text-secondary">
-            Confirmed findings after the motor is opened — one entry per component.
-          </p>
-          <Select
-            label="Component"
-            options={componentOptions}
-            value={detComponent}
-            onChange={(e) => setDetComponent(e.target.value)}
-            searchable={false}
-            disabled={savingInspection}
-          />
-          <Input
-            label="Winding condition"
-            value={detailedFindings.windingCondition}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, windingCondition: e.target.value }))}
-            disabled={savingInspection}
-          />
-          <Input
-            label="Core / lamination damage"
-            value={detailedFindings.coreDamage}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, coreDamage: e.target.value }))}
-            disabled={savingInspection}
-          />
-          <Input
-            label="Bearing"
-            value={detailedFindings.bearingFailure}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, bearingFailure: e.target.value }))}
-            disabled={savingInspection}
-          />
-          <Input
-            label="Shaft / mechanical"
-            value={detailedFindings.shaftIssues}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, shaftIssues: e.target.value }))}
-            disabled={savingInspection}
-          />
-          <Textarea
-            label="Additional findings"
-            value={detailedFindings.additionalFindings}
-            onChange={(e) => setDetailedFindings((f) => ({ ...f, additionalFindings: e.target.value }))}
-            rows={2}
-            disabled={savingInspection}
-          />
-        </Form>
-      </Modal>
+        subtitle="Opens with your latest pre-inspection values when available."
+        formId="wo-detailed-insp-form"
+        saving={savingInspection}
+        values={findings}
+        onFieldChange={(key, value) => setFindings((f) => ({ ...f, [key]: value }))}
+        onSubmit={(e) => submitInspection(e, "detailed")}
+      />
 
       <Modal
         open={!!viewingInspection}
         onClose={() => setViewingInspection(null)}
         title="Inspection"
         size="lg"
+        width="min(900px, 94vw)"
         actions={
           <Button type="button" variant="outline" size="sm" onClick={() => setViewingInspection(null)}>
             Close
@@ -397,36 +318,33 @@ export default function WorkOrderInspectionsPanel({ workOrderId, motorClass = "A
                 variant={viewingInspection.kind === "detailed" ? "warning" : "primary"}
                 className="rounded-full px-2.5 py-0.5 text-xs capitalize"
               >
-                {viewingInspection.kind === "preliminary"
-                  ? "Pre-inspection"
-                  : viewingInspection.kind === "detailed"
-                    ? "Detailed"
-                    : viewingInspection.kind}
+                {kindLabel(viewingInspection.kind)}
               </Badge>
               <span className="text-secondary">
-                {componentLabel(motorClass, viewingInspection.component)}
-              </span>
-              <span className="text-secondary">
-                {viewingInspection.createdAt ? new Date(viewingInspection.createdAt).toLocaleString() : ""}
+                {viewingInspection.createdAt
+                  ? new Date(viewingInspection.createdAt).toLocaleString()
+                  : ""}
               </span>
             </div>
-            <dl className="space-y-3">
-              {viewingInspection.kind === "detailed"
-                ? getDetailedViewEntries(viewingInspection.findings).map(({ key, label, text }) => (
-                    <div key={key}>
-                      <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
-                      <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
-                    </div>
-                  ))
-                : getPreliminaryViewEntries(viewingInspection.component, viewingInspection.findings).map(
-                    ({ key, label, text }) => (
-                      <div key={key}>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
-                        <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
-                      </div>
-                    )
-                  )}
-            </dl>
+            {usesUnifiedMotorInspectionFindings(viewingInspection.findings) ? (
+              <MotorInspectionViewContent findings={viewingInspection.findings} />
+            ) : (
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {viewEntriesFor(viewingInspection).map(({ key, label, text }) => (
+                  <div
+                    key={key}
+                    className={
+                      key === "finalNotes" || key === "brokenPartsNotes" || key === "otherNotes"
+                        ? "sm:col-span-2"
+                        : ""
+                    }
+                  >
+                    <dt className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</dt>
+                    <dd className="mt-0.5 whitespace-pre-wrap text-title">{text}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </div>
         ) : null}
       </Modal>

@@ -12,6 +12,8 @@ export const USER_SETTINGS_DEFAULTS = {
   weekStartsOn: 0,
   /** ISO 4217 — how amounts are shown across the dashboard */
   currency: "USD",
+  /** UI zoom for dashboard only (75–150, step 5). 100 = default browser-like size. */
+  zoomLevel: DISPLAY_ZOOM_DEFAULT,
   /** Public path to uploaded shop logo (set via POST /api/dashboard/settings/logo only) */
   logoUrl: "",
   /** Status dropdown options for work orders (order = list order) */
@@ -48,6 +50,7 @@ export const USER_SETTINGS_DEFAULTS = {
   prefixWorkOrder: "",
 };
 
+import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
 import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
 import { isAllowedCurrency } from "@/lib/format-currency";
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
@@ -66,6 +69,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "compactTables",
   "weekStartsOn",
   "currency",
+  "zoomLevel",
   "workOrderStatuses",
   "shopFloorBoardOrder",
   "accountsBillingAddress",
@@ -181,6 +185,7 @@ export function mergeUserSettings(stored) {
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
+  merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
   merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
     merged.workOrderStatusTileColors,
     merged.workOrderStatuses
@@ -210,6 +215,10 @@ export function sanitizeUserSettingsPatch(body) {
     if (key === "currency") {
       const c = String(body[key] ?? "").toUpperCase().trim();
       if (isAllowedCurrency(c)) out[key] = c;
+      continue;
+    }
+    if (key === "zoomLevel") {
+      out.zoomLevel = normalizeZoomLevel(body[key]);
       continue;
     }
     if (key === "workOrderStatuses") {

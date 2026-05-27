@@ -27,11 +27,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com"
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
+    default: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
     template: "%s | IQMotorBase.com",
   },
   description:
-    "Center management, work orders, and lead generation for motor repair and rewinding businesses. Find local motor repair centers and manage your repair center with one platform.",
+    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
   keywords: [
     "motor repair center software",
     "motor rewinding center software",
@@ -47,9 +47,9 @@ export const metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "IQMotorBase.com",
-    title: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
+    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
     description:
-      "Center management, work orders, and lead generation for motor repair and rewinding businesses.",
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
     images: [
       {
         url: "/og-image.png",
@@ -61,9 +61,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "IQMotorBase.com – Motor Repair Center Software & Lead Generation",
+    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
     description:
-      "Center management, work orders, and lead generation for motor repair and rewinding businesses.",
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
   },
   robots: {
     index: true,

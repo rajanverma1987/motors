@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Modal from "@/components/ui/modal";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -15,14 +14,12 @@ import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
-import { FiSave, FiSend, FiPrinter, FiTrash2, FiRotateCw, FiClipboard } from "react-icons/fi";
+import { FiSave, FiSend, FiPrinter, FiRotateCw, FiClipboard } from "react-icons/fi";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
-
-const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
 const SCOPE_COLUMNS = [
   { key: "scope", label: "Scope", width: "75%" },
@@ -320,33 +317,6 @@ export default function InvoiceFormModal({
     }
   };
 
-  const handleHeaderDelete = async () => {
-    if (!persistedId) return;
-    const ok = await confirm({
-      title: "Delete invoice",
-      message: `Delete invoice #${form.invoiceNumber || persistedId}? This cannot be undone.`,
-      confirmLabel: "Delete",
-      variant: "danger",
-    });
-    if (!ok) return;
-    setHeaderBusy(true);
-    try {
-      const res = await fetch(`/api/dashboard/invoices/${persistedId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || "Delete failed");
-      toast.success("Invoice deleted.");
-      onAfterSave?.();
-      onClose?.();
-    } catch (e) {
-      toast.error(e.message || "Could not delete");
-    } finally {
-      setHeaderBusy(false);
-    }
-  };
-
   // Keep totals in sync with the tables automatically.
   useEffect(() => {
     if (!open) return;
@@ -436,47 +406,6 @@ export default function InvoiceFormModal({
     taxPercent: form.customerTaxPercent,
   });
 
-  const invoiceActionsMenuItems = useMemo(() => {
-    if (!canUseRecordActions) return [];
-    return [
-      {
-        key: "send",
-        label: isSendingToClient ? "Sending…" : "Send to client",
-        icon: isSendingToClient ? (
-          <FiRotateCw className={`${MENU_IC} animate-spin`} aria-hidden />
-        ) : (
-          <FiSend className={MENU_IC} />
-        ),
-        disabled: headerDisabled,
-        onClick: handleHeaderSend,
-      },
-      {
-        key: "print",
-        label: "Print",
-        icon: <FiPrinter className={MENU_IC} />,
-        disabled: headerDisabled,
-        onClick: handleHeaderPrint,
-      },
-      { key: "d1", type: "divider" },
-      {
-        key: "delete",
-        label: "Delete",
-        icon: <FiTrash2 className={MENU_IC} />,
-        disabled: headerDisabled,
-        danger: true,
-        title: "Delete",
-        onClick: handleHeaderDelete,
-      },
-    ];
-  }, [
-    canUseRecordActions,
-    headerDisabled,
-    isSendingToClient,
-    handleHeaderSend,
-    handleHeaderPrint,
-    handleHeaderDelete,
-  ]);
-
   return (
     <>
     <Modal
@@ -509,7 +438,34 @@ export default function InvoiceFormModal({
             View Job
           </Button>
           {canUseRecordActions ? (
-            <ModalActionsDropdown items={invoiceActionsMenuItems} menuZIndex={zIndex + 25} />
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={headerDisabled}
+                className="inline-flex shrink-0 items-center gap-1.5"
+                onClick={handleHeaderPrint}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={headerDisabled}
+                className="inline-flex shrink-0 items-center gap-1.5"
+                onClick={handleHeaderSend}
+              >
+                {isSendingToClient ? (
+                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                )}
+                {isSendingToClient ? "Sending…" : "Send to client"}
+              </Button>
+            </>
           ) : null}
           <Button
             type="button"

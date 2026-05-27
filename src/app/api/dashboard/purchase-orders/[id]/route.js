@@ -16,28 +16,15 @@ import {
   normalizeLineItemStatus,
 } from "@/lib/purchase-order-line-items";
 import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
+import {
+  computePoDeliveryStatus,
+  computePoInvoicedStatus,
+  computePoOverallStatus,
+  computePoPaidStatus,
+} from "@/lib/po-status";
 
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
-
-function computeDeliveryStatus(lineItems) {
-  const items = Array.isArray(lineItems) ? lineItems : [];
-  if (items.length === 0) return "Partial";
-  const allReceived = items.every((item) => item?.status === "Received");
-  return allReceived ? "Delivered" : "Partial";
-}
-
-function computeInvoicedStatus(totalOrder, totalInvoiced) {
-  if (totalOrder <= 0) return "—";
-  if (totalInvoiced >= totalOrder) return "Invoiced";
-  return "Partial";
-}
-
-function computePaidStatus(totalInvoiced, totalPaid) {
-  if (totalInvoiced <= 0) return "—";
-  if (totalPaid >= totalInvoiced) return "Paid";
-  return "Partially";
-}
 
 function normalizeVendorInvoices(arr) {
   if (!Array.isArray(arr)) return [];
@@ -71,15 +58,6 @@ function sumAmounts(items, key = "amount") {
     if (Number.isFinite(a)) sum += a;
   }
   return sum;
-}
-
-function computeStatus(totalOrder, totalInvoiced, totalPaid) {
-  if (totalOrder <= 0) return "Open";
-  if (totalPaid >= totalInvoiced && totalInvoiced >= totalOrder) return "Closed";
-  if (totalPaid > 0 && totalPaid < totalInvoiced) return "Partially Paid";
-  if (totalInvoiced >= totalOrder) return "Fully Invoiced";
-  if (totalInvoiced > 0) return "Partially Invoiced";
-  return "Open";
 }
 
 function getParams(context) {
@@ -117,9 +95,9 @@ export async function GET(request, context) {
       ...item,
       status: normalizeLineItemStatus(item),
     }));
-    const deliveryStatus = computeDeliveryStatus(lineItemsWithStatus);
-    const invoicedStatus = computeInvoicedStatus(totalOrder, totalInvoiced);
-    const paidStatus = computePaidStatus(totalInvoiced, totalPaid);
+    const deliveryStatus = computePoDeliveryStatus(lineItemsWithStatus);
+    const invoicedStatus = computePoInvoicedStatus(totalOrder, totalInvoiced);
+    const paidStatus = computePoPaidStatus(totalInvoiced, totalPaid, totalOrder);
     const balanceDue = poBalanceDue(doc);
     const vendorDoc = doc.vendorId
       ? await Vendor.findOne({
@@ -152,7 +130,7 @@ export async function GET(request, context) {
       totalOrder: totalOrder.toFixed(2),
       totalInvoiced: totalInvoiced.toFixed(2),
       totalPaid: totalPaid.toFixed(2),
-      status: computeStatus(totalOrder, totalInvoiced, totalPaid),
+      status: computePoOverallStatus(totalOrder, totalInvoiced, totalPaid),
       balanceDue,
       deliveryStatus,
       invoicedStatus,
@@ -304,12 +282,12 @@ export async function PATCH(request, context) {
         totalOrder: totalOrder.toFixed(2),
         totalInvoiced: totalInvoiced.toFixed(2),
         totalPaid: totalPaid.toFixed(2),
-        status: computeStatus(totalOrder, totalInvoiced, totalPaid),
-        deliveryStatus: computeDeliveryStatus(
+        status: computePoOverallStatus(totalOrder, totalInvoiced, totalPaid),
+        deliveryStatus: computePoDeliveryStatus(
           (po.lineItems ?? []).map((item) => ({ ...item, status: normalizeLineItemStatus(item) }))
         ),
-        invoicedStatus: computeInvoicedStatus(totalOrder, totalInvoiced),
-        paidStatus: computePaidStatus(totalInvoiced, totalPaid),
+        invoicedStatus: computePoInvoicedStatus(totalOrder, totalInvoiced),
+        paidStatus: computePoPaidStatus(totalInvoiced, totalPaid, totalOrder),
         notes: po.notes ?? "",
         vendorShareToken: doc.vendorShareToken ?? "",
         attachments: Array.isArray(po.attachments)

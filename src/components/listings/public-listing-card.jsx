@@ -16,7 +16,7 @@ export default function PublicListingCard({ listing, imagePriority = false }) {
 
   return (
     <Link
-      href={`/electric-motor-reapir-shops-listings/${slug}`}
+      href={`/electric-motor-repair-shops-listings/${slug}`}
       prefetch
       className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:border-primary/30 hover:shadow-lg"
     >

@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, TextInput, StyleSheet, Pressable } from "react-native";
-import { colors, spacing } from "../../theme";
+import { colors, spacing, formFieldLabel } from "../../theme";
 
 export function num(v) {
   const n = parseFloat(String(v).replace(/,/g, ""));
@@ -98,6 +98,7 @@ export const calcScreenStyles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  fieldLabel: { ...formFieldLabel, marginBottom: spacing.sm },
 });
 
 const styles = StyleSheet.create({
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   field: { marginBottom: spacing.md },
-  label: { fontSize: 13, fontWeight: "600", color: colors.secondary, marginBottom: 6 },
+  label: formFieldLabel,
   input: {
     backgroundColor: colors.formBg,
     borderWidth: 1,

@@ -204,13 +204,13 @@ export async function POST(request) {
       console.warn("ensureLocationPageForArea failed:", e);
     }
 
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     const pathSlug = (doc.urlSlug || "").trim();
-    if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+    if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
 
     const site = getPublicSiteUrl();
-    const publicListingUrl = pathSlug ? `${site}/electric-motor-reapir-shops-listings/${pathSlug}` : "";
+    const publicListingUrl = pathSlug ? `${site}/electric-motor-repair-shops-listings/${pathSlug}` : "";
 
     try {
       await sendListingFeaturedAccountEmail({

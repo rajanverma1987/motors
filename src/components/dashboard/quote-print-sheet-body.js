@@ -25,7 +25,8 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
   });
 
   return (
-    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+    <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
+      <div className="flex-1 min-h-0">
       <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           <PrintShopLogo logoUrl={q.fromShopLogoUrl} alt="" />
@@ -192,11 +193,14 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </section>
       ) : null}
 
+      </div>
+
       <InvoicePaymentFooterPrint
         paymentOptions={q.invoicePaymentOptions}
         thankYouNote={q.invoiceThankYouNote}
         variant="dashboard"
         compact
+        thankYouAtPageFooter
       />
     </div>
   );

@@ -11,6 +11,7 @@ import ScanScreen from "../screens/ScanScreen";
 import RfqWorkOrdersScreen from "../screens/RfqWorkOrdersScreen";
 import MyWorkOrdersScreen from "../screens/MyWorkOrdersScreen";
 import WorkOrderDetailScreen from "../screens/WorkOrderDetailScreen";
+import PreInspectionDetailScreen from "../screens/PreInspectionDetailScreen";
 import BookmarksScreen from "../screens/BookmarksScreen";
 import CalculatorsHomeScreen from "../screens/calculators/CalculatorsHomeScreen";
 import CmBestMatchScreen from "../screens/calculators/CmBestMatchScreen";
@@ -62,6 +63,11 @@ function JobsStackNavigator() {
           title: "Jobs",
           headerRight: () => <HeaderSignOut />,
         }}
+      />
+      <Stack.Screen
+        name="PreInspectionDetail"
+        component={PreInspectionDetailScreen}
+        options={{ title: "Pre-inspection" }}
       />
       <Stack.Screen name="WorkOrderDetail" component={WorkOrderDetailScreen} options={{ title: "Work order" }} />
     </Stack.Navigator>

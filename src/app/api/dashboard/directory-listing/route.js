@@ -332,10 +332,10 @@ export async function PATCH(request) {
       { new: true, runValidators: true }
     ).lean();
 
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     const pathSlug = (saved.urlSlug || "").trim();
-    if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+    if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
 
     return NextResponse.json({ ok: true, listing: serializeListing(saved) });
   } catch (err) {

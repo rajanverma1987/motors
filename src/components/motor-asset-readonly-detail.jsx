@@ -1,9 +1,9 @@
 "use client";
 
 import {
-  AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
-  DC_ARMATURE_FIELDS,
+  AC_OTHERS_FIELDS,
+  DC_ARMATURE_OTHERS_FIELDS,
+  DC_OTHERS_FIELDS,
 } from "@/lib/work-order-fields";
 
 function SpecBlock({ title, subtitle, specs, fields }) {
@@ -110,23 +110,23 @@ export default function MotorAssetReadonlyDetail({ motor, customerName }) {
         <>
           <SpecBlock
             title="DC motor — technical (customer's motor)"
-            subtitle="Stored on motor; pre-fills DC work orders."
+            subtitle="Stored on motor; pre-fills DC work orders. Nameplate values are under Identification & specs."
             specs={motor.dcSpecs}
-            fields={DC_WORK_ORDER_FIELDS}
+            fields={DC_OTHERS_FIELDS}
           />
           <SpecBlock
             title="Armature (customer's motor)"
-            subtitle="Stored on motor; pre-fills DC armature tab."
+            subtitle="Stored on motor; pre-fills DC armature tab. Nameplate values are under Identification & specs."
             specs={motor.dcArmatureSpecs}
-            fields={DC_ARMATURE_FIELDS}
+            fields={DC_ARMATURE_OTHERS_FIELDS}
           />
         </>
       ) : (
         <SpecBlock
           title="AC winding & technical (customer's motor)"
-          subtitle="Stored on motor; pre-fills AC work orders."
+          subtitle="Stored on motor; pre-fills AC work orders. Nameplate values are under Identification & specs."
           specs={motor.acSpecs}
-          fields={AC_WORK_ORDER_FIELDS}
+          fields={AC_OTHERS_FIELDS}
         />
       )}
       {(motor.notes || "").trim() ? (

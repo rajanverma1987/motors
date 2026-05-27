@@ -2,6 +2,26 @@ import Link from "next/link";
 import Button from "@/components/ui/button";
 import { HomePageJsonLd } from "@/components/seo/JsonLd";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import HomeFAQ from "@/components/marketing/home-faq";
+
+export const metadata = {
+  title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
+  description:
+    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+  openGraph: {
+    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
+    description:
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+  },
+  twitter: {
+    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
+    description:
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+  },
+  alternates: {
+    canonical: "/",
+  },
+};
 
 const workflowFeatures = [
   {
@@ -125,11 +145,7 @@ export default function HomePage() {
                 Built for motor repair shops
               </span>
               <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
-                A system that manages{" "}
-                <span className="text-primary underline decoration-primary/40 decoration-2 underline-offset-4">
-                  everything
-                </span>{" "}
-                for your electric motor repair company.
+                Motor Repair Shop Software — Work Orders, Leads & Inventory in One Place
               </h1>
               <p className="mt-6 max-w-[43.2rem] text-lg text-secondary sm:text-xl">
                 From first lead through cash collection, vendor buying, payables, and sales commissions—one connected
@@ -574,6 +590,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      <HomeFAQ />
 
       {/* CTA */}
       <section className="border-t border-border bg-card py-16 sm:py-24">

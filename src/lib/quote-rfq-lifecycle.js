@@ -4,10 +4,28 @@ import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 /** RFQ intake status — not shown as a “quote” until promoted to a quote_status dropdown value. */
 export const WRITE_UP_QUOTE_STATUS = "write-up";
 
-export function isWriteUpStatus(status) {
+/** Fixed status after pre-inspection is complete (not from Settings dropdowns). */
+export const INSPECTION_DONE_QUOTE_STATUS = "inspection-done";
+
+export function isInspectionDoneStatus(status) {
+  return (
+    String(status ?? "")
+      .trim()
+      .toLowerCase() === INSPECTION_DONE_QUOTE_STATUS
+  );
+}
+
+/** Normalize status for comparisons (handles "Write Up", "write_up", etc.). */
+export function normalizeQuoteStatusKey(status) {
   return String(status ?? "")
     .trim()
-    .toLowerCase() === WRITE_UP_QUOTE_STATUS;
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-");
+}
+
+export function isWriteUpStatus(status) {
+  const key = normalizeQuoteStatusKey(status);
+  return key === WRITE_UP_QUOTE_STATUS || key === "writeup";
 }
 
 /** RFQ# until a work order exists for the job; then JOB#. */

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   num,
@@ -14,8 +14,6 @@ import {
   SegmentedTwo,
   calcScreenStyles as S,
 } from "./shared";
-import { colors, spacing } from "../../theme";
-
 export default function PowerCurrentScreen() {
   const insets = useSafeAreaInsets();
   const [hp, setHp] = useState("10");
@@ -76,7 +74,7 @@ export default function PowerCurrentScreen() {
       <CalcPanel title="Estimated full-load amps (FLA)">
         <LabeledInput label="Output power (HP)" value={flaHp} onChangeText={setFlaHp} keyboardType="decimal-pad" />
         <LabeledInput label="Voltage (V)" value={volts} onChangeText={setVolts} keyboardType="decimal-pad" />
-        <Text style={styles.fieldLabel}>Phases</Text>
+        <Text style={S.fieldLabel}>Phases</Text>
         <SegmentedTwo
           a={{ value: "3", label: "Three-phase" }}
           b={{ value: "1", label: "Single-phase" }}
@@ -105,7 +103,3 @@ export default function PowerCurrentScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.secondary, marginBottom: spacing.sm },
-});

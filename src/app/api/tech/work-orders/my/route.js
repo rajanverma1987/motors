@@ -3,6 +3,10 @@ import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
 import { getTechnicianFromRequest } from "@/lib/auth-portal";
 import { isWorkOrderOpenStatus } from "@/lib/work-order-open-status";
+import {
+  getWriteUpQuoteIds,
+  technicianOpenWorkOrderFilter,
+} from "@/lib/tech-job-queries";
 
 export async function GET(request) {
   try {
@@ -16,10 +20,10 @@ export async function GET(request) {
     }
 
     await connectDB();
-    const list = await WorkOrder.find({
-      createdByEmail: tech.shopEmail,
-      technicianEmployeeId: assigneeId,
-    })
+    const writeUpQuoteIds = await getWriteUpQuoteIds(tech.shopEmail);
+    const list = await WorkOrder.find(
+      technicianOpenWorkOrderFilter(tech.shopEmail, assigneeId, writeUpQuoteIds)
+    )
       .sort({ updatedAt: -1 })
       .limit(200)
       .lean();

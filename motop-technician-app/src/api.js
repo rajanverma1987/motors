@@ -86,6 +86,18 @@ export async function techFetch(path, opts = {}) {
     data = { error: text || "Invalid response" };
   }
   if (!res.ok) {
+    const trimmed = (text || "").trim();
+    const isHtml = trimmed.startsWith("<!") || /<!DOCTYPE/i.test(trimmed);
+    if (isHtml) {
+      if (res.status === 404) {
+        throw new Error(
+          `CRM API not found (${path}). Server: ${base}\n` +
+            "• Production: deploy the latest motors app so /api/tech/pre-inspections is available.\n" +
+            "• Local dev: set EXPO_PUBLIC_API_URL to your dev server (e.g. http://127.0.0.1:3000), run `npm run dev`, then fully restart Expo."
+        );
+      }
+      throw new Error(`CRM returned an HTML error page (${res.status}). Server: ${base}`);
+    }
     const errMsg = (data && data.error) || res.statusText || "Request failed";
     throw new Error(errMsg);
   }

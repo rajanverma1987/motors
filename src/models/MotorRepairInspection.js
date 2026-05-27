@@ -9,6 +9,8 @@ const motorRepairInspectionSchema = new mongoose.Schema(
     jobId: { type: String, default: "", trim: true },
     /** Work order this inspection belongs to */
     workOrderId: { type: String, default: "", trim: true },
+    /** CRM RFQ (Quote) id when pre-inspection is recorded before a work order exists */
+    quoteId: { type: String, default: "", trim: true },
     jobSourceSystem: { type: String, default: "", trim: true },
     jobExternalRef: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true, lowercase: true },
@@ -36,6 +38,7 @@ const motorRepairInspectionSchema = new mongoose.Schema(
 
 motorRepairInspectionSchema.index({ jobId: 1, createdAt: -1 });
 motorRepairInspectionSchema.index({ workOrderId: 1, createdAt: -1 });
+motorRepairInspectionSchema.index({ quoteId: 1, createdAt: -1 });
 motorRepairInspectionSchema.index({ createdByEmail: 1, jobId: 1 });
 motorRepairInspectionSchema.index({ createdByEmail: 1, workOrderId: 1 });
 motorRepairInspectionSchema.index(

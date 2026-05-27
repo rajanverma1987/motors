@@ -230,7 +230,7 @@ export default function DirectoryListingPageClient() {
     setSuggestionSubmitting(true);
     try {
       const slugLine = urlSlug
-        ? `Live listing path: /electric-motor-reapir-shops-listings/${urlSlug}`
+        ? `Live listing path: /electric-motor-repair-shops-listings/${urlSlug}`
         : "No live listing slug yet (draft or not submitted).";
       const description = `Directory listing — customer suggestions\n\n${slugLine}\n\n---\n\n${text}`;
       const res = await fetch("/api/dashboard/support/tickets", {
@@ -273,7 +273,7 @@ export default function DirectoryListingPageClient() {
           </Link>
           <span className="text-border">·</span>
           <Link
-            href="/electric-motor-reapir-shops-listings"
+            href="/electric-motor-repair-shops-listings"
             className="text-primary hover:underline"
             target="_blank"
             rel="noopener noreferrer"
@@ -292,7 +292,7 @@ export default function DirectoryListingPageClient() {
             <>
               <span className="text-border">·</span>
               <Link
-                href={`/electric-motor-reapir-shops-listings/${urlSlug}`}
+                href={`/electric-motor-repair-shops-listings/${urlSlug}`}
                 className="text-primary hover:underline"
                 target="_blank"
                 rel="noopener noreferrer"

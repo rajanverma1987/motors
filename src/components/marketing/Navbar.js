@@ -12,7 +12,7 @@ import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/l
 const primaryNav = [
   { href: "/#features", label: "Features" },
   { href: "/pricing", label: "Pricing" },
-  { href: "/electric-motor-reapir-shops-listings", label: "Find shops" },
+  { href: "/electric-motor-repair-shops-listings", label: "Find shops" },
   { href: "/marketplace", label: "Marketplace" },
   { href: "/blog", label: "Blog" },
 ];

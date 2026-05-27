@@ -86,7 +86,7 @@ export const DC_WORK_ORDER_FIELDS = [
   { key: "i_pole_turns", label: "I-pole Turns" },
 ];
 
-/** DC work order keys already in Identification & specs — hide from “Others” on motor detail. */
+/** DC work order keys already in motor Identification & specs — hide on motor form/detail. */
 const DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
   "hp",
   "make",
@@ -96,11 +96,18 @@ const DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
   "volts",
   "amps",
   "rpm",
+  "core_length",
+  "inside_diameter",
 ]);
 
 /** DC “Others” section: DC WO fields excluding duplicates of Identification & specs. */
 export const DC_OTHERS_FIELDS = DC_WORK_ORDER_FIELDS.filter(
   (f) => !DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
+);
+
+/** AC winding fields excluding duplicates of Identification & specs. */
+export const AC_OTHERS_FIELDS = AC_WORK_ORDER_FIELDS.filter(
+  (f) => !AC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
 );
 
 export const DC_ARMATURE_FIELDS = [
@@ -140,9 +147,18 @@ export const DC_ARMATURE_FIELDS = [
   { key: "total_wires_riser_width", label: "Total Wires In Riser — Width" },
 ];
 
-/** Armature “Armature data” on motor detail: exclude fields already in Identification & specs. */
+/** Armature keys that duplicate motor Identification & specs (incl. iron L./diam.). */
+const DC_ARMATURE_KEYS_OVERLAPPING_MOTOR_ASSETS = new Set([
+  ...DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS,
+  "slots",
+  "bars",
+  "iron_l",
+  "iron_diam",
+]);
+
+/** Armature section on motor form/detail: exclude identification duplicates. */
 export const DC_ARMATURE_OTHERS_FIELDS = DC_ARMATURE_FIELDS.filter(
-  (f) => !DC_WORK_ORDER_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
+  (f) => !DC_ARMATURE_KEYS_OVERLAPPING_MOTOR_ASSETS.has(f.key)
 );
 
 export const JOB_TYPE_OPTIONS = [

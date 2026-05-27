@@ -149,6 +149,8 @@ export default function Table({
   resizableColumns = false,
   // Optional: refresh callback (shows refresh icon to the right of search; call to refetch table data)
   onRefresh,
+  /** Header label for the actions column (default "Actions"). Pass "" for a compact delete-only column. */
+  actionsColumnLabel = "Actions",
   /** When true (default), table grows to fill parent flex area and body scrolls inside */
   fillHeight = true,
   /** Client-side slice when server pagination is not used (default: on). Set false to show all rows. */
@@ -381,7 +383,14 @@ export default function Table({
     ? [{ key: "__select", label: "", isSelect: true, width: 48 }]
     : [];
   const actionsColumn = hasActions
-    ? [{ key: "__actions", label: "Actions", isAction: true }]
+    ? [
+        {
+          key: "__actions",
+          label: actionsColumnLabel ?? "Actions",
+          isAction: true,
+          ...(actionsColumnLabel === "" ? { width: 52, minWidth: 52, maxWidth: 56 } : {}),
+        },
+      ]
     : [];
 
   const visibleDataColumns = columns.filter((c) => !hiddenColumnKeys.includes(c.key));
@@ -507,7 +516,7 @@ export default function Table({
     : "w-full border-collapse";
   const thClass = (col) => {
     const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
-    const px = col.isSelect ? "px-2" : "px-4";
+    const px = col.isSelect || col.isAction ? "px-2" : "px-4";
     return `${px} ${headerPy} text-sm font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
   };
   const thStickyStyle = effectiveStickyHeader

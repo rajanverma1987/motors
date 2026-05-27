@@ -41,7 +41,7 @@ export default function HowToChooseElectricMotorRepairShopPage() {
     <BlogPageLayout
       title="How to choose an electric motor repair shop"
       description="When a motor fails or needs a rewind, choosing the right shop affects cost, downtime, and long-term reliability. Here’s what to look for and how to compare repair centers."
-      breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
       canonicalPath={path}
       sidebarTitle="Get a quote or find a shop"
       sidebarDescription="Submit your motor details and we’ll connect you with repair centers that can quote your job. Or browse our directory by location."
@@ -108,7 +108,7 @@ export default function HowToChooseElectricMotorRepairShopPage() {
             Find and compare repair shops
           </h2>
           <p className="mt-4 text-secondary">
-            <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
+            <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
               Browse our directory of electric motor repair shops
             </Link>{" "}
             by location and service type, or{" "}

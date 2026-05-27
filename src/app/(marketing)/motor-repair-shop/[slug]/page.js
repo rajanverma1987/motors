@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getLocationPageBySlug } from "@/lib/location-pages-public";
 import { getListingsFilteredByLocationPaginated } from "@/lib/listings-public";
 import HeroBackground from "@/components/marketing/HeroBackground";
-import ListingsHeroCta from "@/app/(marketing)/electric-motor-reapir-shops-listings/listings-hero-cta";
+import ListingsHeroCta from "@/app/(marketing)/electric-motor-repair-shops-listings/listings-hero-cta";
 import PublicListingCard from "@/components/listings/public-listing-card";
 
 const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com";
@@ -53,7 +53,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <Link
-            href="/electric-motor-reapir-shops-listings"
+            href="/electric-motor-repair-shops-listings"
             prefetch
             className="inline-flex items-center text-sm text-secondary hover:text-primary"
           >
@@ -80,7 +80,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
           {total === 0 ? (
             <div className="rounded-xl border border-border bg-card py-12 text-center">
               <p className="text-secondary">No repair centers listed for this area yet.</p>
-              <Link href="/electric-motor-reapir-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
+              <Link href="/electric-motor-repair-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
                 Browse all listings
               </Link>
             </div>

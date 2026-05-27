@@ -8,6 +8,8 @@ export function InvoicePaymentFooterPrint({
   thankYouNote = "",
   variant = "dashboard",
   compact = false,
+  /** When true, footer is pinned to the bottom of a flex print column (thank-you last). */
+  thankYouAtPageFooter = false,
 }) {
   const pay = String(paymentOptions ?? "").trim();
   const thanks = String(thankYouNote ?? "").trim();
@@ -22,24 +24,44 @@ export function InvoicePaymentFooterPrint({
   const footerPad = compact ? "mt-3 border-t pt-2" : "mt-8 border-t pt-6";
   const payBlock = compact ? "mb-2" : "mb-6";
   const payHeading = compact ? "mb-1 text-[10px]" : "mb-2 text-xs";
+  const thanksEl = thanks ? (
+    <p
+      className={`text-center ${compact ? "text-xs" : "text-sm"} font-medium italic ${thanksClass} ${
+        pay && thankYouAtPageFooter ? (compact ? "mt-2" : "mt-4") : ""
+      }`}
+    >
+      {thanks}
+    </p>
+  ) : null;
+
+  const paymentBlock = pay ? (
+    <div className={thankYouAtPageFooter && thanks ? payBlock : ""}>
+      <h2 className={`${payHeading} font-semibold uppercase tracking-wide ${label}`}>
+        Payment options
+      </h2>
+      <PaymentOptionsWithLinks
+        text={pay}
+        className={`whitespace-pre-wrap ${compact ? "text-xs leading-snug" : "text-sm"} ${body}`}
+        linkClassName={linkClass}
+      />
+    </div>
+  ) : null;
+
+  if (thankYouAtPageFooter) {
+    return (
+      <footer
+        className={`mt-auto shrink-0 border-t ${border} ${compact ? "pt-3 print:pt-4" : "pt-6 print:pt-8"} print:pb-4`}
+      >
+        {paymentBlock}
+        {thanksEl}
+      </footer>
+    );
+  }
 
   return (
     <footer className={`${footerPad} ${border}`}>
-      {pay ? (
-        <div className={payBlock}>
-          <h2 className={`${payHeading} font-semibold uppercase tracking-wide ${label}`}>
-            Payment options
-          </h2>
-          <PaymentOptionsWithLinks
-            text={pay}
-            className={`whitespace-pre-wrap ${compact ? "text-xs leading-snug" : "text-sm"} ${body}`}
-            linkClassName={linkClass}
-          />
-        </div>
-      ) : null}
-      {thanks ? (
-        <p className={`text-center ${compact ? "text-xs" : "text-sm"} font-medium italic ${thanksClass}`}>{thanks}</p>
-      ) : null}
+      {paymentBlock}
+      {thanksEl}
     </footer>
   );
 }

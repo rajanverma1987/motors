@@ -14,9 +14,12 @@ import { Form, FormLayout, FormField } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import {
+  AC_OTHERS_FIELDS,
   AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
   DC_ARMATURE_FIELDS,
+  DC_ARMATURE_OTHERS_FIELDS,
+  DC_OTHERS_FIELDS,
+  DC_WORK_ORDER_FIELDS,
   emptySpecsFromFields,
 } from "@/lib/work-order-fields";
 
@@ -695,11 +698,11 @@ export default function DashboardMotorsPage() {
           {isAcMotorType(form.motorType) ? (
             <div className="rounded-lg border border-border bg-form-bg/50 p-4">
               <p className="mb-4 text-sm text-secondary">
-                AC winding data on this motor. New work orders prefill from here.
+                AC winding data on this motor (fields not already in Motor details above). New work orders prefill from here.
               </p>
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">AC winding</h3>
               <MotorSpecGrid
-                fields={AC_WORK_ORDER_FIELDS}
+                fields={AC_OTHERS_FIELDS}
                 values={form.acSpecs}
                 onChange={(key, v) =>
                   setForm((f) => ({ ...f, acSpecs: { ...f.acSpecs, [key]: v } }))
@@ -710,12 +713,12 @@ export default function DashboardMotorsPage() {
           ) : isDcMotorType(form.motorType) ? (
             <div className="rounded-lg border border-border bg-form-bg/50 p-4 space-y-8">
               <p className="text-sm text-secondary">
-                DC field and armature data on this motor. New work orders prefill from here.
+                DC field and armature data on this motor (fields not already in Motor details above). New work orders prefill from here.
               </p>
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">DC motor</h3>
                 <MotorSpecGrid
-                  fields={DC_WORK_ORDER_FIELDS}
+                  fields={DC_OTHERS_FIELDS}
                   values={form.dcSpecs}
                   onChange={(key, v) =>
                     setForm((f) => ({ ...f, dcSpecs: { ...f.dcSpecs, [key]: v } }))
@@ -726,7 +729,7 @@ export default function DashboardMotorsPage() {
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">Armature</h3>
                 <MotorSpecGrid
-                  fields={DC_ARMATURE_FIELDS}
+                  fields={DC_ARMATURE_OTHERS_FIELDS}
                   values={form.dcArmatureSpecs}
                   onChange={(key, v) =>
                     setForm((f) => ({
@@ -813,13 +816,13 @@ export default function DashboardMotorsPage() {
                   title="DC motor — technical (customer's motor)"
                   subtitle="Stored on this motor. New work orders prefill from here; saving a work order updates these fields."
                   specs={viewingMotor.dcSpecs ?? {}}
-                  fields={DC_WORK_ORDER_FIELDS}
+                  fields={DC_OTHERS_FIELDS}
                 />
                 <WorkOrderSpecBlock
                   title="Armature (customer's motor)"
                   subtitle="Stored on this motor. Flows into new DC work orders."
                   specs={viewingMotor.dcArmatureSpecs ?? {}}
-                  fields={DC_ARMATURE_FIELDS}
+                  fields={DC_ARMATURE_OTHERS_FIELDS}
                 />
               </>
             ) : (
@@ -827,7 +830,7 @@ export default function DashboardMotorsPage() {
                 title="AC winding & technical (customer's motor)"
                 subtitle="Stored on this motor. New work orders prefill from here; saving a work order updates these fields."
                 specs={viewingMotor.acSpecs ?? {}}
-                fields={AC_WORK_ORDER_FIELDS}
+                fields={AC_OTHERS_FIELDS}
               />
             )}
             {(viewingMotor.notes || "").trim() && (
@@ -965,11 +968,11 @@ export default function DashboardMotorsPage() {
           {isAcMotorType(form.motorType) ? (
             <div className="rounded-lg border border-border bg-form-bg/50 p-4">
               <p className="mb-4 text-sm text-secondary">
-                AC winding data. Pre-fills new work orders; also updates when a work order is saved.
+                AC winding data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved.
               </p>
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">AC winding</h3>
               <MotorSpecGrid
-                fields={AC_WORK_ORDER_FIELDS}
+                fields={AC_OTHERS_FIELDS}
                 values={form.acSpecs}
                 onChange={(key, v) =>
                   setForm((f) => ({ ...f, acSpecs: { ...f.acSpecs, [key]: v } }))
@@ -980,12 +983,12 @@ export default function DashboardMotorsPage() {
           ) : isDcMotorType(form.motorType) ? (
             <div className="rounded-lg border border-border bg-form-bg/50 p-4 space-y-8">
               <p className="text-sm text-secondary">
-                DC and armature data. Pre-fills new work orders; also updates when a work order is saved.
+                DC and armature data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved.
               </p>
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">DC motor</h3>
                 <MotorSpecGrid
-                  fields={DC_WORK_ORDER_FIELDS}
+                  fields={DC_OTHERS_FIELDS}
                   values={form.dcSpecs}
                   onChange={(key, v) =>
                     setForm((f) => ({ ...f, dcSpecs: { ...f.dcSpecs, [key]: v } }))
@@ -996,7 +999,7 @@ export default function DashboardMotorsPage() {
               <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">Armature</h3>
                 <MotorSpecGrid
-                  fields={DC_ARMATURE_FIELDS}
+                  fields={DC_ARMATURE_OTHERS_FIELDS}
                   values={form.dcArmatureSpecs}
                   onChange={(key, v) =>
                     setForm((f) => ({

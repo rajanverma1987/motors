@@ -136,7 +136,7 @@ export async function GET(request) {
       id: null,
       workOrderNumber,
       date: today,
-      technicianEmployeeId: "",
+      technicianEmployeeId: String(quote.technicianEmployeeId || "").trim(),
       jobType: "complete_motor",
       status: initialStatusFromSettings(settingsDoc),
       motorClass,

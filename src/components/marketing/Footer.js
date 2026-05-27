@@ -18,8 +18,8 @@ const footerLinks = {
   "For buyers": [
     { href: "/electric-motor-repair", label: "Electric motor repair hub" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
-    { href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" },
-    { href: "/electric-motor-reapir-near-me", label: "Repair shops near me" },
+    { href: "/electric-motor-repair-shops-listings", label: "Find repair centers" },
+    { href: "/electric-motor-repair-near-me", label: "Repair shops near me" },
     { href: "/how-to-choose-electric-motor-repair-shop", label: "How to choose a shop" },
     { href: "/when-to-repair-or-replace-electric-motor", label: "Repair vs. replace" },
     { href: "/types-of-electric-motor-repair-services", label: "Types of repair" },
@@ -32,7 +32,7 @@ const footerLinks = {
     { href: "/careers", label: "Careers & job postings" },
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
-    { href: "/contact", label: "About" },
+    { href: "/about", label: "About" },
   ],
   Legal: [
     { href: "/privacy", label: "Privacy Policy" },

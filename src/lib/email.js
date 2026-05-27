@@ -171,7 +171,7 @@ export async function sendDemoRequestThankYou(toName, toEmail) {
   const html = `
     <p>Hi${name},</p>
     <p>Thank you for requesting a demo of IQMotorBase.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
-    <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-reapir-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
+    <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-repair-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
     <p>— The IQMotorBase.com team</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
@@ -222,7 +222,7 @@ export async function sendShopListedNotificationToAdmin(doc) {
     <p>A repair center has been <strong>approved</strong> and is now listed on the website.</p>
     <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
     Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || "—"}</p>
-    <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-reapir-shops-listings">Public directory</a></p>
+    <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-repair-shops-listings">Public directory</a></p>
     <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, "Shop listed on website – IQMotorBase.com", wrapPlatformBrandedHtml(html));
@@ -565,4 +565,43 @@ export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, sho
     <p style="margin-top:16px">— ${signature}</p>
   `;
   return sendEmail(toEmail, subject, html);
+}
+
+/** Email work order PDF to a recipient (custom email + optional message in body). */
+export async function sendWorkOrderPdfToRecipient(
+  toEmail,
+  workOrderNumber,
+  shopCompanyName,
+  pdfBuffer,
+  options = {}
+) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const shopName = shopCompanyName && String(shopCompanyName).trim() ? shopCompanyName.trim() : "Motor Shop";
+  const woNo = esc(workOrderNumber) || "—";
+  const subject = `Work order ${woNo} – ${esc(shopName)}`;
+  const instructions = String(options.instructions ?? "").trim();
+  const instructionsBlock = instructions
+    ? `<p style="margin-top:12px;padding:12px;background:#f5f5f4;border-radius:8px;font-size:14px;line-height:1.5;color:#374151"><strong>Message:</strong><br/>${esc(instructions).replace(/\n/g, "<br/>")}</p>`
+    : "";
+  const html = `
+    <p>Hello,</p>
+    <p>Please find the attached work order <strong>${woNo}</strong> from ${esc(shopName)}.</p>
+    ${instructionsBlock}
+    <p style="margin-top:16px">If you have questions, reply to this email.</p>
+    <p style="margin-top:16px">— ${esc(shopName)}</p>
+  `;
+  const safeFile = String(workOrderNumber || "work-order")
+    .replace(/[^\w.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return sendEmail(toEmail, subject, html, {
+    attachments: [
+      {
+        filename: `Work-Order-${safeFile || "document"}.pdf`,
+        content: pdfBuffer,
+        contentType: "application/pdf",
+      },
+    ],
+  });
 }

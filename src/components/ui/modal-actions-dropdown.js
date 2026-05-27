@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
+import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
 import { FiChevronDown } from "react-icons/fi";
 import Button from "@/components/ui/button";
 
@@ -37,7 +38,7 @@ export default function ModalActionsDropdown({
 
   useLayoutEffect(() => {
     if (!menuMode || !open || !triggerWrapRef.current) return;
-    const r = triggerWrapRef.current.getBoundingClientRect();
+    const r = mapRectForBodyFixedPosition(triggerWrapRef.current.getBoundingClientRect());
     const minW = Math.max(200, r.width);
     let left = align === "end" ? r.right - minW : r.left;
     if (left + minW > window.innerWidth - 8) left = window.innerWidth - minW - 8;

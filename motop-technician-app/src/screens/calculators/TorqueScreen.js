@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Text, ScrollView, StyleSheet } from "react-native";
+import { Text, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   num,
@@ -12,8 +12,6 @@ import {
   SegmentedTwo,
   calcScreenStyles as S,
 } from "./shared";
-import { colors, spacing } from "../../theme";
-
 export default function TorqueScreen() {
   const insets = useSafeAreaInsets();
   const [mode, setMode] = useState("hp");
@@ -43,7 +41,7 @@ export default function TorqueScreen() {
   return (
     <ScrollView style={S.scroll} contentContainerStyle={[S.content, { paddingBottom: insets.bottom + 24 }]}>
       <CalcPanel title="Torque from power & speed">
-        <Text style={styles.fieldLabel}>Power input</Text>
+        <Text style={S.fieldLabel}>Power input</Text>
         <SegmentedTwo
           a={{ value: "hp", label: "HP + RPM" }}
           b={{ value: "kw", label: "kW + RPM" }}
@@ -69,7 +67,3 @@ export default function TorqueScreen() {
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.secondary, marginBottom: spacing.sm },
-});

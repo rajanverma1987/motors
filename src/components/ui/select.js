@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
 import HelpIcon from "./help-icon";
 
 const DROPDOWN_Z = 9999;
@@ -19,6 +20,8 @@ export default function Select({
   searchable = true,
   placeholder = "Select...",
   disabled = false,
+  /** Classes on the trigger control (e.g. match compact Input height in dense forms). */
+  triggerClassName = "",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -54,7 +57,7 @@ export default function Select({
 
   const updateDropdownRect = () => {
     if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
+      const rect = mapRectForBodyFixedPosition(triggerRef.current.getBoundingClientRect());
       setDropdownRect({ top: rect.bottom, left: rect.left, width: rect.width });
     }
   };
@@ -240,7 +243,7 @@ export default function Select({
           }
         }}
         onKeyDown={handleKeyboardNavigation}
-        className={`flex w-full min-h-[2.5rem] items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary ${disabled ? "cursor-not-allowed opacity-60 bg-card border-border/80" : "cursor-pointer"}`}
+        className={`flex w-full min-h-[2.5rem] items-center justify-between gap-2 rounded-md border border-border bg-bg px-3 py-2 text-left text-text focus:outline-none focus:ring-2 focus:ring-primary ${disabled ? "cursor-not-allowed opacity-60 bg-card border-border/80" : "cursor-pointer"} ${triggerClassName}`.trim()}
       >
         {triggerContent}
         <svg

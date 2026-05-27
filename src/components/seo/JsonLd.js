@@ -1,5 +1,6 @@
 import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { HOME_FAQS } from "@/lib/home-faqs";
 
 export function HomePageJsonLd() {
   const siteUrl = getPublicSiteUrl();
@@ -21,25 +22,44 @@ export function HomePageJsonLd() {
   const softwareApplication = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "IQMotorBase.com",
+    name: "IQMotorBase",
     applicationCategory: "BusinessApplication",
-    operatingSystem: "Web",
+    operatingSystem: "Web, iOS, Android",
     description:
-      "Motor repair job management software with Job Write-Up (pipeline quotes, customer send, attachments, and shop actions on one job record), work orders linked to job numbers, job board, customer and motor registry, formal RFQs and invoicing, quotes tied to shop inventory, parts stock with reservations and low-stock alerts, technician mobile app scanning job QR tags, lead generation network, public Careers job postings, and a public marketplace—with buyer requests managed in the CRM.",
+      "Shop management software for electric motor repair businesses. Includes work orders, lead generation, inventory, invoicing, and a technician mobile app.",
     url: siteUrl,
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
+      description: "Custom pricing — contact for a demo",
     },
   };
 
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "IQMotorBase.com",
+    name: "IQMotorBase",
     url: siteUrl,
     logo: getBrandLogoAbsoluteUrl(),
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "Sales",
+      url: `${siteUrl}/contact`,
+    },
+  };
+
+  const faqPage = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: HOME_FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.answer,
+      },
+    })),
   };
 
   return (
@@ -58,6 +78,11 @@ export function HomePageJsonLd() {
         id="schema-jsonld-organization"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
+      />
+      <script
+        id="schema-jsonld-faq"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPage) }}
       />
     </>
   );

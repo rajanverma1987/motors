@@ -121,10 +121,10 @@ export async function deleteAllDataForRegisteredClient(user) {
 
   try {
     const { revalidatePath } = await import("next/cache");
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     for (const slug of listingSlugs) {
-      revalidatePath(`/electric-motor-reapir-shops-listings/${slug}`);
+      revalidatePath(`/electric-motor-repair-shops-listings/${slug}`);
     }
   } catch (e) {
     console.warn("revalidatePath after listing purge:", e?.message || e);

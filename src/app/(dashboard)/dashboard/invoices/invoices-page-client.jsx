@@ -2,15 +2,12 @@
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEdit2, FiTrash2, FiSend, FiPrinter, FiRotateCw } from "react-icons/fi";
-import Button from "@/components/ui/button";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
-import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
-import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -24,6 +21,14 @@ import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatDateMdy } from "@/lib/format-date";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+import QuoteFormModal from "@/components/dashboard/quote-form-modal";
+import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[id]/repair-flow-job-detail-client";
+import Modal from "@/components/ui/modal";
+import Button from "@/components/ui/button";
+
+const INVOICE_RECORD_LINK_CLASS =
+  "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
 function InvoicesInner() {
   const toast = useToast();
@@ -46,9 +51,10 @@ function InvoicesInner() {
   const [summaryByStatus, setSummaryByStatus] = useState({});
   const [statusFilter, setStatusFilter] = useState("");
   const [invoiceModal, setInvoiceModal] = useState(null);
-  const [printOpen, setPrintOpen] = useState(false);
-  const [printPayload, setPrintPayload] = useState(null);
-  const [sendingInvoiceId, setSendingInvoiceId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [openQuoteId, setOpenQuoteId] = useState(null);
+  const [linkedJobId, setLinkedJobId] = useState(null);
+  const [linkedJobHeader, setLinkedJobHeader] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -172,6 +178,22 @@ function InvoicesInner() {
     return buttons;
   }, [summaryByStatus, statusSelectOptions, mergedAccountSettings]);
 
+  const openInvoiceJobLink = useCallback((row) => {
+    const jobId = String(row?.repairFlowJobId || "").trim();
+    const quoteId = String(row?.quoteId || "").trim();
+    if (jobId) {
+      setLinkedJobHeader(null);
+      setLinkedJobId(jobId);
+      return;
+    }
+    if (quoteId) setOpenQuoteId(quoteId);
+  }, []);
+
+  const closeLinkedJobModal = useCallback(() => {
+    setLinkedJobId(null);
+    setLinkedJobHeader(null);
+  }, []);
+
   const handleDeleteCb = useCallback(
     async (row) => {
       const ok = await confirm({
@@ -197,128 +219,40 @@ function InvoicesInner() {
     [confirm, toast, load]
   );
 
-  const handleSendCb = useCallback(
-    async (row) => {
-      const ok = await confirm({
-        title: "Send invoice to client",
-        message: `Email invoice #${row.invoiceNumber || ""} to the customer on file?`,
-        confirmLabel: "Send",
-      });
-      if (!ok) return;
-      setSendingInvoiceId(row.id);
-      try {
-        const res = await fetch(`/api/dashboard/invoices/${row.id}/send`, {
-          method: "POST",
-          credentials: "include",
-        });
-        const d = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(d.error || "Send failed");
-        toast.success(d.message || "Sent.");
-        load();
-      } catch (e) {
-        toast.error(e.message || "Could not send");
-      } finally {
-        setSendingInvoiceId(null);
-      }
-    },
-    [confirm, toast, load]
-  );
-
-  const openPrintCb = useCallback(
-    async (row) => {
-      try {
-        const res = await fetch(`/api/dashboard/invoices/${row.id}`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        const inv = await res.json();
-        if (!res.ok) throw new Error(inv.error || "Failed to load invoice");
-        setPrintPayload({
-          invoice: inv,
-          motorLabel: inv.motorLabel,
-          fromShopName: inv.fromShopName || "",
-          fromShopContact: inv.fromShopContact || "",
-          fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
-          fromBillingAddress: inv.fromBillingAddress || "",
-          fromPaymentTermsLabel:
-            inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
-          customerToName: inv.customerToName || "",
-          customerBillingAddress: inv.customerBillingAddress || "",
-          invoicePaymentOptions: accountSettings?.invoicePaymentOptions || "",
-          invoiceThankYouNote: accountSettings?.invoiceThankYouNote || "",
-        });
-        setPrintOpen(true);
-      } catch (e) {
-        toast.error(e.message || "Could not open print view");
-      }
-    },
-    [toast, accountSettings]
-  );
-
   const columns = useMemo(
     () => [
       {
-        key: "_actions",
-        label: "Actions",
+        key: "actions",
+        label: "",
+        width: 72,
+        minWidth: 72,
+        maxWidth: 80,
         render: (_, row) => (
-          <div className="flex flex-wrap justify-start gap-1">
-            <Button
+          <div className="flex items-center gap-1">
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              title="Edit"
               onClick={(e) => {
                 e.stopPropagation();
                 setInvoiceModal({ invoiceId: row.id });
               }}
+              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+              aria-label="Edit invoice"
+              title="Edit"
             >
-              <FiEdit2 className="h-4 w-4" />
-            </Button>
-            <Button
+              <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
+            </button>
+            <button
               type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              title={sendingInvoiceId === row.id ? "Sending…" : "Send to client"}
-              disabled={sendingInvoiceId != null}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleSendCb(row);
-              }}
-            >
-              {sendingInvoiceId === row.id ? (
-                <FiRotateCw className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <FiSend className="h-4 w-4" aria-hidden />
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              title="Print"
-              onClick={(e) => {
-                e.stopPropagation();
-                openPrintCb(row);
-              }}
-            >
-              <FiPrinter className="h-4 w-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 text-danger"
-              title="Delete"
               onClick={(e) => {
                 e.stopPropagation();
                 handleDeleteCb(row);
               }}
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+              aria-label="Delete invoice"
+              title="Delete"
             >
-              <FiTrash2 className="h-4 w-4" />
-            </Button>
+              <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+            </button>
           </div>
         ),
       },
@@ -327,7 +261,25 @@ function InvoicesInner() {
         key: "rfqNumber",
         label: "Job#",
         sortable: true,
-        render: (v) => v || "—",
+        render: (v, row) => {
+          const label = v || row.rfqNumber || "—";
+          const jobId = String(row.repairFlowJobId || "").trim();
+          const quoteId = String(row.quoteId || "").trim();
+          if (label === "—" || (!jobId && !quoteId)) return label;
+          return (
+            <button
+              type="button"
+              className={INVOICE_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                openInvoiceJobLink(row);
+              }}
+              title={jobId ? "Open repair job" : "Open RFQ"}
+            >
+              {label}
+            </button>
+          );
+        },
       },
       {
         key: "customerPo",
@@ -335,7 +287,29 @@ function InvoicesInner() {
         sortable: true,
         render: (v) => v || "—",
       },
-      { key: "customerName", label: "Customer", sortable: true },
+      {
+        key: "customerName",
+        label: "Customer",
+        sortable: true,
+        render: (v, row) => {
+          const name = v || row.customerName || "—";
+          const customerId = String(row.customerId || "").trim();
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className={INVOICE_RECORD_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
+      },
       {
         key: "date",
         label: "Date",
@@ -375,7 +349,7 @@ function InvoicesInner() {
         },
       },
     ],
-    [fmt, handleDeleteCb, handleSendCb, openPrintCb, sendingInvoiceId, mergedAccountSettings]
+    [fmt, handleDeleteCb, mergedAccountSettings, openInvoiceJobLink]
   );
 
   return (
@@ -445,14 +419,49 @@ function InvoicesInner() {
         zIndex={55}
       />
 
-      <InvoicePrintOffscreen
-        open={printOpen}
-        payload={printPayload}
-        onClose={() => {
-          setPrintOpen(false);
-          setPrintPayload(null);
-        }}
+      <CustomerQuickViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
       />
+
+      <QuoteFormModal
+        open={!!openQuoteId}
+        quoteId={openQuoteId}
+        onClose={() => setOpenQuoteId(null)}
+        onAfterSave={load}
+        zIndex={120}
+      />
+
+      <Modal
+        open={!!linkedJobId}
+        onClose={closeLinkedJobModal}
+        title={
+          linkedJobHeader?.jobNumber
+            ? `${linkedJobHeader.jobNumber} · ${linkedJobHeader.customerLabel || "Customer"}`
+            : "Repair job"
+        }
+        width="min(1200px, 94vw)"
+        zIndex={115}
+        actions={
+          <Button type="button" variant="outline" size="sm" onClick={closeLinkedJobModal}>
+            Close
+          </Button>
+        }
+      >
+        <div className="w-full min-w-0 max-w-none">
+          {linkedJobId ? (
+            <RepairFlowJobDetailClient
+              key={linkedJobId}
+              jobId={linkedJobId}
+              variant="modal"
+              onClose={closeLinkedJobModal}
+              onJobMeta={setLinkedJobHeader}
+            />
+          ) : null}
+        </div>
+      </Modal>
     </div>
   );
 }

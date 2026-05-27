@@ -16,6 +16,8 @@ const quoteSchema = new mongoose.Schema(
     date: { type: String, default: "", trim: true },
     /** Prepared by: employee id or name */
     preparedBy: { type: String, default: "", trim: true },
+    /** Assigned technician (Employee id) — synced to work orders; required for mobile app visibility */
+    technicianEmployeeId: { type: String, default: "", trim: true },
     /** Auto-generated RFQ number: A00001, A00002, ... */
     rfqNumber: { type: String, default: "", trim: true },
     /** Legacy single-line scope; kept for backward compat */

@@ -51,6 +51,12 @@ function todayISODate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+/** Logistics list rows use `id`; tolerate legacy `_id` if present. */
+function logisticsRowId(row) {
+  const id = String(row?.id ?? row?._id ?? "").trim();
+  return id;
+}
+
 const EMPTY_FORM = {
   date: todayISODate(),
   invoiceNumber: "",
@@ -253,7 +259,7 @@ export default function LogisticsPageClient() {
   };
 
   const openEdit = (row) => {
-    setEditingId(row.id);
+    setEditingId(logisticsRowId(row));
     setForm({
       date: row.date || todayISODate(),
       invoiceNumber: row.invoiceNumber || "",
@@ -346,6 +352,11 @@ export default function LogisticsPageClient() {
   };
 
   const handleDelete = async (row) => {
+    const entryId = logisticsRowId(row);
+    if (!entryId) {
+      toast.error("Cannot delete: missing entry id.");
+      return;
+    }
     const ok = await confirm({
       title: "Delete entry?",
       message: "This logistics record will be removed.",
@@ -354,7 +365,7 @@ export default function LogisticsPageClient() {
     });
     if (!ok) return;
     try {
-      const res = await fetch(`/api/dashboard/logistics/${row.id}`, {
+      const res = await fetch(`/api/dashboard/logistics/${entryId}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -583,7 +594,7 @@ export default function LogisticsPageClient() {
         <Table
           columns={columns}
           data={sortedRows}
-          rowKey="id"
+          rowKey={(row, i) => logisticsRowId(row) || `row-${i}`}
           loading={loading}
           emptyMessage="No entries yet. Use Add entry to log receiving or shipping."
           onRefresh={load}

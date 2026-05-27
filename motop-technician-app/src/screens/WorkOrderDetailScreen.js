@@ -22,7 +22,7 @@ import { useBookmarks } from "../BookmarksContext";
 import { techFetch, techFetchForm, getMediaUrl } from "../api";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
 import WorkOrderInspectionsSection from "../components/WorkOrderInspectionsSection";
-import { colors, spacing } from "../theme";
+import { colors, spacing, formFieldLabel } from "../theme";
 
 const DEFAULT_JOB_TYPES = [
   { value: "complete_motor", label: "Complete Motor" },
@@ -1058,12 +1058,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.secondary,
-    marginBottom: 4,
-  },
+  fieldLabel: formFieldLabel,
   fieldInput: {
     backgroundColor: colors.formBg,
     borderWidth: 1,

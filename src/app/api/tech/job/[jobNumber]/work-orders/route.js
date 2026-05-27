@@ -4,6 +4,11 @@ import Quote from "@/models/Quote";
 import WorkOrder from "@/models/WorkOrder";
 import MotorRepairJob from "@/models/MotorRepairJob";
 import { getTechnicianFromRequest } from "@/lib/auth-portal";
+import { isWorkOrderOpenStatus } from "@/lib/work-order-open-status";
+import {
+  getWriteUpQuoteIds,
+  technicianOpenWorkOrderFilter,
+} from "@/lib/tech-job-queries";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -53,17 +58,17 @@ export async function GET(request, context) {
     const orClause = [{ repairFlowJobId: jobIdStr }];
     if (quoteIds.length) orClause.push({ quoteId: { $in: quoteIds } });
 
+    const writeUpQuoteIds = await getWriteUpQuoteIds(tech.shopEmail);
     const list = assigneeId
       ? await WorkOrder.find({
-          createdByEmail: tech.shopEmail,
-          technicianEmployeeId: assigneeId,
+          ...technicianOpenWorkOrderFilter(tech.shopEmail, assigneeId, writeUpQuoteIds),
           $or: orClause,
         })
           .sort({ workOrderNumber: 1 })
           .lean()
       : [];
 
-    const workOrders = list.map((w) => ({
+    const workOrders = list.filter((w) => isWorkOrderOpenStatus(w.status)).map((w) => ({
       id: w._id.toString(),
       workOrderNumber: w.workOrderNumber || "",
       status: w.status || "",

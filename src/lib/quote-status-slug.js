@@ -1,5 +1,5 @@
 import { clampString } from "@/lib/validation";
-import { WRITE_UP_QUOTE_STATUS } from "@/lib/quote-rfq-lifecycle";
+import { WRITE_UP_QUOTE_STATUS, isWriteUpStatus } from "@/lib/quote-rfq-lifecycle";
 
 const MAX_LEN = 80;
 
@@ -18,6 +18,7 @@ export function defaultNewRfqStatusSlug() {
 
 /** Whether quote status (slug or dropdown label) allows creating a work order. */
 export function quoteStatusAllowsWorkOrder(rawStatus) {
+  if (isWriteUpStatus(rawStatus)) return false;
   const s = String(rawStatus ?? "").trim().toLowerCase();
   if (!s) return false;
   if (s === "approved") return true;

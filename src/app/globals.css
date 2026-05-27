@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Base font size 90% of browser default (16px → ~14.4px) */
+/* Base font size; --app-zoom-factor from Settings → Display scales rem-based UI (all browsers) */
 html {
-  font-size: 95%;
+  font-size: calc(95% * var(--app-zoom-factor, 1));
 }
 
 /* Design system theme tokens (HSL values without hsl()) */
@@ -125,4 +125,15 @@ html.dark .job-board-status-pill.tile-colors-custom {
 .ui-table-shell a:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
+}
+
+/* Dashboard display zoom — reset for print so layouts match paper */
+@media print {
+  html {
+    zoom: 1 !important;
+    font-size: 95% !important;
+  }
+  html[data-app-zoom] {
+    --app-zoom-factor: 1 !important;
+  }
 }

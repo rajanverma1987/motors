@@ -60,13 +60,13 @@ export async function POST(request) {
           console.warn("notifyAreaRequestsForListing failed:", e);
         }
         const pathSlug = (doc.urlSlug || "").trim();
-        if (pathSlug) revalidatePath(`/electric-motor-reapir-shops-listings/${pathSlug}`);
+        if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
       } else {
         await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
       }
       updated += 1;
     }
-    revalidatePath("/electric-motor-reapir-shops-listings");
+    revalidatePath("/electric-motor-repair-shops-listings");
     revalidatePath("/sitemap.xml");
     return NextResponse.json({ ok: true, updated });
   } catch (err) {

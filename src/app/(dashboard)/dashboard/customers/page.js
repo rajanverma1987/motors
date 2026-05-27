@@ -12,9 +12,23 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
+import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
+import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
 import { useAuth } from "@/contexts/auth-context";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
+import {
+  quoteStatusSelectOptionsFromMerged,
+  quoteStatusTileColorForValue,
+} from "@/lib/dropdown-catalog";
+import {
+  resolveStatusTileProps,
+  resolveWorkOrderStatusTileProps,
+} from "@/lib/work-order-status-tiles";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -115,10 +129,91 @@ function buildCustomerPayload(form) {
   };
 }
 
+const STATUS_PILL_CLASS =
+  "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium";
+
+function InvoiceStatusPill({ status, mergedSettings }) {
+  const pill = invoiceStatusPillAppearance(status, mergedSettings);
+  const label = invoiceStatusLabel(status, mergedSettings);
+  return (
+    <span className={`${STATUS_PILL_CLASS} ${pill.className}`} style={pill.style}>
+      {label}
+    </span>
+  );
+}
+
+function QuoteStatusPill({ status, mergedSettings }) {
+  const s = String(status || "draft").toLowerCase();
+  const opts = quoteStatusSelectOptionsFromMerged(mergedSettings);
+  const optIdx = opts.findIndex((o) => String(o.value).toLowerCase() === s);
+  const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
+    mergedSettings,
+    s,
+    optIdx >= 0 ? optIdx : 0
+  );
+  const pill = resolveStatusTileProps(tileColor, index, {
+    tileBgColor,
+    tileTextColor,
+    tileColor,
+  });
+  const label =
+    opts.find((o) => String(o.value).toLowerCase() === s)?.label ??
+    (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
+  return (
+    <span className={`${STATUS_PILL_CLASS} ${pill.className}`} style={pill.style}>
+      {label}
+    </span>
+  );
+}
+
+function WorkOrderStatusPill({ status, mergedSettings }) {
+  const label = status != null && String(status).trim() ? String(status).trim() : "—";
+  if (label === "—") return <span className="text-secondary">—</span>;
+  const statuses = Array.isArray(mergedSettings?.workOrderStatuses)
+    ? mergedSettings.workOrderStatuses
+    : [];
+  const idx = statuses.findIndex((x) => String(x).trim() === label);
+  const pill = resolveWorkOrderStatusTileProps(
+    label,
+    idx >= 0 ? idx : 0,
+    mergedSettings?.workOrderStatusTileColors ?? {}
+  );
+  return (
+    <span className={`${STATUS_PILL_CLASS} ${pill.className}`} style={pill.style}>
+      {label}
+    </span>
+  );
+}
+
+function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children }) {
+  if (loading) {
+    return (
+      <div
+        className="flex min-h-[7rem] items-center justify-center gap-2 rounded border border-border bg-form-bg/30 py-8"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span
+          className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+          aria-hidden
+        />
+        <span className="text-sm text-secondary">Loading…</span>
+      </div>
+    );
+  }
+  if (isEmpty) {
+    return <p className="text-sm text-secondary">{emptyMessage}</p>;
+  }
+  return children;
+}
+
 export default function DashboardCustomersPage() {
   const { user } = useAuth();
   const toast = useToast();
   const formatMoney = useFormatMoney();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromLeadId = searchParams.get("fromLead");
@@ -158,6 +253,14 @@ export default function DashboardCustomersPage() {
   /** Ref so submit always sends latest form (avoids stale closure after "Copy from billing") */
   const formRef = useRef(form);
   formRef.current = form;
+
+  const [openInvoiceId, setOpenInvoiceId] = useState(null);
+  const [openQuoteId, setOpenQuoteId] = useState(null);
+  const [openWorkOrderId, setOpenWorkOrderId] = useState(null);
+  const [openMotorId, setOpenMotorId] = useState(null);
+
+  const openRecordBtnClass =
+    "font-mono text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
   const loadCustomers = useCallback(async () => {
     try {
@@ -308,11 +411,11 @@ export default function DashboardCustomersPage() {
     });
   };
 
-  useEffect(() => {
-    if (!viewModalOpen || !viewingCustomer?.id || viewLoadingCustomerId) return;
-    let cancelled = false;
-    setCustomerActivityLoading(true);
-    (async () => {
+  const refreshCustomerActivity = useCallback(
+    async (customerId) => {
+      const cid = String(customerId || "").trim();
+      if (!cid) return;
+      setCustomerActivityLoading(true);
       try {
         const [quotesRes, workOrdersRes, invoicesRes] = await Promise.all([
           fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
@@ -324,8 +427,6 @@ export default function DashboardCustomersPage() {
           workOrdersRes.json().catch(() => []),
           invoicesRes.json().catch(() => []),
         ]);
-        if (cancelled) return;
-        const customerId = String(viewingCustomer.id);
         const invoiceQuoteIds = new Set(
           (Array.isArray(invoicesData) ? invoicesData : [])
             .map((inv) => String(inv?.quoteId || "").trim())
@@ -341,27 +442,40 @@ export default function DashboardCustomersPage() {
           ])
         );
         setCustomerActivity({
-          quotes: visibleQuotes.filter((q) => String(q.customerId || "") === customerId),
+          quotes: visibleQuotes.filter((q) => String(q.customerId || "") === cid),
           workOrders: Array.isArray(workOrdersData)
             ? workOrdersData
-                .filter((w) => String(w.customerId || "") === customerId)
+                .filter((w) => String(w.customerId || "") === cid)
                 .map((w) => ({
                   ...w,
                   linkedQuoteAmount: quoteAmountById.get(String(w?.quoteId || "")) || 0,
                 }))
             : [],
           invoices: Array.isArray(invoicesData)
-            ? invoicesData.filter((inv) => String(inv.customerId || "") === customerId)
+            ? invoicesData.filter((inv) => String(inv.customerId || "") === cid)
             : [],
         });
       } finally {
-        if (!cancelled) setCustomerActivityLoading(false);
+        setCustomerActivityLoading(false);
+      }
+    },
+    [setCustomerActivity, setCustomerActivityLoading]
+  );
+
+  useEffect(() => {
+    if (!viewModalOpen || !viewingCustomer?.id || viewLoadingCustomerId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshCustomerActivity(viewingCustomer.id);
+      } finally {
+        // refreshCustomerActivity handles loading flags
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [viewModalOpen, viewingCustomer?.id, viewLoadingCustomerId]);
+  }, [viewModalOpen, viewingCustomer?.id, viewLoadingCustomerId, refreshCustomerActivity]);
 
   const openAddMotorModal = () => {
     if (!viewingCustomer?.id) return;
@@ -642,15 +756,6 @@ export default function DashboardCustomersPage() {
     ],
     []
   );
-
-  const statusBadgeVariant = (status) => {
-    const s = String(status || "").toLowerCase();
-    if (["approved", "paid", "completed", "delivered", "closed"].includes(s)) return "success";
-    if (["pending", "in progress", "assigned", "sent", "partially paid"].includes(s)) return "warning";
-    if (["cancelled", "canceled", "rejected", "overdue", "void"].includes(s)) return "danger";
-    if (["draft", "open"].includes(s)) return "default";
-    return "primary";
-  };
 
   const moneyLabel = (v) => {
     const n = Number.parseFloat(String(v ?? ""));
@@ -1147,7 +1252,20 @@ export default function DashboardCustomersPage() {
                       <tbody className="text-title">
                         {viewingCustomer.linkedMotors.map((m) => (
                           <tr key={m.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{m.serialNumber || "—"}</td>
+                            <td className="px-3 py-2">
+                              {m?.id ? (
+                                <button
+                                  type="button"
+                                  className={openRecordBtnClass}
+                                  onClick={() => setOpenMotorId(m.id)}
+                                  title="Open motor"
+                                >
+                                  {m.serialNumber || "—"}
+                                </button>
+                              ) : (
+                                m.serialNumber || "—"
+                              )}
+                            </td>
                             <td className="px-3 py-2">{m.manufacturer || "—"}</td>
                             <td className="px-3 py-2">{m.model || "—"}</td>
                             <td className="px-3 py-2">{m.hp || "—"}</td>
@@ -1164,22 +1282,24 @@ export default function DashboardCustomersPage() {
 
             <div className="space-y-6">
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Invoices ({customerActivity.invoices.length})</h3>
-                  {customerActivityLoading && <span className="text-xs text-secondary">Loading related records…</span>}
-                </div>
-                {invoiceStatusTotals.length > 0 && (
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Invoices ({customerActivityLoading ? "…" : customerActivity.invoices.length})
+                </h3>
+                {!customerActivityLoading && invoiceStatusTotals.length > 0 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {invoiceStatusTotals.map((s) => (
-                      <Badge key={`inv-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                        {s.status}: {moneyLabel(s.amount)}
-                      </Badge>
+                      <span key={`inv-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
+                        <InvoiceStatusPill status={s.status} mergedSettings={mergedSettings} />
+                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                      </span>
                     ))}
                   </div>
                 )}
-                {customerActivity.invoices.length === 0 ? (
-                  <p className="text-sm text-secondary">No invoices found.</p>
-                ) : (
+                <CustomerActivityTableBody
+                  loading={customerActivityLoading}
+                  isEmpty={customerActivity.invoices.length === 0}
+                  emptyMessage="No invoices found."
+                >
                   <div className="overflow-x-auto rounded border border-border">
                     <table className="w-full min-w-[560px] text-sm">
                       <thead>
@@ -1193,12 +1313,23 @@ export default function DashboardCustomersPage() {
                       <tbody className="text-title">
                         {customerActivity.invoices.map((inv) => (
                           <tr key={inv.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{inv.invoiceNumber || "—"}</td>
+                            <td className="px-3 py-2">
+                              {inv?.id ? (
+                                <button
+                                  type="button"
+                                  className={openRecordBtnClass}
+                                  onClick={() => setOpenInvoiceId(inv.id)}
+                                  title="Open invoice"
+                                >
+                                  {inv.invoiceNumber || "—"}
+                                </button>
+                              ) : (
+                                inv.invoiceNumber || "—"
+                              )}
+                            </td>
                             <td className="px-3 py-2">{inv.date || "—"}</td>
                             <td className="px-3 py-2">
-                              <Badge variant={statusBadgeVariant(inv.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                                {inv.status || "—"}
-                              </Badge>
+                              <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
                             </td>
                             <td className="px-3 py-2 text-right">{moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}</td>
                           </tr>
@@ -1206,23 +1337,28 @@ export default function DashboardCustomersPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
+                </CustomerActivityTableBody>
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">Quotes ({customerActivity.quotes.length})</h3>
-                {quoteStatusTotals.length > 0 && (
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Quotes ({customerActivityLoading ? "…" : customerActivity.quotes.length})
+                </h3>
+                {!customerActivityLoading && quoteStatusTotals.length > 0 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {quoteStatusTotals.map((s) => (
-                      <Badge key={`quote-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                        {s.status}: {moneyLabel(s.amount)}
-                      </Badge>
+                      <span key={`quote-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
+                        <QuoteStatusPill status={s.status} mergedSettings={mergedSettings} />
+                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                      </span>
                     ))}
                   </div>
                 )}
-                {customerActivity.quotes.length === 0 ? (
-                  <p className="text-sm text-secondary">No quotes found.</p>
-                ) : (
+                <CustomerActivityTableBody
+                  loading={customerActivityLoading}
+                  isEmpty={customerActivity.quotes.length === 0}
+                  emptyMessage="No quotes found."
+                >
                   <div className="overflow-x-auto rounded border border-border">
                     <table className="w-full min-w-[560px] text-sm">
                       <thead>
@@ -1236,12 +1372,23 @@ export default function DashboardCustomersPage() {
                       <tbody className="text-title">
                         {customerActivity.quotes.map((q) => (
                           <tr key={q.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{q.rfqNumber || "—"}</td>
+                            <td className="px-3 py-2">
+                              {q?.id ? (
+                                <button
+                                  type="button"
+                                  className={openRecordBtnClass}
+                                  onClick={() => setOpenQuoteId(q.id)}
+                                  title="Open RFQ"
+                                >
+                                  {q.rfqNumber || "—"}
+                                </button>
+                              ) : (
+                                q.rfqNumber || "—"
+                              )}
+                            </td>
                             <td className="px-3 py-2">{q.date || "—"}</td>
                             <td className="px-3 py-2">
-                              <Badge variant={statusBadgeVariant(q.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                                {q.status || "—"}
-                              </Badge>
+                              <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
                             </td>
                             <td className="px-3 py-2 text-right">{moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}</td>
                           </tr>
@@ -1249,23 +1396,28 @@ export default function DashboardCustomersPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
+                </CustomerActivityTableBody>
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">Work orders ({customerActivity.workOrders.length})</h3>
-                {workOrderStatusTotals.length > 0 && (
+                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                  Work orders ({customerActivityLoading ? "…" : customerActivity.workOrders.length})
+                </h3>
+                {!customerActivityLoading && workOrderStatusTotals.length > 0 && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {workOrderStatusTotals.map((s) => (
-                      <Badge key={`wo-s-${s.status}`} variant={statusBadgeVariant(s.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                        {s.status}: {moneyLabel(s.amount)}
-                      </Badge>
+                      <span key={`wo-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
+                        <WorkOrderStatusPill status={s.status} mergedSettings={mergedSettings} />
+                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                      </span>
                     ))}
                   </div>
                 )}
-                {customerActivity.workOrders.length === 0 ? (
-                  <p className="text-sm text-secondary">No work orders found.</p>
-                ) : (
+                <CustomerActivityTableBody
+                  loading={customerActivityLoading}
+                  isEmpty={customerActivity.workOrders.length === 0}
+                  emptyMessage="No work orders found."
+                >
                   <div className="overflow-x-auto rounded border border-border">
                     <table className="w-full min-w-[560px] text-sm">
                       <thead>
@@ -1279,20 +1431,44 @@ export default function DashboardCustomersPage() {
                       <tbody className="text-title">
                         {customerActivity.workOrders.map((wo) => (
                           <tr key={wo.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{wo.workOrderNumber || "—"}</td>
-                            <td className="px-3 py-2">{wo.quoteRfqNumber || "—"}</td>
+                            <td className="px-3 py-2">
+                              {wo?.id ? (
+                                <button
+                                  type="button"
+                                  className={openRecordBtnClass}
+                                  onClick={() => setOpenWorkOrderId(wo.id)}
+                                  title="Open work order"
+                                >
+                                  {wo.workOrderNumber || "—"}
+                                </button>
+                              ) : (
+                                wo.workOrderNumber || "—"
+                              )}
+                            </td>
+                            <td className="px-3 py-2">
+                              {wo?.quoteId ? (
+                                <button
+                                  type="button"
+                                  className={openRecordBtnClass}
+                                  onClick={() => setOpenQuoteId(wo.quoteId)}
+                                  title="Open linked RFQ"
+                                >
+                                  {wo.quoteRfqNumber || "—"}
+                                </button>
+                              ) : (
+                                wo.quoteRfqNumber || "—"
+                              )}
+                            </td>
                             <td className="px-3 py-2">{wo.date || "—"}</td>
                             <td className="px-3 py-2">
-                              <Badge variant={statusBadgeVariant(wo.status)} className="rounded-full px-2.5 py-0.5 text-xs">
-                                {wo.status || "—"}
-                              </Badge>
+                              <WorkOrderStatusPill status={wo.status} mergedSettings={mergedSettings} />
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                )}
+                </CustomerActivityTableBody>
               </div>
             </div>
           </div>
@@ -1418,6 +1594,45 @@ export default function DashboardCustomersPage() {
           </div>
         </Form>
       </Modal>
+
+      {/* Open related records without leaving Customers page */}
+      <InvoiceFormModal
+        open={!!openInvoiceId}
+        invoiceId={openInvoiceId}
+        onClose={() => setOpenInvoiceId(null)}
+        onAfterSave={() => {
+          setOpenInvoiceId(null);
+          // Keep customer modal open; refresh related activity
+          if (viewingCustomer?.id) refreshCustomerActivity(viewingCustomer.id);
+        }}
+        zIndex={110}
+      />
+
+      <QuoteQuickViewModal
+        open={!!openQuoteId}
+        quoteId={openQuoteId}
+        onClose={() => setOpenQuoteId(null)}
+        zIndex={115}
+      />
+
+      <WorkOrderFormModal
+        open={!!openWorkOrderId}
+        workOrderId={openWorkOrderId}
+        onClose={() => setOpenWorkOrderId(null)}
+        onAfterSave={() => {
+          setOpenWorkOrderId(null);
+          if (viewingCustomer?.id) refreshCustomerActivity(viewingCustomer.id);
+        }}
+        zIndex={120}
+      />
+
+      <MotorQuickViewModal
+        open={!!openMotorId}
+        motorId={openMotorId}
+        customerName={viewingCustomer?.companyName || viewingCustomer?.primaryContactName || ""}
+        onClose={() => setOpenMotorId(null)}
+        zIndex={125}
+      />
 
       {/* Edit modal */}
       <Modal

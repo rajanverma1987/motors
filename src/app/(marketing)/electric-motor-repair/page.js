@@ -125,11 +125,11 @@ export default function ElectricMotorRepairHubPage() {
               <h2 className="text-2xl font-bold text-title">Find shops &amp; parts</h2>
               <p className="mt-3 text-secondary">
                 Our{" "}
-                <Link href="/electric-motor-reapir-shops-listings" className="font-medium text-primary hover:underline">
+                <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
                   repair center directory
                 </Link>{" "}
                 and{" "}
-                <Link href="/electric-motor-reapir-near-me" className="font-medium text-primary hover:underline">
+                <Link href="/electric-motor-repair-near-me" className="font-medium text-primary hover:underline">
                   near-me listings
                 </Link>{" "}
                 help you reach shops that quote your HP, voltage, and application. For surplus equipment, browse the{" "}

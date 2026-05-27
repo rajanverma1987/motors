@@ -180,7 +180,7 @@ export function buildListingDetailJsonLdGraph(opts) {
         "@type": "ListItem",
         position: 2,
         name: "Motor repair directory",
-        item: `${siteBase}/electric-motor-reapir-shops-listings`,
+        item: `${siteBase}/electric-motor-repair-shops-listings`,
       },
       {
         "@type": "ListItem",

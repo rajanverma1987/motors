@@ -253,7 +253,7 @@ export default function CostOfMotorRepairPage() {
       <BlogPageLayout
         title="Cost of motor repair and rewinding"
         description="Electric motor repair cost and motor rewinding price depend on HP, damage, and scope. This US guide covers ballpark tables, a rewind calculator, quote tips, and FAQs—use it with our directory to compare real shop estimates."
-        breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
+        breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
         canonicalPath={path}
         sidebarBelowCta={calculatorSidebar}
         wideSidebar
@@ -529,11 +529,11 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 Use{" "}
-                <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
+                <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
                   find repair shops
                 </Link>{" "}
                 or{" "}
-                <Link href="/electric-motor-reapir-near-me" className="text-primary font-medium hover:underline">
+                <Link href="/electric-motor-repair-near-me" className="text-primary font-medium hover:underline">
                   repair near me
                 </Link>{" "}
                 to shortlist shops that serve your area or industry.
@@ -611,12 +611,12 @@ export default function CostOfMotorRepairPage() {
             </p>
             <ul className="mt-4 flex flex-col gap-2 text-sm font-medium">
               <li>
-                <Link href="/electric-motor-reapir-shops-listings" className="text-primary hover:underline">
+                <Link href="/electric-motor-repair-shops-listings" className="text-primary hover:underline">
                   → Browse repair centers by location
                 </Link>
               </li>
               <li>
-                <Link href="/electric-motor-reapir-near-me" className="text-primary hover:underline">
+                <Link href="/electric-motor-repair-near-me" className="text-primary hover:underline">
                   → Motor repair shops near me
                 </Link>
               </li>
@@ -667,7 +667,7 @@ export default function CostOfMotorRepairPage() {
                 <span className="text-secondary"> — hub for buyers</span>
               </li>
               <li>
-                <Link href="/electric-motor-reapir-near-me" className="text-primary hover:underline">
+                <Link href="/electric-motor-repair-near-me" className="text-primary hover:underline">
                   Motor repair near me
                 </Link>
                 <span className="text-secondary"> — local intent</span>

@@ -258,7 +258,7 @@ export default function Modal({
             )}
             {actions != null ? (
               <div className="pointer-events-auto flex min-h-0 min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
-                <div className="flex min-h-0 w-full min-w-0 flex-nowrap items-center justify-end gap-1 pr-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:items-center">
+                <div className="flex min-h-0 w-full min-w-0 flex-nowrap items-center justify-end gap-1 pr-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button:disabled]:cursor-not-allowed">
                   {actions}
                 </div>
               </div>

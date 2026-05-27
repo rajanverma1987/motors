@@ -99,9 +99,12 @@ async function resolveLinkedWorkOrderTagExtras(email, { quoteId, repairFlowJobId
       .lean();
   }
 
-  const technicianName = wo
+  let technicianName = wo
     ? await resolveTechnicianName(shopEmail, wo.technicianEmployeeId)
     : "";
+  if (!technicianName && quoteLean?.technicianEmployeeId) {
+    technicianName = await resolveTechnicianName(shopEmail, quoteLean.technicianEmployeeId);
+  }
 
   return {
     technicianName,

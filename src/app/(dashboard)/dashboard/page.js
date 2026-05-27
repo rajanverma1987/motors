@@ -169,8 +169,8 @@ function StatCard({
       className="flex flex-col rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/30 hover:bg-primary/5"
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-base font-semibold text-title">{label}</span>
-        <Icon className={`h-5 w-5 shrink-0 text-secondary ${showLoading ? "opacity-40" : ""}`} aria-hidden />
+        <span className="text-lg font-semibold leading-snug text-title">{label}</span>
+        <Icon className={`h-6 w-6 shrink-0 text-secondary ${showLoading ? "opacity-40" : ""}`} aria-hidden />
       </div>
       {showLoading ? (
         <CardLoadingBody />

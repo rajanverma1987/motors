@@ -21,7 +21,6 @@ import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
-import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
@@ -33,26 +32,30 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import { mergeUserSettings } from "@/lib/user-settings";
 import { quoteStatusSelectOptionsFromMerged, quoteStatusTileColorForValue } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
-import { useAuth } from "@/contexts/auth-context";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import {
   WRITE_UP_QUOTE_STATUS,
+  INSPECTION_DONE_QUOTE_STATUS,
   filterQuotesForRfqList,
   isWriteUpStatus,
   jobNumberFieldLabel,
 } from "@/lib/quote-rfq-lifecycle";
+import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { buildTechnicianSelectOptions } from "@/lib/technician-select-options";
 
 /** Icons in modal Actions dropdown menu rows */
-const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
+const HEADER_BTN_IC = "h-4 w-4 shrink-0";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -138,7 +141,7 @@ const INITIAL_FORM = {
   status: WRITE_UP_QUOTE_STATUS,
   customerPo: "",
   date: todayString(),
-  preparedBy: "",
+  technicianEmployeeId: "",
   rfqNumber: "",
   repairScope: "",
   laborTotal: "",
@@ -194,7 +197,7 @@ function buildQuotePayload(form) {
     status: f.status ?? "draft",
     customerPo: f.customerPo ?? "",
     date: f.date ?? "",
-    preparedBy: f.preparedBy ?? "",
+    technicianEmployeeId: f.technicianEmployeeId ?? "",
     repairScope: f.repairScope ?? "",
     laborTotal: laborFromLines,
     partsTotal: partsFromLines,
@@ -211,7 +214,6 @@ function buildQuotePayload(form) {
 export default function DashboardRfqListPage() {
   const toast = useToast();
   const confirm = useConfirm();
-  const { user: authUser } = useAuth();
   const router = useRouter();
   const jobIdLabel = "RFQ#";
   const searchParams = useSearchParams();
@@ -233,12 +235,32 @@ export default function DashboardRfqListPage() {
   const [quotePrintId, setQuotePrintId] = useState(null);
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [workOrderModal, setWorkOrderModal] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [openWoPrompt, setOpenWoPrompt] = useState(null);
   const [checkingOpenWoQuoteId, setCheckingOpenWoQuoteId] = useState(null);
   const [printingTagQrQuoteId, setPrintingTagQrQuoteId] = useState(null);
-  const [form, setForm] = useState(INITIAL_FORM);
+  const [form, _setForm] = useState(INITIAL_FORM);
   const formRef = useRef(form);
-  formRef.current = form;
+  const technicianEmployeeIdRef = useRef("");
+  /** Keep formRef in sync on every update so Save never reads stale state (e.g. technician just selected). */
+  const setForm = useCallback((update) => {
+    if (typeof update === "function") {
+      _setForm((prev) => {
+        const next = update(prev);
+        formRef.current = next;
+        return next;
+      });
+    } else {
+      formRef.current = update;
+      _setForm(update);
+    }
+  }, []);
+
+  const handleTechnicianChange = useCallback((e) => {
+    const v = String(e.target?.value ?? "").trim();
+    technicianEmployeeIdRef.current = v;
+    setForm((f) => ({ ...f, technicianEmployeeId: v }));
+  }, [setForm]);
 
   const editFormJobIdLabel = useMemo(() => jobNumberFieldLabel(form.workOrderId), [form.workOrderId]);
   const viewJobIdLabel = useMemo(
@@ -267,6 +289,14 @@ export default function DashboardRfqListPage() {
     const base = [...statusSelectOptions];
     if (!base.some((o) => o.value === WRITE_UP_QUOTE_STATUS)) {
       base.unshift({ value: WRITE_UP_QUOTE_STATUS, label: "Write-Up" });
+    }
+    if (!base.some((o) => o.value === INSPECTION_DONE_QUOTE_STATUS)) {
+      const writeUpIdx = base.findIndex((o) => o.value === WRITE_UP_QUOTE_STATUS);
+      const insertAt = writeUpIdx >= 0 ? writeUpIdx + 1 : 0;
+      base.splice(insertAt, 0, {
+        value: INSPECTION_DONE_QUOTE_STATUS,
+        label: "Inspection done",
+      });
     }
     return base;
   }, [statusSelectOptions]);
@@ -357,15 +387,6 @@ export default function DashboardRfqListPage() {
     }
   }, []);
 
-  const defaultPreparedByEmployeeId = useMemo(() => {
-    const loginEmail = String(authUser?.email || "")
-      .trim()
-      .toLowerCase();
-    if (!loginEmail) return "";
-    const emp = employees.find((e) => String(e.email || "").trim().toLowerCase() === loginEmail);
-    return emp?.id ? String(emp.id) : "";
-  }, [employees, authUser?.email]);
-
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -402,6 +423,8 @@ export default function DashboardRfqListPage() {
       }
     }
     const customerForQuote = customers.find((c) => c.id === (dataToUse.customerId ?? ""));
+    const techId = String(dataToUse.technicianEmployeeId ?? "").trim();
+    technicianEmployeeIdRef.current = techId;
     setViewingQuote(dataToUse);
     setForm({
       customerId: dataToUse.customerId ?? "",
@@ -410,7 +433,7 @@ export default function DashboardRfqListPage() {
       status: dataToUse.status ?? "draft",
       customerPo: dataToUse.customerPo ?? "",
       date: dataToUse.date ?? todayString(),
-      preparedBy: dataToUse.preparedBy ?? "",
+      technicianEmployeeId: techId,
       rfqNumber: dataToUse.rfqNumber ?? "",
       repairScope: dataToUse.repairScope ?? "",
       laborTotal: dataToUse.laborTotal ?? "",
@@ -481,16 +504,16 @@ export default function DashboardRfqListPage() {
 
   const openCreateRfqModal = useCallback(() => {
     setViewingQuote(null);
+    technicianEmployeeIdRef.current = "";
     setForm({
       ...INITIAL_FORM,
       status: WRITE_UP_QUOTE_STATUS,
       date: todayString(),
-      preparedBy: defaultPreparedByEmployeeId,
       scopeLines: [{ scope: "", price: "" }],
       partsLines: [],
     });
     setEditModalOpen(true);
-  }, [defaultPreparedByEmployeeId]);
+  }, [setForm]);
 
   useEffect(() => {
     const id = editQuoteIdParam?.trim();
@@ -545,6 +568,16 @@ export default function DashboardRfqListPage() {
     return m;
   }, [motors]);
 
+  const technicianNameMap = useMemo(() => {
+    const m = {};
+    employees.forEach((e) => {
+      const id = String(e.id ?? "").trim();
+      if (!id) return;
+      m[id] = (e.name && String(e.name).trim()) || (e.email && String(e.email).trim()) || id;
+    });
+    return m;
+  }, [employees]);
+
   const openViewModal = useCallback((quote) => {
     if (!quote?.id) {
       setViewingQuote(quote);
@@ -597,7 +630,13 @@ export default function DashboardRfqListPage() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    const currentForm = formRef.current;
+    const technicianEmployeeId = String(
+      technicianEmployeeIdRef.current || formRef.current?.technicianEmployeeId || form.technicianEmployeeId || ""
+    ).trim();
+    const currentForm = {
+      ...(formRef.current || form),
+      technicianEmployeeId,
+    };
     if (!currentForm.customerId?.trim()) {
       toast.error("Customer is required.");
       return;
@@ -629,6 +668,8 @@ export default function DashboardRfqListPage() {
         const created = data.quote;
         toast.success(created?.rfqNumber ? `RFQ ${created.rfqNumber} created.` : "RFQ created.");
         setQuotesRaw((prev) => [created, ...prev]);
+        const createdId = created?.id || created?._id?.toString?.();
+        if (createdId) await refreshQuoteWorkOrderLink(createdId);
         closeEditModal();
         return;
       }
@@ -640,11 +681,23 @@ export default function DashboardRfqListPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update quote");
+      const savedTechId = String(data.quote?.technicianEmployeeId ?? "").trim();
+      technicianEmployeeIdRef.current = savedTechId;
       toast.success("Quote updated.");
       setQuotesRaw((prev) =>
-        prev.map((q) => (q.id === viewingQuote.id ? { ...q, ...data.quote } : q))
+        prev.map((q) =>
+          q.id === viewingQuote.id
+            ? {
+                ...q,
+                ...data.quote,
+                id: data.quote?.id ?? q.id,
+                technicianEmployeeId: savedTechId,
+              }
+            : q
+        )
       );
       setViewingQuote(data.quote);
+      await refreshQuoteWorkOrderLink(viewingQuote.id);
       closeEditModal();
     } catch (err) {
       toast.error(err.message || (isNewQuoteForm ? "Failed to create RFQ" : "Failed to update quote"));
@@ -792,11 +845,22 @@ export default function DashboardRfqListPage() {
         (qt.rfqNumber || "").toLowerCase().includes(q) ||
         (customerNameMap[qt.customerId] || "").toLowerCase().includes(q) ||
         (motorLabelMap[String(qt.motorId ?? "").trim()] || "").toLowerCase().includes(q) ||
+        (technicianNameMap[String(qt.technicianEmployeeId ?? "").trim()] || "")
+          .toLowerCase()
+          .includes(q) ||
         (qt.status || "").toLowerCase().includes(q) ||
         labelFor(qt).toLowerCase().includes(q) ||
         (qt.repairScope || "").toLowerCase().includes(q)
     );
-  }, [quotes, searchQuery, statusFilter, customerNameMap, motorLabelMap, statusSelectOptions]);
+  }, [
+    quotes,
+    searchQuery,
+    statusFilter,
+    customerNameMap,
+    motorLabelMap,
+    technicianNameMap,
+    statusSelectOptions,
+  ]);
 
   const sortedQuotes = useMemo(() => {
     const sortKey = quoteSort?.key;
@@ -833,6 +897,15 @@ export default function DashboardRfqListPage() {
           const vb = String(motorLabelMap[String(b.motorId ?? "").trim()] || b.motorId || "").toLowerCase();
           return va.localeCompare(vb) * dir;
         }
+        case "technician": {
+          const va = String(
+            technicianNameMap[String(a.technicianEmployeeId ?? "").trim()] || ""
+          ).toLowerCase();
+          const vb = String(
+            technicianNameMap[String(b.technicianEmployeeId ?? "").trim()] || ""
+          ).toLowerCase();
+          return va.localeCompare(vb) * dir;
+        }
         case "status": {
           const va = String(a.status || "draft").toLowerCase();
           const vb = String(b.status || "draft").toLowerCase();
@@ -861,7 +934,7 @@ export default function DashboardRfqListPage() {
       return String(a.id || "").localeCompare(String(b.id || ""));
     });
     return list;
-  }, [filteredQuotes, quoteSort, customerNameMap, motorLabelMap]);
+  }, [filteredQuotes, quoteSort, customerNameMap, motorLabelMap, technicianNameMap]);
 
   const handleQuoteSort = useCallback((key, direction) => {
     setQuoteSort({ key, direction });
@@ -933,11 +1006,7 @@ export default function DashboardRfqListPage() {
         key: "actions",
         label: "",
         render: (_, row) => {
-          const isSending = sendingQuoteId === row.id;
           const isDeleting = deletingQuoteId === row.id;
-          const canCreateWorkOrder = quoteStatusAllowsWorkOrder(row.status);
-          const isCheckingOpenWo = checkingOpenWoQuoteId === row.id;
-          const isPrintingTagQr = printingTagQrQuoteId === row.id;
           return (
             <div className="flex items-center gap-1">
               <button
@@ -959,81 +1028,9 @@ export default function DashboardRfqListPage() {
                 onClick={() => openEditModal(row)}
                 className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
                 aria-label="Edit"
+                title="Edit"
               >
-                <FiEdit2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePrintQuote(row)}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Print RFQ"
-                title="Print RFQ"
-              >
-                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePrintTagQr(row)}
-                disabled={isPrintingTagQr}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
-                aria-label="Print Tag QR"
-                title="Print Tag QR (technician scans → assigned work orders for customer)"
-              >
-                {isPrintingTagQr ? (
-                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <LuQrCode className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendToCustomer(row)}
-                disabled={isSending}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                aria-label="Send to customer"
-                title="Send to customer"
-              >
-                {isSending ? <FiRotateCw className="h-4 w-4 animate-spin" aria-hidden /> : <FiSend className="h-4 w-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleCreateWorkOrderClick(row)}
-                disabled={!canCreateWorkOrder || isCheckingOpenWo}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label={canCreateWorkOrder ? "Create work order" : "Create work order (approved or accepted quotes only)"}
-                title={
-                  canCreateWorkOrder
-                    ? "Create work order"
-                    : "Set status to approved or accepted to create a work order"
-                }
-              >
-                {isCheckingOpenWo ? (
-                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <FiTool className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() =>
-                  setInvoiceModal({
-                    draftQuoteId: row.id,
-                    invoiceId: null,
-                    sourceQuoteId: row.id,
-                  })
-                }
-                disabled={!canCreateWorkOrder}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label={
-                  canCreateWorkOrder ? "Create invoice" : "Create invoice (approved or accepted quotes only)"
-                }
-                title={
-                  canCreateWorkOrder
-                    ? "Create invoice"
-                    : "Set status to approved or accepted to create an invoice"
-                }
-              >
-                <FiFileText className="h-4 w-4 shrink-0" aria-hidden />
+                <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
               </button>
             </div>
           );
@@ -1057,7 +1054,40 @@ export default function DashboardRfqListPage() {
         key: "customer",
         label: "Customer",
         sortable: true,
-        render: (_, row) => customerNameMap[row.customerId] || row.customerId || "—",
+        render: (_, row) => {
+          const customerId = String(row.customerId || "").trim();
+          const name = customerNameMap[customerId] || customerId || "—";
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
+      },
+      {
+        key: "technician",
+        label: "Technician",
+        sortable: true,
+        minWidth: 120,
+        render: (_, row) => {
+          const techId = String(row.technicianEmployeeId ?? "").trim();
+          if (!techId) return <span className="text-secondary">—</span>;
+          const name = technicianNameMap[techId];
+          return (
+            <span className="text-title" title={name || techId}>
+              {name || techId}
+            </span>
+          );
+        },
       },
       {
         key: "motor",
@@ -1129,29 +1159,19 @@ export default function DashboardRfqListPage() {
     [
       customerNameMap,
       motorLabelMap,
-      sendingQuoteId,
+      technicianNameMap,
       deletingQuoteId,
       fmt,
       mergedSettings,
       statusSelectOptions,
-      router,
       openViewModal,
       openEditModal,
-      handlePrintQuote,
-      handlePrintTagQr,
-      handleSendToCustomer,
-      handleCreateWorkOrderClick,
-      checkingOpenWoQuoteId,
-      printingTagQrQuoteId,
       jobIdLabel,
     ]
   );
 
-  const employeeOptions = useMemo(
-    () =>
-      [{ value: "", label: "—" }].concat(
-        employees.map((e) => ({ value: e.id, label: e.name || e.email || e.id || "—" }))
-      ),
+  const technicianOptions = useMemo(
+    () => buildTechnicianSelectOptions(employees),
     [employees]
   );
 
@@ -1178,36 +1198,124 @@ export default function DashboardRfqListPage() {
     taxPercent: selectedCustomerTaxPercent,
   });
 
-  const viewQuoteToolbarMenuItems = useMemo(() => {
+  const viewQuoteHeaderActions = useMemo(() => {
     const vq = viewingQuote;
-    return [
-      {
-        key: "edit",
-        label: "Edit",
-        icon: <FiEdit2 className={MENU_IC} />,
-        disabled: !vq?.id,
-        onClick: () => {
-          closeViewModal();
-          openEditModal(vq);
-        },
-      },
-      {
-        key: "printRfq",
-        label: "Print RFQ",
-        icon: <FiPrinter className={MENU_IC} aria-hidden />,
-        disabled: !vq?.id,
-        onClick: () => handlePrintQuote(vq),
-      },
-      {
-        key: "tagQr",
-        label: "Tag QR",
-        icon: <LuQrCode className={MENU_IC} aria-hidden />,
-        disabled: !vq?.id || printingTagQrQuoteId === vq?.id,
-        title: "Print QR motor tag (technician scans → work orders for customer)",
-        onClick: () => handlePrintTagQr(vq),
-      },
-    ];
-  }, [viewingQuote, closeViewModal, openEditModal, handlePrintQuote, handlePrintTagQr, printingTagQrQuoteId]);
+    if (!vq?.id) return null;
+    const canCreateWorkOrder = quoteStatusAllowsWorkOrder(vq.status);
+    const isSending = sendingQuoteId === vq.id;
+    const isPrintingTagQr = printingTagQrQuoteId === vq.id;
+    const isCheckingOpenWo = checkingOpenWoQuoteId === vq.id;
+    const woDisabledTitle = canCreateWorkOrder
+      ? "Create work order"
+      : "Set status to approved or accepted to create a work order";
+    const invoiceDisabledTitle = canCreateWorkOrder
+      ? "Create invoice"
+      : "Set status to approved or accepted to create an invoice";
+
+    return (
+      <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          onClick={() => {
+            closeViewModal();
+            openEditModal(vq);
+          }}
+        >
+          <FiEdit2 className={HEADER_BTN_IC} aria-hidden />
+          Edit
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          onClick={() => handlePrintQuote(vq)}
+        >
+          <FiPrinter className={HEADER_BTN_IC} aria-hidden />
+          Print
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          disabled={isPrintingTagQr}
+          title="Print QR motor tag (technician scans → work orders for customer)"
+          onClick={() => handlePrintTagQr(vq)}
+        >
+          {isPrintingTagQr ? (
+            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+          ) : (
+            <LuQrCode className={HEADER_BTN_IC} aria-hidden />
+          )}
+          QR
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          disabled={isSending}
+          onClick={() => handleSendToCustomer(vq)}
+        >
+          {isSending ? (
+            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+          ) : (
+            <FiSend className={HEADER_BTN_IC} aria-hidden />
+          )}
+          Send to customer
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          disabled={!canCreateWorkOrder || isCheckingOpenWo}
+          title={woDisabledTitle}
+          onClick={() => handleCreateWorkOrderClick(vq)}
+        >
+          {isCheckingOpenWo ? (
+            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+          ) : (
+            <FiTool className={HEADER_BTN_IC} aria-hidden />
+          )}
+          Create work order
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          disabled={!canCreateWorkOrder}
+          title={invoiceDisabledTitle}
+          onClick={() =>
+            setInvoiceModal({
+              draftQuoteId: vq.id,
+              invoiceId: null,
+              sourceQuoteId: vq.id,
+            })
+          }
+        >
+          <FiFileText className={HEADER_BTN_IC} aria-hidden />
+          Create invoice
+        </Button>
+      </div>
+    );
+  }, [
+    viewingQuote,
+    sendingQuoteId,
+    printingTagQrQuoteId,
+    checkingOpenWoQuoteId,
+    closeViewModal,
+    openEditModal,
+    handlePrintQuote,
+    handlePrintTagQr,
+    handleSendToCustomer,
+    handleCreateWorkOrderClick,
+  ]);
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -1252,7 +1360,7 @@ export default function DashboardRfqListPage() {
           }
           searchable
           onSearch={setSearchQuery}
-          searchPlaceholder="Search customer, motor, status…"
+          searchPlaceholder="Search customer, technician, motor, status…"
           onRefresh={async () => { setLoading(true); await loadQuotes(); setLoading(false); }}
           responsive
         />
@@ -1388,8 +1496,8 @@ export default function DashboardRfqListPage() {
         title="Quote details"
         size="full"
         width="min(1200px, 94vw)"
-        headerClassName="flex-wrap"
-        actions={<ModalActionsDropdown items={viewQuoteToolbarMenuItems} />}
+        headerClassName="flex-wrap gap-2"
+        actions={viewQuoteHeaderActions}
       >
         {viewLoadingQuoteId ? (
           <div className="flex items-center justify-center py-12">
@@ -1403,12 +1511,28 @@ export default function DashboardRfqListPage() {
                 <div><dt className="text-secondary">{viewJobIdLabel}</dt><dd className="text-title font-medium">{viewingQuote.rfqNumber || "—"}</dd></div>
                 <div><dt className="text-secondary">Customer PO#</dt><dd className="text-title">{viewingQuote.customerPo || "—"}</dd></div>
                 <div><dt className="text-secondary">Date</dt><dd className="text-title">{viewingQuote.date || "—"}</dd></div>
-                <div><dt className="text-secondary">Prepared by</dt><dd className="text-title">{employees.find((e) => e.id === viewingQuote.preparedBy)?.name || viewingQuote.preparedBy || "—"}</dd></div>
+                <div>
+                  <dt className="text-secondary">Technician</dt>
+                  <dd className="text-title">
+                    {technicianNameMap[String(viewingQuote.technicianEmployeeId ?? "").trim()] || "—"}
+                  </dd>
+                </div>
               </dl>
             </div>
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Customer &amp; motor</h3>
-              <p className="text-title font-medium">{customerNameMap[viewingQuote.customerId] || viewingQuote.customerId || "—"}</p>
+              {String(viewingQuote.customerId || "").trim() ? (
+                <button
+                  type="button"
+                  className="text-left text-title font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+                  onClick={() => setOpenCustomerId(String(viewingQuote.customerId).trim())}
+                  title="Open customer"
+                >
+                  {customerNameMap[viewingQuote.customerId] || viewingQuote.customerId || "—"}
+                </button>
+              ) : (
+                <p className="text-title font-medium">—</p>
+              )}
               <p className="mt-1 text-sm text-secondary">
                 {motorLabelMap[String(viewingQuote.motorId ?? "").trim()] || viewingQuote.motorId || "—"}
               </p>
@@ -1596,6 +1720,13 @@ export default function DashboardRfqListPage() {
         }
       >
         <Form id="edit-quote-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
+          <input
+            type="hidden"
+            name="technicianEmployeeId"
+            value={form.technicianEmployeeId || ""}
+            readOnly
+            aria-hidden
+          />
           <div>
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote info</h3>
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -1617,13 +1748,19 @@ export default function DashboardRfqListPage() {
                 onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
               />
               <Select
-                label="Prepared by"
-                options={employeeOptions}
-                value={form.preparedBy}
-                onChange={(e) => setForm((f) => ({ ...f, preparedBy: e.target.value ?? "" }))}
-                placeholder="Select employee"
+                label="Technician"
+                options={technicianOptions}
+                value={form.technicianEmployeeId}
+                onChange={handleTechnicianChange}
+                placeholder="Select technician"
                 searchable
               />
+              {isWriteUpStatus(form?.status) ? (
+                <p className="sm:col-span-2 lg:col-span-4 text-xs text-secondary">
+                  Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
+                  orders are not created automatically — use Create work order on the row when the quote is approved.
+                </p>
+              ) : null}
               <Select
                 label="Status"
                 options={statusOptionsForForm}
@@ -1675,58 +1812,34 @@ export default function DashboardRfqListPage() {
                 disabled={!form.customerId}
               />
             </div>
-            {(selectedCustomer || selectedMotor) && (
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {selectedCustomer ? (
-                  <div className="rounded-lg border border-border bg-card p-3 text-sm">
-                    <div className="font-medium text-title">Customer</div>
-                    <p className="mt-1 text-title">{selectedCustomer.companyName || "—"}</p>
-                    {selectedCustomer.primaryContactName ? (
-                      <p className="text-secondary">{selectedCustomer.primaryContactName}</p>
-                    ) : null}
-                    {selectedCustomer.phone ? <p className="text-secondary">{selectedCustomer.phone}</p> : null}
-                    {selectedCustomer.email ? <p className="text-secondary">{selectedCustomer.email}</p> : null}
-                    <p className="text-secondary">
-                      Tax: {selectedCustomer.taxExempt === false ? `${selectedCustomer.taxPercent || "0"}%` : "Exempt"}
-                    </p>
-                    {(selectedCustomer.address || selectedCustomer.city) && (
-                      <p className="text-secondary">
-                        {[selectedCustomer.address, selectedCustomer.city, selectedCustomer.state, selectedCustomer.zipCode]
-                          .filter(Boolean)
-                          .join(", ")}
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-                {selectedMotor ? (
-                  <div className="rounded-lg border border-border bg-card p-3 text-sm">
-                    <div className="font-medium text-title">Motor</div>
-                    <p className="mt-1 text-title">
-                      {[selectedMotor.serialNumber, selectedMotor.manufacturer, selectedMotor.model].filter(Boolean).join(" · ") ||
-                        "—"}
-                    </p>
-                    {(selectedMotor.hp || selectedMotor.voltage || selectedMotor.rpm) && (
-                      <p className="text-secondary">
-                        {[
-                          selectedMotor.hp && `${selectedMotor.hp} HP`,
-                          selectedMotor.voltage && `${selectedMotor.voltage}V`,
-                          selectedMotor.rpm && `${selectedMotor.rpm} RPM`,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                    )}
-                    {selectedMotor.motorType ? <p className="text-secondary">Type: {selectedMotor.motorType}</p> : null}
-                  </div>
-                ) : null}
-              </div>
-            )}
+            <QuoteFormCustomerMotorCards
+              customer={selectedCustomer}
+              motor={selectedMotor}
+              quickViewZIndex={130}
+              onCustomerSaved={() => loadCustomers()}
+              onMotorSaved={() => loadMotors()}
+            />
           </div>
-          <QuoteFormRepairJobInspections
-            workOrderId={form.workOrderId}
-            quoteMotorId={form.motorId}
-            disabled={savingQuote}
-          />
+          {isWriteUpStatus(form?.status) && viewingQuote?.id ? (
+            <RfqPreInspectionSection
+              quoteId={viewingQuote.id}
+              quoteStatus={form.status}
+              disabled={savingQuote}
+              onStatusChange={(status) => {
+                setForm((f) => ({ ...f, status }));
+                setViewingQuote((v) => (v ? { ...v, status } : v));
+                setQuotesRaw((prev) =>
+                  prev.map((q) => (q.id === viewingQuote.id ? { ...q, status } : q))
+                );
+              }}
+            />
+          ) : (
+            <QuoteFormRepairJobInspections
+              workOrderId={form.workOrderId}
+              quoteMotorId={form.motorId}
+              disabled={savingQuote}
+            />
+          )}
           <div>
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Scope &amp; Other Cost</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
@@ -1915,6 +2028,13 @@ export default function DashboardRfqListPage() {
           }));
         }}
         zIndex={60}
+      />
+
+      <CustomerQuickViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
       />
     </div>
   );

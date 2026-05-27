@@ -4,14 +4,14 @@ import { connectDB } from "@/lib/db";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import WorkOrder from "@/models/WorkOrder";
 import MotorRepairInspection from "@/models/MotorRepairInspection";
+import {
+  inspectionComponentForSave,
+  normalizeInspectionFindings,
+  normalizeInspectionKind,
+  toPublicInspection,
+} from "@/lib/motor-inspection-api";
 
-const COMPONENTS = new Set(["stator", "rotor", "field_frame", "armature", "full_motor"]);
-const KINDS = new Set(["preliminary", "detailed"]);
-
-function toPublic(row) {
-  const o = row.toObject ? row.toObject() : row;
-  return { ...o, id: o._id.toString(), _id: undefined };
-}
+const LEGACY_COMPONENTS = new Set(["stator", "rotor", "field_frame", "armature", "full_motor"]);
 
 async function loadWorkOrder(id, email) {
   if (!mongoose.isValidObjectId(id)) return null;
@@ -22,6 +22,10 @@ async function loadWorkOrder(id, email) {
 function inspectionQueryForWorkOrder(wo, email) {
   const woId = wo._id.toString();
   const or = [{ workOrderId: woId, createdByEmail: email }];
+  const quoteId = String(wo.quoteId || "").trim();
+  if (quoteId) {
+    or.push({ quoteId, createdByEmail: email });
+  }
   const legacyJobId = String(wo.repairFlowJobId || "").trim();
   if (legacyJobId && mongoose.isValidObjectId(legacyJobId)) {
     or.push({ jobId: legacyJobId, createdByEmail: email });
@@ -61,18 +65,15 @@ export async function POST(request, context) {
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const id = params?.id;
     const body = await request.json().catch(() => ({}));
-    const kind = typeof body.kind === "string" ? body.kind.trim() : "";
-    const component = typeof body.component === "string" ? body.component.trim() : "";
-    const findings = body.findings && typeof body.findings === "object" ? body.findings : {};
+    const kind = normalizeInspectionKind(body.kind);
+    const componentRaw = typeof body.component === "string" ? body.component.trim() : "";
+    const component = LEGACY_COMPONENTS.has(componentRaw)
+      ? componentRaw
+      : inspectionComponentForSave();
+    const findings = normalizeInspectionFindings(body);
 
-    if (!KINDS.has(kind)) {
+    if (!kind) {
       return NextResponse.json({ error: "kind must be preliminary or detailed" }, { status: 400 });
-    }
-    if (!COMPONENTS.has(component)) {
-      return NextResponse.json(
-        { error: "component must be stator, rotor, field_frame, armature, or full_motor" },
-        { status: 400 }
-      );
     }
 
     const email = user.email.trim().toLowerCase();
@@ -83,6 +84,7 @@ export async function POST(request, context) {
 
     const doc = await MotorRepairInspection.create({
       workOrderId: wo._id.toString(),
+      quoteId: String(wo.quoteId || "").trim(),
       jobId: String(wo.repairFlowJobId || "").trim(),
       createdByEmail: email,
       kind,

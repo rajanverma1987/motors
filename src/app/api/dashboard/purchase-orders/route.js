@@ -7,6 +7,12 @@ import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items
 import { getNextPoNumber } from "@/lib/purchase-order-numbers";
 import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
+import {
+  computePoDeliveryStatus,
+  computePoInvoicedStatus,
+  computePoOverallStatus,
+  computePoPaidStatus,
+} from "@/lib/po-status";
 
 const MAX_INVOICES = 50;
 const MAX_PAYMENTS = 50;
@@ -45,48 +51,23 @@ function sumAmounts(items, key = "amount") {
   return sum;
 }
 
-/** Compute PO status from totals */
-function computeStatus(totalOrder, totalInvoiced, totalPaid) {
-  if (totalOrder <= 0) return "Open";
-  if (totalPaid >= totalInvoiced && totalInvoiced >= totalOrder) return "Closed";
-  if (totalPaid > 0 && totalPaid < totalInvoiced) return "Partially Paid";
-  if (totalInvoiced >= totalOrder) return "Fully Invoiced";
-  if (totalInvoiced > 0) return "Partially Invoiced";
-  return "Open";
-}
-
-/** Invoiced status: Partial | Invoiced */
-function computeInvoicedStatus(totalOrder, totalInvoiced) {
-  if (totalOrder <= 0) return "—";
-  if (totalInvoiced >= totalOrder) return "Invoiced";
-  return "Partial";
-}
-
-/** Payment status: Partially | Paid */
-function computePaidStatus(totalInvoiced, totalPaid) {
-  if (totalInvoiced <= 0) return "—";
-  if (totalPaid >= totalInvoiced) return "Paid";
-  return "Partially";
-}
-
-/** Delivery status: Partial | Delivered (Delivered when all line items are Received) */
-function computeDeliveryStatus(lineItems) {
-  const items = Array.isArray(lineItems) ? lineItems : [];
-  if (items.length === 0) return "Partial";
-  const allReceived = items.every((item) => item?.status === "Received");
-  return allReceived ? "Delivered" : "Partial";
-}
-
-function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {}, jobCustomerName = "—") {
+function toPoListItem(
+  po,
+  vendorNameMap = {},
+  quoteRfqMap = {},
+  jobNumberMap = {},
+  jobCustomerName = "—",
+  customerId = ""
+) {
   const lineItems = Array.isArray(po.lineItems) ? po.lineItems : [];
   const vendorInvoices = Array.isArray(po.vendorInvoices) ? po.vendorInvoices : [];
   const payments = Array.isArray(po.payments) ? po.payments : [];
   const totalOrder = sumLineItems(lineItems);
   const totalInvoiced = sumAmounts(vendorInvoices);
   const totalPaid = sumAmounts(payments);
-  const status = computeStatus(totalOrder, totalInvoiced, totalPaid);
-  const invoicedStatus = computeInvoicedStatus(totalOrder, totalInvoiced);
-  const paidStatus = computePaidStatus(totalInvoiced, totalPaid);
+  const status = computePoOverallStatus(totalOrder, totalInvoiced, totalPaid);
+  const invoicedStatus = computePoInvoicedStatus(totalOrder, totalInvoiced);
+  const paidStatus = computePoPaidStatus(totalInvoiced, totalPaid, totalOrder);
   const lineItemsWithStatus = lineItems.map((item) => ({
     ...item,
     status:
@@ -98,7 +79,7 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {
             ? "Dispatch"
             : "Ordered",
   }));
-  const deliveryStatus = computeDeliveryStatus(lineItemsWithStatus);
+  const deliveryStatus = computePoDeliveryStatus(lineItemsWithStatus);
   const qrf = po.quoteId ? (quoteRfqMap[String(po.quoteId)] ?? "") : "";
   const jn = po.repairFlowJobId ? (jobNumberMap[String(po.repairFlowJobId)] ?? "") : "";
   const linkLabel = jn || qrf || "—";
@@ -113,6 +94,7 @@ function toPoListItem(po, vendorNameMap = {}, quoteRfqMap = {}, jobNumberMap = {
     vendorName: vendorNameMap[po.vendorId] ?? po.vendorId ?? "—",
     rfqNumber: linkLabel,
     customerName: typeNorm === "job" ? jobCustomerName : "—",
+    customerId: typeNorm === "job" ? customerId : "",
     lineItems: lineItemsWithStatus,
     vendorInvoices,
     payments,
@@ -146,6 +128,7 @@ export async function GET(request) {
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
     const qText = String(searchParams.get("q") || "").trim();
+    const typeFilter = String(searchParams.get("type") || "").trim().toLowerCase();
     const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
     const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const sortFieldMap = {
@@ -158,6 +141,9 @@ export async function GET(request) {
     const sortField = sortFieldMap[sortBy] || "createdAt";
     const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
     const q = { createdByEmail: email };
+    if (typeFilter === "shop" || typeFilter === "job") {
+      q.type = typeFilter;
+    }
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       const orParts = [
@@ -188,10 +174,26 @@ export async function GET(request) {
       }
       q.$or = orParts;
     }
-    const [totalCount, list] = await Promise.all([
+    const ownerScope = { createdByEmail: email };
+    const [totalCount, list, summaryDocs] = await Promise.all([
       PurchaseOrder.countDocuments(q),
       PurchaseOrder.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      PurchaseOrder.find(ownerScope).select("type lineItems").lean(),
     ]);
+
+    const summaryByType = {
+      all: { count: 0, amount: 0 },
+      shop: { count: 0, amount: 0 },
+      job: { count: 0, amount: 0 },
+    };
+    for (const po of summaryDocs) {
+      const typeKey = (po.type ?? "shop") === "job" ? "job" : "shop";
+      const amount = sumLineItems(po.lineItems ?? []);
+      summaryByType[typeKey].count += 1;
+      summaryByType[typeKey].amount += amount;
+      summaryByType.all.count += 1;
+      summaryByType.all.amount += amount;
+    }
 
     const Vendor = (await import("@/models/Vendor")).default;
     const Quote = (await import("@/models/Quote")).default;
@@ -249,18 +251,24 @@ export async function GET(request) {
         String(c.companyName || "").trim() || String(c.primaryContactName || "").trim() || "—";
     }
 
-    function resolveJobPoCustomerName(po) {
-      if ((po.type ?? "shop") !== "job") return "—";
+    function resolveJobPoCustomerId(po) {
+      if ((po.type ?? "shop") !== "job") return "";
       const jid = String(po.repairFlowJobId || "").trim();
       if (jid) {
         const cid = jobCustomerIdMap[jid];
-        if (cid && customerNameMap[cid]) return customerNameMap[cid];
+        if (cid) return cid;
       }
       const qid = String(po.quoteId || "").trim();
       if (qid) {
         const cid = quoteCustomerIdMap[qid];
-        if (cid && customerNameMap[cid]) return customerNameMap[cid];
+        if (cid) return cid;
       }
+      return "";
+    }
+
+    function resolveJobPoCustomerName(po) {
+      const cid = resolveJobPoCustomerId(po);
+      if (cid && customerNameMap[cid]) return customerNameMap[cid];
       return "—";
     }
 
@@ -270,11 +278,12 @@ export async function GET(request) {
         vendorNameMap,
         quoteRfqMap,
         jobNumberMap,
-        resolveJobPoCustomerName(po)
+        resolveJobPoCustomerName(po),
+        resolveJobPoCustomerId(po)
       )
     );
     if (!includePagination) return NextResponse.json(listWithId);
-    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
+    return NextResponse.json({ items: listWithId, page, pageSize, totalCount, summaryByType });
   } catch (err) {
     console.error("Dashboard list purchase orders error:", err);
     return NextResponse.json({ error: "Failed to list purchase orders" }, { status: 500 });
@@ -347,7 +356,7 @@ export async function POST(request) {
         totalOrder: totalOrder.toFixed(2),
         totalInvoiced: totalInvoiced.toFixed(2),
         totalPaid: totalPaid.toFixed(2),
-        status: computeStatus(totalOrder, totalInvoiced, totalPaid),
+        status: computePoOverallStatus(totalOrder, totalInvoiced, totalPaid),
         notes: po.notes ?? "",
         vendorShareToken: po.vendorShareToken ?? "",
         attachments: Array.isArray(po.attachments)

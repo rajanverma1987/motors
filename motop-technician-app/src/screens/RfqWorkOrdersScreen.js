@@ -11,6 +11,7 @@ import {
 import { useTechAuth } from "../TechAuthContext";
 import { techFetch } from "../api";
 import { colors, spacing } from "../theme";
+import { filterOpenWorkOrders } from "../lib/work-order-open-status";
 
 export default function RfqWorkOrdersScreen({ route, navigation }) {
   const { jobNumber, serial, customerId } = route.params || {};
@@ -35,7 +36,7 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
       setJobInfo(null);
       setCustomerInfo(null);
       setMotorInfo(data.motor || null);
-      setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
+      setRows(filterOpenWorkOrders(data.workOrders));
       return;
     }
     if (mode === "customer") {
@@ -47,7 +48,7 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
       setJobInfo(null);
       setCustomerInfo(data.customer || null);
       setMotorInfo(null);
-      setRows(Array.isArray(data.workOrders) ? data.workOrders : []);
+      setRows(filterOpenWorkOrders(data.workOrders));
       return;
     }
     const r = String(jobNumber || "").trim();
@@ -56,7 +57,7 @@ export default function RfqWorkOrdersScreen({ route, navigation }) {
     setJobInfo(jData.job || null);
     setCustomerInfo(null);
     setMotorInfo(null);
-    setRows(Array.isArray(jData.workOrders) ? jData.workOrders : []);
+    setRows(filterOpenWorkOrders(jData.workOrders));
   }, [token, mode, jobNumber, serial, customerId]);
 
   useEffect(() => {

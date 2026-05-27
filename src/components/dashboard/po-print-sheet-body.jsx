@@ -2,8 +2,14 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import { poBalanceDueVendorFacing } from "@/lib/po-payable";
-import { parsePoLineTaxPercent, poLineTaxAmount, poLineTotalWithTax } from "@/lib/po-line-item-totals";
+import {
+  parsePoLineTaxPercent,
+  poLineTaxAmount,
+  poLineTotalWithTax,
+  sumPoLineExtendedPreTax,
+  sumPoLineTaxAmount,
+  sumPoLineItemsTaxInclusive,
+} from "@/lib/po-line-item-totals";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
@@ -36,13 +42,14 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
     .map((s) => String(s || "").trim())
     .filter(Boolean);
 
-  const balanceDueDisplay = poBalanceDueVendorFacing(po);
-  const invoicedNum = parseFloat(po.totalInvoiced) || 0;
-  const balanceDueLabel =
-    invoicedNum > 0 ? "Balance due (on invoices)" : "Balance due";
+  const lines = Array.isArray(po.lineItems) ? po.lineItems : [];
+  const orderSubtotal = sumPoLineExtendedPreTax(lines);
+  const totalTax = sumPoLineTaxAmount(lines);
+  const grandTotal = sumPoLineItemsTaxInclusive(lines);
 
   return (
-    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+    <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
+      <div className="flex-1 min-h-0">
       <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
         <div className="flex min-w-0 flex-1 items-start gap-2.5">
           <PrintShopLogo logoUrl={logoUrl} alt="" />
@@ -91,7 +98,7 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
 
       <section className="mb-3">
         <h2 className={sectionLabel}>Purchase order info</h2>
-        <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
           <div>
             <dt className="text-neutral-600">PO#</dt>
             <dd className="font-medium text-neutral-900">{po.poNumber || "—"}</dd>
@@ -99,14 +106,6 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
           <div>
             <dt className="text-neutral-600">Date</dt>
             <dd className="text-neutral-900">{po.formattedCreatedAt || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-neutral-600">Status</dt>
-            <dd className="text-neutral-900">{po.status || "—"}</dd>
-          </div>
-          <div>
-            <dt className="text-neutral-600">Delivery</dt>
-            <dd className="text-neutral-900">{po.deliveryStatus || "—"}</dd>
           </div>
         </dl>
       </section>
@@ -123,11 +122,10 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
               <th className={thCell + " w-10 text-right"}>Tax %</th>
               <th className={thCell + " w-[4.5rem] text-right"}>Tax</th>
               <th className={thCell + " w-[5rem] text-right"}>Total</th>
-              <th className={thCell + " w-[4.5rem]"}>Status</th>
             </tr>
           </thead>
           <tbody>
-            {(Array.isArray(po.lineItems) ? po.lineItems : []).map((row, i) => {
+            {lines.map((row, i) => {
               const taxPct = parsePoLineTaxPercent(row?.taxPercent);
               const taxVal = poLineTaxAmount(row);
               const lineTot = poLineTotalWithTax(row);
@@ -148,7 +146,6 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
                       ? formatMoney(String(lineTot.toFixed(2)))
                       : "—"}
                   </td>
-                  <td className={tdCell}>{row?.status ?? "Ordered"}</td>
                 </tr>
               );
             })}
@@ -158,24 +155,22 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
 
       <section className="mb-3">
         <h2 className={sectionLabel}>Totals</h2>
-        <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
+        <table className="ml-auto w-full max-w-xs border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
-            <tr className="border-b border-neutral-200 bg-neutral-50">
-              <td className="px-2 py-1.5 font-medium text-neutral-800">Order total</td>
-              <td className="px-2 py-1.5 text-right font-medium text-neutral-900">{formatMoney(po.totalOrder)}</td>
+            <tr className="border-b border-neutral-200">
+              <td className="px-2 py-1.5 text-neutral-800">Order total</td>
+              <td className="px-2 py-1.5 text-right font-medium text-neutral-900">
+                {formatMoney(orderSubtotal)}
+              </td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Total invoiced</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{formatMoney(po.totalInvoiced)}</td>
-            </tr>
-            <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Total paid</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{formatMoney(po.totalPaid)}</td>
+              <td className="px-2 py-1.5 text-neutral-800">Total tax</td>
+              <td className="px-2 py-1.5 text-right font-medium text-neutral-900">{formatMoney(totalTax)}</td>
             </tr>
             <tr className="bg-neutral-100">
-              <td className="px-2 py-2 text-sm font-bold text-neutral-900">{balanceDueLabel}</td>
+              <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
               <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">
-                {formatMoney(balanceDueDisplay)}
+                {formatMoney(grandTotal)}
               </td>
             </tr>
           </tbody>
@@ -188,12 +183,14 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
           <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{po.notes}</p>
         </section>
       ) : null}
+      </div>
 
       <InvoicePaymentFooterPrint
-        paymentOptions={po.invoicePaymentOptions ?? settings?.invoicePaymentOptions}
+        paymentOptions=""
         thankYouNote={po.invoiceThankYouNote ?? settings?.invoiceThankYouNote}
         variant="dashboard"
         compact
+        thankYouAtPageFooter
       />
     </div>
   );

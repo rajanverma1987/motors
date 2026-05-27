@@ -130,7 +130,7 @@ export default function BenchElectricalScreen() {
       </CalcPanel>
 
       <CalcPanel title="3-phase resistor networks (Δ ↔ Y)">
-        <Text style={styles.fieldLabel}>Conversion</Text>
+        <Text style={S.fieldLabel}>Conversion</Text>
         <SegmentedTwo
           a={{ value: "delta_to_wye", label: "Δ → Y" }}
           b={{ value: "wye_to_delta", label: "Y → Δ" }}
@@ -171,6 +171,5 @@ export default function BenchElectricalScreen() {
 }
 
 const styles = StyleSheet.create({
-  fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.secondary, marginBottom: spacing.sm },
   warn: { fontSize: 14, color: colors.danger, marginTop: 8, lineHeight: 20 },
 });

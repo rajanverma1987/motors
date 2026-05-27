@@ -20,6 +20,14 @@ import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
+import { defaultPreparedByEmployeeIdForPortalUser } from "@/lib/quote-defaults-shop";
+import {
+  syncQuoteTechnicianToWorkOrders,
+  validateTechnicianEmployeeId,
+} from "@/lib/quote-technician-work-order-sync";
+import { quoteToDashboardJson } from "@/lib/quote-api-response";
+import { isWriteUpStatus } from "@/lib/quote-rfq-lifecycle";
+import { notifyTechnicianPreInspectionAssigned } from "@/lib/notify-technician-pre-inspection";
 
 function normalizeScopeLines(arr) {
   if (!Array.isArray(arr)) return [];
@@ -125,6 +133,7 @@ export async function GET(request, context) {
       customerPo: obj.customerPo ?? "",
       date: obj.date ?? "",
       preparedBy: obj.preparedBy ?? "",
+      technicianEmployeeId: obj.technicianEmployeeId ?? "",
       rfqNumber: obj.rfqNumber ?? "",
       repairScope: obj.repairScope ?? "",
       laborTotal: obj.laborTotal ?? "",
@@ -215,7 +224,7 @@ export async function PATCH(request, context) {
       customerTaxPercent,
       customerPo,
       date,
-      preparedBy,
+      technicianEmployeeId,
     } = body;
     if (customerId !== undefined) {
       if (!String(customerId).trim()) {
@@ -257,7 +266,23 @@ export async function PATCH(request, context) {
     }
     if (customerPo !== undefined) doc.customerPo = clampString(customerPo, 100);
     if (date !== undefined) doc.date = clampString(date, 20);
-    if (preparedBy !== undefined) doc.preparedBy = clampString(preparedBy, 200);
+    const email = user.email.trim().toLowerCase();
+    const prevTechnicianEmployeeId = String(doc.technicianEmployeeId || "").trim();
+    doc.preparedBy = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    if (technicianEmployeeId !== undefined) {
+      const validated = await validateTechnicianEmployeeId(email, technicianEmployeeId);
+      if (validated === null) {
+        return NextResponse.json(
+          {
+            error:
+              "Technician not found. Pick an employee from the dropdown, or leave the field blank.",
+          },
+          { status: 400 }
+        );
+      }
+      doc.technicianEmployeeId = validated;
+      doc.markModified("technicianEmployeeId");
+    }
     if (repairScope !== undefined) doc.repairScope = clampString(repairScope, LIMITS.message.max);
     if (bodyScopeLines !== undefined) {
       doc.scopeLines = normalizeScopeLines(bodyScopeLines);
@@ -279,13 +304,41 @@ export async function PATCH(request, context) {
         .map((a) => ({ url: a.url.trim(), name: clampString(a.name, 200) || a.url.trim() }));
     }
     await doc.save();
+    try {
+      await syncQuoteTechnicianToWorkOrders(user.email.trim().toLowerCase(), doc);
+    } catch (syncErr) {
+      console.error("Quote technician work order sync:", syncErr);
+    }
+    const nextTechnicianEmployeeId = String(doc.technicianEmployeeId || "").trim();
+    if (
+      nextTechnicianEmployeeId &&
+      nextTechnicianEmployeeId !== prevTechnicianEmployeeId &&
+      isWriteUpStatus(doc.status)
+    ) {
+      let companyName = "";
+      if (doc.customerId) {
+        const cust = await Customer.findOne({
+          _id: doc.customerId,
+          createdByEmail: email,
+        })
+          .select({ companyName: 1, primaryContactName: 1 })
+          .lean();
+        companyName =
+          (cust?.companyName && String(cust.companyName).trim()) ||
+          (cust?.primaryContactName && String(cust.primaryContactName).trim()) ||
+          "";
+      }
+      void notifyTechnicianPreInspectionAssigned({
+        shopEmail: email,
+        assigneeEmployeeId: nextTechnicianEmployeeId,
+        quoteId: doc._id.toString(),
+        rfqNumber: doc.rfqNumber || "",
+        companyName,
+      });
+    }
     return NextResponse.json({
       ok: true,
-      quote: {
-        ...doc.toObject(),
-        id: doc._id.toString(),
-        _id: undefined,
-      },
+      quote: quoteToDashboardJson(doc),
     });
   } catch (err) {
     console.error("Dashboard update quote error:", err);

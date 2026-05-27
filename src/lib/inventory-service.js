@@ -181,3 +181,24 @@ export async function receiveInventoryFromPoLine(email, inventoryItemId, qty) {
   if (r.matchedCount === 0) return { ok: false, error: "Inventory item not found" };
   return { ok: true };
 }
+
+/**
+ * Undo on-hand increase when a PO line receipt is reverted (logistics delete).
+ *
+ * @param {string} email
+ * @param {string} inventoryItemId
+ * @param {number} qty
+ */
+export async function reverseReceiveInventoryFromPoLine(email, inventoryItemId, qty) {
+  const e = email.trim().toLowerCase();
+  const id = String(inventoryItemId || "").trim();
+  if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
+    return { ok: true, skipped: true };
+  }
+  const r = await InventoryItem.updateOne(
+    { _id: id, createdByEmail: e },
+    { $inc: { onHand: -qty } }
+  );
+  if (r.matchedCount === 0) return { ok: false, error: "Inventory item not found" };
+  return { ok: true };
+}

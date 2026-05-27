@@ -27,7 +27,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
     if (state) next.set("state", state);
     if (nextPage > 1) next.set("page", String(nextPage));
     const qs = next.toString();
-    return qs ? `/electric-motor-reapir-shops-listings?${qs}` : "/electric-motor-reapir-shops-listings";
+    return qs ? `/electric-motor-repair-shops-listings?${qs}` : "/electric-motor-repair-shops-listings";
   };
 
   return (
@@ -50,7 +50,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
               <>
                 {" "}
                 in {[city, state].filter(Boolean).join(", ")}
-                <Link href="/electric-motor-reapir-shops-listings" prefetch className="ml-1 text-primary hover:underline">
+                <Link href="/electric-motor-repair-shops-listings" prefetch className="ml-1 text-primary hover:underline">
                   (show all)
                 </Link>
               </>
@@ -68,7 +68,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
                   : "No repair centers listed yet."}
             </p>
             {search || city || state ? (
-              <Link href="/electric-motor-reapir-shops-listings" prefetch className="mt-3 inline-block text-sm text-primary hover:underline">
+              <Link href="/electric-motor-repair-shops-listings" prefetch className="mt-3 inline-block text-sm text-primary hover:underline">
                 Show all listings
               </Link>
             ) : (

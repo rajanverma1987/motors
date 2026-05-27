@@ -5,7 +5,16 @@ import LogisticsEntry from "@/models/LogisticsEntry";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
-import { applyPoLineReceiptStatuses } from "@/lib/po-line-receipts";
+import {
+  applyPoLineReceiptStatuses,
+  revertPoOnLogisticsDelete,
+} from "@/lib/po-line-receipts";
+
+function getParams(context) {
+  return typeof context.params?.then === "function"
+    ? context.params
+    : Promise.resolve(context.params || {});
+}
 
 function toRow(doc) {
   return {
@@ -27,13 +36,14 @@ function toRow(doc) {
   };
 }
 
-export async function PATCH(request, { params }) {
+export async function PATCH(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const email = user.email.trim().toLowerCase();
+    const params = await getParams(context);
     const id = params?.id;
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
@@ -82,6 +92,7 @@ export async function PATCH(request, { params }) {
             if (!applied.ok) {
               return NextResponse.json({ error: applied.error }, { status: 400 });
             }
+            patch.poLineReceiptStatuses = applied.appliedStatuses ?? [];
           }
         }
       }
@@ -93,11 +104,12 @@ export async function PATCH(request, { params }) {
         .select("lineItems")
         .lean();
       const lineCount = Array.isArray(po?.lineItems) ? po.lineItems.length : 0;
-      if (lineCount > 0) {
+      if (lineCount > 0 && body.poLineReceiptStatuses !== undefined) {
         const applied = await applyPoLineReceiptStatuses(nextPoId, email, body.poLineReceiptStatuses);
         if (!applied.ok) {
           return NextResponse.json({ error: applied.error }, { status: 400 });
         }
+        patch.poLineReceiptStatuses = applied.appliedStatuses ?? [];
       }
     }
 
@@ -110,18 +122,31 @@ export async function PATCH(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
+export async function DELETE(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const email = user.email.trim().toLowerCase();
+    const params = await getParams(context);
     const id = params?.id;
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid id" }, { status: 400 });
     }
     await connectDB();
+    const existing = await LogisticsEntry.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    if (existing.kind === "vendor_po_receiving" && existing.purchaseOrderId) {
+      const reverted = await revertPoOnLogisticsDelete(existing, email, id);
+      if (!reverted.ok) {
+        return NextResponse.json({ error: reverted.error || "Failed to revert PO receipt" }, { status: 400 });
+      }
+    }
+
     const r = await LogisticsEntry.deleteOne({ _id: id, createdByEmail: email });
     if (r.deletedCount === 0) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

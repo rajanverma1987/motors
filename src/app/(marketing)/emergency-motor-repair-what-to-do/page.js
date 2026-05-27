@@ -41,7 +41,7 @@ export default function EmergencyMotorRepairWhatToDoPage() {
     <BlogPageLayout
       title="Emergency motor repair: what to do when a motor fails"
       description="A motor failure can shut down a line or a facility. Knowing what to do next—and where to find rush or emergency repair—helps you get back online faster and avoid costly downtime."
-      breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
       canonicalPath={path}
       sidebarTitle="Need a quote or a shop now?"
       sidebarDescription="Submit your motor details for a quote, or browse our directory to find repair centers—including those that offer emergency and rush service."
@@ -108,7 +108,7 @@ export default function EmergencyMotorRepairWhatToDoPage() {
             Find emergency and rush repair shops
           </h2>
           <p className="mt-4 text-secondary">
-            <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
+            <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
               Search our directory of electric motor repair shops
             </Link>{" "}
             —many list emergency or 24/7 service. You can also submit your motor details and we’ll connect you with shops that can quote your job, including rush turnaround when available.

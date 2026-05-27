@@ -41,7 +41,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
     <BlogPageLayout
       title="Types of electric motor repair services"
       description="Electric motor repair covers a wide range of work—from bearing changes and cleaning to full rewinds and specialty testing. Knowing the main service types helps you describe your need and choose the right shop."
-      breadcrumbLink={{ href: "/electric-motor-reapir-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
       canonicalPath={path}
       sidebarTitle="Get a quote or find a shop"
       sidebarDescription="Tell us about your motor and we’ll connect you with repair centers that can quote your job. Or browse our directory."
@@ -104,7 +104,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
             Find a shop for your motor type
           </h2>
           <p className="mt-4 text-secondary">
-            <Link href="/electric-motor-reapir-shops-listings" className="text-primary font-medium hover:underline">
+            <Link href="/electric-motor-repair-shops-listings" className="text-primary font-medium hover:underline">
               Browse our directory of electric motor repair shops
             </Link>{" "}
             to see services, capabilities, and locations. You can filter by service type and region, or{" "}

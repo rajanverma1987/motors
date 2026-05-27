@@ -51,6 +51,11 @@ export function poBalanceDueVendorFacing(po) {
   return Math.max(0, Math.round((orderNum - paid) * 100) / 100);
 }
 
+/** Outstanding amount when recording a payment (vendor bills if any, else PO total minus paid). */
+export function poAmountDueForPayment(po) {
+  return poBalanceDueVendorFacing(po);
+}
+
 /** Latest vendor invoice date (YYYY-MM-DD) for aging; null if none. */
 export function latestVendorInvoiceDate(po) {
   const inv = Array.isArray(po?.vendorInvoices) ? po.vendorInvoices : [];

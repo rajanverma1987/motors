@@ -17,6 +17,15 @@ import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
 } from "@/lib/user-settings";
+import { applyDashboardZoom } from "@/lib/apply-dashboard-zoom";
+import {
+  DISPLAY_ZOOM_DEFAULT,
+  DISPLAY_ZOOM_MAX,
+  DISPLAY_ZOOM_MIN,
+  DISPLAY_ZOOM_STEP,
+  normalizeZoomLevel,
+} from "@/lib/display-zoom";
+import Slider from "@/components/ui/slider";
 import { DISPLAY_CURRENCIES } from "@/lib/format-currency";
 
 const PAGE_SIZE_OPTIONS = [
@@ -42,7 +51,9 @@ const ACCOUNTS_PAYMENT_TERMS_OPTIONS = [
 export default function SettingsPageClient() {
   const toast = useToast();
   const { user } = useAuth();
-  const { refresh: refreshContext } = useUserSettings();
+  const { settings: savedSettings, refresh: refreshContext } = useUserSettings();
+  const savedZoomRef = useRef(savedSettings?.zoomLevel);
+  savedZoomRef.current = savedSettings?.zoomLevel;
   const [activeTab, setActiveTab] = useState("account");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -73,6 +84,13 @@ export default function SettingsPageClient() {
   useEffect(() => {
     load();
   }, [load]);
+
+  /** Live preview on Display tab; revert to saved zoom when leaving settings without a full navigation remount. */
+  useEffect(() => {
+    if (loading) return;
+    applyDashboardZoom(draft.zoomLevel);
+    return () => applyDashboardZoom(savedZoomRef.current);
+  }, [draft.zoomLevel, loading]);
 
   const updateDraft = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
 
@@ -121,8 +139,10 @@ export default function SettingsPageClient() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Save failed");
-      setDraft(mergeUserSettings(d.settings));
+      const merged = mergeUserSettings(d.settings);
+      setDraft(merged);
       await refreshContext();
+      applyDashboardZoom(merged.zoomLevel);
       toast.success("Settings saved.");
     } catch (e) {
       toast.error(e.message || "Could not save settings.");
@@ -406,6 +426,31 @@ export default function SettingsPageClient() {
         children: (
           <div className="flex flex-col gap-8 pb-24">
             <FormContainer>
+              <FormSectionTitle as="h2">Zoom level</FormSectionTitle>
+              <p className="mb-4 max-w-[42rem] text-sm text-secondary">
+                Makes text and controls larger or smaller across the signed-in dashboard only (not your whole browser).
+                Drag the slider to preview; click Save changes to keep your setting.
+              </p>
+              <div className="max-w-md">
+                <Slider
+                  id="settings-display-zoom"
+                  label="Zoom level"
+                  min={DISPLAY_ZOOM_MIN}
+                  max={DISPLAY_ZOOM_MAX}
+                  step={DISPLAY_ZOOM_STEP}
+                  value={normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}
+                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${
+                    normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
+                      ? " (default)"
+                      : ""
+                  }`}
+                  onChange={(e) =>
+                    updateDraft({ zoomLevel: normalizeZoomLevel(e.target.value) })
+                  }
+                />
+              </div>
+            </FormContainer>
+            <FormContainer>
               <FormSectionTitle as="h2">Currency</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
                 Quotes, purchase orders, and other money fields on the dashboard are shown in this currency. Stored amounts are unchanged; only display formatting updates.
@@ -567,6 +612,7 @@ export default function SettingsPageClient() {
       draft.invoiceThankYouNote,
       draft.compactTables,
       draft.currency,
+      draft.zoomLevel,
       draft.leadEmailAlerts,
       draft.logoUrl,
       draft.marketingTips,

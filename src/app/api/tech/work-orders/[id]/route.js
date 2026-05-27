@@ -19,6 +19,7 @@ import {
   workOrderToBoardPayload,
   notifyWorkOrderBoardUpdated,
 } from "@/lib/job-board-emit";
+import { isWorkOrderOpenStatus } from "@/lib/work-order-open-status";
 
 const LIMITS_SHORT = 200;
 
@@ -81,6 +82,12 @@ export async function GET(request, context) {
       createdByEmail: tech.shopEmail,
     }).lean();
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!isWorkOrderOpenStatus(doc.status)) {
+      return NextResponse.json(
+        { error: "This work order is closed and is not available in the mobile app." },
+        { status: 404 }
+      );
+    }
 
     const customer = await Customer.findOne({
       _id: doc.customerId,
@@ -194,6 +201,12 @@ export async function PATCH(request, context) {
       createdByEmail: tech.shopEmail,
     });
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!isWorkOrderOpenStatus(doc.status)) {
+      return NextResponse.json(
+        { error: "This work order is closed and cannot be updated in the mobile app." },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json().catch(() => ({}));
 

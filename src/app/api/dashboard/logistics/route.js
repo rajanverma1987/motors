@@ -104,10 +104,15 @@ export async function POST(request) {
       payload.poNumberSnapshot = po.poNumber || "";
       const lineCount = Array.isArray(po.lineItems) ? po.lineItems.length : 0;
       if (lineCount > 0) {
-        const applied = await applyPoLineReceiptStatuses(payload.purchaseOrderId, email, body.poLineReceiptStatuses);
+        const applied = await applyPoLineReceiptStatuses(
+          payload.purchaseOrderId,
+          email,
+          body.poLineReceiptStatuses
+        );
         if (!applied.ok) {
           return NextResponse.json({ error: applied.error }, { status: 400 });
         }
+        payload.poLineReceiptStatuses = applied.appliedStatuses ?? [];
       }
     } else {
       payload.purchaseOrderId = null;

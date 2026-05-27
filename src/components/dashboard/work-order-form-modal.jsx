@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo, useSyncExternalStore } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import WorkOrderSendEmailModal from "@/components/dashboard/work-order-send-email-modal";
+import WorkOrderPrintPreview from "@/components/dashboard/work-order-print-preview";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Tabs from "@/components/ui/tabs";
-import { Form, FormLayout, FormField } from "@/components/ui/form-layout";
+import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import {
   AC_WORK_ORDER_FIELDS,
@@ -19,121 +22,282 @@ import {
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 import WorkOrderInspectionsPanel from "@/components/dashboard/work-order-inspections-panel";
 
-function QuoteReferenceNoPrices({ scopeLines = [], otherCostLines = [] }) {
-  const hasScope = scopeLines.length > 0;
-  const hasOther = otherCostLines.some((r) => (r.item || "").trim() || (r.qty || "").trim());
-  if (!hasScope && !hasOther) return null;
+const panelShell = "overflow-hidden rounded-lg border border-border bg-card";
+const sectionLabel = "text-[10px] font-semibold uppercase tracking-wide text-secondary";
+const sectionHeadingClass = "text-sm font-bold text-title";
+/** Same height for date input and select triggers in assignment grid */
+const assignmentControlSize =
+  "!h-9 !min-h-9 !max-h-9 !box-border !py-1.5 !text-xs leading-normal";
+
+const WO_HEADER_LINK_CLASS =
+  "text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
+
+function WorkOrderCustomerHeader({ editing, onOpenQuote, onOpenCustomer }) {
+  const company = editing.customerCompany || editing.companyName || "—";
+  const woNum = editing.isDraft
+    ? `${editing.workOrderNumber || "—"} (assigned on save)`
+    : editing.workOrderNumber || "—";
+  const rfq = editing.quoteRfqNumber || "—";
+  const motorType = String(editing.motorClass || "").trim() || "—";
+  const quoteId = String(editing?.quoteId || editing?.draftQuoteId || "").trim();
+  const customerId = String(editing?.customerId || "").trim();
+
   return (
-    <div className="rounded-lg border border-border bg-card/80 p-4">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-        Scope From quote
-      </h3>
-      <div className="grid gap-4 lg:grid-cols-2">
-        {hasScope && (
-          <div>
-            
-            <ul className="list-inside list-disc space-y-1.5 text-sm text-text">
-              {scopeLines.map((row, i) => (
-                <li key={i} className="whitespace-pre-wrap pl-1">
-                  {row.scope || "—"}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {hasOther && (
-          <div>
-            <p className="mb-2 text-sm font-medium text-title">Other cost (items)</p>
-            <div className="overflow-hidden rounded border border-border">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border bg-form-bg">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium text-title">Item</th>
-                    <th className="px-3 py-2 text-right font-medium text-title">Qty</th>
-                    <th className="px-3 py-2 text-left font-medium text-title">UOM</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {otherCostLines.map((row, i) => (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-3 py-2 text-text">{row.item || "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.qty || "—"}</td>
-                      <td className="px-3 py-2 text-secondary">{row.uom || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+    <header className="min-w-0">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-secondary">Customer</p>
+      {customerId && company !== "—" && typeof onOpenCustomer === "function" ? (
+        <button
+          type="button"
+          className={`mt-0.5 block text-left text-2xl font-bold leading-tight tracking-tight sm:text-[1.65rem] ${WO_HEADER_LINK_CLASS}`}
+          onClick={() => onOpenCustomer(customerId)}
+          title="Open customer"
+        >
+          {company}
+        </button>
+      ) : (
+        <h2 className="mt-0.5 text-2xl font-bold leading-tight tracking-tight text-title sm:text-[1.65rem]">
+          {company}
+        </h2>
+      )}
+      <p className="mt-1 text-lg font-bold leading-tight text-primary sm:text-xl">
+        Motor type: {motorType}
+      </p>
+      <dl className="mt-2.5 flex flex-wrap gap-x-8 gap-y-1">
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-secondary">RFQ#</dt>
+          <dd className="mt-0.5 text-sm font-semibold tabular-nums">
+            {quoteId && rfq !== "—" && typeof onOpenQuote === "function" ? (
+              <button
+                type="button"
+                className={`text-title ${WO_HEADER_LINK_CLASS}`}
+                onClick={() => onOpenQuote(quoteId)}
+                title="Open RFQ"
+              >
+                {rfq}
+              </button>
+            ) : (
+              <span className="text-title">{rfq}</span>
+            )}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-[10px] font-semibold uppercase tracking-wide text-secondary">Work order#</dt>
+          <dd className="mt-0.5 font-mono text-sm font-bold tabular-nums text-primary">{woNum}</dd>
+        </div>
+      </dl>
+    </header>
+  );
+}
+
+function WorkOrderTopSection({
+  editing,
+  form,
+  setForm,
+  technicianOptions,
+  jobTypeSelectOptions,
+  statusSelectOptions,
+  onOpenQuote,
+  onOpenCustomer,
+}) {
+  return (
+    <div className={panelShell}>
+      <div className="flex flex-col lg:flex-row lg:items-stretch">
+        <div className="min-w-0 flex-1 border-b border-border px-3 py-3 lg:border-b-0 lg:border-r lg:py-3 lg:pr-4">
+          <WorkOrderCustomerHeader
+            editing={editing}
+            onOpenQuote={onOpenQuote}
+            onOpenCustomer={onOpenCustomer}
+          />
+        </div>
+        <div className="w-full shrink-0 px-3 py-2.5 lg:w-[min(50%,26rem)] lg:py-3 lg:pl-4">
+          <AssignmentFields
+            form={form}
+            setForm={setForm}
+            editing={editing}
+            technicianOptions={technicianOptions}
+            jobTypeSelectOptions={jobTypeSelectOptions}
+            statusSelectOptions={statusSelectOptions}
+          />
+        </div>
       </div>
     </div>
   );
 }
 
-function woSpecColumnCount() {
-  if (typeof window === "undefined") return 3;
-  const w = window.innerWidth;
-  if (w < 640) return 1;
-  if (w < 1024) return 2;
-  return 3;
-}
+function QuoteScopeBlock({ scopeLines = [], otherCostLines = [] }) {
+  const hasScope = scopeLines.length > 0;
+  const hasOther = otherCostLines.some((r) => (r.item || "").trim() || (r.qty || "").trim());
+  if (!hasScope && !hasOther) return null;
 
-function useWoSpecColumns() {
-  return useSyncExternalStore(
-    (onStoreChange) => {
-      const m640 = window.matchMedia("(min-width: 640px)");
-      const m1024 = window.matchMedia("(min-width: 1024px)");
-      const fn = () => onStoreChange();
-      m640.addEventListener("change", fn);
-      m1024.addEventListener("change", fn);
-      window.addEventListener("resize", fn);
-      return () => {
-        m640.removeEventListener("change", fn);
-        m1024.removeEventListener("change", fn);
-        window.removeEventListener("resize", fn);
-      };
-    },
-    woSpecColumnCount,
-    () => 3
+  return (
+    <div className={panelShell}>
+      <div className="border-b border-border px-3 py-2">
+        <h3 className={sectionHeadingClass}>Scope from quote</h3>
+      </div>
+      <div className="px-3 py-2">
+      {hasScope ? (
+        <ul className="space-y-0.5 border-l-2 border-primary/35 pl-2.5">
+          {scopeLines.map((row, i) => (
+            <li key={i} className="whitespace-pre-wrap text-xs leading-snug text-text">
+              {row.scope || "—"}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {hasOther ? (
+        <div className={hasScope ? "mt-2" : "mt-1"}>
+          <p className={`${sectionLabel} mb-1`}>Other cost</p>
+          <div className="overflow-hidden rounded border border-border text-xs">
+            <table className="w-full">
+              <thead className="border-b border-border bg-form-bg">
+                <tr>
+                  <th className="px-2 py-1 text-left font-medium text-title">Item</th>
+                  <th className="px-2 py-1 text-right font-medium text-title">Qty</th>
+                  <th className="px-2 py-1 text-left font-medium text-title">UOM</th>
+                </tr>
+              </thead>
+              <tbody>
+                {otherCostLines.map((row, i) => (
+                  <tr key={i} className="border-t border-border">
+                    <td className="px-2 py-1 text-text">{row.item || "—"}</td>
+                    <td className="px-2 py-1 text-right tabular-nums">{row.qty || "—"}</td>
+                    <td className="px-2 py-1 text-secondary">{row.uom || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+      </div>
+    </div>
   );
 }
 
-function SpecGrid({ fields, values, onChange, idPrefix = "wo", compact = false }) {
-  const cols = useWoSpecColumns();
+function AssignmentFields({
+  form,
+  setForm,
+  editing,
+  technicianOptions,
+  jobTypeSelectOptions,
+  statusSelectOptions,
+}) {
   return (
-    <FormLayout
-      labelWidth={compact ? "minmax(5rem, 6.75rem)" : "minmax(7.5rem, 10.5rem)"}
-      cols={cols}
-      className={`w-full min-w-0 ${compact ? "!gap-y-1 !gap-x-1" : ""}`}
-    >
+    <div className="min-w-0">
+      <p className="mb-2 text-xs font-medium text-secondary">Assignment</p>
+      <div className="grid w-full grid-cols-2 gap-2 [&>div]:min-w-0 [&_label]:!mb-0.5 [&_label]:!text-xs [&_label]:!font-normal [&_label]:!text-secondary [&_span.text-title]:!mb-0.5 [&_span.text-title]:!text-xs [&_span.text-title]:!font-normal [&_span.text-title]:!text-secondary">
+        <Input
+          label="Date"
+          type="date"
+          value={form.date}
+          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+          className="!w-full !gap-1"
+          inputClassName={assignmentControlSize}
+        />
+        <Select
+          label="Technician"
+          options={technicianOptions}
+          value={form.technicianEmployeeId}
+          onChange={(e) => setForm((f) => ({ ...f, technicianEmployeeId: e.target.value ?? "" }))}
+          placeholder="Select"
+          searchable
+          className="!w-full !gap-1"
+          triggerClassName={assignmentControlSize}
+        />
+        <Select
+          label="Job type"
+          options={jobTypeSelectOptions}
+          value={form.jobType}
+          onChange={(e) =>
+            setForm((f) => ({
+              ...f,
+              jobType: normalizeWorkOrderJobType(
+                e.target.value ?? "complete_motor",
+                editing.motorClass || "AC"
+              ),
+            }))
+          }
+          searchable={false}
+          className="!w-full !gap-1"
+          triggerClassName={assignmentControlSize}
+        />
+        <Select
+          label="Status"
+          options={statusSelectOptions}
+          value={form.status}
+          onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "" }))}
+          searchable={false}
+          className="!w-full !gap-1"
+          triggerClassName={assignmentControlSize}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ShopNotesBlock({ form, setForm }) {
+  return (
+    <div className={panelShell}>
+      <div className="border-b border-border px-3 py-2">
+        <h3 className={sectionHeadingClass}>Shop notes</h3>
+      </div>
+      <div className="px-3 py-2.5">
+        <Textarea
+          label="Shop notes"
+          id="wo-modal-notes"
+          name="notes"
+          rows={2}
+          placeholder="Floor / parts / customer notes…"
+          value={form.notes ?? ""}
+          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+          maxLength={8000}
+          className="!gap-0 [&_label]:sr-only"
+          textareaClassName="min-h-[2.75rem] !py-1.5 !text-xs"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Primary motor data — dense label-over-input grid (main fields to fill). */
+function MotorSpecsPrimarySection({ title, subtitle, children }) {
+  return (
+    <section className="overflow-hidden rounded-lg border-2 border-primary/35 bg-card ring-1 ring-primary/15">
+      <div className="border-b border-primary/25 bg-primary/10 px-3 py-2">
+        <h3 className={sectionHeadingClass}>{title}</h3>
+        {subtitle ? <p className="mt-0.5 text-[11px] leading-snug text-secondary">{subtitle}</p> : null}
+      </div>
+      <div className="bg-form-bg/20 p-3">{children}</div>
+    </section>
+  );
+}
+
+function WoSpecDenseGrid({ fields, values, onChange, idPrefix = "wo" }) {
+  return (
+    <div className="grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-4">
       {fields.map(({ key, label }) => {
         const fid = `${idPrefix}-${key}`;
         return (
-          <FormField
-            key={key}
-            label={label}
-            id={fid}
-            name={key}
-            labelAlign="right"
-            labelSize={compact ? "xs" : "sm"}
-            labelWeight={compact ? "normal" : "medium"}
-            classNameLabel={compact ? "pr-1 py-0 leading-tight" : "pr-2"}
-          >
+          <div key={key} className="min-w-0">
+            <label
+              htmlFor={fid}
+              className="mb-1 block truncate text-sm font-bold leading-tight text-title"
+              title={label}
+            >
+              {label}
+            </label>
             <Input
               id={fid}
               name={key}
               value={values[key] ?? ""}
               onChange={(e) => onChange(key, e.target.value)}
               className="min-w-0 !gap-0"
-              inputClassName={
-                compact ? "!h-8 !py-1 !px-2 !text-xs leading-tight" : ""
-              }
+              inputClassName="!h-8 w-full !py-1 !px-2 !text-sm leading-snug"
             />
-          </FormField>
+          </div>
         );
       })}
-    </FormLayout>
+    </div>
   );
 }
 
@@ -148,6 +312,8 @@ export default function WorkOrderFormModal({
   draftQuoteId = null,
   workOrderId = null,
   onAfterSave,
+  onOpenQuote,
+  onOpenCustomer,
   zIndex = 50,
 }) {
   const toast = useToast();
@@ -158,6 +324,8 @@ export default function WorkOrderFormModal({
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [printOpen, setPrintOpen] = useState(false);
 
   const technicianOptions = useMemo(() => {
     const tech = employees.filter((e) =>
@@ -263,6 +431,8 @@ export default function WorkOrderFormModal({
   }, [open, draftQuoteId, workOrderId, toast]);
 
   const handleClose = () => {
+    setSendEmailOpen(false);
+    setPrintOpen(false);
     setEditing(null);
     setForm(null);
     setLoadError(null);
@@ -350,24 +520,53 @@ export default function WorkOrderFormModal({
   const activeWo = workOrderId?.trim();
   const showForm = open && form && editing && !loadError && !loading;
 
+  const modalTitle = editing?.isDraft
+    ? "New work order"
+    : editing
+      ? `Work order ${editing.workOrderNumber || ""}`
+      : "Work order";
+
   return (
     <Modal
       open={open && !!(activeDraft || activeWo)}
       onClose={handleClose}
-      title={
-        editing?.isDraft
-          ? "New work order (save to create)"
-          : editing
-            ? `Work order ${editing.workOrderNumber}`
-            : "Work order"
-      }
-      width="min(1280px, 76.8vw)"
+      title={modalTitle}
+      width="min(1280px, 96vw)"
       zIndex={zIndex}
+      headerClassName="flex-wrap gap-2"
       actions={
         showForm ? (
-          <Button type="submit" form="wo-form-modal" variant="primary" size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
+          <>
+            {!editing.isDraft && editing.id ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex shrink-0 items-center gap-1.5"
+                  disabled={saving}
+                  onClick={() => setPrintOpen(true)}
+                >
+                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                  Print
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex shrink-0 items-center gap-1.5"
+                  disabled={saving}
+                  onClick={() => setSendEmailOpen(true)}
+                >
+                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                  Send
+                </Button>
+              </>
+            ) : null}
+            <Button type="submit" form="wo-form-modal" variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
         ) : null
       }
     >
@@ -379,95 +578,46 @@ export default function WorkOrderFormModal({
         <Form
           id="wo-form-modal"
           onSubmit={handleSave}
-          className="flex min-h-0 flex-col gap-5 !space-y-0"
+          className="flex min-h-0 flex-col gap-2.5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
         >
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Input
-              label="Date"
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-            />
-            <Input
-              label="Work order #"
-              value={
-                editing.isDraft ? `${editing.workOrderNumber} (assigned on save)` : editing.workOrderNumber
-              }
-              readOnly
-            />
-            <Input label="RFQ#" value={editing.quoteRfqNumber || "—"} readOnly />
-            <Input label="Company" value={editing.customerCompany || editing.companyName || "—"} readOnly />
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Select
-              label="Technician"
-              options={technicianOptions}
-              value={form.technicianEmployeeId}
-              onChange={(e) => setForm((f) => ({ ...f, technicianEmployeeId: e.target.value ?? "" }))}
-              placeholder="Select technician"
-              searchable
-            />
-            <Select
-              label="Job type"
-              options={jobTypeSelectOptions}
-              value={form.jobType}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  jobType: normalizeWorkOrderJobType(
-                    e.target.value ?? "complete_motor",
-                    editing.motorClass || "AC"
-                  ),
-                }))
-              }
-              searchable={false}
-            />
-            <Select
-              label="Status"
-              options={statusSelectOptions}
-              value={form.status}
-              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "" }))}
-              searchable={false}
-            />
-          </div>
-          <Textarea
-            label="Notes"
-            id="wo-modal-notes"
-            name="notes"
-            rows={3}
-            placeholder="Shop notes for this work order…"
-            value={form.notes ?? ""}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            maxLength={8000}
-            textareaClassName="min-h-[4.5rem] text-sm"
+          <WorkOrderTopSection
+            editing={editing}
+            form={form}
+            setForm={setForm}
+            technicianOptions={technicianOptions}
+            jobTypeSelectOptions={jobTypeSelectOptions}
+            statusSelectOptions={statusSelectOptions}
+            onOpenQuote={onOpenQuote}
+            onOpenCustomer={onOpenCustomer}
           />
-          <p className="text-xs text-secondary">
-            Motor class: <strong className="text-title">{editing.motorClass}</strong> — fields pre-filled from
-            the customer's motor where available.
-          </p>
-          <QuoteReferenceNoPrices
+
+          <QuoteScopeBlock
             scopeLines={editing.quoteScopeForTech}
             otherCostLines={editing.quoteOtherCostForTech}
           />
+
+          <ShopNotesBlock form={form} setForm={setForm} />
+
           {editing.motorClass === "AC" && (
-            <div>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-title">
-                AC motor — winding &amp; mechanical
-              </h3>
-              <SpecGrid
-                compact
+            <MotorSpecsPrimarySection
+              title="AC motor — winding & mechanical"
+              subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+            >
+              <WoSpecDenseGrid
                 idPrefix="wo-modal-ac"
                 fields={AC_WORK_ORDER_FIELDS}
                 values={form.acSpecs}
                 onChange={(k, v) => setForm((f) => ({ ...f, acSpecs: { ...f.acSpecs, [k]: v } }))}
               />
-            </div>
+            </MotorSpecsPrimarySection>
           )}
+
           {editing.motorClass === "DC" && form.jobType === "armature_only" && (
-            <div>
-              <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-title">Armature</h3>
-              <SpecGrid
-                compact
+            <MotorSpecsPrimarySection
+              title="Armature"
+              subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+            >
+              <WoSpecDenseGrid
                 idPrefix="wo-modal-arm"
                 fields={DC_ARMATURE_FIELDS}
                 values={form.armatureSpecs}
@@ -478,41 +628,36 @@ export default function WorkOrderFormModal({
                   }))
                 }
               />
-            </div>
+            </MotorSpecsPrimarySection>
           )}
-          {!editing.isDraft && editing.id ? (
-            <WorkOrderInspectionsPanel
-              workOrderId={editing.id}
-              motorClass={editing.motorClass || "AC"}
-              disabled={saving}
-            />
-          ) : null}
+
           {editing.motorClass === "DC" && form.jobType !== "armature_only" && (
-            <Tabs
-              defaultTab="dc"
-              tabs={[
-                {
-                  id: "dc",
-                  label: "DC motor",
-                  children: (
-                    <div className="pt-1">
-                      <SpecGrid
-                        compact
+            <MotorSpecsPrimarySection
+              title="DC motor & armature"
+              subtitle="Main work order data — use tabs for motor vs armature; saved to the customer motor on save."
+            >
+              <Tabs
+                className="[&_[role=tabpanel]]:!pt-1.5"
+                listClassName="!gap-0"
+                defaultTab="dc"
+                tabs={[
+                  {
+                    id: "dc",
+                    label: "DC motor",
+                    children: (
+                      <WoSpecDenseGrid
                         idPrefix="wo-modal-dc"
                         fields={DC_WORK_ORDER_FIELDS}
                         values={form.dcSpecs}
                         onChange={(k, v) => setForm((f) => ({ ...f, dcSpecs: { ...f.dcSpecs, [k]: v } }))}
                       />
-                    </div>
-                  ),
-                },
-                {
-                  id: "armature",
-                  label: "Armature",
-                  children: (
-                    <div className="pt-1">
-                      <SpecGrid
-                        compact
+                    ),
+                  },
+                  {
+                    id: "armature",
+                    label: "Armature",
+                    children: (
+                      <WoSpecDenseGrid
                         idPrefix="wo-modal-arm"
                         fields={DC_ARMATURE_FIELDS}
                         values={form.armatureSpecs}
@@ -523,14 +668,33 @@ export default function WorkOrderFormModal({
                           }))
                         }
                       />
-                    </div>
-                  ),
-                },
-              ]}
-            />
+                    ),
+                  },
+                ]}
+              />
+            </MotorSpecsPrimarySection>
           )}
+
+          {!editing.isDraft && editing.id ? (
+            <WorkOrderInspectionsPanel workOrderId={editing.id} disabled={saving} secondary />
+          ) : null}
         </Form>
       ) : null}
+
+      <WorkOrderSendEmailModal
+        open={sendEmailOpen}
+        onClose={() => setSendEmailOpen(false)}
+        workOrderId={editing?.id ?? null}
+        workOrderNumber={editing?.workOrderNumber ?? ""}
+        defaultEmail={editing?.customerEmail ?? ""}
+        zIndex={zIndex + 10}
+      />
+
+      <WorkOrderPrintPreview
+        workOrderId={printOpen && editing?.id ? editing.id : null}
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+      />
     </Modal>
   );
 }

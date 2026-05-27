@@ -4,7 +4,11 @@ import WorkOrder from "@/models/WorkOrder";
 import Motor from "@/models/Motor";
 import Customer from "@/models/Customer";
 import Quote from "@/models/Quote";
+import User from "@/models/User";
+import UserSettings from "@/models/UserSettings";
+import Employee from "@/models/Employee";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { sanitizeSpecs } from "@/lib/sanitize-specs";
 import {
   workOrderToBoardPayload,
@@ -40,16 +44,25 @@ export async function GET(request, context) {
     const email = user.email.trim().toLowerCase();
     const doc = await WorkOrder.findOne({ _id: id, createdByEmail: email }).lean();
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const customer = await Customer.findOne({
-      _id: doc.customerId,
-      createdByEmail: email,
-    }).lean();
-    const quote = await Quote.findOne({
-      _id: doc.quoteId,
-      createdByEmail: email,
-    })
-      .select({ scopeLines: 1, partsLines: 1 })
-      .lean();
+    const [customer, quote, owner, settingsDoc, technician] = await Promise.all([
+      Customer.findOne({
+        _id: doc.customerId,
+        createdByEmail: email,
+      }).lean(),
+      Quote.findOne({
+        _id: doc.quoteId,
+        createdByEmail: email,
+      })
+        .select({ scopeLines: 1, partsLines: 1 })
+        .lean(),
+      User.findOne({ email }).lean(),
+      UserSettings.findOne({ ownerEmail: email }).lean(),
+      doc.technicianEmployeeId
+        ? Employee.findOne({ _id: doc.technicianEmployeeId, createdByEmail: email })
+            .select({ name: 1 })
+            .lean()
+        : Promise.resolve(null),
+    ]);
     const quoteScopeForTech = Array.isArray(quote?.scopeLines)
       ? quote.scopeLines
           .slice(0, 100)
@@ -66,12 +79,23 @@ export async function GET(request, context) {
           }))
           .filter((r) => r.item.trim())
       : [];
+    const u = mergeUserSettings(settingsDoc?.settings);
+    const fromShopName =
+      (owner?.shopName && String(owner.shopName).trim()) ||
+      (user.shopName && String(user.shopName).trim()) ||
+      process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
+      "";
+
     return NextResponse.json({
       ...doc,
       id: doc._id.toString(),
       _id: undefined,
       customerCompany:
         customer?.companyName || customer?.primaryContactName || doc.companyName || "",
+      customerEmail: String(customer?.email ?? "").trim(),
+      technicianName: technician?.name || "",
+      fromShopName,
+      fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       quoteScopeForTech,
       quoteOtherCostForTech,
     });

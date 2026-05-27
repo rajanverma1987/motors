@@ -1,6 +1,11 @@
+import {
+  getMotorInspectionViewEntries,
+  usesUnifiedMotorInspectionFindings,
+} from "@/lib/motor-inspection-fields";
+
 /**
  * Preliminary inspection fields per component (AC stator/rotor, DC field/armature).
- * Aligned with documents/inspectionFields.md. Findings are stored as a flat object on MotorRepairInspection.findings.
+ * Legacy component-specific fields; new inspections use motor-inspection-fields.js (full_motor).
  */
 
 /** @typedef {{ key: string, label: string, multiline?: boolean, rows?: number }} PreliminaryFieldDef */
@@ -111,6 +116,9 @@ const DETAILED_VIEW_DEFS = [
  * @returns {Array<{ key: string, label: string, text: string }>}
  */
 export function getDetailedViewEntries(findings) {
+  if (usesUnifiedMotorInspectionFindings(findings)) {
+    return getMotorInspectionViewEntries(findings);
+  }
   const f = findings && typeof findings === "object" ? findings : {};
   return DETAILED_VIEW_DEFS.map(({ key, label }) => ({
     key,
@@ -124,6 +132,9 @@ export function getDetailedViewEntries(findings) {
  * @returns {Array<{ key: string, label: string, text: string }>}
  */
 export function getPreliminaryViewEntries(component, findings) {
+  if (usesUnifiedMotorInspectionFindings(findings)) {
+    return getMotorInspectionViewEntries(findings);
+  }
   const f = findings && typeof findings === "object" ? findings : {};
   const defs = preliminaryFieldDefs(component);
   const defKeys = new Set(defs.map((d) => d.key));

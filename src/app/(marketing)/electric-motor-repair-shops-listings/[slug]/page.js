@@ -105,7 +105,7 @@ export async function generateMetadata({ params }) {
   }
   const siteUrl = getPublicSiteUrl().replace(/\/$/, "");
   const canonicalSlug = getListingPublicPathSegment(listing);
-  const canonicalUrl = `${siteUrl}/electric-motor-reapir-shops-listings/${canonicalSlug}`;
+  const canonicalUrl = `${siteUrl}/electric-motor-repair-shops-listings/${canonicalSlug}`;
 
   const city = String(listing.city || "").trim();
   const state = String(listing.state || "").trim();
@@ -187,14 +187,14 @@ export default async function ListingDetailPage({ params }) {
   const { listing, redirectToSlug } = await resolvePublicListingFromSlugParam(slug);
 
   if (redirectToSlug) {
-    redirect(`/electric-motor-reapir-shops-listings/${redirectToSlug}`);
+    redirect(`/electric-motor-repair-shops-listings/${redirectToSlug}`);
   }
 
   if (!listing) {
     return (
       <div className="mx-auto max-w-[67.2rem] px-4 py-16 text-center">
         <p className="text-secondary">Repair center not found.</p>
-        <Link href="/electric-motor-reapir-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
+        <Link href="/electric-motor-repair-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
           ← Back to listings
         </Link>
       </div>
@@ -203,7 +203,7 @@ export default async function ListingDetailPage({ params }) {
 
   const canonicalSlug = getListingPublicPathSegment(listing);
   if (slug && canonicalSlug && slug.trim() !== canonicalSlug) {
-    redirect(`/electric-motor-reapir-shops-listings/${canonicalSlug}`);
+    redirect(`/electric-motor-repair-shops-listings/${canonicalSlug}`);
   }
 
   const locationParts = [listing.city, listing.state, listing.zipCode].filter(Boolean);
@@ -255,7 +255,7 @@ export default async function ListingDetailPage({ params }) {
     siteBase
   );
 
-  const pageCanonicalUrl = `${siteBase}/electric-motor-reapir-shops-listings/${canonicalSlug}`;
+  const pageCanonicalUrl = `${siteBase}/electric-motor-repair-shops-listings/${canonicalSlug}`;
   const jsonLd = buildListingDetailJsonLdGraph({
     listing,
     canonicalUrl: pageCanonicalUrl,
@@ -275,7 +275,7 @@ export default async function ListingDetailPage({ params }) {
       />
       <div className="mx-auto max-w-[86.4rem] px-4 py-8 sm:py-12">
         <Link
-          href="/electric-motor-reapir-shops-listings"
+          href="/electric-motor-repair-shops-listings"
           prefetch
           className="inline-flex items-center text-sm text-secondary hover:text-primary"
         >
@@ -467,7 +467,7 @@ export default async function ListingDetailPage({ params }) {
                   </Link>
                 ) : (
                   <Link
-                    href={`/electric-motor-reapir-shops-listings?${new URLSearchParams({
+                    href={`/electric-motor-repair-shops-listings?${new URLSearchParams({
                       ...(listing.city && { city: listing.city }),
                       ...(listing.state && { state: listing.state }),
                     }).toString()}`}
@@ -506,7 +506,7 @@ export default async function ListingDetailPage({ params }) {
           <div className="lg:sticky lg:top-8">
             <ListingReviewsSidebar
               listingId={listing.id}
-              listingPagePath={`/electric-motor-reapir-shops-listings/${canonicalSlug}`}
+              listingPagePath={`/electric-motor-repair-shops-listings/${canonicalSlug}`}
             />
           </div>
         </div>

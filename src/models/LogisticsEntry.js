@@ -24,6 +24,8 @@ const logisticsEntrySchema = new mongoose.Schema(
     },
     /** Denormalized PO# for list display */
     poNumberSnapshot: { type: String, default: "", trim: true },
+    /** Per-line receipt status applied to the linked PO (Received | Back Order), same order as PO lineItems */
+    poLineReceiptStatuses: { type: [String], default: [] },
     mannerOfTransport: { type: String, default: "", trim: true },
     freight: { type: String, default: "", trim: true },
     droppedBy: { type: String, default: "", trim: true },

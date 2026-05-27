@@ -4,6 +4,11 @@ import { connectDB } from "@/lib/db";
 import Customer from "@/models/Customer";
 import WorkOrder from "@/models/WorkOrder";
 import { getTechnicianFromRequest } from "@/lib/auth-portal";
+import { isWorkOrderOpenStatus } from "@/lib/work-order-open-status";
+import {
+  getWriteUpQuoteIds,
+  technicianOpenWorkOrderFilter,
+} from "@/lib/tech-job-queries";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -36,17 +41,17 @@ export async function GET(request, context) {
     }
 
     const assigneeId = String(tech.employeeId || "").trim();
+    const writeUpQuoteIds = await getWriteUpQuoteIds(tech.shopEmail);
     const list = assigneeId
       ? await WorkOrder.find({
-          createdByEmail: tech.shopEmail,
+          ...technicianOpenWorkOrderFilter(tech.shopEmail, assigneeId, writeUpQuoteIds),
           customerId,
-          technicianEmployeeId: assigneeId,
         })
           .sort({ workOrderNumber: 1 })
           .lean()
       : [];
 
-    const workOrders = list.map((w) => ({
+    const workOrders = list.filter((w) => isWorkOrderOpenStatus(w.status)).map((w) => ({
       id: w._id.toString(),
       workOrderNumber: w.workOrderNumber || "",
       status: w.status || "",

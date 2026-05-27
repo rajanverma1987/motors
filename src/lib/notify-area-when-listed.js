@@ -17,7 +17,7 @@ export async function notifyAreaRequestsForListing(listing) {
     const requests = await AreaNotifyRequest.find({}).lean();
     const listingObj = listing.toObject ? listing.toObject() : listing;
     const locationLabel = [listingObj.city, listingObj.state, listingObj.zipCode].filter(Boolean).join(", ") || "your area";
-    const shopListingsUrl = `${getPublicSiteUrl()}/electric-motor-reapir-near-me`;
+    const shopListingsUrl = `${getPublicSiteUrl()}/electric-motor-repair-near-me`;
 
     const toNotify = requests.filter((req) =>
       matchesLocation(listingObj, req.state, req.city, req.zip)
