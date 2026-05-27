@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAdminFromRequest } from "@/lib/auth-admin";
-import { mkdirSync, writeFileSync } from "fs";
+import {
+  publicUploadUrlPath,
+  resolvePublicUploadEntityDir,
+  sanitizeUploadSegment,
+  writeFileInUploadDir,
+} from "@/lib/public-upload-fs";
 import path from "path";
 
-const UPLOAD_DIR = "public/uploads/listings";
-const ABS_UPLOAD_BASE_DIR = path.join(process.cwd(), "public", "uploads", "listings");
+const LISTING_UPLOAD_CATEGORY = "listings";
 const MAX_FILES = 15;
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
@@ -20,7 +24,7 @@ export async function POST(request, context) {
     if (!id) {
       return NextResponse.json({ error: "ID required" }, { status: 400 });
     }
-    const safeId = String(id).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const safeId = sanitizeUploadSegment(id);
     if (!safeId) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
@@ -37,8 +41,7 @@ export async function POST(request, context) {
       );
     }
 
-    const dir = path.join(ABS_UPLOAD_BASE_DIR, safeId);
-    mkdirSync(dir, { recursive: true });
+    const dir = resolvePublicUploadEntityDir(LISTING_UPLOAD_CATEGORY, safeId);
 
     const urls = [];
     for (let i = 0; i < files.length; i++) {
@@ -59,9 +62,8 @@ export async function POST(request, context) {
       }
       const ext = path.extname(file.name) || ".jpg";
       const safeName = `${Date.now()}-${i}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = path.join(dir, safeName);
-      writeFileSync(filePath, buffer);
-      urls.push(`/uploads/listings/${safeId}/${safeName}`);
+      writeFileInUploadDir(dir, safeName, buffer);
+      urls.push(publicUploadUrlPath(LISTING_UPLOAD_CATEGORY, safeId, safeName));
     }
 
     return NextResponse.json({ ok: true, urls });
