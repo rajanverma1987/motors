@@ -7,6 +7,32 @@ import Button from "./button";
 import Checkbox from "./checkbox";
 import Modal from "./modal";
 import { useUserSettings } from "@/contexts/user-settings-context";
+import { formatDateMdy } from "@/lib/format-date";
+
+/** Column keys that hold calendar dates (not timestamps) when no custom render is set. */
+const TABLE_DATE_COLUMN_KEYS = new Set([
+  "date",
+  "paidat",
+  "paiddate",
+  "paymentdate",
+  "invoicedate",
+  "duedate",
+  "shipdate",
+  "orderdate",
+]);
+
+function isTableDateColumn(col) {
+  if (typeof col.render === "function" || col.formatDate === false) return false;
+  const key = String(col.key || "").trim().toLowerCase();
+  if (TABLE_DATE_COLUMN_KEYS.has(key)) return true;
+  const label = String(col.label || "").trim().toLowerCase();
+  return label === "date" || label === "paid date" || label === "payment date";
+}
+
+function defaultTableCellContent(col, value) {
+  if (isTableDateColumn(col)) return formatDateMdy(value);
+  return value;
+}
 
 const DEFAULT_PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10" },
@@ -345,7 +371,8 @@ export default function Table({
     const value = row[col.key];
     const placeholder = col.emptyCell ?? emptyCell;
     if (placeholder == null || placeholder === false) return false;
-    const content = typeof col.render === "function" ? col.render(value, row, i) : value;
+    const content =
+      typeof col.render === "function" ? col.render(value, row, i) : defaultTableCellContent(col, value);
     return content == null || content === "";
   };
 
@@ -456,7 +483,7 @@ export default function Table({
     let content =
       typeof col.render === "function"
         ? col.render(value, row, i)
-        : value;
+        : defaultTableCellContent(col, value);
     if ((content == null || content === "") && placeholder != null && placeholder !== false) {
       content = placeholder;
     }
@@ -495,6 +522,7 @@ export default function Table({
       columns.map((c) => {
         const val = row[c.key];
         if (typeof c.exportValue === "function") return c.exportValue(val, row);
+        if (isTableDateColumn(c)) return formatDateMdy(val);
         return val;
       })
     );

@@ -11,6 +11,7 @@ import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { formatDateMdy } from "@/lib/format-date";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
@@ -39,36 +40,6 @@ function currentFinancialYearRange() {
     from: `${fyStartYear}-04-01`,
     to: `${fyEndYear}-03-31`,
   };
-}
-
-function formatLedgerDate(value) {
-  if (value == null || value === "") return "—";
-  let d = null;
-
-  if (value instanceof Date) {
-    d = value;
-  } else if (typeof value === "number") {
-    d = new Date(value);
-  } else {
-    const raw = String(value).trim();
-    if (!raw) return "—";
-    const isoLike = raw.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (isoLike) {
-      d = new Date(`${isoLike[1]}T12:00:00.000Z`);
-    } else {
-      const hasExplicitYear = /\b\d{4}\b/.test(raw);
-      if (hasExplicitYear) {
-        const parsed = new Date(raw);
-        if (!Number.isNaN(parsed.getTime())) d = parsed;
-      }
-    }
-  }
-
-  if (!d || Number.isNaN(d.getTime())) return String(value);
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const month = d.toLocaleString("en-US", { month: "short", timeZone: "UTC" });
-  const year = d.getUTCFullYear();
-  return `${day}-${month}-${year}`;
 }
 
 function statusVariant(status) {
@@ -223,8 +194,8 @@ export default function LedgerPageClient() {
         key: "date",
         label: "Date",
         sortable: true,
-        render: (v) => formatLedgerDate(v),
-        exportValue: (v) => formatLedgerDate(v),
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+        exportValue: (v) => formatDateMdy(v),
       },
       {
         key: "description",

@@ -11,6 +11,7 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { formatDateMdy } from "@/lib/format-date";
 
 const COMMISSION_INITIAL = {
   salesPersonId: "",
@@ -24,13 +25,6 @@ const SALES_PERSON_INITIAL = {
   email: "",
   bankDetail: "",
 };
-
-function formatDateIST(dateValue) {
-  if (!dateValue) return "—";
-  const d = new Date(dateValue);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-}
 
 /**
  * @param {object} props
@@ -340,10 +334,10 @@ export default function SalesCommissionModal({ open, onClose, repairFlowJobId, j
                             </Badge>
                           </td>
                           <td className="px-3 py-2 text-title">
-                            {formatDateIST(row.paidAt)}
+                            {formatDateMdy(row.paidAt)}
                           </td>
                           <td className="px-3 py-2 text-secondary">
-                            {formatDateIST(row.createdAt)}
+                            {formatDateMdy(row.createdAt)}
                           </td>
                         </tr>
                       );

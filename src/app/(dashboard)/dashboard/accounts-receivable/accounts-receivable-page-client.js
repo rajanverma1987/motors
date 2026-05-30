@@ -22,6 +22,7 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { formatDateMdy } from "@/lib/format-date";
 
 const TABS = [
   { id: "open", label: "Open (due)", include: "open" },
@@ -227,7 +228,7 @@ export default function AccountsReceivablePageClient() {
             ? [
                 `"${r.invoiceNumber}"`,
                 `"${String(r.customerName).replace(/"/g, '""')}"`,
-                r.date,
+                formatDateMdy(r.date),
                 r.invoiceTotal.toFixed(2),
                 r.amountPaid.toFixed(2),
                 r.status,
@@ -237,7 +238,7 @@ export default function AccountsReceivablePageClient() {
             : [
                 `"${r.invoiceNumber}"`,
                 `"${String(r.customerName).replace(/"/g, '""')}"`,
-                r.date,
+                formatDateMdy(r.date),
                 r.invoiceTotal.toFixed(2),
                 r.amountPaid.toFixed(2),
                 r.balance.toFixed(2),
@@ -293,7 +294,12 @@ export default function AccountsReceivablePageClient() {
         ),
       },
       { key: "customerName", label: "Customer", sortable: true },
-      { key: "date", label: "Date", sortable: true },
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+      },
       {
         key: "invoiceTotal",
         label: "Total",
@@ -361,7 +367,12 @@ export default function AccountsReceivablePageClient() {
         ),
       },
       { key: "customerName", label: "Customer", sortable: true },
-      { key: "date", label: "Date", sortable: true },
+      {
+        key: "date",
+        label: "Date",
+        sortable: true,
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+      },
       {
         key: "invoiceTotal",
         label: "Total",
@@ -591,7 +602,7 @@ export default function AccountsReceivablePageClient() {
                 <ul className="max-h-32 space-y-1 overflow-y-auto rounded border border-border bg-form-bg/50 p-2 text-xs">
                   {paymentHistory.map((p, i) => (
                     <li key={i} className="tabular">
-                      {p.paymentDate} · {fmt(p.amount)} · {p.method || "—"}
+                      {formatDateMdy(p.paymentDate)} · {fmt(p.amount)} · {p.method || "—"}
                       {p.reference ? ` · ref ${p.reference}` : ""}
                     </li>
                   ))}

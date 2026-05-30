@@ -11,6 +11,7 @@ import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { formatDateMdy } from "@/lib/format-date";
 import { useConfirm } from "@/components/confirm-provider";
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft (not public)" },
@@ -347,7 +348,7 @@ export default function MarketplacePageClient() {
         key: "createdAt",
         label: "Date",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
       },
     ],
     []

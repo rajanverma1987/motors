@@ -10,6 +10,7 @@ import { invoiceStatusLabel } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import DashboardPeriodFilter from "@/components/dashboard/dashboard-period-filter";
 import { rangeToQueryParams } from "@/lib/dashboard-period";
+import { formatDateMdy } from "@/lib/format-date";
 
 const LEAD_STATUS_LABELS = {
   new: "New",
@@ -716,7 +717,7 @@ export default function ReportsPageClient() {
                 {
                   key: "paidAt",
                   label: "Paid date",
-                  render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
+                  render: (v) => formatDateMdy(v),
                 },
               ]}
               rows={commissionPaidRows}

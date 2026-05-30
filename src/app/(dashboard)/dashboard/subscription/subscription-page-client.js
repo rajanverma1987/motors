@@ -7,6 +7,7 @@ import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { formatDateMdy } from "@/lib/format-date";
 
 const STATE_BADGE = {
   active: "success",
@@ -66,7 +67,7 @@ export default function SubscriptionPageClient() {
         key: "createdAt",
         label: "Date",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
       },
       { key: "type", label: "Type", sortable: true },
       { key: "status", label: "Status", sortable: true },

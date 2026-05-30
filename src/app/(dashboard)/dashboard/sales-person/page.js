@@ -11,13 +11,7 @@ import Textarea from "@/components/ui/textarea";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
-
-function formatDateShort(dateValue) {
-  if (!dateValue) return "—";
-  const d = new Date(dateValue);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-}
+import { formatDateMdy } from "@/lib/format-date";
 
 const INITIAL_FORM = {
   name: "",
@@ -173,12 +167,12 @@ export default function DashboardSalesPersonPage() {
       {
         key: "paidAt",
         label: "Paid date",
-        render: (_, row) => formatDateShort(row.paidAt),
+        render: (_, row) => formatDateMdy(row.paidAt),
       },
       {
         key: "createdAt",
         label: "Created",
-        render: (_, row) => formatDateShort(row.createdAt),
+        render: (_, row) => formatDateMdy(row.createdAt),
       },
     ],
     [fmt]

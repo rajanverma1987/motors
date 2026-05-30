@@ -13,6 +13,7 @@ import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusPillAppearance } from "@/lib/invoice-status";
+import { formatDateMdy } from "@/lib/format-date";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -199,7 +200,8 @@ export default function TaxesPageClient() {
         key: "paidDate",
         label: "Paid date",
         sortable: true,
-        exportValue: (v) => isoDateForCsv(v),
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+        exportValue: (v) => formatDateMdy(v),
       },
       {
         key: "paidAmount",

@@ -15,6 +15,7 @@ import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { formatDateMdy } from "@/lib/format-date";
 
 const NEW_COMMISSION_INITIAL = {
   jobKey: "",
@@ -24,13 +25,6 @@ const NEW_COMMISSION_INITIAL = {
   paidAt: "",
   attachments: [],
 };
-
-function formatDateIST(dateValue) {
-  if (!dateValue) return "—";
-  const d = new Date(dateValue);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" });
-}
 
 export default function DashboardSalesCommissionPage() {
   const toast = useToast();
@@ -717,13 +711,13 @@ export default function DashboardSalesCommissionPage() {
         key: "paidAt",
         label: "Paid date",
         sortable: true,
-        render: (_, row) => formatDateIST(row.paidAt),
+        render: (_, row) => formatDateMdy(row.paidAt),
       },
       {
         key: "createdAt",
         label: "Created",
         sortable: true,
-        render: (_, row) => formatDateIST(row.createdAt),
+        render: (_, row) => formatDateMdy(row.createdAt),
       },
     ],
     [fmt, statusSavingId, openDocsCommissionModal, getRowJobMeta]
