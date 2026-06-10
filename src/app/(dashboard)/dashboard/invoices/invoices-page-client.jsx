@@ -26,11 +26,13 @@ import QuoteFormModal from "@/components/dashboard/quote-form-modal";
 import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[id]/repair-flow-job-detail-client";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import { allJobsListPath } from "@/lib/all-jobs-tabs";
 
 const INVOICE_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
-function InvoicesInner() {
+function InvoicesInner({ embedded = false }) {
+  const listPath = allJobsListPath(embedded, "invoices", "/dashboard/invoices");
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -91,14 +93,14 @@ function InvoicesInner() {
     const o = openId?.trim();
     if (d) {
       setInvoiceModal({ draftQuoteId: d });
-      router.replace("/dashboard/invoices", { scroll: false });
+      router.replace(listPath, { scroll: false });
       return;
     }
     if (o) {
       setInvoiceModal({ invoiceId: o });
-      router.replace("/dashboard/invoices", { scroll: false });
+      router.replace(listPath, { scroll: false });
     }
-  }, [draftQuoteParam, openId, router]);
+  }, [draftQuoteParam, openId, router, listPath]);
 
   const handleInvoiceSort = useCallback((key, direction) => {
     setPage(1);
@@ -354,12 +356,14 @@ function InvoicesInner() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-4 shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Invoices</h1>
-        <p className="mt-2 text-sm text-secondary">
-          Bills from quotes—edit, send, print, and track payment.
-        </p>
-      </div>
+      {!embedded ? (
+        <div className="mb-4 shrink-0 border-b border-border pb-4">
+          <h1 className="text-2xl font-bold text-title">Invoices</h1>
+          <p className="mt-2 text-sm text-secondary">
+            Bills from quotes—edit, send, print, and track payment.
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="mb-2 flex shrink-0 flex-wrap gap-2">
@@ -466,10 +470,10 @@ function InvoicesInner() {
   );
 }
 
-export default function InvoicesPageClient() {
+export default function InvoicesPageClient({ embedded = false }) {
   return (
     <Suspense fallback={<CrmPlaceholder title="Invoices" description="Loading…" />}>
-      <InvoicesInner />
+      <InvoicesInner embedded={embedded} />
     </Suspense>
   );
 }

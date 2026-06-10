@@ -48,11 +48,13 @@ import {
   INSPECTION_DONE_QUOTE_STATUS,
   filterQuotesForRfqList,
   isWriteUpStatus,
+  isInspectionDoneStatus,
   jobNumberFieldLabel,
 } from "@/lib/quote-rfq-lifecycle";
 import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildTechnicianSelectOptions } from "@/lib/technician-select-options";
+import { allJobsListPath } from "@/lib/all-jobs-tabs";
 
 /** Icons in modal Actions dropdown menu rows */
 const HEADER_BTN_IC = "h-4 w-4 shrink-0";
@@ -211,7 +213,8 @@ function buildQuotePayload(form) {
   };
 }
 
-export default function DashboardRfqListPage() {
+export default function DashboardRfqListPage({ embedded = false }) {
+  const listPath = allJobsListPath(embedded, "rfq", "/dashboard/rfq");
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -400,16 +403,16 @@ export default function DashboardRfqListPage() {
   useEffect(() => {
     if (!fromLeadId) return;
     toast.info("Create work orders from approved RFQs to record inspections on the shop floor.");
-    router.replace("/dashboard/rfq", { scroll: false });
-  }, [fromLeadId, toast, router]);
+    router.replace(listPath, { scroll: false });
+  }, [fromLeadId, toast, router, listPath]);
 
   useEffect(() => {
     const id = openQuoteId?.trim();
     if (!id) return;
     setViewModalOpen(true);
     setViewLoadingQuoteId(id);
-    router.replace("/dashboard/rfq", { scroll: false });
-  }, [openQuoteId, router]);
+    router.replace(listPath, { scroll: false });
+  }, [openQuoteId, router, listPath]);
 
   const openEditModal = useCallback(async (quote) => {
     if (!quote) return;
@@ -521,12 +524,12 @@ export default function DashboardRfqListPage() {
     let cancelled = false;
     (async () => {
       await openEditModal({ id });
-      if (!cancelled) router.replace("/dashboard/rfq", { scroll: false });
+      if (!cancelled) router.replace(listPath, { scroll: false });
     })();
     return () => {
       cancelled = true;
     };
-  }, [editQuoteIdParam, openEditModal, router]);
+  }, [editQuoteIdParam, openEditModal, router, listPath]);
 
   const customerOptions = useMemo(
     () =>
@@ -839,7 +842,7 @@ export default function DashboardRfqListPage() {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return list;
     const labelFor = (qt) =>
-      statusSelectOptions.find((o) => o.value === (qt.status || "draft").toLowerCase())?.label ?? "";
+      statusOptionsForForm.find((o) => o.value === (qt.status || "draft").toLowerCase())?.label ?? "";
     return list.filter(
       (qt) =>
         (qt.rfqNumber || "").toLowerCase().includes(q) ||
@@ -859,7 +862,7 @@ export default function DashboardRfqListPage() {
     customerNameMap,
     motorLabelMap,
     technicianNameMap,
-    statusSelectOptions,
+    statusOptionsForForm,
   ]);
 
   const sortedQuotes = useMemo(() => {
@@ -949,12 +952,12 @@ export default function DashboardRfqListPage() {
         taxPercent: quote?.customerTaxPercent,
       }).grandTotal ?? 0;
     const pool = quotes;
-    const keysLower = new Set(statusSelectOptions.map((o) => o.value.toLowerCase()));
+    const keysLower = new Set(statusOptionsForForm.map((o) => o.value.toLowerCase()));
     const buttons = [];
     const tileAppearanceForKey = (statusKey, fallbackIndex) => {
       if (statusKey === "") return resolveStatusTileProps("", 0);
       if (statusKey === "__other__") return resolveStatusTileProps("", 17);
-      const optIdx = statusSelectOptions.findIndex(
+      const optIdx = statusOptionsForForm.findIndex(
         (o) => o.value.toLowerCase() === String(statusKey).toLowerCase()
       );
       const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
@@ -969,7 +972,7 @@ export default function DashboardRfqListPage() {
       });
     };
 
-    statusSelectOptions.forEach((opt, optIdx) => {
+    statusOptionsForForm.forEach((opt, optIdx) => {
       const v = opt.value.toLowerCase();
       const matches = (q) => (q.status || "draft").toLowerCase() === v;
       buttons.push({
@@ -980,7 +983,12 @@ export default function DashboardRfqListPage() {
         tileAppearance: tileAppearanceForKey(opt.value, optIdx),
       });
     });
-    const orphans = pool.filter((q) => !keysLower.has((q.status || "draft").toLowerCase()) && !isWriteUpStatus(q.status));
+    const orphans = pool.filter(
+      (q) =>
+        !keysLower.has((q.status || "draft").toLowerCase()) &&
+        !isWriteUpStatus(q.status) &&
+        !isInspectionDoneStatus(q.status)
+    );
     if (orphans.length) {
       buttons.push({
         key: "__other__",
@@ -998,7 +1006,7 @@ export default function DashboardRfqListPage() {
       tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
-  }, [quotes, statusSelectOptions, mergedSettings]);
+  }, [quotes, statusOptionsForForm, mergedSettings]);
 
   const columns = useMemo(
     () => [
@@ -1104,7 +1112,7 @@ export default function DashboardRfqListPage() {
         sortable: true,
         render: (_, row) => {
           const s = (row.status || "draft").toLowerCase();
-          const optIdx = statusSelectOptions.findIndex((o) => o.value.toLowerCase() === s);
+          const optIdx = statusOptionsForForm.findIndex((o) => o.value.toLowerCase() === s);
           const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
             mergedSettings,
             s,
@@ -1116,7 +1124,7 @@ export default function DashboardRfqListPage() {
             tileColor,
           });
           const label =
-            statusSelectOptions.find((o) => o.value === s)?.label ??
+            statusOptionsForForm.find((o) => o.value === s)?.label ??
             s.charAt(0).toUpperCase() + s.slice(1);
           return (
             <span
@@ -1163,7 +1171,7 @@ export default function DashboardRfqListPage() {
       deletingQuoteId,
       fmt,
       mergedSettings,
-      statusSelectOptions,
+      statusOptionsForForm,
       openViewModal,
       openEditModal,
       jobIdLabel,
@@ -1319,20 +1327,29 @@ export default function DashboardRfqListPage() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h1 className="text-2xl font-bold text-title">RFQ</h1>
-          <p className="mt-1 text-sm text-secondary">
-            All requests and quotes in one place—one job number through work orders and invoices.
-          </p>
+      {embedded ? (
+        <div className="mb-3 flex shrink-0 justify-end">
+          <Button type="button" variant="primary" size="sm" onClick={openCreateRfqModal}>
+            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+            Create RFQ
+          </Button>
         </div>
-        <Button type="button" variant="primary" size="sm" onClick={openCreateRfqModal}>
-          <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-          Create RFQ
-        </Button>
-      </div>
+      ) : (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-title">RFQ</h1>
+            <p className="mt-1 text-sm text-secondary">
+              All requests and quotes in one place—one job number through work orders and invoices.
+            </p>
+          </div>
+          <Button type="button" variant="primary" size="sm" onClick={openCreateRfqModal}>
+            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+            Create RFQ
+          </Button>
+        </div>
+      )}
 
-      <div className="mt-4 flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${embedded ? "" : "mt-4"}`}>
         <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
           {statusSummaryCards.map((card) => (
             <StatusFilterPillButton
@@ -1547,7 +1564,7 @@ export default function DashboardRfqListPage() {
                 <div>
                   <dt className="text-secondary">Status</dt>
                   <dd className="text-title">
-                    {statusSelectOptions.find(
+                    {statusOptionsForForm.find(
                       (o) => o.value === (viewingQuote.status || "draft").toLowerCase()
                     )?.label ?? (viewingQuote.status || "—")}
                   </dd>
@@ -1637,12 +1654,12 @@ export default function DashboardRfqListPage() {
                   {(viewingQuote.statusLog ?? []).map((entry, i) => (
                     <li key={i} className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-secondary">
                       <span className="font-medium text-title">
-                        {statusSelectOptions.find((o) => o.value === String(entry.from || "draft").toLowerCase())
+                        {statusOptionsForForm.find((o) => o.value === String(entry.from || "draft").toLowerCase())
                           ?.label ?? (entry.from || "draft")}
                       </span>
                       <span>→</span>
                       <span className="font-medium text-title">
-                        {statusSelectOptions.find((o) => o.value === String(entry.to || "").toLowerCase())?.label ??
+                        {statusOptionsForForm.find((o) => o.value === String(entry.to || "").toLowerCase())?.label ??
                           (entry.to || "—")}
                       </span>
                       {entry.at && (

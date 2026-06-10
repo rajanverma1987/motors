@@ -9,7 +9,6 @@ import {
   FiUsers,
   FiUser,
   FiPackage,
-  FiClipboard,
   FiDollarSign,
   FiTrendingUp,
   FiCreditCard,
@@ -30,11 +29,10 @@ import {
   FiRepeat,
   FiKey,
   FiPercent,
+  FiLayers,
   FiChevronRight,
   FiChevronLeft,
 } from "react-icons/fi";
-import { ImPencil2 } from "react-icons/im";
-
 const SIDEBAR_COLLAPSED_KEY = "dashboard-sidebar-collapsed";
 
 const CUSTOMERS_NAV = [
@@ -43,14 +41,9 @@ const CUSTOMERS_NAV = [
   { href: "/dashboard/motors", label: "Customer's motors", icon: FiPackage },
 ];
 
-const JOBS_NAV = [
-  { href: "/dashboard/rfq", label: "RFQ", icon: ImPencil2 },
-  { href: "/dashboard/work-orders", label: "Work orders", icon: FiClipboard },
-  { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
-];
+const ALL_JOBS_NAV = [{ href: "/dashboard/all-jobs", label: "All jobs", icon: FiLayers }];
 
 const ACCOUNTING_NAV = [
-  { href: "/dashboard/invoices", label: "Invoices", icon: FiDollarSign },
   { href: "/dashboard/accounts-receivable", label: "Accounts receivable", icon: FiTrendingUp },
   { href: "/dashboard/taxes", label: "Taxes", icon: FiPercent },
   { href: "/dashboard/ledger", label: "Ledger", icon: FiCreditCard },
@@ -61,6 +54,7 @@ const PROCUREMENT_NAV = [
   { href: "/dashboard/purchase-orders", label: "Purchase orders", icon: FiShoppingCart },
   { href: "/dashboard/accounts-payable", label: "Accounts payable", icon: FiCreditCard },
   { href: "/dashboard/sales-commission", label: "Sales commission", icon: FiDollarSign },
+  { href: "/dashboard/inventory", label: "Inventory", icon: FiPackage },
 ];
 
 const OPERATIONS_NAV = [
@@ -88,7 +82,7 @@ const TOOLS_NAV = [
 
 const NAV_GROUPS = [
   { title: "Customers", items: CUSTOMERS_NAV },
-  { title: "Jobs", items: JOBS_NAV },
+  { title: "All Jobs", items: ALL_JOBS_NAV },
   { title: "Accounting", items: ACCOUNTING_NAV },
   { title: "Procurement & payables", items: PROCUREMENT_NAV },
   { title: "Operations", items: OPERATIONS_NAV },

@@ -13,6 +13,7 @@ import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
 import QuoteFormModal from "@/components/dashboard/quote-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import { allJobsListPath } from "@/lib/all-jobs-tabs";
 
 const WO_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
@@ -30,7 +31,8 @@ function workOrderStatusVariant(status) {
   return ["default", "primary", "warning"][h % 3];
 }
 
-export default function WorkOrdersPageClient() {
+export default function WorkOrdersPageClient({ embedded = false }) {
+  const listPath = allJobsListPath(embedded, "work-orders", "/dashboard/work-orders");
   const toast = useToast();
   const confirm = useConfirm();
   const router = useRouter();
@@ -101,14 +103,14 @@ export default function WorkOrdersPageClient() {
     const o = openId?.trim();
     if (d) {
       setWoModal({ draftQuoteId: d });
-      router.replace("/dashboard/work-orders", { scroll: false });
+      router.replace(listPath, { scroll: false });
       return;
     }
     if (o) {
       setWoModal({ workOrderId: o });
-      router.replace("/dashboard/work-orders", { scroll: false });
+      router.replace(listPath, { scroll: false });
     }
-  }, [draftQuoteParam, openId, router]);
+  }, [draftQuoteParam, openId, router, listPath]);
 
   const bucketSummaryCards = useMemo(
     () => [
@@ -257,14 +259,17 @@ export default function WorkOrdersPageClient() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-4 shrink-0 border-b border-border pb-4">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-title">Work orders</h1>
-          <p className="mt-2 text-sm text-secondary">
-            Shop jobs from approved quotes. Open excludes Close status; Closed shows only work orders with Close status.
-          </p>
+      {!embedded ? (
+        <div className="mb-4 shrink-0 border-b border-border pb-4">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-title">Work orders</h1>
+            <p className="mt-2 text-sm text-secondary">
+              Shop jobs from approved quotes. Open excludes Close status; Closed shows only work orders with Close
+              status.
+            </p>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="mt-0 flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
