@@ -35,6 +35,91 @@ function createCustomerViewToken() {
   return crypto.randomBytes(24).toString("hex");
 }
 
+const INVOICE_SORT_FIELD_MAP = {
+  invoiceNumber: "invoiceNumber",
+  rfqNumber: "rfqNumber",
+  customerPo: "customerPo",
+  date: "date",
+  status: "status",
+  createdAt: "createdAt",
+};
+
+/**
+ * Paginated invoice list with optional customer-name sort (joined from customers).
+ * @param {object} q
+ * @param {string} sortBy
+ * @param {"asc"|"desc"} sortDir
+ * @param {number} skip
+ * @param {number} pageSize
+ */
+async function fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize) {
+  if (sortBy === "customerName") {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return Invoice.aggregate([
+      { $match: q },
+      {
+        $lookup: {
+          from: "customers",
+          let: { custId: "$customerId", ownerEmail: "$createdByEmail" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: [{ $toString: "$_id" }, "$$custId"] },
+                    { $eq: ["$createdByEmail", "$$ownerEmail"] },
+                  ],
+                },
+              },
+            },
+            { $project: { companyName: 1, primaryContactName: 1 } },
+          ],
+          as: "_sortCustomer",
+        },
+      },
+      {
+        $addFields: {
+          _customerNameSort: {
+            $toLower: {
+              $trim: {
+                input: {
+                  $let: {
+                    vars: {
+                      company: { $ifNull: [{ $arrayElemAt: ["$_sortCustomer.companyName", 0] }, ""] },
+                      contact: { $ifNull: [{ $arrayElemAt: ["$_sortCustomer.primaryContactName", 0] }, ""] },
+                    },
+                    in: {
+                      $cond: [
+                        { $ne: ["$$company", ""] },
+                        "$$company",
+                        {
+                          $cond: [
+                            { $ne: ["$$contact", ""] },
+                            "$$contact",
+                            { $ifNull: ["$customerId", ""] },
+                          ],
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      { $sort: { _customerNameSort: dir, createdAt: -1 } },
+      { $skip: skip },
+      { $limit: pageSize },
+      { $project: { _sortCustomer: 0, _customerNameSort: 0 } },
+    ]);
+  }
+
+  const sortField = INVOICE_SORT_FIELD_MAP[sortBy] || "createdAt";
+  const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+  return Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean();
+}
+
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -53,16 +138,6 @@ export async function GET(request) {
     const statusFilter = String(searchParams.get("status") || "").trim().toLowerCase();
     const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
     const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
-    const sortFieldMap = {
-      invoiceNumber: "invoiceNumber",
-      rfqNumber: "rfqNumber",
-      customerPo: "customerPo",
-      date: "date",
-      status: "status",
-      createdAt: "createdAt",
-    };
-    const sortField = sortFieldMap[sortBy] || "createdAt";
-    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
     const ownerScope = { createdByEmail: email };
     const q = { ...ownerScope };
     if (qText) {
@@ -104,7 +179,7 @@ export async function GET(request) {
     }
     const [totalCount, list] = await Promise.all([
       Invoice.countDocuments(q),
-      Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize),
     ]);
     const summaryRows = await Invoice.aggregate([
       { $match: ownerScope },

@@ -252,7 +252,7 @@ function ShopNotesBlock({ form, setForm }) {
           onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
           maxLength={8000}
           className="!gap-0 [&_label]:sr-only"
-          textareaClassName="min-h-[2.75rem] !py-1.5 !text-xs"
+          textareaClassName="min-h-[3.25rem] !py-2 !text-base leading-normal"
         />
       </div>
     </div>

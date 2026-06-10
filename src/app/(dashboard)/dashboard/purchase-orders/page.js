@@ -35,7 +35,7 @@ const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "30%" },
   { key: "qty", label: "Qty", type: "number", width: "8%" },
   { key: "uom", label: "UOM", width: "10%" },
-  { key: "unitPrice", label: "Unit price", type: "number", width: "12%" },
+  { key: "unitPrice", label: "Unit price", type: "number", step: "0.00001", width: "12%" },
   { key: "taxPercent", label: "Tax %", type: "number", width: "9%" },
   {
     key: "lineTax",
@@ -45,8 +45,9 @@ const PO_LINE_COLUMNS = [
     formula: (row) => {
       const v = poLineTaxAmount(row);
       if (v == null || !Number.isFinite(v)) return "";
-      return Math.round(v * 1e6) / 1e6;
+      return Math.round(v * 100) / 100;
     },
+    displayDecimals: 2,
   },
   {
     key: "total",
@@ -56,8 +57,9 @@ const PO_LINE_COLUMNS = [
     formula: (row) => {
       const v = poLineTotalWithTax(row);
       if (v == null || !Number.isFinite(v)) return "";
-      return Math.round(v * 1e6) / 1e6;
+      return Math.round(v * 100) / 100;
     },
+    displayDecimals: 2,
   },
 ];
 
@@ -236,11 +238,17 @@ function lineItemStatusMeta(row) {
   return { itemStatus, itemBadgeVariant };
 }
 
-function PoViewLineItemsTable({ lineItems, fmt }) {
+function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt }) {
   const rows = Array.isArray(lineItems) ? lineItems : [];
   const orderSubtotal = sumPoLineExtendedPreTax(rows);
   const totalTax = sumPoLineTaxAmount(rows);
-  const grandTotal = sumPoLineItemsTaxInclusive(rows);
+  const lineGrand = sumPoLineItemsTaxInclusive(rows);
+  const otherChargesList = Array.isArray(otherCharges) ? otherCharges : [];
+  const otherChargesTotal = otherChargesList.reduce((sum, row) => {
+    const n = parseFloat(row?.amount ?? "0");
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
+  const grandTotal = lineGrand + otherChargesTotal;
   const thClass =
     "px-3 py-2.5 text-left text-sm font-bold uppercase tracking-wide text-title";
 
@@ -310,6 +318,17 @@ function PoViewLineItemsTable({ lineItems, fmt }) {
             <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
             <td />
           </tr>
+          {otherChargesList.map((row, i) => (
+            <tr key={row.logisticsEntryId || `other-${i}`}>
+              <td colSpan={6} className="px-3 py-2 text-right text-secondary">
+                Other charges
+              </td>
+              <td className="px-3 py-2 text-right font-medium tabular-nums text-title">
+                {row?.amount ? fmt(row.amount) : "—"}
+              </td>
+              <td />
+            </tr>
+          ))}
           <tr className="bg-muted/40">
             <td colSpan={6} className="px-3 py-2.5 text-right font-semibold text-title">
               Grand total
@@ -325,11 +344,17 @@ function PoViewLineItemsTable({ lineItems, fmt }) {
   );
 }
 
-function PoLineItemsTotalsTable({ lines, fmt }) {
+function PoLineItemsTotalsTable({ lines, otherCharges = [], fmt }) {
   const arr = Array.isArray(lines) ? lines : [];
   const orderSubtotal = sumPoLineExtendedPreTax(arr);
   const totalTax = sumPoLineTaxAmount(arr);
-  const grandTotal = sumPoLineItemsTaxInclusive(arr);
+  const lineGrand = sumPoLineItemsTaxInclusive(arr);
+  const otherChargesList = Array.isArray(otherCharges) ? otherCharges : [];
+  const otherChargesTotal = otherChargesList.reduce((sum, row) => {
+    const n = parseFloat(row?.amount ?? "0");
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
+  const grandTotal = lineGrand + otherChargesTotal;
   return (
     <div className="mt-3 overflow-hidden rounded-lg border border-border bg-card">
       <table className="ml-auto w-full max-w-md text-sm">
@@ -342,6 +367,16 @@ function PoLineItemsTotalsTable({ lines, fmt }) {
             <td className="px-3 py-2 text-secondary">Total tax</td>
             <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
           </tr>
+          {otherChargesList.map((row, i) => (
+            <tr key={row.logisticsEntryId || `other-${i}`} className="border-b border-border">
+              <td className="px-3 py-2 text-secondary">
+                Other charges
+              </td>
+              <td className="px-3 py-2 text-right font-medium tabular-nums text-title">
+                {row?.amount ? fmt(row.amount) : "—"}
+              </td>
+            </tr>
+          ))}
           <tr className="border-t border-border bg-muted/30">
             <td className="px-3 py-2 font-semibold text-title">Grand total</td>
             <td className="px-3 py-2 text-right font-semibold tabular-nums text-title">{fmt(grandTotal)}</td>
@@ -465,7 +500,11 @@ function PoViewDetailBody({
         <div className="border-b border-border px-4 py-3 sm:px-5">
           <h3 className="text-sm font-bold text-title">Line items</h3>
         </div>
-        <PoViewLineItemsTable lineItems={viewingPo.lineItems} fmt={fmt} />
+        <PoViewLineItemsTable
+          lineItems={viewingPo.lineItems}
+          otherCharges={viewingPo.otherCharges}
+          fmt={fmt}
+        />
       </div>
     </div>
   );
@@ -1605,7 +1644,9 @@ export default function DashboardPurchaseOrdersPage() {
         sortable: true,
         align: "right",
         render: (_, row) => (
-          <span className="tabular-nums">{row.totalOrder ? fmt(row.totalOrder) : "—"}</span>
+          <span className="tabular-nums">
+            {row.grandTotal || row.totalOrder ? fmt(row.grandTotal || row.totalOrder) : "—"}
+          </span>
         ),
       },
       {
@@ -2369,7 +2410,11 @@ export default function DashboardPurchaseOrdersPage() {
               striped
               headerClassName="px-3 py-2.5 text-left text-sm font-semibold text-title"
             />
-            <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
+            <PoLineItemsTotalsTable
+              lines={form.lineItems}
+              otherCharges={viewingPo?.otherCharges}
+              fmt={fmt}
+            />
           </div>
           <div>
             <Textarea

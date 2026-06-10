@@ -1,7 +1,7 @@
 import LogisticsPageClient from "./logistics-page-client";
 
 export const metadata = {
-  title: "Logistics",
+  title: "Receiving & Shipping",
   description: "Receiving and shipping motors; vendor PO receiving.",
 };
 

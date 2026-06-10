@@ -9,8 +9,9 @@ import OtherTaxPayment from "@/models/OtherTaxPayment";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { computeTotalsFromLaborAndParts, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
+import { invoiceFullyPaidDate } from "@/lib/invoice-amounts";
 import { invoiceStatusLabel, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
-import { poLineOrderTotal, sumVendorPayments } from "@/lib/po-payable";
+import { poGrandTotal, sumVendorPayments } from "@/lib/po-payable";
 import { sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
 
 function toNum(v) {
@@ -58,12 +59,19 @@ export async function GET(request) {
       const slug = normalizeInvoiceStatusSlug(inv.status, merged);
       if (slug !== "fully_paid") continue;
       const cust = custById[String(inv.customerId)];
+      const invForPaidDate = {
+        ...inv,
+        customerTaxExempt: tax.customerTaxExempt,
+        customerTaxPercent: tax.customerTaxPercent,
+      };
       taxCollected.push({
         id: String(inv._id),
         invoiceNumber: inv.invoiceNumber || "—",
+        customerId: String(inv.customerId || "").trim(),
         customerName: cust?.companyName || cust?.primaryContactName || String(inv.customerId || "—"),
         statusSlug: slug,
         statusLabel: invoiceStatusLabel(slug, merged),
+        paidDate: invoiceFullyPaidDate(invForPaidDate),
         invoiceAmount: totals.grandTotal,
         taxAmount: totals.taxAmount,
       });
@@ -77,7 +85,7 @@ export async function GET(request) {
 
     for (const po of purchaseOrders || []) {
       const lines = Array.isArray(po.lineItems) ? po.lineItems : [];
-      const totalIncl = round2(poLineOrderTotal(po));
+      const totalIncl = round2(poGrandTotal(po));
       const totalTax = round2(sumPoLineTaxAmount(lines));
       const paid = round2(sumVendorPayments(po));
       if (paid <= 0 || totalTax <= 0.005) continue;

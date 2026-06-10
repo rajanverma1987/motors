@@ -22,7 +22,7 @@ export const PAGES = [
   { id: "vendors", label: "Vendors" },
   { id: "purchase-orders", label: "Purchase orders" },
   { id: "accounts-payable", label: "Accounts payable" },
-  { id: "logistics", label: "Logistics" },
+  { id: "logistics", label: "Receiving & Shipping" },
   { id: "employees", label: "Employees" },
   { id: "job-postings", label: "Job postings (careers)" },
   { id: "calculators", label: "Calculators" },

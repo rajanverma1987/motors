@@ -14,6 +14,10 @@ import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-contex
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { formatDateMdy } from "@/lib/format-date";
+import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+
+const CUSTOMER_LINK_CLASS =
+  "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
@@ -40,6 +44,7 @@ export default function TaxesPageClient() {
   const [taxPaidRows, setTaxPaidRows] = useState([]);
   const [taxPaidSummary, setTaxPaidSummary] = useState({ poAmount: 0, taxPaid: 0 });
   const [otherRows, setOtherRows] = useState([]);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [savingOther, setSavingOther] = useState(false);
   const [otherForm, setOtherForm] = useState({
@@ -105,6 +110,24 @@ export default function TaxesPageClient() {
         key: "customerName",
         label: "Customer",
         sortable: true,
+        render: (v, row) => {
+          const name = v || row.customerName || "—";
+          const customerId = String(row.customerId || "").trim();
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className={CUSTOMER_LINK_CLASS}
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
         exportValue: (v) => v ?? "",
       },
       {
@@ -123,6 +146,13 @@ export default function TaxesPageClient() {
           );
         },
         exportValue: (_, row) => row.statusLabel ?? "",
+      },
+      {
+        key: "paidDate",
+        label: "Invoice paid date",
+        sortable: true,
+        render: (v) => formatDateMdy(v),
+        exportValue: (v) => isoDateForCsv(v),
       },
       {
         key: "invoiceAmount",
@@ -446,6 +476,13 @@ export default function TaxesPageClient() {
           />
         </Form>
       </Modal>
+
+      <CustomerQuickViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+      />
     </div>
   );
 }

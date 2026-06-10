@@ -31,12 +31,28 @@ const logisticsEntrySchema = new mongoose.Schema(
     droppedBy: { type: String, default: "", trim: true },
     pickedBy: { type: String, default: "", trim: true },
     charges: { type: String, default: "", trim: true },
+    /** vendor_po_receiving: who paid freight/logistics — vendor or shop (company) */
+    logisticsChargesPaidBy: {
+      type: String,
+      enum: ["vendor", "company", ""],
+      default: "",
+      trim: true,
+    },
+    /** vendor_po_receiving: amount when logisticsChargesPaidBy is company */
+    logisticsChargesAmount: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
 
 logisticsEntrySchema.index({ createdByEmail: 1, kind: 1, createdAt: -1 });
+
+if (
+  mongoose.models.LogisticsEntry &&
+  !mongoose.models.LogisticsEntry.schema.paths.logisticsChargesPaidBy
+) {
+  delete mongoose.models.LogisticsEntry;
+}
 
 export default mongoose.models.LogisticsEntry ||
   mongoose.model("LogisticsEntry", logisticsEntrySchema);

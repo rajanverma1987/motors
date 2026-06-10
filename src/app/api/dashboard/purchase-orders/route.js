@@ -7,6 +7,7 @@ import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items
 import { getNextPoNumber } from "@/lib/purchase-order-numbers";
 import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
+import { poGrandTotal, sumPoOtherCharges } from "@/lib/po-payable";
 import {
   computePoDeliveryStatus,
   computePoInvoicedStatus,
@@ -62,7 +63,9 @@ function toPoListItem(
   const lineItems = Array.isArray(po.lineItems) ? po.lineItems : [];
   const vendorInvoices = Array.isArray(po.vendorInvoices) ? po.vendorInvoices : [];
   const payments = Array.isArray(po.payments) ? po.payments : [];
-  const totalOrder = sumLineItems(lineItems);
+  const lineTotal = sumLineItems(lineItems);
+  const otherChargesTotal = sumPoOtherCharges(po);
+  const totalOrder = poGrandTotal(po);
   const totalInvoiced = sumAmounts(vendorInvoices);
   const totalPaid = sumAmounts(payments);
   const status = computePoOverallStatus(totalOrder, totalInvoiced, totalPaid);
@@ -98,7 +101,15 @@ function toPoListItem(
     lineItems: lineItemsWithStatus,
     vendorInvoices,
     payments,
-    totalOrder: totalOrder.toFixed(2),
+    lineItemsTotal: lineTotal.toFixed(2),
+    totalOrder: lineTotal.toFixed(2),
+    otherChargesTotal: otherChargesTotal.toFixed(2),
+    grandTotal: totalOrder.toFixed(2),
+    otherCharges: (Array.isArray(po.otherCharges) ? po.otherCharges : []).map((row) => ({
+      label: row?.label || "Logistics charges",
+      amount: row?.amount || "",
+      logisticsEntryId: row?.logisticsEntryId ? String(row.logisticsEntryId) : "",
+    })),
     totalInvoiced: totalInvoiced.toFixed(2),
     totalPaid: totalPaid.toFixed(2),
     status,

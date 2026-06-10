@@ -25,6 +25,22 @@ export function poLineOrderTotal(po) {
   return Math.round(sumPoLineItemsTaxInclusive(po?.lineItems) * 100) / 100;
 }
 
+/** Sum of PO other charges (e.g. logistics freight paid by shop). */
+export function sumPoOtherCharges(po) {
+  const arr = Array.isArray(po?.otherCharges) ? po.otherCharges : [];
+  let s = 0;
+  for (const row of arr) {
+    const a = parseFloat(row?.amount ?? "0");
+    if (Number.isFinite(a)) s += a;
+  }
+  return Math.round(s * 100) / 100;
+}
+
+/** Line items total plus other charges. */
+export function poGrandTotal(po) {
+  return Math.round((poLineOrderTotal(po) + sumPoOtherCharges(po)) * 100) / 100;
+}
+
 /** Amount still owed to vendor on recorded vendor invoices. */
 export function poBalanceDue(po) {
   const inv = sumVendorInvoiced(po);
@@ -42,11 +58,7 @@ export function poBalanceDueVendorFacing(po) {
   if (invoiced > 0) {
     return Math.max(0, Math.round((invoiced - paid) * 100) / 100);
   }
-  const rawOrder = po?.totalOrder;
-  let orderNum =
-    rawOrder != null && rawOrder !== "" && Number.isFinite(parseFloat(rawOrder))
-      ? parseFloat(rawOrder)
-      : poLineOrderTotal(po);
+  let orderNum = poGrandTotal(po);
   if (!Number.isFinite(orderNum)) orderNum = 0;
   return Math.max(0, Math.round((orderNum - paid) * 100) / 100);
 }

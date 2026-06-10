@@ -2,8 +2,11 @@
 
 import { useState, useId } from "react";
 
+const tabListBase =
+  "inline-flex max-w-full flex-wrap gap-1.5 rounded-xl border border-border bg-muted/35 p-1.5 shadow-sm sm:gap-2 sm:p-2";
+
 const tabButtonBase =
-  "relative shrink-0 border-b-2 px-4 py-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-t";
+  "relative shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold tracking-tight transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-base";
 
 /**
  * Tabs – horizontal tab list with panels. Use for category navigation.
@@ -39,7 +42,7 @@ export default function Tabs({
       <div
         role="tablist"
         aria-label="Settings categories"
-        className={`flex flex-wrap gap-x-1 border-b border-border ${listClassName}`}
+        className={`${tabListBase} ${listClassName}`}
       >
         {tabs.map((tab) => {
           const isActive = activeId === tab.id;
@@ -54,8 +57,8 @@ export default function Tabs({
               tabIndex={isActive ? 0 : -1}
               className={
                 isActive
-                  ? `${tabButtonBase} border-primary text-primary`
-                  : `${tabButtonBase} border-transparent text-secondary hover:text-title hover:border-border`
+                  ? `${tabButtonBase} bg-primary text-white shadow-md`
+                  : `${tabButtonBase} text-secondary hover:bg-card/90 hover:text-title`
               }
               onClick={() => setActiveId(tab.id)}
             >

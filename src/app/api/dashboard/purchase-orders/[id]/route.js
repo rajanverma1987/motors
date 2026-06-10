@@ -9,7 +9,8 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import Vendor from "@/models/Vendor";
-import { poBalanceDue } from "@/lib/po-payable";
+import { poBalanceDue, poGrandTotal, sumPoOtherCharges } from "@/lib/po-payable";
+import { reconcilePoOtherChargesFromLogistics } from "@/lib/logistics-po-charges";
 import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 import {
   normalizePurchaseOrderLineItems,
@@ -78,9 +79,11 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "ID required" }, { status: 400 });
     }
     await connectDB();
+    const ownerEmail = user.email.trim().toLowerCase();
+    await reconcilePoOtherChargesFromLogistics(id, ownerEmail);
     const doc = await PurchaseOrder.findOne({
       _id: id,
-      createdByEmail: user.email.trim().toLowerCase(),
+      createdByEmail: ownerEmail,
     }).lean();
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -88,7 +91,9 @@ export async function GET(request, context) {
     const lineItems = Array.isArray(doc.lineItems) ? doc.lineItems : [];
     const vendorInvoices = Array.isArray(doc.vendorInvoices) ? doc.vendorInvoices : [];
     const payments = Array.isArray(doc.payments) ? doc.payments : [];
-    const totalOrder = sumLineItems(lineItems);
+    const lineItemsTotal = sumLineItems(lineItems);
+    const otherChargesTotal = sumPoOtherCharges(doc);
+    const grandTotal = poGrandTotal(doc);
     const totalInvoiced = sumAmounts(vendorInvoices);
     const totalPaid = sumAmounts(payments);
     const lineItemsWithStatus = lineItems.map((item) => ({
@@ -96,8 +101,8 @@ export async function GET(request, context) {
       status: normalizeLineItemStatus(item),
     }));
     const deliveryStatus = computePoDeliveryStatus(lineItemsWithStatus);
-    const invoicedStatus = computePoInvoicedStatus(totalOrder, totalInvoiced);
-    const paidStatus = computePoPaidStatus(totalInvoiced, totalPaid, totalOrder);
+    const invoicedStatus = computePoInvoicedStatus(grandTotal, totalInvoiced);
+    const paidStatus = computePoPaidStatus(totalInvoiced, totalPaid, grandTotal);
     const balanceDue = poBalanceDue(doc);
     const vendorDoc = doc.vendorId
       ? await Vendor.findOne({
@@ -127,10 +132,18 @@ export async function GET(request, context) {
       payments,
       attachments,
       attachmentCount,
-      totalOrder: totalOrder.toFixed(2),
+      lineItemsTotal: lineItemsTotal.toFixed(2),
+      totalOrder: lineItemsTotal.toFixed(2),
+      otherChargesTotal: otherChargesTotal.toFixed(2),
+      grandTotal: grandTotal.toFixed(2),
+      otherCharges: (Array.isArray(doc.otherCharges) ? doc.otherCharges : []).map((row) => ({
+        label: row?.label || "Logistics charges",
+        amount: row?.amount || "",
+        logisticsEntryId: row?.logisticsEntryId ? String(row.logisticsEntryId) : "",
+      })),
       totalInvoiced: totalInvoiced.toFixed(2),
       totalPaid: totalPaid.toFixed(2),
-      status: computePoOverallStatus(totalOrder, totalInvoiced, totalPaid),
+      status: computePoOverallStatus(grandTotal, totalInvoiced, totalPaid),
       balanceDue,
       deliveryStatus,
       invoicedStatus,
@@ -141,7 +154,6 @@ export async function GET(request, context) {
       updatedAt: doc.updatedAt,
     };
 
-    const ownerEmail = user.email.trim().toLowerCase();
     const [owner, settingsDoc] = await Promise.all([
       User.findOne({ email: ownerEmail }).select("shopName contactName email").lean(),
       UserSettings.findOne({ ownerEmail: ownerEmail }).lean(),

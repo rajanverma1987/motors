@@ -9,6 +9,19 @@ import { useState, useEffect, useRef } from "react";
  * - Calculated columns (formula receives row), full dataset returned via onChange.
  * - Uses theme tokens (border-border, bg-card, text-text).
  */
+function formatCellNumber(value, decimals) {
+  if (value === "" || value == null) return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return String(value);
+  if (decimals != null && Number.isFinite(decimals)) {
+    return n.toLocaleString(undefined, {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  }
+  return n.toLocaleString();
+}
+
 function getRowsFromData(data, columns) {
   const source = Array.isArray(data) ? data : [];
   const editableKeys = columns.filter((c) => !c.calculated).map((c) => c.key);
@@ -164,7 +177,7 @@ export default function DataTable({
                   const value = row[col.key];
                   const display =
                     col.type === "number" && value !== "" && value != null
-                      ? Number(value).toLocaleString()
+                      ? formatCellNumber(value, col.displayDecimals)
                       : value ?? "";
                   return (
                     <td
@@ -228,6 +241,7 @@ export default function DataTable({
                     <div className="block w-full min-w-0 h-full" style={fullWidthStyle}>
                       <input
                         type={inputType}
+                        step={col.step}
                         data-cell={`${rowIndex}-${editableIdx}`}
                         value={row[col.key] ?? ""}
                         onChange={(e) =>

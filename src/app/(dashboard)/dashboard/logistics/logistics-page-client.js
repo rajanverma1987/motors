@@ -12,6 +12,7 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
 const TABS = [
@@ -67,6 +68,8 @@ const EMPTY_FORM = {
   droppedBy: "",
   pickedBy: "",
   charges: "",
+  logisticsChargesPaidBy: "vendor",
+  logisticsChargesAmount: "",
   notes: "",
 };
 
@@ -76,6 +79,8 @@ export default function LogisticsPageClient() {
   const toast = useToast();
   const confirm = useConfirm();
   const fmt = useFormatMoney();
+  const { user } = useAuth();
+  const companyName = String(user?.shopName || "").trim() || "Company";
 
   const [tab, setTab] = useState("motor_receiving");
   const [rows, setRows] = useState([]);
@@ -270,6 +275,8 @@ export default function LogisticsPageClient() {
       droppedBy: row.droppedBy || "",
       pickedBy: row.pickedBy || "",
       charges: row.charges || "",
+      logisticsChargesPaidBy: row.logisticsChargesPaidBy === "company" ? "company" : "vendor",
+      logisticsChargesAmount: row.logisticsChargesAmount || "",
       notes: row.notes || "",
     });
     setModalOpen(true);
@@ -300,6 +307,17 @@ export default function LogisticsPageClient() {
         return;
       }
     }
+    if (
+      activeKind === "vendor_po_receiving" &&
+      form.purchaseOrderId?.trim() &&
+      form.logisticsChargesPaidBy === "company"
+    ) {
+      const charge = parseFloat(String(form.logisticsChargesAmount ?? "").replace(/,/g, ""));
+      if (!Number.isFinite(charge) || charge <= 0) {
+        toast.error("Enter logistics charges when paid by your company.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -319,6 +337,9 @@ export default function LogisticsPageClient() {
         if (poLineCount > 0) {
           payload.poLineReceiptStatuses = poLineReceipts;
         }
+        payload.logisticsChargesPaidBy = form.logisticsChargesPaidBy === "company" ? "company" : "vendor";
+        payload.logisticsChargesAmount =
+          form.logisticsChargesPaidBy === "company" ? form.logisticsChargesAmount.trim() : "";
       }
 
       if (editingId) {
@@ -394,6 +415,18 @@ export default function LogisticsPageClient() {
     () => sortRowsClient(rows, logisticsSort, getLogisticsSortValue),
     [rows, logisticsSort, getLogisticsSortValue]
   );
+
+  const selectedPoAmount = useMemo(() => {
+    const n = parseFloat(String(selectedPoDetail?.totalOrder ?? "").replace(/,/g, ""));
+    return Number.isFinite(n) ? n : 0;
+  }, [selectedPoDetail]);
+
+  const logisticsFormGrandTotal = useMemo(() => {
+    if (form.logisticsChargesPaidBy !== "company") return selectedPoAmount;
+    const charge = parseFloat(String(form.logisticsChargesAmount ?? "").replace(/,/g, ""));
+    const add = Number.isFinite(charge) && charge > 0 ? charge : 0;
+    return Math.round((selectedPoAmount + add) * 100) / 100;
+  }, [selectedPoAmount, form.logisticsChargesPaidBy, form.logisticsChargesAmount]);
 
   const columns = useMemo(() => {
     if (activeKind === "motor_receiving") {
@@ -552,7 +585,7 @@ export default function LogisticsPageClient() {
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Logistics</h1>
+        <h1 className="text-2xl font-bold text-title">Receiving & Shipping</h1>
         <p className="mt-1 text-sm text-secondary">
           Receive and ship repair motors; receive vendor PO shipments.
         </p>
@@ -829,12 +862,71 @@ export default function LogisticsPageClient() {
                 className="sm:col-span-2"
               />
             )}
-            <Input
-              label="Charges"
-              value={form.charges}
-              onChange={(e) => setForm((f) => ({ ...f, charges: e.target.value }))}
-              placeholder="e.g. 125.00"
-            />
+            {activeKind === "vendor_po_receiving" && form.purchaseOrderId?.trim() && (
+              <div className="sm:col-span-2 rounded-lg border border-border bg-muted/20 p-3">
+                <p className="text-sm font-medium text-title">Logistics charges paid by</p>
+                <div className="mt-2 flex flex-wrap gap-4">
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-title">
+                    <input
+                      type="radio"
+                      name="logistics-charges-paid-by"
+                      checked={form.logisticsChargesPaidBy === "vendor"}
+                      onChange={() =>
+                        setForm((f) => ({
+                          ...f,
+                          logisticsChargesPaidBy: "vendor",
+                          logisticsChargesAmount: "",
+                        }))
+                      }
+                      className="text-primary"
+                    />
+                    Vendor
+                  </label>
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-title">
+                    <input
+                      type="radio"
+                      name="logistics-charges-paid-by"
+                      checked={form.logisticsChargesPaidBy === "company"}
+                      onChange={() => setForm((f) => ({ ...f, logisticsChargesPaidBy: "company" }))}
+                      className="text-primary"
+                    />
+                    {companyName}
+                  </label>
+                </div>
+                {form.logisticsChargesPaidBy === "company" && (
+                  <Input
+                    label="Logistics charges"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.logisticsChargesAmount}
+                    onChange={(e) => setForm((f) => ({ ...f, logisticsChargesAmount: e.target.value }))}
+                    placeholder="0.00"
+                    className="mt-3"
+                  />
+                )}
+              </div>
+            )}
+            {activeKind === "vendor_po_receiving" && form.purchaseOrderId?.trim() && !poDetailLoading && selectedPoDetail && (
+              <div className="sm:col-span-2 grid grid-cols-1 gap-3 rounded-lg border border-border bg-muted/20 p-3 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-secondary">PO amount</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-title">{fmt(selectedPoAmount)}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-secondary">Grand total</p>
+                  <p className="mt-1 text-lg font-bold tabular-nums text-title">{fmt(logisticsFormGrandTotal)}</p>
+                </div>
+              </div>
+            )}
+            {activeKind !== "vendor_po_receiving" ? (
+              <Input
+                label="Charges"
+                value={form.charges}
+                onChange={(e) => setForm((f) => ({ ...f, charges: e.target.value }))}
+                placeholder="e.g. 125.00"
+              />
+            ) : null}
           </div>
           <Textarea
             label="Notes"

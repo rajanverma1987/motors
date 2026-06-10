@@ -6,6 +6,7 @@ import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { applyPoLineReceiptStatuses } from "@/lib/po-line-receipts";
+import { syncLogisticsChargesToPo } from "@/lib/logistics-po-charges";
 
 function toRow(doc) {
   return {
@@ -21,6 +22,8 @@ function toRow(doc) {
     droppedBy: doc.droppedBy || "",
     pickedBy: doc.pickedBy || "",
     charges: doc.charges || "",
+    logisticsChargesPaidBy: doc.logisticsChargesPaidBy || "",
+    logisticsChargesAmount: doc.logisticsChargesAmount || "",
     notes: doc.notes || "",
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -41,6 +44,8 @@ function normalizePayload(body, email) {
     droppedBy: clampString(body?.droppedBy, LIMITS.shortText.max),
     pickedBy: clampString(body?.pickedBy, LIMITS.shortText.max),
     charges: clampString(body?.charges, 50),
+    logisticsChargesPaidBy: "",
+    logisticsChargesAmount: "",
     notes: clampString(body?.notes, LIMITS.message.max),
     purchaseOrderId: null,
     poNumberSnapshot: "",
@@ -48,6 +53,11 @@ function normalizePayload(body, email) {
   if (kind === "vendor_po_receiving" && body?.purchaseOrderId) {
     const id = String(body.purchaseOrderId).trim();
     if (mongoose.Types.ObjectId.isValid(id)) out.purchaseOrderId = new mongoose.Types.ObjectId(id);
+    const paidBy = String(body?.logisticsChargesPaidBy ?? "").trim().toLowerCase();
+    if (paidBy === "company" || paidBy === "vendor") {
+      out.logisticsChargesPaidBy = paidBy;
+    }
+    out.logisticsChargesAmount = clampString(body?.logisticsChargesAmount, 50);
   }
   return out;
 }
@@ -123,6 +133,33 @@ export async function POST(request) {
       createdByEmail: email,
       ...payload,
     });
+
+    if (payload.kind === "vendor_po_receiving") {
+      await LogisticsEntry.updateOne(
+        { _id: doc._id, createdByEmail: email },
+        {
+          $set: {
+            logisticsChargesPaidBy: payload.logisticsChargesPaidBy || "",
+            logisticsChargesAmount: payload.logisticsChargesAmount || "",
+          },
+        }
+      );
+    }
+
+    if (payload.kind === "vendor_po_receiving" && payload.purchaseOrderId) {
+      const synced = await syncLogisticsChargesToPo({
+        purchaseOrderId: payload.purchaseOrderId,
+        ownerEmail: email,
+        logisticsEntryId: doc._id,
+        paidBy: payload.logisticsChargesPaidBy,
+        amount: payload.logisticsChargesAmount,
+      });
+      if (!synced.ok) {
+        await LogisticsEntry.deleteOne({ _id: doc._id, createdByEmail: email });
+        return NextResponse.json({ error: synced.error || "Failed to update PO charges" }, { status: 400 });
+      }
+    }
+
     return NextResponse.json({ ok: true, entry: toRow(doc.toObject()) });
   } catch (err) {
     console.error("Logistics POST:", err);

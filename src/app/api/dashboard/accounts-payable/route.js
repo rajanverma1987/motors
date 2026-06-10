@@ -5,7 +5,7 @@ import Vendor from "@/models/Vendor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
   poBalanceDue,
-  poLineOrderTotal,
+  poGrandTotal,
   sumVendorInvoiced,
   sumVendorPayments,
   latestVendorInvoiceDate,
@@ -42,7 +42,7 @@ export async function GET(request) {
     );
 
     const row = (po) => {
-      const order = poLineOrderTotal(po);
+      const order = poGrandTotal(po);
       const invoiced = sumVendorInvoiced(po);
       const paid = sumVendorPayments(po);
       const balanceDue = poBalanceDue(po);

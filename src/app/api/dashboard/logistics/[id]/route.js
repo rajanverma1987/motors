@@ -9,6 +9,10 @@ import {
   applyPoLineReceiptStatuses,
   revertPoOnLogisticsDelete,
 } from "@/lib/po-line-receipts";
+import {
+  removeLogisticsChargesFromPo,
+  syncLogisticsChargesToPo,
+} from "@/lib/logistics-po-charges";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -30,6 +34,8 @@ function toRow(doc) {
     droppedBy: doc.droppedBy || "",
     pickedBy: doc.pickedBy || "",
     charges: doc.charges || "",
+    logisticsChargesPaidBy: doc.logisticsChargesPaidBy || "",
+    logisticsChargesAmount: doc.logisticsChargesAmount || "",
     notes: doc.notes || "",
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
@@ -67,8 +73,18 @@ export async function PATCH(request, context) {
     if (body.pickedBy !== undefined) patch.pickedBy = clampString(body.pickedBy, LIMITS.shortText.max);
     if (body.charges !== undefined) patch.charges = clampString(body.charges, 50);
     if (body.notes !== undefined) patch.notes = clampString(body.notes, LIMITS.message.max);
+    if (existing.kind === "vendor_po_receiving") {
+      if (body.logisticsChargesPaidBy !== undefined) {
+        const paidBy = String(body.logisticsChargesPaidBy ?? "").trim().toLowerCase();
+        patch.logisticsChargesPaidBy = paidBy === "company" || paidBy === "vendor" ? paidBy : "";
+      }
+      if (body.logisticsChargesAmount !== undefined) {
+        patch.logisticsChargesAmount = clampString(body.logisticsChargesAmount, 50);
+      }
+    }
 
-    let nextPoId = existing.purchaseOrderId ? String(existing.purchaseOrderId) : "";
+    const prevPoId = existing.purchaseOrderId ? String(existing.purchaseOrderId) : "";
+    let nextPoId = prevPoId;
     if (existing.kind === "vendor_po_receiving" && body.purchaseOrderId !== undefined) {
       const pid = String(body.purchaseOrderId || "").trim();
       if (!pid || !mongoose.Types.ObjectId.isValid(pid)) {
@@ -115,6 +131,39 @@ export async function PATCH(request, context) {
 
     Object.assign(existing, patch);
     await existing.save();
+
+    if (existing.kind === "vendor_po_receiving") {
+      await LogisticsEntry.updateOne(
+        { _id: id, createdByEmail: email },
+        {
+          $set: {
+            logisticsChargesPaidBy: existing.logisticsChargesPaidBy || "",
+            logisticsChargesAmount: existing.logisticsChargesAmount || "",
+          },
+        }
+      );
+    }
+
+    if (existing.kind === "vendor_po_receiving") {
+      if (prevPoId && prevPoId !== nextPoId) {
+        await removeLogisticsChargesFromPo(prevPoId, email);
+      }
+      if (nextPoId) {
+        const synced = await syncLogisticsChargesToPo({
+          purchaseOrderId: nextPoId,
+          ownerEmail: email,
+          logisticsEntryId: id,
+          paidBy: existing.logisticsChargesPaidBy,
+          amount: existing.logisticsChargesAmount,
+        });
+        if (!synced.ok) {
+          return NextResponse.json({ error: synced.error || "Failed to update PO charges" }, { status: 400 });
+        }
+      } else if (prevPoId) {
+        await removeLogisticsChargesFromPo(prevPoId, email);
+      }
+    }
+
     return NextResponse.json({ ok: true, entry: toRow(existing.toObject()) });
   } catch (err) {
     console.error("Logistics PATCH:", err);
@@ -141,6 +190,7 @@ export async function DELETE(request, context) {
     }
 
     if (existing.kind === "vendor_po_receiving" && existing.purchaseOrderId) {
+      await removeLogisticsChargesFromPo(existing.purchaseOrderId, email);
       const reverted = await revertPoOnLogisticsDelete(existing, email, id);
       if (!reverted.ok) {
         return NextResponse.json({ error: reverted.error || "Failed to revert PO receipt" }, { status: 400 });

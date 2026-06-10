@@ -45,7 +45,13 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
   const lines = Array.isArray(po.lineItems) ? po.lineItems : [];
   const orderSubtotal = sumPoLineExtendedPreTax(lines);
   const totalTax = sumPoLineTaxAmount(lines);
-  const grandTotal = sumPoLineItemsTaxInclusive(lines);
+  const lineGrand = sumPoLineItemsTaxInclusive(lines);
+  const otherChargesList = Array.isArray(po.otherCharges) ? po.otherCharges : [];
+  const otherChargesTotal = otherChargesList.reduce((sum, row) => {
+    const n = parseFloat(row?.amount ?? "0");
+    return sum + (Number.isFinite(n) ? n : 0);
+  }, 0);
+  const grandTotal = lineGrand + otherChargesTotal;
 
   return (
     <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
@@ -167,6 +173,16 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
               <td className="px-2 py-1.5 text-neutral-800">Total tax</td>
               <td className="px-2 py-1.5 text-right font-medium text-neutral-900">{formatMoney(totalTax)}</td>
             </tr>
+            {otherChargesList.map((row, i) => (
+              <tr key={row.logisticsEntryId || `other-${i}`} className="border-b border-neutral-200">
+                <td className="px-2 py-1.5 text-neutral-800">
+                  Other charges — {row.label || "Logistics charges"}
+                </td>
+                <td className="px-2 py-1.5 text-right font-medium text-neutral-900">
+                  {row?.amount ? formatMoney(row.amount) : "—"}
+                </td>
+              </tr>
+            ))}
             <tr className="bg-neutral-100">
               <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
               <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">

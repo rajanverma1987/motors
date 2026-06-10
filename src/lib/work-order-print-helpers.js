@@ -1,7 +1,8 @@
 import {
   AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
   DC_ARMATURE_FIELDS,
+  DC_WORK_ORDER_FIELDS,
+  normalizeWorkOrderJobType,
 } from "@/lib/work-order-fields";
 import { getMotorInspectionViewEntries } from "@/lib/motor-inspection-fields";
 import { formatDateMdy } from "@/lib/format-date";
@@ -51,12 +52,20 @@ export function inspectionFindingRows(findings) {
   return getMotorInspectionViewEntries(findings);
 }
 
+/** Armature print fields — skip keys already listed on the DC motor section. */
+function armatureFieldsForPrint(jobType) {
+  if (jobType === "armature_only") return DC_ARMATURE_FIELDS;
+  const dcMotorKeys = new Set(DC_WORK_ORDER_FIELDS.map((f) => f.key));
+  return DC_ARMATURE_FIELDS.filter((f) => !dcMotorKeys.has(f.key));
+}
+
 /**
- * Motor spec sections for print/PDF.
+ * Motor spec sections for print/PDF (no duplicate fields across DC motor / armature).
  * @param {object} data
  */
 export function motorSpecSectionsForPrint(data) {
   const motorClass = normalizedMotorClass(data?.motorClass);
+  const jobType = normalizeWorkOrderJobType(data?.jobType, motorClass);
   const sections = [];
   if (motorClass === "AC") {
     sections.push({
@@ -65,13 +74,15 @@ export function motorSpecSectionsForPrint(data) {
     });
   }
   if (motorClass === "DC") {
-    sections.push({
-      title: "DC motor",
-      rows: specRowsAll(DC_WORK_ORDER_FIELDS, data?.dcSpecs),
-    });
+    if (jobType !== "armature_only") {
+      sections.push({
+        title: "DC motor",
+        rows: specRowsAll(DC_WORK_ORDER_FIELDS, data?.dcSpecs),
+      });
+    }
     sections.push({
       title: "Armature",
-      rows: specRowsAll(DC_ARMATURE_FIELDS, data?.armatureSpecs),
+      rows: specRowsAll(armatureFieldsForPrint(jobType), data?.armatureSpecs),
     });
   }
   return sections;

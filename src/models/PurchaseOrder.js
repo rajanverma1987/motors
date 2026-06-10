@@ -54,6 +54,18 @@ const purchaseOrderSchema = new mongoose.Schema(
         recordedAt: { type: Date, default: Date.now },
       },
     ],
+    /** Added from logistics receiving (e.g. company-paid freight); included in PO grand total */
+    otherCharges: {
+      type: [
+        {
+          label: { type: String, default: "Logistics charges", trim: true },
+          amount: { type: String, default: "", trim: true },
+          logisticsEntryId: { type: mongoose.Schema.Types.ObjectId, default: null },
+          addedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    },
     notes: { type: String, default: "", trim: true },
     /** Dashboard uploads: { url, name } */
     attachments: {
@@ -87,5 +99,9 @@ purchaseOrderSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
 );
+
+if (mongoose.models.PurchaseOrder && !mongoose.models.PurchaseOrder.schema.paths.otherCharges) {
+  delete mongoose.models.PurchaseOrder;
+}
 
 export default mongoose.models.PurchaseOrder || mongoose.model("PurchaseOrder", purchaseOrderSchema);
