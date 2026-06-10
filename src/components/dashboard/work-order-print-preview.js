@@ -59,6 +59,7 @@ const OFFSCREEN_STYLE = {
 export default function WorkOrderPrintPreview({ workOrderId, open, onClose }) {
   const toast = useToast();
   const [workOrder, setWorkOrder] = useState(null);
+  const [inspections, setInspections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -70,6 +71,7 @@ export default function WorkOrderPrintPreview({ workOrderId, open, onClose }) {
   useEffect(() => {
     if (!open) {
       setWorkOrder(null);
+      setInspections([]);
       setError(null);
       setLoading(true);
     }
@@ -80,6 +82,7 @@ export default function WorkOrderPrintPreview({ workOrderId, open, onClose }) {
     if (!workOrderId) {
       setLoading(false);
       setError("Work order ID required");
+      setInspections([]);
       setWorkOrder(null);
       return;
     }
@@ -87,19 +90,28 @@ export default function WorkOrderPrintPreview({ workOrderId, open, onClose }) {
     setLoading(true);
     setError(null);
     setWorkOrder(null);
+    setInspections([]);
     (async () => {
       try {
-        const res = await fetch(`/api/dashboard/work-orders/${workOrderId}`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        const data = await res.json();
+        const [woRes, inspRes] = await Promise.all([
+          fetch(`/api/dashboard/work-orders/${workOrderId}`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch(`/api/dashboard/work-orders/${workOrderId}/inspections`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+        ]);
+        const data = await woRes.json();
+        const inspData = await inspRes.json().catch(() => []);
         if (cancelled) return;
-        if (!res.ok) {
+        if (!woRes.ok) {
           setError(data.error || "Work order not found");
           return;
         }
         setWorkOrder(data);
+        setInspections(inspRes.ok && Array.isArray(inspData) ? inspData : []);
       } catch {
         if (!cancelled) setError("Failed to load work order");
       } finally {
@@ -155,7 +167,7 @@ export default function WorkOrderPrintPreview({ workOrderId, open, onClose }) {
       style={OFFSCREEN_STYLE}
       aria-hidden="true"
     >
-      <WorkOrderPrintSheetBody workOrder={workOrder} />
+      <WorkOrderPrintSheetBody workOrder={workOrder} inspections={inspections} />
     </div>,
     document.body
   );

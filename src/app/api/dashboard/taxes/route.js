@@ -56,6 +56,7 @@ export async function GET(request) {
       });
       if (totals.taxAmount <= 0.005) continue;
       const slug = normalizeInvoiceStatusSlug(inv.status, merged);
+      if (slug !== "fully_paid") continue;
       const cust = custById[String(inv.customerId)];
       taxCollected.push({
         id: String(inv._id),

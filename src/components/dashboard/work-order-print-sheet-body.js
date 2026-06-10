@@ -1,28 +1,17 @@
 "use client";
 
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import {
-  AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
-  DC_ARMATURE_FIELDS,
-  JOB_TYPE_OPTIONS,
-} from "@/lib/work-order-fields";
+  motorSpecSectionsForPrint,
+  normalizedMotorClass,
+} from "@/lib/work-order-print-helpers";
+import WorkOrderPrintInspections from "@/components/dashboard/work-order-print-inspections";
 
 const sectionLabel = "mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
 
 function jobTypeLabel(value) {
   return JOB_TYPE_OPTIONS.find((o) => o.value === value)?.label || value || "—";
-}
-
-function specRows(fields, specs) {
-  const bag = specs && typeof specs === "object" ? specs : {};
-  return fields
-    .map(({ key, label }) => {
-      const v = String(bag[key] ?? "").trim();
-      if (!v) return null;
-      return { label, value: v };
-    })
-    .filter(Boolean);
 }
 
 function SpecSection({ title, rows }) {
@@ -44,12 +33,14 @@ function SpecSection({ title, rows }) {
 
 /**
  * Printable work order body (matches {@link buildWorkOrderPdfBuffer} content).
+ * @param {{ workOrder?: object, inspections?: object[] }} props
  */
-export default function WorkOrderPrintSheetBody({ workOrder: wo }) {
+export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [] }) {
   if (!wo) return null;
 
   const shopName = String(wo.fromShopName || "Motor shop").trim();
   const woNum = String(wo.workOrderNumber || "").trim() || "—";
+  const motorClass = normalizedMotorClass(wo.motorClass);
   const scopeLines = (wo.quoteScopeForTech || [])
     .map((r) => String(r?.scope ?? "").trim())
     .filter(Boolean);
@@ -62,8 +53,10 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo }) {
     ["Technician", wo.technicianName || "—"],
     ["Job type", jobTypeLabel(wo.jobType)],
     ["Status", wo.status || "—"],
-    ["Motor class", wo.motorClass || "—"],
+    ["Motor class", motorClass || "—"],
   ];
+
+  const motorSections = motorSpecSectionsForPrint(wo);
 
   return (
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
@@ -139,19 +132,11 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo }) {
         </section>
       ) : null}
 
-      {wo.motorClass === "AC" ? (
-        <SpecSection
-          title="AC motor — winding & mechanical"
-          rows={specRows(AC_WORK_ORDER_FIELDS, wo.acSpecs)}
-        />
-      ) : null}
+      {motorSections.map((section) => (
+        <SpecSection key={section.title} title={section.title} rows={section.rows} />
+      ))}
 
-      {wo.motorClass === "DC" ? (
-        <>
-          <SpecSection title="DC motor" rows={specRows(DC_WORK_ORDER_FIELDS, wo.dcSpecs)} />
-          <SpecSection title="Armature" rows={specRows(DC_ARMATURE_FIELDS, wo.armatureSpecs)} />
-        </>
-      ) : null}
+      <WorkOrderPrintInspections inspections={inspections} />
 
       <footer className="mt-6 border-t border-neutral-200 pt-2 text-center text-[10px] text-neutral-500">
         Generated {new Date().toLocaleString()}

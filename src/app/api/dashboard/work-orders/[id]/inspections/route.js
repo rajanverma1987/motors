@@ -10,6 +10,7 @@ import {
   normalizeInspectionKind,
   toPublicInspection,
 } from "@/lib/motor-inspection-api";
+import { listInspectionsForWorkOrder } from "@/lib/work-order-inspections-list";
 
 const LEGACY_COMPONENTS = new Set(["stator", "rotor", "field_frame", "armature", "full_motor"]);
 
@@ -17,20 +18,6 @@ async function loadWorkOrder(id, email) {
   if (!mongoose.isValidObjectId(id)) return null;
   await connectDB();
   return WorkOrder.findOne({ _id: id, createdByEmail: email }).lean();
-}
-
-function inspectionQueryForWorkOrder(wo, email) {
-  const woId = wo._id.toString();
-  const or = [{ workOrderId: woId, createdByEmail: email }];
-  const quoteId = String(wo.quoteId || "").trim();
-  if (quoteId) {
-    or.push({ quoteId, createdByEmail: email });
-  }
-  const legacyJobId = String(wo.repairFlowJobId || "").trim();
-  if (legacyJobId && mongoose.isValidObjectId(legacyJobId)) {
-    or.push({ jobId: legacyJobId, createdByEmail: email });
-  }
-  return { $or: or };
 }
 
 export async function GET(request, context) {
@@ -46,10 +33,8 @@ export async function GET(request, context) {
     if (!wo) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const list = await MotorRepairInspection.find(inspectionQueryForWorkOrder(wo, email))
-      .sort({ createdAt: -1 })
-      .lean();
-    return NextResponse.json(list.map((r) => toPublic(r)));
+    const list = await listInspectionsForWorkOrder(wo, email);
+    return NextResponse.json([...list].reverse());
   } catch (err) {
     console.error("work-order inspections GET:", err);
     return NextResponse.json({ error: "Failed to load inspections" }, { status: 500 });
@@ -92,7 +77,7 @@ export async function POST(request, context) {
       findings,
     });
 
-    return NextResponse.json({ ok: true, inspection: toPublic(doc) });
+    return NextResponse.json({ ok: true, inspection: toPublicInspection(doc) });
   } catch (err) {
     console.error("work-order inspections POST:", err);
     return NextResponse.json({ error: err.message || "Failed to save inspection" }, { status: 500 });

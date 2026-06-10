@@ -6,6 +6,7 @@ import Quote from "@/models/Quote";
 import Employee from "@/models/Employee";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { buildWorkOrderPdfBuffer } from "@/lib/work-order-pdf";
+import { listInspectionsForWorkOrder } from "@/lib/work-order-inspections-list";
 import { sendWorkOrderPdfToRecipient } from "@/lib/email";
 import { LIMITS, clampString } from "@/lib/validation";
 
@@ -73,6 +74,8 @@ export async function POST(request, context) {
       process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
       "";
 
+    const inspections = await listInspectionsForWorkOrder(doc, ownerEmail);
+
     const pdfBuffer = await buildWorkOrderPdfBuffer({
       shopName: shopCompanyName,
       workOrderNumber: doc.workOrderNumber,
@@ -90,6 +93,7 @@ export async function POST(request, context) {
       armatureSpecs: doc.armatureSpecs,
       quoteScopeForTech,
       quoteOtherCostForTech,
+      inspections,
     });
 
     const result = await sendWorkOrderPdfToRecipient(

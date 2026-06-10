@@ -289,8 +289,8 @@ export default function TaxesPageClient() {
                   </div>
                 </div>
                 <p className="text-sm text-secondary">
-                  Invoices where sales tax was charged (non-exempt with a tax rate). Invoice amount is the grand total
-                  including tax.
+                  Fully paid invoices where sales tax was charged (non-exempt with a tax rate). Invoice amount is the
+                  grand total including tax.
                 </p>
                 <Table
                   columns={collectedColumns}
@@ -299,7 +299,7 @@ export default function TaxesPageClient() {
                   loading={loading}
                   searchable
                   searchPlaceholder="Search invoice#, customer, status…"
-                  emptyMessage="No invoices with tax collected yet."
+                  emptyMessage="No fully paid invoices with tax collected yet."
                   onRefresh={load}
                   responsive
                   exportable

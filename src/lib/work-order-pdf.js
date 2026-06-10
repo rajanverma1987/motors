@@ -1,24 +1,13 @@
 import PDFDocument from "pdfkit";
+import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import {
-  AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
-  DC_ARMATURE_FIELDS,
-  JOB_TYPE_OPTIONS,
-} from "@/lib/work-order-fields";
+  inspectionsSectionsForPrint,
+  motorSpecSectionsForPrint,
+  normalizedMotorClass,
+} from "@/lib/work-order-print-helpers";
 
 function jobTypeLabel(value) {
   return JOB_TYPE_OPTIONS.find((o) => o.value === value)?.label || value || "—";
-}
-
-function specRows(fields, specs) {
-  const bag = specs && typeof specs === "object" ? specs : {};
-  return fields
-    .map(({ key, label }) => {
-      const v = String(bag[key] ?? "").trim();
-      if (!v) return null;
-      return { label, value: v };
-    })
-    .filter(Boolean);
 }
 
 function drawSection(doc, title, rows, { startY } = {}) {
@@ -69,6 +58,7 @@ function drawBulletList(doc, title, lines, { startY } = {}) {
 /**
  * Build a work order PDF buffer for email attachment.
  * @param {object} data — work order + related display fields
+ * @param {object[]} [data.inspections]
  */
 export function buildWorkOrderPdfBuffer(data) {
   return new Promise((resolve, reject) => {
@@ -80,6 +70,7 @@ export function buildWorkOrderPdfBuffer(data) {
 
     const shop = String(data.shopName || "Motor shop").trim();
     const woNum = String(data.workOrderNumber || "").trim() || "—";
+    const motorClass = normalizedMotorClass(data.motorClass);
 
     doc.font("Helvetica-Bold").fontSize(16).text(shop, { align: "center" });
     doc.moveDown(0.5);
@@ -94,7 +85,7 @@ export function buildWorkOrderPdfBuffer(data) {
       ["Technician", data.technicianName || "—"],
       ["Job type", jobTypeLabel(data.jobType)],
       ["Status", data.status || "—"],
-      ["Motor class", data.motorClass || "—"],
+      ["Motor class", motorClass || "—"],
     ];
     for (const [label, value] of headerRows) {
       doc.font("Helvetica-Bold").text(`${label}: `, { continued: true });
@@ -124,14 +115,21 @@ export function buildWorkOrderPdfBuffer(data) {
     let y = drawBulletList(doc, "Scope from quote", scopeLines);
     y = drawBulletList(doc, "Other cost items", otherLines, { startY: y });
 
-    if (data.motorClass === "AC") {
-      y = drawSection(doc, "AC motor — winding & mechanical", specRows(AC_WORK_ORDER_FIELDS, data.acSpecs), {
-        startY: y,
-      });
+    for (const section of motorSpecSectionsForPrint(data)) {
+      y = drawSection(doc, section.title, section.rows, { startY: y });
     }
-    if (data.motorClass === "DC") {
-      y = drawSection(doc, "DC motor", specRows(DC_WORK_ORDER_FIELDS, data.dcSpecs), { startY: y });
-      y = drawSection(doc, "Armature", specRows(DC_ARMATURE_FIELDS, data.armatureSpecs), { startY: y });
+
+    const inspectionBlocks = inspectionsSectionsForPrint(data.inspections);
+    if (inspectionBlocks.length) {
+      if (y > doc.page.height - 120) {
+        doc.addPage();
+        y = 50;
+      }
+      doc.font("Helvetica-Bold").fontSize(11).text("Inspections", 50, y);
+      y = doc.y + 8;
+      for (const block of inspectionBlocks) {
+        y = drawSection(doc, block.title, block.rows, { startY: y });
+      }
     }
 
     doc.font("Helvetica").fontSize(8).fillColor("#666666").text(
