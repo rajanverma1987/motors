@@ -16,6 +16,8 @@ import { sortRowsClient } from "@/lib/client-table-sort";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { formatDateMdy } from "@/lib/format-date";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { CustomerRecordLink } from "@/components/dashboard/customer-record-link";
 
 const NEW_COMMISSION_INITIAL = {
   jobKey: "",
@@ -35,6 +37,7 @@ export default function DashboardSalesCommissionPage() {
   const [searchUnpaid, setSearchUnpaid] = useState("");
   const [searchPaid, setSearchPaid] = useState("");
   const [rows, setRows] = useState([]);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [salesPersons, setSalesPersons] = useState([]);
   const [jobOptions, setJobOptions] = useState([]);
   const [createModalOpen, setCreateModalOpen] = useState(false);
@@ -129,6 +132,7 @@ export default function DashboardSalesCommissionPage() {
                 rfqNumber: rfq,
                 invoiceId: invMeta?.id || "",
                 invoiceNumber: invNum,
+                customerId: String(q.customerId || "").trim(),
                 customerName: customerMap[String(q.customerId || "")] || "—",
                 jobStatus: String(q.status || "draft"),
               },
@@ -154,6 +158,7 @@ export default function DashboardSalesCommissionPage() {
                 rfqNumber: rfq,
                 invoiceId: String(inv.id || "").trim(),
                 invoiceNumber: invNum,
+                customerId: String(inv.customerId || "").trim(),
                 customerName: customerMap[String(inv.customerId || "")] || "—",
                 jobStatus: String(inv.status || "invoiced"),
               },
@@ -663,7 +668,16 @@ export default function DashboardSalesCommissionPage() {
         key: "customerName",
         label: "Customer",
         sortable: true,
-        render: (_, row) => row.customerName || getRowJobMeta(row)?.customerName || "—",
+        render: (_, row) => {
+          const meta = getRowJobMeta(row);
+          const customerId = String(row.customerId || meta?.customerId || "").trim();
+          const name = row.customerName || meta?.customerName || "—";
+          return (
+            <CustomerRecordLink customerId={customerId} onOpen={setOpenCustomerId}>
+              {name}
+            </CustomerRecordLink>
+          );
+        },
       },
       {
         key: "jobStatus",
@@ -1022,6 +1036,13 @@ export default function DashboardSalesCommissionPage() {
           />
         )}
       </Modal>
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={56}
+      />
     </div>
   );
 }

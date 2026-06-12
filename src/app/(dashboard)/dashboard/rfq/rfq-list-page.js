@@ -15,6 +15,7 @@ import {
   FiClipboard,
   FiPlus,
   FiEye,
+  FiUserPlus,
 } from "react-icons/fi";
 import { LuQrCode } from "react-icons/lu";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
@@ -25,7 +26,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -64,6 +65,13 @@ const MOTOR_TYPE_OPTIONS = [
   { value: "AC", label: "AC" },
   { value: "DC", label: "DC" },
 ];
+
+const INITIAL_NEW_CUSTOMER = {
+  companyName: "",
+  primaryContactName: "",
+  phone: "",
+  email: "",
+};
 
 const ADD_MOTOR_INITIAL = {
   customerId: "",
@@ -271,6 +279,9 @@ export default function DashboardRfqListPage({ embedded = false }) {
     [viewingQuote?.workOrderId]
   );
 
+  const [addCustomerModalOpen, setAddCustomerModalOpen] = useState(false);
+  const [newCustomerForm, setNewCustomerForm] = useState(() => ({ ...INITIAL_NEW_CUSTOMER }));
+  const [savingNewCustomer, setSavingNewCustomer] = useState(false);
   const [addMotorModalOpen, setAddMotorModalOpen] = useState(false);
   const [addMotorForm, setAddMotorForm] = useState(ADD_MOTOR_INITIAL);
   const [savingMotor, setSavingMotor] = useState(false);
@@ -304,9 +315,53 @@ export default function DashboardRfqListPage({ embedded = false }) {
     return base;
   }, [statusSelectOptions]);
 
+  const openAddCustomerModal = () => {
+    setNewCustomerForm({ ...INITIAL_NEW_CUSTOMER });
+    setAddCustomerModalOpen(true);
+  };
+
+  const handleAddCustomerSubmit = async (e) => {
+    e.preventDefault();
+    if (!newCustomerForm.companyName.trim()) {
+      toast.error("Company name is required.");
+      return;
+    }
+    setSavingNewCustomer(true);
+    try {
+      const res = await fetch("/api/dashboard/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(newCustomerForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create customer");
+      const id = data.customer?.id;
+      if (!id) throw new Error("Invalid response");
+      const saved = data.customer;
+      await loadCustomers();
+      setForm((f) => ({
+        ...f,
+        customerId: id,
+        motorId: "",
+        customerTaxExempt: saved?.taxExempt !== false,
+        customerTaxPercent: saved?.taxExempt === false ? String(saved?.taxPercent ?? "0") : "0",
+      }));
+      setAddCustomerModalOpen(false);
+      toast.success("Customer added and selected.");
+    } catch (err) {
+      toast.error(err.message || "Failed to create customer");
+    } finally {
+      setSavingNewCustomer(false);
+    }
+  };
+
   const openAddMotorModal = () => {
     const custId = form.customerId || formRef.current?.customerId;
-    if (!custId) return;
+    if (!custId) {
+      toast.error("Select a customer first.");
+      return;
+    }
     setAddMotorForm({ ...ADD_MOTOR_INITIAL, customerId: custId });
     setAddMotorModalOpen(true);
   };
@@ -1383,24 +1438,89 @@ export default function DashboardRfqListPage({ embedded = false }) {
         />
       </div>
 
+      <Modal
+        open={addCustomerModalOpen}
+        onClose={() => !savingNewCustomer && setAddCustomerModalOpen(false)}
+        title="Add new customer"
+        size="lg"
+        zIndex={130}
+        showClose={!savingNewCustomer}
+        actions={
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setAddCustomerModalOpen(false)}
+              disabled={savingNewCustomer}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="rfq-add-customer-form"
+              variant="primary"
+              size="sm"
+              disabled={savingNewCustomer}
+            >
+              {savingNewCustomer ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <Form id="rfq-add-customer-form" onSubmit={handleAddCustomerSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Company & contact">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
+            <Input
+              label="Company name"
+              value={newCustomerForm.companyName}
+              onChange={(e) => setNewCustomerForm((f) => ({ ...f, companyName: e.target.value }))}
+              placeholder="Company or business name"
+              required
+            />
+            <Input
+              label="Primary contact name"
+              value={newCustomerForm.primaryContactName}
+              onChange={(e) => setNewCustomerForm((f) => ({ ...f, primaryContactName: e.target.value }))}
+              placeholder="Contact person"
+            />
+            <Input
+              label="Phone"
+              type="tel"
+              value={newCustomerForm.phone}
+              onChange={(e) => setNewCustomerForm((f) => ({ ...f, phone: e.target.value }))}
+              placeholder="Phone"
+            />
+            <Input
+              label="Email"
+              type="email"
+              value={newCustomerForm.email}
+              onChange={(e) => setNewCustomerForm((f) => ({ ...f, email: e.target.value }))}
+              placeholder="email@example.com"
+            />
+            </div>
+          </FormSection>
+        </Form>
+      </Modal>
+
       {/* Add Motor modal (from quote form) — same layout as customer's motors Create Motor */}
       <Modal
         open={addMotorModalOpen}
         onClose={() => setAddMotorModalOpen(false)}
         title="Add new motor"
         size="4xl"
+        zIndex={130}
         actions={
           <Button type="submit" form="add-motor-form" variant="primary" size="sm" disabled={savingMotor}>
             {savingMotor ? "Saving…" : <><FiSave className="mr-1.5 h-4 w-4 inline" />Save</>}
           </Button>
         }
       >
-        <Form id="add-motor-form" onSubmit={handleAddMotorSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer & identification</h3>
-            <p className="mb-3 text-sm text-secondary">
-              Linked to: <span className="font-medium text-title">{selectedCustomer?.companyName || "—"}</span>
-            </p>
+        <Form id="add-motor-form" onSubmit={handleAddMotorSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection
+            title="Customer & identification"
+            subtitle={`Linked to: ${selectedCustomer?.companyName || "—"}`}
+          >
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Serial number"
@@ -1409,9 +1529,8 @@ export default function DashboardRfqListPage({ embedded = false }) {
                 placeholder="Serial number"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+          </FormSection>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Manufacturer"
@@ -1493,16 +1612,17 @@ export default function DashboardRfqListPage({ embedded = false }) {
                 placeholder="Bars"
               />
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={addMotorForm.notes}
               onChange={(e) => setAddMotorForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes, problem description, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -1690,6 +1810,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
         title={isNewQuoteForm ? "Create RFQ" : "Edit quote"}
         size="full"
         width="min(1200px, 94vw)"
+        zIndex={120}
         showClose={!savingQuote}
         headerClassName="flex-wrap"
         actions={
@@ -1736,7 +1857,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
           </>
         }
       >
-        <Form id="edit-quote-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
+        <Form id="edit-quote-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <input
             type="hidden"
             name="technicianEmployeeId"
@@ -1744,8 +1865,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
             readOnly
             aria-hidden
           />
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote info</h3>
+          <FormSection title="Quote info">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label={editFormJobIdLabel}
@@ -1793,41 +1913,66 @@ export default function DashboardRfqListPage({ embedded = false }) {
                 placeholder="e.g. 2 weeks"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer &amp; motor</h3>
+          </FormSection>
+          <FormSection title="Customer & motor">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Select
-                label="Customer"
-                options={customerOptions}
-                value={form.customerId}
-                onChange={(e) => {
-                  const newCustomerId = e.target.value ?? "";
-                  const currentMotor = motors.find((m) => m.id === form.motorId);
-                  const keepMotor = currentMotor && currentMotor.customerId === newCustomerId;
-                  const nextCustomer = customers.find((c) => c.id === newCustomerId);
-                  setForm((f) => ({
-                    ...f,
-                    customerId: newCustomerId,
-                    motorId: keepMotor ? f.motorId : "",
-                    customerTaxExempt: nextCustomer?.taxExempt !== false,
-                    customerTaxPercent: nextCustomer?.taxExempt === false ? String(nextCustomer?.taxPercent ?? "0") : "0",
-                  }));
-                }}
-                placeholder="Select customer"
-                searchable
-                className="lg:col-span-2 min-w-0"
-              />
-              <Select
-                label="Motor"
-                options={motorOptionsForCustomer}
-                value={form.motorId === "__add_motor__" ? "" : form.motorId}
-                onChange={handleMotorSelectChange}
-                placeholder={form.customerId ? "Select motor…" : "Select customer first"}
-                searchable
-                className="lg:col-span-2 min-w-0"
-                disabled={!form.customerId}
-              />
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:col-span-2">
+                <Select
+                  label="Customer"
+                  options={customerOptions}
+                  value={form.customerId}
+                  onChange={(e) => {
+                    const newCustomerId = e.target.value ?? "";
+                    const currentMotor = motors.find((m) => m.id === form.motorId);
+                    const keepMotor = currentMotor && currentMotor.customerId === newCustomerId;
+                    const nextCustomer = customers.find((c) => c.id === newCustomerId);
+                    setForm((f) => ({
+                      ...f,
+                      customerId: newCustomerId,
+                      motorId: keepMotor ? f.motorId : "",
+                      customerTaxExempt: nextCustomer?.taxExempt !== false,
+                      customerTaxPercent:
+                        nextCustomer?.taxExempt === false ? String(nextCustomer?.taxPercent ?? "0") : "0",
+                    }));
+                  }}
+                  placeholder="Select customer"
+                  searchable
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 shrink-0 whitespace-nowrap"
+                  onClick={openAddCustomerModal}
+                >
+                  <FiUserPlus className="h-4 w-4 shrink-0" aria-hidden />
+                  Add New Customer
+                </Button>
+              </div>
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:col-span-2">
+                <Select
+                  label="Motor"
+                  options={motorOptionsForCustomer}
+                  value={form.motorId === "__add_motor__" ? "" : form.motorId}
+                  onChange={handleMotorSelectChange}
+                  placeholder={form.customerId ? "Select motor…" : "Select customer first"}
+                  searchable
+                  className="min-w-0 flex-1"
+                  disabled={!form.customerId}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-10 shrink-0 whitespace-nowrap"
+                  disabled={!form.customerId}
+                  onClick={openAddMotorModal}
+                >
+                  <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                  Add New Motor
+                </Button>
+              </div>
             </div>
             <QuoteFormCustomerMotorCards
               customer={selectedCustomer}
@@ -1836,7 +1981,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
               onCustomerSaved={() => loadCustomers()}
               onMotorSaved={() => loadMotors()}
             />
-          </div>
+          </FormSection>
           {isWriteUpStatus(form?.status) && viewingQuote?.id ? (
             <RfqPreInspectionSection
               quoteId={viewingQuote.id}
@@ -1857,8 +2002,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
               disabled={savingQuote}
             />
           )}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Scope &amp; Other Cost</h3>
+          <FormSection title="Scope & other cost">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="lg:col-span-2">
                 <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -1911,45 +2055,31 @@ export default function DashboardRfqListPage({ embedded = false }) {
                 </tbody>
               </table>
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="min-w-0">
-                <label
-                  htmlFor="edit-quote-internal-notes"
-                  className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
-                >
-                  Internal Notes
-                </label>
-                <Textarea
-                  id="edit-quote-internal-notes"
-                  name="internalNotes"
-                  value={form.notes}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={4}
-                  placeholder="Terms, technician notes, and caveats…"
-                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
-                />
-              </div>
-              <div className="min-w-0">
-                <label
-                  htmlFor="edit-quote-customer-notes"
-                  className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
-                >
-                  Customer Notes
-                </label>
-                <Textarea
-                  id="edit-quote-customer-notes"
-                  name="customerNotes"
-                  value={form.customerNotes}
-                  onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
-                  rows={4}
-                  placeholder="Shown on the proposal and documents sent to the customer…"
-                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
-                />
-              </div>
+              <Textarea
+                id="edit-quote-internal-notes"
+                name="internalNotes"
+                label="Internal notes"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={4}
+                placeholder="Terms, technician notes, and caveats…"
+                textareaClassName="min-h-[7.5rem] w-full min-w-0"
+              />
+              <Textarea
+                id="edit-quote-customer-notes"
+                name="customerNotes"
+                label="Customer notes"
+                value={form.customerNotes}
+                onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
+                rows={4}
+                placeholder="Shown on the proposal and documents sent to the customer…"
+                textareaClassName="min-h-[7.5rem] w-full min-w-0"
+              />
             </div>
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 

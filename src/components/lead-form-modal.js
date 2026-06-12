@@ -6,7 +6,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 
 const URGENCY_OPTIONS = [
   { value: "", label: "Select urgency…" },
@@ -145,12 +145,12 @@ export default function LeadFormModal({
           </p>
         </div>
       ) : (
-        <Form id="lead-form-modal-form" onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
+        <Form id="lead-form-modal-form" onSubmit={handleSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <p className="text-sm text-secondary">{introText}</p>
 
           <div className="grid min-h-0 grid-cols-1 items-stretch gap-6 lg:min-h-[min(70vh,36rem)] lg:grid-cols-[minmax(0,1fr)_minmax(18rem,42%)] lg:gap-8">
-            <div className="flex min-h-0 flex-col gap-5 lg:h-full">
-              <div>
+            <div className="flex min-h-0 flex-col gap-4 lg:h-full">
+              <FormSection title="Contact">
                 <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
                   <Input
                     label="Your name"
@@ -194,10 +194,9 @@ export default function LeadFormModal({
                     placeholder="e.g. 12345"
                   />
                 </div>
-              </div>
+              </FormSection>
 
-              <div>
-                <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+              <FormSection title="Motor details">
                 <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
                   <Input
                     label="Motor type"
@@ -244,22 +243,26 @@ export default function LeadFormModal({
                     )}
                   </div>
                 </div>
-              </div>
+              </FormSection>
             </div>
 
-            <div className="flex min-h-[min(50vh,22rem)] flex-col border-t border-border pt-6 lg:h-full lg:min-h-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <FormSection
+              title="Message to shops"
+              subtitle="Read this entire text before you submit. Correct any errors, update nameplate data, and add missing context so repair shops can quote accurately."
+              className="flex min-h-[min(50vh,22rem)] flex-col lg:h-full lg:min-h-0"
+              bodyClassName="flex min-h-0 flex-1 flex-col py-3"
+            >
               <Textarea
                 label="Review and verify your message to shops"
-                help="Read this entire text before you submit. Correct any errors, update nameplate data, and add missing context so repair shops can quote accurately."
                 name="problemDescription"
                 value={form.problemDescription}
                 onChange={(e) => setForm((f) => ({ ...f, problemDescription: e.target.value }))}
                 placeholder="Describe the issue, symptoms, timeline, etc."
                 rows={6}
-                className="flex min-h-0 flex-1 flex-col gap-2"
+                className="flex min-h-0 flex-1 flex-col gap-2 [&_label]:sr-only"
                 textareaClassName="min-h-[12rem] flex-1 resize-y lg:min-h-0"
               />
-            </div>
+            </FormSection>
           </div>
         </Form>
       )}

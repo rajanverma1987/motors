@@ -7,7 +7,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
@@ -490,8 +490,8 @@ export default function InvoiceFormModal({
       {loading ? (
         <div className="flex justify-center py-16 text-secondary">Loading…</div>
       ) : (
-        <Form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-          <div className="rounded-lg border border-border bg-card/50 p-4">
+        <Form className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`} onSubmit={(e) => e.preventDefault()}>
+          <FormSection title="Invoice summary">
             <p className="text-sm font-medium text-title">Invoice # {form.invoiceNumber || "—"}</p>
             <p className="text-sm text-secondary">{isNew ? "Not saved until you click Save." : ""}</p>
             <p className="mt-2 text-sm">
@@ -502,8 +502,9 @@ export default function InvoiceFormModal({
               <span className="text-secondary">Motor: </span>
               {form.motorLabel || "—"}
             </p>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          </FormSection>
+          <FormSection title="Invoice details">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Input
               label="Date"
               type="date"
@@ -542,9 +543,9 @@ export default function InvoiceFormModal({
               value={form.customerTaxExempt ? "Yes" : "No"}
               readOnly
             />
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Scope &amp; other cost</h3>
+            </div>
+          </FormSection>
+          <FormSection title="Scope & other cost">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="lg:col-span-2">
                 <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -591,21 +592,23 @@ export default function InvoiceFormModal({
                 </tbody>
               </table>
             </div>
-          </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <Textarea
-              label="Customer notes"
-              value={form.customerNotes}
-              onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
-              rows={2}
-            />
-            <Textarea
-              label="Internal notes"
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              rows={2}
-            />
-          </div>
+          </FormSection>
+          <FormSection title="Notes">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Textarea
+                label="Customer notes"
+                value={form.customerNotes}
+                onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
+                rows={2}
+              />
+              <Textarea
+                label="Internal notes"
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                rows={2}
+              />
+            </div>
+          </FormSection>
         </Form>
       )}
     </Modal>

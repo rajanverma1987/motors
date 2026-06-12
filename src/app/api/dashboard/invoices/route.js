@@ -12,6 +12,11 @@ import { normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
+import {
+  aggregateTaxCollectedSummary,
+  INVOICE_FILTER_TAX_COLLECTED,
+  isInvoiceTaxCollected,
+} from "@/lib/invoice-tax-collected";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -120,6 +125,25 @@ async function fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize) {
   return Invoice.find(q).sort(sort).skip(skip).limit(pageSize).lean();
 }
 
+/** Fully paid + tax charged invoices for summary card and filter. */
+async function loadTaxCollectedContext(email, merged) {
+  const invoices = await Invoice.find({ createdByEmail: email })
+    .select("_id status laborTotal partsTotal customerId")
+    .lean();
+  const customerIds = [...new Set(invoices.map((i) => String(i.customerId)).filter(Boolean))];
+  const customers = customerIds.length
+    ? await Customer.find({ _id: { $in: customerIds }, createdByEmail: email })
+        .select("taxExempt taxPercent")
+        .lean()
+    : [];
+  const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
+  const summary = aggregateTaxCollectedSummary(invoices, custById, merged);
+  const ids = invoices
+    .filter((inv) => isInvoiceTaxCollected(inv, custById[String(inv.customerId)], merged))
+    .map((inv) => inv._id);
+  return { summary, ids };
+}
+
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -166,6 +190,13 @@ export async function GET(request) {
       UserSettings.findOne({ ownerEmail: email }).lean(),
     ]);
     const mergedForStatus = mergeUserSettings(settingsDocEarly?.settings);
+    let summaryTaxCollected = { count: 0, invoiceAmount: 0, taxCollected: 0 };
+    let taxCollectedIds = [];
+    if (includePagination) {
+      const taxCtx = await loadTaxCollectedContext(email, mergedForStatus);
+      summaryTaxCollected = taxCtx.summary;
+      taxCollectedIds = taxCtx.ids;
+    }
     if (statusFilter === "__other__") {
       const allowed = invoiceStatusAllowedSlugs(mergedForStatus);
       if (allowed.length) {
@@ -173,6 +204,8 @@ export async function GET(request) {
           status: { $regex: new RegExp(`^${String(slug).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
         }));
       }
+    } else if (statusFilter === INVOICE_FILTER_TAX_COLLECTED) {
+      q._id = { $in: taxCollectedIds };
     } else if (statusFilter) {
       const statusRx = new RegExp(`^${statusFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
       q.status = statusRx;
@@ -255,7 +288,14 @@ export async function GET(request) {
       };
     });
     if (!includePagination) return NextResponse.json(items);
-    return NextResponse.json({ items, page, pageSize, totalCount, summaryByStatus });
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      totalCount,
+      summaryByStatus,
+      summaryTaxCollected,
+    });
   } catch (err) {
     console.error("Invoices list:", err);
     return NextResponse.json({ error: err.message || "Failed to list" }, { status: 500 });

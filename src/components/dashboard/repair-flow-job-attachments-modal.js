@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
+import { FormSection } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 
 /**
@@ -115,11 +116,11 @@ export default function RepairFlowJobAttachmentsModal({ open, onClose, jobId, jo
         </Button>
       }
     >
-      <div className="space-y-4">
+      <div className="flex flex-col gap-4">
         <p className="text-sm text-secondary">
           Files are stored on this repair job (not on individual RFQs). They stay with the job for shop reference.
         </p>
-        <div>
+        <FormSection title="Upload files">
           <label className="mb-1 block text-sm font-medium text-title">Select files to attach</label>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -131,9 +132,8 @@ export default function RepairFlowJobAttachmentsModal({ open, onClose, jobId, jo
             />
             {uploading ? <span className="text-sm text-secondary">Uploading…</span> : null}
           </div>
-        </div>
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Attached documents</h3>
+        </FormSection>
+        <FormSection title="Attached documents">
           {loading ? (
             <p className="text-sm text-secondary">Loading…</p>
           ) : list.length === 0 ? (
@@ -180,7 +180,7 @@ export default function RepairFlowJobAttachmentsModal({ open, onClose, jobId, jo
               </table>
             </div>
           )}
-        </div>
+        </FormSection>
       </div>
     </Modal>
   );

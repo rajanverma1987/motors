@@ -10,7 +10,7 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
@@ -806,37 +806,6 @@ export default function DashboardCustomersPage() {
         </div>
       </div>
 
-      {existingCustomerFromLead && (
-        <div className="mt-4 shrink-0 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
-          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-            A customer with this email or company already exists.
-          </p>
-          <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
-            {existingCustomerFromLead.companyName}
-            {existingCustomerFromLead.primaryContactName && ` · ${existingCustomerFromLead.primaryContactName}`}
-          </p>
-          <div className="mt-3 flex gap-2">
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                openViewModal(existingCustomerFromLead);
-                setExistingCustomerFromLead(null);
-              }}
-            >
-              View existing customer
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setExistingCustomerFromLead(null)}
-            >
-              Dismiss
-            </Button>
-          </div>
-        </div>
-      )}
-
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
@@ -875,9 +844,34 @@ export default function DashboardCustomersPage() {
           </Button>
         }
       >
-        <Form id="enter-customer-form" onSubmit={handleEnterSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Company & contact</h3>
+        <Form id="enter-customer-form" onSubmit={handleEnterSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          {existingCustomerFromLead && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-900/20">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                A customer with this email or company already exists.
+              </p>
+              <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                {existingCustomerFromLead.companyName}
+                {existingCustomerFromLead.primaryContactName && ` · ${existingCustomerFromLead.primaryContactName}`}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => {
+                    openViewModal(existingCustomerFromLead);
+                    setExistingCustomerFromLead(null);
+                  }}
+                >
+                  View existing customer
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setExistingCustomerFromLead(null)}>
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+          <FormSection title="Company & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Company name"
@@ -952,15 +946,16 @@ export default function DashboardCustomersPage() {
                 disabled={form.taxExempt}
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Additional contact persons</h3>
+          <FormSection
+            title="Additional contact persons"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={addAdditionalContact}>
                 Add contact person
               </Button>
-            </div>
+            }
+          >
             {(form.additionalContacts || []).length === 0 ? (
               <p className="text-sm text-secondary">No additional contacts. Click “Add contact person” to add one.</p>
             ) : (
@@ -995,10 +990,9 @@ export default function DashboardCustomersPage() {
                 ))}
               </div>
             )}
-          </div>
+          </FormSection>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Billing address</h3>
+          <FormSection title="Billing address">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -1037,15 +1031,16 @@ export default function DashboardCustomersPage() {
                 placeholder="United States"
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Shipping address</h3>
+          <FormSection
+            title="Shipping address"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={copyBillingToShipping}>
                 Copy from billing
               </Button>
-            </div>
+            }
+          >
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -1084,9 +1079,9 @@ export default function DashboardCustomersPage() {
                 placeholder="United States"
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               name="notes"
@@ -1094,8 +1089,9 @@ export default function DashboardCustomersPage() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Customer notes, billing details, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
 
         </Form>
       </Modal>
@@ -1128,7 +1124,7 @@ export default function DashboardCustomersPage() {
           </div>
         ) : viewingCustomer ? (
           <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
-            <div className="space-y-6">
+            <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
@@ -1280,7 +1276,7 @@ export default function DashboardCustomersPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
+            <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
                   Invoices ({customerActivityLoading ? "…" : customerActivity.invoices.length})
@@ -1489,12 +1485,11 @@ export default function DashboardCustomersPage() {
           </>
         }
       >
-        <Form id="add-motor-form" onSubmit={handleAddMotorSubmit} className="flex flex-col gap-5 !space-y-0">
+        <Form id="add-motor-form" onSubmit={handleAddMotorSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <p className="text-sm text-secondary">
             Linked to customer: <span className="font-medium text-title">{viewingCustomer?.companyName || "—"}</span>
           </p>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Identification & details</h3>
+          <FormSection title="Identification & details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Serial number"
@@ -1582,16 +1577,17 @@ export default function DashboardCustomersPage() {
                 placeholder="Bars"
               />
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={motorForm.notes}
               onChange={(e) => setMotorForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes, problem description, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -1646,9 +1642,8 @@ export default function DashboardCustomersPage() {
           </Button>
         }
       >
-        <Form id="edit-customer-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Company & contact</h3>
+        <Form id="edit-customer-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Company & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Company name"
@@ -1723,15 +1718,16 @@ export default function DashboardCustomersPage() {
                 disabled={form.taxExempt}
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Additional contact persons</h3>
+          <FormSection
+            title="Additional contact persons"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={addAdditionalContact}>
                 Add contact person
               </Button>
-            </div>
+            }
+          >
             {(form.additionalContacts || []).length === 0 ? (
               <p className="text-sm text-secondary">No additional contacts. Click “Add contact person” to add one.</p>
             ) : (
@@ -1766,10 +1762,9 @@ export default function DashboardCustomersPage() {
                 ))}
               </div>
             )}
-          </div>
+          </FormSection>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Billing address</h3>
+          <FormSection title="Billing address">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -1808,15 +1803,16 @@ export default function DashboardCustomersPage() {
                 placeholder="United States"
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Shipping address</h3>
+          <FormSection
+            title="Shipping address"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={copyBillingToShipping}>
                 Copy from billing
               </Button>
-            </div>
+            }
+          >
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -1855,9 +1851,9 @@ export default function DashboardCustomersPage() {
                 placeholder="United States"
               />
             </div>
-          </div>
+          </FormSection>
 
-          <div>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               name="notes"
@@ -1865,8 +1861,9 @@ export default function DashboardCustomersPage() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Customer notes, billing details, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
 
         </Form>
       </Modal>

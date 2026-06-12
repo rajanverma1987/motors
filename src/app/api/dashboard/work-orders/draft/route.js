@@ -14,10 +14,7 @@ import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import { nextWorkOrderNumberSuggestion } from "@/lib/work-order-factory";
 import {
   motorClassFromMotorType,
-  prefillSpecsFromMotor,
-  AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
-  DC_ARMATURE_FIELDS,
+  specsFromMotorRecord,
   DEFAULT_WORK_ORDER_STATUSES,
 } from "@/lib/work-order-fields";
 
@@ -87,29 +84,7 @@ export async function GET(request) {
     const motorClass = motorClassFromMotorType(motor.motorType);
     const today = new Date().toISOString().slice(0, 10);
 
-    const acSpecs =
-      motorClass === "AC"
-        ? {
-            ...prefillSpecsFromMotor(motor, AC_WORK_ORDER_FIELDS),
-            ...(motor.acSpecs && typeof motor.acSpecs === "object" ? motor.acSpecs : {}),
-          }
-        : {};
-    const dcSpecs =
-      motorClass === "DC"
-        ? {
-            ...prefillSpecsFromMotor(motor, DC_WORK_ORDER_FIELDS),
-            ...(motor.dcSpecs && typeof motor.dcSpecs === "object" ? motor.dcSpecs : {}),
-          }
-        : {};
-    const armatureSpecs =
-      motorClass === "DC"
-        ? {
-            ...prefillSpecsFromMotor(motor, DC_ARMATURE_FIELDS),
-            ...(motor.dcArmatureSpecs && typeof motor.dcArmatureSpecs === "object"
-              ? motor.dcArmatureSpecs
-              : {}),
-          }
-        : {};
+    const { acSpecs, dcSpecs, armatureSpecs } = specsFromMotorRecord(motor, motorClass);
 
     const quoteScopeForTech = Array.isArray(quote.scopeLines)
       ? quote.scopeLines

@@ -9,7 +9,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
@@ -347,7 +347,7 @@ export default function RepairFlowCreateQuoteModal({
         </>
       }
     >
-      <Form id={formId} onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
+      <Form id={formId} onSubmit={handleSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
         <p className="text-sm text-secondary">
           {mode === "final" ? (
             <>
@@ -368,16 +368,14 @@ export default function RepairFlowCreateQuoteModal({
           )}
         </p>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote info</h3>
+        <FormSection title="Quote info">
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
             <Input label="Job" value={job?.jobNumber || job?.id || "—"} readOnly />
             <Input label="Date" type="date" value={todayString()} readOnly />
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer &amp; motor</h3>
+        <FormSection title="Customer & motor">
           <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
             <Select
               label="Customer"
@@ -446,16 +444,12 @@ export default function RepairFlowCreateQuoteModal({
               ) : null}
             </div>
           )}
-        </div>
+        </FormSection>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-            {mode === "final" ? "Inspections (optional, this motor)" : "Pre-inspections (optional, this motor)"}
-          </h3>
-          <p className="mb-2 text-xs text-secondary">
-            Inspections on this job are optional for reference — click a label to view readings. Scope, other cost, and
-            notes are entered manually and are not pre-filled from inspections.
-          </p>
+        <FormSection
+          title={mode === "final" ? "Inspections (optional, this motor)" : "Pre-inspections (optional, this motor)"}
+          subtitle="Inspections on this job are optional for reference — click a label to view readings. Scope, other cost, and notes are entered manually and are not pre-filled from inspections."
+        >
           {inspectionListHint && inspectionsForSelectedMotor.length === 0 ? (
             <p className="rounded-md border border-border bg-form-bg/50 px-3 py-2 text-sm text-secondary">{inspectionListHint}</p>
           ) : null}
@@ -497,10 +491,9 @@ export default function RepairFlowCreateQuoteModal({
               </p>
             </>
           ) : null}
-        </div>
+        </FormSection>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Scope &amp; Other Cost</h3>
+        <FormSection title="Scope & other cost">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
             <div className="lg:col-span-2">
               <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -532,18 +525,18 @@ export default function RepairFlowCreateQuoteModal({
             <span className="text-sm text-secondary">Other Cost total: {fmt(partsTotalSum)}</span>
             <span className="font-semibold text-title">Service proposal total: {fmt(serviceProposalTotal)}</span>
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote notes</h3>
+        <FormSection title="Quote notes">
           <Textarea
             label="Notes / terms"
             value={quoteNotes}
             onChange={(e) => setQuoteNotes(e.target.value)}
             rows={4}
             placeholder="Terms, technician notes, and caveats…"
+            className="[&_label]:sr-only"
           />
-        </div>
+        </FormSection>
       </Form>
     </Modal>
 

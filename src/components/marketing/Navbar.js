@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { FiMenu, FiX } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import { useAuth } from "@/contexts/auth-context";
+import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
 import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
 
 const primaryNav = [
@@ -52,7 +53,9 @@ export default function Navbar() {
   const pathname = usePathname() || "";
   const { user, mounted } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const dashboardHref = user?.calculatorOnlyAccount ? "/dashboard/calculators" : "/dashboard";
+  const dashboardHref = user?.calculatorOnlyAccount
+    ? "/dashboard/calculators"
+    : DEFAULT_PORTAL_LANDING_PATH;
 
   useEffect(() => {
     if (!mobileOpen) return;

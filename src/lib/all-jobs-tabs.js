@@ -2,6 +2,9 @@
 
 export const ALL_JOBS_PATH = "/dashboard/all-jobs";
 
+/** Default portal landing after sign-in (non calculator-only accounts). */
+export const DEFAULT_PORTAL_LANDING_PATH = ALL_JOBS_PATH;
+
 export const ALL_JOBS_TAB_RFQ = "rfq";
 export const ALL_JOBS_TAB_WORK_ORDERS = "work-orders";
 export const ALL_JOBS_TAB_INVOICES = "invoices";

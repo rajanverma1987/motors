@@ -27,6 +27,7 @@ import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { allJobsListPath } from "@/lib/all-jobs-tabs";
+import { INVOICE_FILTER_TAX_COLLECTED } from "@/lib/invoice-tax-collected";
 
 const INVOICE_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
@@ -51,6 +52,11 @@ function InvoicesInner({ embedded = false }) {
   const [totalCount, setTotalCount] = useState(0);
   const [invoiceSort, setInvoiceSort] = useState({ key: "createdAt", direction: "desc" });
   const [summaryByStatus, setSummaryByStatus] = useState({});
+  const [summaryTaxCollected, setSummaryTaxCollected] = useState({
+    count: 0,
+    invoiceAmount: 0,
+    taxCollected: 0,
+  });
   const [statusFilter, setStatusFilter] = useState("");
   const [invoiceModal, setInvoiceModal] = useState(null);
   const [openCustomerId, setOpenCustomerId] = useState(null);
@@ -74,10 +80,16 @@ function InvoicesInner({ embedded = false }) {
         setRows(Array.isArray(data?.items) ? data.items : []);
         setTotalCount(Number(data?.totalCount) || 0);
         setSummaryByStatus(data?.summaryByStatus && typeof data.summaryByStatus === "object" ? data.summaryByStatus : {});
+        setSummaryTaxCollected(
+          data?.summaryTaxCollected && typeof data.summaryTaxCollected === "object"
+            ? data.summaryTaxCollected
+            : { count: 0, invoiceAmount: 0, taxCollected: 0 }
+        );
       } else {
         setRows([]);
         setTotalCount(0);
         setSummaryByStatus({});
+        setSummaryTaxCollected({ count: 0, invoiceAmount: 0, taxCollected: 0 });
       }
     } finally {
       setLoading(false);
@@ -143,6 +155,17 @@ function InvoicesInner({ embedded = false }) {
       });
     });
 
+    const taxCount = Number(summaryTaxCollected?.count) || 0;
+    const taxAmount = Number(summaryTaxCollected?.taxCollected) || 0;
+    buttons.push({
+      key: INVOICE_FILTER_TAX_COLLECTED,
+      label: "Tax collected",
+      count: taxCount,
+      amount: taxAmount,
+      subtitle: `${taxCount} · ${fmt(taxAmount)}`,
+      tileAppearance: resolveStatusTileProps("", 8),
+    });
+
     let orphanCount = 0;
     let orphanAmount = 0;
     for (const [rawKey, agg] of Object.entries(summaryByStatus || {})) {
@@ -178,7 +201,7 @@ function InvoicesInner({ embedded = false }) {
       tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
-  }, [summaryByStatus, statusSelectOptions, mergedAccountSettings]);
+  }, [summaryByStatus, summaryTaxCollected, statusSelectOptions, mergedAccountSettings, fmt]);
 
   const openInvoiceJobLink = useCallback((row) => {
     const jobId = String(row?.repairFlowJobId || "").trim();
@@ -406,9 +429,11 @@ function InvoicesInner({ embedded = false }) {
           emptyMessage={
             totalCount === 0 && !searchQuery.trim() && !statusFilter
               ? "No invoices yet. Create an invoice from an approved quote on the RFQ page."
-              : statusFilter
-                ? "No invoices with this status."
-                : "No invoices match your search."
+              : statusFilter === INVOICE_FILTER_TAX_COLLECTED
+                ? "No fully paid invoices with tax collected."
+                : statusFilter
+                  ? "No invoices with this status."
+                  : "No invoices match your search."
           }
         />
       </div>

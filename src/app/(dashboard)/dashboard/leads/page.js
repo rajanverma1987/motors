@@ -10,7 +10,7 @@ import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import Badge from "@/components/ui/badge";
 import { useAuth } from "@/contexts/auth-context";
@@ -446,8 +446,9 @@ export default function DashboardLeadsPage() {
           </Button>
         }
       >
-        <Form id="enter-lead-form" onSubmit={handleEnterLeadSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+        <Form id="enter-lead-form" onSubmit={handleEnterLeadSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Contact">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             <Input
               label="Your name"
               name="name"
@@ -494,12 +495,10 @@ export default function DashboardLeadsPage() {
               onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
               placeholder="e.g. 12345"
             />
-          </div>
+            </div>
+          </FormSection>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-              Motor details
-            </h3>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
               <Input
                 label="Motor type"
@@ -557,7 +556,7 @@ export default function DashboardLeadsPage() {
                 />
               </div>
             </div>
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -576,8 +575,9 @@ export default function DashboardLeadsPage() {
         }
       >
         {editingLead && (
-          <Form id="edit-lead-form" onSubmit={handleEditLeadSubmit} className="flex flex-col gap-5 !space-y-0">
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Form id="edit-lead-form" onSubmit={handleEditLeadSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+            <FormSection title="Lead details">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Select
                 label="Status"
                 name="status"
@@ -633,9 +633,9 @@ export default function DashboardLeadsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
                 placeholder="e.g. 12345"
               />
-            </div>
-            <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+              </div>
+            </FormSection>
+            <FormSection title="Motor details">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Input
                   label="Motor type"
@@ -696,7 +696,7 @@ export default function DashboardLeadsPage() {
                   />
                 </div>
               </div>
-            </div>
+            </FormSection>
           </Form>
         )}
       </Modal>
@@ -724,7 +724,7 @@ export default function DashboardLeadsPage() {
         }
       >
         {viewingLead && (
-          <div className="space-y-6">
+          <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
                 Lead information

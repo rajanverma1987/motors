@@ -6,7 +6,7 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import MotorSpecGrid from "@/components/dashboard/motor-spec-grid";
 import {
@@ -143,9 +143,8 @@ export default function MotorFormModal({
       {loading || !form ? (
         <p className="py-8 text-center text-secondary">Loading…</p>
       ) : (
-        <Form id={FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer & identification</h3>
+        <Form id={FORM_ID} onSubmit={handleSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Customer & identification">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Select
                 label="Customer"
@@ -161,9 +160,8 @@ export default function MotorFormModal({
                 onChange={(e) => setForm((f) => ({ ...f, serialNumber: e.target.value }))}
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+          </FormSection>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Input
                 label="Manufacturer"
@@ -189,30 +187,27 @@ export default function MotorFormModal({
               <Input label="Core diameter" value={form.coreDiameter} onChange={(e) => setForm((f) => ({ ...f, coreDiameter: e.target.value }))} />
               <Input label="Bars" value={form.bars} onChange={(e) => setForm((f) => ({ ...f, bars: e.target.value }))} />
             </div>
-          </div>
+          </FormSection>
           {isAcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4">
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">AC winding</h3>
+            <FormSection title="AC winding" emphasis>
               <MotorSpecGrid
                 fields={AC_OTHERS_FIELDS}
                 values={form.acSpecs}
                 onChange={(key, v) => setForm((f) => ({ ...f, acSpecs: { ...f.acSpecs, [key]: v } }))}
                 idPrefix="motor-modal-ac"
               />
-            </div>
+            </FormSection>
           ) : isDcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4 space-y-8">
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">DC motor</h3>
+            <>
+              <FormSection title="DC motor" emphasis>
                 <MotorSpecGrid
                   fields={DC_OTHERS_FIELDS}
                   values={form.dcSpecs}
                   onChange={(key, v) => setForm((f) => ({ ...f, dcSpecs: { ...f.dcSpecs, [key]: v } }))}
                   idPrefix="motor-modal-dc"
                 />
-              </div>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">Armature</h3>
+              </FormSection>
+              <FormSection title="Armature" emphasis>
                 <MotorSpecGrid
                   fields={DC_ARMATURE_OTHERS_FIELDS}
                   values={form.dcArmatureSpecs}
@@ -221,15 +216,18 @@ export default function MotorFormModal({
                   }
                   idPrefix="motor-modal-arm"
                 />
-              </div>
-            </div>
+              </FormSection>
+            </>
           ) : null}
-          <Textarea
-            label="Notes"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            rows={3}
-          />
+          <FormSection title="Notes">
+            <Textarea
+              label="Notes"
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              rows={3}
+              className="[&_label]:sr-only"
+            />
+          </FormSection>
         </Form>
       )}
     </Modal>

@@ -9,7 +9,7 @@ import DataTable from "@/components/ui/data-table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 
@@ -487,9 +487,8 @@ export default function DashboardVendorsPage() {
           </Button>
         }
       >
-        <Form id="enter-vendor-form" onSubmit={handleEnterSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Vendor & contact</h3>
+        <Form id="enter-vendor-form" onSubmit={handleEnterSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Vendor & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Vendor name"
@@ -552,9 +551,8 @@ export default function DashboardVendorsPage() {
                 placeholder="ZIP code"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Parts & terms</h3>
+          </FormSection>
+          <FormSection title="Parts & terms">
             <div className="flex flex-col gap-4">
               <Input
                 label="Payment terms"
@@ -573,8 +571,8 @@ export default function DashboardVendorsPage() {
                 />
               </div>
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               name="notes"
@@ -582,8 +580,9 @@ export default function DashboardVendorsPage() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes"
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
           <VendorAttachmentsPanel
             vendorId={null}
             attachments={form.attachments}
@@ -610,7 +609,7 @@ export default function DashboardVendorsPage() {
             <span className="text-secondary">Loading…</span>
           </div>
         ) : viewingVendor ? (
-          <div className="space-y-6">
+          <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Vendor & contact</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -687,9 +686,8 @@ export default function DashboardVendorsPage() {
           </Button>
         }
       >
-        <Form id="edit-vendor-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Vendor & contact</h3>
+        <Form id="edit-vendor-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Vendor & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Vendor name"
@@ -752,9 +750,8 @@ export default function DashboardVendorsPage() {
                 placeholder="ZIP code"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Parts & terms</h3>
+          </FormSection>
+          <FormSection title="Parts & terms">
             <div className="flex flex-col gap-4">
               <Input
                 label="Payment terms"
@@ -773,8 +770,8 @@ export default function DashboardVendorsPage() {
                 />
               </div>
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               name="notes"
@@ -782,8 +779,9 @@ export default function DashboardVendorsPage() {
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes"
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
           <VendorAttachmentsPanel
             vendorId={viewingVendor?.id || null}
             attachments={form.attachments}

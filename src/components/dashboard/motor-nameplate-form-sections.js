@@ -2,6 +2,7 @@
 
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import { FormSection } from "@/components/ui/form-layout";
 import { MOTOR_TYPE_SELECT_OPTIONS } from "@/lib/motor-type-options";
 
 /**
@@ -13,9 +14,8 @@ export default function MotorNameplateFormSections({ values, onFieldChange, disa
   const ch = (key) => (e) => onFieldChange(key, e.target.value ?? "");
 
   return (
-    <div className="w-full min-w-0 space-y-6">
-      <div className="w-full min-w-0">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Nameplate & identification</h3>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <FormSection title="Nameplate & identification">
         <div className="grid w-full min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             label="Serial number"
@@ -26,9 +26,8 @@ export default function MotorNameplateFormSections({ values, onFieldChange, disa
             className="min-w-0"
           />
         </div>
-      </div>
-      <div className="w-full min-w-0">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+      </FormSection>
+      <FormSection title="Motor details">
         <div className="grid w-full min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
           <Input
             label="Manufacturer"
@@ -82,7 +81,7 @@ export default function MotorNameplateFormSections({ values, onFieldChange, disa
           />
           <Input label="Bars" value={v.bars ?? ""} onChange={ch("bars")} placeholder="Bars" disabled={disabled} />
         </div>
-      </div>
+      </FormSection>
     </div>
   );
 }

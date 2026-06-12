@@ -10,7 +10,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Tabs from "@/components/ui/tabs";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import {
   AC_WORK_ORDER_FIELDS,
@@ -22,9 +22,7 @@ import {
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
 import WorkOrderInspectionsPanel from "@/components/dashboard/work-order-inspections-panel";
 
-const panelShell = "overflow-hidden rounded-lg border border-border bg-card";
 const sectionLabel = "text-[10px] font-semibold uppercase tracking-wide text-secondary";
-const sectionHeadingClass = "text-sm font-bold text-title";
 /** Same height for date input and select triggers in assignment grid */
 const assignmentControlSize =
   "!h-9 !min-h-9 !max-h-9 !box-border !py-1.5 !text-xs leading-normal";
@@ -100,16 +98,16 @@ function WorkOrderTopSection({
   onOpenCustomer,
 }) {
   return (
-    <div className={panelShell}>
+    <FormSection bodyClassName="p-0">
       <div className="flex flex-col lg:flex-row lg:items-stretch">
-        <div className="min-w-0 flex-1 border-b border-border px-3 py-3 lg:border-b-0 lg:border-r lg:py-3 lg:pr-4">
+        <div className="min-w-0 flex-1 border-b border-border px-4 py-3 lg:border-b-0 lg:border-r lg:py-3 lg:pr-4">
           <WorkOrderCustomerHeader
             editing={editing}
             onOpenQuote={onOpenQuote}
             onOpenCustomer={onOpenCustomer}
           />
         </div>
-        <div className="w-full shrink-0 px-3 py-2.5 lg:w-[min(50%,26rem)] lg:py-3 lg:pl-4">
+        <div className="w-full shrink-0 px-4 py-2.5 lg:w-[min(50%,26rem)] lg:py-3 lg:pl-4">
           <AssignmentFields
             form={form}
             setForm={setForm}
@@ -120,7 +118,7 @@ function WorkOrderTopSection({
           />
         </div>
       </div>
-    </div>
+    </FormSection>
   );
 }
 
@@ -130,11 +128,7 @@ function QuoteScopeBlock({ scopeLines = [], otherCostLines = [] }) {
   if (!hasScope && !hasOther) return null;
 
   return (
-    <div className={panelShell}>
-      <div className="border-b border-border px-3 py-2">
-        <h3 className={sectionHeadingClass}>Scope from quote</h3>
-      </div>
-      <div className="px-3 py-2">
+    <FormSection title="Scope from quote">
       {hasScope ? (
         <ul className="space-y-0.5 border-l-2 border-primary/35 pl-2.5">
           {scopeLines.map((row, i) => (
@@ -169,8 +163,7 @@ function QuoteScopeBlock({ scopeLines = [], otherCostLines = [] }) {
           </div>
         </div>
       ) : null}
-      </div>
-    </div>
+    </FormSection>
   );
 }
 
@@ -237,38 +230,20 @@ function AssignmentFields({
 
 function ShopNotesBlock({ form, setForm }) {
   return (
-    <div className={panelShell}>
-      <div className="border-b border-border px-3 py-2">
-        <h3 className={sectionHeadingClass}>Shop notes</h3>
-      </div>
-      <div className="px-3 py-2.5">
-        <Textarea
-          label="Shop notes"
-          id="wo-modal-notes"
-          name="notes"
-          rows={2}
-          placeholder="Floor / parts / customer notes…"
-          value={form.notes ?? ""}
-          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-          maxLength={8000}
-          className="!gap-0 [&_label]:sr-only"
-          textareaClassName="min-h-[3.25rem] !py-2 !text-base leading-normal"
-        />
-      </div>
-    </div>
-  );
-}
-
-/** Primary motor data — dense label-over-input grid (main fields to fill). */
-function MotorSpecsPrimarySection({ title, subtitle, children }) {
-  return (
-    <section className="overflow-hidden rounded-lg border-2 border-primary/35 bg-card ring-1 ring-primary/15">
-      <div className="border-b border-primary/25 bg-primary/10 px-3 py-2">
-        <h3 className={sectionHeadingClass}>{title}</h3>
-        {subtitle ? <p className="mt-0.5 text-[11px] leading-snug text-secondary">{subtitle}</p> : null}
-      </div>
-      <div className="bg-form-bg/20 p-3">{children}</div>
-    </section>
+    <FormSection title="Shop notes">
+      <Textarea
+        label="Shop notes"
+        id="wo-modal-notes"
+        name="notes"
+        rows={2}
+        placeholder="Floor / parts / customer notes…"
+        value={form.notes ?? ""}
+        onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+        maxLength={8000}
+        className="!gap-0 [&_label]:sr-only"
+        textareaClassName="min-h-[3.25rem] !py-2 !text-base leading-normal"
+      />
+    </FormSection>
   );
 }
 
@@ -578,7 +553,7 @@ export default function WorkOrderFormModal({
         <Form
           id="wo-form-modal"
           onSubmit={handleSave}
-          className="flex min-h-0 flex-col gap-2.5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          className={`${FORM_SECTIONS_STACK_CLASS} min-h-0 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
         >
           <WorkOrderTopSection
             editing={editing}
@@ -599,9 +574,11 @@ export default function WorkOrderFormModal({
           <ShopNotesBlock form={form} setForm={setForm} />
 
           {editing.motorClass === "AC" && (
-            <MotorSpecsPrimarySection
+            <FormSection
               title="AC motor — winding & mechanical"
               subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+              emphasis
+              bodyClassName="bg-form-bg/20"
             >
               <WoSpecDenseGrid
                 idPrefix="wo-modal-ac"
@@ -609,13 +586,15 @@ export default function WorkOrderFormModal({
                 values={form.acSpecs}
                 onChange={(k, v) => setForm((f) => ({ ...f, acSpecs: { ...f.acSpecs, [k]: v } }))}
               />
-            </MotorSpecsPrimarySection>
+            </FormSection>
           )}
 
           {editing.motorClass === "DC" && form.jobType === "armature_only" && (
-            <MotorSpecsPrimarySection
+            <FormSection
               title="Armature"
               subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+              emphasis
+              bodyClassName="bg-form-bg/20"
             >
               <WoSpecDenseGrid
                 idPrefix="wo-modal-arm"
@@ -628,13 +607,15 @@ export default function WorkOrderFormModal({
                   }))
                 }
               />
-            </MotorSpecsPrimarySection>
+            </FormSection>
           )}
 
           {editing.motorClass === "DC" && form.jobType !== "armature_only" && (
-            <MotorSpecsPrimarySection
+            <FormSection
               title="DC motor & armature"
               subtitle="Main work order data — use tabs for motor vs armature; saved to the customer motor on save."
+              emphasis
+              bodyClassName="bg-form-bg/20"
             >
               <Tabs
                 className="[&_[role=tabpanel]]:!pt-1.5"
@@ -672,7 +653,7 @@ export default function WorkOrderFormModal({
                   },
                 ]}
               />
-            </MotorSpecsPrimarySection>
+            </FormSection>
           )}
 
           {!editing.isDraft && editing.id ? (

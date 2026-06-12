@@ -29,6 +29,8 @@ import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import { REPAIR_FLOW_PHASE_LABELS, phaseBadgeVariant } from "@/lib/repair-flow-constants";
 import { getRepairFlowWorkOrderToolbarState } from "@/lib/repair-flow-work-order-toolbar";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { CustomerRecordLink } from "@/components/dashboard/customer-record-link";
 
 const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 
@@ -36,6 +38,7 @@ export default function RepairFlowPageClient() {
   const toast = useToast();
   const confirm = useConfirm();
   const [jobs, setJobs] = useState([]);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -333,7 +336,16 @@ export default function RepairFlowPageClient() {
         ),
       },
       { key: "jobNumber", label: "Job #", sortable: true },
-      { key: "customerLabel", label: "Customer", sortable: true },
+      {
+        key: "customerLabel",
+        label: "Customer",
+        sortable: true,
+        render: (_, row) => (
+          <CustomerRecordLink customerId={row.customerId} onOpen={setOpenCustomerId}>
+            {row.customerLabel || "—"}
+          </CustomerRecordLink>
+        ),
+      },
       { key: "motorLabel", label: "Motor", sortable: true },
       {
         key: "phase",
@@ -549,6 +561,13 @@ export default function RepairFlowPageClient() {
         }}
         repairFlowJobId={modalCommissionRepairFlowJobId}
         jobNumber={modalCommissionJobNumber}
+      />
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={56}
       />
     </div>
   );

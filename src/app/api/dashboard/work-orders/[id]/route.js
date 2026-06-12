@@ -21,7 +21,7 @@ import {
   consumeInventoryForQuoteOnShipped,
   releaseInventoryReservationsForQuote,
 } from "@/lib/inventory-service";
-import { normalizeWorkOrderJobType } from "@/lib/work-order-fields";
+import { mergeWorkOrderSpecsWithMotor, normalizeWorkOrderJobType } from "@/lib/work-order-fields";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -44,7 +44,7 @@ export async function GET(request, context) {
     const email = user.email.trim().toLowerCase();
     const doc = await WorkOrder.findOne({ _id: id, createdByEmail: email }).lean();
     if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    const [customer, quote, owner, settingsDoc, technician] = await Promise.all([
+    const [customer, quote, motor, owner, settingsDoc, technician] = await Promise.all([
       Customer.findOne({
         _id: doc.customerId,
         createdByEmail: email,
@@ -55,6 +55,9 @@ export async function GET(request, context) {
       })
         .select({ scopeLines: 1, partsLines: 1 })
         .lean(),
+      doc.motorId
+        ? Motor.findOne({ _id: doc.motorId, createdByEmail: email }).lean()
+        : Promise.resolve(null),
       User.findOne({ email }).lean(),
       UserSettings.findOne({ ownerEmail: email }).lean(),
       doc.technicianEmployeeId
@@ -63,6 +66,21 @@ export async function GET(request, context) {
             .lean()
         : Promise.resolve(null),
     ]);
+    const mergedSpecs = motor
+      ? mergeWorkOrderSpecsWithMotor(
+          {
+            acSpecs: doc.acSpecs,
+            dcSpecs: doc.dcSpecs,
+            armatureSpecs: doc.armatureSpecs,
+          },
+          motor,
+          doc.motorClass
+        )
+      : {
+          acSpecs: doc.acSpecs || {},
+          dcSpecs: doc.dcSpecs || {},
+          armatureSpecs: doc.armatureSpecs || {},
+        };
     const quoteScopeForTech = Array.isArray(quote?.scopeLines)
       ? quote.scopeLines
           .slice(0, 100)
@@ -88,6 +106,9 @@ export async function GET(request, context) {
 
     return NextResponse.json({
       ...doc,
+      acSpecs: mergedSpecs.acSpecs,
+      dcSpecs: mergedSpecs.dcSpecs,
+      armatureSpecs: mergedSpecs.armatureSpecs,
       id: doc._id.toString(),
       _id: undefined,
       customerCompany:

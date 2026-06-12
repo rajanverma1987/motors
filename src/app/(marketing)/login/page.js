@@ -8,6 +8,7 @@ import Input from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
 
 /** Open redirect safe: same-origin path only. */
 function safeNextPath(raw) {
@@ -33,7 +34,7 @@ function LoginPageContent() {
     [searchParams]
   );
   const intent = searchParams.get("intent") || "";
-  const defaultAfterLogin = "/dashboard";
+  const defaultAfterLogin = DEFAULT_PORTAL_LANDING_PATH;
   const afterLoginPath = nextPath || defaultAfterLogin;
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });

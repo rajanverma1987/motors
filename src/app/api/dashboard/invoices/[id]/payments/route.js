@@ -1,19 +1,22 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Invoice from "@/models/Invoice";
+import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
-import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { invoiceBalance, invoiceLineTotal, invoiceTotalPaid } from "@/lib/invoice-amounts";
+import {
+  invoicePaymentBalance,
+  invoicePaymentResponse,
+  parseInvoicePaymentBody,
+  syncInvoiceStatusFromPayments,
+} from "@/lib/invoice-payment-records";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
     : Promise.resolve(context.params || {});
 }
-
-const METHODS = new Set(["cash", "check", "ach", "wire", "card", "other", ""]);
 
 export async function POST(request, context) {
   try {
@@ -26,20 +29,10 @@ export async function POST(request, context) {
     if (!id) return NextResponse.json({ error: "ID required" }, { status: 400 });
     const email = user.email.trim().toLowerCase();
     const body = await request.json().catch(() => ({}));
-    const amount = parseFloat(String(body.amount ?? "").replace(/,/g, ""));
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+    const parsed = parseInvoicePaymentBody(body);
+    if (parsed.error) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
-    const paymentDate = String(body.paymentDate ?? "").trim().slice(0, 50);
-    if (!paymentDate) {
-      return NextResponse.json({ error: "Payment date required" }, { status: 400 });
-    }
-    const method = String(body.method ?? "").trim().toLowerCase();
-    if (!METHODS.has(method)) {
-      return NextResponse.json({ error: "Invalid payment method" }, { status: 400 });
-    }
-    const reference = String(body.reference ?? "").trim().slice(0, 200);
-    const notes = String(body.notes ?? "").trim().slice(0, 2000);
 
     await connectDB();
     const [doc, settingsDoc] = await Promise.all([
@@ -47,12 +40,11 @@ export async function POST(request, context) {
       UserSettings.findOne({ ownerEmail: email }).lean(),
     ]);
     if (!doc) return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    const cust = await Customer.findOne({ _id: doc.customerId, createdByEmail: email }).lean();
     const merged = mergeUserSettings(settingsDoc?.settings);
 
-    const total = invoiceLineTotal(doc.toObject());
-    const paidBefore = invoiceTotalPaid(doc.toObject());
-    const balance = Math.max(0, Math.round((total - paidBefore) * 100) / 100);
-    if (amount > balance + 0.009) {
+    const balance = invoicePaymentBalance(doc, cust);
+    if (parsed.amountNum > balance + 0.009) {
       return NextResponse.json(
         { error: `Amount exceeds open balance (${balance.toFixed(2)})` },
         { status: 400 }
@@ -61,33 +53,16 @@ export async function POST(request, context) {
 
     doc.payments = doc.payments || [];
     doc.payments.push({
-      amount: amount.toFixed(2),
-      paymentDate,
-      method: method || "other",
-      reference,
-      notes,
+      ...parsed.payment,
       recordedAt: new Date(),
     });
-
-    const paidAfter = paidBefore + Math.round(amount * 100) / 100;
-    const newBalance = Math.max(0, Math.round((total - paidAfter) * 100) / 100);
-    if (newBalance <= 0.005) {
-      doc.status = normalizeInvoiceStatusSlug("fully_paid", merged);
-    } else if (paidAfter > 0) {
-      doc.status = normalizeInvoiceStatusSlug("partial_paid", merged);
-    }
-
+    doc.markModified("payments");
+    syncInvoiceStatusFromPayments(doc, merged, cust);
     await doc.save();
-    const o = doc.toObject();
+
     return NextResponse.json({
       ok: true,
-      invoice: {
-        id: doc._id.toString(),
-        status: o.status,
-        totalPaid: invoiceTotalPaid(o),
-        balance: invoiceBalance(o),
-        payments: o.payments || [],
-      },
+      invoice: invoicePaymentResponse(doc, cust),
     });
   } catch (err) {
     console.error("Invoice payment POST:", err);

@@ -35,14 +35,17 @@ export function computeGrandTotal(subtotal, taxExempt, taxPercent) {
   return roundMoney(base + tax);
 }
 
+/** laborTotal = scope sum; partsTotal = other cost. Tax applies to scope only. */
 export function computeTotalsFromLaborAndParts({
   laborTotal,
   partsTotal,
   taxExempt,
   taxPercent,
 }) {
-  const subtotal = roundMoney(toNumber(laborTotal) + toNumber(partsTotal));
-  const taxAmount = computeTaxAmount(subtotal, taxExempt, taxPercent);
+  const labor = roundMoney(toNumber(laborTotal));
+  const parts = roundMoney(toNumber(partsTotal));
+  const subtotal = roundMoney(labor + parts);
+  const taxAmount = computeTaxAmount(labor, taxExempt, taxPercent);
   return {
     subtotal,
     taxAmount,

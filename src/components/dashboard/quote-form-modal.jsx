@@ -8,7 +8,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -434,7 +434,7 @@ export default function QuoteFormModal({
             <span className="text-secondary">Loading RFQ…</span>
           </div>
         ) : (
-          <Form id={FORM_ID} onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
+          <Form id={FORM_ID} onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
             <input
               type="hidden"
               name="technicianEmployeeId"
@@ -442,8 +442,7 @@ export default function QuoteFormModal({
               readOnly
               aria-hidden
             />
-            <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Quote info</h3>
+            <FormSection title="Quote info">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Input label={editFormJobIdLabel} value={form.rfqNumber || "—"} readOnly />
                 <Input
@@ -488,9 +487,8 @@ export default function QuoteFormModal({
                   placeholder="e.g. 2 weeks"
                 />
               </div>
-            </div>
-            <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer &amp; motor</h3>
+            </FormSection>
+            <FormSection title="Customer & motor">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Select
                   label="Customer"
@@ -543,7 +541,7 @@ export default function QuoteFormModal({
                 }}
                 onMotorSaved={() => loadMotors()}
               />
-            </div>
+            </FormSection>
             {isWriteUpStatus(form?.status) && viewingQuote?.id ? (
               <RfqPreInspectionSection
                 quoteId={viewingQuote.id}
@@ -561,10 +559,7 @@ export default function QuoteFormModal({
                 disabled={savingQuote}
               />
             )}
-            <div>
-              <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-                Scope &amp; Other Cost
-              </h3>
+            <FormSection title="Scope & other cost">
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
                 <div className="lg:col-span-2">
                   <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -621,45 +616,31 @@ export default function QuoteFormModal({
                   </tbody>
                 </table>
               </div>
-            </div>
-            <div>
+            </FormSection>
+            <FormSection title="Notes">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div className="min-w-0">
-                  <label
-                    htmlFor="quote-form-modal-internal-notes"
-                    className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
-                  >
-                    Internal Notes
-                  </label>
-                  <Textarea
-                    id="quote-form-modal-internal-notes"
-                    name="internalNotes"
-                    value={form.notes}
-                    onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                    rows={4}
-                    placeholder="Terms, technician notes, and caveats…"
-                    textareaClassName="min-h-[7.5rem] w-full min-w-0"
-                  />
-                </div>
-                <div className="min-w-0">
-                  <label
-                    htmlFor="quote-form-modal-customer-notes"
-                    className="mb-2 block cursor-default text-sm font-semibold uppercase tracking-wide text-title"
-                  >
-                    Customer Notes
-                  </label>
-                  <Textarea
-                    id="quote-form-modal-customer-notes"
-                    name="customerNotes"
-                    value={form.customerNotes}
-                    onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
-                    rows={4}
-                    placeholder="Shown on the proposal and documents sent to the customer…"
-                    textareaClassName="min-h-[7.5rem] w-full min-w-0"
-                  />
-                </div>
+                <Textarea
+                  id="quote-form-modal-internal-notes"
+                  name="internalNotes"
+                  label="Internal notes"
+                  value={form.notes}
+                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                  rows={4}
+                  placeholder="Terms, technician notes, and caveats…"
+                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
+                />
+                <Textarea
+                  id="quote-form-modal-customer-notes"
+                  name="customerNotes"
+                  label="Customer notes"
+                  value={form.customerNotes}
+                  onChange={(e) => setForm((f) => ({ ...f, customerNotes: e.target.value }))}
+                  rows={4}
+                  placeholder="Shown on the proposal and documents sent to the customer…"
+                  textareaClassName="min-h-[7.5rem] w-full min-w-0"
+                />
               </div>
-            </div>
+            </FormSection>
           </Form>
         )}
       </Modal>
@@ -682,14 +663,11 @@ export default function QuoteFormModal({
           </Button>
         }
       >
-        <Form id={ADD_MOTOR_FORM_ID} onSubmit={handleAddMotorSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-              Customer & identification
-            </h3>
-            <p className="mb-3 text-sm text-secondary">
-              Linked to: <span className="font-medium text-title">{selectedCustomer?.companyName || "—"}</span>
-            </p>
+        <Form id={ADD_MOTOR_FORM_ID} onSubmit={handleAddMotorSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection
+            title="Customer & identification"
+            subtitle={`Linked to: ${selectedCustomer?.companyName || "—"}`}
+          >
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Serial number"
@@ -698,9 +676,8 @@ export default function QuoteFormModal({
                 placeholder="Serial number"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+          </FormSection>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Manufacturer"
@@ -782,16 +759,17 @@ export default function QuoteFormModal({
                 placeholder="Bars"
               />
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={addMotorForm.notes}
               onChange={(e) => setAddMotorForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes, problem description, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 

@@ -5,6 +5,58 @@ import HelpIcon from "./help-icon";
 
 const SECTION_TITLE_CLASS = "mb-4 text-title font-semibold";
 
+/** Stack class for multiple FormSection blocks inside a modal form. */
+export const FORM_SECTIONS_STACK_CLASS = "flex flex-col gap-4";
+
+export const FORM_SECTION_SHELL_CLASS =
+  "overflow-hidden rounded-lg border border-border bg-card shadow-sm dark:shadow-black/20";
+
+export const FORM_SECTION_HEADER_CLASS =
+  "border-b border-border bg-form-bg/90 px-4 py-2.5 dark:bg-form-bg/60";
+
+export const FORM_SECTION_TITLE_CLASS =
+  "text-sm font-bold uppercase tracking-wide text-title";
+
+export const FORM_SECTION_BODY_CLASS = "px-4 py-3";
+
+/**
+ * Bordered dashboard form section with a visible header bar (modal forms, settings, etc.).
+ * @param {string} [title]
+ * @param {string} [subtitle]
+ * @param {boolean} [emphasis] — primary accent (main editable block)
+ */
+export function FormSection({
+  title,
+  subtitle,
+  headerRight = null,
+  children,
+  className = "",
+  bodyClassName = "",
+  emphasis = false,
+}) {
+  const shell = emphasis
+    ? "overflow-hidden rounded-lg border-2 border-primary/35 bg-card shadow-sm ring-1 ring-primary/15 dark:shadow-black/20"
+    : FORM_SECTION_SHELL_CLASS;
+  const header = emphasis
+    ? "border-b border-primary/25 bg-primary/10 px-4 py-2.5"
+    : FORM_SECTION_HEADER_CLASS;
+
+  return (
+    <section className={`${shell} ${className}`.trim()}>
+      {title ? (
+        <header className={`${header} flex items-start justify-between gap-3`}>
+          <div className="min-w-0">
+            <h3 className={FORM_SECTION_TITLE_CLASS}>{title}</h3>
+            {subtitle ? <p className="mt-0.5 text-xs leading-snug text-secondary">{subtitle}</p> : null}
+          </div>
+          {headerRight ? <div className="shrink-0">{headerRight}</div> : null}
+        </header>
+      ) : null}
+      <div className={`${FORM_SECTION_BODY_CLASS} ${bodyClassName}`.trim()}>{children}</div>
+    </section>
+  );
+}
+
 const sectionTitleSize = {
   h1: "text-2xl",
   h2: "text-xl",
@@ -168,4 +220,6 @@ FormLayout.FormField = FormField;
 FormLayout.FullRow = FormFullRow;
 FormLayout.Container = FormContainer;
 FormLayout.SectionTitle = FormSectionTitle;
+FormLayout.Section = FormSection;
+FormLayout.SectionsStack = FORM_SECTIONS_STACK_CLASS;
 export default FormLayout;

@@ -6,7 +6,7 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import {
   buildCustomerPayload,
@@ -144,9 +144,8 @@ export default function CustomerFormModal({
       {loading ? (
         <p className="py-8 text-center text-secondary">Loading…</p>
       ) : (
-        <Form id={FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Company & contact</h3>
+        <Form id={FORM_ID} onSubmit={handleSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Company & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Company name"
@@ -187,14 +186,15 @@ export default function CustomerFormModal({
                 disabled={form.taxExempt}
               />
             </div>
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Additional contacts</h3>
+          </FormSection>
+          <FormSection
+            title="Additional contacts"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={addAdditionalContact}>
                 Add contact
               </Button>
-            </div>
+            }
+          >
             {(form.additionalContacts || []).length === 0 ? (
               <p className="text-sm text-secondary">No additional contacts.</p>
             ) : (
@@ -226,9 +226,8 @@ export default function CustomerFormModal({
                 ))}
               </div>
             )}
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Billing address</h3>
+          </FormSection>
+          <FormSection title="Billing address">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -241,14 +240,15 @@ export default function CustomerFormModal({
               <Input label="Zip code" value={form.zipCode} onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))} />
               <Input label="Country" value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} />
             </div>
-          </div>
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-title">Shipping address</h3>
+          </FormSection>
+          <FormSection
+            title="Shipping address"
+            headerRight={
               <Button type="button" variant="outline" size="sm" onClick={copyBillingToShipping}>
                 Copy from billing
               </Button>
-            </div>
+            }
+          >
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Street address"
@@ -261,13 +261,16 @@ export default function CustomerFormModal({
               <Input label="Zip code" value={form.shippingZipCode} onChange={(e) => setForm((f) => ({ ...f, shippingZipCode: e.target.value }))} />
               <Input label="Country" value={form.shippingCountry} onChange={(e) => setForm((f) => ({ ...f, shippingCountry: e.target.value }))} />
             </div>
-          </div>
-          <Textarea
-            label="Notes"
-            value={form.notes}
-            onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            rows={3}
-          />
+          </FormSection>
+          <FormSection title="Notes">
+            <Textarea
+              label="Notes"
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              rows={3}
+              className="[&_label]:sr-only"
+            />
+          </FormSection>
         </Form>
       )}
     </Modal>

@@ -11,7 +11,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Badge from "@/components/ui/badge";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -1757,9 +1757,8 @@ export default function DashboardPurchaseOrdersPage() {
           </>
         }
       >
-        <Form id="create-po-form" onSubmit={handleCreateSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Vendor & type</h3>
+        <Form id="create-po-form" onSubmit={handleCreateSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Vendor & type">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input label="PO #" value={nextPoNumber} readOnly />
               <Select
@@ -1798,9 +1797,8 @@ export default function DashboardPurchaseOrdersPage() {
                 />
               )}
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-base font-bold text-title">Line items</h3>
+          </FormSection>
+          <FormSection title="Line items">
             <DataTable
               columns={PO_LINE_COLUMNS}
               data={form.lineItems}
@@ -1809,16 +1807,17 @@ export default function DashboardPurchaseOrdersPage() {
               headerClassName="px-3 py-2.5 text-left text-sm font-semibold text-title"
             />
             <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes"
               rows={2}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
           <VendorAttachmentsPanel
             resourceLabel="purchase order"
             vendorId={null}
@@ -1843,9 +1842,8 @@ export default function DashboardPurchaseOrdersPage() {
           </Button>
         }
       >
-        <Form id="add-vendor-form" onSubmit={handleAddVendorSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Vendor & contact</h3>
+        <Form id="add-vendor-form" onSubmit={handleAddVendorSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Vendor & contact">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label="Vendor name"
@@ -1908,9 +1906,8 @@ export default function DashboardPurchaseOrdersPage() {
                 placeholder="ZIP code"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Parts & terms</h3>
+          </FormSection>
+          <FormSection title="Parts & terms">
             <div className="flex flex-col gap-4">
               <Input
                 label="Payment terms"
@@ -1929,8 +1926,8 @@ export default function DashboardPurchaseOrdersPage() {
                 />
               </div>
             </div>
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               name="notes"
@@ -1938,8 +1935,9 @@ export default function DashboardPurchaseOrdersPage() {
               onChange={(e) => setVendorForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes"
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -2100,7 +2098,7 @@ export default function DashboardPurchaseOrdersPage() {
           </>
         }
       >
-        <Form id="attach-invoice-form" onSubmit={handleAttachInvoice} className="flex flex-col gap-4 !space-y-0">
+        <Form id="attach-invoice-form" onSubmit={handleAttachInvoice} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <Input
             label="Invoice number"
             value={invoiceForm.invoiceNumber}
@@ -2250,7 +2248,7 @@ export default function DashboardPurchaseOrdersPage() {
           </>
         }
       >
-        <Form id="record-payment-form" onSubmit={handleRecordPayment} className="flex flex-col gap-4 !space-y-0">
+        <Form id="record-payment-form" onSubmit={handleRecordPayment} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <Input
             label="Amount"
             type="number"
@@ -2360,9 +2358,8 @@ export default function DashboardPurchaseOrdersPage() {
           </Button>
         }
       >
-        <Form id="edit-po-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Vendor & type</h3>
+        <Form id="edit-po-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Vendor & type">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Select
                 label="Vendor"
@@ -2400,9 +2397,8 @@ export default function DashboardPurchaseOrdersPage() {
                 />
               )}
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-base font-bold text-title">Line items</h3>
+          </FormSection>
+          <FormSection title="Line items">
             <DataTable
               columns={PO_LINE_COLUMNS}
               data={form.lineItems}
@@ -2415,16 +2411,17 @@ export default function DashboardPurchaseOrdersPage() {
               otherCharges={viewingPo?.otherCharges}
               fmt={fmt}
             />
-          </div>
-          <div>
+          </FormSection>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes"
               rows={2}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
           <VendorAttachmentsPanel
             resourceLabel="purchase order"
             resourceId={viewingPo?.id || null}

@@ -8,6 +8,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
+import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
 
 export default function DashboardNav() {
   const { user, logout } = useAuth();
@@ -15,7 +16,7 @@ export default function DashboardNav() {
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const calculatorOnly = !!user?.calculatorOnlyAccount;
-  const homeHref = calculatorOnly ? "/dashboard/calculators" : "/dashboard";
+  const homeHref = calculatorOnly ? "/dashboard/calculators" : DEFAULT_PORTAL_LANDING_PATH;
 
   useEffect(() => {
     const onKeyDown = (e) => {

@@ -6,10 +6,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import {
   motorClassFromMotorType,
   normalizeWorkOrderJobType,
-  prefillSpecsFromMotor,
-  AC_WORK_ORDER_FIELDS,
-  DC_WORK_ORDER_FIELDS,
-  DC_ARMATURE_FIELDS,
+  specsFromMotorRecord,
   DEFAULT_WORK_ORDER_STATUSES,
 } from "@/lib/work-order-fields";
 import { effectiveWorkOrderNumberPrefix, workOrderNumberStem, workOrderNumberPatternRegex } from "@/lib/document-number-prefixes";
@@ -131,27 +128,7 @@ export async function createWorkOrderForQuote({
   const techId = String(technicianEmployeeId || "").trim();
   const jobType = normalizeWorkOrderJobType(jobTypeRaw, motorClass);
 
-  const acSpecs =
-    motorClass === "AC"
-      ? {
-          ...prefillSpecsFromMotor(motor, AC_WORK_ORDER_FIELDS),
-          ...(motor.acSpecs && typeof motor.acSpecs === "object" ? motor.acSpecs : {}),
-        }
-      : {};
-  const dcSpecs =
-    motorClass === "DC"
-      ? {
-          ...prefillSpecsFromMotor(motor, DC_WORK_ORDER_FIELDS),
-          ...(motor.dcSpecs && typeof motor.dcSpecs === "object" ? motor.dcSpecs : {}),
-        }
-      : {};
-  const armatureSpecs =
-    motorClass === "DC"
-      ? {
-          ...prefillSpecsFromMotor(motor, DC_ARMATURE_FIELDS),
-          ...(motor.dcArmatureSpecs && typeof motor.dcArmatureSpecs === "object" ? motor.dcArmatureSpecs : {}),
-        }
-      : {};
+  const { acSpecs, dcSpecs, armatureSpecs } = specsFromMotorRecord(motor, motorClass);
 
   const statusToStore = String(forcedStatus || "").trim() || initialStatusFromSettings(settingsDoc);
   const notes = String(notesOpt || "").trim().slice(0, 8000);

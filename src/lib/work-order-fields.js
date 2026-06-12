@@ -202,10 +202,10 @@ export function emptySpecsFromFields(fieldList) {
   return o;
 }
 
-export function prefillSpecsFromMotor(motor, fieldList) {
+/** Nameplate + identification values on Motor → work order spec keys. */
+function motorNameplateSpecMap(motor) {
   const m = motor || {};
-  const out = emptySpecsFromFields(fieldList);
-  const map = {
+  return {
     hp: m.hp,
     make: m.manufacturer,
     model: m.model,
@@ -215,12 +215,108 @@ export function prefillSpecsFromMotor(motor, fieldList) {
     rpm: m.rpm,
     type: m.motorType,
     slots: m.slots,
+    bars: m.bars,
     core_length: m.coreLength,
     core_dia: m.coreDiameter,
-    bars: m.bars,
+    inside_diameter: m.coreDiameter,
+    iron_l: m.coreLength,
+    iron_diam: m.coreDiameter,
   };
+}
+
+export function prefillSpecsFromMotor(motor, fieldList) {
+  const map = motorNameplateSpecMap(motor);
+  const out = emptySpecsFromFields(fieldList);
   for (const { key } of fieldList) {
     if (map[key] != null && String(map[key]).trim() !== "") out[key] = String(map[key]).trim();
   }
   return out;
+}
+
+function mergeStoredMotorSpecs(stored, fieldList, base) {
+  const out = { ...base };
+  if (!stored || typeof stored !== "object") return out;
+  for (const { key } of fieldList) {
+    const v = stored[key];
+    if (v != null && String(v).trim() !== "") out[key] = String(v).trim();
+  }
+  return out;
+}
+
+/**
+ * Full motor specs for a new work order (nameplate + motor.acSpecs / dcSpecs / dcArmatureSpecs).
+ * @param {object} motor
+ * @param {"AC"|"DC"} motorClass
+ */
+export function specsFromMotorRecord(motor, motorClass) {
+  const mc = motorClass || motorClassFromMotorType(motor?.motorType);
+  const m = motor || {};
+  if (mc === "AC") {
+    return {
+      acSpecs: mergeStoredMotorSpecs(
+        m.acSpecs,
+        AC_WORK_ORDER_FIELDS,
+        prefillSpecsFromMotor(m, AC_WORK_ORDER_FIELDS)
+      ),
+      dcSpecs: {},
+      armatureSpecs: {},
+    };
+  }
+  if (mc === "DC") {
+    return {
+      acSpecs: {},
+      dcSpecs: mergeStoredMotorSpecs(
+        m.dcSpecs,
+        DC_WORK_ORDER_FIELDS,
+        prefillSpecsFromMotor(m, DC_WORK_ORDER_FIELDS)
+      ),
+      armatureSpecs: mergeStoredMotorSpecs(
+        m.dcArmatureSpecs,
+        DC_ARMATURE_FIELDS,
+        prefillSpecsFromMotor(m, DC_ARMATURE_FIELDS)
+      ),
+    };
+  }
+  return { acSpecs: {}, dcSpecs: {}, armatureSpecs: {} };
+}
+
+/**
+ * Work order specs with empty fields filled from the linked motor record.
+ * Saved work order values take priority.
+ * @param {{ acSpecs?: object, dcSpecs?: object, armatureSpecs?: object }} woSpecs
+ * @param {object} motor
+ * @param {"AC"|"DC"} motorClass
+ */
+export function mergeWorkOrderSpecsWithMotor(woSpecs, motor, motorClass) {
+  const fromMotor = specsFromMotorRecord(motor, motorClass);
+  const fill = (wo, motorSpec, fieldList) => {
+    const out = {};
+    for (const { key } of fieldList) {
+      const w = String(wo?.[key] ?? "").trim();
+      const mv = String(motorSpec?.[key] ?? "").trim();
+      out[key] = w || mv;
+    }
+    return out;
+  };
+  const mc = motorClass || motorClassFromMotorType(motor?.motorType);
+  if (mc === "AC") {
+    return {
+      acSpecs: fill(woSpecs?.acSpecs, fromMotor.acSpecs, AC_WORK_ORDER_FIELDS),
+      dcSpecs: {},
+      armatureSpecs: {},
+    };
+  }
+  if (mc === "DC") {
+    return {
+      acSpecs: {},
+      dcSpecs: fill(woSpecs?.dcSpecs, fromMotor.dcSpecs, DC_WORK_ORDER_FIELDS),
+      armatureSpecs: fill(woSpecs?.armatureSpecs, fromMotor.armatureSpecs, DC_ARMATURE_FIELDS),
+    };
+  }
+  return {
+    acSpecs: woSpecs?.acSpecs && typeof woSpecs.acSpecs === "object" ? woSpecs.acSpecs : {},
+    dcSpecs: woSpecs?.dcSpecs && typeof woSpecs.dcSpecs === "object" ? woSpecs.dcSpecs : {},
+    armatureSpecs:
+      woSpecs?.armatureSpecs && typeof woSpecs.armatureSpecs === "object" ? woSpecs.armatureSpecs : {},
+  };
 }

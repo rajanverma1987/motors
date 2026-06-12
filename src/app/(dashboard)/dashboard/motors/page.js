@@ -10,9 +10,11 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
-import { Form, FormLayout, FormField } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS, FormLayout, FormField } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { CustomerRecordLink } from "@/components/dashboard/customer-record-link";
 import {
   AC_OTHERS_FIELDS,
   AC_WORK_ORDER_FIELDS,
@@ -202,6 +204,7 @@ export default function DashboardMotorsPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "createdAt", direction: "desc" });
   const [deletingMotorId, setDeletingMotorId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [form, setForm] = useState(() => freshMotorForm());
   const formRef = useRef(form);
   formRef.current = form;
@@ -512,7 +515,14 @@ export default function DashboardMotorsPage() {
         key: "customer",
         label: "Customer",
         sortable: true,
-        render: (_, row) => customerNameMap[row.customerId] || row.customerId || "—",
+        render: (_, row) => (
+          <CustomerRecordLink
+            customerId={row.customerId}
+            onOpen={setOpenCustomerId}
+          >
+            {customerNameMap[row.customerId] || row.customerId || "—"}
+          </CustomerRecordLink>
+        ),
       },
       {
         key: "serialNumber",
@@ -590,9 +600,8 @@ export default function DashboardMotorsPage() {
           </Button>
         }
       >
-        <Form id="create-motor-form" onSubmit={handleCreateSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer & identification</h3>
+        <Form id="create-motor-form" onSubmit={handleCreateSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Customer & identification">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Select
                 label="Customer"
@@ -610,9 +619,8 @@ export default function DashboardMotorsPage() {
                 placeholder="Serial number"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+          </FormSection>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Input
                 label="Manufacturer"
@@ -694,13 +702,14 @@ export default function DashboardMotorsPage() {
                 placeholder="Bars"
               />
             </div>
-          </div>
+          </FormSection>
           {isAcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4">
-              <p className="mb-4 text-sm text-secondary">
-                AC winding data on this motor (fields not already in Motor details above). New work orders prefill from here.
-              </p>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">AC winding</h3>
+            <FormSection
+              title="AC winding"
+              subtitle="AC winding data on this motor (fields not already in Motor details above). New work orders prefill from here."
+              emphasis
+              bodyClassName="bg-form-bg/20"
+            >
               <MotorSpecGrid
                 fields={AC_OTHERS_FIELDS}
                 values={form.acSpecs}
@@ -709,14 +718,15 @@ export default function DashboardMotorsPage() {
                 }
                 idPrefix="create-ac"
               />
-            </div>
+            </FormSection>
           ) : isDcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4 space-y-8">
-              <p className="text-sm text-secondary">
-                DC field and armature data on this motor (fields not already in Motor details above). New work orders prefill from here.
-              </p>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">DC motor</h3>
+            <>
+              <FormSection
+                title="DC motor"
+                subtitle="DC field data on this motor (fields not already in Motor details above). New work orders prefill from here."
+                emphasis
+                bodyClassName="bg-form-bg/20"
+              >
                 <MotorSpecGrid
                   fields={DC_OTHERS_FIELDS}
                   values={form.dcSpecs}
@@ -725,9 +735,8 @@ export default function DashboardMotorsPage() {
                   }
                   idPrefix="create-dc"
                 />
-              </div>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">Armature</h3>
+              </FormSection>
+              <FormSection title="Armature" emphasis bodyClassName="bg-form-bg/20">
                 <MotorSpecGrid
                   fields={DC_ARMATURE_OTHERS_FIELDS}
                   values={form.dcArmatureSpecs}
@@ -739,23 +748,24 @@ export default function DashboardMotorsPage() {
                   }
                   idPrefix="create-arm"
                 />
-              </div>
-            </div>
+              </FormSection>
+            </>
           ) : (
             <p className="text-sm text-secondary">
               Select <span className="font-medium text-title">AC</span> or{" "}
               <span className="font-medium text-title">DC</span> as motor type above to enter technical fields.
             </p>
           )}
-          <div>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes, problem description, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -786,7 +796,7 @@ export default function DashboardMotorsPage() {
             <span className="text-secondary">Loading…</span>
           </div>
         ) : viewingMotor ? (
-          <div className="space-y-6">
+          <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Customer</h3>
               <p className="text-title font-medium">{customerNameMap[viewingMotor.customerId] || viewingMotor.customerId || "—"}</p>
@@ -860,9 +870,8 @@ export default function DashboardMotorsPage() {
           </Button>
         }
       >
-        <Form id="edit-motor-form" onSubmit={handleEditSubmit} className="flex flex-col gap-5 !space-y-0">
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Customer & identification</h3>
+        <Form id="edit-motor-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <FormSection title="Customer & identification">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Select
                 label="Customer"
@@ -880,9 +889,8 @@ export default function DashboardMotorsPage() {
                 placeholder="Serial number"
               />
             </div>
-          </div>
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">Motor details</h3>
+          </FormSection>
+          <FormSection title="Motor details">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-5">
               <Input
                 label="Manufacturer"
@@ -964,13 +972,14 @@ export default function DashboardMotorsPage() {
                 placeholder="Bars"
               />
             </div>
-          </div>
+          </FormSection>
           {isAcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4">
-              <p className="mb-4 text-sm text-secondary">
-                AC winding data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved.
-              </p>
-              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">AC winding</h3>
+            <FormSection
+              title="AC winding"
+              subtitle="AC winding data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved."
+              emphasis
+              bodyClassName="bg-form-bg/20"
+            >
               <MotorSpecGrid
                 fields={AC_OTHERS_FIELDS}
                 values={form.acSpecs}
@@ -979,14 +988,15 @@ export default function DashboardMotorsPage() {
                 }
                 idPrefix="edit-ac"
               />
-            </div>
+            </FormSection>
           ) : isDcMotorType(form.motorType) ? (
-            <div className="rounded-lg border border-border bg-form-bg/50 p-4 space-y-8">
-              <p className="text-sm text-secondary">
-                DC and armature data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved.
-              </p>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">DC motor</h3>
+            <>
+              <FormSection
+                title="DC motor"
+                subtitle="DC field data (fields not already in Motor details above). Pre-fills new work orders; also updates when a work order is saved."
+                emphasis
+                bodyClassName="bg-form-bg/20"
+              >
                 <MotorSpecGrid
                   fields={DC_OTHERS_FIELDS}
                   values={form.dcSpecs}
@@ -995,9 +1005,8 @@ export default function DashboardMotorsPage() {
                   }
                   idPrefix="edit-dc"
                 />
-              </div>
-              <div>
-                <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">Armature</h3>
+              </FormSection>
+              <FormSection title="Armature" emphasis bodyClassName="bg-form-bg/20">
                 <MotorSpecGrid
                   fields={DC_ARMATURE_OTHERS_FIELDS}
                   values={form.dcArmatureSpecs}
@@ -1009,25 +1018,32 @@ export default function DashboardMotorsPage() {
                   }
                   idPrefix="edit-arm"
                 />
-              </div>
-            </div>
+              </FormSection>
+            </>
           ) : (
             <p className="text-sm text-secondary">
               Select <span className="font-medium text-title">AC</span> or{" "}
               <span className="font-medium text-title">DC</span> as motor type above to enter technical fields.
             </p>
           )}
-          <div>
+          <FormSection title="Notes">
             <Textarea
               label="Notes"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               placeholder="Notes, problem description, etc."
               rows={3}
+              className="[&_label]:sr-only"
             />
-          </div>
+          </FormSection>
         </Form>
       </Modal>
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+      />
     </div>
   );
 }

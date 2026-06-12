@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import {
   FiDollarSign,
   FiDownload,
+  FiEdit2,
   FiExternalLink,
   FiLayers,
   FiClock,
   FiAlertCircle,
+  FiTrash2,
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
@@ -18,15 +20,17 @@ import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
+import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import { formatDateMdy } from "@/lib/format-date";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { CustomerRecordLink } from "@/components/dashboard/customer-record-link";
 
 const TABS = [
   { id: "open", label: "Open (due)", include: "open" },
-  { id: "customer", label: "By customer", include: "open" },
   { id: "draft", label: "Drafts (unpaid)", include: "draft" },
   { id: "paid", label: "Paid history", include: "paid" },
 ];
@@ -52,9 +56,13 @@ function todayISODate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function paymentMethodLabel(value) {
+  return PAYMENT_METHODS.find((m) => m.value === value)?.label || value || "—";
+}
+
 export default function AccountsReceivablePageClient() {
   const toast = useToast();
-  const router = useRouter();
+  const confirm = useConfirm();
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
   const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
@@ -78,12 +86,15 @@ export default function AccountsReceivablePageClient() {
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
   const [paySubmitting, setPaySubmitting] = useState(false);
+  const [editingPaymentIndex, setEditingPaymentIndex] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [invoiceModal, setInvoiceModal] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const inc =
-        tab === "customer" ? "open" : TABS.find((t) => t.id === tab)?.include || "open";
+      const inc = TABS.find((t) => t.id === tab)?.include || "open";
       const res = await fetch(`/api/dashboard/accounts-receivable?include=${inc}`, {
         credentials: "include",
         cache: "no-store",
@@ -105,37 +116,43 @@ export default function AccountsReceivablePageClient() {
   }, [load]);
 
   const filteredOpenRows = useMemo(() => {
-    if (tab !== "open" && tab !== "customer") return rows;
+    if (tab !== "open") return rows;
     if (agingFilter === "all") return rows;
     return rows.filter((r) => r.agingBucket === agingFilter);
   }, [rows, agingFilter, tab]);
 
-  const customerGroups = useMemo(() => {
-    const map = new Map();
-    for (const r of filteredOpenRows) {
-      const k = r.customerId;
-      if (!map.has(k)) {
-        map.set(k, {
-          customerId: k,
-          customerName: r.customerName,
-          balance: 0,
-          invoices: [],
-        });
-      }
-      const g = map.get(k);
-      g.balance += r.balance;
-      g.invoices.push(r);
+  const applyPaymentModalInvoice = useCallback((inv, rowFallback, { resetAmount = false } = {}) => {
+    const bal = Math.max(0, inv.balance ?? rowFallback?.balance ?? 0);
+    setPaymentRow((prev) => ({
+      ...(rowFallback || prev || {}),
+      balance: bal,
+      customerName: inv.customerName || rowFallback?.customerName,
+      invoiceNumber: inv.invoiceNumber || rowFallback?.invoiceNumber,
+    }));
+    setPaymentHistory(
+      Array.isArray(inv.payments)
+        ? inv.payments.map((p, i) => ({ ...p, _index: i }))
+        : []
+    );
+    if (resetAmount) {
+      setPayAmount(bal > 0 ? String(bal) : "");
     }
-    return [...map.values()].sort((a, b) => b.balance - a.balance);
-  }, [filteredOpenRows]);
+  }, []);
 
-  const openPaymentModal = async (row) => {
-    setPaymentForId(row.id);
-    setPaymentRow(row);
+  const resetPaymentForm = useCallback((balance) => {
+    setEditingPaymentIndex(null);
     setPayDate(todayISODate());
     setPayMethod("check");
     setPayRef("");
     setPayNotes("");
+    const bal = Math.max(0, Number(balance) || 0);
+    setPayAmount(bal > 0 ? String(bal) : "");
+  }, []);
+
+  const openPaymentModal = async (row) => {
+    setPaymentForId(row.id);
+    setPaymentRow(row);
+    resetPaymentForm(row.balance);
     try {
       const res = await fetch(`/api/dashboard/invoices/${row.id}`, {
         credentials: "include",
@@ -143,13 +160,70 @@ export default function AccountsReceivablePageClient() {
       });
       const inv = await res.json();
       if (!res.ok) throw new Error(inv.error || "Failed");
-      const bal = Math.max(0, inv.balance ?? row.balance);
-      setPayAmount(bal > 0 ? String(bal) : "");
-      setPaymentHistory(Array.isArray(inv.payments) ? [...inv.payments].reverse() : []);
+      applyPaymentModalInvoice(inv, row, { resetAmount: true });
     } catch (e) {
       toast.error(e.message || "Could not load invoice");
       setPayAmount(String(row.balance));
       setPaymentHistory([]);
+    }
+  };
+
+  const refreshPaymentModal = useCallback(
+    async (invoiceId, rowFallback, { resetAmount = false } = {}) => {
+      const res = await fetch(`/api/dashboard/invoices/${invoiceId}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const inv = await res.json();
+      if (!res.ok) throw new Error(inv.error || "Failed to load invoice");
+      applyPaymentModalInvoice(inv, rowFallback, { resetAmount });
+      return inv;
+    },
+    [applyPaymentModalInvoice]
+  );
+
+  const handleEditPayment = (payment) => {
+    if (payment?._index == null) return;
+    setEditingPaymentIndex(payment._index);
+    setPayAmount(String(payment.amount ?? ""));
+    setPayDate(String(payment.paymentDate ?? "").slice(0, 10) || todayISODate());
+    setPayMethod(payment.method || "check");
+    setPayRef(payment.reference || "");
+    setPayNotes(payment.notes || "");
+  };
+
+  const handleDeletePayment = async (payment) => {
+    if (!paymentForId || payment?._index == null || paySubmitting) return;
+    const ok = await confirm({
+      title: "Delete payment",
+      message: `Remove this payment${payment.amount ? ` (${fmt(payment.amount)})` : ""}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setPaySubmitting(true);
+    try {
+      const res = await fetch(
+        `/api/dashboard/invoices/${paymentForId}/payments/${payment._index}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Delete failed");
+      toast.success("Payment removed.");
+      if (editingPaymentIndex === payment._index) {
+        resetPaymentForm(d.invoice?.balance ?? paymentRow?.balance);
+      } else if (editingPaymentIndex != null && editingPaymentIndex > payment._index) {
+        setEditingPaymentIndex(editingPaymentIndex - 1);
+      }
+      await refreshPaymentModal(paymentForId, {
+        ...paymentRow,
+        balance: d.invoice?.balance ?? paymentRow?.balance,
+      });
+      load();
+    } catch (e) {
+      toast.error(e.message || "Could not delete payment");
+    } finally {
+      setPaySubmitting(false);
     }
   };
 
@@ -162,8 +236,12 @@ export default function AccountsReceivablePageClient() {
     }
     setPaySubmitting(true);
     try {
-      const res = await fetch(`/api/dashboard/invoices/${paymentForId}/payments`, {
-        method: "POST",
+      const isEdit = editingPaymentIndex != null && editingPaymentIndex >= 0;
+      const url = isEdit
+        ? `/api/dashboard/invoices/${paymentForId}/payments/${editingPaymentIndex}`
+        : `/api/dashboard/invoices/${paymentForId}/payments`;
+      const res = await fetch(url, {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
@@ -176,53 +254,46 @@ export default function AccountsReceivablePageClient() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || "Payment failed");
-      toast.success("Payment recorded.");
-      setPaymentForId(null);
-      setPaymentRow(null);
+      toast.success(isEdit ? "Payment updated." : "Payment recorded.");
+      resetPaymentForm(d.invoice?.balance ?? 0);
+      await refreshPaymentModal(
+        paymentForId,
+        {
+          ...paymentRow,
+          balance: d.invoice?.balance ?? paymentRow?.balance,
+        },
+        { resetAmount: true }
+      );
+      if ((d.invoice?.balance ?? 0) <= 0.009) {
+        setPaymentForId(null);
+        setPaymentRow(null);
+      }
       load();
     } catch (e) {
-      toast.error(e.message || "Could not record payment");
+      toast.error(e.message || "Could not save payment");
     } finally {
       setPaySubmitting(false);
     }
   };
 
   const exportCsv = () => {
-    const listRows =
-      tab === "customer"
-        ? null
-        : tab === "open"
-          ? filteredOpenRows
-          : rows;
+    const listRows = tab === "open" ? filteredOpenRows : rows;
     const headers =
-      tab === "customer"
-        ? ["Customer", "Open invoices", "Total balance"]
-        : tab === "paid"
-          ? ["Invoice#", "Customer", "Date", "Total", "Amount paid", "Status", "Days", "Aging"]
-          : [
-              "Invoice#",
-              "Customer",
-              "Date",
-              "Invoice total",
-              "Amount paid",
-              "Balance",
-              "Status",
-              "Days out",
-              "Aging",
-            ];
+      tab === "paid"
+        ? ["Invoice#", "Customer", "Date", "Total", "Amount paid", "Status", "Days", "Aging"]
+        : [
+            "Invoice#",
+            "Customer",
+            "Date",
+            "Invoice total",
+            "Amount paid",
+            "Balance",
+            "Status",
+            "Days out",
+            "Aging",
+          ];
     const lines = [headers.join(",")];
-    if (tab === "customer") {
-      for (const g of customerGroups) {
-        lines.push(
-          [
-            `"${String(g.customerName).replace(/"/g, '""')}"`,
-            g.invoices.length,
-            g.balance.toFixed(2),
-          ].join(",")
-        );
-      }
-    } else {
-      for (const r of listRows || []) {
+    for (const r of listRows || []) {
         lines.push(
           tab === "paid"
             ? [
@@ -246,8 +317,7 @@ export default function AccountsReceivablePageClient() {
                 r.daysOutstanding ?? "",
                 r.agingBucket,
               ].join(",")
-        );
-      }
+      );
     }
     const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -257,7 +327,7 @@ export default function AccountsReceivablePageClient() {
     URL.revokeObjectURL(a.href);
   };
 
-  const showAging = tab === "open" || tab === "customer";
+  const showAging = tab === "open";
 
   const [arTableSort, setArTableSort] = useState({ key: null, direction: "asc" });
   const arTableSource = tab === "paid" || tab === "draft" ? rows : filteredOpenRows;
@@ -265,6 +335,26 @@ export default function AccountsReceivablePageClient() {
     () => sortRowsClient(arTableSource, arTableSort),
     [arTableSource, arTableSort]
   );
+  const searchFilteredArTableData = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return sortedArTableData;
+    return sortedArTableData.filter((row) => {
+      const hay = [
+        row.invoiceNumber,
+        row.customerName,
+        row.date,
+        row.status,
+        row.agingBucket,
+        fmt(row.invoiceTotal),
+        fmt(row.balance),
+        fmt(row.amountPaid),
+        String(row.daysOutstanding ?? ""),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return hay.includes(q);
+    });
+  }, [sortedArTableData, searchQuery, fmt]);
   const handleArTableSort = useCallback((key, direction) => setArTableSort({ key, direction }), []);
 
   const openColumns = useMemo(
@@ -287,13 +377,22 @@ export default function AccountsReceivablePageClient() {
           <button
             type="button"
             className="font-medium text-primary hover:underline"
-            onClick={() => router.push(`/dashboard/invoices?open=${row.id}`)}
+            onClick={() => setInvoiceModal({ invoiceId: row.id })}
           >
             {v || "—"}
           </button>
         ),
       },
-      { key: "customerName", label: "Customer", sortable: true },
+      {
+        key: "customerName",
+        label: "Customer",
+        sortable: true,
+        render: (_, row) => (
+          <CustomerRecordLink customerId={row.customerId} onOpen={setOpenCustomerId}>
+            {row.customerName || "—"}
+          </CustomerRecordLink>
+        ),
+      },
       {
         key: "date",
         label: "Date",
@@ -347,7 +446,7 @@ export default function AccountsReceivablePageClient() {
         },
       },
     ],
-    [fmt, router, mergedAccountSettings]
+    [fmt, mergedAccountSettings]
   );
 
   const paidHistoryColumns = useMemo(
@@ -360,13 +459,22 @@ export default function AccountsReceivablePageClient() {
           <button
             type="button"
             className="font-medium text-primary hover:underline"
-            onClick={() => router.push(`/dashboard/invoices?open=${row.id}`)}
+            onClick={() => setInvoiceModal({ invoiceId: row.id })}
           >
             {v || "—"}
           </button>
         ),
       },
-      { key: "customerName", label: "Customer", sortable: true },
+      {
+        key: "customerName",
+        label: "Customer",
+        sortable: true,
+        render: (_, row) => (
+          <CustomerRecordLink customerId={row.customerId} onOpen={setOpenCustomerId}>
+            {row.customerName || "—"}
+          </CustomerRecordLink>
+        ),
+      },
       {
         key: "date",
         label: "Date",
@@ -409,7 +517,7 @@ export default function AccountsReceivablePageClient() {
         },
       },
     ],
-    [fmt, router, mergedAccountSettings]
+    [fmt, mergedAccountSettings]
   );
 
   return (
@@ -453,6 +561,7 @@ export default function AccountsReceivablePageClient() {
             onClick={() => {
               setTab(t.id);
               setAgingFilter("all");
+              setSearchQuery("");
             }}
             className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
               tab === t.id
@@ -486,7 +595,7 @@ export default function AccountsReceivablePageClient() {
             size="sm"
             className="h-8 shrink-0"
             onClick={exportCsv}
-            disabled={tab === "customer" ? customerGroups.length === 0 : rows.length === 0}
+            disabled={rows.length === 0}
           >
             <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
             Export CSV
@@ -501,79 +610,27 @@ export default function AccountsReceivablePageClient() {
         </div>
       </div>
 
-      {tab === "customer" ? (
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-card border-b border-border">
-              <tr>
-                <th className="px-4 py-3 text-left font-medium text-secondary">Customer</th>
-                <th className="px-4 py-3 text-right font-medium text-secondary">Open invoices</th>
-                <th className="px-4 py-3 text-right font-medium text-secondary">Total balance</th>
-                <th className="px-4 py-3 text-left font-medium text-secondary">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-secondary">
-                    Loading…
-                  </td>
-                </tr>
-              ) : customerGroups.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-secondary">
-                    No open balances.
-                  </td>
-                </tr>
-              ) : (
-                customerGroups.map((g) => (
-                  <tr key={g.customerId} className="border-b border-border/80">
-                    <td className="px-4 py-3 font-medium text-title">{g.customerName}</td>
-                    <td className="px-4 py-3 text-right tabular">{g.invoices.length}</td>
-                    <td className="px-4 py-3 text-right tabular font-medium">{fmt(g.balance)}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        {g.invoices.map((inv) => (
-                          <Button
-                            key={inv.id}
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-8 cursor-pointer border-primary/40 bg-primary/5 px-2.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:border-primary hover:bg-primary/10 hover:text-primary"
-                            title={`Record payment — invoice #${inv.invoiceNumber}`}
-                            onClick={() => openPaymentModal(inv)}
-                          >
-                            <FiDollarSign className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                            <span>#{inv.invoiceNumber}</span>
-                            <span className="tabular opacity-90">({fmt(inv.balance)})</span>
-                          </Button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <Table
-          columns={tab === "paid" ? paidHistoryColumns : openColumns}
-          data={sortedArTableData}
-          rowKey="id"
-          loading={loading}
-          fillHeight
-          sortState={arTableSort}
-          onSort={handleArTableSort}
-          emptyMessage={
-            tab === "paid"
+      <Table
+        columns={tab === "paid" ? paidHistoryColumns : openColumns}
+        data={searchFilteredArTableData}
+        rowKey="id"
+        loading={loading}
+        fillHeight
+        sortState={arTableSort}
+        onSort={handleArTableSort}
+        searchable
+        onSearch={setSearchQuery}
+        searchPlaceholder="Search invoice#, customer, date, status, aging…"
+        emptyMessage={
+          searchQuery.trim()
+            ? "No invoices match your search."
+            : tab === "paid"
               ? "No paid invoices yet. Record payments on open invoices."
               : tab === "draft"
                 ? "No draft invoices with a balance."
                 : "No open receivables. Sent invoices appear here until fully paid."
-          }
-        />
-      )}
+        }
+      />
 
       <Modal
         open={!!paymentForId}
@@ -581,10 +638,35 @@ export default function AccountsReceivablePageClient() {
           if (!paySubmitting) {
             setPaymentForId(null);
             setPaymentRow(null);
+            setEditingPaymentIndex(null);
           }
         }}
-        title={paymentRow ? `Record payment — #${paymentRow.invoiceNumber}` : "Record payment"}
-        size="md"
+        title={
+          paymentRow
+            ? `${editingPaymentIndex != null ? "Edit" : "Record"} payment — #${paymentRow.invoiceNumber}`
+            : "Record payment"
+        }
+        size="lg"
+        actions={
+          paymentRow ? (
+            <>
+              {editingPaymentIndex != null ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={paySubmitting}
+                  onClick={() => resetPaymentForm(paymentRow.balance)}
+                >
+                  Cancel edit
+                </Button>
+              ) : null}
+              <Button type="button" variant="primary" size="sm" disabled={paySubmitting} onClick={submitPayment}>
+                {paySubmitting ? "Saving…" : editingPaymentIndex != null ? "Update payment" : "Record payment"}
+              </Button>
+            </>
+          ) : null
+        }
       >
         {paymentRow && (
           <div className="space-y-4">
@@ -594,21 +676,7 @@ export default function AccountsReceivablePageClient() {
               Open balance:{" "}
               <span className="font-semibold tabular text-title">{fmt(paymentRow.balance)}</span>
             </p>
-            {paymentHistory.length > 0 && (
-              <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Payment history
-                </p>
-                <ul className="max-h-32 space-y-1 overflow-y-auto rounded border border-border bg-form-bg/50 p-2 text-xs">
-                  {paymentHistory.map((p, i) => (
-                    <li key={i} className="tabular">
-                      {formatDateMdy(p.paymentDate)} · {fmt(p.amount)} · {p.method || "—"}
-                      {p.reference ? ` · ref ${p.reference}` : ""}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+
             <Input
               label="Amount"
               type="text"
@@ -630,14 +698,90 @@ export default function AccountsReceivablePageClient() {
               onChange={(e) => setPayRef(e.target.value)}
             />
             <Textarea label="Notes" value={payNotes} onChange={(e) => setPayNotes(e.target.value)} rows={2} />
-            <div className="flex justify-end gap-2 pt-2">
-              <Button type="button" variant="primary" disabled={paySubmitting} onClick={submitPayment}>
-                {paySubmitting ? "Saving…" : "Record payment"}
-              </Button>
+
+            <div className="border-t border-border pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Payment history</p>
+              {paymentHistory.length > 0 ? (
+                <div className="overflow-x-auto rounded border border-border">
+                  <table className="w-full text-sm">
+                    <thead className="bg-card">
+                      <tr>
+                        <th className="w-0 px-2 py-2 text-left text-secondary">
+                          <span className="sr-only">Actions</span>
+                        </th>
+                        <th className="px-3 py-2 text-right text-secondary">Amount</th>
+                        <th className="px-3 py-2 text-left text-secondary">Date</th>
+                        <th className="px-3 py-2 text-left text-secondary">Method</th>
+                        <th className="px-3 py-2 text-left text-secondary">Reference</th>
+                        <th className="px-3 py-2 text-left text-secondary">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...paymentHistory].reverse().map((p) => (
+                        <tr
+                          key={p._index}
+                          className={`border-t border-border ${editingPaymentIndex === p._index ? "bg-primary/5" : ""}`}
+                        >
+                          <td className="px-2 py-2">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                disabled={paySubmitting}
+                                onClick={() => handleEditPayment(p)}
+                                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                                aria-label="Edit payment"
+                                title="Edit"
+                              >
+                                <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={paySubmitting}
+                                onClick={() => handleDeletePayment(p)}
+                                className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+                                aria-label="Delete payment"
+                                title="Delete"
+                              >
+                                <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-title">{fmt(p.amount)}</td>
+                          <td className="px-3 py-2 text-secondary">{formatDateMdy(p.paymentDate)}</td>
+                          <td className="px-3 py-2 text-title">{paymentMethodLabel(p.method)}</td>
+                          <td className="px-3 py-2 text-secondary">{p.reference || "—"}</td>
+                          <td className="max-w-[12rem] truncate px-3 py-2 text-secondary" title={p.notes || ""}>
+                            {p.notes || "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-secondary">No payments recorded yet.</p>
+              )}
             </div>
           </div>
         )}
       </Modal>
+
+      <InvoiceFormModal
+        open={!!invoiceModal}
+        draftQuoteId={invoiceModal?.draftQuoteId ?? null}
+        invoiceId={invoiceModal?.invoiceId ?? null}
+        onClose={() => setInvoiceModal(null)}
+        onAfterSave={load}
+        onSwitchToInvoice={(id) => setInvoiceModal({ invoiceId: id })}
+        zIndex={55}
+      />
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={56}
+      />
     </div>
   );
 }

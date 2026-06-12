@@ -8,7 +8,7 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Checkbox from "@/components/ui/checkbox";
-import { Form } from "@/components/ui/form-layout";
+import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { PAGES, ACTIONS } from "@/lib/pbac";
 import { sortRowsClient } from "@/lib/client-table-sort";
@@ -398,9 +398,10 @@ export default function AccessControlPage() {
         <Form
           id="policy-form"
           onSubmit={handleSubmit}
-          className="flex flex-col gap-5 !space-y-0"
+          className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
         >
-          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+          <FormSection title="Policy details">
+            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
             <Input
               label="Policy name"
               value={form.name}
@@ -429,15 +430,13 @@ export default function AccessControlPage() {
                 Employees selected here will receive the permissions defined below when they log in.
               </p>
             </div>
-          </div>
+            </div>
+          </FormSection>
 
-          <div>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-title">
-              Page & action permissions
-            </h3>
-            <p className="mb-3 text-xs text-secondary">
-              Choose which pages each employee can access and which actions (view, create, edit, delete) they can perform.
-            </p>
+          <FormSection
+            title="Page & action permissions"
+            subtitle="Choose which pages each employee can access and which actions (view, create, edit, delete) they can perform."
+          >
             <div className="overflow-x-auto rounded border border-border">
               <table className="w-full text-sm">
                 <thead className="bg-card">
@@ -483,7 +482,7 @@ export default function AccessControlPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </FormSection>
         </Form>
       </Modal>
     </div>
