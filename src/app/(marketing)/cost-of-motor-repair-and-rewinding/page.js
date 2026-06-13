@@ -226,9 +226,6 @@ export default function CostOfMotorRepairPage() {
             fullHeadingAsH2
             compact
             calculatorSourcePage={path}
-            requirePaidAccess
-            allowGuestSingleUse
-            showAllCalculatorsCta
           />
         </div>
       </div>

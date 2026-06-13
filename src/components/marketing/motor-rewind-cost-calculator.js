@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FiUpload } from "react-icons/fi";
+import { FiUpload, FiDownload } from "react-icons/fi";
 import {
   computeCustomerRewindBallpark,
   DEFAULT_CUSTOMER_COPPER_USD_PER_KG,
@@ -13,6 +13,7 @@ import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import { Form, FormSectionTitle } from "@/components/ui/form-layout";
 import LeadFormModal from "@/components/lead-form-modal";
+import CalculatorEstimateDownloadModal from "@/components/marketing/calculator-estimate-download-modal";
 import CalculatorPaywallModal from "@/components/marketing/calculator-paywall-modal";
 import { useCalculatorAccess } from "@/hooks/use-calculator-access";
 import { useAuth } from "@/contexts/auth-context";
@@ -363,54 +364,6 @@ Thanks — I appreciate responses with clear scope, assumptions, and line items 
   };
 }
 
-/** RFQ prefill from calculator inputs when ballpark price was not unlocked. */
-function buildRewindQuoteLeadPrefillFromForm(form) {
-  const phaseLabel = form.phase === "1" ? "Single-phase" : "Three-phase";
-  const coilLabel =
-    form.coilType === "lap"
-      ? "Lap"
-      : form.coilType === "wave"
-        ? "Wave"
-        : form.coilType === "concentric"
-          ? "Concentric"
-          : String(form.coilType || "—");
-  const ratingLine = `${form.hp || "—"} HP on nameplate`;
-  const problemDescription = `REQUEST — Motor rewinding quotes (IQMotorBase.com calculator)
-
-WHAT I NEED
-Qualified rewind / motor repair shops: please reply with a quote or offer to inspect. Local service or inbound freight is fine if you accept shipped cores.
-
-MOTOR / WINDING (from calculator form — verify against nameplate)
-• Rating: ${ratingLine}
-• Phase: ${phaseLabel}
-• Voltage: ${form.voltage || "—"} V | RPM (as entered / typical): ${rpmLabelForCopy(form)}
-• Slots: ${form.slots} | AWG: ${form.wireGauge} | Coil type: ${coilLabel}
-
-BALLPARK
-• Website ballpark range was not unlocked on the cost calculator; please quote from inspection and nameplate.
-
-NAMEPLATE / DOCUMENTS
-• I can attach clear nameplate photos using “Motor photos” on this form if that helps your first pass.
-
-PLEASE FILL IN THE LINES BELOW (anything you already know helps)
-• Application (pump, fan, compressor, etc.):
-• Failure / symptoms (trip, smoke, ground, bearings, environment):
-• Frame, enclosure (TEFC/ODP), insulation class if known:
-• Timeline (standard vs rush):
-• Can you quote from photos + nameplate, or must the motor be in your shop first?
-• Service area / willingness to accept shipped motor:
-• Special construction (vertical, explosion-proof, washdown, inverter-duty, etc.) if applicable:
-
-Thanks — I appreciate responses with clear scope, assumptions, and line items (labor, materials, testing, warranty).`;
-
-  return {
-    motorHp: `${form.hp || ""} HP`,
-    voltage: form.voltage ? `${form.voltage} V` : "",
-    motorType: "AC motor rewinding",
-    problemDescription,
-  };
-}
-
 export default function MotorRewindCostCalculator({
   variant = "full",
   calculatorSourcePage = CALCULATOR_SOURCE_PAGE,
@@ -436,6 +389,7 @@ export default function MotorRewindCostCalculator({
   const [form, setForm] = useState(defaultForm);
   const [templateId, setTemplateId] = useState("");
   const [leadOpen, setLeadOpen] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   const [leadPrefill, setLeadPrefill] = useState(null);
   const [leadIntroOverride, setLeadIntroOverride] = useState(null);
   const [paywallOpen, setPaywallOpen] = useState(false);
@@ -793,23 +747,6 @@ export default function MotorRewindCostCalculator({
     setForm((prev) => ({ ...prev, [name]: v }));
   };
 
-  const openQuoteModal = useCallback(() => {
-    const d = displayDerived;
-    setLeadIntroOverride(null);
-    if (d?.breakdown) {
-      setLeadPrefill(
-        buildRewindCalculatorLeadPrefill(form, d.breakdown, {
-          low: d.low,
-          high: d.high,
-          replacementRecommended: d.replacementRecommended,
-        })
-      );
-    } else {
-      setLeadPrefill(buildRewindQuoteLeadPrefillFromForm(form));
-    }
-    setLeadOpen(true);
-  }, [form, displayDerived]);
-
   const openNameplateFastPath = useCallback(() => {
     setLeadIntroOverride(NAMEPLATE_FAST_PATH_INTRO);
     setLeadPrefill({
@@ -1096,19 +1033,22 @@ export default function MotorRewindCostCalculator({
           </div>
         ) : null}
 
-        {!isDashboard ? (
+        {!isDashboard && !priceLocked && displayDerived ? (
           <div className={`border-t border-primary/15 ${isCompact ? "mt-4 pt-3" : "mt-6 pt-5"}`}>
             <Button
               type="button"
               variant="primary"
-              size={isCompact ? "sm" : "md"}
-              className={isCompact ? "w-full" : "w-full sm:w-auto"}
-              onClick={openQuoteModal}
+              size={isCompact ? "md" : "lg"}
+              className={`w-full shadow-md ring-2 ring-primary/25 hover:shadow-lg ${
+                isCompact ? "py-2.5 text-sm font-semibold" : "py-3 text-base font-semibold"
+              }`}
+              onClick={() => setDownloadModalOpen(true)}
             >
-              Get exact quote in 30 minutes
+              <FiDownload className={`shrink-0 ${isCompact ? "h-4 w-4" : "h-5 w-5"}`} aria-hidden />
+              Download Detailed Estimate
             </Button>
-            <p className={`leading-snug text-secondary ${isCompact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]"}`}>
-              1–2 min · no commitment · shops often same day
+            <p className={`leading-snug text-secondary ${isCompact ? "mt-1.5 text-[10px]" : "mt-2 text-xs"}`}>
+              Free PDF with your motor specs, ballpark range, cost breakdown, and methodology.
             </p>
           </div>
         ) : null}
@@ -1273,6 +1213,15 @@ export default function MotorRewindCostCalculator({
           introTextOverride={leadIntroOverride ?? DEFAULT_LEAD_INTRO}
           calculatorFormSnapshot={leadIntroOverride ? null : form}
           calculatorSourcePage={calculatorSourcePage}
+        />
+      ) : null}
+
+      {!isDashboard ? (
+        <CalculatorEstimateDownloadModal
+          open={downloadModalOpen}
+          onClose={() => setDownloadModalOpen(false)}
+          form={form}
+          sourcePage={calculatorSourcePage}
         />
       ) : null}
     </div>

@@ -98,6 +98,95 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
+/**
+ * Notify IQMotorBase when a visitor downloads a calculator estimate PDF (price enquiry).
+ * @param {{
+ *   leadName: string,
+ *   leadEmail: string,
+ *   leadPhone: string,
+ *   visitorTypeLabel: string,
+ *   sourcePage?: string,
+ *   htmlRows: string,
+ *   estimateRange?: string,
+ *   pdfBuffer?: Buffer,
+ *   pdfFilename?: string,
+ * }} params
+ */
+export async function sendCalculatorPriceEnquiryToAdmin(params) {
+  const to = rewindCalculatorRfqEmail();
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const subject = "Price Enquiry";
+  const html = `
+    <p>A visitor downloaded a <strong>motor rewind cost calculator estimate PDF</strong> from IQMotorBase.com.</p>
+    ${params.pdfBuffer ? "<p><strong>The detailed estimate PDF is attached to this email.</strong></p>" : ""}
+    <table style="border-collapse:collapse;margin-top:12px;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Name</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadName)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadEmail)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Phone</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.leadPhone)}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Visitor type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.visitorTypeLabel)}</td></tr>
+        ${params.sourcePage ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Source page</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.sourcePage)}</td></tr>` : ""}
+        ${params.estimateRange ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Ballpark range</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(params.estimateRange)}</td></tr>` : ""}
+      </tbody>
+    </table>
+    <p style="margin-top:16px;"><strong>Calculator configuration &amp; estimate</strong></p>
+    <table style="border-collapse:collapse;">${params.htmlRows}</table>
+    <p>— IQMotorBase.com (automated)</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
+    attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
+  });
+}
+
+function calculatorEstimatePdfAttachments(pdfBuffer, pdfFilename) {
+  if (!pdfBuffer || !Buffer.isBuffer(pdfBuffer)) return undefined;
+  return [
+    {
+      filename: pdfFilename || "IQMotorBase-Motor-Rewind-Estimate.pdf",
+      content: pdfBuffer,
+      contentType: "application/pdf",
+    },
+  ];
+}
+
+/**
+ * Send the detailed estimate PDF to the visitor who requested the download.
+ * @param {{
+ *   toEmail: string,
+ *   customerName: string,
+ *   estimateRange?: string,
+ *   pdfBuffer?: Buffer,
+ *   pdfFilename?: string,
+ * }} params
+ */
+export async function sendCalculatorEstimatePdfToCustomer(params) {
+  const to = String(params.toEmail || "").trim();
+  if (!to) return { ok: false, error: "Customer email is required." };
+
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const site = getPublicSiteUrl();
+  const name = esc(params.customerName || "there");
+  const rangeLine = params.estimateRange
+    ? `<p>Your ballpark planning range: <strong>${esc(params.estimateRange)}</strong> (US typical rewind shop pricing).</p>`
+    : "";
+
+  const subject = "Your motor rewind cost estimate – IQMotorBase.com";
+  const html = `
+    <p>Hi ${name},</p>
+    <p>Thank you for using the <strong>IQMotorBase.com motor rewind cost calculator</strong>. Your detailed estimate PDF is attached.</p>
+    ${rangeLine}
+    <p>The PDF includes your motor configuration, ballpark range, cost breakdown, and how the estimate was calculated. This is planning guidance only—not a binding shop quote. Final pricing depends on inspection and shop scope.</p>
+    <p>When you are ready for written quotes from qualified repair shops, visit <a href="${esc(site)}">${esc(site)}</a>.</p>
+    <p>— IQMotorBase.com</p>
+  `;
+
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
+    attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
+  });
+}
+
 /** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
   const to = "contact@IQMotorBase.com";
