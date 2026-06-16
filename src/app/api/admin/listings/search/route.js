@@ -4,6 +4,7 @@ import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
 import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
+import { verifyListingEmail } from "@/lib/prospectlens-email-verify";
 
 function digits(s) {
   return String(s || "").replace(/\D/g, "");
@@ -37,7 +38,16 @@ export async function GET(request) {
         : await Listing.findOne({ email }).lean().then((one) => (one ? [one] : []));
 
       if (docs.length === 0) {
-        return NextResponse.json({ listing: null, listings: [], allowsMultiple });
+        const emailVerification = await verifyListingEmail(email);
+        console.log("[Admin listing search] email verification result", {
+          email: email.slice(0, 2) + "***" + email.slice(email.indexOf("@")),
+          valid: emailVerification.valid,
+          reason: emailVerification.reason,
+          deliverable: emailVerification.deliverable,
+          score: emailVerification.score,
+          message: emailVerification.message,
+        });
+        return NextResponse.json({ listing: null, listings: [], allowsMultiple, emailVerification });
       }
 
       const emailMap = await buildEmailToCrmUserIdMap(docs.map((d) => d.email));

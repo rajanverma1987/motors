@@ -118,6 +118,8 @@ export default function AdminListingsPage() {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchAllowsMultiple, setSearchAllowsMultiple] = useState(false);
+  const [emailVerifyError, setEmailVerifyError] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -464,6 +466,8 @@ export default function AdminListingsPage() {
     setSearching(true);
     setSearchResults([]);
     setSearchAllowsMultiple(false);
+    setEmailVerifyError("");
+    setEmailVerified(false);
     try {
       const qs = new URLSearchParams();
       if (e) qs.set("email", e);
@@ -474,6 +478,13 @@ export default function AdminListingsPage() {
       const listings = Array.isArray(data.listings) ? data.listings : data.listing ? [data.listing] : [];
       setSearchResults(listings);
       setSearchAllowsMultiple(!!data.allowsMultiple);
+      if (e && listings.length === 0 && data.emailVerification) {
+        if (data.emailVerification.valid) {
+          setEmailVerified(true);
+        } else {
+          setEmailVerifyError(data.emailVerification.message || "This email address is invalid.");
+        }
+      }
       setSearchAttempted(true);
     } catch (err) {
       toast.error(err.message || "Search failed");
@@ -488,6 +499,8 @@ export default function AdminListingsPage() {
     setSearchResults([]);
     setSearchAllowsMultiple(false);
     setSearchAttempted(false);
+    setEmailVerifyError("");
+    setEmailVerified(false);
     setNewListingSearchOpen(true);
   }, []);
 
@@ -684,7 +697,30 @@ export default function AdminListingsPage() {
           Search by email or phone before creating a duplicate. If you already have a listing, open it to edit.
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Input label="Email" type="email" value={searchEmail} onChange={(e) => setSearchEmail(e.target.value)} placeholder="shop@example.com" />
+          <div>
+            <Input
+              label="Email"
+              type="email"
+              value={searchEmail}
+              onChange={(e) => {
+                setSearchEmail(e.target.value);
+                setEmailVerifyError("");
+                setEmailVerified(false);
+                setSearchAttempted(false);
+                setSearchResults([]);
+              }}
+              placeholder="shop@example.com"
+              inputClassName={emailVerifyError ? "border-danger focus:ring-danger focus:border-danger" : ""}
+            />
+            {emailVerifyError ? (
+              <p className="mt-1 text-sm text-danger" role="alert">
+                {emailVerifyError}
+              </p>
+            ) : null}
+            {emailVerified && searchEmail.trim() ? (
+              <p className="mt-1 text-sm text-success">Email verified — you can create a new listing.</p>
+            ) : null}
+          </div>
           <Input label="Phone" value={searchPhone} onChange={(e) => setSearchPhone(e.target.value)} placeholder="Digits only" />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -728,7 +764,7 @@ export default function AdminListingsPage() {
             ) : null}
           </div>
         ) : null}
-        {searchAttempted && !searching && searchResults.length === 0 ? (
+        {searchAttempted && !searching && searchResults.length === 0 && (!searchEmail.trim() || emailVerified) ? (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-sm text-secondary">No listing found for this search.</p>
             <Button

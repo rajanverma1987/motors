@@ -14,6 +14,7 @@ import { sendShopListedNotificationToAdmin } from "@/lib/email";
 import { sendListingFeaturedAccountEmail } from "@/lib/email";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
+import { verifyListingEmail } from "@/lib/prospectlens-email-verify";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -84,6 +85,14 @@ export async function POST(request) {
     const emailNorm = email.trim().toLowerCase().slice(0, LIMITS.email.max);
     if (!isValidEmail(emailNorm)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
+    }
+
+    const emailVerification = await verifyListingEmail(emailNorm);
+    if (!emailVerification.valid) {
+      return NextResponse.json(
+        { error: emailVerification.message || "This email address is invalid.", code: "EMAIL_INVALID" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
