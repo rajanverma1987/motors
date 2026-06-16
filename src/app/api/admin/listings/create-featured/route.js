@@ -13,6 +13,7 @@ import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 import { sendShopListedNotificationToAdmin } from "@/lib/email";
 import { sendListingFeaturedAccountEmail } from "@/lib/email";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -87,8 +88,9 @@ export async function POST(request) {
 
     await connectDB();
 
-    const existingUser = await User.findOne({ email: emailNorm }).select("_id").lean();
-    if (existingUser) {
+    const allowsMultiple = allowsMultipleListingsForEmail(emailNorm);
+    const existingUser = await User.findOne({ email: emailNorm }).select("_id email shopName").lean();
+    if (existingUser && !allowsMultiple) {
       return NextResponse.json(
         {
           error:
@@ -99,29 +101,35 @@ export async function POST(request) {
       );
     }
 
-    const passwordHash = await hashPassword(password);
     const shopName = STR(companyName, LIMITS.companyName.max);
     const contactName = STR(primaryContactPerson, LIMITS.name.max);
 
     let user;
-    try {
-      user = await User.create({
-        email: emailNorm,
-        passwordHash,
-        shopName,
-        contactName,
-        canLogin: true,
-        listingOnlyAccount: true,
-      });
-    } catch (createErr) {
-      console.error("User create (featured listing):", createErr);
-      return NextResponse.json({ error: "Could not create account." }, { status: 500 });
-    }
+    let reusedExistingUser = false;
+    if (existingUser) {
+      user = existingUser;
+      reusedExistingUser = true;
+    } else {
+      const passwordHash = await hashPassword(password);
+      try {
+        user = await User.create({
+          email: emailNorm,
+          passwordHash,
+          shopName,
+          contactName,
+          canLogin: true,
+          listingOnlyAccount: true,
+        });
+      } catch (createErr) {
+        console.error("User create (featured listing):", createErr);
+        return NextResponse.json({ error: "Could not create account." }, { status: 500 });
+      }
 
-    try {
-      await applyListingOnlySubscriptionToShop(user.email);
-    } catch (subErr) {
-      console.error("Listing-only subscription on featured listing create:", subErr);
+      try {
+        await applyListingOnlySubscriptionToShop(user.email);
+      } catch (subErr) {
+        console.error("Listing-only subscription on featured listing create:", subErr);
+      }
     }
 
     const reviewedAt = new Date();
@@ -212,20 +220,23 @@ export async function POST(request) {
     const site = getPublicSiteUrl();
     const publicListingUrl = pathSlug ? `${site}/electric-motor-repair-shops-listings/${pathSlug}` : "";
 
-    try {
-      await sendListingFeaturedAccountEmail({
-        to: user.email,
-        shopName: user.shopName || doc.companyName || "",
-        userId: String(user._id),
-        plainPassword: password,
-        publicListingUrl,
-      });
-    } catch (mailErr) {
-      console.error("Featured listing welcome email failed:", mailErr);
+    if (!reusedExistingUser) {
+      try {
+        await sendListingFeaturedAccountEmail({
+          to: user.email,
+          shopName: user.shopName || doc.companyName || "",
+          userId: String(user._id),
+          plainPassword: password,
+          publicListingUrl,
+        });
+      } catch (mailErr) {
+        console.error("Featured listing welcome email failed:", mailErr);
+      }
     }
 
     return NextResponse.json({
       ok: true,
+      reusedExistingUser,
       listing: {
         ...doc.toObject(),
         id: doc._id.toString(),

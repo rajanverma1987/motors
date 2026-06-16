@@ -8,6 +8,7 @@ import { hashPassword } from "@/lib/auth-portal";
 import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { sendCrmWelcomeEmail } from "@/lib/email";
+import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
 
 /**
  * POST: Create a portal User from a directory listing (shop name, contact from listing),
@@ -61,7 +62,7 @@ export async function POST(request, context) {
     }
 
     const existing = await User.findOne({ email });
-    if (existing) {
+    if (existing && !allowsMultipleListingsForEmail(email)) {
       return NextResponse.json(
         {
           error: "A portal account with this email already exists. Use Registered clients to manage subscription and access.",
@@ -70,6 +71,22 @@ export async function POST(request, context) {
         },
         { status: 409 }
       );
+    }
+
+    if (existing && allowsMultipleListingsForEmail(email)) {
+      listing.crmUserId = existing._id;
+      listing.crmOnboardedAt = new Date();
+      await listing.save();
+      return NextResponse.json({
+        ok: true,
+        linkedExistingUser: true,
+        user: {
+          id: String(existing._id),
+          email: existing.email,
+          shopName: existing.shopName || "",
+          contactName: existing.contactName || "",
+        },
+      });
     }
 
     const finalShopName = shopName || clampString(listing.companyName, LIMITS.name.max);

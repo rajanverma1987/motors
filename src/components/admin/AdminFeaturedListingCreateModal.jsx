@@ -95,7 +95,7 @@ export default function AdminFeaturedListingCreateModal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Create failed");
-      toast.success("Listing created, account emailed.");
+      toast.success(data.reusedExistingUser ? "Listing created (shared account)." : "Listing created, account emailed.");
       onCreated?.(data);
       setForm(INITIAL);
       onClose();

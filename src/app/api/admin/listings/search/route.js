@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
+import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
 
 function digits(s) {
   return String(s || "").replace(/\D/g, "");
@@ -30,19 +31,27 @@ export async function GET(request) {
     await connectDB();
 
     if (email) {
-      const doc = await Listing.findOne({ email }).lean();
-      if (!doc) {
-        return NextResponse.json({ listing: null });
+      const allowsMultiple = allowsMultipleListingsForEmail(email);
+      const docs = allowsMultiple
+        ? await Listing.find({ email }).sort({ submittedAt: -1 }).lean()
+        : await Listing.findOne({ email }).lean().then((one) => (one ? [one] : []));
+
+      if (docs.length === 0) {
+        return NextResponse.json({ listing: null, listings: [], allowsMultiple });
       }
-      const emailMap = await buildEmailToCrmUserIdMap([doc.email]);
-      const resolvedCrmUserId = resolveListingCrmUserId(doc, emailMap);
+
+      const emailMap = await buildEmailToCrmUserIdMap(docs.map((d) => d.email));
+      const listings = docs.map((doc) => ({
+        ...doc,
+        id: doc._id.toString(),
+        _id: undefined,
+        crmUserId: resolveListingCrmUserId(doc, emailMap),
+      }));
+
       return NextResponse.json({
-        listing: {
-          ...doc,
-          id: doc._id.toString(),
-          _id: undefined,
-          crmUserId: resolvedCrmUserId,
-        },
+        listing: listings[0],
+        listings,
+        allowsMultiple,
       });
     }
 

@@ -116,7 +116,8 @@ export default function AdminListingsPage() {
   const [searchEmail, setSearchEmail] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState(null);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchAllowsMultiple, setSearchAllowsMultiple] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -461,7 +462,8 @@ export default function AdminListingsPage() {
       return;
     }
     setSearching(true);
-    setSearchResult(null);
+    setSearchResults([]);
+    setSearchAllowsMultiple(false);
     try {
       const qs = new URLSearchParams();
       if (e) qs.set("email", e);
@@ -469,7 +471,9 @@ export default function AdminListingsPage() {
       const res = await fetch(`/api/admin/listings/search?${qs}`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Search failed");
-      setSearchResult(data.listing || null);
+      const listings = Array.isArray(data.listings) ? data.listings : data.listing ? [data.listing] : [];
+      setSearchResults(listings);
+      setSearchAllowsMultiple(!!data.allowsMultiple);
       setSearchAttempted(true);
     } catch (err) {
       toast.error(err.message || "Search failed");
@@ -481,7 +485,8 @@ export default function AdminListingsPage() {
   const openNewListingFlow = useCallback(() => {
     setSearchEmail("");
     setSearchPhone("");
-    setSearchResult(null);
+    setSearchResults([]);
+    setSearchAllowsMultiple(false);
     setSearchAttempted(false);
     setNewListingSearchOpen(true);
   }, []);
@@ -687,20 +692,43 @@ export default function AdminListingsPage() {
             {searching ? "Searching…" : "Search"}
           </Button>
         </div>
-        {searchResult ? (
-          <div className="mt-4 rounded-lg border border-border bg-muted/20 p-3 text-sm">
-            <p className="font-medium text-title">{searchResult.companyName}</p>
-            <p className="text-secondary">{searchResult.email}</p>
-            <Link
-              href={`/admin/listings/${searchResult.id}`}
-              className="mt-2 inline-block text-primary hover:underline"
-              onClick={() => setNewListingSearchOpen(false)}
-            >
-              Open listing
-            </Link>
+        {searchResults.length > 0 ? (
+          <div className="mt-4 space-y-3">
+            {searchAllowsMultiple ? (
+              <p className="text-sm text-secondary">
+                {searchResults.length} listing(s) use this shared platform email. You can create another listing with the
+                same address.
+              </p>
+            ) : null}
+            {searchResults.map((row) => (
+              <div key={row.id} className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
+                <p className="font-medium text-title">{row.companyName}</p>
+                <p className="text-secondary">{row.email}</p>
+                <Link
+                  href={`/admin/listings/${row.id}`}
+                  className="mt-2 inline-block text-primary hover:underline"
+                  onClick={() => setNewListingSearchOpen(false)}
+                >
+                  Open listing
+                </Link>
+              </div>
+            ))}
+            {searchAllowsMultiple ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setNewListingSearchOpen(false);
+                  setNewListingCreateOpen(true);
+                }}
+              >
+                Create another listing
+              </Button>
+            ) : null}
           </div>
         ) : null}
-        {searchAttempted && !searching && !searchResult ? (
+        {searchAttempted && !searching && searchResults.length === 0 ? (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-sm text-secondary">No listing found for this search.</p>
             <Button
