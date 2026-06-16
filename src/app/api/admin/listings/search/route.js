@@ -39,14 +39,6 @@ export async function GET(request) {
 
       if (docs.length === 0) {
         const emailVerification = await verifyListingEmail(email);
-        console.log("[Admin listing search] email verification result", {
-          email: email.slice(0, 2) + "***" + email.slice(email.indexOf("@")),
-          valid: emailVerification.valid,
-          reason: emailVerification.reason,
-          deliverable: emailVerification.deliverable,
-          score: emailVerification.score,
-          message: emailVerification.message,
-        });
         return NextResponse.json({ listing: null, listings: [], allowsMultiple, emailVerification });
       }
 

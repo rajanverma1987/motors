@@ -15,17 +15,6 @@ function getApiKey() {
   return process.env.PROSPECTLENS_API_KEY?.trim() || "";
 }
 
-function maskEmail(email) {
-  const s = String(email || "");
-  const at = s.indexOf("@");
-  if (at <= 1) return "***";
-  return `${s.slice(0, 2)}***${s.slice(at)}`;
-}
-
-function logVerify(step, payload) {
-  console.log("[ProspectLens email verify]", step, payload);
-}
-
 /** ProspectLens returns { success, data: { valid, deliverable, ... } }; docs show flat shape. */
 function unwrapProspectLensBody(body) {
   if (!body || typeof body !== "object") return body;
@@ -60,37 +49,24 @@ function invalidMessage(data) {
  */
 export async function verifyListingEmail(email) {
   const norm = String(email || "").trim().toLowerCase();
-  logVerify("start", { email: maskEmail(norm) });
-
   if (!norm) {
-    logVerify("reject", { reason: "missing" });
     return { valid: false, reason: "missing", message: "Email is required." };
   }
   if (allowsMultipleListingsForEmail(norm)) {
-    logVerify("skip", { reason: "platform_shared_email" });
     return { valid: true, skipped: true, reason: "platform_shared_email", message: null };
   }
   if (!isValidEmail(norm)) {
-    logVerify("reject", { reason: "format" });
     return { valid: false, reason: "format", message: "Please enter a valid email address." };
   }
 
   const apiKey = getApiKey();
   if (!apiKey) {
-    logVerify("reject", { reason: "service_unconfigured", hasApiKey: false });
     return {
       valid: false,
       reason: "service_unconfigured",
       message: "Email verification is not configured (PROSPECTLENS_API_KEY).",
     };
   }
-
-  logVerify("request", {
-    url: VERIFY_URL,
-    email: maskEmail(norm),
-    hasApiKey: true,
-    options: VERIFY_OPTIONS,
-  });
 
   let res;
   try {
@@ -103,12 +79,7 @@ export async function verifyListingEmail(email) {
       body: JSON.stringify({ email: norm, options: VERIFY_OPTIONS }),
       signal: AbortSignal.timeout(15000),
     });
-  } catch (err) {
-    logVerify("fetch_error", {
-      email: maskEmail(norm),
-      name: err?.name,
-      message: err?.message,
-    });
+  } catch {
     return {
       valid: false,
       reason: "service_error",
@@ -116,29 +87,12 @@ export async function verifyListingEmail(email) {
     };
   }
 
-  const rawText = await res.text();
   let data = {};
   try {
-    data = rawText ? JSON.parse(rawText) : {};
-  } catch (parseErr) {
-    logVerify("parse_error", {
-      email: maskEmail(norm),
-      status: res.status,
-      statusText: res.statusText,
-      rawPreview: rawText.slice(0, 500),
-      parseError: parseErr?.message,
-    });
+    data = await res.json();
+  } catch {
     data = {};
   }
-
-  logVerify("response", {
-    email: maskEmail(norm),
-    status: res.status,
-    statusText: res.statusText,
-    ok: res.ok,
-    body: data,
-    rawLength: rawText.length,
-  });
 
   if (!res.ok) {
     const msg =
@@ -147,38 +101,17 @@ export async function verifyListingEmail(email) {
         : typeof data?.message === "string"
           ? data.message
           : "Email verification failed.";
-    logVerify("reject", {
-      email: maskEmail(norm),
-      reason: data?.reason || "verify_failed",
-      httpStatus: res.status,
-      message: msg,
-    });
     return { valid: false, reason: data?.reason || "verify_failed", message: msg };
   }
 
-  /** ProspectLens wraps payload as { success, data: { valid, deliverable, ... } }. */
   const result = unwrapProspectLensBody(data);
-
   const valid = result.valid === true && result.deliverable === "yes";
-  const message = valid ? null : invalidMessage(result);
-  logVerify(valid ? "accept" : "reject", {
-    email: maskEmail(norm),
-    computedValid: valid,
-    apiValid: result.valid,
-    deliverable: result.deliverable,
-    reason: result.reason,
-    score: result.score,
-    checks: result.checks,
-    smtp: result.smtp,
-    unwrappedFromDataField: result !== data,
-    message,
-  });
 
   return {
     valid,
     reason: result.reason || (valid ? "ok" : "invalid"),
     deliverable: result.deliverable,
     score: typeof result.score === "number" ? result.score : undefined,
-    message,
+    message: valid ? null : invalidMessage(result),
   };
 }
