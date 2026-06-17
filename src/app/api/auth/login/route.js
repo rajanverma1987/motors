@@ -9,6 +9,7 @@ import { getLoginBlockReason } from "@/lib/subscription-access";
 import { syncSubscriptionWithAccountTier } from "@/lib/subscription-service";
 import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
+import { recordPortalLogin } from "@/lib/portal-login-audit";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "portal-login", 10);
@@ -87,6 +88,12 @@ export async function POST(request) {
 
     const listingOnly = await userIsListingOnlyAccount(ownerEmail);
     const calculatorOnlyAccount = await userIsCalculatorOnlyPortalAccount(ownerEmail);
+
+    try {
+      await recordPortalLogin(ownerEmail);
+    } catch (_) {
+      /* ignore */
+    }
 
     const token = await createPortalToken({
       email: ownerEmail,

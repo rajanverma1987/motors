@@ -15,6 +15,7 @@ import {
   FiCreditCard,
   FiChevronLeft,
   FiChevronRight,
+  FiUserCheck,
 } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/listings", label: "Listings", icon: FiList },
   { href: "/admin/leads", label: "Leads", icon: FiInbox },
   { href: "/admin/clients", label: "Clients", icon: FiUsers },
+  { href: "/admin/active-clients", label: "Active clients", icon: FiUserCheck },
   { href: "/admin/subscription-plans", label: "Subscriptions", icon: FiCreditCard },
   { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },

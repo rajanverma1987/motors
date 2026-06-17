@@ -11,6 +11,7 @@ import {
   ensureShopSubscriptionOnRegister,
 } from "@/lib/subscription-service";
 import { getOrCreateEntitlementForEmail } from "@/lib/calculator-access";
+import { recordPortalLogin } from "@/lib/portal-login-audit";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "register", 5);
@@ -81,6 +82,12 @@ export async function POST(request) {
       }
     } catch (subErr) {
       console.error("Subscription bootstrap on register:", subErr);
+    }
+
+    try {
+      await recordPortalLogin(user.email);
+    } catch (_) {
+      /* ignore */
     }
 
     const token = await createPortalToken({

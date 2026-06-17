@@ -14,9 +14,13 @@ const userSchema = new mongoose.Schema(
     listingOnlyAccount: { type: Boolean, default: false },
     /** Signup from calculators marketing: calculators-only portal until CalculatorEntitlement is active. */
     calculatorOnlyAccount: { type: Boolean, default: false },
+    /** Last successful portal sign-in (owner or employee session for this shop). */
+    lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
+
+userSchema.index({ lastLoginAt: -1 });
 
 /* email: unique: true already creates an index */
 

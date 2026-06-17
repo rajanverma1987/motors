@@ -53,6 +53,7 @@ export const config = {
     "/admin/listings/:path*",
     "/admin/leads/:path*",
     "/admin/clients/:path*",
+    "/admin/active-clients/:path*",
     "/admin/location-pages/:path*",
     "/admin/marketing/:path*",
     "/admin/marketplace/:path*",
