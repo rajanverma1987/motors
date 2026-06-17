@@ -159,7 +159,7 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
       </div>
       <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1">
         <Button type="submit" variant="primary" size="sm" disabled={submitting}>
-          {submitting ? "Submitting..." : "Get Pricing"}
+          {submitting ? "Submitting…" : "Request pricing"}
         </Button>
       </div>
       {error ? <p className="sm:col-span-2 text-xs text-danger">{error}</p> : null}

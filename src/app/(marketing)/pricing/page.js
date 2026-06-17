@@ -1,100 +1,31 @@
-import Link from "next/link";
-import Button from "@/components/ui/button";
-import HeroBackground from "@/components/marketing/HeroBackground";
 import PricingInquiryForm from "@/components/marketing/PricingInquiryForm";
 
 export const metadata = {
-  title: "Custom Pricing",
+  title: "Request pricing",
   description:
-    "Pricing tailored to your workflow. Monthly, yearly, one-time, and hybrid models based on your process complexity.",
+    "Request IQMotorBase CRM pricing for your motor repair shop. Tell us about your team and workflow and we will send a proposal.",
   openGraph: {
-    title: "Custom Pricing | IQMotorBase.com",
-    description: "Not a generic SaaS. Built around your workflow.",
+    title: "Request pricing | IQMotorBase.com",
+    description: "Request custom pricing for motor repair shop management software.",
   },
 };
 
 export default function PricingPage() {
   return (
-    <>
-      <section className="relative overflow-hidden border-b border-border bg-card py-16 sm:py-20">
-        <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
-          <div className="mx-auto max-w-[50.4rem] text-center">
-            <h1 className="text-4xl font-bold tracking-tight text-title sm:text-5xl">
-              Pricing tailored to your workflow
-            </h1>
-            <p className="mt-4 text-lg text-secondary">
-              Every business is different. We analyze your process and offer the best pricing model - monthly, yearly, or one-time.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
-              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
-                <Button variant="primary" size="sm" className="w-full sm:w-auto">
-                  Book a Demo
-                </Button>
-              </Link>
-              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
-                <Button variant="outline" size="sm" className="w-full sm:w-auto">
-                  Get Pricing
-                </Button>
-              </Link>
-            </div>
-            <p className="mt-4 text-sm font-medium text-primary">
-              Not a generic SaaS. Built around your workflow.
-            </p>
-          </div>
+    <section className="py-16 sm:py-24">
+      <div className="mx-auto max-w-2xl px-4 sm:px-6">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold tracking-tight text-title sm:text-5xl">Request pricing</h1>
+          <p className="mt-4 text-lg text-secondary">
+            IQMotorBase subscription pricing is customized for each shop. Share a few details and we will follow up
+            with a quote.
+          </p>
         </div>
-      </section>
 
-      <section className="py-16 sm:py-24">
-        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
-          <div className="grid gap-8 lg:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card p-7 shadow-sm">
-              <h2 className="text-xl font-semibold text-title">Available pricing models</h2>
-              <ul className="mt-5 space-y-3 text-sm text-secondary">
-                <li className="flex items-start gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                  Subscription (Monthly / Yearly)
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                  One-time license (On-premise)
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                  Hybrid (Setup + lower recurring)
-                </li>
-              </ul>
-              <p className="mt-6 rounded-lg border border-border bg-bg px-3 py-2 text-sm text-secondary">
-                Optional anchor: <span className="font-medium text-title">Projects typically start from custom monthly tiers.</span>
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-card p-7 shadow-sm lg:col-span-2">
-              <h2 className="text-xl font-semibold text-title">Tell us about your workflow</h2>
-              <p className="mt-2 text-sm text-secondary">
-                We use this to prepare the right demo and proposal.
-              </p>
-              <PricingInquiryForm sourcePage="/pricing" />
-            </div>
-          </div>
-
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm font-semibold text-title">Reduce manual work</p>
-              <p className="mt-2 text-sm text-secondary">Automate repetitive status updates, quote handoffs, and follow-up tasks across teams.</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm font-semibold text-title">Replace Excel dependency</p>
-              <p className="mt-2 text-sm text-secondary">Move from spreadsheets and scattered chats to one controlled workflow with live visibility.</p>
-            </div>
-            <div className="rounded-xl border border-border bg-card p-5">
-              <p className="text-sm font-semibold text-title">Custom-fit to your process</p>
-              <p className="mt-2 text-sm text-secondary">Configure around your floor, approvals, and billing model instead of forcing your team into generic templates.</p>
-            </div>
-          </div>
-
+        <div className="mt-10 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+          <PricingInquiryForm sourcePage="/pricing" />
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 }
