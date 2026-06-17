@@ -5,7 +5,7 @@ const VERIFY_URL = "https://prospectslens.com/api/v1/email/verify";
 
 const VERIFY_OPTIONS = {
   smtp: true,
-  blockRoleAccounts: true,
+  blockRoleAccounts: false,
   blockCatchAll: true,
   requireSmtp: true,
   timeoutMs: 12000,
