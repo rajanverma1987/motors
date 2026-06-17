@@ -15,14 +15,42 @@ function getApiKey() {
   return process.env.PROSPECTLENS_API_KEY?.trim() || "";
 }
 
+function authHeaders(apiKey) {
+  return {
+    "Content-Type": "application/json",
+    "X-API-Key": apiKey,
+    Authorization: `Bearer ${apiKey}`,
+  };
+}
+
+function extractApiError(body) {
+  if (!body || typeof body !== "object") return null;
+  const err = body.error;
+  if (typeof err === "string" && err.trim()) return err.trim();
+  if (err && typeof err === "object" && typeof err.message === "string" && err.message.trim()) {
+    return err.message.trim();
+  }
+  if (typeof body.message === "string" && body.message.trim()) return body.message.trim();
+  return null;
+}
+
 /** ProspectLens returns { success, data: { valid, deliverable, ... } }; docs show flat shape. */
 function unwrapProspectLensBody(body) {
   if (!body || typeof body !== "object") return body;
+  if (body.success === false) return null;
   const inner = body.data;
   if (inner && typeof inner === "object" && !Array.isArray(inner)) {
     return inner;
   }
+  if (typeof body.valid === "boolean" || body.deliverable != null) {
+    return body;
+  }
   return body;
+}
+
+function isVerifiedResult(result) {
+  if (!result || typeof result !== "object") return false;
+  return result.valid === true;
 }
 
 function invalidMessage(data) {
@@ -37,7 +65,8 @@ function invalidMessage(data) {
   if (checks.format === false) return "Please enter a valid email address.";
   if (checks.mx === false) return "This email domain does not accept mail (no MX records).";
   if (checks.mailboxExists === false) return "This mailbox does not appear to exist.";
-  if (data?.deliverable && data.deliverable !== "yes") {
+  const deliverable = String(data?.deliverable || "").toLowerCase();
+  if (deliverable && deliverable !== "yes" && deliverable !== "unknown") {
     return `This email does not appear deliverable (${data.deliverable}).`;
   }
   return "This email address could not be verified. Please use a valid shop contact email.";
@@ -72,10 +101,7 @@ export async function verifyListingEmail(email) {
   try {
     res = await fetch(VERIFY_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-API-Key": apiKey,
-      },
+      headers: authHeaders(apiKey),
       body: JSON.stringify({ email: norm, options: VERIFY_OPTIONS }),
       signal: AbortSignal.timeout(15000),
     });
@@ -95,17 +121,22 @@ export async function verifyListingEmail(email) {
   }
 
   if (!res.ok) {
-    const msg =
-      typeof data?.error === "string"
-        ? data.error
-        : typeof data?.message === "string"
-          ? data.message
-          : "Email verification failed.";
-    return { valid: false, reason: data?.reason || "verify_failed", message: msg };
+    const msg = extractApiError(data) || `Email verification failed (HTTP ${res.status}).`;
+    return { valid: false, reason: data?.error?.code || "verify_failed", message: msg };
+  }
+
+  if (data.success === false) {
+    const msg = extractApiError(data) || "Email verification failed.";
+    return { valid: false, reason: data?.error?.code || "verify_failed", message: msg };
   }
 
   const result = unwrapProspectLensBody(data);
-  const valid = result.valid === true && result.deliverable === "yes";
+  if (!result) {
+    const msg = extractApiError(data) || "Email verification failed.";
+    return { valid: false, reason: "verify_failed", message: msg };
+  }
+
+  const valid = isVerifiedResult(result);
 
   return {
     valid,
