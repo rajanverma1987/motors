@@ -254,12 +254,23 @@ export async function sendDemoRequestToAdmin(fields) {
 }
 
 /** Send thank-you email to client after demo request. */
-export async function sendDemoRequestThankYou(toName, toEmail) {
+export async function sendDemoRequestThankYou(toName, toEmail, availability = {}) {
   const name = toName ? ` ${toName}` : "";
   const subject = "We received your demo request – IQMotorBase.com";
+  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const preferDate = String(availability?.preferDate || "").trim();
+  const preferTime = String(availability?.preferTime || "").trim();
+  const timezone = String(availability?.timezone || "").trim();
+  const preferenceParts = [preferDate, preferTime, timezone].filter(Boolean);
+  const preferenceLine =
+    preferenceParts.length > 0
+      ? `<p>We saved your submitted preference: <strong>${esc(preferenceParts.join(" · "))}</strong>. If that changes, include updated options in your reply.</p>`
+      : "";
   const html = `
     <p>Hi${name},</p>
-    <p>Thank you for requesting a demo of IQMotorBase.com. We've received your details and will get back to you within 1–2 business days to schedule a time that works for you.</p>
+    <p>Thank you for requesting a demo of IQMotorBase.com.</p>
+    ${preferenceLine}
+    <p>To schedule your meeting, please <strong>reply to this email</strong> with a few dates and times that work for you (include your timezone). We&apos;ll send a calendar invite for a slot that fits your schedule.</p>
     <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-repair-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
     <p>— The IQMotorBase.com team</p>
   `;

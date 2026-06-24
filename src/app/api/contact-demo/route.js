@@ -61,7 +61,11 @@ export async function POST(request) {
       );
     }
 
-    const thankYouResult = await sendDemoRequestThankYou(name, email);
+    const thankYouResult = await sendDemoRequestThankYou(name, email, {
+      preferDate,
+      preferTime,
+      timezone,
+    });
     if (!thankYouResult.ok) {
       console.warn("Demo request thank-you email failed:", thankYouResult.error);
       // Still return success; admin got the lead

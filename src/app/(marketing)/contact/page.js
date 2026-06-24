@@ -126,7 +126,7 @@ export default function ContactPage() {
                 </div>
 
                 <p className="mt-6 text-xs text-secondary">
-                  Typically we reply within 1–2 business days. For urgent issues, mention it in your message.
+                  Reply to our confirmation email with your availability to schedule a demo. For urgent issues, mention it in your message.
                 </p>
               </div>
             </div>

@@ -21,7 +21,7 @@ export default function ContactThankYouPage() {
             Thanks for reaching out
           </h1>
           <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-secondary">
-            We&apos;ve received your demo request and sent a confirmation to your email. We&apos;ll get back to you within 1–2 business days to schedule a time that works for you.
+            We&apos;ve received your demo request and sent a confirmation to your email. Please reply with a few dates and times that work for you so we can schedule your demo.
           </p>
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
             <Link href="/" className="w-full min-w-0 sm:w-auto">
