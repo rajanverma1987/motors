@@ -18,6 +18,7 @@ const tabButtonBase =
  * @param {(id: string) => void} [props.onChange] – called when tab changes (for controlled use)
  * @param {string} [props.className] – extra class on the root wrapper
  * @param {string} [props.listClassName] – extra class on the tab list
+ * @param {string} [props.panelClassName] – extra class on each tab panel (use flex-1 min-h-0 for fill-height tables)
  */
 export default function Tabs({
   tabs = [],
@@ -26,6 +27,7 @@ export default function Tabs({
   onChange,
   className = "",
   listClassName = "",
+  panelClassName = "flex flex-col pt-6",
 }) {
   const [internalValue, setInternalValue] = useState(defaultTab ?? tabs[0]?.id ?? "");
   const activeId = value !== undefined ? value : internalValue;
@@ -76,7 +78,7 @@ export default function Tabs({
             id={`${uid}-panel-${tab.id}`}
             aria-labelledby={`${uid}-tab-${tab.id}`}
             hidden={!isActive}
-            className="flex flex-col pt-6"
+            className={`${panelClassName}${isActive ? "" : " hidden"}`}
           >
             {isActive ? tab.children : null}
           </div>

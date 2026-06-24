@@ -221,7 +221,7 @@ function buildQuotePayload(form) {
   };
 }
 
-export default function DashboardRfqListPage({ embedded = false }) {
+export default function DashboardRfqListPage({ embedded = false, actionsRef = null }) {
   const listPath = allJobsListPath(embedded, "rfq", "/dashboard/rfq");
   const toast = useToast();
   const confirm = useConfirm();
@@ -572,6 +572,16 @@ export default function DashboardRfqListPage({ embedded = false }) {
     });
     setEditModalOpen(true);
   }, [setForm]);
+
+  useEffect(() => {
+    if (!embedded || !actionsRef) return undefined;
+    actionsRef.current = { openCreateRfqModal };
+    return () => {
+      if (actionsRef.current?.openCreateRfqModal === openCreateRfqModal) {
+        actionsRef.current = null;
+      }
+    };
+  }, [embedded, actionsRef, openCreateRfqModal]);
 
   useEffect(() => {
     const id = editQuoteIdParam?.trim();
@@ -1382,14 +1392,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      {embedded ? (
-        <div className="mb-3 flex shrink-0 justify-end">
-          <Button type="button" variant="primary" size="sm" onClick={openCreateRfqModal}>
-            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-            Create RFQ
-          </Button>
-        </div>
-      ) : (
+      {!embedded ? (
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
           <div>
             <h1 className="text-2xl font-bold text-title">RFQ</h1>
@@ -1402,7 +1405,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
             Create RFQ
           </Button>
         </div>
-      )}
+      ) : null}
 
       <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${embedded ? "" : "mt-4"}`}>
         <div className="mb-2 flex shrink-0 flex-wrap gap-1.5">
@@ -1421,6 +1424,7 @@ export default function DashboardRfqListPage({ embedded = false }) {
           data={sortedQuotes}
           rowKey="id"
           loading={loading}
+          fillHeight
           sortState={quoteSort}
           onSort={handleQuoteSort}
           emptyMessage={
