@@ -25,7 +25,7 @@ import WorkOrderInspectionsPanel from "@/components/dashboard/work-order-inspect
 const sectionLabel = "text-[10px] font-semibold uppercase tracking-wide text-secondary";
 /** Same height for date input and select triggers in assignment grid */
 const assignmentControlSize =
-  "!h-9 !min-h-9 !max-h-9 !box-border !py-1.5 !text-xs leading-normal";
+  "!h-9 !min-h-9 !max-h-9 !box-border !py-1.5 !text-xs !leading-normal !whitespace-nowrap";
 
 const WO_HEADER_LINK_CLASS =
   "text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
@@ -92,7 +92,6 @@ function WorkOrderTopSection({
   form,
   setForm,
   technicianOptions,
-  jobTypeSelectOptions,
   statusSelectOptions,
   onOpenQuote,
   onOpenCustomer,
@@ -107,13 +106,11 @@ function WorkOrderTopSection({
             onOpenCustomer={onOpenCustomer}
           />
         </div>
-        <div className="w-full shrink-0 px-4 py-2.5 lg:w-[min(50%,26rem)] lg:py-3 lg:pl-4">
+        <div className="w-full shrink-0 px-4 py-2.5 lg:w-[min(62%,40rem)] lg:py-3 lg:pl-4">
           <AssignmentFields
             form={form}
             setForm={setForm}
-            editing={editing}
             technicianOptions={technicianOptions}
-            jobTypeSelectOptions={jobTypeSelectOptions}
             statusSelectOptions={statusSelectOptions}
           />
         </div>
@@ -167,18 +164,46 @@ function QuoteScopeBlock({ scopeLines = [], otherCostLines = [] }) {
   );
 }
 
-function AssignmentFields({
-  form,
-  setForm,
-  editing,
-  technicianOptions,
-  jobTypeSelectOptions,
-  statusSelectOptions,
-}) {
+function JobTypeRadioGroup({ options, value, motorClass, onChange }) {
+  return (
+    <fieldset className="min-w-0 border-0 p-0">
+      <legend className="sr-only">Job type</legend>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Job type">
+        {options.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <label
+              key={opt.value}
+              className={`inline-flex cursor-pointer items-center rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors hover:border-primary/50 ${
+                active
+                  ? "border-primary bg-primary text-white shadow-sm"
+                  : "border-border bg-form-bg text-title hover:bg-card"
+              }`}
+            >
+              <input
+                type="radio"
+                name="wo-job-type"
+                value={opt.value}
+                checked={active}
+                onChange={() =>
+                  onChange(normalizeWorkOrderJobType(opt.value, motorClass || "AC"))
+                }
+                className="sr-only"
+              />
+              {opt.label}
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+function AssignmentFields({ form, setForm, technicianOptions, statusSelectOptions }) {
   return (
     <div className="min-w-0">
       <p className="mb-2 text-xs font-medium text-secondary">Assignment</p>
-      <div className="grid w-full grid-cols-2 gap-2 [&>div]:min-w-0 [&_label]:!mb-0.5 [&_label]:!text-xs [&_label]:!font-normal [&_label]:!text-secondary [&_span.text-title]:!mb-0.5 [&_span.text-title]:!text-xs [&_span.text-title]:!font-normal [&_span.text-title]:!text-secondary">
+      <div className="grid w-full grid-cols-2 gap-x-3 gap-y-2 [&>div]:min-w-0 [&_label]:!mb-0.5 [&_label]:!text-xs [&_label]:!font-normal [&_label]:!text-secondary [&_span.text-title]:!mb-0.5 [&_span.text-title]:!text-xs [&_span.text-title]:!font-normal [&_span.text-title]:!text-secondary">
         <Input
           label="Date"
           type="date"
@@ -197,32 +222,17 @@ function AssignmentFields({
           className="!w-full !gap-1"
           triggerClassName={assignmentControlSize}
         />
-        <Select
-          label="Job type"
-          options={jobTypeSelectOptions}
-          value={form.jobType}
-          onChange={(e) =>
-            setForm((f) => ({
-              ...f,
-              jobType: normalizeWorkOrderJobType(
-                e.target.value ?? "complete_motor",
-                editing.motorClass || "AC"
-              ),
-            }))
-          }
-          searchable={false}
-          className="!w-full !gap-1"
-          triggerClassName={assignmentControlSize}
-        />
-        <Select
-          label="Status"
-          options={statusSelectOptions}
-          value={form.status}
-          onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "" }))}
-          searchable={false}
-          className="!w-full !gap-1"
-          triggerClassName={assignmentControlSize}
-        />
+        <div className="col-span-2 min-w-0">
+          <Select
+            label="Status"
+            options={statusSelectOptions}
+            value={form.status}
+            onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "" }))}
+            searchable={false}
+            className="!w-full !gap-1"
+            triggerClassName={assignmentControlSize}
+          />
+        </div>
       </div>
     </div>
   );
@@ -314,7 +324,7 @@ export default function WorkOrderFormModal({
 
   const statusSelectOptions = statusOptions.map((s) => ({ value: s, label: s }));
 
-  const jobTypeSelectOptions = useMemo(() => {
+  const jobTypeOptions = useMemo(() => {
     if (editing?.motorClass === "DC") return JOB_TYPE_OPTIONS;
     return JOB_TYPE_OPTIONS.filter((o) => o.value !== "armature_only");
   }, [editing?.motorClass]);
@@ -560,7 +570,6 @@ export default function WorkOrderFormModal({
             form={form}
             setForm={setForm}
             technicianOptions={technicianOptions}
-            jobTypeSelectOptions={jobTypeSelectOptions}
             statusSelectOptions={statusSelectOptions}
             onOpenQuote={onOpenQuote}
             onOpenCustomer={onOpenCustomer}
@@ -572,6 +581,15 @@ export default function WorkOrderFormModal({
           />
 
           <ShopNotesBlock form={form} setForm={setForm} />
+
+          <FormSection title="Job type" bodyClassName="py-3">
+            <JobTypeRadioGroup
+              options={jobTypeOptions}
+              value={form.jobType}
+              motorClass={editing.motorClass}
+              onChange={(next) => setForm((f) => ({ ...f, jobType: next }))}
+            />
+          </FormSection>
 
           {editing.motorClass === "AC" && (
             <FormSection
@@ -589,31 +607,26 @@ export default function WorkOrderFormModal({
             </FormSection>
           )}
 
-          {editing.motorClass === "DC" && form.jobType === "armature_only" && (
+          {editing.motorClass === "DC" && form.jobType === "field_frame_only" && (
             <FormSection
-              title="Armature"
-              subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+              title="DC motor — field frame"
+              subtitle="Field frame work only — fill these fields; saved to the customer motor on save."
               emphasis
               bodyClassName="bg-form-bg/20"
             >
               <WoSpecDenseGrid
-                idPrefix="wo-modal-arm"
-                fields={DC_ARMATURE_FIELDS}
-                values={form.armatureSpecs}
-                onChange={(k, v) =>
-                  setForm((f) => ({
-                    ...f,
-                    armatureSpecs: { ...f.armatureSpecs, [k]: v },
-                  }))
-                }
+                idPrefix="wo-modal-dc"
+                fields={DC_WORK_ORDER_FIELDS}
+                values={form.dcSpecs}
+                onChange={(k, v) => setForm((f) => ({ ...f, dcSpecs: { ...f.dcSpecs, [k]: v } }))}
               />
             </FormSection>
           )}
 
-          {editing.motorClass === "DC" && form.jobType !== "armature_only" && (
+          {editing.motorClass === "DC" && form.jobType === "complete_motor" && (
             <FormSection
-              title="DC motor & armature"
-              subtitle="Main work order data — use tabs for motor vs armature; saved to the customer motor on save."
+              title="Field Frame & armature"
+              subtitle="Complete motor — use tabs for Field Frame and armature; saved to the customer motor on save."
               emphasis
               bodyClassName="bg-form-bg/20"
             >
@@ -624,7 +637,7 @@ export default function WorkOrderFormModal({
                 tabs={[
                   {
                     id: "dc",
-                    label: "DC motor",
+                    label: "Field Frame",
                     children: (
                       <WoSpecDenseGrid
                         idPrefix="wo-modal-dc"
@@ -652,6 +665,27 @@ export default function WorkOrderFormModal({
                     ),
                   },
                 ]}
+              />
+            </FormSection>
+          )}
+
+          {editing.motorClass === "DC" && form.jobType === "armature_only" && (
+            <FormSection
+              title="Armature"
+              subtitle="Main work order data — fill these fields; saved to the customer motor on save."
+              emphasis
+              bodyClassName="bg-form-bg/20"
+            >
+              <WoSpecDenseGrid
+                idPrefix="wo-modal-arm"
+                fields={DC_ARMATURE_FIELDS}
+                values={form.armatureSpecs}
+                onChange={(k, v) =>
+                  setForm((f) => ({
+                    ...f,
+                    armatureSpecs: { ...f.armatureSpecs, [k]: v },
+                  }))
+                }
               />
             </FormSection>
           )}

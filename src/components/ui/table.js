@@ -198,9 +198,6 @@ export default function Table({
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
 
-  const cellPy = dense ? "py-1" : "py-1.5";
-  const headerPy = dense ? "py-1" : "py-1.5";
-
   const [searchInput, setSearchInput] = useState("");
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [draftHiddenKeys, setDraftHiddenKeys] = useState([]);
@@ -215,6 +212,20 @@ export default function Table({
   const lastEmittedSearchRef = useRef(null);
   const { settings: dashboardUserSettings } = useUserSettings();
   const preferredPageSize = dashboardUserSettings?.tablePageSize;
+  const compactFromSettings = !!dashboardUserSettings?.compactTables;
+  const isCompact = dense || compactFromSettings;
+
+  const cellPy = isCompact ? "py-0.5" : "py-1.5";
+  const headerPy = isCompact ? "py-0.5" : "py-1.5";
+  const cellText = isCompact ? "text-xs" : "text-sm";
+  const actionPad = isCompact ? "p-1" : "p-1.5";
+  const actionIcon = isCompact ? "h-3.5 w-3.5" : "h-4 w-4";
+
+  function cellPx(col) {
+    if (col.isSelect || col.isAction) return isCompact ? "px-1.5" : "px-2";
+    return isCompact ? "px-3" : "px-4";
+  }
+
   const [internalPage, setInternalPage] = useState(1);
   const [internalPageSize, setInternalPageSize] = useState(() =>
     [10, 25, 50, 100].includes(Number(preferredPageSize)) ? Number(preferredPageSize) : 25
@@ -459,20 +470,20 @@ export default function Table({
             <button
               type="button"
               onClick={() => onEdit(row, i)}
-              className="cursor-pointer rounded p-1.5 text-primary hover:bg-primary/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+              className={`cursor-pointer rounded ${actionPad} text-primary hover:bg-primary/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary`}
               aria-label="Edit"
             >
-              <FiEdit2 className="h-4 w-4" aria-hidden />
+              <FiEdit2 className={`${actionIcon} shrink-0`} aria-hidden />
             </button>
           )}
           {hasDelete && (
             <button
               type="button"
               onClick={() => onDelete(row, i)}
-              className="cursor-pointer rounded p-1.5 text-danger hover:bg-danger/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-danger"
+              className={`cursor-pointer rounded ${actionPad} text-danger hover:bg-danger/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-danger`}
               aria-label="Delete"
             >
-              <FiTrash2 className="h-4 w-4" aria-hidden />
+              <FiTrash2 className={`${actionIcon} shrink-0`} aria-hidden />
             </button>
           )}
         </div>
@@ -544,8 +555,7 @@ export default function Table({
     : "w-full border-collapse";
   const thClass = (col) => {
     const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
-    const px = col.isSelect || col.isAction ? "px-2" : "px-4";
-    return `${px} ${headerPy} text-sm font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
+    return `${cellPx(col)} ${headerPy} ${cellText} font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
   };
   const thStickyStyle = effectiveStickyHeader
     ? { position: "sticky", top: 0, zIndex: 10, backgroundColor: "hsl(var(--card))", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" }
@@ -644,7 +654,7 @@ export default function Table({
           <tr>
             <td
               colSpan={displayColumns.length}
-              className="px-4 py-8 text-center text-sm text-secondary whitespace-nowrap"
+              className={`px-4 ${isCompact ? "py-5" : "py-8"} text-center ${cellText} text-secondary whitespace-nowrap`}
             >
               {emptyState != null ? emptyState : emptyMessage}
             </td>
@@ -660,7 +670,6 @@ export default function Table({
                 const align =
                   alignClass[resolveColumnAlign(col, { value: row[col.key], isPlaceholder })] ?? "text-left";
                 const style = getEffectiveColStyle(col);
-                const cellPx = col.isSelect || col.isAction ? "px-2" : "px-4";
                 const isActionLikeColumn =
                   col.isAction || col.key === "actions" || col.key === "_actions";
                 /** Parent cursor does not override UA `button` cursor; target descendants explicitly. */
@@ -668,7 +677,7 @@ export default function Table({
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`${cellPx} ${cellPy} text-sm leading-snug text-text tabular whitespace-nowrap ${align} ${cellBorderClass} ${cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}`}
+                    className={`${cellPx(col)} ${cellPy} ${cellText} leading-snug text-text tabular whitespace-nowrap ${align} ${cellBorderClass} ${cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}`}
                     style={style}
                     onMouseEnter={() => setCellHover({ row: i, col: j })}
                   >
@@ -689,7 +698,7 @@ export default function Table({
                   return (
                     <td
                       key={col.key ?? j}
-                      className={`px-2 ${cellPy} whitespace-nowrap ${cellBorderClass}`}
+                      className={`${cellPx(col)} ${cellPy} whitespace-nowrap ${cellBorderClass}`}
                     />
                   );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
@@ -699,7 +708,7 @@ export default function Table({
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align} ${cellBorderClass}`}
+                    className={`${cellPx(col)} ${cellPy} ${cellText} tabular whitespace-nowrap ${align} ${cellBorderClass}`}
                     style={getEffectiveColStyle(col)}
                   >
                     {val ?? emptyCell}
@@ -725,7 +734,7 @@ export default function Table({
                   return (
                     <td
                       key={col.key ?? j}
-                      className={`px-2 ${cellPy} whitespace-nowrap ${cellBorderClass}`}
+                      className={`${cellPx(col)} ${cellPy} whitespace-nowrap ${cellBorderClass}`}
                     />
                   );
                 const val = typeof row === "object" && row !== null ? row[col.key] : null;
@@ -735,7 +744,7 @@ export default function Table({
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`px-4 ${cellPy} text-sm tabular whitespace-nowrap ${align} ${cellBorderClass}`}
+                    className={`${cellPx(col)} ${cellPy} ${cellText} tabular whitespace-nowrap ${align} ${cellBorderClass}`}
                     style={getEffectiveColStyle(col)}
                   >
                     {val ?? emptyCell}
@@ -894,7 +903,7 @@ export default function Table({
 
       {showPaginationBar && (
         <div
-          className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 py-3 ${fillHeight ? "shrink-0" : ""}`}
+          className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 ${isCompact ? "py-2" : "py-3"} ${fillHeight ? "shrink-0" : ""}`}
         >
           <div className="flex flex-wrap items-center gap-4">
             <span className="text-sm text-title">

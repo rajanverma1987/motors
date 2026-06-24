@@ -127,6 +127,17 @@ html.dark .job-board-status-pill.tile-colors-custom {
   box-shadow: none;
 }
 
+/* Settings → Display → Compact table rows (summary / modal tables; main lists use Table component) */
+html[data-compact-tables="true"] table.dashboard-data-table {
+  font-size: 0.75rem;
+  line-height: 1.25rem;
+}
+
+html[data-compact-tables="true"] table.dashboard-data-table :is(th, td) {
+  padding-top: 0.125rem;
+  padding-bottom: 0.125rem;
+}
+
 /* Dashboard display zoom — reset for print so layouts match paper */
 @media print {
   html {

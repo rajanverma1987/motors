@@ -20,6 +20,10 @@ import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import VendorQuickViewModal from "@/components/dashboard/vendor-quick-view-modal";
+
+const VENDOR_LINK_CLASS =
+  "font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
 const TABS = [
   { id: "due", label: "Due to vendors", include: "due" },
@@ -78,6 +82,7 @@ export default function AccountsPayablePageClient() {
   const [payMethod, setPayMethod] = useState("check");
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
+  const [openVendorId, setOpenVendorId] = useState(null);
   const [paySubmitting, setPaySubmitting] = useState(false);
 
   const load = useCallback(async () => {
@@ -279,7 +284,21 @@ export default function AccountsPayablePageClient() {
           <span className="font-medium text-title">{v || "—"}</span>
         ),
       },
-      { key: "vendorName", label: "Vendor", sortable: true },
+      { key: "vendorName", label: "Vendor", sortable: true, render: (_, row) => {
+        const vendorId = String(row.vendorId || "").trim();
+        const name = row.vendorName || "—";
+        if (!vendorId || name === "—") return name;
+        return (
+          <button
+            type="button"
+            className={VENDOR_LINK_CLASS}
+            onClick={() => setOpenVendorId(vendorId)}
+            title="View vendor"
+          >
+            {name}
+          </button>
+        );
+      } },
       {
         key: "orderTotal",
         label: "Order",
@@ -431,7 +450,7 @@ export default function AccountsPayablePageClient() {
 
       {tab === "vendor" ? (
         <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-border">
-          <table className="w-full text-sm">
+          <table className="dashboard-data-table w-full text-sm">
             <thead className="sticky top-0 border-b border-border bg-card">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-secondary">Vendor</th>
@@ -456,7 +475,16 @@ export default function AccountsPayablePageClient() {
               ) : (
                 vendorGroups.map((g) => (
                   <tr key={g.vendorId} className="border-b border-border/80">
-                    <td className="px-4 py-3 font-medium text-title">{g.vendorName}</td>
+                    <td className="px-4 py-3 font-medium text-title">
+                      <button
+                        type="button"
+                        className={VENDOR_LINK_CLASS}
+                        onClick={() => setOpenVendorId(g.vendorId)}
+                        title="View vendor"
+                      >
+                        {g.vendorName}
+                      </button>
+                    </td>
                     <td className="px-4 py-3 text-right tabular">{g.pos.length}</td>
                     <td className="px-4 py-3 text-right tabular font-medium">{fmt(g.balance)}</td>
                     <td className="px-4 py-3">
@@ -563,6 +591,13 @@ export default function AccountsPayablePageClient() {
           </div>
         )}
       </Modal>
+
+      <VendorQuickViewModal
+        open={!!openVendorId}
+        vendorId={openVendorId}
+        onClose={() => setOpenVendorId(null)}
+        zIndex={120}
+      />
     </div>
   );
 }

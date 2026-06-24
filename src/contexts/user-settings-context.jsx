@@ -57,6 +57,11 @@ export function useUserSettings() {
   return useContext(UserSettingsContext);
 }
 
+export function useCompactTables() {
+  const { settings } = useUserSettings();
+  return !!settings?.compactTables;
+}
+
 /** Format money using the signed-in user’s Settings → Currency (default USD). */
 export function useFormatMoney() {
   const { settings } = useUserSettings();

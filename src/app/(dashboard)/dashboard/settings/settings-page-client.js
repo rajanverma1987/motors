@@ -486,8 +486,8 @@ export default function SettingsPageClient() {
               <div className="mt-4">
                 <Checkbox
                   name="compactTables"
-                  label="Compact table rows (coming soon)"
-                  help="Tighter row height on list pages when supported."
+                  label="Compact table rows"
+                  help="Tighter row height on list and summary tables across the dashboard."
                   checked={!!draft.compactTables}
                   onChange={(e) => updateDraft({ compactTables: e.target.checked })}
                 />

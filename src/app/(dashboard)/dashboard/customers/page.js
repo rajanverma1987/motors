@@ -762,6 +762,15 @@ export default function DashboardCustomersPage() {
     return Number.isFinite(n) ? formatMoney(n) : "—";
   };
 
+  const statusCountSummary = (rows) => {
+    const totals = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((row) => {
+      const status = String(row?.status || "draft").trim() || "draft";
+      totals.set(status, (totals.get(status) || 0) + 1);
+    });
+    return Array.from(totals.entries()).map(([status, count]) => ({ status, count }));
+  };
+
   const statusAmountSummary = (rows, getAmount) => {
     const totals = new Map();
     (Array.isArray(rows) ? rows : []).forEach((row) => {
@@ -781,10 +790,7 @@ export default function DashboardCustomersPage() {
     customerActivity.quotes,
     (q) => Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0)
   );
-  const workOrderStatusTotals = statusAmountSummary(
-    customerActivity.workOrders,
-    (wo) => Number(wo?.linkedQuoteAmount || 0)
-  );
+  const workOrderStatusTotals = statusCountSummary(customerActivity.workOrders);
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -1278,7 +1284,7 @@ export default function DashboardCustomersPage() {
 
             <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Invoices ({customerActivityLoading ? "…" : customerActivity.invoices.length})
                 </h3>
                 {!customerActivityLoading && invoiceStatusTotals.length > 0 && (
@@ -1297,7 +1303,7 @@ export default function DashboardCustomersPage() {
                   emptyMessage="No invoices found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Invoice #</th>
@@ -1337,7 +1343,7 @@ export default function DashboardCustomersPage() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Quotes ({customerActivityLoading ? "…" : customerActivity.quotes.length})
                 </h3>
                 {!customerActivityLoading && quoteStatusTotals.length > 0 && (
@@ -1356,7 +1362,7 @@ export default function DashboardCustomersPage() {
                   emptyMessage="No quotes found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">RFQ #</th>
@@ -1396,7 +1402,7 @@ export default function DashboardCustomersPage() {
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Work orders ({customerActivityLoading ? "…" : customerActivity.workOrders.length})
                 </h3>
                 {!customerActivityLoading && workOrderStatusTotals.length > 0 && (
@@ -1404,7 +1410,7 @@ export default function DashboardCustomersPage() {
                     {workOrderStatusTotals.map((s) => (
                       <span key={`wo-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
                         <WorkOrderStatusPill status={s.status} mergedSettings={mergedSettings} />
-                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                        <span className="text-sm text-title">{s.count}</span>
                       </span>
                     ))}
                   </div>
@@ -1415,7 +1421,7 @@ export default function DashboardCustomersPage() {
                   emptyMessage="No work orders found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">WO #</th>

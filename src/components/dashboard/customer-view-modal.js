@@ -132,6 +132,15 @@ function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children })
   return children;
 }
 
+function statusCountSummary(rows) {
+  const totals = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const status = String(row?.status || "draft").trim() || "draft";
+    totals.set(status, (totals.get(status) || 0) + 1);
+  });
+  return Array.from(totals.entries()).map(([status, count]) => ({ status, count }));
+}
+
 function statusAmountSummary(rows, getAmount) {
   const totals = new Map();
   (Array.isArray(rows) ? rows : []).forEach((row) => {
@@ -303,10 +312,7 @@ export default function CustomerViewModal({
     activity.quotes,
     (q) => Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0)
   );
-  const workOrderStatusTotals = statusAmountSummary(
-    activity.workOrders,
-    (wo) => Number(wo?.linkedQuoteAmount || 0)
-  );
+  const workOrderStatusTotals = statusCountSummary(activity.workOrders);
 
   const handleClose = () => {
     queueMicrotask(() => {
@@ -614,7 +620,7 @@ export default function CustomerViewModal({
 
             <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Invoices ({activityLoading ? "…" : activity.invoices.length})
                 </h3>
                 {!activityLoading && invoiceStatusTotals.length > 0 ? (
@@ -633,7 +639,7 @@ export default function CustomerViewModal({
                   emptyMessage="No invoices found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
@@ -683,7 +689,7 @@ export default function CustomerViewModal({
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Quotes ({activityLoading ? "…" : activity.quotes.length})
                 </h3>
                 {!activityLoading && quoteStatusTotals.length > 0 ? (
@@ -702,7 +708,7 @@ export default function CustomerViewModal({
                   emptyMessage="No quotes found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
@@ -752,7 +758,7 @@ export default function CustomerViewModal({
               </div>
 
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wide text-secondary">
+                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Work orders ({activityLoading ? "…" : activity.workOrders.length})
                 </h3>
                 {!activityLoading && workOrderStatusTotals.length > 0 ? (
@@ -760,7 +766,7 @@ export default function CustomerViewModal({
                     {workOrderStatusTotals.map((s) => (
                       <span key={`wo-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
                         <WorkOrderStatusPill status={s.status} mergedSettings={mergedSettings} />
-                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                        <span className="text-sm text-title">{s.count}</span>
                       </span>
                     ))}
                   </div>
@@ -771,7 +777,7 @@ export default function CustomerViewModal({
                   emptyMessage="No work orders found."
                 >
                   <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[560px] text-sm">
+                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
                       <thead>
                         <tr className="border-b border-border bg-card">
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">

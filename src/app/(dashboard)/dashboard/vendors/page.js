@@ -12,6 +12,7 @@ import Textarea from "@/components/ui/textarea";
 import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import VendorViewModal from "@/components/dashboard/vendor-view-modal";
 
 const PARTS_SUPPLIED_COLUMNS = [{ key: "item", label: "Part / material" }];
 
@@ -56,10 +57,9 @@ export default function DashboardVendorsPage() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [enterModalOpen, setEnterModalOpen] = useState(false);
-  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewVendorId, setViewVendorId] = useState(null);
+  const [editingVendor, setEditingVendor] = useState(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [viewingVendor, setViewingVendor] = useState(null);
-  const [viewLoadingVendorId, setViewLoadingVendorId] = useState(null);
   const [savingVendor, setSavingVendor] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
@@ -108,8 +108,7 @@ export default function DashboardVendorsPage() {
   useEffect(() => {
     const id = openVendorId?.trim();
     if (!id) return;
-    setViewLoadingVendorId(id);
-    setViewModalOpen(true);
+    setViewVendorId(id);
     router.replace("/dashboard/vendors", { scroll: false });
   }, [openVendorId, router]);
 
@@ -122,41 +121,9 @@ export default function DashboardVendorsPage() {
   const closeEnterModal = () => setEnterModalOpen(false);
 
   const openViewModal = (vendor) => {
-    if (!vendor?.id) {
-      setViewingVendor(vendor);
-      setViewModalOpen(true);
-      return;
-    }
-    setViewingVendor(null);
-    setViewLoadingVendorId(vendor.id);
-    setViewModalOpen(true);
+    if (!vendor?.id) return;
+    setViewVendorId(vendor.id);
   };
-
-  useEffect(() => {
-    if (!viewModalOpen || !viewLoadingVendorId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/dashboard/vendors/${viewLoadingVendorId}`, {
-          credentials: "include",
-          cache: "no-store",
-          headers: { Pragma: "no-cache", "Cache-Control": "no-cache" },
-        });
-        if (cancelled) return;
-        if (!res.ok) {
-          setViewLoadingVendorId(null);
-          return;
-        }
-        const data = await res.json();
-        if (cancelled) return;
-        setViewingVendor(data);
-        setViewLoadingVendorId(null);
-      } catch {
-        if (!cancelled) setViewLoadingVendorId(null);
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [viewModalOpen, viewLoadingVendorId]);
 
   useEffect(() => {
     if (!docsModalOpen || !docsVendorMeta?.id) return;
@@ -188,11 +155,7 @@ export default function DashboardVendorsPage() {
   }, [docsModalOpen, docsVendorMeta?.id]);
 
   const closeViewModal = () => {
-    queueMicrotask(() => {
-      setViewModalOpen(false);
-      setViewingVendor(null);
-      setViewLoadingVendorId(null);
-    });
+    queueMicrotask(() => setViewVendorId(null));
   };
 
   const openDocsModal = (row) => {
@@ -257,13 +220,13 @@ export default function DashboardVendorsPage() {
       notes: dataToUse.notes ?? "",
       attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
     });
-    setViewingVendor(dataToUse);
+    setEditingVendor(dataToUse);
     setEditModalOpen(true);
   };
 
   const closeEditModal = () => {
     setEditModalOpen(false);
-    setViewingVendor(null);
+    setEditingVendor(null);
   };
 
   const handleEnterSubmit = async (e) => {
@@ -306,10 +269,10 @@ export default function DashboardVendorsPage() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
-    if (!viewingVendor?.id) return;
+    if (!editingVendor?.id) return;
     setSavingVendor(true);
     try {
-      const res = await fetch(`/api/dashboard/vendors/${viewingVendor.id}`, {
+      const res = await fetch(`/api/dashboard/vendors/${editingVendor.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -319,9 +282,9 @@ export default function DashboardVendorsPage() {
       if (!res.ok) throw new Error(data.error || "Failed to update vendor");
       toast.success("Vendor updated.");
       setVendors((prev) =>
-        prev.map((v) => (v.id === viewingVendor.id ? { ...v, ...data.vendor } : v))
+        prev.map((v) => (v.id === editingVendor.id ? { ...v, ...data.vendor } : v))
       );
-      setViewingVendor(data.vendor);
+      setEditingVendor(data.vendor);
       closeEditModal();
     } catch (err) {
       toast.error(err.message || "Failed to update vendor");
@@ -594,85 +557,16 @@ export default function DashboardVendorsPage() {
         </Form>
       </Modal>
 
-      {/* View modal */}
-      <Modal
-        open={viewModalOpen}
+      <VendorViewModal
+        open={!!viewVendorId}
+        vendorId={viewVendorId}
         onClose={closeViewModal}
-        title="Vendor details"
-        size="4xl"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => { closeViewModal(); openEditModal(viewingVendor); }}>Edit</Button>
-        }
-      >
-        {viewLoadingVendorId ? (
-          <div className="flex items-center justify-center py-12">
-            <span className="text-secondary">Loading…</span>
-          </div>
-        ) : viewingVendor ? (
-          <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Vendor & contact</h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                <div><dt className="text-secondary">Name</dt><dd className="text-title font-medium">{viewingVendor.name || "—"}</dd></div>
-                <div><dt className="text-secondary">Contact</dt><dd className="text-title">{viewingVendor.contactName || "—"}</dd></div>
-                <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingVendor.phone || "—"}</dd></div>
-                <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingVendor.email || "—"}</dd></div>
-                <div className="sm:col-span-2"><dt className="text-secondary">Address</dt><dd className="text-title">{viewingVendor.address || "—"}</dd></div>
-                <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingVendor.city || "—"}</dd></div>
-                <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingVendor.state || "—"}</dd></div>
-                <div><dt className="text-secondary">ZIP</dt><dd className="text-title">{viewingVendor.zipCode || "—"}</dd></div>
-              </dl>
-            </div>
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Parts & terms</h3>
-              <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div className="sm:col-span-2">
-                  <dt className="text-secondary">Parts supplied</dt>
-                  <dd className="text-title mt-0.5">
-                    {Array.isArray(viewingVendor.partsSupplied) && viewingVendor.partsSupplied.length > 0 ? (
-                      <ul className="list-disc list-inside space-y-0.5">
-                        {viewingVendor.partsSupplied.map((p, i) => (
-                          <li key={i}>{typeof p === "string" ? p.trim() : (p?.item ?? "").trim() || "—"}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      "—"
-                    )}
-                  </dd>
-                </div>
-                <div className="sm:col-span-2"><dt className="text-secondary">Payment terms</dt><dd className="text-title">{viewingVendor.paymentTerms || "—"}</dd></div>
-              </dl>
-            </div>
-            {(viewingVendor.notes || "").trim() && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                <p className="whitespace-pre-wrap text-sm text-title">{viewingVendor.notes}</p>
-              </div>
-            )}
-            {(viewingVendor.attachmentCount > 0 ||
-              (Array.isArray(viewingVendor.attachments) && viewingVendor.attachments.length > 0)) && (
-              <div>
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Documents</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    closeViewModal();
-                    openDocsModal(viewingVendor);
-                  }}
-                >
-                  View {viewingVendor.attachmentCount || viewingVendor.attachments?.length || 0} document(s)
-                </Button>
-              </div>
-            )}
-            <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Purchase history</h3>
-              <p className="text-sm text-secondary">Purchase orders linked to this vendor will appear here when you create POs.</p>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
+        onEdit={(vendor) => {
+          closeViewModal();
+          openEditModal(vendor);
+        }}
+        zIndex={100}
+      />
 
       {/* Edit modal */}
       <Modal
@@ -783,7 +677,7 @@ export default function DashboardVendorsPage() {
             />
           </FormSection>
           <VendorAttachmentsPanel
-            vendorId={viewingVendor?.id || null}
+            vendorId={editingVendor?.id || null}
             attachments={form.attachments}
             onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
             pendingFiles={[]}

@@ -6,7 +6,7 @@ export const USER_SETTINGS_DEFAULTS = {
   leadEmailAlerts: true,
   /** Default rows per page for dashboard tables */
   tablePageSize: 25,
-  /** Denser table rows (future: wire to Table dense prop) */
+  /** Denser table rows on dashboard list / summary tables */
   compactTables: false,
   /** First day of week for date pickers: 0 = Sunday, 1 = Monday */
   weekStartsOn: 0,
