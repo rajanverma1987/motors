@@ -14,6 +14,7 @@ import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-m
 import QuoteFormModal from "@/components/dashboard/quote-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { allJobsListPath } from "@/lib/all-jobs-tabs";
+import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 
 const WO_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
@@ -31,7 +32,7 @@ function workOrderStatusVariant(status) {
   return ["default", "primary", "warning"][h % 3];
 }
 
-export default function WorkOrdersPageClient({ embedded = false }) {
+export default function WorkOrdersPageClient({ embedded = false, actionsRef = null }) {
   const listPath = allJobsListPath(embedded, "work-orders", "/dashboard/work-orders");
   const toast = useToast();
   const confirm = useConfirm();
@@ -39,6 +40,7 @@ export default function WorkOrdersPageClient({ embedded = false }) {
   const searchParams = useSearchParams();
   const openId = searchParams.get("open");
   const draftQuoteParam = searchParams.get("draftQuote");
+  const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,8 @@ export default function WorkOrdersPageClient({ embedded = false }) {
         params.set("sortBy", tableSort.key);
         params.set("sortDir", tableSort.direction || "asc");
       }
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
       const [woRes, empRes] = await Promise.all([
         fetch(`/api/dashboard/work-orders?${params.toString()}`, { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" }),
@@ -92,7 +96,11 @@ export default function WorkOrdersPageClient({ embedded = false }) {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort, bucketFilter]);
+  }, [page, pageSize, searchQuery, tableSort, bucketFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo, bucketFilter, searchQuery]);
 
   useEffect(() => {
     load();
@@ -111,6 +119,16 @@ export default function WorkOrdersPageClient({ embedded = false }) {
       router.replace(listPath, { scroll: false });
     }
   }, [draftQuoteParam, openId, router, listPath]);
+
+  useEffect(() => {
+    if (!embedded || !actionsRef) return undefined;
+    actionsRef.current = { reload: load };
+    return () => {
+      if (actionsRef.current?.reload === load) {
+        actionsRef.current = null;
+      }
+    };
+  }, [embedded, actionsRef, load]);
 
   const bucketSummaryCards = useMemo(
     () => [
@@ -134,9 +152,10 @@ export default function WorkOrdersPageClient({ embedded = false }) {
 
   const emptyMessage = useMemo(() => {
     if (searchQuery.trim()) return "No work orders match your search.";
+    if (dateFrom || dateTo) return "No work orders in this date range.";
     if (bucketFilter === "closed") return "No work orders with Close status.";
     return "No work orders yet. Create from an approved quote on the RFQ page.";
-  }, [searchQuery, bucketFilter]);
+  }, [searchQuery, bucketFilter, dateFrom, dateTo]);
 
   const handleDeleteWorkOrder = useCallback(
     async (row) => {

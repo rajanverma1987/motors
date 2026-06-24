@@ -14,9 +14,13 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
 import {
   aggregateTaxCollectedSummary,
+  aggregateTaxToBeCollectedSummary,
   INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
   isInvoiceTaxCollected,
+  resolveInvoiceBilledStatusSlug,
 } from "@/lib/invoice-tax-collected";
+import { mongoDocumentDateRangeClause } from "@/lib/all-jobs-date-filter";
 
 function normalizeLines(body) {
   const scopeLines = Array.isArray(body.scopeLines)
@@ -126,9 +130,10 @@ async function fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize) {
 }
 
 /** Fully paid + tax charged invoices for summary card and filter. */
-async function loadTaxCollectedContext(email, merged) {
-  const invoices = await Invoice.find({ createdByEmail: email })
-    .select("_id status laborTotal partsTotal customerId")
+async function loadTaxCollectedContext(email, merged, dateClause = null) {
+  const scope = dateClause ? { createdByEmail: email, ...dateClause } : { createdByEmail: email };
+  const invoices = await Invoice.find(scope)
+    .select("_id status laborTotal partsTotal customerId customerTaxExempt customerTaxPercent")
     .lean();
   const customerIds = [...new Set(invoices.map((i) => String(i.customerId)).filter(Boolean))];
   const customers = customerIds.length
@@ -142,6 +147,23 @@ async function loadTaxCollectedContext(email, merged) {
     .filter((inv) => isInvoiceTaxCollected(inv, custById[String(inv.customerId)], merged))
     .map((inv) => inv._id);
   return { summary, ids };
+}
+
+/** Billed invoices with sales tax for summary card and filter. */
+async function loadTaxToBeCollectedContext(email, merged, dateClause = null) {
+  const scope = dateClause ? { createdByEmail: email, ...dateClause } : { createdByEmail: email };
+  const invoices = await Invoice.find(scope)
+    .select("_id status laborTotal partsTotal customerId customerTaxExempt customerTaxPercent")
+    .lean();
+  const customerIds = [...new Set(invoices.map((i) => String(i.customerId)).filter(Boolean))];
+  const customers = customerIds.length
+    ? await Customer.find({ _id: { $in: customerIds }, createdByEmail: email })
+        .select("taxExempt taxPercent")
+        .lean()
+    : [];
+  const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
+  const summary = aggregateTaxToBeCollectedSummary(invoices, custById, merged);
+  return { summary };
 }
 
 export async function GET(request) {
@@ -162,7 +184,12 @@ export async function GET(request) {
     const statusFilter = String(searchParams.get("status") || "").trim().toLowerCase();
     const sortBy = String(searchParams.get("sortBy") || "createdAt").trim();
     const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const dateClause = mongoDocumentDateRangeClause(
+      searchParams.get("from"),
+      searchParams.get("to")
+    );
     const ownerScope = { createdByEmail: email };
+    const summaryScope = dateClause ? { ...ownerScope, ...dateClause } : ownerScope;
     const q = { ...ownerScope };
     if (qText) {
       const escaped = qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -192,10 +219,15 @@ export async function GET(request) {
     const mergedForStatus = mergeUserSettings(settingsDocEarly?.settings);
     let summaryTaxCollected = { count: 0, invoiceAmount: 0, taxCollected: 0 };
     let taxCollectedIds = [];
+    let summaryTaxToBeCollected = { count: 0, invoiceAmount: 0, taxToBeCollected: 0 };
     if (includePagination) {
-      const taxCtx = await loadTaxCollectedContext(email, mergedForStatus);
+      const [taxCtx, taxToBeCtx] = await Promise.all([
+        loadTaxCollectedContext(email, mergedForStatus, dateClause),
+        loadTaxToBeCollectedContext(email, mergedForStatus, dateClause),
+      ]);
       summaryTaxCollected = taxCtx.summary;
       taxCollectedIds = taxCtx.ids;
+      summaryTaxToBeCollected = taxToBeCtx.summary;
     }
     if (statusFilter === "__other__") {
       const allowed = invoiceStatusAllowedSlugs(mergedForStatus);
@@ -206,16 +238,32 @@ export async function GET(request) {
       }
     } else if (statusFilter === INVOICE_FILTER_TAX_COLLECTED) {
       q._id = { $in: taxCollectedIds };
+    } else if (statusFilter === INVOICE_FILTER_TAX_TO_BE_COLLECTED) {
+      const billedSlug = resolveInvoiceBilledStatusSlug(mergedForStatus);
+      q.status = {
+        $regex: new RegExp(`^${String(billedSlug).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+      };
     } else if (statusFilter) {
       const statusRx = new RegExp(`^${statusFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
       q.status = statusRx;
+    }
+    if (dateClause) {
+      const extraKeys = Object.keys(q).filter((k) => k !== "createdByEmail");
+      if (!extraKeys.length) {
+        Object.assign(q, dateClause);
+      } else {
+        const snapshot = { ...q };
+        for (const key of Object.keys(snapshot)) delete q[key];
+        q.createdByEmail = email;
+        q.$and = [snapshot, dateClause];
+      }
     }
     const [totalCount, list] = await Promise.all([
       Invoice.countDocuments(q),
       fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize),
     ]);
     const summaryRows = await Invoice.aggregate([
-      { $match: ownerScope },
+      { $match: summaryScope },
       {
         $group: {
           _id: "$status",
@@ -295,6 +343,7 @@ export async function GET(request) {
       totalCount,
       summaryByStatus,
       summaryTaxCollected,
+      summaryTaxToBeCollected,
     });
   } catch (err) {
     console.error("Invoices list:", err);

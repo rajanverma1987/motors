@@ -175,6 +175,8 @@ export default function Table({
   resizableColumns = false,
   // Optional: refresh callback (shows refresh icon to the right of search; call to refetch table data)
   onRefresh,
+  /** Optional node rendered immediately after the refresh control in the table toolbar. */
+  toolbarAfterRefresh = null,
   /** Header label for the actions column (default "Actions"). Pass "" for a compact delete-only column. */
   actionsColumnLabel = "Actions",
   /** When true (default), table grows to fill parent flex area and body scrolls inside */
@@ -197,6 +199,7 @@ export default function Table({
   const hasColumnWidths = columns.some((c) => c.width || c.minWidth || c.maxWidth);
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
+  const hasToolbarAfterRefresh = toolbarAfterRefresh != null;
 
   const [searchInput, setSearchInput] = useState("");
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
@@ -767,7 +770,7 @@ export default function Table({
 
   return (
     <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-4" : "space-y-4"}>
-      {(hasSearch || hasRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
+      {(hasSearch || hasRefresh || hasToolbarAfterRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
         <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
           {hasSearch && (
             <input
@@ -791,6 +794,7 @@ export default function Table({
               <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
             </button>
           )}
+          {hasToolbarAfterRefresh ? <div className="shrink-0">{toolbarAfterRefresh}</div> : null}
           {loading && !hasRefresh && (
             <span
               className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"

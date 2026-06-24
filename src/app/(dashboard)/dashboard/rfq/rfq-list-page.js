@@ -56,6 +56,10 @@ import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-s
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildTechnicianSelectOptions } from "@/lib/technician-select-options";
 import { allJobsListPath } from "@/lib/all-jobs-tabs";
+import {
+  parseAllJobsDateRange,
+  recordInAllJobsDateRange,
+} from "@/lib/all-jobs-date-filter";
 
 /** Icons in modal Actions dropdown menu rows */
 const HEADER_BTN_IC = "h-4 w-4 shrink-0";
@@ -294,6 +298,12 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     () => filterQuotesForRfqList(quotesRaw, linkedInvoices, mergedSettings),
     [quotesRaw, linkedInvoices, mergedSettings]
   );
+
+  const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
+  const quotesForDisplay = useMemo(() => {
+    if (!dateFrom && !dateTo) return quotes;
+    return quotes.filter((q) => recordInAllJobsDateRange(q, dateFrom, dateTo));
+  }, [quotes, dateFrom, dateTo]);
 
   const statusSelectOptions = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -575,13 +585,13 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
 
   useEffect(() => {
     if (!embedded || !actionsRef) return undefined;
-    actionsRef.current = { openCreateRfqModal };
+    actionsRef.current = { openCreateRfqModal, reload: loadQuotes };
     return () => {
       if (actionsRef.current?.openCreateRfqModal === openCreateRfqModal) {
         actionsRef.current = null;
       }
     };
-  }, [embedded, actionsRef, openCreateRfqModal]);
+  }, [embedded, actionsRef, openCreateRfqModal, loadQuotes]);
 
   useEffect(() => {
     const id = editQuoteIdParam?.trim();
@@ -899,7 +909,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   const [quoteSort, setQuoteSort] = useState({ key: null, direction: "asc" });
 
   const filteredQuotes = useMemo(() => {
-    let list = quotes;
+    let list = quotesForDisplay;
     if (statusFilter && statusFilter.trim()) {
       const status = statusFilter.trim().toLowerCase();
       list = list.filter((qt) => (qt.status || "draft").toLowerCase() === status);
@@ -921,7 +931,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         (qt.repairScope || "").toLowerCase().includes(q)
     );
   }, [
-    quotes,
+    quotesForDisplay,
     searchQuery,
     statusFilter,
     customerNameMap,
@@ -1016,7 +1026,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         taxExempt: quote?.customerTaxExempt,
         taxPercent: quote?.customerTaxPercent,
       }).grandTotal ?? 0;
-    const pool = quotes;
+    const pool = quotesForDisplay;
     const keysLower = new Set(statusOptionsForForm.map((o) => o.value.toLowerCase()));
     const buttons = [];
     const tileAppearanceForKey = (statusKey, fallbackIndex) => {
@@ -1071,13 +1081,16 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
-  }, [quotes, statusOptionsForForm, mergedSettings]);
+  }, [quotesForDisplay, statusOptionsForForm, mergedSettings]);
 
   const columns = useMemo(
     () => [
       {
         key: "actions",
         label: "",
+        width: 44,
+        minWidth: 44,
+        maxWidth: 52,
         render: (_, row) => {
           const isDeleting = deletingQuoteId === row.id;
           return (
@@ -1096,15 +1109,6 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                   <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
                 )}
               </button>
-              <button
-                type="button"
-                onClick={() => openEditModal(row)}
-                className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Edit"
-                title="Edit"
-              >
-                <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
-              </button>
             </div>
           );
         },
@@ -1116,7 +1120,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         render: (_, row) => (
           <button
             type="button"
-            onClick={() => openViewModal(row)}
+            onClick={() => openEditModal(row)}
             className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
           >
             {row.rfqNumber || "—"}
@@ -1237,7 +1241,6 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       fmt,
       mergedSettings,
       statusOptionsForForm,
-      openViewModal,
       openEditModal,
       jobIdLabel,
     ]
@@ -1430,14 +1433,24 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
           emptyMessage={
             quotes.length === 0
               ? "No RFQs yet. Click Create RFQ to add one."
-              : statusFilter
-                ? "No records with this status."
-                : "No records match the search."
+              : (dateFrom || dateTo) && quotesForDisplay.length === 0
+                ? "No RFQs in this date range."
+                : statusFilter
+                  ? "No records with this status."
+                  : "No records match the search."
           }
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder="Search customer, technician, motor, status…"
           onRefresh={async () => { setLoading(true); await loadQuotes(); setLoading(false); }}
+          toolbarAfterRefresh={
+            embedded ? (
+              <Button type="button" variant="primary" size="sm" className="h-9 shrink-0" onClick={openCreateRfqModal}>
+                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Add New
+              </Button>
+            ) : null
+          }
           responsive
         />
       </div>

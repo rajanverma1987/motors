@@ -7,6 +7,9 @@ export const WRITE_UP_QUOTE_STATUS = "write-up";
 /** Fixed status after pre-inspection is complete (not from Settings dropdowns). */
 export const INSPECTION_DONE_QUOTE_STATUS = "inspection-done";
 
+/** Quote status when reverting an invoice back to the RFQ list (Settings → Dropdowns → Quote status). */
+export const CONVERT_TO_RFQ_QUOTE_STATUS = "proposal_approved_regular";
+
 export function isInspectionDoneStatus(status) {
   return (
     String(status ?? "")

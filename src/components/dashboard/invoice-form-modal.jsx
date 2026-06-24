@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
-import { FiSave, FiSend, FiPrinter, FiRotateCw, FiClipboard } from "react-icons/fi";
+import { FiSave, FiSend, FiPrinter, FiRotateCw, FiClipboard, FiCornerUpLeft } from "react-icons/fi";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
@@ -94,6 +94,7 @@ export default function InvoiceFormModal({
   onClose,
   onAfterSave,
   onSwitchToInvoice,
+  onConvertedToRfq,
   zIndex = 50,
 }) {
   const toast = useToast();
@@ -285,6 +286,34 @@ export default function InvoiceFormModal({
     }
   };
 
+  const handleConvertToRfq = async () => {
+    if (!persistedId || !String(form.quoteId || "").trim()) return;
+    const ok = await confirm({
+      title: "Convert to RFQ",
+      message: `Move invoice #${form.invoiceNumber || ""} back to the RFQ list? The invoice will be deleted and the linked RFQ status will be set to proposal approved (regular). This cannot be undone.`,
+      confirmLabel: "Convert to RFQ",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setHeaderBusy(true);
+    try {
+      const res = await fetch(`/api/dashboard/invoices/${persistedId}/convert-to-rfq`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.error || "Convert failed");
+      toast.success("Moved back to RFQ.");
+      onAfterSave?.();
+      onConvertedToRfq?.({ quoteId: d.quoteId || form.quoteId });
+      onClose?.();
+    } catch (e) {
+      toast.error(e.message || "Could not convert to RFQ");
+    } finally {
+      setHeaderBusy(false);
+    }
+  };
+
   const handleHeaderPrint = async () => {
     if (!persistedId) return;
     setHeaderBusy(true);
@@ -437,6 +466,20 @@ export default function InvoiceFormModal({
             <FiClipboard className="h-4 w-4 shrink-0" aria-hidden />
             View Job
           </Button>
+          {canUseRecordActions && String(form.quoteId || "").trim() ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={headerDisabled}
+              className="inline-flex shrink-0 items-center gap-1.5"
+              title="Delete this invoice and return the job to the RFQ list"
+              onClick={handleConvertToRfq}
+            >
+              <FiCornerUpLeft className="h-4 w-4 shrink-0" aria-hidden />
+              Convert to RFQ
+            </Button>
+          ) : null}
           {canUseRecordActions ? (
             <>
               <Button

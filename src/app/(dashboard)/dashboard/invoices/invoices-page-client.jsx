@@ -2,7 +2,7 @@
 
 import { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiTrash2 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
@@ -26,13 +26,14 @@ import QuoteFormModal from "@/components/dashboard/quote-form-modal";
 import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[id]/repair-flow-job-detail-client";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
-import { allJobsListPath } from "@/lib/all-jobs-tabs";
-import { INVOICE_FILTER_TAX_COLLECTED } from "@/lib/invoice-tax-collected";
+import { allJobsListPath, ALL_JOBS_TAB_RFQ } from "@/lib/all-jobs-tabs";
+import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
+import { INVOICE_FILTER_TAX_COLLECTED, INVOICE_FILTER_TAX_TO_BE_COLLECTED } from "@/lib/invoice-tax-collected";
 
 const INVOICE_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
-function InvoicesInner({ embedded = false }) {
+function InvoicesInner({ embedded = false, actionsRef = null }) {
   const listPath = allJobsListPath(embedded, "invoices", "/dashboard/invoices");
   const toast = useToast();
   const confirm = useConfirm();
@@ -40,6 +41,7 @@ function InvoicesInner({ embedded = false }) {
   const searchParams = useSearchParams();
   const openId = searchParams.get("open");
   const draftQuoteParam = searchParams.get("draftQuote");
+  const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
   const { settings: accountSettings } = useUserSettings();
   const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
   const fmt = useFormatMoney();
@@ -56,6 +58,11 @@ function InvoicesInner({ embedded = false }) {
     count: 0,
     invoiceAmount: 0,
     taxCollected: 0,
+  });
+  const [summaryTaxToBeCollected, setSummaryTaxToBeCollected] = useState({
+    count: 0,
+    invoiceAmount: 0,
+    taxToBeCollected: 0,
   });
   const [statusFilter, setStatusFilter] = useState("");
   const [invoiceModal, setInvoiceModal] = useState(null);
@@ -74,6 +81,8 @@ function InvoicesInner({ embedded = false }) {
         params.set("sortDir", invoiceSort.direction || "asc");
       }
       if (statusFilter.trim()) params.set("status", statusFilter.trim());
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
       const res = await fetch(`/api/dashboard/invoices?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -85,20 +94,40 @@ function InvoicesInner({ embedded = false }) {
             ? data.summaryTaxCollected
             : { count: 0, invoiceAmount: 0, taxCollected: 0 }
         );
+        setSummaryTaxToBeCollected(
+          data?.summaryTaxToBeCollected && typeof data.summaryTaxToBeCollected === "object"
+            ? data.summaryTaxToBeCollected
+            : { count: 0, invoiceAmount: 0, taxToBeCollected: 0 }
+        );
       } else {
         setRows([]);
         setTotalCount(0);
         setSummaryByStatus({});
         setSummaryTaxCollected({ count: 0, invoiceAmount: 0, taxCollected: 0 });
+        setSummaryTaxToBeCollected({ count: 0, invoiceAmount: 0, taxToBeCollected: 0 });
       }
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, invoiceSort, statusFilter]);
+  }, [page, pageSize, searchQuery, invoiceSort, statusFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo, statusFilter, searchQuery]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!embedded || !actionsRef) return undefined;
+    actionsRef.current = { reload: load };
+    return () => {
+      if (actionsRef.current?.reload === load) {
+        actionsRef.current = null;
+      }
+    };
+  }, [embedded, actionsRef, load]);
 
   useEffect(() => {
     const d = draftQuoteParam?.trim();
@@ -166,6 +195,17 @@ function InvoicesInner({ embedded = false }) {
       tileAppearance: resolveStatusTileProps("", 8),
     });
 
+    const taxToBeCount = Number(summaryTaxToBeCollected?.count) || 0;
+    const taxToBeAmount = Number(summaryTaxToBeCollected?.taxToBeCollected) || 0;
+    buttons.push({
+      key: INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+      label: "Tax To Be Collected",
+      count: taxToBeCount,
+      amount: taxToBeAmount,
+      subtitle: `${taxToBeCount} · ${fmt(taxToBeAmount)}`,
+      tileAppearance: resolveStatusTileProps("", 9),
+    });
+
     let orphanCount = 0;
     let orphanAmount = 0;
     for (const [rawKey, agg] of Object.entries(summaryByStatus || {})) {
@@ -201,7 +241,7 @@ function InvoicesInner({ embedded = false }) {
       tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
-  }, [summaryByStatus, summaryTaxCollected, statusSelectOptions, mergedAccountSettings, fmt]);
+  }, [summaryByStatus, summaryTaxCollected, summaryTaxToBeCollected, statusSelectOptions, mergedAccountSettings, fmt]);
 
   const openInvoiceJobLink = useCallback((row) => {
     const jobId = String(row?.repairFlowJobId || "").trim();
@@ -249,23 +289,11 @@ function InvoicesInner({ embedded = false }) {
       {
         key: "actions",
         label: "",
-        width: 72,
-        minWidth: 72,
-        maxWidth: 80,
+        width: 44,
+        minWidth: 44,
+        maxWidth: 52,
         render: (_, row) => (
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setInvoiceModal({ invoiceId: row.id });
-              }}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Edit invoice"
-              title="Edit"
-            >
-              <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
-            </button>
             <button
               type="button"
               onClick={(e) => {
@@ -427,13 +455,17 @@ function InvoicesInner({ embedded = false }) {
           }}
           paginateClientSide={false}
           emptyMessage={
-            totalCount === 0 && !searchQuery.trim() && !statusFilter
+            totalCount === 0 && !searchQuery.trim() && !statusFilter && !dateFrom && !dateTo
               ? "No invoices yet. Create an invoice from an approved quote on the RFQ page."
-              : statusFilter === INVOICE_FILTER_TAX_COLLECTED
-                ? "No fully paid invoices with tax collected."
-                : statusFilter
-                  ? "No invoices with this status."
-                  : "No invoices match your search."
+              : totalCount === 0 && (dateFrom || dateTo)
+                ? "No invoices in this date range."
+                : statusFilter === INVOICE_FILTER_TAX_COLLECTED
+                  ? "No fully paid invoices with tax collected."
+                  : statusFilter === INVOICE_FILTER_TAX_TO_BE_COLLECTED
+                    ? "No billed invoices."
+                    : statusFilter
+                      ? "No invoices with this status."
+                      : "No invoices match your search."
           }
         />
       </div>
@@ -445,6 +477,16 @@ function InvoicesInner({ embedded = false }) {
         onClose={() => setInvoiceModal(null)}
         onAfterSave={load}
         onSwitchToInvoice={(id) => setInvoiceModal({ invoiceId: id })}
+        onConvertedToRfq={({ quoteId }) => {
+          const qid = String(quoteId || "").trim();
+          if (!qid) return;
+          if (embedded) {
+            const params = new URLSearchParams({ tab: ALL_JOBS_TAB_RFQ, edit: qid });
+            router.replace(`/dashboard/all-jobs?${params.toString()}`, { scroll: false });
+            return;
+          }
+          router.push(`/dashboard/rfq?edit=${encodeURIComponent(qid)}`);
+        }}
         zIndex={55}
       />
 
@@ -495,10 +537,10 @@ function InvoicesInner({ embedded = false }) {
   );
 }
 
-export default function InvoicesPageClient({ embedded = false }) {
+export default function InvoicesPageClient({ embedded = false, actionsRef = null }) {
   return (
     <Suspense fallback={<CrmPlaceholder title="Invoices" description="Loading…" />}>
-      <InvoicesInner embedded={embedded} />
+      <InvoicesInner embedded={embedded} actionsRef={actionsRef} />
     </Suspense>
   );
 }

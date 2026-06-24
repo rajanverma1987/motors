@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { FiEdit2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -705,22 +704,6 @@ export default function DashboardCustomersPage() {
 
   const columns = useMemo(
     () => [
-      {
-        key: "actions",
-        label: "",
-        render: (_, row) => (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => openEditModal(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Edit"
-            >
-              <FiEdit2 className="h-4 w-4" />
-            </button>
-          </div>
-        ),
-      },
       {
         key: "companyName",
         label: "Company",

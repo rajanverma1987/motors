@@ -7,6 +7,7 @@ import Customer from "@/models/Customer";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { createWorkOrderForQuote } from "@/lib/work-order-factory";
 import UserSettings from "@/models/UserSettings";
+import { mongoDocumentDateRangeClause } from "@/lib/all-jobs-date-filter";
 
 /** Work orders list: "Closed" bucket = status label Close (exact, case-insensitive). */
 const WORK_ORDER_CLOSE_STATUS_RX = /^close$/i;
@@ -51,9 +52,14 @@ export async function GET(request) {
     };
     const sortField = sortFieldMap[sortBy] || "createdAt";
     const sort = { [sortField]: sortDir === "asc" ? 1 : -1, createdAt: -1 };
+    const dateClause = mongoDocumentDateRangeClause(
+      searchParams.get("from"),
+      searchParams.get("to")
+    );
     const ownerScope = { createdByEmail: email };
     const q = { ...ownerScope };
     const and = [];
+    if (dateClause) and.push(dateClause);
     if (bucket === "closed") {
       and.push(workOrderCloseStatusQuery());
     } else {
@@ -72,8 +78,12 @@ export async function GET(request) {
     }
 
     const findSorted = () => WorkOrder.find(q).sort(sort);
-    const openScope = { ...ownerScope, ...workOrderOpenBucketQuery() };
-    const closeScope = { ...ownerScope, ...workOrderCloseStatusQuery() };
+    const openAnd = [workOrderOpenBucketQuery(), ...(dateClause ? [dateClause] : [])];
+    const closeAnd = [workOrderCloseStatusQuery(), ...(dateClause ? [dateClause] : [])];
+    const openScope =
+      openAnd.length === 1 ? { ...ownerScope, ...openAnd[0] } : { ...ownerScope, $and: openAnd };
+    const closeScope =
+      closeAnd.length === 1 ? { ...ownerScope, ...closeAnd[0] } : { ...ownerScope, $and: closeAnd };
     const [totalCount, list, openCount, closedCount] = await Promise.all([
       includePagination ? WorkOrder.countDocuments(q) : Promise.resolve(0),
       includePagination

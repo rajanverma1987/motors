@@ -35,6 +35,9 @@ export default function StatusFilterPillButton({
   formatAmount,
   readOnly = false,
   amountOnly = false,
+  className = "",
+  /** When true, only the label row is shown (no subtitle / count line). */
+  labelOnly = false,
 }) {
   const amountText =
     typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
@@ -46,8 +49,9 @@ export default function StatusFilterPillButton({
         color: tileStyle.color || "#fff",
       }
     : undefined;
-  const subtitle =
-    card.subtitle != null && String(card.subtitle).trim() !== ""
+  const subtitle = labelOnly
+    ? ""
+    : card.subtitle != null && String(card.subtitle).trim() !== ""
       ? String(card.subtitle)
       : amountOnly
         ? amountText
@@ -56,7 +60,7 @@ export default function StatusFilterPillButton({
     active
       ? "z-[1] opacity-100 saturate-100 pr-8"
       : "border-border opacity-[0.88] saturate-[0.92] hover:opacity-100 hover:saturate-100 hover:shadow-sm pr-3"
-  }`;
+  } ${className}`.trim();
   const pillStyle = card.tileAppearance?.style;
 
   if (readOnly) {
@@ -68,9 +72,11 @@ export default function StatusFilterPillButton({
         aria-label={card.label}
       >
         <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
-        <span className="mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums">
-          {subtitle}
-        </span>
+        {subtitle ? (
+          <span className="mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums">
+            {subtitle}
+          </span>
+        ) : null}
       </div>
     );
   }
@@ -95,13 +101,15 @@ export default function StatusFilterPillButton({
         </span>
       ) : null}
       <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
-      <span
-        className={`mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums ${
-          active ? "opacity-100" : "opacity-95"
-        }`}
-      >
-        {subtitle}
-      </span>
+      {subtitle ? (
+        <span
+          className={`mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums ${
+            active ? "opacity-100" : "opacity-95"
+          }`}
+        >
+          {subtitle}
+        </span>
+      ) : null}
     </button>
   );
 }

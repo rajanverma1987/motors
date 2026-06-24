@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, useSyncExternalStore } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -488,17 +488,11 @@ export default function DashboardMotorsPage() {
       {
         key: "actions",
         label: "",
+        width: 44,
+        minWidth: 44,
+        maxWidth: 52,
         render: (_, row) => (
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => openEditModal(row)}
-              disabled={deletingMotorId === row.id}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:pointer-events-none disabled:opacity-40"
-              aria-label="Edit"
-            >
-              <FiEdit2 className="h-4 w-4 shrink-0" />
-            </button>
             <button
               type="button"
               onClick={() => handleDeleteMotor(row)}
