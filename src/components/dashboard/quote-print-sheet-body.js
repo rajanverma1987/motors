@@ -2,7 +2,8 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { formatMoney } from "@/lib/format-currency";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
@@ -20,7 +21,15 @@ const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
  */
 export default function QuotePrintSheetBody({ quote: q, fmt }) {
   const { settings } = useUserSettings();
+  const contextFmt = useFormatMoney();
   if (!q) return null;
+
+  const format =
+    typeof fmt === "function"
+      ? fmt
+      : q.currency
+        ? (v) => formatMoney(v, q.currency)
+        : contextFmt;
 
   const billingAddress = String(q.fromBillingAddress || settings?.accountsBillingAddress || "").trim();
   const shippingAddress = String(q.fromShippingAddress || settings?.accountsShippingAddress || "").trim();
@@ -133,7 +142,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               {q.scopeLines.map((row, i) => (
                 <tr key={i}>
                   <td className={tdCell + " align-top"}>{row.scope || "—"}</td>
-                  <td className={tdCell + " text-right tabular-nums"}>{row.price ? fmt(row.price) : "—"}</td>
+                  <td className={tdCell + " text-right tabular-nums"}>{row.price ? format(row.price) : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -164,9 +173,9 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
                     <td className={tdCell}>{row.item || "—"}</td>
                     <td className={tdCell + " text-right tabular-nums"}>{row.qty ?? "1"}</td>
                     <td className={tdCell}>{row.uom || "—"}</td>
-                    <td className={tdCell + " text-right tabular-nums"}>{row.price ? fmt(row.price) : "—"}</td>
+                    <td className={tdCell + " text-right tabular-nums"}>{row.price ? format(row.price) : "—"}</td>
                     <td className={tdCell + " text-right tabular-nums"}>
-                      {lineTotalNum != null ? fmt(lineTotalNum) : "—"}
+                      {lineTotalNum != null ? format(lineTotalNum) : "—"}
                     </td>
                   </tr>
                 );
@@ -183,24 +192,24 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
             <tr className="border-b border-neutral-200 bg-neutral-50">
               <td className="px-2 py-1.5 font-medium text-neutral-800">Scope total</td>
               <td className="px-2 py-1.5 text-right font-medium text-neutral-900">
-                {q.laborTotal ? fmt(q.laborTotal) : "—"}
+                {q.laborTotal ? format(q.laborTotal) : "—"}
               </td>
             </tr>
             <tr className="border-b border-neutral-200">
               <td className="px-2 py-1.5 text-neutral-800">Other cost total</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? fmt(q.partsTotal) : "—"}</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? format(q.partsTotal) : "—"}</td>
             </tr>
             <tr className="border-b border-neutral-200">
               <td className="px-2 py-1.5 text-neutral-800">Service proposal subtotal</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.subtotal)}</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
               <td className="px-2 py-1.5 text-neutral-800">Tax</td>
-              <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.taxAmount)}</td>
+              <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.taxAmount)}</td>
             </tr>
             <tr className="bg-neutral-100">
               <td className="px-2 py-2 text-sm font-bold text-neutral-900">Grand total</td>
-              <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">{fmt(totals.grandTotal)}</td>
+              <td className="px-2 py-2 text-right text-sm font-bold text-neutral-900">{format(totals.grandTotal)}</td>
             </tr>
           </tbody>
         </table>

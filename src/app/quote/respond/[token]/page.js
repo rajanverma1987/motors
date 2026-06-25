@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
-import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
-import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
+import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
-import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import { formatMoney } from "@/lib/format-currency";
 
 export default function QuoteRespondPage() {
   const params = useParams();
@@ -56,6 +54,11 @@ export default function QuoteRespondPage() {
     return () => window.clearTimeout(t);
   }, [quote]);
 
+  const fmt = useMemo(() => {
+    const code = quote?.currency || "USD";
+    return (v) => formatMoney(v, code);
+  }, [quote?.currency]);
+
   const handleRespond = async (action) => {
     if (!token || submitting) return;
     setSubmitting(true);
@@ -81,16 +84,16 @@ export default function QuoteRespondPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
         <p className="text-gray-600">Loading {SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}…</p>
       </div>
     );
   }
   if (error || !quote) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6">
         <div className="text-center">
-          <p className="text-red-600 font-medium">{error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`}</p>
+          <p className="font-medium text-red-600">{error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`}</p>
           <p className="mt-2 text-sm text-gray-600">This link may have expired or is invalid.</p>
         </div>
       </div>
@@ -99,9 +102,9 @@ export default function QuoteRespondPage() {
 
   if (response?.ok) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 print:hidden">
-        <div className="max-w-[33.6rem] w-full bg-white rounded-lg shadow p-8 text-center">
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Thank you</h1>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 print:hidden">
+        <div className="w-full max-w-[33.6rem] rounded-lg bg-white p-8 text-center shadow">
+          <h1 className="mb-2 text-xl font-semibold text-gray-900">Thank you</h1>
           <p className="text-gray-700">{response.message}</p>
         </div>
       </div>
@@ -109,205 +112,91 @@ export default function QuoteRespondPage() {
   }
   if (response?.error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 print:hidden">
-        <div className="max-w-[33.6rem] w-full bg-white rounded-lg shadow p-8 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 print:hidden">
+        <div className="w-full max-w-[33.6rem] rounded-lg bg-white p-8 text-center shadow">
           <p className="text-red-600">{response.error}</p>
         </div>
       </div>
     );
   }
 
-  const totals = computeTotalsFromLaborAndParts({
-    laborTotal: quote.laborTotal,
-    partsTotal: quote.partsTotal,
-    taxExempt: quote.customerTaxExempt,
-    taxPercent: quote.customerTaxPercent,
-  });
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 print:py-4 print:px-0">
-      <div className="max-w-[57.6rem] mx-auto bg-white rounded-lg shadow print:shadow-none print:max-w-none">
-        <div className="p-6 print:p-4 space-y-6">
-          {(quote.status === "approved" || quote.status === "rejected") && (
-            <div
-              className={`rounded-lg border px-4 py-3 text-center text-sm font-medium print:mb-4 ${
-                quote.status === "approved"
-                  ? "border-green-200 bg-green-50 text-green-800"
-                  : "border-red-200 bg-red-50 text-red-800"
-              }`}
-              role="status"
+    <div className="min-h-screen bg-gray-50 py-6 px-4 print:bg-white print:px-0 print:py-0">
+      <div className="mx-auto max-w-[52.8rem] print:max-w-none">
+        {(quote.status === "approved" || quote.status === "rejected") && (
+          <div
+            className={`mb-4 rounded-lg border px-4 py-3 text-center text-sm font-medium print:mb-4 ${
+              quote.status === "approved"
+                ? "border-green-200 bg-green-50 text-green-800"
+                : "border-red-200 bg-red-50 text-red-800"
+            }`}
+            role="status"
+          >
+            {quote.status === "approved"
+              ? `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was approved by customer`
+              : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was rejected by customer`}
+            {quote.respondedAt && (
+              <span className="mt-1 block text-xs opacity-90">
+                {new Date(quote.respondedAt).toLocaleDateString(undefined, {
+                  dateStyle: "long",
+                })}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4 print:hidden">
+          <h1 className="text-xl font-bold text-gray-900">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              {quote.status === "approved"
-                ? `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was approved by customer`
-                : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was rejected by customer`}
-              {quote.respondedAt && (
-                <span className="block mt-1 text-xs opacity-90">
-                  {new Date(quote.respondedAt).toLocaleDateString(undefined, {
-                    dateStyle: "long",
-                  })}
-                </span>
-              )}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4 print:border-gray-300 print:hidden">
-            <h1 className="text-2xl font-bold text-gray-900">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrint}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-gray-300 bg-white text-gray-700 text-sm font-medium hover:bg-gray-50"
-              >
-                Print / Save as PDF
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRespond("approve")}
-                disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? "Sending…" : `Approve ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRespond("reject")}
-                disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 bg-white text-red-700 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? "Sending…" : `Reject ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
-              </button>
-            </div>
+              Print / Save as PDF
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRespond("approve")}
+              disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
+              className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Sending…" : `Approve ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRespond("reject")}
+              disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
+              className="inline-flex items-center gap-2 rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {submitting ? "Sending…" : `Reject ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
+            </button>
           </div>
-
-          {/* Same layout as print: Motor Shop, Service Proposal title, Quote info, Customer & motor, Scope, Other Cost, Totals, Customer notes */}
-          <section className="mb-6 border-b border-gray-200 pb-4">
-            <div className="flex flex-wrap items-start gap-3">
-              <PrintShopLogo logoUrl={quote.shopLogoUrl} alt="" />
-              <div className="min-w-0 flex-1">
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">Motor Shop</h2>
-                <p className="font-semibold text-gray-900">{quote.shop?.name || "—"}</p>
-                <p className="text-sm text-gray-500">{quote.shop?.contact || "—"}</p>
-              </div>
-            </div>
-          </section>
-          <div className="mb-6 border-b border-gray-200 pb-4">
-            <CompanyAccountsPrint
-              billingAddress={quote.accountsBillingAddress}
-              paymentTermsLabel={quote.accountsPaymentTermsLabel}
-              bodyClassName="text-sm text-gray-900 whitespace-pre-wrap"
-              termsLabelClassName="text-gray-500"
-              termsValueClassName="font-medium text-gray-900"
-            />
-          </div>
-
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 print:block hidden">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
-          </div>
-
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Service proposal info</h2>
-            <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div><dt className="text-gray-500">RFQ#</dt><dd className="font-medium text-gray-900">{quote.rfqNumber || "—"}</dd></div>
-              <div><dt className="text-gray-500">Customer PO#</dt><dd className="text-gray-900">{quote.customerPo || "—"}</dd></div>
-              <div><dt className="text-gray-500">Date</dt><dd className="text-gray-900">{quote.date || "—"}</dd></div>
-              <div><dt className="text-gray-500">Prepared by</dt><dd className="text-gray-900">{quote.preparedByDisplay || quote.preparedBy || "—"}</dd></div>
-            </dl>
-          </section>
-
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Customer</h2>
-            <p className="font-medium text-gray-900">{quote.customerName || quote.customerId || "—"}</p>
-          </section>
-
-          <section className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-            <MotorSummaryBlock
-              identityLine={quote.motorIdentityLine}
-              specsLine={quote.motorSpecsLine}
-              motorType={quote.motorType}
-              fallback={quote.motorLabel || quote.motorId || "—"}
-              titleClassName="mb-1.5 text-sm font-semibold text-gray-900"
-              identityClassName="text-sm font-medium text-gray-900"
-              detailClassName="text-sm text-gray-600"
-            />
-          </section>
-
-          {Array.isArray(quote.scopeLines) && quote.scopeLines.length > 0 && (
-            <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Scope</h2>
-              <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left font-medium text-gray-700">Scope</th><th className="px-3 py-2 text-right font-medium text-gray-700">Price</th></tr></thead>
-                <tbody>
-                  {quote.scopeLines.map((row, i) => (
-                    <tr key={i} className="border-t border-gray-200"><td className="px-3 py-2 text-gray-900">{row.scope || "—"}</td><td className="px-3 py-2 text-right text-gray-900">{row.price ? `$${row.price}` : "—"}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
-          )}
-
-          {Array.isArray(quote.partsLines) && quote.partsLines.length > 0 && (
-            <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Other Cost</h2>
-              <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
-                <thead className="bg-gray-50"><tr><th className="px-3 py-2 text-left font-medium text-gray-700">Item</th><th className="px-3 py-2 text-right font-medium text-gray-700">Qty</th><th className="px-3 py-2 text-left font-medium text-gray-700">UOM</th><th className="px-3 py-2 text-right font-medium text-gray-700">Price</th><th className="px-3 py-2 text-right font-medium text-gray-700">Total</th></tr></thead>
-                <tbody>
-                  {quote.partsLines.map((row, i) => {
-                    const qty = parseFloat(row?.qty ?? "1");
-                    const price = parseFloat(row?.price ?? "0");
-                    const lineTotal = Number.isFinite(qty) && Number.isFinite(price) ? (qty * price).toFixed(2) : "—";
-                    return (
-                      <tr key={i} className="border-t border-gray-200">
-                        <td className="px-3 py-2 text-gray-900">{row.item || "—"}</td>
-                        <td className="px-3 py-2 text-right text-gray-900">{row.qty ?? "1"}</td>
-                        <td className="px-3 py-2 text-gray-900">{row.uom || "—"}</td>
-                        <td className="px-3 py-2 text-right text-gray-900">{row.price ? `$${row.price}` : "—"}</td>
-                        <td className="px-3 py-2 text-right text-gray-900">{lineTotal !== "—" ? `$${lineTotal}` : "—"}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </section>
-          )}
-
-          <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Totals</h2>
-            <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
-              <div><dt className="text-gray-500">Scope total</dt><dd className="text-gray-900">{quote.laborTotal ? `$${quote.laborTotal}` : "—"}</dd></div>
-              <div><dt className="text-gray-500">Other Cost total</dt><dd className="text-gray-900">{quote.partsTotal ? `$${quote.partsTotal}` : "—"}</dd></div>
-              <div><dt className="text-gray-500">Service proposal total</dt><dd className="font-semibold text-gray-900">${totals.subtotal.toFixed(2)}</dd></div>
-              <div><dt className="text-gray-500">Tax amount</dt><dd className="text-gray-900">${totals.taxAmount.toFixed(2)}</dd></div>
-              <div><dt className="text-gray-500">Grand total</dt><dd className="font-semibold text-gray-900">${totals.grandTotal.toFixed(2)}</dd></div>
-              <div><dt className="text-gray-500">Est. completion</dt><dd className="text-gray-900">{quote.estimatedCompletion || "—"}</dd></div>
-            </dl>
-          </section>
-
-          {quote.customerNotes && (
-            <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Customer notes</h2>
-              <p className="text-sm text-gray-900 whitespace-pre-wrap">{quote.customerNotes}</p>
-            </section>
-          )}
-
-          {Array.isArray(quote.attachments) && quote.attachments.length > 0 && (
-            <section>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Attachments</h2>
-              <ul className="list-inside list-disc space-y-1 text-sm text-gray-900">
-                {quote.attachments.map((a, i) => (
-                  <li key={`${a.url}-${i}`}>
-                    <a
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-blue-700 underline hover:opacity-90"
-                    >
-                      {a.name || "Download"}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </div>
+
+        <QuotePrintSheetBody quote={quote} fmt={fmt} />
+
+        {Array.isArray(quote.attachments) && quote.attachments.length > 0 && (
+          <section className="mt-4 rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
+            <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-neutral-600">
+              Attachments
+            </h2>
+            <ul className="list-inside list-disc space-y-1 text-sm text-neutral-900">
+              {quote.attachments.map((a, i) => (
+                <li key={`${a.url}-${i}`}>
+                  <a
+                    href={a.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-blue-700 underline hover:opacity-90"
+                  >
+                    {a.name || "Download"}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </div>
     </div>
   );

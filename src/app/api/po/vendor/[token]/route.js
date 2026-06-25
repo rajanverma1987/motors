@@ -72,8 +72,29 @@ export async function GET(request, context) {
       ? await UserSettings.findOne({ ownerEmail }).lean()
       : null;
     const { mergeUserSettings } = await import("@/lib/user-settings");
+    const { accountsPaymentTermsLabel } = await import("@/lib/accounts-display");
     const u = mergeUserSettings(settingsDoc?.settings);
     const shopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
+    const fromShopName = owner?.shopName?.trim() || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
+    const fromShopContact = shopContact || process.env.MOTOR_SHOP_CONTACT?.trim() || "";
+    const fromShopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
+    const fromAccountsBillingAddress = (u.accountsBillingAddress || "").trim();
+    const fromAccountsShippingAddress = (u.accountsShippingAddress || "").trim();
+    const fromPaymentTermsLabel = accountsPaymentTermsLabel(u.accountsPaymentTerms);
+    const currency = typeof u.currency === "string" ? u.currency.toUpperCase().trim() : "USD";
+    const formattedCreatedAt =
+      doc.createdAt != null
+        ? new Date(doc.createdAt).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+        : "";
+    const otherCharges = (Array.isArray(doc.otherCharges) ? doc.otherCharges : []).map((row) => ({
+      label: row?.label || "Logistics charges",
+      amount: row?.amount || "",
+      logisticsEntryId: row?.logisticsEntryId ? String(row.logisticsEntryId) : "",
+    }));
 
     const lineItems = (doc.lineItems ?? []).map((item) => ({
       description: item?.description ?? "",
@@ -90,12 +111,6 @@ export async function GET(request, context) {
               ? "Dispatch"
               : "Ordered",
     }));
-    const shop = {
-      name: owner?.shopName?.trim() || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "",
-      address: "",
-      contact: shopContact || process.env.MOTOR_SHOP_CONTACT?.trim() || "",
-    };
-    const shopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
     return NextResponse.json({
       id: doc._id.toString(),
       poNumber: doc.poNumber ?? "",
@@ -105,10 +120,16 @@ export async function GET(request, context) {
       quoteId: doc.quoteId ?? "",
       lineItems,
       notes: doc.notes ?? "",
-      shop,
-      shopLogoUrl,
-      accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
-      accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
+      otherCharges,
+      fromShopName,
+      fromShopContact,
+      fromShopLogoUrl,
+      fromAccountsBillingAddress,
+      fromAccountsShippingAddress,
+      fromPaymentTermsLabel,
+      invoiceThankYouNote: (u.invoiceThankYouNote || "").trim(),
+      formattedCreatedAt,
+      currency,
       totalOrder: lineItems.reduce((sum, row) => {
         const t = poLineTotalWithTax(row);
         return sum + (t != null && Number.isFinite(t) ? t : 0);

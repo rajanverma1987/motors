@@ -11,6 +11,7 @@ import { syncRepairFlowJobAfterCrmCustomerRespond } from "@/lib/repair-flow-sync
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
+import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
@@ -26,13 +27,22 @@ export async function GET(request) {
       return NextResponse.json({ error: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found or link expired` }, { status: 404 });
     }
     let customerName = "";
+    let customerToName = "";
+    let customerBillingAddress = "";
     let motorLabel = "";
     let motorIdentityLine = "";
     let motorSpecsLine = "";
     let motorType = "";
+    let customer = null;
     if (doc.customerId) {
-      const cust = await Customer.findById(doc.customerId).lean();
-      if (cust) customerName = cust.primaryContactName?.trim() || cust.companyName?.trim() || "";
+      customer = await Customer.findById(doc.customerId).lean();
+      if (customer) {
+        customerName =
+          customer.primaryContactName?.trim() || customer.companyName?.trim() || "";
+        const block = customerInvoiceToBlock(customer);
+        customerToName = block.toName;
+        customerBillingAddress = block.billingAddress;
+      }
     }
     if (doc.motorId) {
       const motor = await Motor.findById(doc.motorId).lean();
@@ -84,15 +94,17 @@ export async function GET(request) {
             }))
             .filter((a) => a.url)
         : [],
-      shop: {
-        name: owner?.shopName?.trim() || "",
-        address: "",
-        contact: shopContact,
-      },
-      accountsBillingAddress: (u.accountsBillingAddress || "").trim(),
-      accountsShippingAddress: (u.accountsShippingAddress || "").trim(),
-      shopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
-      accountsPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
+      customerToName,
+      customerBillingAddress,
+      fromShopName: owner?.shopName?.trim() || "",
+      fromShopContact: shopContact,
+      fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
+      fromBillingAddress: (u.accountsBillingAddress || "").trim(),
+      fromShippingAddress: (u.accountsShippingAddress || "").trim(),
+      fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
+      invoicePaymentOptions: (u.invoicePaymentOptions || "").trim(),
+      invoiceThankYouNote: (u.invoiceThankYouNote || "").trim(),
+      currency: typeof u.currency === "string" ? u.currency.toUpperCase().trim() : "USD",
       respondedAt:
         doc.respondedAt
           ? (doc.respondedAt.toISOString?.() ?? String(doc.respondedAt))

@@ -21,7 +21,7 @@ const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
  * Printable purchase order (dashboard). Used by PoPrintPreview.
  * Layout matches {@link InvoicePrintPreview} for consistent print quality.
  */
-export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
+export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLineStatus }) {
   if (!po) return null;
 
   const formatMoney = typeof fmt === "function" ? fmt : (v) => (v != null && v !== "" ? String(v) : "—");
@@ -128,6 +128,9 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
               <th className={thCell + " w-10 text-right"}>Tax %</th>
               <th className={thCell + " w-[4.5rem] text-right"}>Tax</th>
               <th className={thCell + " w-[5rem] text-right"}>Total</th>
+              {vendorLineStatus ? (
+                <th className={thCell + " w-[7rem] print:hidden"}>Status</th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -135,6 +138,7 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
               const taxPct = parsePoLineTaxPercent(row?.taxPercent);
               const taxVal = poLineTaxAmount(row);
               const lineTot = poLineTotalWithTax(row);
+              const status = row?.status ?? "Ordered";
               return (
                 <tr key={i}>
                   <td className={tdCell + " align-top whitespace-pre-wrap"}>{row?.description || "—"}</td>
@@ -152,6 +156,20 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt }) {
                       ? formatMoney(String(lineTot.toFixed(2)))
                       : "—"}
                   </td>
+                  {vendorLineStatus ? (
+                    <td className={tdCell + " print:hidden"}>
+                      <select
+                        value={status}
+                        onChange={(e) => vendorLineStatus.onStatusChange?.(i, e.target.value)}
+                        className="w-full rounded border border-neutral-300 bg-white px-2 py-1 text-xs text-neutral-900 focus:border-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-400"
+                      >
+                        <option value="Ordered">Ordered</option>
+                        <option value="Dispatch">Dispatch</option>
+                        <option value="Received">Received</option>
+                        <option value="Back Order">Back Order</option>
+                      </select>
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}

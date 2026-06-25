@@ -74,6 +74,7 @@ export async function GET(request) {
       customerPo: doc.customerPo ?? "",
       date: doc.date ?? "",
       preparedBy,
+      preparedByDisplay: preparedBy,
       status: doc.status ?? "draft",
       scopeLines: Array.isArray(doc.scopeLines) ? doc.scopeLines : [],
       partsLines: Array.isArray(doc.partsLines) ? doc.partsLines : [],

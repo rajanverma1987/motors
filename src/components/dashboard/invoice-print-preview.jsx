@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { formatMoney } from "@/lib/format-currency";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
@@ -29,8 +30,16 @@ export default function InvoicePrintPreview({
   customerBillingAddress = "",
   invoicePaymentOptions = "",
   invoiceThankYouNote = "",
+  fmt: fmtProp,
+  currency,
 }) {
-  const fmt = useFormatMoney();
+  const contextFmt = useFormatMoney();
+  const fmt =
+    typeof fmtProp === "function"
+      ? fmtProp
+      : currency
+        ? (v) => formatMoney(v, currency)
+        : contextFmt;
   const { settings } = useUserSettings();
   if (!q) return null;
 
