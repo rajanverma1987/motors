@@ -10,6 +10,7 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
 import { resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
+import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 
 /** Public GET ?token= — invoice for customer view/print (no internal notes). */
 export async function GET(request) {
@@ -35,6 +36,9 @@ export async function GET(request) {
     let customerToName = "";
     let customerBillingAddress = "";
     let motorLabel = "";
+    let motorIdentityLine = "";
+    let motorSpecsLine = "";
+    let motorType = "";
     let customer = null;
     if (doc.customerId) {
       customer = await Customer.findOne({
@@ -54,8 +58,11 @@ export async function GET(request) {
         createdByEmail: ownerEmail,
       }).lean();
       if (motor) {
-        motorLabel =
-          [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "";
+        const summary = motorSummaryFromMotor(motor);
+        motorIdentityLine = summary.identityLine;
+        motorSpecsLine = summary.specsLine;
+        motorType = summary.motorType;
+        motorLabel = summary.identityLine;
       }
     }
 
@@ -76,6 +83,9 @@ export async function GET(request) {
       customerTaxPercent: tax.customerTaxPercent,
       customerNotes: doc.customerNotes ?? "",
       motorLabel,
+      motorIdentityLine,
+      motorSpecsLine,
+      motorType,
       fromShopName: owner?.shopName?.trim() || "",
       fromShopContact: [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "",
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",

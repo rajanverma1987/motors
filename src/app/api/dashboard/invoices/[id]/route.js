@@ -13,6 +13,7 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 import { normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
 function getParams(context) {
@@ -64,10 +65,9 @@ export async function GET(request, context) {
     const customerName = customer?.companyName || customer?.primaryContactName || inv.customerId;
     const { toName: customerToName, billingAddress: customerBillingAddress } =
       customerInvoiceToBlock(customer);
+    const motorSummary = motorSummaryFromMotor(motor);
     const motorLabel =
-      motor && [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
-        ? [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
-        : inv.motorId;
+      motorSummary.identityLine || (inv.motorId ? String(inv.motorId) : "");
     const preparedByDisplay = await resolvePreparedByDisplay(inv.preparedBy, email);
 
     const owner = await User.findOne({ email }).lean();
@@ -101,6 +101,9 @@ export async function GET(request, context) {
       customerToName,
       customerBillingAddress,
       motorLabel,
+      motorIdentityLine: motorSummary.identityLine,
+      motorSpecsLine: motorSummary.specsLine,
+      motorType: motorSummary.motorType,
       preparedByDisplay,
       fromShopName,
       fromShopContact,

@@ -3,6 +3,7 @@
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
@@ -117,9 +118,14 @@ export default function InvoicePrintPreview({
         </dl>
       </section>
 
-      <section className="mb-3">
-        <h2 className={sectionLabel}>Motor</h2>
-        <p className="text-xs font-medium text-neutral-900">{motorLabel || q.motorId || "—"}</p>
+      <section className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
+        <MotorSummaryBlock
+          identityLine={q.motorIdentityLine}
+          specsLine={q.motorSpecsLine}
+          motorType={q.motorType}
+          fallback={motorLabel || q.motorLabel || q.motorId || "—"}
+          titleClassName="mb-1.5 text-sm font-semibold text-neutral-900"
+        />
       </section>
 
       {Array.isArray(q.scopeLines) && q.scopeLines.length > 0 && (
