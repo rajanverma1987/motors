@@ -10,6 +10,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -47,11 +48,11 @@ export async function POST(request, context) {
       "";
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const uSettings = mergeUserSettings(settingsDoc?.settings);
-    const logoPath = typeof uSettings.logoUrl === "string" ? uSettings.logoUrl.trim() : "";
-    const logoAbsoluteUrl =
-      logoPath.startsWith("/uploads/shop-settings/") && baseUrl
-        ? `${baseUrl.replace(/\/$/, "")}${logoPath}`
-        : "";
+    const shopLogo = resolveShopEmailLogo({
+      ownerEmail: email,
+      logoUrl: uSettings.logoUrl,
+      baseUrl,
+    });
 
     if (!inv.customerViewToken?.trim()) {
       let token = crypto.randomBytes(24).toString("hex");
@@ -81,7 +82,9 @@ export async function POST(request, context) {
       inv.invoiceNumber || inv.rfqNumber,
       shopCompanyName,
       {
-        logoAbsoluteUrl,
+        userSettings: uSettings,
+        logoSrc: shopLogo.logoSrc,
+        ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
         accountsEmailBlock,
         viewUrl,
       }

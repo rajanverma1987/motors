@@ -48,6 +48,15 @@ export const USER_SETTINGS_DEFAULTS = {
   prefixInvoice: "",
   /** Optional prefix for new work order numbers before RFQ/job segment (blank = W-). */
   prefixWorkOrder: "",
+  /** Workspace SMTP for customer-facing quote & invoice emails */
+  smtpEnabled: false,
+  smtpHost: "",
+  smtpPort: 587,
+  smtpSecure: false,
+  smtpUser: "",
+  smtpPassword: "",
+  smtpFromEmail: "",
+  smtpFromName: "",
 };
 
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
@@ -60,6 +69,7 @@ import {
   sanitizeControlledDropdownsPatch,
   deriveWorkOrderFieldsFromControlledEntries,
 } from "@/lib/dropdown-catalog";
+import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -83,6 +93,14 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "prefixRepairJob",
   "prefixInvoice",
   "prefixWorkOrder",
+  "smtpEnabled",
+  "smtpHost",
+  "smtpPort",
+  "smtpSecure",
+  "smtpUser",
+  "smtpPassword",
+  "smtpFromEmail",
+  "smtpFromName",
 ]);
 
 const ACCOUNTS_PAYMENT_TERMS = new Set([
@@ -190,6 +208,8 @@ export function mergeUserSettings(stored) {
     merged.workOrderStatusTileColors,
     merged.workOrderStatuses
   );
+  const smtp = normalizeWorkspaceSmtpFields(merged);
+  Object.assign(merged, smtp);
   return merged;
 }
 
@@ -269,6 +289,30 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "prefixRepairJob" || key === "prefixInvoice" || key === "prefixWorkOrder") {
       out[key] = sanitizeDocumentNumberPrefix(body[key]);
+      continue;
+    }
+    if (key === "smtpEnabled" || key === "smtpSecure") {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "smtpHost" || key === "smtpUser" || key === "smtpFromName") {
+      out[key] = String(body[key] ?? "").trim().slice(0, key === "smtpFromName" ? 120 : 255);
+      continue;
+    }
+    if (key === "smtpFromEmail") {
+      out[key] = String(body[key] ?? "").trim().slice(0, 255).toLowerCase();
+      continue;
+    }
+    if (key === "smtpPort") {
+      const portNum = Number(body[key]);
+      if (Number.isFinite(portNum) && portNum > 0 && portNum <= 65535) {
+        out[key] = Math.round(portNum);
+      }
+      continue;
+    }
+    if (key === "smtpPassword") {
+      const pw = String(body[key] ?? "").trim();
+      if (pw) out[key] = pw;
       continue;
     }
     if (key === "controlledDropdowns") {

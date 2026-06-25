@@ -43,6 +43,7 @@ import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
+import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
@@ -825,7 +826,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     }
   };
 
-  const [sendingQuoteId, setSendingQuoteId] = useState(null);
+  const [sendEmailPreview, setSendEmailPreview] = useState(null);
   const [deletingQuoteId, setDeletingQuoteId] = useState(null);
 
   async function handleDeleteQuote(row) {
@@ -863,36 +864,16 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   handleDeleteQuoteRef.current = handleDeleteQuote;
 
   const handleSendToCustomer = useCallback(
-    async (quoteFromTable) => {
+    (quoteFromTable) => {
       const quote = quoteFromTable?.id != null ? quoteFromTable : viewingQuote;
       const quoteId = quote?.id;
       if (!quoteId) return;
-      const rfq = quote?.rfqNumber || quoteId;
-      const confirmed = await confirm({
-        title: "Send quote to customer",
-        message: `Send quote ${rfq} to the customer? They will receive an email with a link to view and respond.`,
-        confirmLabel: "Send",
-        cancelLabel: "Cancel",
+      setSendEmailPreview({
+        quoteId,
+        rfqNumber: quote?.rfqNumber || quoteId,
       });
-      if (!confirmed) return;
-      setSendingQuoteId(quoteId);
-      try {
-        const res = await fetch(`/api/dashboard/quotes/${quoteId}/send`, {
-          method: "POST",
-          credentials: "include",
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to send quote");
-        toast.success("Quote sent to customer. Status set to Sent.");
-        setQuotesRaw((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status: "sent" } : q)));
-        setViewingQuote((prev) => (prev?.id === quoteId ? { ...prev, status: "sent" } : prev));
-      } catch (err) {
-        toast.error(err.message || "Failed to send quote");
-      } finally {
-        setSendingQuoteId(null);
-      }
     },
-    [viewingQuote, confirm, toast]
+    [viewingQuote]
   );
 
   const handlePrintQuote = useCallback((quoteFromTable) => {
@@ -1303,7 +1284,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     (vq, { showEditButton = false } = {}) => {
       if (!vq?.id) return null;
       const canCreateWorkOrder = quoteStatusAllowsWorkOrder(vq.status);
-      const isSending = sendingQuoteId === vq.id;
+      const isSending = sendEmailPreview?.quoteId === vq.id;
       const isPrintingTagQr = printingTagQrQuoteId === vq.id;
       const isCheckingOpenWo = checkingOpenWoQuoteId === vq.id;
       const woDisabledTitle = canCreateWorkOrder
@@ -1409,7 +1390,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       );
     },
     [
-      sendingQuoteId,
+      sendEmailPreview,
       printingTagQrQuoteId,
       checkingOpenWoQuoteId,
       closeViewModal,
@@ -2271,6 +2252,29 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         customerId={openCustomerId}
         onClose={() => setOpenCustomerId(null)}
         zIndex={120}
+      />
+
+      <SendDocumentPreviewModal
+        open={!!sendEmailPreview?.quoteId}
+        onClose={() => setSendEmailPreview(null)}
+        title={
+          sendEmailPreview?.rfqNumber
+            ? `Send quote ${sendEmailPreview.rfqNumber} to customer`
+            : "Send quote to customer"
+        }
+        documentType="quote"
+        documentId={sendEmailPreview?.quoteId || null}
+        sendUrl={
+          sendEmailPreview?.quoteId ? `/api/dashboard/quotes/${sendEmailPreview.quoteId}/send` : null
+        }
+        onSent={() => {
+          const quoteId = sendEmailPreview?.quoteId;
+          if (!quoteId) return;
+          setQuotesRaw((prev) => prev.map((q) => (q.id === quoteId ? { ...q, status: "sent" } : q)));
+          setViewingQuote((prev) => (prev?.id === quoteId ? { ...prev, status: "sent" } : prev));
+          setSendEmailPreview(null);
+        }}
+        zIndex={130}
       />
     </div>
   );

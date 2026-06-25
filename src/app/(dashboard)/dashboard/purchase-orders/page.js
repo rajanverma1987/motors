@@ -22,6 +22,7 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
 import VendorQuickViewModal from "@/components/dashboard/vendor-quick-view-modal";
 import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
+import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
 import RepairFlowJobDetailClient from "@/app/(dashboard)/dashboard/repair-flow/[id]/repair-flow-job-detail-client";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
@@ -573,8 +574,7 @@ export default function DashboardPurchaseOrdersPage() {
   const vendorFormRef = useRef(vendorForm);
   vendorFormRef.current = vendorForm;
 
-  const [sendingVendor, setSendingVendor] = useState(false);
-  const [sendingVendorId, setSendingVendorId] = useState(null);
+  const [sendEmailPreview, setSendEmailPreview] = useState(null);
   const [printPoId, setPrintPoId] = useState(null);
 
   const [pendingPoAttachmentFiles, setPendingPoAttachmentFiles] = useState([]);
@@ -815,35 +815,14 @@ export default function DashboardPurchaseOrdersPage() {
     setVendorForm(INITIAL_VENDOR_FORM);
   };
 
-  const handleSendToVendor = async (poFromTable) => {
+  const handleSendToVendor = (poFromTable) => {
     const po = poFromTable ?? viewingPo;
     const poId = po?.id;
     if (!poId) return;
-    const poNum = po?.poNumber || poId;
-    const confirmed = await confirm({
-      title: "Send purchase order to vendor",
-      message: `Send purchase order ${poNum} to the vendor? They will receive an email with a link to view, print, and update delivery status for each line item.`,
-      confirmLabel: "Send",
-      cancelLabel: "Cancel",
+    setSendEmailPreview({
+      poId,
+      poNumber: po?.poNumber || poId,
     });
-    if (!confirmed) return;
-    setSendingVendor(true);
-    setSendingVendorId(poId);
-    try {
-      const res = await fetch(`/api/dashboard/purchase-orders/${poId}/send`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "Failed to send purchase order");
-      toast.success(data?.message ?? "Purchase order sent to vendor.");
-      loadPos();
-    } catch (err) {
-      toast.error(err?.message ?? "Failed to send purchase order");
-    } finally {
-      setSendingVendor(false);
-      setSendingVendorId(null);
-    }
   };
 
   const handleDeletePo = useCallback(
@@ -1994,16 +1973,12 @@ export default function DashboardPurchaseOrdersPage() {
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={sendingVendor}
+                disabled={sendEmailPreview?.poId === viewingPo.id}
                 className="inline-flex shrink-0 items-center gap-1.5"
                 onClick={() => handleSendToVendor(viewingPo)}
               >
-                {sendingVendor && sendingVendorId === viewingPo.id ? (
-                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                {sendingVendor && sendingVendorId === viewingPo.id ? "Sending…" : "Send"}
+                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                Send
               </Button>
             </div>
           ) : null
@@ -2514,6 +2489,28 @@ export default function DashboardPurchaseOrdersPage() {
           ) : null}
         </div>
       </Modal>
+
+      <SendDocumentPreviewModal
+        open={!!sendEmailPreview?.poId}
+        onClose={() => setSendEmailPreview(null)}
+        title={
+          sendEmailPreview?.poNumber
+            ? `Send PO ${sendEmailPreview.poNumber} to vendor`
+            : "Send purchase order to vendor"
+        }
+        documentType="po"
+        documentId={sendEmailPreview?.poId || null}
+        sendUrl={
+          sendEmailPreview?.poId
+            ? `/api/dashboard/purchase-orders/${sendEmailPreview.poId}/send`
+            : null
+        }
+        onSent={() => {
+          setSendEmailPreview(null);
+          loadPos();
+        }}
+        zIndex={130}
+      />
     </div>
   );
 }

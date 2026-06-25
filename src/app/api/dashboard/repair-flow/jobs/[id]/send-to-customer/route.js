@@ -9,6 +9,7 @@ import Quote from "@/models/Quote";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 import { sendRepairFlowPreliminaryToCustomer } from "@/lib/email";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendCrmQuoteToCustomer } from "@/lib/crm-quote-send-customer";
@@ -52,17 +53,18 @@ export async function POST(request, context) {
     const baseUrl = getPublicSiteUrl(request);
     const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
     const uSettings = mergeUserSettings(settingsDoc?.settings);
-    const logoPath = typeof uSettings.logoUrl === "string" ? uSettings.logoUrl.trim() : "";
-    const logoAbsoluteUrl =
-      logoPath.startsWith("/uploads/shop-settings/") && baseUrl
-        ? `${baseUrl.replace(/\/$/, "")}${logoPath}`
-        : "";
+    const shopLogo = resolveShopEmailLogo({
+      ownerEmail: email,
+      logoUrl: uSettings.logoUrl,
+      baseUrl,
+    });
     const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({
       billingAddress: uSettings.accountsBillingAddress,
       paymentTermsLabel: accountsPaymentTermsLabel(uSettings.accountsPaymentTerms),
     });
     const emailExtras = {
-      ...(logoAbsoluteUrl ? { logoAbsoluteUrl } : {}),
+      ...(shopLogo.logoSrc ? { logoSrc: shopLogo.logoSrc } : {}),
+      ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
       ...(accountsEmailBlock.trim() ? { accountsEmailBlock } : {}),
     };
 

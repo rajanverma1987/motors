@@ -20,6 +20,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
+import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
 
 const SCOPE_COLUMNS = [
   { key: "scope", label: "Scope", width: "75%" },
@@ -110,7 +111,7 @@ export default function InvoiceFormModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [headerBusy, setHeaderBusy] = useState(false);
-  const [isSendingToClient, setIsSendingToClient] = useState(false);
+  const [sendPreviewOpen, setSendPreviewOpen] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [form, setForm] = useState(emptyForm);
   /** Saved invoice id (edit mode); null = new draft */
@@ -258,32 +259,9 @@ export default function InvoiceFormModal({
     };
   }, [open, draftQuoteId, invoiceId, onSwitchToInvoice, toast, mergedAccountSettings]);
 
-  const handleHeaderSend = async () => {
+  const handleHeaderSend = () => {
     if (!persistedId) return;
-    const ok = await confirm({
-      title: "Send invoice to client",
-      message: `Email invoice #${form.invoiceNumber || ""} to the customer on file?`,
-      confirmLabel: "Send",
-    });
-    if (!ok) return;
-    setIsSendingToClient(true);
-    setHeaderBusy(true);
-    try {
-      const res = await fetch(`/api/dashboard/invoices/${persistedId}/send`, {
-        method: "POST",
-        credentials: "include",
-      });
-      const d = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(d.error || "Send failed");
-      toast.success(d.message || "Sent.");
-      setForm((f) => ({ ...f, status: normalizeInvoiceStatusSlug("sent", mergedAccountSettings) }));
-      onAfterSave?.();
-    } catch (e) {
-      toast.error(e.message || "Could not send");
-    } finally {
-      setHeaderBusy(false);
-      setIsSendingToClient(false);
-    }
+    setSendPreviewOpen(true);
   };
 
   const handleConvertToRfq = async () => {
@@ -497,16 +475,12 @@ export default function InvoiceFormModal({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={headerDisabled}
+                disabled={headerDisabled || sendPreviewOpen}
                 className="inline-flex shrink-0 items-center gap-1.5"
                 onClick={handleHeaderSend}
               >
-                {isSendingToClient ? (
-                  <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
-                ) : (
-                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                )}
-                {isSendingToClient ? "Sending…" : "Send to client"}
+                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                Send to client
               </Button>
             </>
           ) : null}
@@ -671,6 +645,25 @@ export default function InvoiceFormModal({
         setPrintOpen(false);
         setPrintPayload(null);
       }}
+    />
+
+    <SendDocumentPreviewModal
+      open={sendPreviewOpen && !!persistedId}
+      onClose={() => setSendPreviewOpen(false)}
+      title={
+        form.invoiceNumber
+          ? `Send invoice #${form.invoiceNumber} to customer`
+          : "Send invoice to customer"
+      }
+      documentType="invoice"
+      documentId={persistedId}
+      sendUrl={persistedId ? `/api/dashboard/invoices/${persistedId}/send` : null}
+      onSent={() => {
+        setForm((f) => ({ ...f, status: normalizeInvoiceStatusSlug("sent", mergedAccountSettings) }));
+        setSendPreviewOpen(false);
+        onAfterSave?.();
+      }}
+      zIndex={(zIndex ?? 50) + 15}
     />
     </>
   );

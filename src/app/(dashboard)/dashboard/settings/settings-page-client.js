@@ -17,6 +17,7 @@ import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
 } from "@/lib/user-settings";
+import { resolveWorkspaceSmtpSecure } from "@/lib/workspace-smtp-fields";
 import { applyDashboardZoom } from "@/lib/apply-dashboard-zoom";
 import {
   DISPLAY_ZOOM_DEFAULT,
@@ -64,6 +65,8 @@ export default function SettingsPageClient() {
   const [pwNew, setPwNew] = useState("");
   const [pwConfirm, setPwConfirm] = useState("");
   const [pwSaving, setPwSaving] = useState(false);
+  const [smtpPasswordInput, setSmtpPasswordInput] = useState("");
+  const [smtpTesting, setSmtpTesting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,16 +134,23 @@ export default function SettingsPageClient() {
   async function handleSave() {
     setSaving(true);
     try {
+      const payload = { ...draft };
+      delete payload.smtpPassword;
+      delete payload.smtpPasswordConfigured;
+      if (smtpPasswordInput.trim()) {
+        payload.smtpPassword = smtpPasswordInput.trim();
+      }
       const r = await fetch("/api/dashboard/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(draft),
+        body: JSON.stringify(payload),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Save failed");
       const merged = mergeUserSettings(d.settings);
       setDraft(merged);
+      setSmtpPasswordInput("");
       await refreshContext();
       applyDashboardZoom(merged.zoomLevel);
       toast.success("Settings saved.");
@@ -148,6 +158,37 @@ export default function SettingsPageClient() {
       toast.error(e.message || "Could not save settings.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleTestSmtp() {
+    setSmtpTesting(true);
+    try {
+      const body = {
+        smtpEnabled: true,
+        smtpHost: draft.smtpHost,
+        smtpPort: draft.smtpPort,
+        smtpSecure: draft.smtpSecure,
+        smtpUser: draft.smtpUser,
+        smtpFromEmail: draft.smtpFromEmail,
+        smtpFromName: draft.smtpFromName,
+      };
+      if (smtpPasswordInput.trim()) {
+        body.smtpPassword = smtpPasswordInput.trim();
+      }
+      const r = await fetch("/api/dashboard/settings/smtp/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "SMTP test failed");
+      toast.success(d.message || "SMTP connection successful.");
+    } catch (e) {
+      toast.error(e.message || "SMTP test failed.");
+    } finally {
+      setSmtpTesting(false);
     }
   }
 
@@ -552,6 +593,119 @@ export default function SettingsPageClient() {
         ),
       },
       {
+        id: "smtp",
+        label: "SMTP",
+        children: (
+          <div className="flex flex-col gap-8 pb-24">
+            <FormContainer>
+              <FormSectionTitle as="h2">Customer email (SMTP)</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                When enabled, quotes and invoices sent to customers use your shop&apos;s SMTP server and from address
+                instead of IQMotorBase.com. Save settings after entering credentials, then test the connection.
+              </p>
+              <div className="flex flex-col gap-4">
+                <Checkbox
+                  name="smtpEnabled"
+                  label="Use my shop SMTP for customer emails"
+                  help="Applies to Send to customer on RFQs and invoices."
+                  checked={!!draft.smtpEnabled}
+                  onChange={(e) => updateDraft({ smtpEnabled: e.target.checked })}
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="SMTP host"
+                    value={draft.smtpHost ?? ""}
+                    onChange={(e) => updateDraft({ smtpHost: e.target.value })}
+                    placeholder="smtp.gmail.com"
+                    autoComplete="off"
+                  />
+                  <Input
+                    label="SMTP port"
+                    type="number"
+                    min={1}
+                    max={65535}
+                    value={String(draft.smtpPort ?? 587)}
+                    onChange={(e) => {
+                      const port = Math.round(Number(e.target.value) || 587);
+                      updateDraft({
+                        smtpPort: e.target.value,
+                        smtpSecure: resolveWorkspaceSmtpSecure(port, draft.smtpSecure),
+                      });
+                    }}
+                    placeholder="587"
+                  />
+                </div>
+                <p className="-mt-2 text-xs text-secondary">
+                  Port 587 uses STARTTLS (leave SSL/TLS off). Port 465 uses SSL/TLS (turned on automatically).
+                </p>
+                <Checkbox
+                  name="smtpSecure"
+                  label="Use SSL/TLS (implicit — port 465 only)"
+                  help="For port 587, keep this off; the connection upgrades with STARTTLS automatically."
+                  checked={!!draft.smtpSecure}
+                  onChange={(e) => {
+                    const port = Math.round(Number(draft.smtpPort) || 587);
+                    updateDraft({
+                      smtpSecure: resolveWorkspaceSmtpSecure(port, e.target.checked),
+                    });
+                  }}
+                />
+                <Input
+                  label="SMTP username"
+                  value={draft.smtpUser ?? ""}
+                  onChange={(e) => updateDraft({ smtpUser: e.target.value })}
+                  placeholder="you@yourshop.com"
+                  autoComplete="off"
+                />
+                <Input
+                  type="password"
+                  label="SMTP password"
+                  value={smtpPasswordInput}
+                  onChange={(e) => setSmtpPasswordInput(e.target.value)}
+                  placeholder={
+                    draft.smtpPasswordConfigured
+                      ? "Leave blank to keep saved password"
+                      : "App password or SMTP password"
+                  }
+                  autoComplete="new-password"
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="From email"
+                    type="email"
+                    value={draft.smtpFromEmail ?? ""}
+                    onChange={(e) => updateDraft({ smtpFromEmail: e.target.value })}
+                    placeholder="billing@yourshop.com"
+                    autoComplete="off"
+                  />
+                  <Input
+                    label="From name (optional)"
+                    value={draft.smtpFromName ?? ""}
+                    onChange={(e) => updateDraft({ smtpFromName: e.target.value })}
+                    placeholder={user?.shopName || "Your shop name"}
+                    autoComplete="off"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={smtpTesting}
+                    onClick={handleTestSmtp}
+                  >
+                    {smtpTesting ? "Testing…" : "Test SMTP connection"}
+                  </Button>
+                  {draft.smtpPasswordConfigured ? (
+                    <span className="text-xs text-secondary">Password saved on server.</span>
+                  ) : null}
+                </div>
+              </div>
+            </FormContainer>
+          </div>
+        ),
+      },
+      {
         id: "dropdowns",
         label: "Dropdowns",
         children: <SettingsControlledDropdownsPanel draft={draft} setDraft={setDraft} />,
@@ -621,6 +775,16 @@ export default function SettingsPageClient() {
       draft.prefixRepairJob,
       draft.prefixInvoice,
       draft.prefixWorkOrder,
+      draft.smtpEnabled,
+      draft.smtpHost,
+      draft.smtpPort,
+      draft.smtpSecure,
+      draft.smtpUser,
+      draft.smtpFromEmail,
+      draft.smtpFromName,
+      draft.smtpPasswordConfigured,
+      smtpPasswordInput,
+      smtpTesting,
       draft.workOrderStatusTileColors,
       draft.controlledDropdowns,
       draft.inventoryLocations,

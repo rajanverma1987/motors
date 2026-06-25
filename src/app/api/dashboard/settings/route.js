@@ -6,6 +6,7 @@ import {
   mergeUserSettings,
   sanitizeUserSettingsPatch,
 } from "@/lib/user-settings";
+import { userSettingsForClient } from "@/lib/workspace-smtp-fields";
 
 export async function GET(request) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const doc = await UserSettings.findOne({ ownerEmail: email }).lean();
-    const settings = mergeUserSettings(doc?.settings);
+    const settings = userSettingsForClient(mergeUserSettings(doc?.settings));
     return NextResponse.json({
       settings,
       ownerEmail: email,
@@ -51,7 +52,7 @@ export async function PATCH(request) {
       { new: true, upsert: true }
     ).lean();
 
-    const settings = mergeUserSettings(doc?.settings);
+    const settings = userSettingsForClient(mergeUserSettings(doc?.settings));
     return NextResponse.json({ ok: true, settings });
   } catch (err) {
     console.error("PATCH dashboard settings:", err);

@@ -1,6 +1,12 @@
 import { getTransporter } from "@/lib/email-transport";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
+import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
+import {
+  buildQuoteToCustomerEmailContent,
+  buildInvoiceToCustomerEmailContent,
+  buildPoToVendorEmailContent,
+} from "@/lib/customer-facing-email-content";
 
 const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
@@ -498,9 +504,9 @@ export async function sendSubscriptionPlanAttachedEmail({
  * Send an email. Uses options.from when provided (e.g. for marketing); otherwise uses default EMAIL_FROM.
  */
 async function sendEmail(to, subject, html, options = {}) {
+  const transport = options.transport || getTransporter();
   const from = options.from || fromEmail || process.env.SMTP_USER;
   const attachments = options.attachments;
-  const transport = getTransporter();
   const sanitizedHtml = sanitizeEmailBodyHtml(html);
   if (!transport) {
     console.error("[Email not configured] Set SMTP_USER and SMTP_PASS. To:", to, "Subject:", subject);
@@ -521,6 +527,28 @@ async function sendEmail(to, subject, html, options = {}) {
   }
 }
 
+/** Apply workspace SMTP when userSettings provided in options. */
+function customerMailOptions(options = {}, shopCompanyName = "") {
+  if (options.transport && options.from) {
+    return { transport: options.transport, from: options.from, error: null };
+  }
+  if (options.userSettings) {
+    const mail = resolveCustomerMailDelivery(options.userSettings, shopCompanyName);
+    return { transport: mail.transport, from: mail.from, error: mail.error };
+  }
+  return { transport: getTransporter(), from: fromEmail || process.env.SMTP_USER, error: null };
+}
+
+async function sendCustomerFacingEmail(to, subject, html, options, shopCompanyName) {
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  const mailOpts = {
+    ...customerMailOptions(options, shopCompanyName),
+    ...(extraAttachments.length ? { attachments: extraAttachments } : {}),
+  };
+  if (mailOpts.error) return { ok: false, error: mailOpts.error };
+  return sendEmail(to, subject, html, mailOpts);
+}
+
 /** Send email using the marketing "from" address (EMAIL_MARKETING_FROM). Use for admin marketing campaigns. */
 export async function sendMarketingEmail(to, subject, html) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { from: marketingFrom });
@@ -535,25 +563,16 @@ export async function sendQuoteToCustomer(
   shopCompanyName,
   options = {}
 ) {
-  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const { subject, html } = buildQuoteToCustomerEmailContent({
+    customerName,
+    rfqNumber,
+    respondUrl,
+    shopCompanyName,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    accountsEmailBlock: options.accountsEmailBlock,
+  });
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
-  const subject = `Your quote ${esc(rfqNumber) || "is ready"} – ${shopName}`;
-  const signature = esc(shopName);
-  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
-  const logoBlock = logoAbs
-    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
-    : "";
-  const html = `
-    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
-    <p>Your service quote ${rfqNumber ? `(RFQ# ${esc(rfqNumber)})` : ""} is ready for your review.</p>
-    <p><strong>View your quote and approve or reject it here:</strong></p>
-    <p><a href="${esc(respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
-    <p>You can also print or save the quote as PDF from that page.</p>
-    ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
-    ${logoBlock}
-    <p style="margin-top:16px">— ${signature}</p>
-  `;
-  return sendEmail(toEmail, subject, html);
+  return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
 }
 
 /** Email link for repair-flow preliminary quote — customer approves teardown, declines repair, or authorizes scrap. */
@@ -571,10 +590,14 @@ export async function sendRepairFlowPreliminaryToCustomer(
   const signature = esc(shopName);
   const jobRef = esc(jobNumber) || "your repair job";
   const subject = `Preliminary quote — Job ${jobRef} – ${shopName}`;
-  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
-  const logoBlock = logoAbs
-    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
-    : "";
+  const logoSrc = String(options.logoSrc || options.logoAbsoluteUrl || "").trim();
+  const logoIsHttp = logoSrc.startsWith("http://") || logoSrc.startsWith("https://");
+  const logoIsData = logoSrc.startsWith("data:image/");
+  const logoIsCid = logoSrc.startsWith("cid:");
+  const logoBlock =
+    logoIsHttp || logoIsData || logoIsCid
+      ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoSrc)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+      : "";
   const html = `
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
     <p>Your <strong>preliminary (pre-disassembly) quote</strong> for job <strong>${jobRef}</strong> is ready.</p>
@@ -585,7 +608,8 @@ export async function sendRepairFlowPreliminaryToCustomer(
     ${logoBlock}
     <p style="margin-top:16px">— ${signature}</p>
   `;
-  return sendEmail(toEmail, subject, html);
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
 }
 
 /**
@@ -599,72 +623,32 @@ export async function sendInvoiceToCustomer(
   shopCompanyName,
   options = {}
 ) {
-  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
+  const { subject, html } = buildInvoiceToCustomerEmailContent({
+    customerName,
+    invoiceNumber,
+    shopCompanyName,
+    viewUrl: options.viewUrl,
+    totalFormatted: options.totalFormatted,
+    summaryHtml: options.summaryHtml,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    accountsEmailBlock: options.accountsEmailBlock,
+  });
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
-  const invNo = esc(invoiceNumber) || "—";
-  const subject = `Invoice ${invNo} – ${esc(shopName)}`;
-  const signature = esc(shopName);
-  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
-  const logoBlock = logoAbs
-    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
-    : "";
-  const accountsBlock =
-    typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim()
-      ? options.accountsEmailBlock
-      : "";
-  const viewUrl = typeof options.viewUrl === "string" ? options.viewUrl.trim() : "";
-
-  if (viewUrl) {
-    const html = `
-    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
-    <p>Your invoice <strong>#${invNo}</strong> from ${signature} is ready.</p>
-    <p><strong>View and print your invoice here:</strong></p>
-    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View invoice</a></p>
-    <p>You can print or save the invoice as PDF from that page.</p>
-    ${accountsBlock}
-    <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
-    ${logoBlock}
-    <p style="margin-top:16px">— ${signature}</p>
-  `;
-    return sendEmail(toEmail, subject, html);
-  }
-
-  const totalLine = options.totalFormatted ? `<p><strong>Amount due:</strong> ${esc(options.totalFormatted)}</p>` : "";
-  const notesBlock = options.summaryHtml ? `<div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:12px">${options.summaryHtml}</div>` : "";
-  const html = `
-    <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
-    <p>Please find your invoice <strong>#${invNo}</strong> from ${signature}.</p>
-    ${totalLine}
-    ${notesBlock}
-    ${accountsBlock}
-    <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
-    ${logoBlock}
-    <p style="margin-top:16px">— ${signature}</p>
-  `;
-  return sendEmail(toEmail, subject, html);
+  return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
 }
 
 /** Send purchase order to vendor with link to view, print, and update delivery status. Uses motor shop name in subject and signature. */
 export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName, options = {}) {
-  const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
-  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
-  const subject = `Purchase order ${esc(poNumber) || ""} – ${shopName}`;
-  const signature = esc(shopName);
-  const logoAbs = typeof options.logoAbsoluteUrl === "string" && options.logoAbsoluteUrl.startsWith("http") ? options.logoAbsoluteUrl.trim() : "";
-  const logoBlock = logoAbs
-    ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoAbs)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
-    : "";
-  const html = `
-    <p>Hi${vendorName ? ` ${esc(vendorName)}` : ""},</p>
-    <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${signature}.</p>
-    <p><strong>View, print, and update delivery status for each line item here:</strong></p>
-    <p><a href="${esc(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
-    <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
-    ${typeof options.poVendorAddressesHtml === "string" && options.poVendorAddressesHtml.trim() ? options.poVendorAddressesHtml : ""}
-    ${logoBlock}
-    <p style="margin-top:16px">— ${signature}</p>
-  `;
-  return sendEmail(toEmail, subject, html);
+  const { subject, html } = buildPoToVendorEmailContent({
+    vendorName,
+    poNumber,
+    viewUrl,
+    shopCompanyName,
+    logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    poVendorAddressesHtml: options.poVendorAddressesHtml,
+  });
+  const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
+  return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
 }
 
 /** Email work order PDF to a recipient (custom email + optional message in body). */

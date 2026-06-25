@@ -7,6 +7,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 
 /**
  * Send CRM Quote email with approve/reject link; sets status to sent when successful.
@@ -50,11 +51,12 @@ export async function sendCrmQuoteToCustomer({ quoteId, user, request }) {
 
   const settingsDoc = await UserSettings.findOne({ ownerEmail: user.email.trim().toLowerCase() }).lean();
   const uSettings = mergeUserSettings(settingsDoc?.settings);
-  const logoPath = typeof uSettings.logoUrl === "string" ? uSettings.logoUrl.trim() : "";
-  const logoAbsoluteUrl =
-    logoPath.startsWith("/uploads/shop-settings/") && baseUrl
-      ? `${baseUrl.replace(/\/$/, "")}${logoPath}`
-      : "";
+  const ownerEmail = user.email.trim().toLowerCase();
+  const shopLogo = resolveShopEmailLogo({
+    ownerEmail,
+    logoUrl: uSettings.logoUrl,
+    baseUrl,
+  });
 
   const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({
     billingAddress: uSettings.accountsBillingAddress,
@@ -68,7 +70,9 @@ export async function sendCrmQuoteToCustomer({ quoteId, user, request }) {
     respondUrl,
     shopCompanyName,
     {
-      ...(logoAbsoluteUrl ? { logoAbsoluteUrl } : {}),
+      userSettings: uSettings,
+      ...(shopLogo.logoSrc ? { logoSrc: shopLogo.logoSrc } : {}),
+      ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
       ...(accountsEmailBlock.trim() ? { accountsEmailBlock } : {}),
     }
   );
