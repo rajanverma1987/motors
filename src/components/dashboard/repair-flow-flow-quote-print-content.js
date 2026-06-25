@@ -3,10 +3,11 @@
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 export const STAGE_LABEL = {
   preliminary: "Pre-disassembly Quote",
-  final: "Quote",
+  final: SERVICE_PROPOSAL_DOCUMENT_TITLE,
 };
 
 function printDocumentTitle(quotes) {
@@ -15,7 +16,7 @@ function printDocumentTitle(quotes) {
   const stages = new Set(list.map((q) => q.stage).filter(Boolean));
   if (stages.size === 1) {
     const s = list[0].stage;
-    return STAGE_LABEL[s] || "Quote";
+    return STAGE_LABEL[s] || SERVICE_PROPOSAL_DOCUMENT_TITLE;
   }
   return "Quotes";
 }
@@ -81,8 +82,8 @@ export default function RepairFlowFlowQuotePrintContent({ job, quotes, fmt, acco
         <section key={q.id} className="mb-8 border-b border-border pb-6 last:mb-0 last:border-b-0 last:pb-0">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-secondary">
             {q.source === "crm" && q.rfqNumber
-              ? `${STAGE_LABEL[q.stage] || "Quote"} · RFQ ${q.rfqNumber}`
-              : STAGE_LABEL[q.stage] || q.stage || "Quote"}
+              ? `${STAGE_LABEL[q.stage] || SERVICE_PROPOSAL_DOCUMENT_TITLE} · RFQ ${q.rfqNumber}`
+              : STAGE_LABEL[q.stage] || q.stage || SERVICE_PROPOSAL_DOCUMENT_TITLE}
           </h2>
           <p className="mt-1 text-sm text-secondary">
             Status: {q.status || "—"}

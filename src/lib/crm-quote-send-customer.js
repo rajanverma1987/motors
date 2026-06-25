@@ -7,6 +7,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 
 /**
@@ -21,7 +22,7 @@ export async function sendCrmQuoteToCustomer({ quoteId, user, request }) {
     createdByEmail: user.email.trim().toLowerCase(),
   });
   if (!doc) {
-    return { ok: false, status: 404, error: "Quote not found" };
+    return { ok: false, status: 404, error: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found` };
   }
 
   const customer = await Customer.findOne({
@@ -100,7 +101,7 @@ export async function sendCrmQuoteToCustomer({ quoteId, user, request }) {
 
   return {
     ok: true,
-    message: "Quote sent to customer. Status set to Sent.",
+    message: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} sent to customer. Status set to Sent.`,
     quote: {
       ...doc.toObject(),
       id: doc._id.toString(),

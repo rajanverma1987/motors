@@ -27,6 +27,7 @@ import {
 } from "@/lib/quote-rfq-lifecycle";
 import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 import {
   ADD_MOTOR_INITIAL,
   MOTOR_TYPE_OPTIONS,
@@ -362,14 +363,14 @@ export default function QuoteFormModal({
         body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update quote");
+      if (!res.ok) throw new Error(data.error || `Failed to update ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
       const savedTechId = String(data.quote?.technicianEmployeeId ?? "").trim();
       technicianEmployeeIdRef.current = savedTechId;
-      toast.success("Quote updated.");
+      toast.success(`${SERVICE_PROPOSAL_DOCUMENT_TITLE} updated.`);
       setViewingQuote(data.quote);
       onAfterSave?.();
     } catch (err) {
-      toast.error(err.message || "Failed to update quote");
+      toast.error(err.message || `Failed to update ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
     } finally {
       setSavingQuote(false);
     }
@@ -382,7 +383,7 @@ export default function QuoteFormModal({
       <Modal
         open={open}
         onClose={handleClose}
-        title="Edit quote"
+        title={`Edit ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
         size="full"
         width="min(1200px, 94vw)"
         showClose={!savingQuote}
@@ -445,7 +446,7 @@ export default function QuoteFormModal({
               readOnly
               aria-hidden
             />
-            <FormSection title="Quote info">
+            <FormSection title="Service proposal info">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
                 <Input label={editFormJobIdLabel} value={form.rfqNumber || "—"} readOnly />
                 <Input

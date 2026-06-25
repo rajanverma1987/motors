@@ -9,6 +9,7 @@ import WorkOrder from "@/models/WorkOrder";
 import Invoice from "@/models/Invoice";
 import Vendor from "@/models/Vendor";
 import PurchaseOrder from "@/models/PurchaseOrder";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 function escapeRegex(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -117,7 +118,7 @@ export async function GET(request) {
         const qid = qDoc._id.toString();
         linked.push({
           type: "quote",
-          label: "Quote",
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           title: `RFQ ${qDoc.rfqNumber || qDoc._id}`,
           openHref: `/dashboard/rfq?open=${qid}`,
         });
@@ -178,7 +179,7 @@ export async function GET(request) {
         })),
         ...custQuotes.map((qu) => ({
           type: "quote",
-          label: "Quote",
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           title: `RFQ ${qu.rfqNumber || qu._id}`,
           openHref: `/dashboard/rfq?open=${qu._id}`,
         })),
@@ -232,7 +233,7 @@ export async function GET(request) {
       for (const qu of motorQuotes) {
         linked.push({
           type: "quote",
-          label: "Quote",
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           title: `RFQ ${qu.rfqNumber || qu._id}`,
           openHref: `/dashboard/rfq?open=${qu._id}`,
         });
@@ -334,7 +335,7 @@ export async function GET(request) {
         raw,
         {
           type: "quote",
-          typeLabel: "Quote",
+          typeLabel: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           id,
           title: `RFQ ${qu.rfqNumber || id}`,
           subtitle: [qu.status, qu.date].filter(Boolean).join(" · ") || undefined,
@@ -365,7 +366,7 @@ export async function GET(request) {
       if (qu) {
         linked.push({
           type: "quote",
-          label: "Quote",
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           title: `RFQ ${qu.rfqNumber || w.quoteId}`,
           openHref: `/dashboard/rfq?open=${qu._id}`,
         });
@@ -426,7 +427,7 @@ export async function GET(request) {
       if (qu) {
         linked.push({
           type: "quote",
-          label: "Quote",
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
           title: `RFQ ${qu.rfqNumber || inv.quoteId}`,
           openHref: `/dashboard/rfq?open=${qu._id}`,
         });
@@ -514,8 +515,8 @@ export async function GET(request) {
         const qu = quoteMap[pqid];
         linked.push({
           type: "quote",
-          label: "Quote",
-          title: qu ? `RFQ ${qu.rfqNumber}` : `Quote ${p.quoteId}`,
+          label: SERVICE_PROPOSAL_DOCUMENT_TITLE,
+          title: qu ? `RFQ ${qu.rfqNumber}` : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} ${p.quoteId}`,
           openHref: `/dashboard/rfq?open=${pqid}`,
         });
         for (const inv of invoices.filter((i) => (i.quoteId || "").toString() === pqid).slice(0, 5)) {

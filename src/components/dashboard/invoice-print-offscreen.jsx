@@ -103,6 +103,7 @@ export default function InvoicePrintOffscreen({ open, payload, onClose }) {
         fromShopContact={payload.fromShopContact}
         fromShopLogoUrl={payload.fromShopLogoUrl}
         fromBillingAddress={payload.fromBillingAddress}
+        fromShippingAddress={payload.fromShippingAddress}
         fromPaymentTermsLabel={payload.fromPaymentTermsLabel}
         customerToName={payload.customerToName}
         customerBillingAddress={payload.customerBillingAddress}

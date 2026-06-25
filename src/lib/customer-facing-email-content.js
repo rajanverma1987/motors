@@ -1,4 +1,5 @@
 import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 
 const platformFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || "IQMotorBase";
 
@@ -35,13 +36,13 @@ export function buildQuoteToCustomerEmailContent(opts) {
   const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
   const rfqNumber = opts.rfqNumber;
   const signature = escapeEmailHtml(shopName);
-  const subject = `Your quote ${escapeEmailHtml(rfqNumber) || "is ready"} – ${signature}`;
+  const subject = `Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${escapeEmailHtml(rfqNumber) || "is ready"} – ${signature}`;
   const html = `
     <p>Hi${opts.customerName ? ` ${escapeEmailHtml(opts.customerName)}` : ""},</p>
-    <p>Your service quote ${rfqNumber ? `(RFQ# ${escapeEmailHtml(rfqNumber)})` : ""} is ready for your review.</p>
-    <p><strong>View your quote and approve or reject it here:</strong></p>
-    <p><a href="${escapeEmailHtml(opts.respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View quote &amp; respond</a></p>
-    <p>You can also print or save the quote as PDF from that page.</p>
+    <p>Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${rfqNumber ? `(RFQ# ${escapeEmailHtml(rfqNumber)})` : ""} is ready for your review.</p>
+    <p><strong>View your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} and approve or reject it here:</strong></p>
+    <p><a href="${escapeEmailHtml(opts.respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} &amp; respond</a></p>
+    <p>You can also print or save the ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} as PDF from that page.</p>
     ${typeof opts.accountsEmailBlock === "string" && opts.accountsEmailBlock.trim() ? opts.accountsEmailBlock : ""}
     ${logoBlock(opts.logoSrc, signature)}
     <p style="margin-top:16px">— ${signature}</p>

@@ -106,6 +106,7 @@ export async function GET(request, context) {
       fromShopContact,
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
+      fromShippingAddress: (u.accountsShippingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       customerTaxExempt: tax.customerTaxExempt,
       customerTaxPercent: tax.customerTaxPercent,

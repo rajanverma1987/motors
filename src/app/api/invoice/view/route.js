@@ -80,6 +80,7 @@ export async function GET(request) {
       fromShopContact: [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "",
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
+      fromShippingAddress: (u.accountsShippingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),
       customerToName,
       customerBillingAddress,

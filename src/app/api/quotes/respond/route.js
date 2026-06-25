@@ -11,6 +11,7 @@ import { syncRepairFlowJobAfterCrmCustomerRespond } from "@/lib/repair-flow-sync
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
 export async function GET(request) {
@@ -22,7 +23,7 @@ export async function GET(request) {
     await connectDB();
     const doc = await Quote.findOne({ respondToken: token.trim() }).lean();
     if (!doc) {
-      return NextResponse.json({ error: "Quote not found or link expired" }, { status: 404 });
+      return NextResponse.json({ error: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found or link expired` }, { status: 404 });
     }
     let customerName = "";
     let motorLabel = "";
@@ -121,7 +122,7 @@ export async function POST(request) {
     await connectDB();
     const doc = await Quote.findOne({ respondToken: token });
     if (!doc) {
-      return NextResponse.json({ error: "Quote not found or link expired" }, { status: 404 });
+      return NextResponse.json({ error: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found or link expired` }, { status: 404 });
     }
     const newStatus = action === "approve" ? "approved" : "rejected";
     const previousStatus = doc.status || "draft";
@@ -146,10 +147,13 @@ export async function POST(request) {
     return NextResponse.json({
       ok: true,
       status: doc.status,
-      message: action === "approve" ? "Quote approved. Thank you!" : "Quote declined. Thank you for letting us know.",
+      message:
+        action === "approve"
+          ? `${SERVICE_PROPOSAL_DOCUMENT_TITLE} approved. Thank you!`
+          : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} declined. Thank you for letting us know.`,
     });
   } catch (err) {
     console.error("Quote respond POST error:", err);
-    return NextResponse.json({ error: "Failed to update quote" }, { status: 500 });
+    return NextResponse.json({ error: `Failed to update ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}` }, { status: 500 });
   }
 }

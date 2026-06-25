@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 export default function QuoteRespondPage() {
@@ -29,12 +30,12 @@ export default function QuoteRespondPage() {
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
-          setError(data.error || "Quote not found");
+          setError(data.error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`);
           return;
         }
         setQuote(data);
       } catch {
-        if (!cancelled) setError("Failed to load quote");
+        if (!cancelled) setError(`Failed to load ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -81,7 +82,7 @@ export default function QuoteRespondPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-        <p className="text-gray-600">Loading quote…</p>
+        <p className="text-gray-600">Loading {SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}…</p>
       </div>
     );
   }
@@ -89,7 +90,7 @@ export default function QuoteRespondPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
         <div className="text-center">
-          <p className="text-red-600 font-medium">{error || "Quote not found"}</p>
+          <p className="text-red-600 font-medium">{error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`}</p>
           <p className="mt-2 text-sm text-gray-600">This link may have expired or is invalid.</p>
         </div>
       </div>
@@ -137,8 +138,8 @@ export default function QuoteRespondPage() {
               role="status"
             >
               {quote.status === "approved"
-                ? "Quote was approved by customer"
-                : "Quote was rejected by customer"}
+                ? `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was approved by customer`
+                : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} was rejected by customer`}
               {quote.respondedAt && (
                 <span className="block mt-1 text-xs opacity-90">
                   {new Date(quote.respondedAt).toLocaleDateString(undefined, {
@@ -149,7 +150,7 @@ export default function QuoteRespondPage() {
             </div>
           )}
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 pb-4 print:border-gray-300 print:hidden">
-            <h1 className="text-2xl font-bold text-gray-900">Service Proposal</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -164,7 +165,7 @@ export default function QuoteRespondPage() {
                 disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? "Sending…" : "Approve quote"}
+                {submitting ? "Sending…" : `Approve ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
               </button>
               <button
                 type="button"
@@ -172,7 +173,7 @@ export default function QuoteRespondPage() {
                 disabled={submitting || quote.status === "approved" || quote.status === "rejected"}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-red-300 bg-white text-red-700 text-sm font-medium hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? "Sending…" : "Reject quote"}
+                {submitting ? "Sending…" : `Reject ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
               </button>
             </div>
           </div>
@@ -199,11 +200,11 @@ export default function QuoteRespondPage() {
           </div>
 
           <div className="mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 print:block hidden">Service Proposal</h1>
+            <h1 className="text-2xl font-bold text-gray-900 print:block hidden">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
           </div>
 
           <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Quote info</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Service proposal info</h2>
             <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
               <div><dt className="text-gray-500">RFQ#</dt><dd className="font-medium text-gray-900">{quote.rfqNumber || "—"}</dd></div>
               <div><dt className="text-gray-500">Customer PO#</dt><dd className="text-gray-900">{quote.customerPo || "—"}</dd></div>

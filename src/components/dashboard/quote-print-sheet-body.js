@@ -2,10 +2,13 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { useUserSettings } from "@/contexts/user-settings-context";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
+const addressTitleLabel = "mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-900";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
 const thRow = "bg-neutral-900 text-left text-[10px] font-semibold uppercase tracking-wide text-white";
 const thCell = "px-2 py-1.5";
@@ -16,7 +19,11 @@ const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
  * Expects dashboard quote GET payload (enriched with print fields: fromShop*, customerTo*, motorLabel, etc.).
  */
 export default function QuotePrintSheetBody({ quote: q, fmt }) {
+  const { settings } = useUserSettings();
   if (!q) return null;
+
+  const billingAddress = String(q.fromBillingAddress || settings?.accountsBillingAddress || "").trim();
+  const shippingAddress = String(q.fromShippingAddress || settings?.accountsShippingAddress || "").trim();
 
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
@@ -35,22 +42,29 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
             <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
             <p className="font-semibold text-neutral-900">{q.fromShopName || "—"}</p>
             {q.fromShopContact ? <p className="text-xs text-neutral-700">{q.fromShopContact}</p> : null}
+            {shippingAddress ? (
+              <div className="mt-1.5">
+                <p className={addressTitleLabel}>Shipping address</p>
+                <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">Quote</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
         </div>
       </header>
 
       <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
-          {q.fromBillingAddress ? (
-            <p className="whitespace-pre-wrap text-xs text-neutral-800">{q.fromBillingAddress}</p>
-          ) : null}
-          <p className="mt-1.5 text-xs text-neutral-800">
+          <p className="text-xs text-neutral-800">
             <span className="text-neutral-600">Payment terms: </span>
             <span className="font-medium">{q.fromPaymentTermsLabel || "—"}</span>
           </p>
+          <div className="mt-1.5">
+            <p className={addressTitleLabel}>Billing address</p>
+            <p className="whitespace-pre-wrap text-xs text-neutral-800">{billingAddress || "—"}</p>
+          </div>
         </div>
         <div className="min-w-0 sm:text-right print:text-right">
           <p className={sectionLabel + " sm:text-right"}>To</p>
@@ -70,7 +84,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
       </div>
 
       <section className="mb-3">
-        <h2 className={sectionLabel}>Quote info</h2>
+        <h2 className={sectionLabel}>Service proposal info</h2>
         <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="text-neutral-600">RFQ#</dt>
@@ -177,7 +191,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               <td className="px-2 py-1.5 text-right text-neutral-900">{q.partsTotal ? fmt(q.partsTotal) : "—"}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Quote subtotal</td>
+              <td className="px-2 py-1.5 text-neutral-800">Service proposal subtotal</td>
               <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">

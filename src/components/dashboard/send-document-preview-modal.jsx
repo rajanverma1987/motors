@@ -11,6 +11,7 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import PoPrintSheetBody from "@/components/dashboard/po-print-sheet-body";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 function sendMetaUrl(documentType, documentId) {
   if (!documentId) return null;
@@ -85,7 +86,7 @@ export default function SendDocumentPreviewModal({
             fetch(`/api/dashboard/quotes/${documentId}`, { credentials: "include", cache: "no-store" }).then(
               async (res) => {
                 const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Quote not found");
+                if (!res.ok) throw new Error(data.error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`);
                 return data;
               }
             )
@@ -120,7 +121,14 @@ export default function SendDocumentPreviewModal({
         setSendMeta(meta);
 
         if (documentType === "quote") {
-          setQuote(results[1]);
+          const q = results[1];
+          setQuote({
+            ...q,
+            fromBillingAddress:
+              String(q.fromBillingAddress || accountSettings?.accountsBillingAddress || "").trim(),
+            fromShippingAddress:
+              String(q.fromShippingAddress || accountSettings?.accountsShippingAddress || "").trim(),
+          });
         } else if (documentType === "invoice") {
           const inv = results[1];
           setInvoicePayload({
@@ -129,7 +137,10 @@ export default function SendDocumentPreviewModal({
             fromShopName: inv.fromShopName || "",
             fromShopContact: inv.fromShopContact || "",
             fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
-            fromBillingAddress: inv.fromBillingAddress || "",
+            fromBillingAddress:
+              String(inv.fromBillingAddress || accountSettings?.accountsBillingAddress || "").trim(),
+            fromShippingAddress:
+              String(inv.fromShippingAddress || accountSettings?.accountsShippingAddress || "").trim(),
             fromPaymentTermsLabel:
               inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
             customerToName: inv.customerToName || "",
@@ -161,7 +172,17 @@ export default function SendDocumentPreviewModal({
     return () => {
       cancelled = true;
     };
-  }, [open, documentType, documentId, accountSettings?.logoUrl, accountSettings?.accountsPaymentTerms, accountSettings?.invoicePaymentOptions, accountSettings?.invoiceThankYouNote]);
+  }, [
+    open,
+    documentType,
+    documentId,
+    accountSettings?.logoUrl,
+    accountSettings?.accountsBillingAddress,
+    accountSettings?.accountsShippingAddress,
+    accountSettings?.accountsPaymentTerms,
+    accountSettings?.invoicePaymentOptions,
+    accountSettings?.invoiceThankYouNote,
+  ]);
 
   const handleSend = async () => {
     if (!sendUrl) return;
@@ -272,6 +293,7 @@ export default function SendDocumentPreviewModal({
                   fromShopContact={invoicePayload.fromShopContact}
                   fromShopLogoUrl={invoicePayload.fromShopLogoUrl}
                   fromBillingAddress={invoicePayload.fromBillingAddress}
+                  fromShippingAddress={invoicePayload.fromShippingAddress}
                   fromPaymentTermsLabel={invoicePayload.fromPaymentTermsLabel}
                   customerToName={invoicePayload.customerToName}
                   customerBillingAddress={invoicePayload.customerBillingAddress}

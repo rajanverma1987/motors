@@ -1,11 +1,12 @@
 "use client";
 
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
+const addressTitleLabel = "mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-900";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
 const thRow = "bg-neutral-900 text-left text-[10px] font-semibold uppercase tracking-wide text-white";
 const thCell = "px-2 py-1.5";
@@ -21,6 +22,7 @@ export default function InvoicePrintPreview({
   fromShopContact = "",
   fromShopLogoUrl = "",
   fromBillingAddress = "",
+  fromShippingAddress = "",
   fromPaymentTermsLabel = "",
   customerToName = "",
   customerBillingAddress = "",
@@ -28,7 +30,12 @@ export default function InvoicePrintPreview({
   invoiceThankYouNote = "",
 }) {
   const fmt = useFormatMoney();
+  const { settings } = useUserSettings();
   if (!q) return null;
+
+  const billingAddress = String(fromBillingAddress || settings?.accountsBillingAddress || "").trim();
+  const shippingAddress = String(fromShippingAddress || settings?.accountsShippingAddress || "").trim();
+
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
     partsTotal: q.partsTotal,
@@ -47,6 +54,12 @@ export default function InvoicePrintPreview({
             <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
             <p className="font-semibold text-neutral-900">{fromShopName || "—"}</p>
             {fromShopContact ? <p className="text-xs text-neutral-700">{fromShopContact}</p> : null}
+            {shippingAddress ? (
+              <div className="mt-1.5">
+                <p className={addressTitleLabel}>Shipping address</p>
+                <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
+              </div>
+            ) : null}
           </div>
         </div>
         <div className="shrink-0 text-right">
@@ -56,13 +69,14 @@ export default function InvoicePrintPreview({
 
       <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
-          {fromBillingAddress ? (
-            <p className="whitespace-pre-wrap text-xs text-neutral-800">{fromBillingAddress}</p>
-          ) : null}
-          <p className="mt-1.5 text-xs text-neutral-800">
+          <p className="text-xs text-neutral-800">
             <span className="text-neutral-600">Payment terms: </span>
             <span className="font-medium">{fromPaymentTermsLabel || "—"}</span>
           </p>
+          <div className="mt-1.5">
+            <p className={addressTitleLabel}>Billing address</p>
+            <p className="whitespace-pre-wrap text-xs text-neutral-800">{billingAddress || "—"}</p>
+          </div>
         </div>
         <div className="min-w-0 sm:text-right print:text-right">
           <p className={sectionLabel + " sm:text-right"}>To</p>

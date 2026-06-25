@@ -6,6 +6,7 @@ import { useFormatMoney } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
 import Button from "@/components/ui/button";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 
 const STYLE_ID = "quote-print-preview-styles";
 const PRINT_ROOT_CLASS = "quote-print-offscreen-root";
@@ -86,7 +87,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     if (!active) return;
     if (!quoteId) {
       setLoading(false);
-      setError("Quote ID required");
+      setError(`${SERVICE_PROPOSAL_DOCUMENT_TITLE} ID required`);
       setQuote(null);
       return;
     }
@@ -100,12 +101,12 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
         const data = await res.json();
         if (cancelled) return;
         if (!res.ok) {
-          setError(data.error || "Quote not found");
+          setError(data.error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`);
           return;
         }
         setQuote(data);
       } catch {
-        if (!cancelled) setError("Failed to load quote");
+        if (!cancelled) setError(`Failed to load ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -154,7 +155,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     if (loading) {
       return (
         <div className="flex min-h-screen items-center justify-center bg-card p-6 text-secondary">
-          Loading quote…
+          Loading {SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}…
         </div>
       );
     }

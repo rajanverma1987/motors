@@ -8,6 +8,7 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
 import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 function shopCompanyNameFromUser(user) {
   return (user.shopName && String(user.shopName).trim()) || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
@@ -30,7 +31,7 @@ export async function buildQuoteSendEmailPreview({ quoteId, user }) {
   await connectDB();
   const email = user.email.trim().toLowerCase();
   const doc = await Quote.findOne({ _id: quoteId, createdByEmail: email });
-  if (!doc) return { ok: false, status: 404, error: "Quote not found" };
+  if (!doc) return { ok: false, status: 404, error: `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found` };
 
   const customer = await Customer.findOne({ _id: doc.customerId, createdByEmail: email }).lean();
   const toEmail = customer?.email?.trim();
@@ -53,7 +54,7 @@ export async function buildQuoteSendEmailPreview({ quoteId, user }) {
       shopCompanyName,
       toEmail,
       toName: customer.primaryContactName || customer.companyName || "",
-      documentLabel: doc.rfqNumber ? `RFQ# ${doc.rfqNumber}` : "Quote",
+      documentLabel: doc.rfqNumber ? `RFQ# ${doc.rfqNumber}` : SERVICE_PROPOSAL_DOCUMENT_TITLE,
     }),
   };
 }

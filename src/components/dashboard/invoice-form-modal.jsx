@@ -308,7 +308,10 @@ export default function InvoiceFormModal({
         fromShopName: inv.fromShopName || "",
         fromShopContact: inv.fromShopContact || "",
         fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
-        fromBillingAddress: inv.fromBillingAddress || "",
+        fromBillingAddress:
+          String(inv.fromBillingAddress || accountSettings?.accountsBillingAddress || "").trim(),
+        fromShippingAddress:
+          String(inv.fromShippingAddress || accountSettings?.accountsShippingAddress || "").trim(),
         fromPaymentTermsLabel:
           inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
         customerToName: inv.customerToName || "",

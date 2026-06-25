@@ -56,6 +56,7 @@ import {
   isInspectionDoneStatus,
   jobNumberFieldLabel,
 } from "@/lib/quote-rfq-lifecycle";
+import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
 import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions, buildTechnicianSelectOptions } from "@/lib/technician-select-options";
@@ -806,7 +807,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       if (!res.ok) throw new Error(data.error || "Failed to update quote");
       const savedTechId = String(data.quote?.technicianEmployeeId ?? "").trim();
       technicianEmployeeIdRef.current = savedTechId;
-      toast.success("Quote updated.");
+      toast.success(`${SERVICE_PROPOSAL_DOCUMENT_TITLE} updated.`);
       setQuotesRaw((prev) =>
         prev.map((q) =>
           q.id === viewingQuote.id
@@ -822,7 +823,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       setViewingQuote(data.quote);
       await refreshQuoteWorkOrderLink(viewingQuote.id);
     } catch (err) {
-      toast.error(err.message || (isNewQuoteForm ? "Failed to create RFQ" : "Failed to update quote"));
+      toast.error(err.message || (isNewQuoteForm ? "Failed to create RFQ" : `Failed to update ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`));
     } finally {
       setSavingQuote(false);
     }
@@ -850,7 +851,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to delete quote");
-      toast.success("Quote deleted.");
+      toast.success(`${SERVICE_PROPOSAL_DOCUMENT_TITLE} deleted.`);
       setQuotesRaw((prev) => prev.filter((q) => q.id !== row.id));
       if (viewModalOpen && viewingQuote?.id === row.id) closeViewModal();
       else if (editModalOpen && viewingQuote?.id === row.id) closeEditModal();
@@ -1113,7 +1114,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 disabled={isDeleting}
                 className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Delete quote"
-                title="Delete quote"
+                title={`Delete ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
               >
                 {isDeleting ? (
                   <FiRotateCw className="h-4 w-4 shrink-0 animate-spin" aria-hidden />
@@ -1748,7 +1749,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       <Modal
         open={viewModalOpen}
         onClose={closeViewModal}
-        title="Quote details"
+        title={`${SERVICE_PROPOSAL_DOCUMENT_TITLE} details`}
         size="full"
         width="min(1200px, 94vw)"
         headerClassName="flex-wrap gap-2"
@@ -1761,7 +1762,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         ) : viewingQuote ? (
           <div className="space-y-6">
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Quote info</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Service proposal info</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-4">
                 <div><dt className="text-secondary">{viewJobIdLabel}</dt><dd className="text-title font-medium">{viewingQuote.rfqNumber || "—"}</dd></div>
                 <div><dt className="text-secondary">Customer PO#</dt><dd className="text-title">{viewingQuote.customerPo || "—"}</dd></div>
@@ -1874,7 +1875,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
               </div>
             ) : null}
             <div>
-              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Quote notes</h3>
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Service proposal notes</h3>
               <dl className="space-y-3 text-sm">
                 <div>
                   <dt className="text-xs font-medium uppercase tracking-wide text-secondary">Notes / terms</dt>
@@ -1933,7 +1934,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       <Modal
         open={editModalOpen}
         onClose={closeEditModal}
-        title={isNewQuoteForm ? "Create RFQ" : "Edit quote"}
+        title={isNewQuoteForm ? "Create RFQ" : `Edit ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`}
         size="full"
         width="min(1200px, 94vw)"
         zIndex={120}
@@ -1949,7 +1950,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
             readOnly
             aria-hidden
           />
-          <FormSection title="Quote info">
+          <FormSection title="Service proposal info">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 label={editFormJobIdLabel}
