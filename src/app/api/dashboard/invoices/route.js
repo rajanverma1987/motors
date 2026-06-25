@@ -9,6 +9,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { invoiceStatusAllowedSlugs } from "@/lib/dropdown-catalog";
 import { normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
+import { invoiceLineTotal } from "@/lib/invoice-amounts";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { nextInvoiceNumberForQuote } from "@/lib/job-document-numbers";
@@ -166,6 +167,40 @@ async function loadTaxToBeCollectedContext(email, merged, dateClause = null) {
   return { summary };
 }
 
+/** Status pill totals use the same grand total as the invoice table (labor + parts + tax). */
+async function buildInvoiceSummaryByStatus(email, merged, dateClause = null) {
+  const scope = dateClause ? { createdByEmail: email, ...dateClause } : { createdByEmail: email };
+  const invoices = await Invoice.find(scope)
+    .select("_id status laborTotal partsTotal customerId customerTaxExempt customerTaxPercent")
+    .lean();
+  const customerIds = [...new Set(invoices.map((i) => String(i.customerId)).filter(Boolean))];
+  const customers = customerIds.length
+    ? await Customer.find({ _id: { $in: customerIds }, createdByEmail: email })
+        .select("taxExempt taxPercent")
+        .lean()
+    : [];
+  const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
+  const summaryByStatus = {};
+  for (const inv of invoices) {
+    const key = normalizeInvoiceStatusSlug(inv?.status, merged);
+    const tax = resolveInvoiceTaxFields({ customer: custById[String(inv.customerId)], quote: inv });
+    const grandTotal = invoiceLineTotal({
+      laborTotal: inv.laborTotal,
+      partsTotal: inv.partsTotal,
+      customerTaxExempt: tax.customerTaxExempt,
+      customerTaxPercent: tax.customerTaxPercent,
+    });
+    if (!summaryByStatus[key]) summaryByStatus[key] = { count: 0, amount: 0 };
+    summaryByStatus[key].count += 1;
+    summaryByStatus[key].amount += grandTotal;
+  }
+  for (const key of Object.keys(summaryByStatus)) {
+    summaryByStatus[key].amount =
+      Math.round((summaryByStatus[key].amount + Number.EPSILON) * 100) / 100;
+  }
+  return summaryByStatus;
+}
+
 export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -189,7 +224,6 @@ export async function GET(request) {
       searchParams.get("to")
     );
     const ownerScope = { createdByEmail: email };
-    const summaryScope = dateClause ? { ...ownerScope, ...dateClause } : ownerScope;
     const q = { ...ownerScope };
     if (qText) {
       const escaped = qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -258,36 +292,13 @@ export async function GET(request) {
         q.$and = [snapshot, dateClause];
       }
     }
-    const [totalCount, list] = await Promise.all([
+    const [totalCount, list, summaryByStatus] = await Promise.all([
       Invoice.countDocuments(q),
       fetchSortedInvoices(q, sortBy, sortDir, skip, pageSize),
+      includePagination
+        ? buildInvoiceSummaryByStatus(email, mergedForStatus, dateClause)
+        : Promise.resolve({}),
     ]);
-    const summaryRows = await Invoice.aggregate([
-      { $match: summaryScope },
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-          amount: {
-            $sum: {
-              $add: [
-                { $convert: { input: "$laborTotal", to: "double", onError: 0, onNull: 0 } },
-                { $convert: { input: "$partsTotal", to: "double", onError: 0, onNull: 0 } },
-              ],
-            },
-          },
-        },
-      },
-    ]);
-    const summaryByStatus = {};
-    for (const row of summaryRows) {
-      const key = normalizeInvoiceStatusSlug(row?._id, mergedForStatus);
-      const count = Number(row?.count) || 0;
-      const amount = Number(row?.amount) || 0;
-      if (!summaryByStatus[key]) summaryByStatus[key] = { count: 0, amount: 0 };
-      summaryByStatus[key].count += count;
-      summaryByStatus[key].amount += amount;
-    }
     const customerIds = [...new Set(list.map((i) => String(i.customerId)))];
     const quoteIds = [
       ...new Set(list.map((i) => String(i.quoteId || "").trim()).filter(Boolean)),

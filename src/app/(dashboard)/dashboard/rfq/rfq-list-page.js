@@ -45,7 +45,7 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
-import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
 import {
   WRITE_UP_QUOTE_STATUS,
@@ -648,6 +648,32 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     return m;
   }, [customers]);
 
+  const customerById = useMemo(() => {
+    const m = {};
+    customers.forEach((c) => {
+      if (c?.id) m[c.id] = c;
+    });
+    return m;
+  }, [customers]);
+
+  const quoteGrandTotal = useCallback(
+    (row) => {
+      const tax = resolveInvoiceTaxFields({
+        customer: customerById[String(row?.customerId || "")],
+        quote: row,
+      });
+      return (
+        computeTotalsFromLaborAndParts({
+          laborTotal: row?.laborTotal,
+          partsTotal: row?.partsTotal,
+          taxExempt: tax.customerTaxExempt,
+          taxPercent: tax.customerTaxPercent,
+        }).grandTotal ?? 0
+      );
+    },
+    [customerById]
+  );
+
   const motorLabelMap = useMemo(() => {
     const m = {};
     motors.forEach((mtr) => {
@@ -960,13 +986,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     const dir = quoteSort?.direction === "desc" ? -1 : 1;
     if (!sortKey) return filteredQuotes;
 
-    const quoteGrandTotal = (row) =>
-      computeTotalsFromLaborAndParts({
-        laborTotal: row?.laborTotal,
-        partsTotal: row?.partsTotal,
-        taxExempt: row?.customerTaxExempt,
-        taxPercent: row?.customerTaxPercent,
-      }).grandTotal ?? 0;
+    const quoteGrand = (row) => quoteGrandTotal(row);
 
     const parseMoney = (v) => {
       const n = parseFloat(v);
@@ -1009,7 +1029,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         case "partsTotal":
           return (parseMoney(a.partsTotal) - parseMoney(b.partsTotal)) * dir;
         case "grandTotal":
-          return (quoteGrandTotal(a) - quoteGrandTotal(b)) * dir;
+          return (quoteGrand(a) - quoteGrand(b)) * dir;
         case "estimatedCompletion": {
           const va = String(a.estimatedCompletion || "").trim().toLowerCase();
           const vb = String(b.estimatedCompletion || "").trim().toLowerCase();
@@ -1027,20 +1047,14 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       return String(a.id || "").localeCompare(String(b.id || ""));
     });
     return list;
-  }, [filteredQuotes, quoteSort, customerNameMap, motorLabelMap, technicianNameMap]);
+  }, [filteredQuotes, quoteSort, customerNameMap, motorLabelMap, technicianNameMap, quoteGrandTotal]);
 
   const handleQuoteSort = useCallback((key, direction) => {
     setQuoteSort({ key, direction });
   }, []);
 
   const statusSummaryCards = useMemo(() => {
-    const calcAmount = (quote) =>
-      computeTotalsFromLaborAndParts({
-        laborTotal: quote?.laborTotal,
-        partsTotal: quote?.partsTotal,
-        taxExempt: quote?.customerTaxExempt,
-        taxPercent: quote?.customerTaxPercent,
-      }).grandTotal ?? 0;
+    const calcAmount = (quote) => quoteGrandTotal(quote);
     const pool = quotesForDisplay;
     const keysLower = new Set(statusOptionsForForm.map((o) => o.value.toLowerCase()));
     const buttons = [];
@@ -1096,7 +1110,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       tileAppearance: tileAppearanceForKey("", 0),
     });
     return buttons;
-  }, [quotesForDisplay, statusOptionsForForm, mergedSettings]);
+  }, [quotesForDisplay, statusOptionsForForm, mergedSettings, quoteGrandTotal]);
 
   const columns = useMemo(
     () => [
@@ -1237,13 +1251,8 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         label: "Grand Total",
         sortable: true,
         render: (_, row) => {
-          const totals = computeTotalsFromLaborAndParts({
-            laborTotal: row.laborTotal,
-            partsTotal: row.partsTotal,
-            taxExempt: row.customerTaxExempt,
-            taxPercent: row.customerTaxPercent,
-          });
-          return totals.grandTotal ? fmt(totals.grandTotal) : "—";
+          const total = quoteGrandTotal(row);
+          return total ? fmt(total) : "—";
         },
       },
       { key: "estimatedCompletion", label: "Est. completion", sortable: true },
@@ -1258,6 +1267,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       statusOptionsForForm,
       openEditModal,
       jobIdLabel,
+      quoteGrandTotal,
     ]
   );
 
@@ -1289,123 +1299,212 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
     taxPercent: selectedCustomerTaxPercent,
   });
 
-  const viewQuoteHeaderActions = useMemo(() => {
-    const vq = viewingQuote;
-    if (!vq?.id) return null;
-    const canCreateWorkOrder = quoteStatusAllowsWorkOrder(vq.status);
-    const isSending = sendingQuoteId === vq.id;
-    const isPrintingTagQr = printingTagQrQuoteId === vq.id;
-    const isCheckingOpenWo = checkingOpenWoQuoteId === vq.id;
-    const woDisabledTitle = canCreateWorkOrder
-      ? "Create work order"
-      : "Set status to approved or accepted to create a work order";
-    const invoiceDisabledTitle = canCreateWorkOrder
-      ? "Create invoice"
-      : "Set status to approved or accepted to create an invoice";
+  const renderQuoteWorkflowActions = useCallback(
+    (vq, { showEditButton = false } = {}) => {
+      if (!vq?.id) return null;
+      const canCreateWorkOrder = quoteStatusAllowsWorkOrder(vq.status);
+      const isSending = sendingQuoteId === vq.id;
+      const isPrintingTagQr = printingTagQrQuoteId === vq.id;
+      const isCheckingOpenWo = checkingOpenWoQuoteId === vq.id;
+      const woDisabledTitle = canCreateWorkOrder
+        ? "Create work order"
+        : "Set status to approved or accepted to create a work order";
+      const invoiceDisabledTitle = canCreateWorkOrder
+        ? "Create invoice"
+        : "Set status to approved or accepted to create an invoice";
 
+      return (
+        <>
+          {showEditButton ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex shrink-0 items-center gap-1.5"
+              onClick={() => {
+                closeViewModal();
+                openEditModal(vq);
+              }}
+            >
+              <FiEdit2 className={HEADER_BTN_IC} aria-hidden />
+              Edit
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex shrink-0 items-center gap-1.5"
+            onClick={() => handlePrintQuote(vq)}
+          >
+            <FiPrinter className={HEADER_BTN_IC} aria-hidden />
+            Print
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex shrink-0 items-center gap-1.5"
+            disabled={isPrintingTagQr}
+            title="Print QR motor tag (technician scans → work orders for customer)"
+            onClick={() => handlePrintTagQr(vq)}
+          >
+            {isPrintingTagQr ? (
+              <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+            ) : (
+              <LuQrCode className={HEADER_BTN_IC} aria-hidden />
+            )}
+            QR
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex shrink-0 items-center gap-1.5"
+            disabled={isSending}
+            onClick={() => handleSendToCustomer(vq)}
+          >
+            {isSending ? (
+              <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+            ) : (
+              <FiSend className={HEADER_BTN_IC} aria-hidden />
+            )}
+            Send to customer
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex shrink-0 items-center gap-1.5"
+            disabled={!canCreateWorkOrder || isCheckingOpenWo}
+            title={woDisabledTitle}
+            onClick={() => handleCreateWorkOrderClick(vq)}
+          >
+            {isCheckingOpenWo ? (
+              <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+            ) : (
+              <FiTool className={HEADER_BTN_IC} aria-hidden />
+            )}
+            Create work order
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="inline-flex shrink-0 items-center gap-1.5"
+            disabled={!canCreateWorkOrder}
+            title={invoiceDisabledTitle}
+            onClick={() =>
+              setInvoiceModal({
+                draftQuoteId: vq.id,
+                invoiceId: null,
+                sourceQuoteId: vq.id,
+              })
+            }
+          >
+            <FiFileText className={HEADER_BTN_IC} aria-hidden />
+            Create invoice
+          </Button>
+        </>
+      );
+    },
+    [
+      sendingQuoteId,
+      printingTagQrQuoteId,
+      checkingOpenWoQuoteId,
+      closeViewModal,
+      openEditModal,
+      handlePrintQuote,
+      handlePrintTagQr,
+      handleSendToCustomer,
+      handleCreateWorkOrderClick,
+    ]
+  );
+
+  const viewQuoteHeaderActions = useMemo(() => {
+    if (!viewingQuote?.id) return null;
     return (
       <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
+        {renderQuoteWorkflowActions(viewingQuote, { showEditButton: true })}
+      </div>
+    );
+  }, [viewingQuote, renderQuoteWorkflowActions]);
+
+  const editQuoteModalActions = useMemo(() => {
+    if (isNewQuoteForm) {
+      return (
+        <Button
+          type="submit"
+          form="edit-quote-form"
+          variant="primary"
+          size="sm"
+          disabled={savingQuote}
+          className="inline-flex shrink-0 items-center gap-1.5"
+        >
+          {savingQuote ? (
+            "Saving…"
+          ) : (
+            <>
+              <FiSave className="h-4 w-4 shrink-0" aria-hidden />
+              Create RFQ
+            </>
+          )}
+        </Button>
+      );
+    }
+    const vq = {
+      ...viewingQuote,
+      status: form.status ?? viewingQuote?.status,
+    };
+    const workOrderId = String(form.workOrderId ?? viewingQuote?.workOrderId ?? "").trim();
+    return (
+      <div className="flex max-w-full flex-wrap items-center justify-end gap-1.5">
+        {renderQuoteWorkflowActions(vq, { showEditButton: false })}
         <Button
           type="button"
           variant="outline"
           size="sm"
+          disabled={savingQuote || !workOrderId}
           className="inline-flex shrink-0 items-center gap-1.5"
+          title={
+            workOrderId
+              ? "Open work order for this quote"
+              : "Create a work order from the quote row first"
+          }
           onClick={() => {
-            closeViewModal();
-            openEditModal(vq);
+            if (!workOrderId) return;
+            setWorkOrderModal({ workOrderId });
           }}
         >
-          <FiEdit2 className={HEADER_BTN_IC} aria-hidden />
-          Edit
+          <FiClipboard className="h-4 w-4 shrink-0" aria-hidden />
+          View Job
         </Button>
         <Button
-          type="button"
-          variant="outline"
+          type="submit"
+          form="edit-quote-form"
+          variant="primary"
           size="sm"
+          disabled={savingQuote}
           className="inline-flex shrink-0 items-center gap-1.5"
-          onClick={() => handlePrintQuote(vq)}
         >
-          <FiPrinter className={HEADER_BTN_IC} aria-hidden />
-          Print
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex shrink-0 items-center gap-1.5"
-          disabled={isPrintingTagQr}
-          title="Print QR motor tag (technician scans → work orders for customer)"
-          onClick={() => handlePrintTagQr(vq)}
-        >
-          {isPrintingTagQr ? (
-            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
+          {savingQuote ? (
+            "Saving…"
           ) : (
-            <LuQrCode className={HEADER_BTN_IC} aria-hidden />
+            <>
+              <FiSave className="h-4 w-4 shrink-0" aria-hidden />
+              Save
+            </>
           )}
-          QR
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex shrink-0 items-center gap-1.5"
-          disabled={isSending}
-          onClick={() => handleSendToCustomer(vq)}
-        >
-          {isSending ? (
-            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
-          ) : (
-            <FiSend className={HEADER_BTN_IC} aria-hidden />
-          )}
-          Send to customer
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex shrink-0 items-center gap-1.5"
-          disabled={!canCreateWorkOrder || isCheckingOpenWo}
-          title={woDisabledTitle}
-          onClick={() => handleCreateWorkOrderClick(vq)}
-        >
-          {isCheckingOpenWo ? (
-            <FiRotateCw className={`${HEADER_BTN_IC} animate-spin`} aria-hidden />
-          ) : (
-            <FiTool className={HEADER_BTN_IC} aria-hidden />
-          )}
-          Create work order
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex shrink-0 items-center gap-1.5"
-          disabled={!canCreateWorkOrder}
-          title={invoiceDisabledTitle}
-          onClick={() =>
-            setInvoiceModal({
-              draftQuoteId: vq.id,
-              invoiceId: null,
-              sourceQuoteId: vq.id,
-            })
-          }
-        >
-          <FiFileText className={HEADER_BTN_IC} aria-hidden />
-          Create invoice
         </Button>
       </div>
     );
   }, [
+    isNewQuoteForm,
     viewingQuote,
-    sendingQuoteId,
-    printingTagQrQuoteId,
-    checkingOpenWoQuoteId,
-    closeViewModal,
-    openEditModal,
-    handlePrintQuote,
-    handlePrintTagQr,
-    handleSendToCustomer,
-    handleCreateWorkOrderClick,
+    form.status,
+    form.workOrderId,
+    savingQuote,
+    renderQuoteWorkflowActions,
   ]);
 
   return (
@@ -1845,49 +1944,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         zIndex={120}
         showClose={!savingQuote}
         headerClassName="flex-wrap"
-        actions={
-          <>
-            {!isNewQuoteForm ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={savingQuote || !String(viewingQuote?.workOrderId || "").trim()}
-                className="inline-flex shrink-0 items-center gap-1.5"
-                title={
-                  String(viewingQuote?.workOrderId || "").trim()
-                    ? "Open work order for this quote"
-                    : "Create a work order from the quote row first"
-                }
-                onClick={() => {
-                  const wid = String(viewingQuote?.workOrderId || "").trim();
-                  if (!wid) return;
-                  setWorkOrderModal({ workOrderId: wid });
-                }}
-              >
-                <FiClipboard className="h-4 w-4 shrink-0" aria-hidden />
-                View Job
-              </Button>
-            ) : null}
-            <Button
-              type="submit"
-              form="edit-quote-form"
-              variant="primary"
-              size="sm"
-              disabled={savingQuote}
-              className="inline-flex shrink-0 items-center gap-1.5"
-            >
-              {savingQuote ? (
-                "Saving…"
-              ) : (
-                <>
-                  <FiSave className="h-4 w-4 shrink-0" aria-hidden />
-                  {isNewQuoteForm ? "Create RFQ" : "Save"}
-                </>
-              )}
-            </Button>
-          </>
-        }
+        actions={editQuoteModalActions}
       >
         <Form id="edit-quote-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <input
