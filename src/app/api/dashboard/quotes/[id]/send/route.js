@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { sendCrmQuoteToCustomer } from "@/lib/crm-quote-send-customer";
+import { parseSendDocumentCustomMessage } from "@/lib/send-document-custom-message";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -20,7 +21,9 @@ export async function POST(request, context) {
       return NextResponse.json({ error: "Quote ID required" }, { status: 400 });
     }
 
-    const result = await sendCrmQuoteToCustomer({ quoteId: id, user, request });
+    const customMessage = await parseSendDocumentCustomMessage(request);
+
+    const result = await sendCrmQuoteToCustomer({ quoteId: id, user, request, customMessage });
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status || 500 });
     }

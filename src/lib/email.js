@@ -570,6 +570,7 @@ export async function sendQuoteToCustomer(
     shopCompanyName,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
     accountsEmailBlock: options.accountsEmailBlock,
+    customMessage: options.customMessage,
   });
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
   return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
@@ -632,6 +633,7 @@ export async function sendInvoiceToCustomer(
     summaryHtml: options.summaryHtml,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
     accountsEmailBlock: options.accountsEmailBlock,
+    customMessage: options.customMessage,
   });
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
   return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
@@ -646,6 +648,7 @@ export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, sho
     shopCompanyName,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
     poVendorAddressesHtml: options.poVendorAddressesHtml,
+    customMessage: options.customMessage,
   });
   const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
   return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});

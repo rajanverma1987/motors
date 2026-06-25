@@ -31,15 +31,30 @@ function logoBlock(logoSrc, signature) {
   return `<p style="margin-top:20px;margin-bottom:8px"><img src="${escapeEmailHtml(src)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`;
 }
 
-/** @param {{ customerName?: string, rfqNumber?: string, respondUrl: string, shopCompanyName?: string, logoSrc?: string, accountsEmailBlock?: string }} opts */
+/** Optional note from shop — plain text, newlines preserved. */
+export function formatCustomEmailMessageHtml(message) {
+  const text = String(message ?? "").trim();
+  if (!text) return "";
+  return text
+    .split(/\r?\n/)
+    .map((line) => {
+      const inner = escapeEmailHtml(line);
+      return `<p style="margin:0 0 8px">${inner || "&nbsp;"}</p>`;
+    })
+    .join("");
+}
+
+/** @param {{ customerName?: string, rfqNumber?: string, respondUrl: string, shopCompanyName?: string, logoSrc?: string, accountsEmailBlock?: string, customMessage?: string }} opts */
 export function buildQuoteToCustomerEmailContent(opts) {
   const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
   const rfqNumber = opts.rfqNumber;
   const signature = escapeEmailHtml(shopName);
+  const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
   const subject = `Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${escapeEmailHtml(rfqNumber) || "is ready"} – ${signature}`;
   const html = `
     <p>Hi${opts.customerName ? ` ${escapeEmailHtml(opts.customerName)}` : ""},</p>
     <p>Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${rfqNumber ? `(RFQ# ${escapeEmailHtml(rfqNumber)})` : ""} is ready for your review.</p>
+    ${customBlock}
     <p><strong>View your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} and approve or reject it here:</strong></p>
     <p><a href="${escapeEmailHtml(opts.respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} &amp; respond</a></p>
     <p>You can also print or save the ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} as PDF from that page.</p>
@@ -50,11 +65,12 @@ export function buildQuoteToCustomerEmailContent(opts) {
   return { subject, html, shopName };
 }
 
-/** @param {{ customerName?: string, invoiceNumber?: string, shopCompanyName?: string, viewUrl?: string, totalFormatted?: string, summaryHtml?: string, logoSrc?: string, accountsEmailBlock?: string }} opts */
+/** @param {{ customerName?: string, invoiceNumber?: string, shopCompanyName?: string, viewUrl?: string, totalFormatted?: string, summaryHtml?: string, logoSrc?: string, accountsEmailBlock?: string, customMessage?: string }} opts */
 export function buildInvoiceToCustomerEmailContent(opts) {
   const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
   const invNo = escapeEmailHtml(opts.invoiceNumber) || "—";
   const signature = escapeEmailHtml(shopName);
+  const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
   const subject = `Invoice ${invNo} – ${signature}`;
   const accountsBlock =
     typeof opts.accountsEmailBlock === "string" && opts.accountsEmailBlock.trim() ? opts.accountsEmailBlock : "";
@@ -64,6 +80,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
     const html = `
     <p>Hi${opts.customerName ? ` ${escapeEmailHtml(opts.customerName)}` : ""},</p>
     <p>Your invoice <strong>#${invNo}</strong> from ${signature} is ready.</p>
+    ${customBlock}
     <p><strong>View and print your invoice here:</strong></p>
     <p><a href="${escapeEmailHtml(viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View invoice</a></p>
     <p>You can print or save the invoice as PDF from that page.</p>
@@ -84,6 +101,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
   const html = `
     <p>Hi${opts.customerName ? ` ${escapeEmailHtml(opts.customerName)}` : ""},</p>
     <p>Please find your invoice <strong>#${invNo}</strong> from ${signature}.</p>
+    ${customBlock}
     ${totalLine}
     ${notesBlock}
     ${accountsBlock}
@@ -94,15 +112,17 @@ export function buildInvoiceToCustomerEmailContent(opts) {
   return { subject, html, shopName };
 }
 
-/** @param {{ vendorName?: string, poNumber?: string, viewUrl: string, shopCompanyName?: string, logoSrc?: string, poVendorAddressesHtml?: string }} opts */
+/** @param {{ vendorName?: string, poNumber?: string, viewUrl: string, shopCompanyName?: string, logoSrc?: string, poVendorAddressesHtml?: string, customMessage?: string }} opts */
 export function buildPoToVendorEmailContent(opts) {
   const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
   const poNumber = opts.poNumber;
   const signature = escapeEmailHtml(shopName);
+  const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
   const subject = `Purchase order ${escapeEmailHtml(poNumber) || ""} – ${shopName}`;
   const html = `
     <p>Hi${opts.vendorName ? ` ${escapeEmailHtml(opts.vendorName)}` : ""},</p>
     <p>Please find your purchase order ${poNumber ? `(PO# ${escapeEmailHtml(poNumber)})` : ""} from ${signature}.</p>
+    ${customBlock}
     <p><strong>View, print, and update delivery status for each line item here:</strong></p>
     <p><a href="${escapeEmailHtml(opts.viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
     <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FiRotateCw, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
@@ -12,6 +13,7 @@ import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import PoPrintSheetBody from "@/components/dashboard/po-print-sheet-body";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
+import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX } from "@/lib/send-document-custom-message";
 
 function sendMetaUrl(documentType, documentId) {
   if (!documentId) return null;
@@ -46,6 +48,7 @@ export default function SendDocumentPreviewModal({
   const [invoicePayload, setInvoicePayload] = useState(null);
   const [po, setPo] = useState(null);
   const [vendor, setVendor] = useState(null);
+  const [emailCustomMessage, setEmailCustomMessage] = useState("");
 
   useEffect(() => {
     if (!open || !documentId || !documentType) {
@@ -57,6 +60,7 @@ export default function SendDocumentPreviewModal({
       setInvoicePayload(null);
       setPo(null);
       setVendor(null);
+      setEmailCustomMessage("");
       return;
     }
 
@@ -191,6 +195,8 @@ export default function SendDocumentPreviewModal({
       const res = await fetch(sendUrl, {
         method: sendMethod,
         credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customMessage: emailCustomMessage.trim() }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to send");
@@ -281,6 +287,18 @@ export default function SendDocumentPreviewModal({
               {sendMeta.toName ? `${sendMeta.toName} <${sendMeta.toEmail}>` : sendMeta.toEmail}
             </p>
           ) : null}
+
+          <Textarea
+            id="send-document-custom-message"
+            label="Message for email (optional)"
+            value={emailCustomMessage}
+            onChange={(e) => setEmailCustomMessage(e.target.value)}
+            placeholder="Add a personal note included in the email body above the document link…"
+            rows={3}
+            maxLength={SEND_DOCUMENT_CUSTOM_MESSAGE_MAX}
+            disabled={busy}
+            textareaClassName="min-h-[5rem]"
+          />
 
           <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-border bg-neutral-100 p-4 sm:p-6 shadow-inner">
             <div className="mx-auto w-full max-w-[52.8rem] bg-white p-6 shadow-sm sm:p-8">

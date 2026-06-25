@@ -11,6 +11,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
+import { parseSendDocumentCustomMessage } from "@/lib/send-document-custom-message";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -71,6 +72,8 @@ export async function POST(request, context) {
     const siteBase = baseUrl.replace(/\/$/, "");
     const viewUrl = `${siteBase}/invoice/view/${inv.customerViewToken}`;
 
+    const customMessage = await parseSendDocumentCustomMessage(request);
+
     const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({
       billingAddress: uSettings.accountsBillingAddress,
       paymentTermsLabel: accountsPaymentTermsLabel(uSettings.accountsPaymentTerms),
@@ -87,6 +90,7 @@ export async function POST(request, context) {
         ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
         accountsEmailBlock,
         viewUrl,
+        ...(customMessage ? { customMessage } : {}),
       }
     );
     if (!result.ok) {
