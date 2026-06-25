@@ -111,6 +111,7 @@ export async function POST(request) {
       customerPo,
       date,
       technicianEmployeeId,
+      preparedBy,
     } = body;
     if (!customerId?.trim()) {
       return NextResponse.json({ error: "Customer is required" }, { status: 400 });
@@ -132,7 +133,20 @@ export async function POST(request) {
     const merged = mergeUserSettings(settingsDoc?.settings);
     const rfqNumber = await getNextRfqNumber(email, merged);
     const dateStr = String(date ?? "").trim() || todayQuoteDateString();
-    const preparedByStr = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    let preparedByStr = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    if (preparedBy !== undefined) {
+      const validated = await validateTechnicianEmployeeId(email, preparedBy);
+      if (validated === null && String(preparedBy).trim()) {
+        return NextResponse.json(
+          {
+            error:
+              "Prepared by not found. Pick an employee from the dropdown, or leave the field blank.",
+          },
+          { status: 400 }
+        );
+      }
+      preparedByStr = validated;
+    }
     const techValidated = await validateTechnicianEmployeeId(email, technicianEmployeeId);
     if (techValidated === null) {
       return NextResponse.json(

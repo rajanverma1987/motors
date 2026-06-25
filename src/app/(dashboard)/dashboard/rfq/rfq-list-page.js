@@ -58,7 +58,7 @@ import {
 } from "@/lib/quote-rfq-lifecycle";
 import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
-import { buildTechnicianSelectOptions } from "@/lib/technician-select-options";
+import { buildEmployeeSelectOptions, buildTechnicianSelectOptions } from "@/lib/technician-select-options";
 import { allJobsListPath } from "@/lib/all-jobs-tabs";
 import {
   parseAllJobsDateRange,
@@ -159,6 +159,7 @@ const INITIAL_FORM = {
   status: WRITE_UP_QUOTE_STATUS,
   customerPo: "",
   date: todayString(),
+  preparedBy: "",
   technicianEmployeeId: "",
   rfqNumber: "",
   repairScope: "",
@@ -215,6 +216,7 @@ function buildQuotePayload(form) {
     status: f.status ?? "draft",
     customerPo: f.customerPo ?? "",
     date: f.date ?? "",
+    preparedBy: f.preparedBy ?? "",
     technicianEmployeeId: f.technicianEmployeeId ?? "",
     repairScope: f.repairScope ?? "",
     laborTotal: laborFromLines,
@@ -517,6 +519,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       status: dataToUse.status ?? "draft",
       customerPo: dataToUse.customerPo ?? "",
       date: dataToUse.date ?? todayString(),
+      preparedBy: dataToUse.preparedBy ?? "",
       technicianEmployeeId: techId,
       rfqNumber: dataToUse.rfqNumber ?? "",
       repairScope: dataToUse.repairScope ?? "",
@@ -818,7 +821,6 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       );
       setViewingQuote(data.quote);
       await refreshQuoteWorkOrderLink(viewingQuote.id);
-      closeEditModal();
     } catch (err) {
       toast.error(err.message || (isNewQuoteForm ? "Failed to create RFQ" : "Failed to update quote"));
     } finally {
@@ -1255,6 +1257,10 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   const technicianOptions = useMemo(
     () => buildTechnicianSelectOptions(employees),
     [employees]
+  );
+  const employeeOptions = useMemo(
+    () => buildEmployeeSelectOptions(employees, form.preparedBy),
+    [employees, form.preparedBy]
   );
 
   const selectedCustomer = useMemo(
@@ -1766,6 +1772,14 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                     {technicianNameMap[String(viewingQuote.technicianEmployeeId ?? "").trim()] || "—"}
                   </dd>
                 </div>
+                <div>
+                  <dt className="text-secondary">Prepared by</dt>
+                  <dd className="text-title">
+                    {viewingQuote.preparedByDisplay ||
+                      technicianNameMap[String(viewingQuote.preparedBy ?? "").trim()] ||
+                      "—"}
+                  </dd>
+                </div>
               </dl>
             </div>
             <div>
@@ -1962,6 +1976,14 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 placeholder="Select technician"
                 searchable
               />
+              <Select
+                label="Prepared by"
+                options={employeeOptions}
+                value={form.preparedBy || ""}
+                onChange={(e) => setForm((f) => ({ ...f, preparedBy: e.target.value ?? "" }))}
+                placeholder="Select employee"
+                searchable
+              />
               {isWriteUpStatus(form?.status) ? (
                 <p className="sm:col-span-2 lg:col-span-4 text-xs text-secondary">
                   Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
@@ -2011,7 +2033,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="primary"
                   size="sm"
                   className="h-10 shrink-0 whitespace-nowrap"
                   onClick={openAddCustomerModal}
@@ -2033,7 +2055,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 />
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="primary"
                   size="sm"
                   className="h-10 shrink-0 whitespace-nowrap"
                   disabled={!form.customerId}

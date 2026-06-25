@@ -1,12 +1,12 @@
 /**
- * Client-safe technician dropdown helpers (no DB / mongoose imports).
+ * Client-safe employee dropdown helpers (no DB / mongoose imports).
  */
 
 /**
- * Dropdown options for RFQ / quote technician (mobile app assignees).
  * @param {Array<{ id?: string, _id?: string, name?: string, email?: string }>} employees
+ * @param {string} [selectedValue] include legacy/unknown id in options
  */
-export function buildTechnicianSelectOptions(employees) {
+export function buildEmployeeSelectOptions(employees, selectedValue = "") {
   const list = (employees || [])
     .map((e) => {
       const id = String(e.id ?? e._id ?? "").trim();
@@ -19,5 +19,18 @@ export function buildTechnicianSelectOptions(employees) {
     })
     .filter(Boolean);
 
-  return [{ value: "", label: "—" }, ...list];
+  const opts = [{ value: "", label: "—" }, ...list];
+  const sel = String(selectedValue ?? "").trim();
+  if (sel && !opts.some((o) => o.value === sel)) {
+    opts.push({ value: sel, label: sel });
+  }
+  return opts;
+}
+
+/**
+ * Dropdown options for RFQ / quote technician (mobile app assignees).
+ * @param {Array<{ id?: string, _id?: string, name?: string, email?: string }>} employees
+ */
+export function buildTechnicianSelectOptions(employees) {
+  return buildEmployeeSelectOptions(employees);
 }

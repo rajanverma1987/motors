@@ -3,6 +3,7 @@
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
@@ -94,9 +95,14 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </dl>
       </section>
 
-      <section className="mb-3">
-        <h2 className={sectionLabel}>Motor</h2>
-        <p className="text-xs font-medium text-neutral-900">{q.motorLabel || q.motorId || "—"}</p>
+      <section className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
+        <MotorSummaryBlock
+          identityLine={q.motorIdentityLine}
+          specsLine={q.motorSpecsLine}
+          motorType={q.motorType}
+          fallback={q.motorLabel || q.motorId || "—"}
+          titleClassName="mb-1.5 text-sm font-semibold text-neutral-900"
+        />
       </section>
 
       {Array.isArray(q.scopeLines) && q.scopeLines.length > 0 && (

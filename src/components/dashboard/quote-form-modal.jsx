@@ -38,7 +38,7 @@ import {
   sumLinePrices,
   sumPartsLineTotals,
 } from "@/lib/quote-form-shared";
-import { buildTechnicianSelectOptions } from "@/lib/technician-select-options";
+import { buildEmployeeSelectOptions, buildTechnicianSelectOptions } from "@/lib/technician-select-options";
 
 const FORM_ID = "quote-form-modal-edit-form";
 const ADD_MOTOR_FORM_ID = "quote-form-modal-add-motor-form";
@@ -255,6 +255,10 @@ export default function QuoteFormModal({
     () => buildTechnicianSelectOptions(employees),
     [employees]
   );
+  const employeeOptions = useMemo(
+    () => buildEmployeeSelectOptions(employees, form?.preparedBy),
+    [employees, form?.preparedBy]
+  );
 
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === form?.customerId) || null,
@@ -364,7 +368,6 @@ export default function QuoteFormModal({
       toast.success("Quote updated.");
       setViewingQuote(data.quote);
       onAfterSave?.();
-      onClose?.();
     } catch (err) {
       toast.error(err.message || "Failed to update quote");
     } finally {
@@ -463,6 +466,14 @@ export default function QuoteFormModal({
                   value={form.technicianEmployeeId}
                   onChange={handleTechnicianChange}
                   placeholder="Select technician"
+                  searchable
+                />
+                <Select
+                  label="Prepared by"
+                  options={employeeOptions}
+                  value={form.preparedBy || ""}
+                  onChange={(e) => setForm((f) => ({ ...f, preparedBy: e.target.value ?? "" }))}
+                  placeholder="Select employee"
                   searchable
                 />
                 {isWriteUpStatus(form?.status) ? (

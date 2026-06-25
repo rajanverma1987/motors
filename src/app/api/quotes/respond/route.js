@@ -9,6 +9,8 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { syncRepairFlowJobAfterCrmCustomerRespond } from "@/lib/repair-flow-sync-crm-quote-respond";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
+import { resolvePreparedByDisplay } from "@/lib/prepared-by-display";
 
 /** GET ?token=xxx – return quote for display (public, no internal notes). Same shape as print. */
 export async function GET(request) {
@@ -24,14 +26,22 @@ export async function GET(request) {
     }
     let customerName = "";
     let motorLabel = "";
+    let motorIdentityLine = "";
+    let motorSpecsLine = "";
+    let motorType = "";
     if (doc.customerId) {
       const cust = await Customer.findById(doc.customerId).lean();
       if (cust) customerName = cust.primaryContactName?.trim() || cust.companyName?.trim() || "";
     }
     if (doc.motorId) {
       const motor = await Motor.findById(doc.motorId).lean();
-      if (motor)
-        motorLabel = [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "";
+      if (motor) {
+        const summary = motorSummaryFromMotor(motor);
+        motorIdentityLine = summary.identityLine;
+        motorSpecsLine = summary.specsLine;
+        motorType = summary.motorType;
+        motorLabel = summary.identityLine;
+      }
     }
     const ownerEmail = (doc.createdByEmail || "").trim().toLowerCase();
     const owner = ownerEmail ? await User.findOne({ email: ownerEmail }).lean() : null;
@@ -40,6 +50,7 @@ export async function GET(request) {
       : null;
     const u = mergeUserSettings(settingsDoc?.settings);
     const shopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
+    const preparedByDisplay = await resolvePreparedByDisplay(doc.preparedBy, ownerEmail);
 
     const out = {
       id: doc._id.toString(),
@@ -48,9 +59,13 @@ export async function GET(request) {
       motorId: doc.motorId ?? "",
       customerName,
       motorLabel,
+      motorIdentityLine,
+      motorSpecsLine,
+      motorType,
       customerPo: doc.customerPo ?? "",
       date: doc.date ?? "",
       preparedBy: doc.preparedBy ?? "",
+      preparedByDisplay,
       status: doc.status ?? "draft",
       scopeLines: Array.isArray(doc.scopeLines) ? doc.scopeLines : [],
       partsLines: Array.isArray(doc.partsLines) ? doc.partsLines : [],

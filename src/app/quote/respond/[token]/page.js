@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 
 export default function QuoteRespondPage() {
@@ -207,14 +208,25 @@ export default function QuoteRespondPage() {
               <div><dt className="text-gray-500">RFQ#</dt><dd className="font-medium text-gray-900">{quote.rfqNumber || "—"}</dd></div>
               <div><dt className="text-gray-500">Customer PO#</dt><dd className="text-gray-900">{quote.customerPo || "—"}</dd></div>
               <div><dt className="text-gray-500">Date</dt><dd className="text-gray-900">{quote.date || "—"}</dd></div>
-              <div><dt className="text-gray-500">Prepared by</dt><dd className="text-gray-900">{quote.preparedBy || "—"}</dd></div>
+              <div><dt className="text-gray-500">Prepared by</dt><dd className="text-gray-900">{quote.preparedByDisplay || quote.preparedBy || "—"}</dd></div>
             </dl>
           </section>
 
           <section>
-            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Customer & motor</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Customer</h2>
             <p className="font-medium text-gray-900">{quote.customerName || quote.customerId || "—"}</p>
-            <p className="text-gray-500">{quote.motorLabel || quote.motorId || "—"}</p>
+          </section>
+
+          <section className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+            <MotorSummaryBlock
+              identityLine={quote.motorIdentityLine}
+              specsLine={quote.motorSpecsLine}
+              motorType={quote.motorType}
+              fallback={quote.motorLabel || quote.motorId || "—"}
+              titleClassName="mb-1.5 text-sm font-semibold text-gray-900"
+              identityClassName="text-sm font-medium text-gray-900"
+              detailClassName="text-sm text-gray-600"
+            />
           </section>
 
           {Array.isArray(quote.scopeLines) && quote.scopeLines.length > 0 && (

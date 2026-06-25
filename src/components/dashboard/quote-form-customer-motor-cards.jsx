@@ -6,6 +6,8 @@ import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-m
 import CustomerFormModal from "@/components/dashboard/customer-form-modal";
 import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
 import MotorFormModal from "@/components/dashboard/motor-form-modal";
+import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
+import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 
 const ICON_BTN_CLASS =
   "shrink-0 rounded p-1.5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1";
@@ -90,21 +92,22 @@ export default function QuoteFormCustomerMotorCards({
               <div className="font-medium text-title">Motor</div>
               {cardActions(motorId, setOpenMotorId, setEditMotorId, "View motor", "Edit motor")}
             </div>
-            <p className="mt-1 text-title">
-              {[motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ") || "—"}
-            </p>
-            {(motor.hp || motor.voltage || motor.rpm) && (
-              <p className="text-secondary">
-                {[
-                  motor.hp && `${motor.hp} HP`,
-                  motor.voltage && `${motor.voltage}V`,
-                  motor.rpm && `${motor.rpm} RPM`,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            )}
-            {motor.motorType ? <p className="text-secondary">Type: {motor.motorType}</p> : null}
+            {(() => {
+              const summary = motorSummaryFromMotor(motor);
+              return (
+                <div className="mt-1">
+                  <MotorSummaryBlock
+                    identityLine={summary.identityLine}
+                    specsLine={summary.specsLine}
+                    motorType={summary.motorType}
+                    fallback="—"
+                    titleClassName="sr-only"
+                    identityClassName="text-title"
+                    detailClassName="text-secondary"
+                  />
+                </div>
+              );
+            })()}
           </div>
         ) : null}
       </div>

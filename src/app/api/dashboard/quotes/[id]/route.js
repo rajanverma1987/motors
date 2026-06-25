@@ -20,12 +20,12 @@ import { LIMITS, clampString } from "@/lib/validation";
 import { normalizeQuotePartsLines, MAX_QUOTE_PARTS_LINES } from "@/lib/quote-parts-lines";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { normalizeDashboardQuoteStatusSlug } from "@/lib/quote-status-slug";
-import { defaultPreparedByEmployeeIdForPortalUser } from "@/lib/quote-defaults-shop";
 import {
   syncQuoteTechnicianToWorkOrders,
   validateTechnicianEmployeeId,
 } from "@/lib/quote-technician-work-order-sync";
 import { quoteToDashboardJson } from "@/lib/quote-api-response";
+import { motorSummaryFromMotor } from "@/lib/motor-display-lines";
 import { isWriteUpStatus } from "@/lib/quote-rfq-lifecycle";
 import { notifyTechnicianPreInspectionAssigned } from "@/lib/notify-technician-pre-inspection";
 
@@ -112,12 +112,10 @@ export async function GET(request, context) {
       (customer?.companyName && String(customer.companyName).trim()) ||
       (customer?.primaryContactName && String(customer.primaryContactName).trim()) ||
       "";
+    const motorSummary = motorSummaryFromMotor(motor);
     const motorLabel =
-      motor && [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
-        ? [motor.serialNumber, motor.manufacturer, motor.model].filter(Boolean).join(" · ")
-        : obj.motorId
-          ? String(obj.motorId)
-          : "";
+      motorSummary.identityLine ||
+      (obj.motorId ? String(obj.motorId) : "");
     const u = mergeUserSettings(settingsDoc?.settings);
     const fromShopName = (owner?.shopName || "").trim();
     const fromShopContact = [owner?.contactName, owner?.email].filter(Boolean).join(" · ") || "";
@@ -171,6 +169,9 @@ export async function GET(request, context) {
       customerToName,
       customerBillingAddress,
       motorLabel,
+      motorIdentityLine: motorSummary.identityLine,
+      motorSpecsLine: motorSummary.specsLine,
+      motorType: motorSummary.motorType,
       preparedByDisplay,
       fromShopName,
       fromShopContact,
@@ -224,6 +225,7 @@ export async function PATCH(request, context) {
       customerTaxPercent,
       customerPo,
       date,
+      preparedBy,
       technicianEmployeeId,
     } = body;
     if (customerId !== undefined) {
@@ -268,7 +270,19 @@ export async function PATCH(request, context) {
     if (date !== undefined) doc.date = clampString(date, 20);
     const email = user.email.trim().toLowerCase();
     const prevTechnicianEmployeeId = String(doc.technicianEmployeeId || "").trim();
-    doc.preparedBy = await defaultPreparedByEmployeeIdForPortalUser(email, user.email);
+    if (preparedBy !== undefined) {
+      const validated = await validateTechnicianEmployeeId(email, preparedBy);
+      if (validated === null && String(preparedBy).trim()) {
+        return NextResponse.json(
+          {
+            error:
+              "Prepared by not found. Pick an employee from the dropdown, or leave the field blank.",
+          },
+          { status: 400 }
+        );
+      }
+      doc.preparedBy = validated;
+    }
     if (technicianEmployeeId !== undefined) {
       const validated = await validateTechnicianEmployeeId(email, technicianEmployeeId);
       if (validated === null) {
