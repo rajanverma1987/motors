@@ -28,6 +28,9 @@ import Select from "@/components/ui/select";
 import DataTable from "@/components/ui/data-table";
 import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { useTrialUpgrade } from "@/contexts/trial-upgrade-context";
+import { TRIAL_MAX_CUSTOMERS, isTrialCustomerCapResponse } from "@/lib/trial-subscription-messages";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -228,6 +231,8 @@ function buildQuotePayload(form) {
 export default function DashboardRfqListPage({ embedded = false, actionsRef = null }) {
   const listPath = allJobsListPath(embedded, "rfq", "/dashboard/rfq");
   const toast = useToast();
+  const { user } = useAuth();
+  const { showTrialUpgradeModal } = useTrialUpgrade();
   const confirm = useConfirm();
   const router = useRouter();
   const jobIdLabel = "RFQ#";
@@ -326,6 +331,10 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   }, [statusSelectOptions]);
 
   const openAddCustomerModal = () => {
+    if (user?.trialAccount && customers.length >= TRIAL_MAX_CUSTOMERS) {
+      showTrialUpgradeModal();
+      return;
+    }
     setNewCustomerForm({ ...INITIAL_NEW_CUSTOMER });
     setAddCustomerModalOpen(true);
   };
@@ -345,7 +354,13 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         body: JSON.stringify(newCustomerForm),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create customer");
+      if (!res.ok) {
+        if (isTrialCustomerCapResponse(res, data)) {
+          showTrialUpgradeModal();
+          return;
+        }
+        throw new Error(data.error || "Failed to create customer");
+      }
       const id = data.customer?.id;
       if (!id) throw new Error("Invalid response");
       const saved = data.customer;

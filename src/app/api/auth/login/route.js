@@ -8,6 +8,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getLoginBlockReason } from "@/lib/subscription-access";
 import { syncSubscriptionWithAccountTier } from "@/lib/subscription-service";
 import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
+import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
 import { recordPortalLogin } from "@/lib/portal-login-audit";
 
@@ -87,6 +88,7 @@ export async function POST(request) {
     }
 
     const listingOnly = await userIsListingOnlyAccount(ownerEmail);
+    const trialAccount = !listingOnly && (await userIsTrialAccount(ownerEmail));
     const calculatorOnlyAccount = await userIsCalculatorOnlyPortalAccount(ownerEmail);
 
     try {
@@ -114,6 +116,7 @@ export async function POST(request) {
         shopName: ownerUser.shopName,
         contactName: ownerUser.contactName,
         listingOnlyAccount: listingOnly,
+        trialAccount,
         calculatorOnlyAccount,
         isEmployeeSession: Boolean(actingEmployee),
         employee: actingEmployee,

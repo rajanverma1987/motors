@@ -11,6 +11,9 @@ import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { useTrialUpgrade } from "@/contexts/trial-upgrade-context";
+import { TRIAL_MAX_CUSTOMERS, isTrialCustomerCapResponse } from "@/lib/trial-subscription-messages";
 import MotorNameplateFormSections from "@/components/dashboard/motor-nameplate-form-sections";
 import RepairFlowPreliminaryInspectionModal from "@/components/dashboard/repair-flow-preliminary-inspection-modal";
 import RepairFlowCreateQuoteModal from "@/components/dashboard/repair-flow-create-quote-modal";
@@ -95,6 +98,8 @@ export default function RepairFlowNewJobForm({
   onFormStatusChange,
 }) {
   const toast = useToast();
+  const { user } = useAuth();
+  const { showTrialUpgradeModal } = useTrialUpgrade();
   const [customers, setCustomers] = useState([]);
   const [motors, setMotors] = useState([]);
   const [customerId, setCustomerId] = useState("");
@@ -239,6 +244,10 @@ export default function RepairFlowNewJobForm({
 
   function openAddCustomerModal() {
     if (createLocked || loading) return;
+    if (user?.trialAccount && customers.length >= TRIAL_MAX_CUSTOMERS) {
+      showTrialUpgradeModal();
+      return;
+    }
     setNewCustomerForm({ ...INITIAL_NEW_CUSTOMER });
     setAddCustomerOpen(true);
   }
@@ -270,7 +279,20 @@ export default function RepairFlowNewJobForm({
     }
     setSavingNewCustomer(true);
     try {
-      const data = await postJson("/api/dashboard/customers", { ...newCustomerForm });
+      const res = await fetch("/api/dashboard/customers", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...newCustomerForm }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        if (isTrialCustomerCapResponse(res, data)) {
+          showTrialUpgradeModal();
+          return;
+        }
+        throw new Error(data.error || "Failed to create customer");
+      }
       const id = data.customer?.id;
       if (!id) throw new Error("Invalid response");
       await reloadCustomerMotorLists();

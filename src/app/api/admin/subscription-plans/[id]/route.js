@@ -5,7 +5,7 @@ import ShopSubscription from "@/models/ShopSubscription";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { createPaypalProductAndPlan, paypalConfigured } from "@/lib/paypal-api";
 
-const PROTECTED_SLUGS = new Set(["free-ultimate"]);
+const PROTECTED_SLUGS = new Set(["free-ultimate", "trial"]);
 
 async function getPlanId(context) {
   const params = typeof context.params?.then === "function" ? await context.params : context.params;
@@ -48,8 +48,8 @@ export async function PATCH(request, context) {
     if (!plan) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    if (plan.slug === "free-ultimate" && active === false) {
-      return NextResponse.json({ error: "Cannot deactivate Free Ultimate plan." }, { status: 400 });
+    if ((plan.slug === "free-ultimate" || plan.slug === "trial") && active === false) {
+      return NextResponse.json({ error: "Cannot deactivate protected internal plan." }, { status: 400 });
     }
     if (typeof active === "boolean") {
       plan.active = active;

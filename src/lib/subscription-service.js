@@ -8,9 +8,11 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { createPaypalProductAndPlan, createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
 import { gracePeriodAfterFailure } from "@/lib/subscription-access";
 import { LISTING_ONLY_PLAN_SLUG } from "@/lib/listing-account-messages";
+import { TRIAL_PLAN_SLUG } from "@/lib/trial-subscription-messages";
 import { planIsListingDirectoryTier } from "@/lib/listing-tier-plan";
 
 export const FREE_ULTIMATE_SLUG = "free-ultimate";
+export const TRIAL_SUBSCRIPTION_SLUG = TRIAL_PLAN_SLUG;
 
 /** @deprecated use LISTING_ONLY_PLAN_SLUG from listing-account-messages */
 export const LISTING_ONLY_SLUG = LISTING_ONLY_PLAN_SLUG;
@@ -24,6 +26,26 @@ export async function ensureFreeUltimatePlan() {
       slug: FREE_ULTIMATE_SLUG,
       planType: "internal",
       description: "Full CRM access — internal comped plan until revoked.",
+      customPrice: 0,
+      billingCycle: "custom",
+      billingIntervalCount: 1,
+      active: true,
+    });
+  }
+  return plan;
+}
+
+/** Internal plan assigned to self-signup users (customer cap enforced in app). */
+export async function ensureTrialPlan() {
+  await connectDB();
+  let plan = await SubscriptionPlan.findOne({ slug: TRIAL_PLAN_SLUG });
+  if (!plan) {
+    plan = await SubscriptionPlan.create({
+      name: "Trial",
+      slug: TRIAL_PLAN_SLUG,
+      planType: "internal",
+      description:
+        "One-month trial with full CRM access and up to 3 saved customers. Contact us to upgrade for unlimited customers.",
       customPrice: 0,
       billingCycle: "custom",
       billingIntervalCount: 1,
@@ -105,7 +127,7 @@ export async function applyListingOnlySubscriptionToShop(ownerEmail) {
 }
 
 /**
- * Bootstrap subscription for login / subscription GET: Free Ultimate or Directory listing from User.listingOnlyAccount.
+ * Bootstrap subscription for login / subscription GET: Trial, Directory listing, or existing tier.
  */
 export async function syncSubscriptionWithAccountTier(ownerEmail) {
   const email = (ownerEmail || "").trim().toLowerCase();
@@ -118,19 +140,19 @@ export async function syncSubscriptionWithAccountTier(ownerEmail) {
   return ensureShopSubscriptionOnRegister(email);
 }
 
-/** Call after new User registration. */
+/** Call after new self-signup User registration (not listing-only or calculator-only). */
 export async function ensureShopSubscriptionOnRegister(ownerEmail) {
   const email = (ownerEmail || "").trim().toLowerCase();
   if (!email) return null;
   await connectDB();
-  const plan = await ensureFreeUltimatePlan();
+  const plan = await ensureTrialPlan();
   const sub = await ShopSubscription.findOneAndUpdate(
     { ownerEmail: email },
     {
       $setOnInsert: {
         ownerEmail: email,
         planId: plan._id,
-        internalState: "active",
+        internalState: "trialing",
         paymentFailureCount: 0,
         customPriceSnapshot: 0,
         currencySnapshot: plan.currency || "USD",
@@ -438,6 +460,70 @@ export async function assignInternalFreeUltimateToShop(ownerEmail, adminEmail) {
     });
   } catch (e) {
     console.warn("sendSubscriptionPlanAttachedEmail (Free Ultimate):", e?.message || e);
+  }
+
+  return sub;
+}
+
+/** Switch shop to Trial (internal) — 3-customer cap enforced in CRM. */
+export async function assignInternalTrialToShop(ownerEmail, adminEmail) {
+  await connectDB();
+  const plan = await ensureTrialPlan();
+  const email = ownerEmail.trim().toLowerCase();
+  let sub = await ShopSubscription.findOne({ ownerEmail: email });
+  if (sub?.paypalSubscriptionId) {
+    try {
+      const { cancelPaypalSubscription } = await import("@/lib/paypal-api");
+      await cancelPaypalSubscription(sub.paypalSubscriptionId, "Switched to Trial internal plan");
+    } catch (e) {
+      console.warn("PayPal cancel:", e.message);
+    }
+  }
+  if (!sub) {
+    sub = new ShopSubscription({
+      ownerEmail: email,
+      planId: plan._id,
+      internalState: "trialing",
+      paypalSubscriptionId: "",
+      pendingApprovalUrl: "",
+      customPriceSnapshot: 0,
+      currencySnapshot: plan.currency || "USD",
+    });
+  } else {
+    sub.planId = plan._id;
+    sub.internalState = "trialing";
+    sub.paypalSubscriptionId = "";
+    sub.pendingApprovalUrl = "";
+    sub.customPriceSnapshot = 0;
+    sub.gracePeriodEndsAt = undefined;
+    sub.paymentFailureCount = 0;
+  }
+  await sub.save();
+
+  await User.updateOne({ email }, { $set: { listingOnlyAccount: false } });
+
+  await logSubscriptionTransaction({
+    ownerEmail: email,
+    type: "admin_override",
+    description: "Assigned Trial (internal)",
+    performedBy: adminEmail || "",
+    status: "ok",
+  });
+
+  try {
+    const u = await User.findOne({ email }).select("shopName").lean();
+    await sendSubscriptionPlanAttachedEmail({
+      to: email,
+      shopName: u?.shopName || "",
+      planName: plan.name,
+      planType: plan.planType,
+      billingCycle: plan.billingCycle,
+      customPrice: plan.customPrice,
+      currency: plan.currency || "USD",
+      approvalUrl: "",
+    });
+  } catch (e) {
+    console.warn("sendSubscriptionPlanAttachedEmail (Trial):", e?.message || e);
   }
 
   return sub;

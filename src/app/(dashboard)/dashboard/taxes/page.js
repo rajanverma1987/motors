@@ -2,7 +2,7 @@ import TaxesPageClient from "./taxes-page-client";
 
 export const metadata = {
   title: "Taxes",
-  description: "Tax collected on invoices, tax on vendor PO payments, and other tax payments.",
+  description: "Tax on vendor PO payments and other tax remittances.",
 };
 
 export default function TaxesPage() {

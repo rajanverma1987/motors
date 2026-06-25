@@ -206,6 +206,17 @@ function SubscriptionManageModal({ client, open, onClose, onSaved }) {
     }
   };
 
+  const handleTrial = async () => {
+    try {
+      await post("assign_trial");
+      toast.success("Client is on Trial (3-customer limit).");
+      await load();
+      onSaved?.();
+    } catch (e) {
+      toast.error(e.message || "Failed");
+    }
+  };
+
   const handleRevoke = async () => {
     if (!revokeReason.trim()) {
       toast.error("Enter a revoke reason (shown on login).");
@@ -322,12 +333,25 @@ function SubscriptionManageModal({ client, open, onClose, onSaved }) {
             )}
           </div>
 
+          <div>
+            <h3 className="text-sm font-semibold text-title">Downgrade to internal plan</h3>
+            <p className="mt-1 text-xs text-secondary">
+              Cancels an active PayPal subscription when possible. Trial limits the shop to 3 saved customers; Free
+              Ultimate has no customer cap.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleTrial}>
+                Switch to Trial
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={handleFreeUltimate}>
+                Switch to Free Ultimate
+              </Button>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" size="sm" onClick={copyApproval}>
               Copy payment link
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={handleFreeUltimate}>
-              Switch to Free Ultimate
             </Button>
             <Button type="button" variant="outline" size="sm" onClick={extendGrace}>
               Extend grace +7 days

@@ -8,6 +8,10 @@ import Table from "@/components/ui/table";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import { formatDateMdy } from "@/lib/format-date";
+import { TRIAL_PLAN_SLUG } from "@/lib/trial-subscription-messages";
+import { LISTING_ONLY_PLAN_SLUG } from "@/lib/listing-account-messages";
+
+const FREE_ULTIMATE_PLAN_SLUG = "free-ultimate";
 
 const STATE_BADGE = {
   active: "success",
@@ -112,7 +116,15 @@ export default function SubscriptionPageClient() {
                 <dt className="text-secondary">Type</dt>
                 <dd>
                   {plan?.planType === "internal" ? (
-                    <Badge variant="success">Free Ultimate (internal)</Badge>
+                    plan?.slug === TRIAL_PLAN_SLUG ? (
+                      <Badge variant="primary">Trial (internal)</Badge>
+                    ) : plan?.slug === FREE_ULTIMATE_PLAN_SLUG ? (
+                      <Badge variant="success">Free Ultimate (internal)</Badge>
+                    ) : plan?.slug === LISTING_ONLY_PLAN_SLUG ? (
+                      <Badge variant="warning">Directory listing (internal)</Badge>
+                    ) : (
+                      <Badge variant="default">Internal plan</Badge>
+                    )
                   ) : (
                     <Badge variant="primary">PayPal subscription</Badge>
                   )}

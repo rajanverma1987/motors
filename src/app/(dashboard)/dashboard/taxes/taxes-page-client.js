@@ -10,41 +10,20 @@ import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
-import { mergeUserSettings } from "@/lib/user-settings";
-import { invoiceStatusPillAppearance } from "@/lib/invoice-status";
+import { useFormatMoney } from "@/contexts/user-settings-context";
 import { formatDateMdy } from "@/lib/format-date";
-import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
-
-const CUSTOMER_LINK_CLASS =
-  "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
-
-function isoDateForCsv(value) {
-  if (value == null || value === "") return "";
-  const s = String(value).trim();
-  const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (m) return m[1];
-  return s;
-}
-
 export default function TaxesPageClient() {
   const toast = useToast();
   const fmt = useFormatMoney();
-  const { settings } = useUserSettings();
-  const mergedAccountSettings = useMemo(() => mergeUserSettings(settings), [settings]);
-
-  const [activeTab, setActiveTab] = useState("collected");
+  const [activeTab, setActiveTab] = useState("paid");
   const [loading, setLoading] = useState(true);
-  const [taxCollectedRows, setTaxCollectedRows] = useState([]);
-  const [taxCollectedSummary, setTaxCollectedSummary] = useState({ invoiceAmount: 0, taxCollected: 0 });
   const [taxPaidRows, setTaxPaidRows] = useState([]);
   const [taxPaidSummary, setTaxPaidSummary] = useState({ poAmount: 0, taxPaid: 0 });
   const [otherRows, setOtherRows] = useState([]);
-  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
   const [savingOther, setSavingOther] = useState(false);
   const [otherForm, setOtherForm] = useState({
@@ -60,10 +39,6 @@ export default function TaxesPageClient() {
       const res = await fetch("/api/dashboard/taxes", { credentials: "include", cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load");
-      setTaxCollectedRows(data.taxCollected?.rows || []);
-      setTaxCollectedSummary(
-        data.taxCollected?.summary || { invoiceAmount: 0, taxCollected: 0 }
-      );
       setTaxPaidRows(data.taxPaid?.rows || []);
       setTaxPaidSummary(data.taxPaid?.summary || { poAmount: 0, taxPaid: 0 });
       setOtherRows(data.otherTaxPayments || []);
@@ -80,96 +55,10 @@ export default function TaxesPageClient() {
 
   const taxesExportStamp = useMemo(() => todayIso(), []);
 
-  const collectedExportFilename = useMemo(
-    () => `taxes-tax-collected-${taxesExportStamp}.csv`,
-    [taxesExportStamp]
-  );
   const paidExportFilename = useMemo(() => `taxes-tax-paid-${taxesExportStamp}.csv`, [taxesExportStamp]);
   const otherExportFilename = useMemo(
     () => `taxes-other-payments-${taxesExportStamp}.csv`,
     [taxesExportStamp]
-  );
-
-  const collectedColumns = useMemo(
-    () => [
-      {
-        key: "invoiceNumber",
-        label: "Invoice#",
-        sortable: true,
-        render: (v, row) => (
-          <Link
-            href={`/dashboard/invoices?open=${encodeURIComponent(row.id)}`}
-            className="font-medium text-primary hover:underline"
-          >
-            {v || "—"}
-          </Link>
-        ),
-        exportValue: (v) => v ?? "",
-      },
-      {
-        key: "customerName",
-        label: "Customer",
-        sortable: true,
-        render: (v, row) => {
-          const name = v || row.customerName || "—";
-          const customerId = String(row.customerId || "").trim();
-          if (!customerId || name === "—") return name;
-          return (
-            <button
-              type="button"
-              className={CUSTOMER_LINK_CLASS}
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenCustomerId(customerId);
-              }}
-              title="Open customer"
-            >
-              {name}
-            </button>
-          );
-        },
-        exportValue: (v) => v ?? "",
-      },
-      {
-        key: "statusLabel",
-        label: "Invoice status",
-        sortable: true,
-        render: (_, row) => {
-          const pill = invoiceStatusPillAppearance(row.statusSlug, mergedAccountSettings);
-          return (
-          <span
-            className={`job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
-            style={pill.style}
-          >
-            {row.statusLabel}
-          </span>
-          );
-        },
-        exportValue: (_, row) => row.statusLabel ?? "",
-      },
-      {
-        key: "paidDate",
-        label: "Invoice paid date",
-        sortable: true,
-        render: (v) => formatDateMdy(v),
-        exportValue: (v) => isoDateForCsv(v),
-      },
-      {
-        key: "invoiceAmount",
-        label: "Invoice amount",
-        sortable: true,
-        render: (v) => fmt(v),
-        exportValue: (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : ""),
-      },
-      {
-        key: "taxAmount",
-        label: "Tax amount",
-        sortable: true,
-        render: (v) => <span className="tabular-nums font-medium text-title">{fmt(v)}</span>,
-        exportValue: (v) => (Number.isFinite(Number(v)) ? Number(v).toFixed(2) : ""),
-      },
-    ],
-    [fmt, mergedAccountSettings]
   );
 
   const paidColumns = useMemo(
@@ -290,8 +179,7 @@ export default function TaxesPageClient() {
       <div className="mb-6 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Taxes</h1>
         <p className="mt-1 text-sm text-secondary">
-          Tax collected on invoices, estimated tax included in vendor PO payments, and other tax remittances. Other tax
-          payments also post to the{" "}
+          Estimated tax included in vendor PO payments and other tax remittances. Other tax payments also post to the{" "}
           <Link href="/dashboard/ledger" className="text-primary hover:underline">
             Ledger
           </Link>
@@ -303,43 +191,6 @@ export default function TaxesPageClient() {
         value={activeTab}
         onChange={setActiveTab}
         tabs={[
-          {
-            id: "collected",
-            label: "Tax collected",
-            children: (
-              <div className="space-y-6">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-lg border border-border bg-card/50 p-4">
-                    <p className="text-sm text-secondary">Invoice amount (with tax)</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-title">{fmt(taxCollectedSummary.invoiceAmount)}</p>
-                  </div>
-                  <div className="rounded-lg border border-border bg-card/50 p-4">
-                    <p className="text-sm text-secondary">Tax collected</p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-title">{fmt(taxCollectedSummary.taxCollected)}</p>
-                  </div>
-                </div>
-                <p className="text-sm text-secondary">
-                  Fully paid invoices where sales tax was charged (non-exempt with a tax rate). Invoice amount is the
-                  grand total including tax.
-                </p>
-                <Table
-                  columns={collectedColumns}
-                  data={taxCollectedRows}
-                  rowKey="id"
-                  loading={loading}
-                  searchable
-                  searchPlaceholder="Search invoice#, customer, status…"
-                  emptyMessage="No fully paid invoices with tax collected yet."
-                  onRefresh={load}
-                  responsive
-                  exportable
-                  exportIconOnly
-                  exportFilename={collectedExportFilename}
-                  exportButtonTitle="Excel export (CSV)"
-                />
-              </div>
-            ),
-          },
           {
             id: "paid",
             label: "Tax paid",
@@ -476,13 +327,6 @@ export default function TaxesPageClient() {
           />
         </Form>
       </Modal>
-
-      <CustomerQuickViewModal
-        open={!!openCustomerId}
-        customerId={openCustomerId}
-        onClose={() => setOpenCustomerId(null)}
-        zIndex={120}
-      />
     </div>
   );
 }

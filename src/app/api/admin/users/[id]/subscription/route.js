@@ -6,6 +6,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import {
   assignPaypalPlanToShop,
   assignInternalFreeUltimateToShop,
+  assignInternalTrialToShop,
   revokeShopAccess,
   clearShopRevoke,
   syncSubscriptionWithAccountTier,
@@ -111,6 +112,11 @@ export async function POST(request, context) {
 
     if (action === "assign_free_ultimate") {
       await assignInternalFreeUltimateToShop(email, admin);
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "assign_trial") {
+      await assignInternalTrialToShop(email, admin);
       return NextResponse.json({ ok: true });
     }
 

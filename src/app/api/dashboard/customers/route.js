@@ -7,7 +7,9 @@ import {
   LISTING_ONLY_UPGRADE_MESSAGE,
   LISTING_ONLY_MAX_CUSTOMERS,
 } from "@/lib/listing-account-messages";
+import { TRIAL_CUSTOMER_CAP_CODE, TRIAL_MAX_CUSTOMERS, TRIAL_UPGRADE_BODY } from "@/lib/trial-subscription-messages";
 import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listing-account-restrictions";
+import { userIsTrialAccount, shopCustomerCount } from "@/lib/trial-account-restrictions";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
@@ -111,6 +113,14 @@ export async function POST(request) {
       if (n >= LISTING_ONLY_MAX_CUSTOMERS) {
         return NextResponse.json(
           { error: LISTING_ONLY_UPGRADE_MESSAGE, code: "LISTING_ONLY_CUSTOMER_CAP" },
+          { status: 403 }
+        );
+      }
+    } else if (await userIsTrialAccount(ownerEmail)) {
+      const n = await shopCustomerCount(ownerEmail);
+      if (n >= TRIAL_MAX_CUSTOMERS) {
+        return NextResponse.json(
+          { error: TRIAL_UPGRADE_BODY, code: TRIAL_CUSTOMER_CAP_CODE },
           { status: 403 }
         );
       }

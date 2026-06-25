@@ -16,8 +16,10 @@ import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
 import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
 import { useAuth } from "@/contexts/auth-context";
+import { useTrialUpgrade } from "@/contexts/trial-upgrade-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
+import { TRIAL_MAX_CUSTOMERS, isTrialCustomerCapResponse } from "@/lib/trial-subscription-messages";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import {
@@ -209,6 +211,7 @@ function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children })
 
 export default function DashboardCustomersPage() {
   const { user } = useAuth();
+  const { showTrialUpgradeModal } = useTrialUpgrade();
   const toast = useToast();
   const formatMoney = useFormatMoney();
   const { settings } = useUserSettings();
@@ -311,6 +314,11 @@ export default function DashboardCustomersPage() {
           router.replace("/dashboard/customers", { scroll: false });
           return;
         }
+        if (user?.trialAccount && list.length >= TRIAL_MAX_CUSTOMERS) {
+          showTrialUpgradeModal();
+          router.replace("/dashboard/customers", { scroll: false });
+          return;
+        }
         const leadEmail = (lead.email || "").trim().toLowerCase();
         const leadCompany = (lead.company || "").trim().toLowerCase();
         const existing = list.find((c) => {
@@ -340,7 +348,7 @@ export default function DashboardCustomersPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [fromLeadId, toast, router, user?.listingOnlyAccount]);
+  }, [fromLeadId, toast, router, user?.listingOnlyAccount, user?.trialAccount, showTrialUpgradeModal]);
 
   useEffect(() => {
     const id = openCustomerId?.trim();
@@ -351,8 +359,12 @@ export default function DashboardCustomersPage() {
   }, [openCustomerId, router]);
 
   const openEnterModal = () => {
-    if (user?.listingOnlyAccount && customers.length >= LISTING_ONLY_MAX_CUSTOMERS) {
+    if (user?.listingOnlyAccount && totalCount >= LISTING_ONLY_MAX_CUSTOMERS) {
       toast.error(LISTING_ONLY_UPGRADE_MESSAGE);
+      return;
+    }
+    if (user?.trialAccount && totalCount >= TRIAL_MAX_CUSTOMERS) {
+      showTrialUpgradeModal();
       return;
     }
     setForm(INITIAL_FORM);
@@ -642,7 +654,13 @@ export default function DashboardCustomersPage() {
         body: JSON.stringify(buildCustomerPayload(currentForm)),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create customer");
+      if (!res.ok) {
+        if (isTrialCustomerCapResponse(res, data)) {
+          showTrialUpgradeModal();
+          return;
+        }
+        throw new Error(data.error || "Failed to create customer");
+      }
       if (fromLeadId) {
         try {
           await fetch(`/api/dashboard/leads/${fromLeadId}`, {
@@ -783,9 +801,15 @@ export default function DashboardCustomersPage() {
           <p className="mt-1 text-sm text-secondary">
             Companies, contacts, billing, and addresses.
           </p>
+          {user?.trialAccount ? (
+            <p className="mt-2 text-xs text-secondary">
+              <strong className="text-title">Trial subscription:</strong> save up to {TRIAL_MAX_CUSTOMERS} customers.
+              Contact us to upgrade for unlimited customers.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-end gap-3">
-          {user?.listingOnlyAccount && customers.length >= LISTING_ONLY_MAX_CUSTOMERS ? (
+          {user?.listingOnlyAccount && totalCount >= LISTING_ONLY_MAX_CUSTOMERS ? (
             <p className="max-w-[33.6rem] text-xs text-secondary">{LISTING_ONLY_UPGRADE_MESSAGE}</p>
           ) : (
             <Button variant="primary" onClick={openEnterModal} className="shrink-0">

@@ -12,6 +12,7 @@ import {
 } from "@/lib/subscription-service";
 import { getOrCreateEntitlementForEmail } from "@/lib/calculator-access";
 import { recordPortalLogin } from "@/lib/portal-login-audit";
+import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "register", 5);
@@ -102,6 +103,9 @@ export async function POST(request) {
       calculatorOnlyPortal: calculatorOnlyAccount,
     });
 
+    const trialAccount =
+      !listingOnly && !calculatorOnlyAccount && (await userIsTrialAccount(user.email));
+
     return NextResponse.json({
       ok: true,
       user: {
@@ -109,6 +113,7 @@ export async function POST(request) {
         shopName: user.shopName,
         contactName: user.contactName,
         listingOnlyAccount: listingOnly,
+        trialAccount,
         calculatorOnlyAccount,
       },
     });

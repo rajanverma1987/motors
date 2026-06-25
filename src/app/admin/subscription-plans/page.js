@@ -16,7 +16,7 @@ import { useConfirm } from "@/components/confirm-provider";
 
 /** Must match CALCULATOR_SUBSCRIPTION_PLAN_SLUG in calculator-subscription-plan.js */
 const CALCULATOR_PAYWALL_SLUG = "calc-only";
-const PROTECTED_DELETE_SLUGS = new Set(["free-ultimate"]);
+const PROTECTED_DELETE_SLUGS = new Set(["free-ultimate", "trial"]);
 
 const BILLING_OPTIONS = [
   { value: "monthly", label: "Monthly" },
@@ -199,7 +199,7 @@ export default function AdminSubscriptionPlansPage() {
   };
 
   const toggleActive = async (id, active, slug) => {
-    if (slug === "free-ultimate" && active) return;
+    if (PROTECTED_DELETE_SLUGS.has(slug) && active) return;
     try {
       const res = await fetch(`/api/admin/subscription-plans/${id}`, {
         method: "PATCH",
@@ -289,7 +289,7 @@ export default function AdminSubscriptionPlansPage() {
         <button
           type="button"
           onClick={() => toggleActive(row.id, v, row.slug)}
-          disabled={row.slug === "free-ultimate"}
+          disabled={PROTECTED_DELETE_SLUGS.has(row.slug)}
           className="text-sm text-primary hover:underline disabled:opacity-40"
         >
           {v ? "Yes" : "No"}
@@ -307,7 +307,7 @@ export default function AdminSubscriptionPlansPage() {
           <strong>calculator subscription</strong> uses the active plan with slug{" "}
           <code className="rounded bg-muted px-1 text-xs">{CALCULATOR_PAYWALL_SLUG}</code> (override with{" "}
           <code className="rounded bg-muted px-1 text-xs">CALCULATOR_SUBSCRIPTION_PLAN_SLUG</code> in env). New clients
-          register with <strong>Free Ultimate</strong> (internal) until you assign a paid plan.
+          register with <strong>Trial</strong> (internal) until you assign a paid plan.
         </p>
       </div>
 
@@ -498,7 +498,7 @@ export default function AdminSubscriptionPlansPage() {
               value={editForm.negotiatedBy}
               onChange={(e) => setEditForm((p) => ({ ...p, negotiatedBy: e.target.value }))}
             />
-            {editPlan.slug !== "free-ultimate" ? (
+            {!PROTECTED_DELETE_SLUGS.has(editPlan.slug) ? (
               <label className="flex items-center gap-2 text-sm text-title">
                 <input
                   type="checkbox"

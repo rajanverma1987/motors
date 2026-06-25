@@ -1,16 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
-import Invoice from "@/models/Invoice";
-import Customer from "@/models/Customer";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import Vendor from "@/models/Vendor";
 import OtherTaxPayment from "@/models/OtherTaxPayment";
-import UserSettings from "@/models/UserSettings";
-import { mergeUserSettings } from "@/lib/user-settings";
-import { computeTotalsFromLaborAndParts, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
-import { invoiceFullyPaidDate } from "@/lib/invoice-amounts";
-import { invoiceStatusLabel, normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { poGrandTotal, sumVendorPayments } from "@/lib/po-payable";
 import { sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
 
@@ -29,55 +22,14 @@ export async function GET(request) {
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     const email = user.email.trim().toLowerCase();
     await connectDB();
-    const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
-    const merged = mergeUserSettings(settingsDoc?.settings);
 
-    const [invoices, customers, purchaseOrders, vendors, otherPayments] = await Promise.all([
-      Invoice.find({ createdByEmail: email }).sort({ date: -1, createdAt: -1 }).lean(),
-      Customer.find({ createdByEmail: email }).select("_id companyName primaryContactName taxExempt taxPercent").lean(),
+    const [purchaseOrders, vendors, otherPayments] = await Promise.all([
       PurchaseOrder.find({ createdByEmail: email }).sort({ createdAt: -1 }).lean(),
       Vendor.find({ createdByEmail: email }).select("_id name").lean(),
       OtherTaxPayment.find({ createdByEmail: email }).sort({ paidDate: -1, createdAt: -1 }).lean(),
     ]);
 
-    const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
     const vendorMap = Object.fromEntries((vendors || []).map((v) => [String(v._id), v.name || String(v._id)]));
-
-    const taxCollected = [];
-    let sumInvoiceAmount = 0;
-    let sumTaxCollected = 0;
-
-    for (const inv of invoices || []) {
-      const tax = resolveInvoiceTaxFields({ customer: custById[String(inv.customerId)] });
-      const totals = computeTotalsFromLaborAndParts({
-        laborTotal: inv.laborTotal,
-        partsTotal: inv.partsTotal,
-        taxExempt: tax.customerTaxExempt,
-        taxPercent: tax.customerTaxPercent,
-      });
-      if (totals.taxAmount <= 0.005) continue;
-      const slug = normalizeInvoiceStatusSlug(inv.status, merged);
-      if (slug !== "fully_paid") continue;
-      const cust = custById[String(inv.customerId)];
-      const invForPaidDate = {
-        ...inv,
-        customerTaxExempt: tax.customerTaxExempt,
-        customerTaxPercent: tax.customerTaxPercent,
-      };
-      taxCollected.push({
-        id: String(inv._id),
-        invoiceNumber: inv.invoiceNumber || "—",
-        customerId: String(inv.customerId || "").trim(),
-        customerName: cust?.companyName || cust?.primaryContactName || String(inv.customerId || "—"),
-        statusSlug: slug,
-        statusLabel: invoiceStatusLabel(slug, merged),
-        paidDate: invoiceFullyPaidDate(invForPaidDate),
-        invoiceAmount: totals.grandTotal,
-        taxAmount: totals.taxAmount,
-      });
-      sumInvoiceAmount += totals.grandTotal;
-      sumTaxCollected += totals.taxAmount;
-    }
 
     const taxPaid = [];
     let sumPoAmount = 0;
@@ -112,13 +64,6 @@ export async function GET(request) {
     }));
 
     return NextResponse.json({
-      taxCollected: {
-        rows: taxCollected,
-        summary: {
-          invoiceAmount: round2(sumInvoiceAmount),
-          taxCollected: round2(sumTaxCollected),
-        },
-      },
       taxPaid: {
         rows: taxPaid,
         summary: {

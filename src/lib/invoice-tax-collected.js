@@ -71,7 +71,7 @@ function round2(v) {
 }
 
 /**
- * Fully paid invoice with non-zero sales tax (matches Taxes → Tax collected).
+ * Fully paid invoice with non-zero sales tax (Invoices → Tax collected filter).
  * @param {object} inv
  * @param {object} [customer]
  * @param {object} [mergedSettings]

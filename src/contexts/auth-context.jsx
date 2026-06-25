@@ -16,6 +16,7 @@ export function AuthProvider({ children }) {
         setUser({
           ...data.user,
           listingOnlyAccount: !!data.user?.listingOnlyAccount,
+          trialAccount: !!data.user?.trialAccount,
           calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
         });
       } else {
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
     setUser({
       ...data.user,
       listingOnlyAccount: !!data.user?.listingOnlyAccount,
+      trialAccount: !!data.user?.trialAccount,
       calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
     });
     return { ok: true, user: data.user };
@@ -69,6 +71,7 @@ export function AuthProvider({ children }) {
     setUser({
       ...data.user,
       listingOnlyAccount: !!data.user?.listingOnlyAccount,
+      trialAccount: !!data.user?.trialAccount,
       calculatorOnlyAccount: !!data.user?.calculatorOnlyAccount,
     });
     return { ok: true, user: data.user };
