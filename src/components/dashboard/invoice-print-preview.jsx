@@ -79,20 +79,22 @@ export default function InvoicePrintPreview({
             <p className="whitespace-pre-wrap text-xs text-neutral-800">{billingAddress || "—"}</p>
           </div>
         </div>
-        <div className="min-w-0 sm:text-right print:text-right">
-          <p className={sectionLabel + " sm:text-right"}>To</p>
-          {customerToName ? (
-            <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900 sm:ml-auto sm:text-right">
-              {customerToName}
-            </p>
-          ) : (
-            <p className="text-xs text-neutral-500">—</p>
-          )}
-          {customerBillingAddress ? (
-            <p className="mt-1.5 whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
-              {customerBillingAddress}
-            </p>
-          ) : null}
+        <div className="flex min-w-0 justify-end print:justify-end">
+          <div className="w-full max-w-[16rem] text-left">
+            <p className={sectionLabel}>To</p>
+            {customerToName ? (
+              <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900">
+                {customerToName}
+              </p>
+            ) : (
+              <p className="text-xs text-neutral-500">—</p>
+            )}
+            {customerBillingAddress ? (
+              <p className="mt-1.5 whitespace-pre-wrap text-xs text-neutral-800">
+                {customerBillingAddress}
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
 
