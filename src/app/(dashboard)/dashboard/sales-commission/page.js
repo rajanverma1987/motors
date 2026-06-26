@@ -14,6 +14,7 @@ import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import SalesCommissionSalesPersonField from "@/components/dashboard/sales-commission-sales-person-field";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { formatDateMdy } from "@/lib/format-date";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
@@ -176,11 +177,6 @@ export default function DashboardSalesCommissionPage() {
       cancelled = true;
     };
   }, []);
-
-  const salesPersonOptions = useMemo(
-    () => salesPersons.map((sp) => ({ value: sp.id, label: sp.name || sp.email || sp.phone || sp.id || "—" })),
-    [salesPersons]
-  );
 
   const selectedJobMeta = useMemo(
     () => jobOptions.find((opt) => opt.value === newCommissionForm.jobKey)?.meta || null,
@@ -857,14 +853,12 @@ export default function DashboardSalesCommissionPage() {
             value={selectedJobMeta?.jobStatus || "—"}
             readOnly
           />
-          <Select
-            label="Sales Person"
-            options={salesPersonOptions}
+          <SalesCommissionSalesPersonField
+            salesPersons={salesPersons}
+            onSalesPersonsChange={setSalesPersons}
             value={newCommissionForm.salesPersonId}
-            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, salesPersonId: e.target.value ?? "" }))}
-            placeholder="Select sales person"
-            searchable
-            required
+            onChange={(id) => setNewCommissionForm((prev) => ({ ...prev, salesPersonId: id }))}
+            quickAddZIndex={70}
           />
           <Input
             label="Amount"
@@ -949,14 +943,12 @@ export default function DashboardSalesCommissionPage() {
             value={selectedJobMeta?.jobStatus || "—"}
             readOnly
           />
-          <Select
-            label="Sales Person"
-            options={salesPersonOptions}
+          <SalesCommissionSalesPersonField
+            salesPersons={salesPersons}
+            onSalesPersonsChange={setSalesPersons}
             value={newCommissionForm.salesPersonId}
-            onChange={(e) => setNewCommissionForm((prev) => ({ ...prev, salesPersonId: e.target.value ?? "" }))}
-            placeholder="Select sales person"
-            searchable
-            required
+            onChange={(id) => setNewCommissionForm((prev) => ({ ...prev, salesPersonId: id }))}
+            quickAddZIndex={70}
           />
           <Input
             label="Amount"

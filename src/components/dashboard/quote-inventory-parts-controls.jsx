@@ -16,6 +16,8 @@ export default function QuoteInventoryPartsControls({
   /** Mongo id when editing a saved quote — required to link job POs */
   quoteId,
   fmtPrice,
+  /** Above parent quote modal (default modal stack is 50). */
+  zIndex = 60,
 }) {
   const toast = useToast();
   const [inventoryOpen, setInventoryOpen] = useState(false);
@@ -275,6 +277,7 @@ export default function QuoteInventoryPartsControls({
         onClose={() => setInventoryOpen(false)}
         title="Add parts from inventory"
         size="lg"
+        zIndex={zIndex}
         actions={
           <>
             <Button type="button" variant="primary" size="sm" onClick={handleAddFromInventory}>
@@ -348,6 +351,7 @@ export default function QuoteInventoryPartsControls({
         onClose={() => setPoOpen(false)}
         title="Vendor PO for shortages"
         size="lg"
+        zIndex={zIndex}
         actions={
           <>
             <Button

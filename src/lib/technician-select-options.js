@@ -29,8 +29,21 @@ export function buildEmployeeSelectOptions(employees, selectedValue = "") {
 
 /**
  * Dropdown options for RFQ / quote technician (mobile app assignees).
- * @param {Array<{ id?: string, _id?: string, name?: string, email?: string }>} employees
+ * Only employees with technician app access are listed; the current assignee is kept if set.
+ * @param {Array<{ id?: string, _id?: string, name?: string, email?: string, technicianAppAccess?: boolean }>} employees
+ * @param {string} [selectedValue]
  */
-export function buildTechnicianSelectOptions(employees) {
-  return buildEmployeeSelectOptions(employees);
+export function buildTechnicianSelectOptions(employees, selectedValue = "") {
+  const list = employees || [];
+  const technicians = list.filter((e) => Boolean(e.technicianAppAccess));
+  const sel = String(selectedValue ?? "").trim();
+
+  if (sel && !technicians.some((e) => String(e.id ?? e._id ?? "").trim() === sel)) {
+    const assigned = list.find((e) => String(e.id ?? e._id ?? "").trim() === sel);
+    if (assigned) {
+      return buildEmployeeSelectOptions([...technicians, assigned], sel);
+    }
+  }
+
+  return buildEmployeeSelectOptions(technicians, sel);
 }

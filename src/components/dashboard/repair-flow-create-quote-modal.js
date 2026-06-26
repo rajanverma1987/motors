@@ -511,6 +511,7 @@ export default function RepairFlowCreateQuoteModal({
                 onChangePartsLines={(rows) => setPartsLines(rows)}
                 quoteId={null}
                 fmtPrice={fmt}
+                zIndex={60}
               />
               <DataTable
                 columns={PARTS_COLUMNS}

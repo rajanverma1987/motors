@@ -16,6 +16,7 @@ import { quoteStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
+import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
@@ -98,6 +99,7 @@ export default function QuoteFormModal({
   const [addMotorForm, setAddMotorForm] = useState(ADD_MOTOR_INITIAL);
   const [savingMotor, setSavingMotor] = useState(false);
   const [workOrderModal, setWorkOrderModal] = useState(null);
+  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
 
   const statusSelectOptions = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -253,8 +255,8 @@ export default function QuoteFormModal({
   }, [motors, form?.customerId]);
 
   const technicianOptions = useMemo(
-    () => buildTechnicianSelectOptions(employees),
-    [employees]
+    () => buildTechnicianSelectOptions(employees, form?.technicianEmployeeId),
+    [employees, form?.technicianEmployeeId]
   );
   const employeeOptions = useMemo(
     () => buildEmployeeSelectOptions(employees, form?.preparedBy),
@@ -571,7 +573,21 @@ export default function QuoteFormModal({
                 disabled={savingQuote}
               />
             )}
-            <FormSection title="Scope & other cost">
+            <FormSection
+              title="Scope & other cost"
+              headerRight={
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={!viewingQuote?.id}
+                  title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                  onClick={() => setCommissionModalOpen(true)}
+                >
+                  Add Sales Commission
+                </Button>
+              }
+            >
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
                 <div className="lg:col-span-2">
                   <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -591,6 +607,7 @@ export default function QuoteFormModal({
                     onChangePartsLines={(rows) => setForm((f) => ({ ...f, partsLines: rows }))}
                     quoteId={viewingQuote?.id ?? null}
                     fmtPrice={fmt}
+                    zIndex={zIndex + 10}
                   />
                   <DataTable
                     columns={PARTS_COLUMNS}
@@ -784,6 +801,22 @@ export default function QuoteFormModal({
           </FormSection>
         </Form>
       </Modal>
+
+      <SalesCommissionCreateModal
+        open={commissionModalOpen && !!viewingQuote?.id}
+        onClose={() => setCommissionModalOpen(false)}
+        zIndex={zIndex + 20}
+        presetQuote={
+          viewingQuote?.id
+            ? {
+                quoteId: viewingQuote.id,
+                rfqNumber: form?.rfqNumber || viewingQuote.rfqNumber || "",
+                customerName: selectedCustomer?.companyName || "—",
+                jobStatus: form?.status || viewingQuote.status || "draft",
+              }
+            : null
+        }
+      />
 
       <WorkOrderFormModal
         open={!!workOrderModal}

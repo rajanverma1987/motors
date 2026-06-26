@@ -45,6 +45,7 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
 import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
+import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
@@ -830,6 +831,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   };
 
   const [sendEmailPreview, setSendEmailPreview] = useState(null);
+  const [commissionModalOpen, setCommissionModalOpen] = useState(false);
   const [deletingQuoteId, setDeletingQuoteId] = useState(null);
 
   async function handleDeleteQuote(row) {
@@ -1256,8 +1258,8 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   );
 
   const technicianOptions = useMemo(
-    () => buildTechnicianSelectOptions(employees),
-    [employees]
+    () => buildTechnicianSelectOptions(employees, form.technicianEmployeeId),
+    [employees, form.technicianEmployeeId]
   );
   const employeeOptions = useMemo(
     () => buildEmployeeSelectOptions(employees, form.preparedBy),
@@ -2095,7 +2097,21 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
               disabled={savingQuote}
             />
           )}
-          <FormSection title="Scope & other cost">
+          <FormSection
+            title="Scope & other cost"
+            headerRight={
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!viewingQuote?.id}
+                title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                onClick={() => setCommissionModalOpen(true)}
+              >
+                Add Sales Commission
+              </Button>
+            }
+          >
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="lg:col-span-2">
                 <div className="mb-1 text-xs font-medium text-secondary">Scope with price</div>
@@ -2113,6 +2129,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                   onChangePartsLines={(rows) => setForm((f) => ({ ...f, partsLines: rows }))}
                   quoteId={viewingQuote?.id ?? null}
                   fmtPrice={fmt}
+                  zIndex={130}
                 />
                 <DataTable
                   columns={PARTS_COLUMNS}
@@ -2299,6 +2316,22 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
           setSendEmailPreview(null);
         }}
         zIndex={130}
+      />
+
+      <SalesCommissionCreateModal
+        open={commissionModalOpen && !!viewingQuote?.id}
+        onClose={() => setCommissionModalOpen(false)}
+        zIndex={140}
+        presetQuote={
+          viewingQuote?.id
+            ? {
+                quoteId: viewingQuote.id,
+                rfqNumber: form.rfqNumber || viewingQuote.rfqNumber || "",
+                customerName: selectedCustomer?.companyName || "—",
+                jobStatus: form.status || viewingQuote.status || "draft",
+              }
+            : null
+        }
       />
     </div>
   );
