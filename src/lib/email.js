@@ -518,6 +518,7 @@ async function sendEmail(to, subject, html, options = {}) {
       to,
       subject,
       html: sanitizedHtml,
+      ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc.join(", ") } : {}),
       ...(attachments && attachments.length ? { attachments } : {}),
     });
     return { ok: true };
@@ -544,6 +545,7 @@ async function sendCustomerFacingEmail(to, subject, html, options, shopCompanyNa
   const mailOpts = {
     ...customerMailOptions(options, shopCompanyName),
     ...(extraAttachments.length ? { attachments: extraAttachments } : {}),
+    ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc } : {}),
   };
   if (mailOpts.error) return { ok: false, error: mailOpts.error };
   return sendEmail(to, subject, html, mailOpts);
@@ -651,7 +653,10 @@ export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, sho
     customMessage: options.customMessage,
   });
   const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
-  return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
+  return sendEmail(toEmail, subject, html, {
+    ...(extraAttachments.length ? { attachments: extraAttachments } : {}),
+    ...(Array.isArray(options.cc) && options.cc.length ? { cc: options.cc } : {}),
+  });
 }
 
 /** Email work order PDF to a recipient (custom email + optional message in body). */

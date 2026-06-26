@@ -21,7 +21,7 @@ import { useConfirm } from "@/components/confirm-provider";
 import RepairFlowNewJobForm from "@/components/dashboard/repair-flow-new-job-form";
 import RepairFlowJobDetailClient from "./[id]/repair-flow-job-detail-client";
 import RepairFlowFlowQuotePrintPreview from "@/components/dashboard/repair-flow-flow-quote-print-preview";
-import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
+import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
 import SalesCommissionModal from "@/components/dashboard/sales-commission-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
@@ -550,7 +550,12 @@ export default function RepairFlowPageClient() {
       />
 
       {modalQuotePrintId ? (
-        <QuotePrintPreview quoteId={modalQuotePrintId} open onClose={() => setModalQuotePrintId(null)} />
+        <DocumentPrintPreviewModal
+          documentType="quote"
+          documentId={modalQuotePrintId}
+          open
+          onClose={() => setModalQuotePrintId(null)}
+        />
       ) : null}
       <SalesCommissionModal
         open={modalCommissionOpen}

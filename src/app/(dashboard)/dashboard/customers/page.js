@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
-import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
@@ -15,6 +14,8 @@ import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
 import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
+import CustomerEditFormFields from "@/components/dashboard/customer-edit-form-fields";
+import { customerApiToForm } from "@/lib/customer-record-form";
 import { useAuth } from "@/contexts/auth-context";
 import { useTrialUpgrade } from "@/contexts/trial-upgrade-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -30,6 +31,8 @@ import {
   resolveStatusTileProps,
   resolveWorkOrderStatusTileProps,
 } from "@/lib/work-order-status-tiles";
+
+const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select type" },
@@ -225,7 +228,6 @@ export default function DashboardCustomersPage() {
   const [loading, setLoading] = useState(true);
   const [enterModalOpen, setEnterModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   /** When set, we're loading full customer for View modal; modal shows loading until fetch completes */
   const [viewLoadingCustomerId, setViewLoadingCustomerId] = useState(null);
@@ -236,8 +238,6 @@ export default function DashboardCustomersPage() {
     workOrders: [],
     invoices: [],
   });
-  /** Index of additional contact being removed from View modal (for loading state) */
-  const [removingContactIndex, setRemovingContactIndex] = useState(null);
   /** When converting from lead, if a customer with same email/company exists, show View option instead of Create */
   const [existingCustomerFromLead, setExistingCustomerFromLead] = useState(null);
   const [addMotorModalOpen, setAddMotorModalOpen] = useState(false);
@@ -402,6 +402,7 @@ export default function DashboardCustomersPage() {
         const data = await res.json();
         if (cancelled) return;
         setViewingCustomer(data);
+        setForm(customerApiToForm(data));
         setViewLoadingCustomerId(null);
       } catch {
         if (!cancelled) setViewLoadingCustomerId(null);
@@ -415,6 +416,7 @@ export default function DashboardCustomersPage() {
     queueMicrotask(() => {
       setViewModalOpen(false);
       setViewingCustomer(null);
+      setForm(INITIAL_FORM);
       setViewLoadingCustomerId(null);
       setCustomerActivity({ quotes: [], workOrders: [], invoices: [] });
       setCustomerActivityLoading(false);
@@ -528,45 +530,34 @@ export default function DashboardCustomersPage() {
     }
   };
 
-  const openEditModal = async (customer) => {
-    if (!customer) return;
-    let dataToUse = customer;
-    if (customer?.id) {
-      try {
-        const res = await fetch(`/api/dashboard/customers/${customer.id}`, { credentials: "include" });
-        if (res.ok) dataToUse = await res.json();
-      } catch {
-        // Use row data
-      }
+  const handleViewCustomerSave = async (e) => {
+    e.preventDefault();
+    const currentForm = formRef.current;
+    if (!viewingCustomer?.id || !currentForm.companyName?.trim()) {
+      toast.error("Company name is required.");
+      return;
     }
-    setViewingCustomer(dataToUse);
-    setForm({
-      companyName: dataToUse.companyName ?? "",
-      primaryContactName: dataToUse.primaryContactName ?? "",
-      phone: dataToUse.phone ?? "",
-      email: dataToUse.email ?? "",
-      address: dataToUse.address ?? "",
-      city: dataToUse.city ?? "",
-      state: dataToUse.state ?? "",
-      zipCode: dataToUse.zipCode ?? "",
-      country: dataToUse.country ?? "United States",
-      shippingAddress: dataToUse.shippingAddress ?? "",
-      shippingCity: dataToUse.shippingCity ?? "",
-      shippingState: dataToUse.shippingState ?? "",
-      shippingZipCode: dataToUse.shippingZipCode ?? "",
-      shippingCountry: dataToUse.shippingCountry ?? "United States",
-      additionalContacts: Array.isArray(dataToUse.additionalContacts) ? dataToUse.additionalContacts.map((ac) => ({
-        contactName: ac.contactName ?? "",
-        phone: ac.phone ?? "",
-        email: ac.email ?? "",
-      })) : [],
-      notes: dataToUse.notes ?? "",
-      ein: dataToUse.ein ?? "",
-      creditLimit: dataToUse.creditLimit ?? "",
-      taxExempt: dataToUse.taxExempt !== false,
-      taxPercent: dataToUse.taxPercent ?? "",
-    });
-    setEditModalOpen(true);
+    setSavingCustomer(true);
+    try {
+      const res = await fetch(`/api/dashboard/customers/${viewingCustomer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildCustomerPayload(currentForm)),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update customer");
+      toast.success("Customer updated.");
+      setCustomers((prev) =>
+        prev.map((c) => (c.id === viewingCustomer.id ? { ...c, ...data.customer } : c))
+      );
+      setViewingCustomer(data.customer);
+      setForm(customerApiToForm(data.customer));
+    } catch (err) {
+      toast.error(err.message || "Failed to update customer");
+    } finally {
+      setSavingCustomer(false);
+    }
   };
 
   const addAdditionalContact = () => {
@@ -592,36 +583,6 @@ export default function DashboardCustomersPage() {
     }));
   };
 
-  /** Remove an additional contact from the customer (View modal); PATCH and refresh. */
-  const removeAdditionalContactFromView = async (contactIndex) => {
-    if (!viewingCustomer?.id || !Array.isArray(viewingCustomer.additionalContacts)) return;
-    const newContacts = viewingCustomer.additionalContacts.filter((_, i) => i !== contactIndex);
-    setRemovingContactIndex(contactIndex);
-    try {
-      const payload = buildCustomerPayload({
-        ...viewingCustomer,
-        additionalContacts: newContacts,
-      });
-      const res = await fetch(`/api/dashboard/customers/${viewingCustomer.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update customer");
-      toast.success("Contact removed.");
-      setViewingCustomer(data.customer);
-      setCustomers((prev) =>
-        prev.map((c) => (c.id === viewingCustomer.id ? { ...c, ...data.customer } : c))
-      );
-    } catch (err) {
-      toast.error(err.message || "Failed to remove contact");
-    } finally {
-      setRemovingContactIndex(null);
-    }
-  };
-
   const copyBillingToShipping = () => {
     setForm((f) => ({
       ...f,
@@ -631,11 +592,6 @@ export default function DashboardCustomersPage() {
       shippingZipCode: f.zipCode,
       shippingCountry: f.country,
     }));
-  };
-
-  const closeEditModal = () => {
-    setEditModalOpen(false);
-    setViewingCustomer(null);
   };
 
   const handleEnterSubmit = async (e) => {
@@ -680,36 +636,6 @@ export default function DashboardCustomersPage() {
       loadCustomers();
     } catch (err) {
       toast.error(err.message || "Failed to create customer");
-    } finally {
-      setSavingCustomer(false);
-    }
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    const currentForm = formRef.current;
-    if (!viewingCustomer?.id || !currentForm.companyName?.trim()) {
-      toast.error("Company name is required.");
-      return;
-    }
-    setSavingCustomer(true);
-    try {
-      const res = await fetch(`/api/dashboard/customers/${viewingCustomer.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(buildCustomerPayload(currentForm)),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update customer");
-      toast.success("Customer updated.");
-      setCustomers((prev) =>
-        prev.map((c) => (c.id === viewingCustomer.id ? { ...c, ...data.customer } : c))
-      );
-      setViewingCustomer(data.customer);
-      closeEditModal();
-    } catch (err) {
-      toast.error(err.message || "Failed to update customer");
     } finally {
       setSavingCustomer(false);
     }
@@ -1116,19 +1042,17 @@ export default function DashboardCustomersPage() {
         title="Customer details"
         size="7xl"
         actions={
-          <>
+          viewingCustomer ? (
             <Button
-              type="button"
+              type="submit"
+              form={CUSTOMER_VIEW_FORM_ID}
               variant="primary"
               size="sm"
-              onClick={() => {
-                closeViewModal();
-                openEditModal(viewingCustomer);
-              }}
+              disabled={savingCustomer}
             >
-              Edit
+              {savingCustomer ? "Saving…" : "Save"}
             </Button>
-          </>
+          ) : null
         }
       >
         {viewLoadingCustomerId ? (
@@ -1136,115 +1060,20 @@ export default function DashboardCustomersPage() {
             <span className="text-secondary">Loading…</span>
           </div>
         ) : viewingCustomer ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
+          <div className="grid gap-6 lg:grid-cols-2">
             <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Customer profile</p>
-                    <h3 className="mt-1 text-lg font-semibold text-title">{viewingCustomer.companyName || "—"}</h3>
-                    <p className="mt-1 text-sm text-secondary">
-                      {viewingCustomer.primaryContactName || "—"} · {viewingCustomer.email || "—"} · {viewingCustomer.phone || "—"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant={viewingCustomer.taxExempt === false ? "warning" : "success"} className="rounded-full px-2.5 py-0.5 text-xs">
-                      Tax exempted: {viewingCustomer.taxExempt === false ? "No" : "Yes"}
-                    </Badge>
-                    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
-                      Tax %: {viewingCustomer.taxExempt === false ? (viewingCustomer.taxPercent || "0") : "0"}
-                    </Badge>
-                  </div>
-                </div>
-                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                  <div><dt className="text-secondary">EIN</dt><dd className="font-medium text-title">{viewingCustomer.ein || "—"}</dd></div>
-                  <div><dt className="text-secondary">Credit limit</dt><dd className="font-medium text-title">{viewingCustomer.creditLimit || "—"}</dd></div>
-                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.city || "—"}</dd></div>
-                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.state || "—"}</dd></div>
-                </dl>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Billing address
-                </h3>
-                <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                  <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.address || "—"}</dd></div>
-                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.city || "—"}</dd></div>
-                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.state || "—"}</dd></div>
-                  <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.zipCode || "—"}</dd></div>
-                  <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.country || "—"}</dd></div>
-                </dl>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                  Shipping address
-                </h3>
-                <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                  <div className="sm:col-span-2"><dt className="text-secondary">Street</dt><dd className="text-title">{viewingCustomer.shippingAddress || "—"}</dd></div>
-                  <div><dt className="text-secondary">City</dt><dd className="text-title">{viewingCustomer.shippingCity || "—"}</dd></div>
-                  <div><dt className="text-secondary">State</dt><dd className="text-title">{viewingCustomer.shippingState || "—"}</dd></div>
-                  <div><dt className="text-secondary">Zip code</dt><dd className="text-title">{viewingCustomer.shippingZipCode || "—"}</dd></div>
-                  <div><dt className="text-secondary">Country</dt><dd className="text-title">{viewingCustomer.shippingCountry || "—"}</dd></div>
-                </dl>
-              </div>
-              {(viewingCustomer.notes || "").trim() && (
-                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                  <p className="whitespace-pre-wrap text-sm text-title">{viewingCustomer.notes}</p>
-                </div>
-              )}
-              {Array.isArray(viewingCustomer.additionalContacts) && viewingCustomer.additionalContacts.length > 0 && (
-                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Additional contacts</h3>
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[320px] text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Name</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Phone</th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Email</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary w-24">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-title">
-                        {viewingCustomer.additionalContacts.map((ac, i) => (
-                          <tr key={i} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{ac.contactName || "—"}</td>
-                            <td className="px-3 py-2">{ac.phone || "—"}</td>
-                            <td className="px-3 py-2">{ac.email || "—"}</td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => { closeViewModal(); openEditModal(viewingCustomer); }}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeAdditionalContactFromView(i)}
-                                  disabled={removingContactIndex !== null}
-                                >
-                                  {removingContactIndex === i ? "Removing…" : "Delete"}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              <Form
+                id={CUSTOMER_VIEW_FORM_ID}
+                onSubmit={handleViewCustomerSave}
+                className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
+              >
+                <CustomerEditFormFields form={form} setForm={setForm} />
+              </Form>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked motors</h3>
                   <Button type="button" variant="outline" size="sm" onClick={openAddMotorModal}>
-                    Add customer's motor
+                    Add customer&apos;s motor
                   </Button>
                 </div>
                 {Array.isArray(viewingCustomer.linkedMotors) && viewingCustomer.linkedMotors.length > 0 ? (
@@ -1284,7 +1113,7 @@ export default function DashboardCustomersPage() {
                     </table>
                   </div>
                 ) : (
-                  <p className="text-sm text-secondary">Customer's motors: —</p>
+                  <p className="text-sm text-secondary">Customer&apos;s motors: —</p>
                 )}
               </div>
             </div>
@@ -1643,243 +1472,6 @@ export default function DashboardCustomersPage() {
         zIndex={125}
       />
 
-      {/* Edit modal */}
-      <Modal
-        open={editModalOpen}
-        onClose={closeEditModal}
-        title="Edit customer"
-        size="4xl"
-        actions={
-          <Button type="submit" form="edit-customer-form" variant="primary" size="sm" disabled={savingCustomer}>
-            {savingCustomer ? "Saving…" : "Save"}
-          </Button>
-        }
-      >
-        <Form id="edit-customer-form" onSubmit={handleEditSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
-          <FormSection title="Company & contact">
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Input
-                label="Company name"
-                name="companyName"
-                value={form.companyName}
-                onChange={(e) => setForm((f) => ({ ...f, companyName: e.target.value }))}
-                placeholder="Company or business name"
-                required
-              />
-              <Input
-                label="Primary contact name"
-                name="primaryContactName"
-                value={form.primaryContactName}
-                onChange={(e) => setForm((f) => ({ ...f, primaryContactName: e.target.value }))}
-                placeholder="Contact person name"
-              />
-              <Input
-                label="Phone"
-                name="phone"
-                type="tel"
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="e.g. (555) 123-4567"
-              />
-              <Input
-                label="Email"
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="email@example.com"
-              />
-              <Input
-                label="EIN"
-                name="ein"
-                value={form.ein}
-                onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))}
-                placeholder="Employer Identification Number"
-              />
-              <Input
-                label="Credit limit"
-                name="creditLimit"
-                value={form.creditLimit}
-                onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
-                placeholder="e.g. 10000"
-              />
-              <Select
-                label="Tax exempted"
-                value={form.taxExempt ? "yes" : "no"}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    taxExempt: e.target.value !== "no",
-                    taxPercent: e.target.value === "no" ? f.taxPercent : "",
-                  }))
-                }
-                options={[
-                  { value: "yes", label: "Yes" },
-                  { value: "no", label: "No" },
-                ]}
-                searchable={false}
-              />
-              <Input
-                label="Tax %"
-                name="taxPercent"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.taxPercent}
-                onChange={(e) => setForm((f) => ({ ...f, taxPercent: e.target.value }))}
-                placeholder="e.g. 8.25"
-                disabled={form.taxExempt}
-              />
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="Additional contact persons"
-            headerRight={
-              <Button type="button" variant="outline" size="sm" onClick={addAdditionalContact}>
-                Add contact person
-              </Button>
-            }
-          >
-            {(form.additionalContacts || []).length === 0 ? (
-              <p className="text-sm text-secondary">No additional contacts. Click “Add contact person” to add one.</p>
-            ) : (
-              <div className="space-y-3">
-                {(form.additionalContacts || []).map((ac, index) => (
-                  <div key={index} className="flex flex-wrap items-end gap-2 rounded border border-border bg-bg/50 p-3">
-                    <Input
-                      label="Name"
-                      value={ac.contactName}
-                      onChange={(e) => updateAdditionalContact(index, "contactName", e.target.value)}
-                      placeholder="Contact name"
-                      className="min-w-[140px] flex-1"
-                    />
-                    <Input
-                      label="Phone"
-                      value={ac.phone}
-                      onChange={(e) => updateAdditionalContact(index, "phone", e.target.value)}
-                      placeholder="e.g. (555) 123-4567"
-                      className="min-w-[120px] flex-1"
-                    />
-                    <Input
-                      label="Email"
-                      value={ac.email}
-                      onChange={(e) => updateAdditionalContact(index, "email", e.target.value)}
-                      placeholder="email@example.com"
-                      className="min-w-[160px] flex-1"
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={() => removeAdditionalContact(index)}>
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </FormSection>
-
-          <FormSection title="Billing address">
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Input
-                label="Street address"
-                name="address"
-                value={form.address}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Street address"
-                className="lg:col-span-2"
-              />
-              <Input
-                label="City"
-                name="city"
-                value={form.city}
-                onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                placeholder="City"
-              />
-              <Input
-                label="State"
-                name="state"
-                value={form.state}
-                onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                placeholder="State or province"
-              />
-              <Input
-                label="Zip code"
-                name="zipCode"
-                value={form.zipCode}
-                onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
-                placeholder="e.g. 12345"
-              />
-              <Input
-                label="Country"
-                name="country"
-                value={form.country}
-                onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                placeholder="United States"
-              />
-            </div>
-          </FormSection>
-
-          <FormSection
-            title="Shipping address"
-            headerRight={
-              <Button type="button" variant="outline" size="sm" onClick={copyBillingToShipping}>
-                Copy from billing
-              </Button>
-            }
-          >
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Input
-                label="Street address"
-                name="shippingAddress"
-                value={form.shippingAddress}
-                onChange={(e) => setForm((f) => ({ ...f, shippingAddress: e.target.value }))}
-                placeholder="Street address"
-                className="lg:col-span-2"
-              />
-              <Input
-                label="City"
-                name="shippingCity"
-                value={form.shippingCity}
-                onChange={(e) => setForm((f) => ({ ...f, shippingCity: e.target.value }))}
-                placeholder="City"
-              />
-              <Input
-                label="State"
-                name="shippingState"
-                value={form.shippingState}
-                onChange={(e) => setForm((f) => ({ ...f, shippingState: e.target.value }))}
-                placeholder="State or province"
-              />
-              <Input
-                label="Zip code"
-                name="shippingZipCode"
-                value={form.shippingZipCode}
-                onChange={(e) => setForm((f) => ({ ...f, shippingZipCode: e.target.value }))}
-                placeholder="e.g. 12345"
-              />
-              <Input
-                label="Country"
-                name="shippingCountry"
-                value={form.shippingCountry}
-                onChange={(e) => setForm((f) => ({ ...f, shippingCountry: e.target.value }))}
-                placeholder="United States"
-              />
-            </div>
-          </FormSection>
-
-          <FormSection title="Notes">
-            <Textarea
-              label="Notes"
-              name="notes"
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="Customer notes, billing details, etc."
-              rows={3}
-              className="[&_label]:sr-only"
-            />
-          </FormSection>
-
-        </Form>
-      </Modal>
     </div>
   );
 }

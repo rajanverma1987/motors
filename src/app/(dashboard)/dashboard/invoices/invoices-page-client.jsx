@@ -462,7 +462,7 @@ function InvoicesInner({ embedded = false, actionsRef = null }) {
                 : statusFilter === INVOICE_FILTER_TAX_COLLECTED
                   ? "No fully paid invoices with tax collected."
                   : statusFilter === INVOICE_FILTER_TAX_TO_BE_COLLECTED
-                    ? "No billed invoices."
+                    ? "No billed invoices with tax to be collected."
                     : statusFilter
                       ? "No invoices with this status."
                       : "No invoices match your search."

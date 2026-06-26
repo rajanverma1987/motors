@@ -15,7 +15,7 @@ import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
  * @param {{ quoteId: string, user: { email?: string, shopName?: string, contactName?: string }, request: Request }} opts
  * @returns {Promise<{ ok: true, message: string, quote: object } | { ok: false, status?: number, error: string }>}
  */
-export async function sendCrmQuoteToCustomer({ quoteId, user, request, customMessage = "" }) {
+export async function sendCrmQuoteToCustomer({ quoteId, user, request, customMessage = "", ccEmails = [] }) {
   await connectDB();
   const doc = await Quote.findOne({
     _id: quoteId,
@@ -76,6 +76,7 @@ export async function sendCrmQuoteToCustomer({ quoteId, user, request, customMes
       ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
       ...(accountsEmailBlock.trim() ? { accountsEmailBlock } : {}),
       ...(String(customMessage || "").trim() ? { customMessage: String(customMessage).trim() } : {}),
+      ...(Array.isArray(ccEmails) && ccEmails.length ? { cc: ccEmails } : {}),
     }
   );
   if (!emailResult.ok) {

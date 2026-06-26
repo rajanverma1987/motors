@@ -11,7 +11,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { buildCustomerQuoteInvoiceEmailBlock, accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
-import { parseSendDocumentCustomMessage } from "@/lib/send-document-custom-message";
+import { parseSendDocumentEmailBody } from "@/lib/send-document-custom-message";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -72,7 +72,10 @@ export async function POST(request, context) {
     const siteBase = baseUrl.replace(/\/$/, "");
     const viewUrl = `${siteBase}/invoice/view/${inv.customerViewToken}`;
 
-    const customMessage = await parseSendDocumentCustomMessage(request);
+    const { customMessage, ccEmails, ccError } = await parseSendDocumentEmailBody(request);
+    if (ccError) {
+      return NextResponse.json({ error: ccError }, { status: 400 });
+    }
 
     const accountsEmailBlock = buildCustomerQuoteInvoiceEmailBlock({
       billingAddress: uSettings.accountsBillingAddress,
@@ -91,6 +94,7 @@ export async function POST(request, context) {
         accountsEmailBlock,
         viewUrl,
         ...(customMessage ? { customMessage } : {}),
+        ...(ccEmails.length ? { cc: ccEmails } : {}),
       }
     );
     if (!result.ok) {

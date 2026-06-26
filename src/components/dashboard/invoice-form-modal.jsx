@@ -12,8 +12,7 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
-import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
-import InvoicePrintOffscreen from "@/components/dashboard/invoice-print-offscreen";
+import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
 import { FiSave, FiSend, FiPrinter, FiRotateCw, FiClipboard, FiCornerUpLeft } from "react-icons/fi";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -116,8 +115,7 @@ export default function InvoiceFormModal({
   const [form, setForm] = useState(emptyForm);
   /** Saved invoice id (edit mode); null = new draft */
   const [savedId, setSavedId] = useState(null);
-  const [printOpen, setPrintOpen] = useState(false);
-  const [printPayload, setPrintPayload] = useState(null);
+  const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [invoiceWorkOrderModalId, setInvoiceWorkOrderModalId] = useState(null);
 
   const persistedId = invoiceId || savedId;
@@ -292,39 +290,9 @@ export default function InvoiceFormModal({
     }
   };
 
-  const handleHeaderPrint = async () => {
+  const handleHeaderPrint = () => {
     if (!persistedId) return;
-    setHeaderBusy(true);
-    try {
-      const res = await fetch(`/api/dashboard/invoices/${persistedId}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const inv = await res.json();
-      if (!res.ok) throw new Error(inv.error || "Failed to load invoice");
-      setPrintPayload({
-        invoice: inv,
-        motorLabel: inv.motorLabel,
-        fromShopName: inv.fromShopName || "",
-        fromShopContact: inv.fromShopContact || "",
-        fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
-        fromBillingAddress:
-          String(inv.fromBillingAddress || accountSettings?.accountsBillingAddress || "").trim(),
-        fromShippingAddress:
-          String(inv.fromShippingAddress || accountSettings?.accountsShippingAddress || "").trim(),
-        fromPaymentTermsLabel:
-          inv.fromPaymentTermsLabel || accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms),
-        customerToName: inv.customerToName || "",
-        customerBillingAddress: inv.customerBillingAddress || "",
-        invoicePaymentOptions: accountSettings?.invoicePaymentOptions || "",
-        invoiceThankYouNote: accountSettings?.invoiceThankYouNote || "",
-      });
-      setPrintOpen(true);
-    } catch (e) {
-      toast.error(e.message || "Could not open print view");
-    } finally {
-      setHeaderBusy(false);
-    }
+    setPrintPreviewOpen(true);
   };
 
   // Keep totals in sync with the tables automatically.
@@ -641,13 +609,13 @@ export default function InvoiceFormModal({
       zIndex={(zIndex ?? 50) + 10}
     />
 
-    <InvoicePrintOffscreen
-      open={printOpen}
-      payload={printPayload}
-      onClose={() => {
-        setPrintOpen(false);
-        setPrintPayload(null);
-      }}
+    <DocumentPrintPreviewModal
+      open={printPreviewOpen && !!persistedId}
+      onClose={() => setPrintPreviewOpen(false)}
+      title={form.invoiceNumber ? `Print invoice #${form.invoiceNumber}` : "Print preview"}
+      documentType="invoice"
+      documentId={persistedId}
+      zIndex={(zIndex ?? 50) + 10}
     />
 
     <SendDocumentPreviewModal

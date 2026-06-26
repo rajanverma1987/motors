@@ -38,7 +38,7 @@ import { quoteStatusSelectOptionsFromMerged, quoteStatusTileColorForValue } from
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-parts-controls";
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
-import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
+import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
@@ -2177,8 +2177,9 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
       </Modal>
 
       {quotePrintId ? (
-        <QuotePrintPreview
-          quoteId={quotePrintId}
+        <DocumentPrintPreviewModal
+          documentType="quote"
+          documentId={quotePrintId}
           open
           onClose={() => setQuotePrintId(null)}
         />

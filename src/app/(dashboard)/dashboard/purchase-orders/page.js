@@ -16,7 +16,7 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
-import PoPrintPreview from "@/components/dashboard/po-print-preview";
+import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-modal";
@@ -2438,7 +2438,12 @@ export default function DashboardPurchaseOrdersPage() {
         )}
       </Modal>
 
-      <PoPrintPreview purchaseOrderId={printPoId} open={!!printPoId} onClose={() => setPrintPoId(null)} />
+      <DocumentPrintPreviewModal
+        documentType="po"
+        documentId={printPoId}
+        open={!!printPoId}
+        onClose={() => setPrintPoId(null)}
+      />
 
       <VendorQuickViewModal
         open={!!openVendorId}

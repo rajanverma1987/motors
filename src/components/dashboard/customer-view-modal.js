@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
-import Badge from "@/components/ui/badge";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
 import Textarea from "@/components/ui/textarea";
@@ -11,7 +10,7 @@ import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/fo
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { buildCustomerPayload } from "@/lib/customer-record-form";
+import { buildCustomerPayload, customerApiToForm, INITIAL_CUSTOMER_FORM } from "@/lib/customer-record-form";
 import { buildMotorPayload } from "@/lib/motor-record-form";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import {
@@ -22,11 +21,13 @@ import {
   resolveStatusTileProps,
   resolveWorkOrderStatusTileProps,
 } from "@/lib/work-order-status-tiles";
-import CustomerFormModal from "@/components/dashboard/customer-form-modal";
+import CustomerEditFormFields from "@/components/dashboard/customer-edit-form-fields";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
 import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
+
+const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 
 const STATUS_PILL_CLASS =
   "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium";
@@ -169,10 +170,12 @@ export default function CustomerViewModal({
 
   const [loadingCustomerId, setLoadingCustomerId] = useState(null);
   const [customer, setCustomer] = useState(null);
+  const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
+  const [savingCustomer, setSavingCustomer] = useState(false);
+  const formRef = useRef(form);
+  formRef.current = form;
   const [activityLoading, setActivityLoading] = useState(false);
   const [activity, setActivity] = useState({ quotes: [], workOrders: [], invoices: [] });
-  const [editCustomerId, setEditCustomerId] = useState(null);
-  const [removingContactIndex, setRemovingContactIndex] = useState(null);
   const [addMotorOpen, setAddMotorOpen] = useState(false);
   const [motorForm, setMotorForm] = useState(INITIAL_MOTOR_FORM);
   const [savingMotor, setSavingMotor] = useState(false);
@@ -200,6 +203,7 @@ export default function CustomerViewModal({
     if (!res.ok) return null;
     const data = await res.json();
     setCustomer(data);
+    setForm(customerApiToForm(data));
     onCustomerUpdated?.(data);
     return data;
   }, [onCustomerUpdated]);
@@ -255,6 +259,7 @@ export default function CustomerViewModal({
   useEffect(() => {
     if (!open) {
       setCustomer(null);
+      setForm(INITIAL_CUSTOMER_FORM);
       setLoadingCustomerId(null);
       setActivity({ quotes: [], workOrders: [], invoices: [] });
       setActivityLoading(false);
@@ -281,6 +286,7 @@ export default function CustomerViewModal({
         const data = await res.json();
         if (cancelled) return;
         setCustomer(data);
+        setForm(customerApiToForm(data));
         setLoadingCustomerId(null);
       } catch {
         if (!cancelled) {
@@ -321,30 +327,33 @@ export default function CustomerViewModal({
     });
   };
 
-  const removeAdditionalContact = async (contactIndex) => {
-    if (!customer?.id || !Array.isArray(customer.additionalContacts)) return;
-    const newContacts = customer.additionalContacts.filter((_, i) => i !== contactIndex);
-    setRemovingContactIndex(contactIndex);
+  const handleCustomerSave = async (e) => {
+    e.preventDefault();
+    const id = String(customer?.id || resolvedId || "").trim();
+    const current = formRef.current;
+    if (!id || !current.companyName?.trim()) {
+      toast.error("Company name is required.");
+      return;
+    }
+    setSavingCustomer(true);
     try {
-      const payload = buildCustomerPayload({
-        ...customer,
-        additionalContacts: newContacts,
-      });
-      const res = await fetch(`/api/dashboard/customers/${customer.id}`, {
+      const res = await fetch(`/api/dashboard/customers/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(payload),
+        body: JSON.stringify(buildCustomerPayload(current)),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to update customer");
-      toast.success("Contact removed.");
-      setCustomer(data.customer);
-      onCustomerUpdated?.(data.customer);
+      toast.success("Customer updated.");
+      const updated = data.customer || data;
+      setCustomer(updated);
+      setForm(customerApiToForm(updated));
+      onCustomerUpdated?.(updated);
     } catch (err) {
-      toast.error(err.message || "Failed to remove contact");
+      toast.error(err.message || "Failed to update customer");
     } finally {
-      setRemovingContactIndex(null);
+      setSavingCustomer(false);
     }
   };
 
@@ -383,12 +392,13 @@ export default function CustomerViewModal({
         actions={
           customer ? (
             <Button
-              type="button"
+              type="submit"
+              form={CUSTOMER_VIEW_FORM_ID}
               variant="primary"
               size="sm"
-              onClick={() => setEditCustomerId(customer.id)}
+              disabled={savingCustomer}
             >
-              Edit
+              {savingCustomer ? "Saving…" : "Save"}
             </Button>
           ) : null
         }
@@ -398,161 +408,15 @@ export default function CustomerViewModal({
             <span className="text-secondary">Loading…</span>
           </div>
         ) : customer ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.6fr)]">
+          <div className="grid gap-6 lg:grid-cols-2">
             <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Customer profile</p>
-                    <h3 className="mt-1 text-lg font-semibold text-title">{customer.companyName || "—"}</h3>
-                    <p className="mt-1 text-sm text-secondary">
-                      {customer.primaryContactName || "—"} · {customer.email || "—"} · {customer.phone || "—"}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant={customer.taxExempt === false ? "warning" : "success"}
-                      className="rounded-full px-2.5 py-0.5 text-xs"
-                    >
-                      Tax exempted: {customer.taxExempt === false ? "No" : "Yes"}
-                    </Badge>
-                    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
-                      Tax %: {customer.taxExempt === false ? customer.taxPercent || "0" : "0"}
-                    </Badge>
-                  </div>
-                </div>
-                <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <dt className="text-secondary">EIN</dt>
-                    <dd className="font-medium text-title">{customer.ein || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">Credit limit</dt>
-                    <dd className="font-medium text-title">{customer.creditLimit || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">City</dt>
-                    <dd className="text-title">{customer.city || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">State</dt>
-                    <dd className="text-title">{customer.state || "—"}</dd>
-                  </div>
-                </dl>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Billing address</h3>
-                <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <dt className="text-secondary">Street</dt>
-                    <dd className="text-title">{customer.address || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">City</dt>
-                    <dd className="text-title">{customer.city || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">State</dt>
-                    <dd className="text-title">{customer.state || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">Zip code</dt>
-                    <dd className="text-title">{customer.zipCode || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">Country</dt>
-                    <dd className="text-title">{customer.country || "—"}</dd>
-                  </div>
-                </dl>
-              </div>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Shipping address</h3>
-                <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <dt className="text-secondary">Street</dt>
-                    <dd className="text-title">{customer.shippingAddress || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">City</dt>
-                    <dd className="text-title">{customer.shippingCity || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">State</dt>
-                    <dd className="text-title">{customer.shippingState || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">Zip code</dt>
-                    <dd className="text-title">{customer.shippingZipCode || "—"}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-secondary">Country</dt>
-                    <dd className="text-title">{customer.shippingCountry || "—"}</dd>
-                  </div>
-                </dl>
-              </div>
-              {(customer.notes || "").trim() ? (
-                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Notes</h3>
-                  <p className="whitespace-pre-wrap text-sm text-title">{customer.notes}</p>
-                </div>
-              ) : null}
-              {Array.isArray(customer.additionalContacts) && customer.additionalContacts.length > 0 ? (
-                <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                  <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
-                    Additional contacts
-                  </h3>
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[320px] text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Name
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Phone
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Email
-                          </th>
-                          <th className="w-24 px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-title">
-                        {customer.additionalContacts.map((ac, i) => (
-                          <tr key={i} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">{ac.contactName || "—"}</td>
-                            <td className="px-3 py-2">{ac.phone || "—"}</td>
-                            <td className="px-3 py-2">{ac.email || "—"}</td>
-                            <td className="px-3 py-2 text-right">
-                              <div className="flex items-center justify-end gap-1">
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setEditCustomerId(customer.id)}
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => removeAdditionalContact(i)}
-                                  disabled={removingContactIndex !== null}
-                                >
-                                  {removingContactIndex === i ? "Removing…" : "Delete"}
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ) : null}
+              <Form
+                id={CUSTOMER_VIEW_FORM_ID}
+                onSubmit={handleCustomerSave}
+                className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
+              >
+                <CustomerEditFormFields form={form} setForm={setForm} />
+              </Form>
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked motors</h3>
@@ -840,17 +704,6 @@ export default function CustomerViewModal({
           </div>
         ) : null}
       </Modal>
-
-      <CustomerFormModal
-        open={!!editCustomerId}
-        customerId={editCustomerId}
-        onClose={() => setEditCustomerId(null)}
-        zIndex={zIndex + 10}
-        onAfterSave={async () => {
-          setEditCustomerId(null);
-          if (resolvedId) await reloadCustomer(resolvedId);
-        }}
-      />
 
       <Modal
         open={addMotorOpen}

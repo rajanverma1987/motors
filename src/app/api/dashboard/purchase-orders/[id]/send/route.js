@@ -10,7 +10,7 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
-import { parseSendDocumentCustomMessage } from "@/lib/send-document-custom-message";
+import { parseSendDocumentEmailBody } from "@/lib/send-document-custom-message";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -86,7 +86,10 @@ export async function POST(request, context) {
       shippingAddress: uSettings.accountsShippingAddress,
     });
 
-    const customMessage = await parseSendDocumentCustomMessage(request);
+    const { customMessage, ccEmails, ccError } = await parseSendDocumentEmailBody(request);
+    if (ccError) {
+      return NextResponse.json({ error: ccError }, { status: 400 });
+    }
 
     const emailResult = await sendPoToVendor(
       toEmail,
@@ -99,6 +102,7 @@ export async function POST(request, context) {
         ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
         ...(poVendorAddressesHtml.trim() ? { poVendorAddressesHtml } : {}),
         ...(customMessage ? { customMessage } : {}),
+        ...(ccEmails.length ? { cc: ccEmails } : {}),
       }
     );
     if (!emailResult.ok) {

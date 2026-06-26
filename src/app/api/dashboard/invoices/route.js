@@ -19,7 +19,7 @@ import {
   INVOICE_FILTER_TAX_COLLECTED,
   INVOICE_FILTER_TAX_TO_BE_COLLECTED,
   isInvoiceTaxCollected,
-  resolveInvoiceBilledStatusSlug,
+  isInvoiceTaxToBeCollected,
 } from "@/lib/invoice-tax-collected";
 import { mongoDocumentDateRangeClause } from "@/lib/all-jobs-date-filter";
 
@@ -164,7 +164,10 @@ async function loadTaxToBeCollectedContext(email, merged, dateClause = null) {
     : [];
   const custById = Object.fromEntries((customers || []).map((c) => [String(c._id), c]));
   const summary = aggregateTaxToBeCollectedSummary(invoices, custById, merged);
-  return { summary };
+  const ids = invoices
+    .filter((inv) => isInvoiceTaxToBeCollected(inv, custById[String(inv.customerId)], merged))
+    .map((inv) => inv._id);
+  return { summary, ids };
 }
 
 /** Status pill totals use the same grand total as the invoice table (labor + parts + tax). */
@@ -254,6 +257,7 @@ export async function GET(request) {
     let summaryTaxCollected = { count: 0, invoiceAmount: 0, taxCollected: 0 };
     let taxCollectedIds = [];
     let summaryTaxToBeCollected = { count: 0, invoiceAmount: 0, taxToBeCollected: 0 };
+    let taxToBeCollectedIds = [];
     if (includePagination) {
       const [taxCtx, taxToBeCtx] = await Promise.all([
         loadTaxCollectedContext(email, mergedForStatus, dateClause),
@@ -262,6 +266,7 @@ export async function GET(request) {
       summaryTaxCollected = taxCtx.summary;
       taxCollectedIds = taxCtx.ids;
       summaryTaxToBeCollected = taxToBeCtx.summary;
+      taxToBeCollectedIds = taxToBeCtx.ids;
     }
     if (statusFilter === "__other__") {
       const allowed = invoiceStatusAllowedSlugs(mergedForStatus);
@@ -273,10 +278,7 @@ export async function GET(request) {
     } else if (statusFilter === INVOICE_FILTER_TAX_COLLECTED) {
       q._id = { $in: taxCollectedIds };
     } else if (statusFilter === INVOICE_FILTER_TAX_TO_BE_COLLECTED) {
-      const billedSlug = resolveInvoiceBilledStatusSlug(mergedForStatus);
-      q.status = {
-        $regex: new RegExp(`^${String(billedSlug).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
-      };
+      q._id = { $in: taxToBeCollectedIds };
     } else if (statusFilter) {
       const statusRx = new RegExp(`^${statusFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i");
       q.status = statusRx;

@@ -1,60 +1,13 @@
 "use client";
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useState, useEffect, useRef } from "react";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
 import Button from "@/components/ui/button";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import { fetchQuotePreviewPayload } from "@/lib/document-preview-payload";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
-
-const STYLE_ID = "quote-print-preview-styles";
-const PRINT_ROOT_CLASS = "quote-print-offscreen-root";
-
-function injectQuotePrintStyles() {
-  if (typeof document === "undefined") return () => {};
-  if (document.getElementById(STYLE_ID)) return () => {};
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  style.textContent = `
-    @media print {
-      body * { visibility: hidden !important; }
-      .${PRINT_ROOT_CLASS},
-      .${PRINT_ROOT_CLASS} * { visibility: visible !important; }
-      .${PRINT_ROOT_CLASS} {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        min-height: 100% !important;
-        overflow: visible !important;
-        opacity: 1 !important;
-        background: white !important;
-        z-index: 2147483647 !important;
-        padding: 1rem !important;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-  return () => {
-    document.getElementById(STYLE_ID)?.remove();
-  };
-}
-
-const OFFSCREEN_STYLE = {
-  position: "fixed",
-  left: "-100vw",
-  top: 0,
-  width: "8.5in",
-  maxWidth: "100vw",
-  opacity: 0,
-  pointerEvents: "none",
-  zIndex: -1,
-  overflow: "hidden",
-};
 
 /**
  * Loads quote data, keeps printable markup off-screen, opens the system print dialog only.
@@ -63,6 +16,7 @@ const OFFSCREEN_STYLE = {
  */
 export default function QuotePrintPreview({ quoteId, open, onClose, standalone = false }) {
   const fmt = useFormatMoney();
+  const { settings: accountSettings } = useUserSettings();
   const toast = useToast();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -97,16 +51,11 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     setQuote(null);
     (async () => {
       try {
-        const res = await fetch(`/api/dashboard/quotes/${quoteId}`, { credentials: "include", cache: "no-store" });
-        const data = await res.json();
+        const data = await fetchQuotePreviewPayload(quoteId, accountSettings);
         if (cancelled) return;
-        if (!res.ok) {
-          setError(data.error || `${SERVICE_PROPOSAL_DOCUMENT_TITLE} not found`);
-          return;
-        }
         setQuote(data);
-      } catch {
-        if (!cancelled) setError(`Failed to load ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
+      } catch (e) {
+        if (!cancelled) setError(e.message || `Failed to load ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER}`);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -114,14 +63,8 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     return () => {
       cancelled = true;
     };
-  }, [quoteId, active]);
+  }, [quoteId, active, accountSettings?.accountsBillingAddress, accountSettings?.accountsShippingAddress]);
 
-  useEffect(() => {
-    if (!active) return;
-    return injectQuotePrintStyles();
-  }, [active]);
-
-  /** In-page print: no overlay — surface errors with toast and close. */
   useEffect(() => {
     if (standalone || !open) return;
     if (loading || !error) return;
@@ -130,24 +73,10 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
   }, [standalone, open, loading, error]);
 
   const ready = active && !loading && !!quote && !error;
+  const shouldPrint = ready && (standalone || open);
 
   const onCloseStableRef = useRef(onClose);
   onCloseStableRef.current = onClose;
-
-  useLayoutEffect(() => {
-    if (!ready) return;
-    const handleAfterPrint = () => {
-      onCloseStableRef.current?.();
-    };
-    window.addEventListener("afterprint", handleAfterPrint);
-    const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => window.print());
-    });
-    return () => {
-      cancelAnimationFrame(id);
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
-  }, [ready]);
 
   if (!active) return null;
 
@@ -171,18 +100,13 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     }
   }
 
-  if (!ready || typeof document === "undefined") {
+  if (!shouldPrint || typeof document === "undefined") {
     return null;
   }
 
-  return createPortal(
-    <div
-      className={`${PRINT_ROOT_CLASS} bg-white text-title`}
-      style={OFFSCREEN_STYLE}
-      aria-hidden="true"
-    >
+  return (
+    <DocumentPrintOffscreenPortal open onClose={() => onCloseStableRef.current?.()}>
       <QuotePrintSheetBody quote={quote} fmt={fmt} />
-    </div>,
-    document.body
+    </DocumentPrintOffscreenPortal>
   );
 }

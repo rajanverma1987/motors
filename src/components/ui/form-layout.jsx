@@ -6,18 +6,18 @@ import HelpIcon from "./help-icon";
 const SECTION_TITLE_CLASS = "mb-4 text-title font-semibold";
 
 /** Stack class for multiple FormSection blocks inside a modal form. */
-export const FORM_SECTIONS_STACK_CLASS = "flex flex-col gap-4";
+export const FORM_SECTIONS_STACK_CLASS = "flex flex-col gap-6";
 
 export const FORM_SECTION_SHELL_CLASS =
-  "overflow-hidden rounded-lg border border-border bg-card shadow-sm dark:shadow-black/20";
+  "overflow-hidden rounded-xl border border-border bg-card shadow-sm ring-1 ring-border/60 dark:shadow-black/25 dark:ring-border/40";
 
 export const FORM_SECTION_HEADER_CLASS =
-  "border-b border-border bg-form-bg/90 px-4 py-2.5 dark:bg-form-bg/60";
+  "border-b border-primary/10 bg-primary/5 px-4 py-3 dark:border-primary/15 dark:bg-primary/10";
 
 export const FORM_SECTION_TITLE_CLASS =
   "text-sm font-bold uppercase tracking-wide text-title";
 
-export const FORM_SECTION_BODY_CLASS = "px-4 py-3";
+export const FORM_SECTION_BODY_CLASS = "bg-card px-4 py-4 sm:px-5 sm:py-5";
 
 /**
  * Bordered dashboard form section with a visible header bar (modal forms, settings, etc.).
@@ -35,10 +35,10 @@ export function FormSection({
   emphasis = false,
 }) {
   const shell = emphasis
-    ? "overflow-hidden rounded-lg border-2 border-primary/35 bg-card shadow-sm ring-1 ring-primary/15 dark:shadow-black/20"
+    ? "overflow-hidden rounded-xl border-2 border-primary/35 bg-card shadow-sm ring-1 ring-primary/15 dark:shadow-black/25"
     : FORM_SECTION_SHELL_CLASS;
   const header = emphasis
-    ? "border-b border-primary/25 bg-primary/10 px-4 py-2.5"
+    ? "border-b border-primary/25 bg-primary/10 px-4 py-3"
     : FORM_SECTION_HEADER_CLASS;
 
   return (
@@ -96,7 +96,7 @@ export function FormContainer({ children, className = "" }) {
  */
 export function Form({ children, className = "", ...rest }) {
   return (
-    <form className={`${FORM_CARD_BASE} space-y-4 ${className}`.trim()} {...rest}>
+    <form className={`${FORM_CARD_BASE} space-y-6 ${className}`.trim()} {...rest}>
       {children}
     </form>
   );

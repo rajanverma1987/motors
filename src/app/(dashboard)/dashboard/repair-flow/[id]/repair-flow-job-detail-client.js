@@ -26,7 +26,7 @@ import RepairFlowQuotesTable from "@/components/dashboard/repair-flow-quotes-tab
 import RepairFlowJobAttachmentsModal from "@/components/dashboard/repair-flow-job-attachments-modal";
 import ModalActionsDropdown from "@/components/ui/modal-actions-dropdown";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
-import QuotePrintPreview from "@/components/dashboard/quote-print-preview";
+import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
 import RepairFlowFlowQuotePrintPreview from "@/components/dashboard/repair-flow-flow-quote-print-preview";
 import SalesCommissionModal from "@/components/dashboard/sales-commission-modal";
 import { getRepairFlowWorkOrderToolbarState } from "@/lib/repair-flow-work-order-toolbar";
@@ -1128,7 +1128,12 @@ export default function RepairFlowJobDetailClient({
             onPrepareStateChange={setFlowQuotePrintPreparing}
           />
           {quotePrintId ? (
-            <QuotePrintPreview quoteId={quotePrintId} open onClose={() => setQuotePrintId(null)} />
+            <DocumentPrintPreviewModal
+              documentType="quote"
+              documentId={quotePrintId}
+              open
+              onClose={() => setQuotePrintId(null)}
+            />
           ) : null}
           <SalesCommissionModal
             open={commissionModalOpen}

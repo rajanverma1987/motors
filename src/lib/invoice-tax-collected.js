@@ -108,12 +108,15 @@ export function aggregateTaxCollectedSummary(invoices, custById, mergedSettings)
 }
 
 /**
- * Billed invoice for tax-to-be-collected summary and filter.
+ * Billed invoice with non-zero sales tax still to be collected (Tax To Be Collected filter).
  * @param {object} inv
+ * @param {object} [customer]
  * @param {object} [mergedSettings]
  */
-export function isInvoiceTaxToBeCollected(inv, _customer, mergedSettings) {
-  return isInvoiceBilledStatus(inv, mergedSettings);
+export function isInvoiceTaxToBeCollected(inv, customer, mergedSettings) {
+  if (!isInvoiceBilledStatus(inv, mergedSettings)) return false;
+  const totals = invoiceTaxTotals(inv, customer);
+  return totals.taxAmount > 0.005;
 }
 
 /**
