@@ -17,6 +17,7 @@ import QuoteInventoryPartsControls from "@/components/dashboard/quote-inventory-
 import QuoteFormRepairJobInspections from "@/components/dashboard/quote-form-repair-job-inspections";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
 import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
+import PurchaseOrderCreateModal from "@/components/dashboard/purchase-order-create-modal";
 import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
@@ -41,6 +42,7 @@ import {
   sumPartsLineTotals,
 } from "@/lib/quote-form-shared";
 import { buildEmployeeSelectOptions, buildTechnicianSelectOptions } from "@/lib/technician-select-options";
+import { buildPurchaseOrderInitialFromQuote } from "@/lib/purchase-order-form-shared";
 
 const FORM_ID = "quote-form-modal-edit-form";
 const ADD_MOTOR_FORM_ID = "quote-form-modal-add-motor-form";
@@ -100,6 +102,7 @@ export default function QuoteFormModal({
   const [savingMotor, setSavingMotor] = useState(false);
   const [workOrderModal, setWorkOrderModal] = useState(null);
   const [commissionModalOpen, setCommissionModalOpen] = useState(false);
+  const [createPoModalOpen, setCreatePoModalOpen] = useState(false);
 
   const statusSelectOptions = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -479,13 +482,6 @@ export default function QuoteFormModal({
                   placeholder="Select employee"
                   searchable
                 />
-                {isWriteUpStatus(form?.status) ? (
-                  <p className="sm:col-span-2 lg:col-span-4 text-xs text-secondary">
-                    Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
-                    orders are not created automatically — use Create work order on the RFQ list when the quote is
-                    approved.
-                  </p>
-                ) : null}
                 <Select
                   label="Status"
                   options={statusOptionsForForm}
@@ -501,6 +497,13 @@ export default function QuoteFormModal({
                   placeholder="e.g. 2 weeks"
                 />
               </div>
+              {isWriteUpStatus(form?.status) ? (
+                <p className="mt-2 text-xs text-secondary">
+                  Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
+                  orders are not created automatically — use Create work order on the RFQ list when the quote is
+                  approved.
+                </p>
+              ) : null}
             </FormSection>
             <FormSection title="Customer & motor">
               <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -576,16 +579,28 @@ export default function QuoteFormModal({
             <FormSection
               title="Scope & other cost"
               headerRight={
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  disabled={!viewingQuote?.id}
-                  title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
-                  onClick={() => setCommissionModalOpen(true)}
-                >
-                  Add Sales Commission
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={!viewingQuote?.id}
+                    title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                    onClick={() => setCreatePoModalOpen(true)}
+                  >
+                    Create PO
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    disabled={!viewingQuote?.id}
+                    title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                    onClick={() => setCommissionModalOpen(true)}
+                  >
+                    Add Sales Commission
+                  </Button>
+                </div>
               }
             >
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
@@ -815,6 +830,21 @@ export default function QuoteFormModal({
                 jobStatus: form?.status || viewingQuote.status || "draft",
               }
             : null
+        }
+      />
+
+      <PurchaseOrderCreateModal
+        open={createPoModalOpen && !!viewingQuote?.id}
+        onClose={() => setCreatePoModalOpen(false)}
+        initialForm={
+          viewingQuote?.id
+            ? buildPurchaseOrderInitialFromQuote({
+                quoteId: viewingQuote.id,
+                rfqNumber: form?.rfqNumber || viewingQuote.rfqNumber,
+                repairFlowJobId: form?.repairFlowJobId || viewingQuote.repairFlowJobId,
+                partsLines: form?.partsLines,
+              })
+            : undefined
         }
       />
 

@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useModalStack } from "@/components/modal-provider";
 
-const BASE_Z = 50;
+const BASE_Z = 110;
+const STACK_STEP = 10;
 const sizeClasses = {
   sm: "max-w-sm",
   md: "max-w-[33.6rem]",
@@ -61,23 +62,19 @@ export default function Modal({
   actions,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
-  /** Optional override so this modal appears above others (e.g. when opening a modal from another modal). */
+  /** @deprecated Ignored when ModalStackProvider is active — stack order sets z-index. */
   zIndex: zIndexOverride,
   /** Optional id on the outer portal wrapper (e.g. for print CSS targeting). */
   hostId,
 }) {
   const stackContext = useModalStack();
-  const { addModal, removeModal } = stackContext || {};
+  const { addModal, removeModal, getStackIndex } = stackContext || {};
   const [modalId, setModalId] = useState(null);
+  const registeredIdRef = useRef(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const dragStartRef = useRef({ clientX: 0, clientY: 0, posX: 0, posY: 0 });
   const dialogRef = useRef(null);
-  const modalStackRef = useRef([]);
-
-  useLayoutEffect(() => {
-    modalStackRef.current = stackContext?.stack ?? [];
-  }, [stackContext?.stack]);
 
   const handleHeaderMouseDown = (e) => {
     if (e.button !== 0) return;
@@ -147,20 +144,33 @@ export default function Modal({
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+
+    let registeredId = registeredIdRef.current;
+    if (!registeredId && addModal) {
+      registeredId = addModal(onClose);
+      registeredIdRef.current = registeredId;
+      setModalId(registeredId);
+    }
+
+    return () => {
+      if (registeredIdRef.current != null && removeModal) {
+        removeModal(registeredIdRef.current);
+        registeredIdRef.current = null;
+        setModalId(null);
+      }
+    };
+  }, [open, onClose, addModal, removeModal]);
+
   useEffect(() => {
     if (!open) return undefined;
 
-    let registeredId = null;
-    if (addModal && removeModal) {
-      registeredId = addModal(onClose);
-      queueMicrotask(() => setModalId(registeredId));
-    }
+    const activeId = registeredIdRef.current ?? modalId;
 
     const isTopModal = () => {
-      if (!registeredId) return true;
-      const s = modalStackRef.current;
-      if (!s?.length) return true;
-      return s[s.length - 1].id === registeredId;
+      if (!activeId || !stackContext?.stack?.length) return true;
+      return stackContext.stack[stackContext.stack.length - 1].id === activeId;
     };
 
     const handleKeyDown = (e) => {
@@ -196,12 +206,8 @@ export default function Modal({
     document.addEventListener("keydown", handleKeyDown, true);
     return () => {
       document.removeEventListener("keydown", handleKeyDown, true);
-      if (registeredId != null && removeModal) {
-        removeModal(registeredId);
-        queueMicrotask(() => setModalId(null));
-      }
     };
-  }, [open, onClose, addModal, removeModal]);
+  }, [open, onClose, addModal, modalId, stackContext?.stack]);
 
   if (!open) return null;
 
@@ -211,12 +217,14 @@ export default function Modal({
   if (w) style.width = w;
   if (h) style.height = h;
 
+  const activeId = registeredIdRef.current ?? modalId;
+  const stackIndex =
+    stackContext && getStackIndex && activeId != null ? getStackIndex(activeId) : 0;
+
   const zIndex =
-    zIndexOverride != null
-      ? zIndexOverride
-      : stackContext && modalId != null
-        ? BASE_Z + stackContext.stack.findIndex((item) => item.id === modalId)
-        : BASE_Z;
+    stackContext && activeId != null
+      ? BASE_Z + stackIndex * STACK_STEP
+      : zIndexOverride ?? BASE_Z;
 
   const dialogStyle = {
     ...(Object.keys(style).length ? style : {}),

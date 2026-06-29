@@ -15,7 +15,6 @@ import {
   FiClipboard,
   FiPlus,
   FiEye,
-  FiUserPlus,
 } from "react-icons/fi";
 import { LuQrCode } from "react-icons/lu";
 import { printQuoteMotorTagQr } from "@/lib/print-quote-motor-tag-qr";
@@ -46,6 +45,7 @@ import CustomerQuickViewModal from "@/components/dashboard/customer-quick-view-m
 import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
 import QuoteFormCustomerMotorCards from "@/components/dashboard/quote-form-customer-motor-cards";
 import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
+import PurchaseOrderCreateModal from "@/components/dashboard/purchase-order-create-modal";
 import { scopeAndPartsToFlowLineItems } from "@/lib/repair-flow-quote-form-map";
 import { computeTotalsFromLaborAndParts, normalizeTaxExempt, normalizeTaxPercent, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 import { quoteStatusAllowsWorkOrder } from "@/lib/quote-status-slug";
@@ -61,6 +61,7 @@ import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER 
 import RfqPreInspectionSection from "@/components/dashboard/rfq-pre-inspection-section";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions, buildTechnicianSelectOptions } from "@/lib/technician-select-options";
+import { buildPurchaseOrderInitialFromQuote } from "@/lib/purchase-order-form-shared";
 import { allJobsListPath } from "@/lib/all-jobs-tabs";
 import {
   parseAllJobsDateRange,
@@ -832,6 +833,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
 
   const [sendEmailPreview, setSendEmailPreview] = useState(null);
   const [commissionModalOpen, setCommissionModalOpen] = useState(false);
+  const [createPoModalOpen, setCreatePoModalOpen] = useState(false);
   const [deletingQuoteId, setDeletingQuoteId] = useState(null);
 
   async function handleDeleteQuote(row) {
@@ -1987,12 +1989,6 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 placeholder="Select employee"
                 searchable
               />
-              {isWriteUpStatus(form?.status) ? (
-                <p className="sm:col-span-2 lg:col-span-4 text-xs text-secondary">
-                  Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
-                  orders are not created automatically — use Create work order on the row when the quote is approved.
-                </p>
-              ) : null}
               <Select
                 label="Status"
                 options={statusOptionsForForm}
@@ -2008,6 +2004,12 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 placeholder="e.g. 2 weeks"
               />
             </div>
+            {isWriteUpStatus(form?.status) ? (
+              <p className="mt-2 text-xs text-secondary">
+                Assign a technician so the RFQ appears on the mobile app as a pre-inspection assignment. Work
+                orders are not created automatically — use Create work order on the row when the quote is approved.
+              </p>
+            ) : null}
           </FormSection>
           <FormSection title="Customer & motor">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -2041,8 +2043,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                   className="h-10 shrink-0 whitespace-nowrap"
                   onClick={openAddCustomerModal}
                 >
-                  <FiUserPlus className="h-4 w-4 shrink-0" aria-hidden />
-                  Add New Customer
+                  + Add New
                 </Button>
               </div>
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:col-span-2">
@@ -2064,8 +2065,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                   disabled={!form.customerId}
                   onClick={openAddMotorModal}
                 >
-                  <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-                  Add New Motor
+                  + Add New
                 </Button>
               </div>
             </div>
@@ -2100,16 +2100,28 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
           <FormSection
             title="Scope & other cost"
             headerRight={
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={!viewingQuote?.id}
-                title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
-                onClick={() => setCommissionModalOpen(true)}
-              >
-                Add Sales Commission
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={!viewingQuote?.id}
+                  title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                  onClick={() => setCreatePoModalOpen(true)}
+                >
+                  Create PO
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  disabled={!viewingQuote?.id}
+                  title={!viewingQuote?.id ? "Save the RFQ first" : undefined}
+                  onClick={() => setCommissionModalOpen(true)}
+                >
+                  Add Sales Commission
+                </Button>
+              </div>
             }
           >
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
@@ -2331,6 +2343,21 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
                 jobStatus: form.status || viewingQuote.status || "draft",
               }
             : null
+        }
+      />
+
+      <PurchaseOrderCreateModal
+        open={createPoModalOpen && !!viewingQuote?.id}
+        onClose={() => setCreatePoModalOpen(false)}
+        initialForm={
+          viewingQuote?.id
+            ? buildPurchaseOrderInitialFromQuote({
+                quoteId: viewingQuote.id,
+                rfqNumber: form.rfqNumber || viewingQuote.rfqNumber,
+                repairFlowJobId: form.repairFlowJobId || viewingQuote.repairFlowJobId,
+                partsLines: form.partsLines,
+              })
+            : undefined
         }
       />
     </div>

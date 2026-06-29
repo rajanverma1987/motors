@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiEdit2, FiPaperclip, FiPlus, FiPrinter, FiRotateCw, FiSend, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPaperclip, FiPrinter, FiRotateCw, FiSend, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import DataTable from "@/components/ui/data-table";
@@ -1719,36 +1719,35 @@ export default function DashboardPurchaseOrdersPage() {
         title="Create Purchase Order"
         size="4xl"
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex shrink-0 items-center gap-1.5"
-              onClick={openAddVendorModal}
-            >
-              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-              Add vendor
-            </Button>
-            <Button type="submit" form="create-po-form" variant="primary" size="sm" disabled={savingPo}>
-              {savingPo ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="create-po-form" variant="primary" size="sm" disabled={savingPo}>
+            {savingPo ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="create-po-form" onSubmit={handleCreateSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
           <FormSection title="Vendor & type">
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input label="PO #" value={nextPoNumber} readOnly />
-              <Select
-                label="Vendor"
-                options={vendorOptions}
-                value={form.vendorId}
-                onChange={(e) => setForm((f) => ({ ...f, vendorId: e.target.value ?? "" }))}
-                placeholder="Select vendor"
-                searchable
-                className="lg:col-span-2"
-              />
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end lg:col-span-2">
+                <Select
+                  label="Vendor"
+                  options={vendorOptions}
+                  value={form.vendorId}
+                  onChange={(e) => setForm((f) => ({ ...f, vendorId: e.target.value ?? "" }))}
+                  placeholder="Select vendor"
+                  searchable
+                  className="min-w-0 flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="h-10 shrink-0 whitespace-nowrap"
+                  onClick={openAddVendorModal}
+                >
+                  + Add New
+                </Button>
+              </div>
               <Select
                 label="Type"
                 options={PO_TYPE_OPTIONS}
