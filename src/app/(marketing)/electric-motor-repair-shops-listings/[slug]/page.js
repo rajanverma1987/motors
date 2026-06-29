@@ -14,6 +14,7 @@ import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 import ListingDetailFaqSection from "./listing-detail-faq-section";
 import ListingGalleryLightbox from "./listing-gallery-lightbox";
+import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
 import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
@@ -266,6 +267,7 @@ export default async function ListingDetailPage({ params }) {
 
   return (
     <>
+      <ListingPageViewTracker listingId={listing.id} />
       <script
         id="listing-directory-jsonld"
         type="application/ld+json"
