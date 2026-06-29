@@ -60,12 +60,14 @@ export default function AdminListingStatsPage() {
     {
       key: "companyName",
       label: "Shop name",
-      render: (row) => <span className="font-medium text-title">{row.companyName}</span>,
+      render: (_value, row) => (
+        <span className="font-medium text-title">{row.companyName || "Repair center"}</span>
+      ),
     },
     {
       key: "listingPath",
       label: "Listing page",
-      render: (row) =>
+      render: (_value, row) =>
         row.listingPath ? (
           <div className="flex min-w-0 items-center gap-2">
             <span className="truncate text-sm text-secondary">{row.listingPath}</span>
