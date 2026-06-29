@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getPublicListingsPaginated } from "@/lib/listings-public";
 import { FormContainer } from "@/components/ui/form-layout";
 import PublicListingCard from "@/components/listings/public-listing-card";
+import ListingsDirectorySeoContent from "./listings-directory-seo-content";
+import { ListingsDirectoryItemListJsonLd } from "./listings-directory-seo-jsonld";
 
 const PAGE_SIZE = 40;
 
@@ -32,6 +34,14 @@ export default async function ListingsDirectoryResults({ searchParams }) {
 
   return (
     <section className="py-10 sm:py-14">
+      {total > 0 && (
+        <ListingsDirectoryItemListJsonLd
+          listings={listings}
+          page={currentPage}
+          pageSize={PAGE_SIZE}
+          total={total}
+        />
+      )}
       <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
         <form method="GET" className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {city && <input type="hidden" name="city" value={city} />}
@@ -121,6 +131,8 @@ export default async function ListingsDirectoryResults({ searchParams }) {
             )}
           </>
         )}
+
+        <ListingsDirectorySeoContent total={total} />
       </div>
     </section>
   );

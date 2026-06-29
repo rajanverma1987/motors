@@ -10,11 +10,12 @@ export default function ListingsDirectoryHero() {
           Directory
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
-          Find a motor repair center
+          Find an <stong>electric motor repair shop</stong>
         </h1>
         <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
-          Browse approved repair centers by location. Submit your requirement and we&apos;ll match you with repair
-          centers in your area.
+          Browse industrial and commercial <strong className="text-title">electric motor repair</strong> centers by
+          city, state, or ZIP. Search this directory or submit your requirement and we&apos;ll match you with qualified
+          repair shops in your area.
         </p>
         <ListingsHeroCta />
       </div>

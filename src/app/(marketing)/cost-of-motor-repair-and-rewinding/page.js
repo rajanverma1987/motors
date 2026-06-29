@@ -10,9 +10,11 @@ const COST_SIDEBAR_CALC_SCROLLABLE =
   "min-h-0 max-h-[min(34rem,calc(100dvh-6rem))] overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable] md:max-h-[calc(100dvh-7.5rem)] md:pr-1";
 
 export const metadata = {
-  title: "Electric Motor Repair & Rewinding Cost Guide + Calculator (US)",
+  title: {
+    absolute: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
+  },
   description:
-    "Electric motor repair cost, AC motor rewinding price, and industrial motor rewind estimates: US ballpark tables, HP-based pricing bands, what drives quotes, a free rewind cost calculator, FAQs, and how to compare shops on IQMotorBase.com.",
+    "US motor rewinding costs by HP: $250–$60k+ ballpark tables, free rewind calculator, and 12 FAQs. Compare written quotes from repair shops.",
   keywords: [
     "motor repair cost",
     "electric motor repair cost",
@@ -41,19 +43,20 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Motor Repair & Rewinding Cost Guide + Calculator | IQMotorBase.com",
+    title: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
     description:
-      "US ballpark motor repair and rewind pricing, HP tables, cost drivers, interactive calculator, and FAQs—plus how to get written quotes from repair centers.",
+      "US ballpark motor rewinding prices by HP ($250–$60k+), free calculator, pricing tables, and FAQs—compare shop quotes after inspection.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
     locale: "en_US",
+    modifiedTime: "2026-06-25",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair & Rewinding Cost Guide | IQMotorBase.com",
+    title: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
     description:
-      "Pricing tables, calculator, and FAQs for electric motor repair cost, rewinding, and industrial motor shop quotes in the US.",
+      "Free rewind calculator + US pricing tables by HP. Ballpark motor repair and rewinding costs with 12 FAQs.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -151,7 +154,7 @@ function CostPageBreadcrumbJsonLd({ pageUrl, site }) {
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: site },
       { "@type": "ListItem", position: 2, name: "Electric motor repair", item: `${site}/electric-motor-repair` },
-      { "@type": "ListItem", position: 3, name: "Motor repair & rewinding cost", item: pageUrl },
+      { "@type": "ListItem", position: 3, name: "Motor rewinding cost (2026 US guide)", item: pageUrl },
     ],
   };
   return (
@@ -169,9 +172,10 @@ function CostPageWebPageJsonLd({ pageUrl, site }) {
     "@type": "WebPage",
     "@id": `${pageUrl}#webpage`,
     url: pageUrl,
-    name: "Cost of electric motor repair and rewinding (US guide)",
+    name: "How much does motor rewinding cost? (2026 US guide)",
     description:
-      "US-focused guide to electric motor repair cost, motor rewinding price drivers, reference pricing tables by horsepower, an interactive rewind cost calculator, and FAQs for buyers comparing shop quotes.",
+      "US motor rewinding costs by horsepower: ballpark pricing tables ($250–$60k+), free rewind calculator, cost drivers, and FAQs for comparing shop quotes.",
+    dateModified: "2026-06-25",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
     about: [
       { "@type": "Thing", name: "Electric motor repair" },
@@ -192,6 +196,32 @@ function CostPageWebPageJsonLd({ pageUrl, site }) {
   );
 }
 
+function CostPageCalculatorJsonLd({ pageUrl }) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Motor rewind & repair cost calculator",
+    description:
+      "Free US ballpark calculator for electric motor rewinding and repair cost by horsepower, motor type, and scope.",
+    url: `${pageUrl}#motor-rewind-cost-calculator`,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Any",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    isPartOf: { "@type": "WebPage", "@id": `${pageUrl}#webpage` },
+  };
+  return (
+    <script
+      id="schema-calculator-cost-motor-repair"
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
 export default function CostOfMotorRepairPage() {
   const site = getPublicSiteUrl().replace(/\/$/, "");
   const pageUrl = `${site}${path}`;
@@ -199,10 +229,10 @@ export default function CostOfMotorRepairPage() {
   const calculatorSpotlight = (
     <section
       id="motor-rewind-cost-calculator"
-      className="not-prose"
+      className="not-prose -mx-4 sm:mx-0"
       aria-labelledby="calc-spotlight-heading"
     >
-      <div className="relative overflow-hidden rounded-2xl border-2 border-primary/45 bg-card shadow-2xl ring-1 ring-primary/15">
+      <div className="relative overflow-hidden rounded-none border-y-2 border-primary/45 bg-card shadow-2xl ring-1 ring-primary/15 sm:rounded-2xl sm:border-2">
         <div
           className="pointer-events-none absolute inset-0 bg-gradient-to-b from-primary/20 via-transparent to-transparent"
           aria-hidden
@@ -220,11 +250,12 @@ export default function CostOfMotorRepairPage() {
             the article with written quotes from shops after inspection.
           </p>
         </div>
-        <div className="relative bg-card/80 px-2 py-4 sm:px-4 sm:py-5">
+        <div className="relative bg-card/80 px-0 py-0 sm:px-4 sm:py-5">
           <MotorRewindCostCalculator
             variant="full"
             fullHeadingAsH2
             compact
+            flushMobilePadding
             calculatorSourcePage={path}
           />
         </div>
@@ -247,9 +278,10 @@ export default function CostOfMotorRepairPage() {
       <CostPageFaqJsonLd />
       <CostPageBreadcrumbJsonLd pageUrl={pageUrl} site={site} />
       <CostPageWebPageJsonLd pageUrl={pageUrl} site={site} />
+      <CostPageCalculatorJsonLd pageUrl={pageUrl} />
       <BlogPageLayout
-        title="Cost of motor repair and rewinding"
-        description="Electric motor repair cost and motor rewinding price depend on HP, damage, and scope. This US guide covers ballpark tables, a rewind calculator, quote tips, and FAQs—use it with our directory to compare real shop estimates."
+        title="How much does electric motor repair & rewinding cost?"
+        description="US ballpark ranges from ~$250 for small motors to $60k+ for large industrial rewinds. Use the free calculator, HP pricing tables, and FAQs below—then compare written quotes from shops. Updated June 2026."
         breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
         canonicalPath={path}
         sidebarBelowCta={calculatorSidebar}
@@ -264,12 +296,16 @@ export default function CostOfMotorRepairPage() {
           />
           <section id="cost-guide-summary">
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-12">
-              Typical US price ranges (ballpark only)
+              How much does motor rewinding cost? (US ballpark ranges)
             </h2>
             <p className="mt-4 text-secondary">
-              Use these bands for budgeting and conversations with shops—not as a guarantee. Currency, region, and motor
-              condition change outcomes. Always insist on a{" "}
-              <strong className="text-title">written quote</strong> after inspection.
+              Most US shops quote <strong className="text-title">electric motor rewinding cost</strong> after
+              inspection, but buyers still need orientation before they call. Typical full-rewind ballparks run from{" "}
+              <strong className="text-title">about $250–$900+</strong> on fractional HP motors,{" "}
+              <strong className="text-title">$900–$9,000+</strong> in the 5–50 HP band, and{" "}
+              <strong className="text-title">$6,000–$60,000+</strong> for large industrial or medium-voltage work. Use
+              these bands for budgeting—not as a guarantee. Currency, region, and motor condition change outcomes.
+              Always insist on a <strong className="text-title">written quote</strong> after inspection.
             </p>
             <ul className="mt-6 list-none space-y-3 pl-0 text-secondary">
               <li>

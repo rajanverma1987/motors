@@ -377,6 +377,8 @@ export default function MotorRewindCostCalculator({
   showAllCalculatorsCta = false,
   /** Cost guide: $5 PayPal unlock without registration. */
   allowGuestSingleUse = false,
+  /** Parent spotlight provides card chrome on mobile — skip inner padding/border. */
+  flushMobilePadding = false,
 }) {
   const isEmbedded = variant === "embedded";
   const isDashboard = variant === "dashboard";
@@ -765,12 +767,16 @@ export default function MotorRewindCostCalculator({
 
   const marketSnapshotShort = formatMarketSnapshotAt(market.fetchedAt);
 
+  const shellPaddingClass = flushMobilePadding
+    ? "rounded-none border-0 bg-transparent px-3 py-3 shadow-none sm:rounded-xl sm:border sm:border-border sm:bg-card sm:p-3 sm:shadow-sm"
+    : isCompact
+      ? "p-3 sm:p-3"
+      : isEmbedded
+        ? "p-3 sm:p-4 md:p-5"
+        : "p-4 sm:p-6";
+
   return (
-    <div
-      className={`not-prose rounded-xl border border-border bg-card shadow-sm ${
-        isCompact ? "p-3 sm:p-3" : isEmbedded ? "p-3 sm:p-4 md:p-5" : "p-4 sm:p-6"
-      }`}
-    >
+    <div className={`not-prose rounded-xl border border-border bg-card shadow-sm ${shellPaddingClass}`}>
       <div className={`border-b border-border ${isCompact ? "pb-3" : "pb-4"}`}>
         {!hideMainTitle ? (
           isEmbedded ? (

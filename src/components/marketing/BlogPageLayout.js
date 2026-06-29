@@ -97,16 +97,22 @@ export default function BlogPageLayout({
         >
           {/* Mobile CTA / tools — above content, only on small screens */}
           {sidebarHasAny ? (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
-              {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
-              {sidebarDescription ? (
-                <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
-              ) : null}
-              {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
-              {sidebarBelowCta ? (
-                <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>{sidebarBelowCta}</div>
-              ) : null}
-            </div>
+            sidebarHasLeader ? (
+              <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
+                {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
+                {sidebarDescription ? (
+                  <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
+                ) : null}
+                {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
+                {sidebarBelowCta ? (
+                  <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>
+                    {sidebarBelowCta}
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="md:hidden">{sidebarBelowCta}</div>
+            )
           ) : null}
           {/* Main content - left column */}
           <div className="min-w-0 md:col-start-1 md:row-start-1">

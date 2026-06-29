@@ -1,18 +1,24 @@
 /**
  * Visible FAQ — questions/answers must match FAQPage JSON-LD on the same page.
- * @param {{ items: { question: string, answer: string }[] }} props
+ * @param {{
+ *   items: { question: string, answer: string }[],
+ *   heading?: string,
+ *   description?: string,
+ * }} props
  */
-export default function ListingDetailFaqSection({ items }) {
+export default function ListingDetailFaqSection({
+  items,
+  heading = "Frequently asked questions",
+  description = "Common questions about this electric motor repair listing and how to use the IQMotorBase directory.",
+}) {
   if (!Array.isArray(items) || items.length === 0) return null;
 
   return (
     <section className="mt-10 border-t border-border pt-10" aria-labelledby="listing-faq-heading">
       <h2 id="listing-faq-heading" className="text-xl font-bold tracking-tight text-title sm:text-2xl">
-        Frequently asked questions
+        {heading}
       </h2>
-      <p className="mt-2 max-w-[57.6rem] text-sm text-secondary">
-        Common questions about this electric motor repair listing and how to use the IQMotorBase directory.
-      </p>
+      <p className="mt-2 max-w-[57.6rem] text-sm text-secondary">{description}</p>
       <div className="mt-6 divide-y divide-border rounded-xl border border-border bg-card">
         {items.map((item, i) => (
           <details key={i} className="group px-4 py-3 sm:px-5 sm:py-4">
