@@ -85,16 +85,18 @@ export async function getAdminListingStats(options = {}) {
     status: "approved",
     _id: { $in: visitedIds.filter((id) => mongoose.Types.ObjectId.isValid(id)) },
   })
-    .select("companyName urlSlug")
+    .select("companyName urlSlug reviewedAt createdAt")
     .lean();
 
   let rows = listings.map((doc) => {
     const id = doc._id.toString();
     const slug = getListingPublicPathSegment({ ...doc, id });
+    const listingDate = doc.reviewedAt || doc.createdAt || null;
     return {
       id,
       companyName: doc.companyName || "Repair center",
       listingPath: slug ? `${LISTING_PATH_PREFIX}/${slug}` : "",
+      listingDate: listingDate ? new Date(listingDate).toISOString() : null,
       visitsThisMonth: monthMap.get(id) || 0,
       visitsOverall: overallMap.get(id) || 0,
       quoteRequestCount: quoteMap.get(id) || 0,

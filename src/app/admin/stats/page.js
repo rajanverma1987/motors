@@ -87,6 +87,11 @@ export default function AdminListingStatsPage() {
         ),
     },
     {
+      key: "listingDate",
+      label: "Listing date",
+      render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
+    },
+    {
       key: "visitsThisMonth",
       label: `${monthHeading} visits`,
       type: "number",
