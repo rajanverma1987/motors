@@ -112,8 +112,8 @@ export default function AdminListingStatsPage() {
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-border px-4 py-4 sm:px-5">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="shrink-0 border-b border-border pb-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold text-title sm:text-2xl">Listing stats</h1>
@@ -161,7 +161,7 @@ export default function AdminListingStatsPage() {
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden p-4 sm:p-5">
+      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={items}

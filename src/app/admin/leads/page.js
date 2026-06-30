@@ -16,7 +16,7 @@ function csvEscape(val) {
   return s;
 }
 
-function buildLeadsCsv(leads, listingMap) {
+function buildLeadsCsv(leads) {
   const headers = [
     "id",
     "name",
@@ -42,7 +42,7 @@ function buildLeadsCsv(leads, listingMap) {
   const rows = leads.map((l) => {
     const srcId = l.sourceListingId || "";
     const ids = l.assignedListingIds || [];
-    const assignNames = ids.map((id) => listingMap[id] || id).join("; ");
+    const assignNames = (l.assignedToNames || []).filter(Boolean).join("; ");
     return [
       l.id,
       l.name,
@@ -58,7 +58,7 @@ function buildLeadsCsv(leads, listingMap) {
       l.problemDescription,
       l.message,
       srcId,
-      srcId ? listingMap[srcId] || "" : "",
+      l.sourceListingName || "",
       ids.join("; "),
       assignNames,
       l.leadSource || "",
@@ -107,7 +107,7 @@ export default function AdminLeadsPage() {
     setLoading(true);
     Promise.all([
       fetch(`/api/leads?page=${page}&pageSize=${pageSize}`, { credentials: "include", cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/listings?page=1&pageSize=1000", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
+      fetch("/api/listings?status=approved&page=1&pageSize=100", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([leadsData, listingsData]) => {
         setLeads(Array.isArray(leadsData?.items) ? leadsData.items : []);
@@ -140,7 +140,7 @@ export default function AdminLeadsPage() {
       return;
     }
     try {
-      const csv = buildLeadsCsv(leads, listingMap);
+      const csv = buildLeadsCsv(leads);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -167,7 +167,15 @@ export default function AdminLeadsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to update");
       setLeads((prev) =>
-        prev.map((l) => (l.id === assigningLead.id ? { ...l, assignedListingIds: assignIds } : l))
+        prev.map((l) =>
+          l.id === assigningLead.id
+            ? {
+                ...l,
+                assignedListingIds: assignIds,
+                assignedToNames: assignIds.map((id) => listingMap[id] || ""),
+              }
+            : l
+        )
       );
       toast.success("Assignments updated.");
       closeAssignModal();
@@ -217,15 +225,14 @@ export default function AdminLeadsPage() {
       {
         key: "source",
         label: "Source",
-        render: (_, row) => (row.sourceListingId ? listingMap[row.sourceListingId] || row.sourceListingId : "—"),
+        render: (_, row) => row.sourceListingName || "—",
       },
       {
         key: "assignedTo",
         label: "Assigned to",
         render: (_, row) => {
-          const ids = row.assignedListingIds || [];
-          const names = ids.map((id) => listingMap[id] || id).join(", ");
-          return names || "—";
+          const names = (row.assignedToNames || []).filter(Boolean);
+          return names.length ? names.join(", ") : "—";
         },
       },
       {
@@ -234,7 +241,7 @@ export default function AdminLeadsPage() {
         render: (val) => (val ? new Date(val).toLocaleString() : "—"),
       },
     ],
-    [listingMap]
+    []
   );
 
   return (
@@ -343,8 +350,8 @@ export default function AdminLeadsPage() {
             <div>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Assignment</h3>
               <dl className="grid gap-2 text-sm sm:grid-cols-2">
-                <div><dt className="text-secondary">Source listing</dt><dd className="text-title">{viewingLead.sourceListingId ? listingMap[viewingLead.sourceListingId] || viewingLead.sourceListingId : "—"}</dd></div>
-                <div><dt className="text-secondary">Assigned to (max 3)</dt><dd className="text-title">{((viewingLead.assignedListingIds || []).map((id) => listingMap[id] || id).join(", ")) || "—"}</dd></div>
+                <div><dt className="text-secondary">Source listing</dt><dd className="text-title">{viewingLead.sourceListingName || "—"}</dd></div>
+                <div><dt className="text-secondary">Assigned to (max 3)</dt><dd className="text-title">{((viewingLead.assignedToNames || []).filter(Boolean).join(", ")) || "—"}</dd></div>
               </dl>
             </div>
             {viewingLead.createdAt && (

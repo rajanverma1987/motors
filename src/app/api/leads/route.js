@@ -11,6 +11,33 @@ import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } 
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 
+async function enrichLeadsWithListingNames(leads) {
+  const idSet = new Set();
+  for (const lead of leads) {
+    if (lead.sourceListingId) idSet.add(lead.sourceListingId);
+    for (const id of lead.assignedListingIds || []) {
+      if (id) idSet.add(id);
+    }
+  }
+
+  const validIds = [...idSet].filter((id) => mongoose.isValidObjectId(id));
+  const nameMap = new Map();
+  if (validIds.length > 0) {
+    const listings = await Listing.find({ _id: { $in: validIds } })
+      .select("companyName")
+      .lean();
+    for (const doc of listings) {
+      nameMap.set(doc._id.toString(), doc.companyName || "");
+    }
+  }
+
+  return leads.map((lead) => ({
+    ...lead,
+    sourceListingName: lead.sourceListingId ? nameMap.get(lead.sourceListingId) || "" : "",
+    assignedToNames: (lead.assignedListingIds || []).map((id) => nameMap.get(id) || ""),
+  }));
+}
+
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "lead", 20);
   if (!allowed) {
@@ -203,7 +230,8 @@ export async function GET(request) {
       id: l._id.toString(),
       _id: undefined,
     }));
-    return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
+    const items = await enrichLeadsWithListingNames(listWithId);
+    return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("List leads error:", err);
     return NextResponse.json(
