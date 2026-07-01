@@ -83,6 +83,12 @@ export default function ElectricMotorRepairHubPage() {
               <h2 className="text-xl font-bold text-title">Start here</h2>
               <ul className="mt-4 space-y-3 text-secondary">
                 <li>
+                  <Link href="/industrial-motor-repair" className="font-medium text-primary hover:underline">
+                    Industrial motor repair
+                  </Link>
+                  <span> — plant motors, rewinding, costs &amp; shop finder</span>
+                </li>
+                <li>
                   <Link href="/cost-of-motor-repair-and-rewinding" className="font-medium text-primary hover:underline">
                     Motor repair &amp; rewinding cost guide
                   </Link>

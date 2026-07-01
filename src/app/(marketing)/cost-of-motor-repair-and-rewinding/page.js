@@ -318,7 +318,11 @@ export default function CostOfMotorRepairPage() {
               </li>
               <li>
                 <strong className="text-title">Large industrial (50 HP and up):</strong> Often several thousand to tens of
-                thousands for full rewinds, extensive mechanical work, or critical spares with tight schedules.
+                thousands for full rewinds, extensive mechanical work, or critical spares with tight schedules. See our{" "}
+                <Link href="/industrial-motor-repair" className="text-primary font-medium hover:underline">
+                  industrial motor repair guide
+                </Link>{" "}
+                for plant-focused service types and shop selection.
               </li>
             </ul>
             <p className="mt-6 text-secondary">

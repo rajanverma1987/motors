@@ -17,6 +17,7 @@ const footerLinks = {
   ],
   "For buyers": [
     { href: "/electric-motor-repair", label: "Electric motor repair hub" },
+    { href: "/industrial-motor-repair", label: "Industrial motor repair" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
     { href: "/electric-motor-repair-shops-listings", label: "Find repair centers" },
     { href: "/electric-motor-repair-near-me", label: "Repair shops near me" },

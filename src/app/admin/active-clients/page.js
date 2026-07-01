@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { FiEye, FiCreditCard } from "react-icons/fi";
+import { FiEye, FiCreditCard, FiMail } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -78,6 +78,7 @@ export default function AdminActiveClientsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const [sendingEmailId, setSendingEmailId] = useState(null);
 
   const openManageSubscription = useCallback(
     (row) => {
@@ -88,6 +89,27 @@ export default function AdminActiveClientsPage() {
       router.push("/admin/clients");
     },
     [router]
+  );
+
+  const sendFeedbackEmail = useCallback(
+    async (row) => {
+      if (!row?.id || sendingEmailId) return;
+      setSendingEmailId(row.id);
+      try {
+        const res = await fetch(`/api/admin/users/${row.id}/feedback-outreach`, {
+          method: "POST",
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send email");
+        toast.success(`Feedback email sent to ${data.email || row.email}.`);
+      } catch (e) {
+        toast.error(e.message || "Failed to send email");
+      } finally {
+        setSendingEmailId(null);
+      }
+    },
+    [toast, sendingEmailId]
   );
 
   const fetchUsers = useCallback(async () => {
@@ -106,6 +128,7 @@ export default function AdminActiveClientsPage() {
           ...u,
           _onView: () => setViewClient(u),
           _onManageSub: () => openManageSubscription(u),
+          _onSendEmail: () => sendFeedbackEmail(u),
         }))
       );
       setTotalCount(Number(data.totalCount) || 0);
@@ -116,7 +139,7 @@ export default function AdminActiveClientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, page, pageSize, searchQuery, openManageSubscription]);
+  }, [toast, page, pageSize, searchQuery, openManageSubscription, sendFeedbackEmail]);
 
   useEffect(() => {
     fetchUsers();
@@ -151,6 +174,25 @@ export default function AdminActiveClientsPage() {
           <FiCreditCard className="h-4 w-4" />
         </button>
       ),
+    },
+    {
+      key: "emailAction",
+      label: "",
+      render: (_, row) => {
+        const busy = sendingEmailId === row.id;
+        return (
+          <button
+            type="button"
+            onClick={() => row._onSendEmail?.()}
+            disabled={busy || !!sendingEmailId}
+            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Send feedback email"
+            title="Send feedback & subscription email"
+          >
+            <FiMail className={`h-4 w-4 ${busy ? "animate-pulse" : ""}`} />
+          </button>
+        );
+      },
     },
     { key: "email", label: "Email" },
     { key: "shopName", label: "Shop name" },

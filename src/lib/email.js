@@ -453,6 +453,45 @@ export async function sendListingFeaturedAccountEmail({
 }
 
 /**
+ * Admin outreach to active portal clients — feedback request and paid subscription interest.
+ */
+export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, shopName }) {
+  const site = getPublicSiteUrl().replace(/\/$/, "");
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const greeting = contactName?.trim()
+    ? esc(contactName.trim())
+    : shopName?.trim()
+      ? `team at ${esc(shopName.trim())}`
+      : "there";
+  const pricingUrl = `${site}/pricing`;
+  const subscriptionUrl = `${site}/dashboard/subscription`;
+  const contactUrl = `${site}/contact`;
+  const subject = "How is IQMotorBase working for your shop?";
+  const html = `
+    <p>Hi ${greeting},</p>
+    <p>Thank you for using <strong>IQMotorBase.com</strong>${shopName?.trim() ? ` at <strong>${esc(shopName.trim())}</strong>` : ""}. We hope the portal is helping you manage jobs, quotes, and customer communication.</p>
+    <p>We would love your feedback:</p>
+    <ul>
+      <li>What is working well for your shop today?</li>
+      <li>What features or workflows would make IQMotorBase more useful?</li>
+      <li>Is there anything confusing or missing from your day-to-day use?</li>
+    </ul>
+    <p>Simply reply to this email with your thoughts — even a few sentences help us prioritize improvements.</p>
+    <p><strong>Interested in a paid subscription?</strong> If you are on a free or trial plan and want full CRM access, calculators, marketplace tools, and ongoing support, we would be happy to walk you through options:</p>
+    <ul>
+      <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
+      <li><a href="${esc(subscriptionUrl)}">Manage subscription in your dashboard</a></li>
+      <li><a href="${esc(contactUrl)}">Contact us for a demo or custom quote</a></li>
+    </ul>
+    <p>Reply here or reach out through the contact page if you would like to discuss a paid plan for your shop.</p>
+    <p>Thank you for being part of IQMotorBase.com.</p>
+    <p>— IQMotorBase.com</p>
+  `;
+  return sendMarketingEmail(to, subject, html);
+}
+
+/**
  * Notify client when an admin attaches or changes their subscription plan (PayPal approval link or Free Ultimate).
  */
 export async function sendSubscriptionPlanAttachedEmail({

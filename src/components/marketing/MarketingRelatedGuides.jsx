@@ -2,6 +2,11 @@ import Link from "next/link";
 
 const BUYER_LINKS = [
   {
+    href: "/industrial-motor-repair",
+    label: "Industrial motor repair",
+    hint: "Plant motors, rewinding, costs & shops",
+  },
+  {
     href: "/cost-of-motor-repair-and-rewinding",
     label: "Motor repair & rewinding costs",
     hint: "Price factors and US ballpark ranges",

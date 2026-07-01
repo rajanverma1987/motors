@@ -33,6 +33,12 @@ export async function getSitemapEntries() {
     },
     { url: `${baseUrl}/electric-motor-repair`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     {
+      url: `${baseUrl}/industrial-motor-repair`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.88,
+    },
+    {
       url: `${baseUrl}/emergency-motor-repair-what-to-do`,
       lastModified: new Date(),
       changeFrequency: "monthly",
