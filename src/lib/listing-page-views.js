@@ -132,3 +132,64 @@ export async function getAdminListingStats(options = {}) {
     monthLabel: monthPrefix,
   };
 }
+
+/**
+ * Load one approved listing's public stats for admin outreach email.
+ * @param {string} listingId
+ * @returns {Promise<null | {
+ *   id: string,
+ *   email: string,
+ *   companyName: string,
+ *   listingPath: string,
+ *   listingDate: string | null,
+ *   visitsThisMonth: number,
+ *   visitsOverall: number,
+ *   quoteRequestCount: number,
+ *   monthLabel: string,
+ * }>}
+ */
+export async function getListingStatsForOutreach(listingId) {
+  if (!listingId || !mongoose.Types.ObjectId.isValid(listingId)) return null;
+
+  await connectDB();
+
+  const doc = await Listing.findOne({ _id: listingId, status: "approved" })
+    .select("companyName email urlSlug reviewedAt createdAt")
+    .lean();
+  if (!doc || !doc.email?.trim()) return null;
+
+  const id = doc._id.toString();
+  const objectId = doc._id;
+  const monthPrefix = currentUtcMonthPrefix();
+
+  const [monthlyViews, overallViews, quoteRequestCount] = await Promise.all([
+    ListingPageViewDaily.aggregate([
+      { $match: { listingId: objectId, dateKey: { $regex: `^${monthPrefix}` } } },
+      { $group: { _id: null, count: { $sum: "$count" } } },
+    ]),
+    ListingPageViewDaily.aggregate([
+      { $match: { listingId: objectId } },
+      { $group: { _id: null, count: { $sum: "$count" } } },
+    ]),
+    Lead.countDocuments({ sourceListingId: id }),
+  ]);
+
+  const visitsThisMonth = monthlyViews[0]?.count || 0;
+  const visitsOverall = overallViews[0]?.count || 0;
+  if (visitsOverall <= 0) return null;
+
+  const slug = getListingPublicPathSegment({ ...doc, id });
+  const listingDate = doc.reviewedAt || doc.createdAt || null;
+
+  return {
+    id,
+    email: doc.email.trim(),
+    companyName: doc.companyName || "Repair center",
+    listingPath: slug ? `${LISTING_PATH_PREFIX}/${slug}` : "",
+    listingDate: listingDate ? new Date(listingDate).toISOString() : null,
+    visitsThisMonth,
+    visitsOverall,
+    quoteRequestCount,
+    monthLabel: monthPrefix,
+  };
+}

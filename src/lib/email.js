@@ -492,6 +492,67 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
 }
 
 /**
+ * Admin outreach — listing page stats, free directory benefits, shop management software subscription.
+ */
+export async function sendListingStatsOutreachEmail({
+  to,
+  companyName,
+  listingUrl,
+  monthLabel,
+  visitsThisMonth,
+  visitsOverall,
+  quoteRequestCount,
+}) {
+  const site = getPublicSiteUrl().replace(/\/$/, "");
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const monthName = monthLabel
+    ? new Date(`${monthLabel}-01T12:00:00Z`).toLocaleString("en-US", {
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : "This month";
+  const fullListingUrl = listingUrl?.startsWith("http") ? listingUrl : `${site}${listingUrl || ""}`;
+  const softwareUrl = `${site}/motor-repair-shop-management-software`;
+  const pricingUrl = `${site}/pricing`;
+  const subscriptionUrl = `${site}/dashboard/subscription`;
+  const contactUrl = `${site}/contact`;
+  const subject = `Your IQMotorBase listing stats — ${esc(companyName || "repair center")}`;
+  const html = `
+    <p>Hello${companyName?.trim() ? ` from <strong>${esc(companyName.trim())}</strong>` : ""},</p>
+    <p>Your repair center is listed on <strong>IQMotorBase.com</strong> and customers are finding you online. Here is a snapshot of your listing performance:</p>
+    <table style="border-collapse:collapse;margin:16px 0;">
+      <tbody>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(monthName)} page visits</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(visitsThisMonth ?? 0))}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Overall listing page visits</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(visitsOverall ?? 0))}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Quote requests from your listing</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(String(quoteRequestCount ?? 0))}</td></tr>
+      </tbody>
+    </table>
+    ${listingUrl ? `<p>View your public listing: <a href="${esc(fullListingUrl)}">${esc(fullListingUrl)}</a></p>` : ""}
+    <p><strong>What you receive for free today</strong></p>
+    <ul>
+      <li>A searchable directory profile so buyers can find your shop by location and services</li>
+      <li>Visibility on IQMotorBase.com when customers search for motor repair and rewinding</li>
+      <li>Quote requests routed to your shop when visitors inquire from your listing page</li>
+      <li>Ongoing exposure as our directory and SEO content grow — at no listing fee</li>
+    </ul>
+    <p><strong>Run your whole shop in one place</strong></p>
+    <p>Many shops start with a free directory listing, then move to <strong>IQMotorBase shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more — without juggling spreadsheets and disconnected tools.</p>
+    <ul>
+      <li><a href="${esc(softwareUrl)}">Motor repair shop management software</a></li>
+      <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
+      <li><a href="${esc(subscriptionUrl)}">Subscribe from your dashboard</a></li>
+      <li><a href="${esc(contactUrl)}">Contact us for a demo</a></li>
+    </ul>
+    <p>Reply to this email if you have questions about your stats or want help choosing a plan for your shop.</p>
+    <p>Thank you for being part of IQMotorBase.com.</p>
+    <p>— IQMotorBase.com</p>
+  `;
+  return sendMarketingEmail(to, subject, html);
+}
+
+/**
  * Notify client when an admin attaches or changes their subscription plan (PayPal approval link or Free Ultimate).
  */
 export async function sendSubscriptionPlanAttachedEmail({

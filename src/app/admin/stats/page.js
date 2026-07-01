@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { FiExternalLink, FiRefreshCw } from "react-icons/fi";
+import { FiExternalLink, FiMail, FiRefreshCw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import { useToast } from "@/components/toast-provider";
 
 const SORT_OPTIONS = [
   { value: "visitsOverall", label: "Overall visits (high → low)" },
@@ -14,6 +15,7 @@ const SORT_OPTIONS = [
 ];
 
 export default function AdminListingStatsPage() {
+  const toast = useToast();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -23,6 +25,28 @@ export default function AdminListingStatsPage() {
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [sort, setSort] = useState("visitsOverall");
+  const [sendingEmailId, setSendingEmailId] = useState(null);
+
+  const sendStatsEmail = useCallback(
+    async (row) => {
+      if (!row?.id || sendingEmailId) return;
+      setSendingEmailId(row.id);
+      try {
+        const res = await fetch(`/api/admin/listing-stats/${row.id}/email`, {
+          method: "POST",
+          credentials: "include",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to send email");
+        toast.success(`Stats email sent to ${data.email || row.companyName}.`);
+      } catch (e) {
+        toast.error(e.message || "Failed to send email");
+      } finally {
+        setSendingEmailId(null);
+      }
+    },
+    [toast, sendingEmailId]
+  );
 
   const loadStats = useCallback(() => {
     setLoading(true);
@@ -57,6 +81,25 @@ export default function AdminListingStatsPage() {
     : "This month";
 
   const columns = [
+    {
+      key: "emailAction",
+      label: "",
+      render: (_, row) => {
+        const busy = sendingEmailId === row.id;
+        return (
+          <button
+            type="button"
+            onClick={() => sendStatsEmail(row)}
+            disabled={busy || !!sendingEmailId}
+            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Send stats email"
+            title="Send listing stats & subscription email"
+          >
+            <FiMail className={`h-4 w-4 shrink-0 ${busy ? "animate-pulse" : ""}`} aria-hidden />
+          </button>
+        );
+      },
+    },
     {
       key: "companyName",
       label: "Shop name",
