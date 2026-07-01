@@ -120,6 +120,7 @@ export default function AdminListingsPage() {
   const [searchAllowsMultiple, setSearchAllowsMultiple] = useState(false);
   const [emailVerifyError, setEmailVerifyError] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
+  const [emailVerifyBypass, setEmailVerifyBypass] = useState(false);
   const [searchAttempted, setSearchAttempted] = useState(false);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
@@ -468,6 +469,7 @@ export default function AdminListingsPage() {
     setSearchAllowsMultiple(false);
     setEmailVerifyError("");
     setEmailVerified(false);
+    setEmailVerifyBypass(false);
     try {
       const qs = new URLSearchParams();
       if (e) qs.set("email", e);
@@ -501,6 +503,7 @@ export default function AdminListingsPage() {
     setSearchAttempted(false);
     setEmailVerifyError("");
     setEmailVerified(false);
+    setEmailVerifyBypass(false);
     setNewListingSearchOpen(true);
   }, []);
 
@@ -706,6 +709,7 @@ export default function AdminListingsPage() {
                 setSearchEmail(e.target.value);
                 setEmailVerifyError("");
                 setEmailVerified(false);
+                setEmailVerifyBypass(false);
                 setSearchAttempted(false);
                 setSearchResults([]);
               }}
@@ -713,11 +717,28 @@ export default function AdminListingsPage() {
               inputClassName={emailVerifyError ? "border-danger focus:ring-danger focus:border-danger" : ""}
             />
             {emailVerifyError ? (
-              <p className="mt-1 text-sm text-danger" role="alert">
-                {emailVerifyError}
+              <div className="mt-1 space-y-2">
+                <p className="text-sm text-danger" role="alert">
+                  {emailVerifyError}
+                </p>
+                {searchAttempted && searchResults.length === 0 && !emailVerifyBypass ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setEmailVerifyBypass(true)}
+                  >
+                    Continue anyway
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
+            {emailVerifyBypass && searchEmail.trim() ? (
+              <p className="mt-1 text-sm text-warning">
+                Email verification skipped — you can create the listing, but delivery to this address is not guaranteed.
               </p>
             ) : null}
-            {emailVerified && searchEmail.trim() ? (
+            {emailVerified && searchEmail.trim() && !emailVerifyBypass ? (
               <p className="mt-1 text-sm text-success">Email verified — you can create a new listing.</p>
             ) : null}
           </div>
@@ -764,7 +785,7 @@ export default function AdminListingsPage() {
             ) : null}
           </div>
         ) : null}
-        {searchAttempted && !searching && searchResults.length === 0 && (!searchEmail.trim() || emailVerified) ? (
+        {searchAttempted && !searching && searchResults.length === 0 && (!searchEmail.trim() || emailVerified || emailVerifyBypass) ? (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-sm text-secondary">No listing found for this search.</p>
             <Button
@@ -789,6 +810,7 @@ export default function AdminListingsPage() {
         generatePassword={generateTempPassword}
         prefillEmail={searchEmail}
         prefillPhone={searchPhone}
+        skipEmailVerification={emailVerifyBypass}
         onCreated={() => {
           fetchListings();
         }}

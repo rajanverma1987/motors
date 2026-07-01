@@ -40,6 +40,7 @@ export default function AdminFeaturedListingCreateModal({
   generatePassword,
   prefillEmail = "",
   prefillPhone = "",
+  skipEmailVerification = false,
 }) {
   const toast = useToast();
   const [form, setForm] = useState(INITIAL);
@@ -82,6 +83,7 @@ export default function AdminFeaturedListingCreateModal({
         body: JSON.stringify({
           ...form,
           password: pwd,
+          skipEmailVerification: !!skipEmailVerification,
           pickupDeliveryAvailable: false,
           rushRepairAvailable: false,
           services: [],
@@ -128,6 +130,12 @@ export default function AdminFeaturedListingCreateModal({
         the welcome email with credentials. For full profile (services, photos), open the listing after save — same
         editor as the eye icon.
       </p>
+      {skipEmailVerification ? (
+        <p className="mt-2 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-sm text-warning">
+          Email verification was skipped for this address. The listing will still be created, but the welcome email may
+          not be deliverable.
+        </p>
+      ) : null}
       <Form id="admin-featured-listing-form" onSubmit={handleSubmit} className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 !space-y-0">
         <Input label="Company name *" name="companyName" value={form.companyName} onChange={update} required />
         <Input label="Email (login) *" name="email" type="email" value={form.email} onChange={update} required />

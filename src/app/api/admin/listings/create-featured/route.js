@@ -88,7 +88,8 @@ export async function POST(request) {
     }
 
     const emailVerification = await verifyListingEmail(emailNorm);
-    if (!emailVerification.valid) {
+    const skipEmailVerification = body?.skipEmailVerification === true;
+    if (!emailVerification.valid && !skipEmailVerification) {
       return NextResponse.json(
         { error: emailVerification.message || "This email address is invalid.", code: "EMAIL_INVALID" },
         { status: 400 }
