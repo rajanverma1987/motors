@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import LocationPage from "@/models/LocationPage";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const LOCATION_PAGE_SORT_KEYS = ["slug", "title", "city", "state", "status"];
 
 export async function GET(request) {
   try {
@@ -14,9 +17,18 @@ export async function GET(request) {
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: LOCATION_PAGE_SORT_KEYS,
+      defaultKey: "slug",
+      defaultDir: "asc",
+    });
     const [totalCount, list] = await Promise.all([
       LocationPage.countDocuments({}),
-      LocationPage.find({}).sort({ slug: 1 }).skip(skip).limit(pageSize).lean(),
+      LocationPage.find({})
+        .sort(mongoSortFromAdmin(sortBy, sortDir, { area: "city" }))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     const data = list.map((l) => ({
       ...l,

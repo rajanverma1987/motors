@@ -4,6 +4,9 @@ import MarketplaceItem from "@/models/MarketplaceItem";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { LIMITS, clampString, clampArray } from "@/lib/validation";
 import { generateMarketplaceSlug, MARKETPLACE_CATEGORIES } from "@/lib/marketplace";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const MARKETPLACE_ITEM_SORT_KEYS = ["title", "shopNameSnapshot", "category", "priceDisplay", "status", "slug", "createdAt"];
 
 const CAT = new Set(MARKETPLACE_CATEGORIES.map((c) => c.value));
 const PLATFORM_EMAIL = "platform@marketplace.internal";
@@ -38,10 +41,19 @@ export async function GET(request) {
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: MARKETPLACE_ITEM_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
     const q = { sellerType: "platform" };
     const [totalCount, list] = await Promise.all([
       MarketplaceItem.countDocuments(q),
-      MarketplaceItem.find(q).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+      MarketplaceItem.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     return NextResponse.json({ items: list.map((d) => toRow(d)), page, pageSize, totalCount });
   } catch (err) {

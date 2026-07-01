@@ -3,6 +3,9 @@ import { connectDB } from "@/lib/db";
 import MarketingContact from "@/models/MarketingContact";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const MARKETING_CONTACT_SORT_KEYS = ["email", "name", "companyName", "status", "followUpCount", "createdAt"];
 
 export async function GET(request) {
   try {
@@ -20,9 +23,18 @@ export async function GET(request) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       q.$or = [{ email: rx }, { name: rx }, { companyName: rx }, { notes: rx }];
     }
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: MARKETING_CONTACT_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
     const [totalCount, list] = await Promise.all([
       MarketingContact.countDocuments(q),
-      MarketingContact.find(q).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+      MarketingContact.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     const data = list.map((c) => ({
       id: c._id.toString(),

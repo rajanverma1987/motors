@@ -13,6 +13,8 @@ import { Form } from "@/components/ui/form-layout";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 /** Must match CALCULATOR_SUBSCRIPTION_PLAN_SLUG in calculator-subscription-plan.js */
 const CALCULATOR_PAYWALL_SLUG = "calc-only";
@@ -57,11 +59,22 @@ export default function AdminSubscriptionPlansPage() {
   const [editPlan, setEditPlan] = useState(null);
   const [editForm, setEditForm] = useState({ ...EMPTY_EDIT });
   const [editSaving, setEditSaving] = useState(false);
+  const { tableSort, handleTableSort } = useAdminTableSort("createdAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/subscription-plans?page=${page}&pageSize=${pageSize}`, {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      appendAdminSortParams(params, tableSort);
+      const res = await fetch(`/api/admin/subscription-plans?${params.toString()}`, {
         credentials: "include",
       });
       const data = await res.json();
@@ -75,7 +88,7 @@ export default function AdminSubscriptionPlansPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, page, pageSize]);
+  }, [toast, page, pageSize, tableSort]);
 
   useEffect(() => {
     load();
@@ -250,6 +263,7 @@ export default function AdminSubscriptionPlansPage() {
     {
       key: "name",
       label: "Name",
+      sortable: true,
       render: (v, row) => (
         <span className="inline-flex flex-wrap items-center gap-2">
           {v}
@@ -261,10 +275,11 @@ export default function AdminSubscriptionPlansPage() {
         </span>
       ),
     },
-    { key: "slug", label: "Slug" },
+    { key: "slug", label: "Slug", sortable: true },
     {
       key: "planType",
       label: "Type",
+      sortable: true,
       render: (v) => (
         <Badge variant={v === "internal" ? "default" : "primary"} className="rounded-full px-2.5 py-0.5 text-xs">
           {v}
@@ -274,9 +289,10 @@ export default function AdminSubscriptionPlansPage() {
     {
       key: "customPrice",
       label: "Price",
+      sortable: true,
       render: (v, row) => `${row.currency || "USD"} ${Number(v).toFixed(2)} / ${row.billingCycle}`,
     },
-    { key: "negotiatedBy", label: "Negotiated by" },
+    { key: "negotiatedBy", label: "Negotiated by", sortable: true },
     {
       key: "paypalPlanId",
       label: "PayPal plan",
@@ -285,6 +301,7 @@ export default function AdminSubscriptionPlansPage() {
     {
       key: "active",
       label: "Active",
+      sortable: true,
       render: (v, row) => (
         <button
           type="button"
@@ -395,6 +412,8 @@ export default function AdminSubscriptionPlansPage() {
             loading={loading}
             emptyMessage="No plans yet."
             responsive
+            sortState={tableSort}
+            onSort={onTableSort}
             pagination={{ page, pageSize, totalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setPage(nextPage);

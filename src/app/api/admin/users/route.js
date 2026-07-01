@@ -3,6 +3,10 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import ShopSubscription from "@/models/ShopSubscription";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { parseAdminSortParams, mongoSortFromAdmin, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
+
+const USER_ADMIN_SORT_KEYS = ["email", "shopName", "contactName", "subscriptionSummary", "canLogin", "createdAt"];
+const USER_MONGO_SORT_KEYS = ["email", "shopName", "contactName", "canLogin", "createdAt"];
 
 export async function GET(request) {
   try {
@@ -21,21 +25,32 @@ export async function GET(request) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
       q.$or = [{ email: rx }, { shopName: rx }, { contactName: rx }];
     }
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: USER_ADMIN_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
+    const useMongoSort = USER_MONGO_SORT_KEYS.includes(sortBy);
     const [totalCount, users] = await Promise.all([
       User.countDocuments(q),
-      User.find(q)
-        .select("_id email shopName contactName canLogin createdAt")
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(pageSize)
-        .lean(),
+      useMongoSort
+        ? User.find(q)
+            .select("_id email shopName contactName canLogin createdAt")
+            .sort(mongoSortFromAdmin(sortBy, sortDir))
+            .skip(skip)
+            .limit(pageSize)
+            .lean()
+        : User.find(q)
+            .select("_id email shopName contactName canLogin createdAt")
+            .sort({ createdAt: -1 })
+            .lean(),
     ]);
     const emails = users.map((u) => u.email);
     const subs = await ShopSubscription.find({ ownerEmail: { $in: emails } })
       .populate("planId", "name slug planType")
       .lean();
     const subByEmail = Object.fromEntries(subs.map((s) => [s.ownerEmail, s]));
-    const list = users.map((u) => {
+    let list = users.map((u) => {
       const s = subByEmail[u.email];
       const p = s?.planId;
       return {
@@ -56,6 +71,11 @@ export async function GET(request) {
           : null,
       };
     });
+    if (!useMongoSort) {
+      const paged = sortAndPaginateAdminRows(list, { sortBy, sortDir }, page, pageSize);
+      list = paged.items;
+      return NextResponse.json({ users: list, page, pageSize, totalCount: paged.totalCount });
+    }
     return NextResponse.json({ users: list, page, pageSize, totalCount });
   } catch (err) {
     console.error("Admin users list error:", err);

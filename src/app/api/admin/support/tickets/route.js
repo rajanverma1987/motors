@@ -3,6 +3,9 @@ import { connectDB } from "@/lib/db";
 import SupportTicket from "@/models/SupportTicket";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { normalizeStatus, ticketToListRow } from "@/lib/support-tickets";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const SUPPORT_TICKET_SORT_KEYS = ["ticketRef", "shopName", "createdByEmail", "subject", "category", "status", "updatedAt"];
 
 export async function GET(request) {
   try {
@@ -21,9 +24,18 @@ export async function GET(request) {
       const st = normalizeStatus(statusRaw);
       if (st) q.status = st;
     }
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: SUPPORT_TICKET_SORT_KEYS,
+      defaultKey: "updatedAt",
+      defaultDir: "desc",
+    });
     const [totalCount, list] = await Promise.all([
       SupportTicket.countDocuments(q),
-      SupportTicket.find(q).sort({ updatedAt: -1 }).skip(skip).limit(pageSize).lean(),
+      SupportTicket.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     return NextResponse.json({ items: list.map(ticketToListRow), page, pageSize, totalCount });
   } catch (err) {

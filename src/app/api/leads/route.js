@@ -10,6 +10,9 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
+import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
+
+const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
 
 async function enrichLeadsWithListingNames(leads) {
   const idSet = new Set();
@@ -215,22 +218,20 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
-    const skip = (page - 1) * pageSize;
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: LEAD_ADMIN_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
     const q = {};
-    const [totalCount, list] = await Promise.all([
-      Lead.countDocuments(q),
-      Lead.find(q)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(pageSize)
-        .lean(),
-    ]);
+    const list = await Lead.find(q).sort({ createdAt: -1 }).lean();
     const listWithId = list.map((l) => ({
       ...l,
       id: l._id.toString(),
       _id: undefined,
     }));
-    const items = await enrichLeadsWithListingNames(listWithId);
+    const enriched = await enrichLeadsWithListingNames(listWithId);
+    const { items, totalCount } = sortAndPaginateAdminRows(enriched, { sortBy, sortDir }, page, pageSize);
     return NextResponse.json({ items, page, pageSize, totalCount });
   } catch (err) {
     console.error("List leads error:", err);

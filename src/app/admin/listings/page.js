@@ -14,6 +14,8 @@ import Textarea from "@/components/ui/textarea";
 import Input from "@/components/ui/input";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
@@ -125,6 +127,15 @@ export default function AdminListingsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const { tableSort, handleTableSort } = useAdminTableSort("submittedAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const goManageSubscription = useCallback(
     (row) => {
@@ -157,6 +168,7 @@ export default function AdminListingsPage() {
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
     params.set("page", String(page));
     params.set("pageSize", String(pageSize));
+    appendAdminSortParams(params, tableSort);
     const url = `/api/listings?${params.toString()}`;
     return fetch(url, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
@@ -169,7 +181,7 @@ export default function AdminListingsPage() {
         setTotalCount(0);
       })
       .finally(() => setLoading(false));
-  }, [filter, searchQuery, page, pageSize]);
+  }, [filter, searchQuery, page, pageSize, tableSort]);
 
   const handleDeleteListing = useCallback(
     async (row) => {
@@ -254,6 +266,7 @@ export default function AdminListingsPage() {
       {
         key: "companyName",
         label: "Company",
+        sortable: true,
         render: (val, row) => (
           <div className="flex min-w-0 max-w-[280px] items-center gap-2 sm:max-w-[33.6rem]">
             <span className="truncate font-medium text-title" title={val}>
@@ -271,15 +284,17 @@ export default function AdminListingsPage() {
           </div>
         ),
       },
-      { key: "email", label: "Email" },
+      { key: "email", label: "Email", sortable: true },
       {
         key: "location",
         label: "Location",
+        sortable: true,
         render: (_, row) => [row.city, row.state].filter(Boolean).join(", ") || "—",
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (val) => (
           <Badge variant={val === "approved" ? "success" : val === "rejected" ? "danger" : "warning"}>{val}</Badge>
         ),
@@ -287,11 +302,13 @@ export default function AdminListingsPage() {
       {
         key: "isSeed",
         label: "Source",
+        sortable: true,
         render: (val) => (val ? <Badge variant="default">Seed</Badge> : <span className="text-secondary">—</span>),
       },
       {
         key: "submittedAt",
         label: "Submitted",
+        sortable: true,
         render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
       },
     ],
@@ -601,6 +618,8 @@ export default function AdminListingsPage() {
           onSearch={handleSearch}
           searchPlaceholder="Search company, email, location, status…"
           responsive
+          sortState={tableSort}
+          onSort={onTableSort}
           selectable
           selectedRowIds={selectedRowIds}
           onSelectionChange={handleSelectionChange}

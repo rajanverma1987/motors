@@ -14,8 +14,10 @@ export async function GET(request) {
     const pageSize = searchParams.get("pageSize");
     const search = searchParams.get("search");
     const sort = searchParams.get("sort");
+    const sortBy = searchParams.get("sortBy");
+    const sortDir = searchParams.get("sortDir");
 
-    const data = await getAdminListingStats({ page, pageSize, search, sort });
+    const data = await getAdminListingStats({ page, pageSize, search, sort, sortBy, sortDir });
     return NextResponse.json(data);
   } catch (err) {
     console.error("GET /api/admin/listing-stats:", err);

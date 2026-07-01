@@ -7,6 +7,8 @@ import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 function formatDateTime(val) {
   if (!val) return "—";
@@ -79,6 +81,15 @@ export default function AdminActiveClientsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [sendingEmailId, setSendingEmailId] = useState(null);
+  const { tableSort, handleTableSort } = useAdminTableSort("lastLoginAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const openManageSubscription = useCallback(
     (row) => {
@@ -120,6 +131,7 @@ export default function AdminActiveClientsPage() {
         pageSize: String(pageSize),
       });
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
+      appendAdminSortParams(params, tableSort);
       const res = await fetch(`/api/admin/users/active?${params.toString()}`, { credentials: "include" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to load active clients");
@@ -139,7 +151,7 @@ export default function AdminActiveClientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, page, pageSize, searchQuery, openManageSubscription, sendFeedbackEmail]);
+  }, [toast, page, pageSize, searchQuery, openManageSubscription, sendFeedbackEmail, tableSort]);
 
   useEffect(() => {
     fetchUsers();
@@ -194,17 +206,19 @@ export default function AdminActiveClientsPage() {
         );
       },
     },
-    { key: "email", label: "Email" },
-    { key: "shopName", label: "Shop name" },
-    { key: "contactName", label: "Contact name" },
+    { key: "email", label: "Email", sortable: true },
+    { key: "shopName", label: "Shop name", sortable: true },
+    { key: "contactName", label: "Contact name", sortable: true },
     {
       key: "lastLoginAt",
       label: "Last login",
+      sortable: true,
       render: (val) => formatDateTime(val),
     },
     {
       key: "subscriptionSummary",
       label: "Subscription",
+      sortable: true,
       render: (s) =>
         s ? (
           <div className="flex flex-col gap-1 text-xs">
@@ -220,6 +234,7 @@ export default function AdminActiveClientsPage() {
     {
       key: "accountType",
       label: "Account",
+      sortable: true,
       render: (_, row) => {
         if (row.calculatorOnlyAccount) {
           return (
@@ -245,6 +260,7 @@ export default function AdminActiveClientsPage() {
     {
       key: "createdAt",
       label: "Registered",
+      sortable: true,
       render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
     },
   ];
@@ -273,6 +289,8 @@ export default function AdminActiveClientsPage() {
           }}
           searchPlaceholder="Search email, shop, contact…"
           responsive
+          sortState={tableSort}
+          onSort={onTableSort}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
             setPage(nextPage);

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { FiDownload, FiEye, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const MAX_ASSIGNMENTS = 3;
 
@@ -84,6 +86,15 @@ export default function AdminLeadsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const { tableSort, handleTableSort } = useAdminTableSort("createdAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const openViewModal = (lead) => {
     setViewingLead(lead);
@@ -106,7 +117,7 @@ export default function AdminLeadsPage() {
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/leads?page=${page}&pageSize=${pageSize}`, { credentials: "include", cache: "no-store" }).then((r) => r.json()),
+      fetch(`/api/leads?${appendAdminSortParams(new URLSearchParams({ page: String(page), pageSize: String(pageSize) }), tableSort).toString()}`, { credentials: "include", cache: "no-store" }).then((r) => r.json()),
       fetch("/api/listings?status=approved&page=1&pageSize=100", { credentials: "include", cache: "no-store" }).then((r) => r.json()),
     ])
       .then(([leadsData, listingsData]) => {
@@ -120,7 +131,7 @@ export default function AdminLeadsPage() {
         setListings([]);
       })
       .finally(() => setLoading(false));
-  }, [page, pageSize]);
+  }, [page, pageSize, tableSort]);
 
   const openAssignModal = (lead) => {
     setAssigningLead(lead);
@@ -220,16 +231,18 @@ export default function AdminLeadsPage() {
           </div>
         ),
       },
-      { key: "name", label: "Name" },
-      { key: "email", label: "Email" },
+      { key: "name", label: "Name", sortable: true },
+      { key: "email", label: "Email", sortable: true },
       {
         key: "source",
         label: "Source",
+        sortable: true,
         render: (_, row) => row.sourceListingName || "—",
       },
       {
         key: "assignedTo",
         label: "Assigned to",
+        sortable: true,
         render: (_, row) => {
           const names = (row.assignedToNames || []).filter(Boolean);
           return names.length ? names.join(", ") : "—";
@@ -238,6 +251,7 @@ export default function AdminLeadsPage() {
       {
         key: "createdAt",
         label: "Submitted",
+        sortable: true,
         render: (val) => (val ? new Date(val).toLocaleString() : "—"),
       },
     ],
@@ -277,6 +291,8 @@ export default function AdminLeadsPage() {
           loading={loading}
           emptyMessage="No leads yet."
           responsive
+          sortState={tableSort}
+          onSort={onTableSort}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
             setPage(nextPage);

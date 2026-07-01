@@ -11,6 +11,8 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "All" },
@@ -142,12 +144,22 @@ export default function AdminMarketingPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const { tableSort, handleTableSort } = useAdminTableSort("createdAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const fetchContacts = useCallback(() => {
     const params = new URLSearchParams({
       page: String(page),
       pageSize: String(pageSize),
     });
+    appendAdminSortParams(params, tableSort);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
     const url = `/api/admin/marketing/contacts?${params.toString()}`;
@@ -162,7 +174,7 @@ export default function AdminMarketingPage() {
         setTotalCount(0);
       })
       .finally(() => setLoading(false));
-  }, [statusFilter, searchQuery, page, pageSize]);
+  }, [statusFilter, searchQuery, page, pageSize, tableSort]);
 
   useEffect(() => {
     setLoading(true);
@@ -280,12 +292,13 @@ export default function AdminMarketingPage() {
         </div>
       ),
     },
-    { key: "email", label: "Email" },
-    { key: "name", label: "Name", render: (v) => v || "—" },
-    { key: "companyName", label: "Company", render: (v) => v || "—" },
+    { key: "email", label: "Email", sortable: true },
+    { key: "name", label: "Name", sortable: true, render: (v) => v || "—" },
+    { key: "companyName", label: "Company", sortable: true, render: (v) => v || "—" },
     {
       key: "status",
       label: "Status",
+      sortable: true,
       render: (v) => (
         <Badge
           variant={
@@ -299,14 +312,16 @@ export default function AdminMarketingPage() {
     {
       key: "firstEmailSentAt",
       label: "First sent",
+      sortable: true,
       render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
     },
     {
       key: "lastEmailSentAt",
       label: "Last sent",
+      sortable: true,
       render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
     },
-    { key: "followUpCount", label: "Follow-ups", render: (v) => v ?? 0 },
+    { key: "followUpCount", label: "Follow-ups", sortable: true, render: (v) => v ?? 0 },
     { key: "notes", label: "Notes", render: (v) => (v ? String(v).slice(0, 30) + (v.length > 30 ? "…" : "") : "—") },
   ];
 
@@ -364,6 +379,8 @@ export default function AdminMarketingPage() {
             loading={loading}
             emptyMessage="No contacts. Click Add contacts to paste emails."
             responsive
+            sortState={tableSort}
+            onSort={onTableSort}
             pagination={{ page, pageSize, totalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setPage(nextPage);

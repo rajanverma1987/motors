@@ -3,6 +3,17 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import MarketplaceOrder from "@/models/MarketplaceOrder";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const MARKETPLACE_ORDER_SORT_KEYS = [
+  "itemTitleSnapshot",
+  "buyerName",
+  "buyerEmail",
+  "buyerPhone",
+  "quantity",
+  "status",
+  "createdAt",
+];
 
 function toRow(o) {
   const d = o?.toObject ? o.toObject() : o;
@@ -34,10 +45,19 @@ export async function GET(request) {
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: MARKETPLACE_ORDER_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
     const q = { sellerType: "platform" };
     const [totalCount, list] = await Promise.all([
       MarketplaceOrder.countDocuments(q),
-      MarketplaceOrder.find(q).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+      MarketplaceOrder.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     return NextResponse.json({ items: list.map((d) => toRow(d)), page, pageSize, totalCount });
   } catch (err) {

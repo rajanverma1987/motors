@@ -11,6 +11,8 @@ import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft (not public)" },
@@ -86,14 +88,47 @@ export default function AdminMarketplacePage() {
   const [wantsPage, setWantsPage] = useState(1);
   const [wantsPageSize, setWantsPageSize] = useState(25);
   const [wantsTotalCount, setWantsTotalCount] = useState(0);
+  const { tableSort: itemsSort, handleTableSort: handleItemsSort } = useAdminTableSort("createdAt", "desc");
+  const { tableSort: ordersSort, handleTableSort: handleOrdersSort } = useAdminTableSort("createdAt", "desc");
+  const { tableSort: wantsSort, handleTableSort: handleWantsSort } = useAdminTableSort("createdAt", "desc");
+
+  const onItemsSort = useCallback(
+    (key, direction) => {
+      setItemsPage(1);
+      handleItemsSort(key, direction);
+    },
+    [handleItemsSort]
+  );
+
+  const onOrdersSort = useCallback(
+    (key, direction) => {
+      setOrdersPage(1);
+      handleOrdersSort(key, direction);
+    },
+    [handleOrdersSort]
+  );
+
+  const onWantsSort = useCallback(
+    (key, direction) => {
+      setWantsPage(1);
+      handleWantsSort(key, direction);
+    },
+    [handleWantsSort]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const itemsParams = new URLSearchParams({ page: String(itemsPage), pageSize: String(itemsPageSize) });
+      appendAdminSortParams(itemsParams, itemsSort);
+      const ordersParams = new URLSearchParams({ page: String(ordersPage), pageSize: String(ordersPageSize) });
+      appendAdminSortParams(ordersParams, ordersSort);
+      const wantsParams = new URLSearchParams({ page: String(wantsPage), pageSize: String(wantsPageSize) });
+      appendAdminSortParams(wantsParams, wantsSort);
       const [iRes, oRes, wRes] = await Promise.all([
-        fetch(`/api/admin/marketplace/items?page=${itemsPage}&pageSize=${itemsPageSize}`, { credentials: "include", cache: "no-store" }),
-        fetch(`/api/admin/marketplace/orders?page=${ordersPage}&pageSize=${ordersPageSize}`, { credentials: "include", cache: "no-store" }),
-        fetch(`/api/admin/marketplace/want-requests?page=${wantsPage}&pageSize=${wantsPageSize}`, { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/items?${itemsParams.toString()}`, { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/orders?${ordersParams.toString()}`, { credentials: "include", cache: "no-store" }),
+        fetch(`/api/admin/marketplace/want-requests?${wantsParams.toString()}`, { credentials: "include", cache: "no-store" }),
       ]);
       const iData = await iRes.json();
       const oData = await oRes.json();
@@ -131,7 +166,7 @@ export default function AdminMarketplacePage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, itemsPage, itemsPageSize, ordersPage, ordersPageSize, wantsPage, wantsPageSize]);
+  }, [toast, itemsPage, itemsPageSize, ordersPage, ordersPageSize, wantsPage, wantsPageSize, itemsSort, ordersSort, wantsSort]);
 
   useEffect(() => {
     load();
@@ -323,18 +358,20 @@ export default function AdminMarketplacePage() {
           </div>
         ),
       },
-      { key: "title", label: "Title" },
-      { key: "shopNameSnapshot", label: "Listed as" },
-      { key: "category", label: "Category" },
-      { key: "priceDisplay", label: "Price / note" },
+      { key: "title", label: "Title", sortable: true },
+      { key: "shopNameSnapshot", label: "Listed as", sortable: true },
+      { key: "category", label: "Category", sortable: true },
+      { key: "priceDisplay", label: "Price / note", sortable: true },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v) => (v === "published" ? "Published" : "Draft"),
       },
       {
         key: "slug",
         label: "Link",
+        sortable: true,
         render: (v) =>
           v ? (
             <a
@@ -355,14 +392,15 @@ export default function AdminMarketplacePage() {
 
   const orderColumns = useMemo(
     () => [
-      { key: "itemTitleSnapshot", label: "Item" },
-      { key: "buyerName", label: "Buyer" },
-      { key: "buyerEmail", label: "Email" },
-      { key: "buyerPhone", label: "Phone" },
-      { key: "quantity", label: "Qty" },
+      { key: "itemTitleSnapshot", label: "Item", sortable: true },
+      { key: "buyerName", label: "Buyer", sortable: true },
+      { key: "buyerEmail", label: "Email", sortable: true },
+      { key: "buyerPhone", label: "Phone", sortable: true },
+      { key: "quantity", label: "Qty", sortable: true },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v, row) => (
           <select
             className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-title"
@@ -387,19 +425,20 @@ export default function AdminMarketplacePage() {
           </span>
         ),
       },
-      { key: "createdAt", label: "Date", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
+      { key: "createdAt", label: "Date", sortable: true, render: (v) => (v ? new Date(v).toLocaleString() : "—") },
     ],
     []
   );
 
   const wantColumns = useMemo(
     () => [
-      { key: "buyerName", label: "Name" },
-      { key: "buyerEmail", label: "Email" },
-      { key: "buyerPhone", label: "Phone", render: (v) => v || "—" },
+      { key: "buyerName", label: "Name", sortable: true },
+      { key: "buyerEmail", label: "Email", sortable: true },
+      { key: "buyerPhone", label: "Phone", sortable: true, render: (v) => v || "—" },
       {
         key: "searchQuery",
         label: "Search (snapshot)",
+        sortable: true,
         render: (v) => (
           <span className="line-clamp-2 max-w-[140px]" title={v}>
             {v || "—"}
@@ -409,6 +448,7 @@ export default function AdminMarketplacePage() {
       {
         key: "categoryFilter",
         label: "Category",
+        sortable: true,
         render: (v) => categoryFilterLabel(v),
       },
       {
@@ -423,6 +463,7 @@ export default function AdminMarketplacePage() {
       {
         key: "status",
         label: "Status",
+        sortable: true,
         render: (v, row) => (
           <select
             className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-title"
@@ -438,7 +479,7 @@ export default function AdminMarketplacePage() {
           </select>
         ),
       },
-      { key: "createdAt", label: "Date", render: (v) => (v ? new Date(v).toLocaleString() : "—") },
+      { key: "createdAt", label: "Date", sortable: true, render: (v) => (v ? new Date(v).toLocaleString() : "—") },
     ],
     []
   );
@@ -500,6 +541,8 @@ export default function AdminMarketplacePage() {
             emptyMessage="No platform listings."
             onRefresh={load}
             responsive
+            sortState={itemsSort}
+            onSort={onItemsSort}
             pagination={{ page: itemsPage, pageSize: itemsPageSize, totalCount: itemsTotalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setItemsPage(nextPage);
@@ -516,6 +559,8 @@ export default function AdminMarketplacePage() {
             emptyMessage="No orders yet."
             onRefresh={load}
             responsive
+            sortState={ordersSort}
+            onSort={onOrdersSort}
             pagination={{ page: ordersPage, pageSize: ordersPageSize, totalCount: ordersTotalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setOrdersPage(nextPage);
@@ -532,6 +577,8 @@ export default function AdminMarketplacePage() {
             emptyMessage="No want requests yet. They appear when visitors submit from an empty marketplace search."
             onRefresh={load}
             responsive
+            sortState={wantsSort}
+            onSort={onWantsSort}
             pagination={{ page: wantsPage, pageSize: wantsPageSize, totalCount: wantsTotalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setWantsPage(nextPage);

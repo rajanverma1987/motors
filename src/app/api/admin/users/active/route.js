@@ -3,6 +3,18 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import ShopSubscription from "@/models/ShopSubscription";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { parseAdminSortParams, mongoSortFromAdmin, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
+
+const ACTIVE_CLIENT_SORT_KEYS = [
+  "email",
+  "shopName",
+  "contactName",
+  "lastLoginAt",
+  "subscriptionSummary",
+  "accountType",
+  "createdAt",
+];
+const ACTIVE_CLIENT_MONGO_SORT_KEYS = ["email", "shopName", "contactName", "lastLoginAt", "createdAt"];
 
 /** GET: portal users who have signed in at least once (lastLoginAt set). */
 export async function GET(request) {
@@ -24,14 +36,25 @@ export async function GET(request) {
       q.$or = [{ email: rx }, { shopName: rx }, { contactName: rx }];
     }
 
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: ACTIVE_CLIENT_SORT_KEYS,
+      defaultKey: "lastLoginAt",
+      defaultDir: "desc",
+    });
+    const useMongoSort = ACTIVE_CLIENT_MONGO_SORT_KEYS.includes(sortBy);
     const [totalCount, users] = await Promise.all([
       User.countDocuments(q),
-      User.find(q)
-        .select("_id email shopName contactName canLogin listingOnlyAccount calculatorOnlyAccount createdAt lastLoginAt")
-        .sort({ lastLoginAt: -1 })
-        .skip(skip)
-        .limit(pageSize)
-        .lean(),
+      useMongoSort
+        ? User.find(q)
+            .select("_id email shopName contactName canLogin listingOnlyAccount calculatorOnlyAccount createdAt lastLoginAt")
+            .sort(mongoSortFromAdmin(sortBy, sortDir))
+            .skip(skip)
+            .limit(pageSize)
+            .lean()
+        : User.find(q)
+            .select("_id email shopName contactName canLogin listingOnlyAccount calculatorOnlyAccount createdAt lastLoginAt")
+            .sort({ lastLoginAt: -1 })
+            .lean(),
     ]);
 
     const emails = users.map((u) => u.email);
@@ -40,7 +63,7 @@ export async function GET(request) {
       .lean();
     const subByEmail = Object.fromEntries(subs.map((s) => [s.ownerEmail, s]));
 
-    const list = users.map((u) => {
+    let list = users.map((u) => {
       const s = subByEmail[u.email];
       const p = s?.planId;
       return {
@@ -64,7 +87,11 @@ export async function GET(request) {
           : null,
       };
     });
-
+    if (!useMongoSort) {
+      const paged = sortAndPaginateAdminRows(list, { sortBy, sortDir }, page, pageSize);
+      list = paged.items;
+      return NextResponse.json({ users: list, page, pageSize, totalCount: paged.totalCount });
+    }
     return NextResponse.json({ users: list, page, pageSize, totalCount });
   } catch (err) {
     console.error("Admin active clients list error:", err);

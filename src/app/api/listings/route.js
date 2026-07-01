@@ -7,6 +7,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { sendNewListingSubmittedToAdmin } from "@/lib/email";
 import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const LISTING_ADMIN_SORT_KEYS = ["companyName", "email", "city", "state", "status", "isSeed", "submittedAt"];
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -195,9 +198,18 @@ export async function GET(request) {
         ],
       };
     }
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: LISTING_ADMIN_SORT_KEYS,
+      defaultKey: "submittedAt",
+      defaultDir: "desc",
+    });
     const [totalCount, list] = await Promise.all([
       Listing.countDocuments(q),
-      Listing.find(q).sort({ submittedAt: -1 }).skip(skip).limit(pageSize).lean(),
+      Listing.find(q)
+        .sort(mongoSortFromAdmin(sortBy, sortDir, { location: "city" }))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
     const listWithId = list.map((l) => {

@@ -7,6 +7,8 @@ import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const CATEGORIES = [
   { value: "bug", label: "Bug" },
@@ -57,6 +59,15 @@ export default function AdminSupportPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const { tableSort, handleTableSort } = useAdminTableSort("updatedAt", "desc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -65,6 +76,7 @@ export default function AdminSupportPage() {
         page: String(page),
         pageSize: String(pageSize),
       });
+      appendAdminSortParams(params, tableSort);
       if (statusFilter !== "all") params.set("status", statusFilter);
       const res = await fetch(`/api/admin/support/tickets?${params.toString()}`, { credentials: "include", cache: "no-store" });
       const data = await res.json();
@@ -78,7 +90,7 @@ export default function AdminSupportPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, statusFilter, page, pageSize]);
+  }, [toast, statusFilter, page, pageSize, tableSort]);
 
   useEffect(() => {
     load();
@@ -165,25 +177,28 @@ export default function AdminSupportPage() {
 
   const columns = useMemo(
     () => [
-      { key: "ticketRef", label: "Ticket", clickable: true },
-      { key: "shopName", label: "Shop", clickable: true, render: (v, row) => v || row.createdByEmail || "—" },
-      { key: "createdByEmail", label: "Email", clickable: true },
-      { key: "subject", label: "Subject", clickable: true },
+      { key: "ticketRef", label: "Ticket", sortable: true, clickable: true },
+      { key: "shopName", label: "Shop", sortable: true, clickable: true, render: (v, row) => v || row.createdByEmail || "—" },
+      { key: "createdByEmail", label: "Email", sortable: true, clickable: true },
+      { key: "subject", label: "Subject", sortable: true, clickable: true },
       {
         key: "category",
         label: "Category",
+        sortable: true,
         clickable: true,
         render: (v) => CATEGORIES.find((c) => c.value === v)?.label || v,
       },
       {
         key: "status",
         label: "Status",
+        sortable: true,
         clickable: true,
         render: (v) => STATUS_SET.find((s) => s.value === v)?.label || v,
       },
       {
         key: "updatedAt",
         label: "Updated",
+        sortable: true,
         clickable: true,
         render: (v) => fmtDate(v),
       },
@@ -225,6 +240,8 @@ export default function AdminSupportPage() {
             loading={loading}
             fillHeight
             paginateClientSide={false}
+            sortState={tableSort}
+            onSort={onTableSort}
             emptyMessage="No tickets match this filter."
             onCellClick={(row) => openDetail(row)}
             pagination={{ page, pageSize, totalCount }}

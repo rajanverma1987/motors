@@ -6,16 +6,13 @@ import { FiExternalLink, FiMail, FiRefreshCw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Input from "@/components/ui/input";
-import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
-
-const SORT_OPTIONS = [
-  { value: "visitsOverall", label: "Overall visits (high → low)" },
-  { value: "visitsThisMonth", label: "This month visits (high → low)" },
-];
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 export default function AdminListingStatsPage() {
   const toast = useToast();
+  const { tableSort, handleTableSort } = useAdminTableSort("visitsOverall", "desc");
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -24,8 +21,15 @@ export default function AdminListingStatsPage() {
   const [monthLabel, setMonthLabel] = useState("");
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [sort, setSort] = useState("visitsOverall");
   const [sendingEmailId, setSendingEmailId] = useState(null);
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const sendStatsEmail = useCallback(
     async (row) => {
@@ -53,8 +57,8 @@ export default function AdminListingStatsPage() {
     const params = new URLSearchParams({
       page: String(page),
       pageSize: String(pageSize),
-      sort,
     });
+    appendAdminSortParams(params, tableSort);
     if (search.trim()) params.set("search", search.trim());
 
     fetch(`/api/admin/listing-stats?${params.toString()}`, { credentials: "include", cache: "no-store" })
@@ -70,7 +74,7 @@ export default function AdminListingStatsPage() {
         setMonthLabel("");
       })
       .finally(() => setLoading(false));
-  }, [page, pageSize, search, sort]);
+  }, [page, pageSize, search, tableSort]);
 
   useEffect(() => {
     loadStats();
@@ -103,6 +107,7 @@ export default function AdminListingStatsPage() {
     {
       key: "companyName",
       label: "Shop name",
+      sortable: true,
       render: (_value, row) => (
         <span className="font-medium text-title">{row.companyName || "Repair center"}</span>
       ),
@@ -110,6 +115,7 @@ export default function AdminListingStatsPage() {
     {
       key: "listingPath",
       label: "Listing page",
+      sortable: true,
       render: (_value, row) =>
         row.listingPath ? (
           <div className="flex min-w-0 items-center gap-2">
@@ -132,6 +138,7 @@ export default function AdminListingStatsPage() {
     {
       key: "listingDate",
       label: "Listing date",
+      sortable: true,
       render: (val) => (val ? new Date(val).toLocaleDateString() : "—"),
     },
     {
@@ -139,18 +146,21 @@ export default function AdminListingStatsPage() {
       label: `${monthHeading} visits`,
       type: "number",
       align: "right",
+      sortable: true,
     },
     {
       key: "visitsOverall",
       label: "Overall visits",
       type: "number",
       align: "right",
+      sortable: true,
     },
     {
       key: "quoteRequestCount",
       label: "Request quote count",
       type: "number",
       align: "right",
+      sortable: true,
     },
   ];
 
@@ -190,17 +200,6 @@ export default function AdminListingStatsPage() {
               Search
             </Button>
           </form>
-          <div className="w-full sm:w-56">
-            <Select
-              value={sort}
-              onChange={(e) => {
-                setSort(e.target.value);
-                setPage(1);
-              }}
-              options={SORT_OPTIONS}
-              aria-label="Sort listing stats"
-            />
-          </div>
         </div>
       </div>
 
@@ -211,6 +210,8 @@ export default function AdminListingStatsPage() {
           loading={loading}
           rowKey="id"
           responsive
+          sortState={tableSort}
+          onSort={onTableSort}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
             setPage(nextPage);

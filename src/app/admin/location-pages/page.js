@@ -11,6 +11,8 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
+import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
 const LOCATION_PAGE_PATH = "/motor-repair-shop";
@@ -37,9 +39,20 @@ export default function AdminLocationPagesPage() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [form, setForm] = useState({ ...EMPTY_FORM });
+  const { tableSort, handleTableSort } = useAdminTableSort("slug", "asc");
+
+  const onTableSort = useCallback(
+    (key, direction) => {
+      setPage(1);
+      handleTableSort(key, direction);
+    },
+    [handleTableSort]
+  );
 
   const fetchPages = useCallback(() => {
-    return fetch(`/api/location-pages?page=${page}&pageSize=${pageSize}`, { credentials: "include", cache: "no-store" })
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    appendAdminSortParams(params, tableSort);
+    return fetch(`/api/location-pages?${params.toString()}`, { credentials: "include", cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         setPages(Array.isArray(data?.items) ? data.items : []);
@@ -50,7 +63,7 @@ export default function AdminLocationPagesPage() {
         setTotalCount(0);
       })
       .finally(() => setLoading(false));
-  }, [page, pageSize]);
+  }, [page, pageSize, tableSort]);
 
   useEffect(() => {
     setLoading(true);
@@ -161,16 +174,18 @@ export default function AdminLocationPagesPage() {
         </button>
       ),
     },
-    { key: "slug", label: "Slug" },
-    { key: "title", label: "Title" },
+    { key: "slug", label: "Slug", sortable: true },
+    { key: "title", label: "Title", sortable: true },
     {
       key: "area",
       label: "Area",
+      sortable: true,
       render: (_, row) => [row.city, row.state].filter(Boolean).join(", ") || "—",
     },
     {
       key: "status",
       label: "Status",
+      sortable: true,
       render: (val) => (
         <Badge variant={val === "active" ? "success" : "warning"} className="rounded-full px-2.5 py-0.5 text-xs">
           {val}
@@ -208,6 +223,8 @@ export default function AdminLocationPagesPage() {
           rowKey="id"
           loading={loading}
           emptyMessage="No location pages yet. Click Add location page to create one."
+          sortState={tableSort}
+          onSort={onTableSort}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
             setPage(nextPage);

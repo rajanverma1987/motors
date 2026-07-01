@@ -4,6 +4,17 @@ import Listing from "@/models/Listing";
 import Lead from "@/models/Lead";
 import ListingPageViewDaily from "@/models/ListingPageViewDaily";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
+import { parseAdminSortParams, adminRowSortValue } from "@/lib/admin-table-sort";
+import { sortRowsClient } from "@/lib/client-table-sort";
+
+const LISTING_STATS_SORT_KEYS = [
+  "companyName",
+  "listingPath",
+  "listingDate",
+  "visitsThisMonth",
+  "visitsOverall",
+  "quoteRequestCount",
+];
 
 const LISTING_PATH_PREFIX = "/electric-motor-repair-shops-listings";
 
@@ -51,7 +62,11 @@ export async function getAdminListingStats(options = {}) {
   const search = String(options.search || "")
     .trim()
     .toLowerCase();
-  const sort = options.sort === "visitsThisMonth" ? "visitsThisMonth" : "visitsOverall";
+  const legacySort = options.sort === "visitsThisMonth" ? "visitsThisMonth" : "visitsOverall";
+  const { sortBy, sortDir } = parseAdminSortParams(
+    { get: (k) => (k === "sortBy" ? options.sortBy || legacySort : k === "sortDir" ? options.sortDir : null) },
+    { allowedKeys: LISTING_STATS_SORT_KEYS, defaultKey: legacySort, defaultDir: "desc" }
+  );
 
   await connectDB();
 
@@ -111,14 +126,7 @@ export async function getAdminListingStats(options = {}) {
     });
   }
 
-  rows.sort((a, b) => {
-    const diff =
-      sort === "visitsThisMonth"
-        ? b.visitsThisMonth - a.visitsThisMonth
-        : b.visitsOverall - a.visitsOverall;
-    if (diff !== 0) return diff;
-    return a.companyName.localeCompare(b.companyName);
-  });
+  rows = sortRowsClient(rows, { key: sortBy, direction: sortDir }, adminRowSortValue);
 
   const totalCount = rows.length;
   const start = (page - 1) * pageSize;

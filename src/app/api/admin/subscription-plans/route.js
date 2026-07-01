@@ -3,6 +3,9 @@ import { connectDB } from "@/lib/db";
 import SubscriptionPlan from "@/models/SubscriptionPlan";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { createPaypalBackedPlan } from "@/lib/subscription-service";
+import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+
+const SUBSCRIPTION_PLAN_SORT_KEYS = ["name", "slug", "planType", "customPrice", "negotiatedBy", "active", "createdAt"];
 
 export async function GET(request) {
   try {
@@ -15,9 +18,18 @@ export async function GET(request) {
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
+    const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
+      allowedKeys: SUBSCRIPTION_PLAN_SORT_KEYS,
+      defaultKey: "createdAt",
+      defaultDir: "desc",
+    });
     const [totalCount, plans] = await Promise.all([
       SubscriptionPlan.countDocuments({}),
-      SubscriptionPlan.find({}).sort({ createdAt: -1 }).skip(skip).limit(pageSize).lean(),
+      SubscriptionPlan.find({})
+        .sort(mongoSortFromAdmin(sortBy, sortDir))
+        .skip(skip)
+        .limit(pageSize)
+        .lean(),
     ]);
     return NextResponse.json({
       plans: plans.map((p) => ({
