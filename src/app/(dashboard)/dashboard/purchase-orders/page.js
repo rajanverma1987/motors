@@ -31,6 +31,7 @@ const PO_RECORD_LINK_CLASS =
 import { sumPoLineItemsTaxInclusive, poLineTaxAmount, poLineTotalWithTax, parsePoLineTaxPercent, sumPoLineExtendedPreTax, sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
 import { formatDateMdy } from "@/lib/format-date";
 import { previewJobPoNumber, previewShopPoNumber } from "@/lib/purchase-order-form-shared";
+import { poAmountDueForPayment, sumVendorInvoiced } from "@/lib/po-payable";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "30%" },
