@@ -30,7 +30,7 @@ const PO_RECORD_LINK_CLASS =
   "text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded";
 import { sumPoLineItemsTaxInclusive, poLineTaxAmount, poLineTotalWithTax, parsePoLineTaxPercent, sumPoLineExtendedPreTax, sumPoLineTaxAmount } from "@/lib/po-line-item-totals";
 import { formatDateMdy } from "@/lib/format-date";
-import { poAmountDueForPayment, sumVendorInvoiced } from "@/lib/po-payable";
+import { previewJobPoNumber, previewShopPoNumber } from "@/lib/purchase-order-form-shared";
 
 const PO_LINE_COLUMNS = [
   { key: "description", label: "Description", width: "30%" },
@@ -798,13 +798,19 @@ export default function DashboardPurchaseOrdersPage() {
   };
 
   const nextPoNumber = useMemo(() => {
-    let maxNum = 0;
-    for (const p of pos) {
-      const m = (p.poNumber || "").match(/^P(\d+)$/i);
-      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    if (form.type === "job") {
+      const qid = String(form.quoteId || "").trim();
+      if (qid) {
+        const quote = quotes.find((q) => String(q.id) === qid);
+        const rfq = String(quote?.rfqNumber || "").trim();
+        if (rfq) {
+          const count = pos.filter((p) => p.type === "job" && String(p.quoteId || "") === qid).length;
+          return previewJobPoNumber(rfq, count);
+        }
+      }
     }
-    return "P" + String(maxNum + 1).padStart(5, "0");
-  }, [pos]);
+    return previewShopPoNumber(pos);
+  }, [pos, form.type, form.quoteId, quotes]);
 
   const openAddVendorModal = () => {
     setVendorForm(INITIAL_VENDOR_FORM);

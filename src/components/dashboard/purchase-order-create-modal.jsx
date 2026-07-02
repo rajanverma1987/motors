@@ -129,9 +129,19 @@ export default function PurchaseOrderCreateModal({ open, onClose, onCreated, ini
     }
   }, []);
 
-  const loadNextPoNumber = useCallback(async () => {
+  const loadNextPoNumber = useCallback(async (poForm) => {
+    const f = poForm || {};
     try {
-      const res = await fetch("/api/dashboard/purchase-orders/next-number", {
+      const params = new URLSearchParams();
+      if (f.type === "job") {
+        params.set("type", "job");
+        const qid = String(f.quoteId || "").trim();
+        const rjid = String(f.repairFlowJobId || "").trim();
+        if (qid) params.set("quoteId", qid);
+        if (rjid) params.set("repairFlowJobId", rjid);
+      }
+      const qs = params.toString();
+      const res = await fetch(`/api/dashboard/purchase-orders/next-number${qs ? `?${qs}` : ""}`, {
         credentials: "include",
         cache: "no-store",
       });
@@ -149,8 +159,12 @@ export default function PurchaseOrderCreateModal({ open, onClose, onCreated, ini
     setPendingPoAttachmentFiles([]);
     loadVendors();
     loadJobLinkLists();
-    loadNextPoNumber();
-  }, [open, loadVendors, loadJobLinkLists, loadNextPoNumber]);
+  }, [open, loadVendors, loadJobLinkLists]);
+
+  useEffect(() => {
+    if (!open) return;
+    loadNextPoNumber(form);
+  }, [open, form.type, form.quoteId, form.repairFlowJobId, loadNextPoNumber]);
 
   const vendorOptions = useMemo(
     () =>

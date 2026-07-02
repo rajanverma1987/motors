@@ -76,6 +76,24 @@ export function partsLinesToPoLineItems(partsLines) {
     }));
 }
 
+/** Preview next shop PO number from existing rows (client-side). */
+export function previewShopPoNumber(pos) {
+  let maxNum = 0;
+  for (const p of pos || []) {
+    const m = (p.poNumber || "").match(/^P(\d+)$/i);
+    if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+  }
+  return "P" + String(maxNum + 1).padStart(5, "0");
+}
+
+/** Preview next job PO number for an RFQ (client-side). */
+export function previewJobPoNumber(rfqNumber, existingPoCount) {
+  const rfq = String(rfqNumber || "").trim();
+  if (!rfq) return null;
+  const count = Number.isFinite(existingPoCount) ? existingPoCount : 0;
+  return `PO-${rfq}-${count + 1}`;
+}
+
 /** Build create-PO defaults when opened from a saved RFQ. */
 export function buildPurchaseOrderInitialFromQuote({ quoteId, rfqNumber, repairFlowJobId, partsLines }) {
   const qid = String(quoteId || "").trim();

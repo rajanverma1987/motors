@@ -4,7 +4,7 @@ import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { normalizePurchaseOrderLineItems } from "@/lib/purchase-order-line-items";
-import { getNextPoNumber } from "@/lib/purchase-order-numbers";
+import { resolvePoNumber } from "@/lib/purchase-order-numbers";
 import { normalizePurchaseOrderAttachmentsFromClient } from "@/lib/dashboard-entity-attachments";
 import { sumPoLineItemsTaxInclusive } from "@/lib/po-line-item-totals";
 import { poGrandTotal, sumPoOtherCharges } from "@/lib/po-payable";
@@ -324,10 +324,14 @@ export async function POST(request) {
       return NextResponse.json({ error: "Vendor is required" }, { status: 400 });
     }
     const email = user.email.trim().toLowerCase();
-    const poNumber = await getNextPoNumber(email);
     const typeVal = type === "job" ? "job" : "shop";
     let qId = typeVal === "job" ? clampString(quoteId, 100) : "";
     let rjId = typeVal === "job" ? clampString(bodyRepairFlowJobId, 100) : "";
+    const poNumber = await resolvePoNumber(email, {
+      type: typeVal,
+      quoteId: qId,
+      repairFlowJobId: rjId,
+    });
     if (typeVal === "job" && rjId) {
       const MotorRepairJob = (await import("@/models/MotorRepairJob")).default;
       const job = await MotorRepairJob.findOne({ _id: rjId, createdByEmail: email }).select("_id").lean();
