@@ -104,3 +104,33 @@ export async function getLocationPageForArea(city, state) {
   }
   return null;
 }
+
+/**
+ * Other active location pages in the same state/region (exclude current slug).
+ */
+export async function getRelatedLocationPages(page, limit = 8) {
+  if (!page?.slug) return [];
+  await connectDB();
+  const state = String(page.state || "").trim();
+  const city = String(page.city || "").trim();
+  const query = { status: "active", slug: { $ne: page.slug } };
+  if (state) {
+    query.state = new RegExp(`^${escapeRegExp(state)}$`, "i");
+  } else if (city) {
+    query.city = new RegExp(`^${escapeRegExp(city)}$`, "i");
+  }
+  const list = await LocationPage.find(query)
+    .select("slug title city state")
+    .sort({ title: 1 })
+    .limit(limit)
+    .lean();
+  return list.map((l) => ({
+    slug: l.slug,
+    title: l.title,
+    label: [l.city, l.state].filter(Boolean).join(", ") || l.title,
+  }));
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

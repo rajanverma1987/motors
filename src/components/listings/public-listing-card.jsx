@@ -1,8 +1,12 @@
 import Link from "next/link";
+import Badge from "@/components/ui/badge";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
 import { ListingDirectoryCardLogo } from "@/components/listings/listing-optimized-images";
 
-export default function PublicListingCard({ listing, imagePriority = false }) {
+/**
+ * @param {{ listing: object, imagePriority?: boolean, locationMatchType?: "based-in"|"serves"|null }} props
+ */
+export default function PublicListingCard({ listing, imagePriority = false, locationMatchType = null }) {
   const location = [listing.city, listing.state].filter(Boolean).join(", ");
   const logoUrl = listing.logoUrl?.trim();
   const firstPhoto =
@@ -32,7 +36,18 @@ export default function PublicListingCard({ listing, imagePriority = false }) {
           )}
         </div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <h2 className="text-lg font-semibold leading-snug text-title">{company}</h2>
+          <div className="flex flex-wrap items-start gap-2">
+            <h2 className="min-w-0 flex-1 text-lg font-semibold leading-snug text-title">{company}</h2>
+            {locationMatchType === "based-in" ? (
+              <Badge variant="success" className="shrink-0 rounded-full px-2 py-0.5 text-[10px]">
+                Based in area
+              </Badge>
+            ) : locationMatchType === "serves" ? (
+              <Badge variant="default" className="shrink-0 rounded-full px-2 py-0.5 text-[10px]">
+                Serves area
+              </Badge>
+            ) : null}
+          </div>
           {location && <p className="mt-1 text-sm text-secondary">{location}</p>}
           {listing.shortDescription && (
             <p className="mt-2 line-clamp-3 text-sm text-secondary">{listing.shortDescription}</p>

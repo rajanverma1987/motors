@@ -95,6 +95,47 @@ export async function getPublicListingsPaginated({
   };
 }
 
+/** All approved listings matching a location area (for insights + client-side filter). */
+export async function getAllListingsForLocationArea({ state, city, zip }) {
+  await connectDB();
+  await ensureApprovedListingsHaveUrlSlug();
+
+  const normalizedState = (state || "").trim();
+  const normalizedCity = (city || "").trim();
+  const normalizedZip = (zip || "").trim();
+
+  const orFilters = [];
+  if (normalizedState) {
+    orFilters.push(
+      { state: new RegExp(`^${escapeRegExp(normalizedState)}$`, "i") },
+      { statesServed: new RegExp(escapeRegExp(normalizedState), "i") }
+    );
+  }
+  if (normalizedCity) {
+    orFilters.push(
+      { city: new RegExp(`^${escapeRegExp(normalizedCity)}$`, "i") },
+      { citiesOrMetrosServed: new RegExp(escapeRegExp(normalizedCity), "i") }
+    );
+  }
+  if (normalizedZip) {
+    orFilters.push(
+      { zipCode: new RegExp(`^${escapeRegExp(normalizedZip)}$`, "i") },
+      { serviceZipCode: new RegExp(`^${escapeRegExp(normalizedZip)}$`, "i") }
+    );
+  }
+
+  const query = orFilters.length > 0 ? { status: "approved", $or: orFilters } : { status: "approved" };
+  const list = await Listing.find(query)
+    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .lean();
+
+  return list.map((l) => ({
+    ...l,
+    id: l._id.toString(),
+    _id: undefined,
+  }));
+}
+
 export async function getListingsFilteredByLocationPaginated({
   state,
   city,

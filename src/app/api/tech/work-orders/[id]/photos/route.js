@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 import { connectDB } from "@/lib/db";
 import WorkOrder from "@/models/WorkOrder";
 import { getTechnicianFromRequest } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
-
-const UPLOAD_DIR = "public/uploads/work-orders";
+import {
+  deleteLocalFileIfExists,
+  resolveWorkOrderPhotoFile,
+  writeWorkOrderPhotoFile,
+} from "@/lib/local-uploads-fs";
 const MAX_SIZE_MB = 12;
 const MAX_PHOTOS_PER_KIND = 24;
 
@@ -28,17 +30,6 @@ function mapTechPhoto(p) {
 
 function photoArrayKey(kind) {
   return kind === "after" ? "technicianAfterPhotos" : "technicianBeforePhotos";
-}
-
-function resolveWoPhotoFile(woId, url) {
-  const u = String(url || "").trim();
-  const prefix = `/uploads/work-orders/${woId}/`;
-  if (!u.startsWith(prefix) || u.includes("..")) return null;
-  const rel = u.replace(/^\//, "");
-  const full = path.resolve(path.join(process.cwd(), "public", rel));
-  const allowedDir = path.resolve(path.join(process.cwd(), "public", "uploads", "work-orders", woId));
-  if (!full.startsWith(`${allowedDir}${path.sep}`)) return null;
-  return full;
 }
 
 async function assertAssignedTechnician(request, woId) {
@@ -106,10 +97,10 @@ export async function DELETE(request, context) {
       return NextResponse.json({ error: "Photo not found" }, { status: 404 });
     }
 
-    const filePath = resolveWoPhotoFile(id, url);
-    if (filePath && existsSync(filePath)) {
+    const filePath = resolveWorkOrderPhotoFile(id, url);
+    if (filePath) {
       try {
-        unlinkSync(filePath);
+        await deleteLocalFileIfExists(filePath);
       } catch (unlinkErr) {
         console.warn("Tech WO photo unlink:", unlinkErr);
       }
@@ -184,11 +175,8 @@ export async function POST(request, context) {
       );
     }
 
-    const dir = path.join(process.cwd(), UPLOAD_DIR, id);
-    mkdirSync(dir, { recursive: true });
     const safeName = `${kind}-${Date.now()}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filePath = path.join(dir, safeName);
-    writeFileSync(filePath, buffer);
+    await writeWorkOrderPhotoFile(id, safeName, buffer);
 
     const url = `/uploads/work-orders/${id}/${safeName}`;
     const entry = {
