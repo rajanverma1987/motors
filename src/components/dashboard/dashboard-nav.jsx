@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FiLogOut, FiSearch, FiSettings } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
+import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
@@ -57,6 +58,9 @@ export default function DashboardNav() {
             {user?.shopName || "Dashboard"}
           </span>
         </Link>
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+          <DashboardViewSwitcher />
+        </div>
         <div className="flex flex-1 items-center justify-end gap-3 sm:gap-4 max-w-[50.4rem] ml-4">
           {!calculatorOnly ? (
             <>

@@ -1,12 +1,32 @@
 import path from "path";
 import { mkdirSync, writeFileSync } from "fs";
 
+export const PUBLIC_UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+
 /**
  * Sanitize a path segment for public/uploads/<category>/<id>/ files.
  * @param {string} value
  */
 export function sanitizeUploadSegment(value) {
   return String(value || "").replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+/**
+ * Resolve a safe absolute path under public/uploads from URL path segments.
+ * @param {string[]} parts e.g. ["listings", "abc", "photo.jpg"]
+ * @returns {string | null}
+ */
+export function resolvePublicUploadFilePath(parts) {
+  const cleaned = (Array.isArray(parts) ? parts : [])
+    .map((p) => String(p || "").trim())
+    .filter(Boolean);
+  if (!cleaned.length) return null;
+  if (cleaned.some((p) => p.includes("..") || p.includes("\\"))) return null;
+  const resolved = path.resolve(PUBLIC_UPLOADS_ROOT, ...cleaned);
+  if (!resolved.startsWith(`${PUBLIC_UPLOADS_ROOT}${path.sep}`) && resolved !== PUBLIC_UPLOADS_ROOT) {
+    return null;
+  }
+  return resolved;
 }
 
 /**

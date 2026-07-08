@@ -23,7 +23,7 @@ export function middleware(request) {
     }
   }
 
-  if (pathname.startsWith("/dashboard")) {
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/dashboards")) {
     if (!hasPortalCookie) {
       const loginUrl = new URL("/login", request.url);
       const dest = `${pathname}${request.nextUrl.search || ""}`;
@@ -61,6 +61,8 @@ export const config = {
     "/admin/support/:path*",
     "/dashboard",
     "/dashboard/:path*",
+    "/dashboards",
+    "/dashboards/:path*",
     "/api/dashboard/:path*",
   ],
 };

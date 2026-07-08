@@ -7,6 +7,7 @@ import {
   CALCULATOR_ONLY_DASHBOARD_PATH,
   isCalculatorOnlyDashboardPath,
 } from "@/lib/calculator-portal-routes";
+import { isSimplePortalPath } from "@/lib/portal-view";
 import DashboardNav from "@/components/dashboard/dashboard-nav";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import ListingUpgradeBanner from "@/components/dashboard/listing-upgrade-banner";
@@ -17,6 +18,7 @@ export default function DashboardShell({ children }) {
   const { user, mounted } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
+  const simpleView = isSimplePortalPath(pathname);
   const calcOnly = !!user?.calculatorOnlyAccount;
   const onCalculatorsRoute = isCalculatorOnlyDashboardPath(pathname);
 
@@ -50,9 +52,13 @@ export default function DashboardShell({ children }) {
           <ListingUpgradeBanner />
         </header>
         <div className="flex min-h-0 flex-1">
-          <DashboardSidebar />
+          {!simpleView ? <DashboardSidebar /> : null}
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain p-[10px]">
+            <div
+              className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain ${
+                simpleView ? "p-1 sm:p-1.5" : "p-[10px]"
+              }`}
+            >
               {children}
             </div>
           </main>
