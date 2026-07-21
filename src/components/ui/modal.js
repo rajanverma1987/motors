@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { useModalStack } from "@/components/modal-provider";
+import { getFocusableElements } from "@/lib/focusable-elements";
 
 const BASE_Z = 110;
 const STACK_STEP = 10;
@@ -26,34 +27,14 @@ function toCssValue(v) {
   return String(v);
 }
 
-const FOCUSABLE_SELECTOR = [
-  "a[href]",
-  "button:not([disabled])",
-  "textarea:not([disabled])",
-  'input:not([disabled]):not([type="hidden"])',
-  "select:not([disabled])",
-  '[tabindex]:not([tabindex="-1"])',
-].join(",");
-
-/** Visible, keyboard-focusable nodes inside a dialog (for Tab wrap). */
-function getFocusableElements(container) {
-  if (!container || typeof container.querySelectorAll !== "function") return [];
-  const elements = Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
-  return elements.filter((el) => {
-    if (el.closest("[inert]") != null) return false;
-    const style = window.getComputedStyle(el);
-    if (style.visibility === "hidden" || style.display === "none") return false;
-    if (el.getAttribute("aria-hidden") === "true") return false;
-    return el.offsetParent !== null || style.position === "fixed";
-  });
-}
-
 export default function Modal({
   open,
   onClose,
   title,
   children,
   showClose = true,
+  /** When false, clicking the backdrop does not call onClose. */
+  closeOnOutsideClick = true,
   size = "md",
   width,
   height,
@@ -71,6 +52,8 @@ export default function Modal({
   const { addModal, removeModal, getStackIndex } = stackContext || {};
   const [modalId, setModalId] = useState(null);
   const registeredIdRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
   const dragStartRef = useRef({ clientX: 0, clientY: 0, posX: 0, posY: 0 });
@@ -149,7 +132,8 @@ export default function Modal({
 
     let registeredId = registeredIdRef.current;
     if (!registeredId && addModal) {
-      registeredId = addModal(onClose);
+      // Stable wrapper so changing `onClose` identity does not re-push this modal to the top.
+      registeredId = addModal(() => onCloseRef.current?.());
       registeredIdRef.current = registeredId;
       setModalId(registeredId);
     }
@@ -161,7 +145,7 @@ export default function Modal({
         setModalId(null);
       }
     };
-  }, [open, onClose, addModal, removeModal]);
+  }, [open, addModal, removeModal]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -242,7 +226,7 @@ export default function Modal({
     >
       <div
         className="absolute inset-0 bg-black/50 dark:bg-black/70"
-        onClick={onClose}
+        onClick={closeOnOutsideClick ? onClose : undefined}
       />
       <div
         ref={dialogRef}

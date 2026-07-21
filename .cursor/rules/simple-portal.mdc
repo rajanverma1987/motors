@@ -1,0 +1,16 @@
+---
+description: Simple portal (/dashboards) — build new, do not reuse classic /dashboard
+alwaysApply: true
+---
+
+# Simple Portal Development
+
+Classic `/dashboard` routes will be removed later. Treat `/dashboards` (Simple view) as the product going forward.
+
+## Rules
+
+- Build **new** pages, components, and flows under `/dashboards` (and related Simple-only code).
+- **Do not** embed, wrap, or reuse classic `/dashboard` page clients as the long-term UI (e.g. do not mount old RFQ/PO/AR/AP page clients into Simple tabs).
+- Shared UI primitives (`Button`, `Modal`, `Table`, `Tabs`, `Form`, etc.) and shared lib/API helpers are fine to reuse.
+- When in doubt, create a fresh Simple implementation and iterate step by step with the user.
+- Design notes for Simple live in `documents/SimpleProduct.md`.

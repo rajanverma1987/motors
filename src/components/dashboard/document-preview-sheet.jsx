@@ -16,24 +16,40 @@ export default function DocumentPreviewSheet({
   accountSettings,
   fmt,
 }) {
+  const quoteForSheet = quote
+    ? { ...quote, printNotesMode: quote.printNotesMode || "customer" }
+    : null;
+  const invoiceForSheet = invoicePayload
+    ? {
+        ...invoicePayload,
+        invoice: {
+          ...(invoicePayload.invoice || {}),
+          printNotesMode:
+            invoicePayload.printNotesMode ||
+            invoicePayload.invoice?.printNotesMode ||
+            "customer",
+        },
+      }
+    : null;
+
   return (
     <div className="max-h-[min(70vh,720px)] overflow-auto rounded-lg border border-border bg-neutral-100 p-4 sm:p-6 shadow-inner">
       <div className="mx-auto w-full max-w-[52.8rem] bg-white p-6 shadow-sm sm:p-8">
-        {documentType === "quote" && quote ? <QuotePrintSheetBody quote={quote} fmt={fmt} /> : null}
-        {documentType === "invoice" && invoicePayload ? (
+        {documentType === "quote" && quoteForSheet ? <QuotePrintSheetBody quote={quoteForSheet} fmt={fmt} /> : null}
+        {documentType === "invoice" && invoiceForSheet ? (
           <InvoicePrintPreview
-            invoice={invoicePayload.invoice}
-            motorLabel={invoicePayload.motorLabel}
-            fromShopName={invoicePayload.fromShopName}
-            fromShopContact={invoicePayload.fromShopContact}
-            fromShopLogoUrl={invoicePayload.fromShopLogoUrl}
-            fromBillingAddress={invoicePayload.fromBillingAddress}
-            fromShippingAddress={invoicePayload.fromShippingAddress}
-            fromPaymentTermsLabel={invoicePayload.fromPaymentTermsLabel}
-            customerToName={invoicePayload.customerToName}
-            customerBillingAddress={invoicePayload.customerBillingAddress}
-            invoicePaymentOptions={invoicePayload.invoicePaymentOptions}
-            invoiceThankYouNote={invoicePayload.invoiceThankYouNote}
+            invoice={invoiceForSheet.invoice}
+            motorLabel={invoiceForSheet.motorLabel}
+            fromShopName={invoiceForSheet.fromShopName}
+            fromShopContact={invoiceForSheet.fromShopContact}
+            fromShopLogoUrl={invoiceForSheet.fromShopLogoUrl}
+            fromBillingAddress={invoiceForSheet.fromBillingAddress}
+            fromShippingAddress={invoiceForSheet.fromShippingAddress}
+            fromPaymentTermsLabel={invoiceForSheet.fromPaymentTermsLabel}
+            customerToName={invoiceForSheet.customerToName}
+            customerBillingAddress={invoiceForSheet.customerBillingAddress}
+            invoicePaymentOptions={invoiceForSheet.invoicePaymentOptions}
+            invoiceThankYouNote={invoiceForSheet.invoiceThankYouNote}
             fmt={fmt}
           />
         ) : null}

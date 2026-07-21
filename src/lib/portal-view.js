@@ -23,7 +23,7 @@ export function portalViewFromPathname(pathname) {
 
 /**
  * Map a path from one portal to the other.
- * Simple view is a single blank page for now — always `/dashboards`.
+ * Simple view hub is `/dashboards` (optional `?tab=`).
  * @param {string} pathname
  * @param {typeof PORTAL_VIEW_CLASSIC | typeof PORTAL_VIEW_SIMPLE} targetView
  * @param {string} [search] Query string including leading `?`
@@ -37,7 +37,7 @@ export function switchPortalPath(pathname, targetView, search = "") {
 
   const pathOnly = (pathname || "").split("?")[0] || CLASSIC_PORTAL_PREFIX;
   if (isSimplePortalPath(pathOnly)) {
-    return `${CLASSIC_PORTAL_PREFIX}/all-jobs${query}`;
+    return `${CLASSIC_PORTAL_PREFIX}/all-jobs`;
   }
 
   return `${pathOnly}${query}`;

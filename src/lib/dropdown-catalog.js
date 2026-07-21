@@ -340,6 +340,73 @@ export function invoiceStatusTileColorForValue(mergedSettings, value, fallbackIn
   };
 }
 
+/** Quote + invoice status options for Simple portal / commission summary. */
+export function buildCombinedQuoteInvoiceStatusOptions(mergedSettings) {
+  const quoteOpts = quoteStatusSelectOptionsFromMerged(mergedSettings);
+  const invoiceOpts = invoiceStatusSelectOptionsFromMerged(mergedSettings);
+  const quoteValues = new Set(quoteOpts.map((o) => String(o.value || "").trim().toLowerCase()).filter(Boolean));
+  const out = quoteOpts.map((o) => ({
+    value: String(o.value || "").trim(),
+    label: o.label || o.value,
+  }));
+  for (const opt of invoiceOpts) {
+    const value = String(opt.value || "").trim().toLowerCase();
+    if (!value) continue;
+    if (quoteValues.has(value)) {
+      out.push({
+        value: `invoice:${value}`,
+        label: `${opt.label || value} (Invoice)`,
+      });
+    } else {
+      out.push({
+        value,
+        label: opt.label || value,
+      });
+    }
+  }
+  return out;
+}
+
+/** Human-readable label for a stored quote/invoice status slug. */
+export function resolveQuoteInvoiceStatusDisplayLabel(rawValue, mergedSettings) {
+  const raw = String(rawValue || "").trim();
+  if (!raw || raw === "—") return "—";
+  const opts = buildCombinedQuoteInvoiceStatusOptions(mergedSettings);
+  const lower = raw.toLowerCase();
+  const hit = opts.find((o) => String(o.value).toLowerCase() === lower);
+  if (hit) return hit.label;
+  return raw.replace(/^invoice:/i, "").replace(/_/g, " ");
+}
+
+export function workOrderStatusSelectOptionsFromMerged(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.work_order_status?.entries;
+  if (Array.isArray(entries) && entries.length) {
+    return entries
+      .map((e) => {
+        const value = String(e.value ?? "").trim();
+        if (!value) return null;
+        return { value, label: clampDropdownLabel(e.label) || value };
+      })
+      .filter(Boolean);
+  }
+  const list = Array.isArray(mergedSettings?.workOrderStatuses) ? mergedSettings.workOrderStatuses : [];
+  return list
+    .map((s) => {
+      const value = String(s ?? "").trim();
+      if (!value) return null;
+      return { value, label: value };
+    })
+    .filter(Boolean);
+}
+
+export function resolveWorkOrderStatusDisplayLabel(rawValue, mergedSettings) {
+  const raw = String(rawValue || "").trim();
+  if (!raw) return "—";
+  const opts = workOrderStatusSelectOptionsFromMerged(mergedSettings);
+  const hit = opts.find((o) => String(o.value).toLowerCase() === raw.toLowerCase());
+  return hit?.label || raw;
+}
+
 /** @param {unknown} bodyVal */
 export function sanitizeControlledDropdownsPatch(
   bodyVal,

@@ -1,32 +1,52 @@
 "use client";
 
-import { FiCheck } from "react-icons/fi";
-
-/** Darken a hex or rgb background for the selected check badge. */
-function darkerShade(color, amount = 0.28) {
-  const s = String(color || "").trim();
-  if (!s) return "";
+/** Approximate relative luminance (0–1) for hex/rgb CSS colors. */
+function relativeLuminance(cssColor) {
+  if (!cssColor || typeof cssColor !== "string") return null;
+  const s = cssColor.trim();
+  let r;
+  let g;
+  let b;
   const hex = s.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (hex) {
     let h = hex[1];
-    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
-    const r = Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount));
-    const g = Math.round(parseInt(h.slice(2, 4), 16) * (1 - amount));
-    const b = Math.round(parseInt(h.slice(4, 6), 16) * (1 - amount));
-    return `rgb(${r}, ${g}, ${b})`;
+    if (h.length === 3) h = `${h[0]}${h[0]}${h[1]}${h[1]}${h[2]}${h[2]}`;
+    r = parseInt(h.slice(0, 2), 16);
+    g = parseInt(h.slice(2, 4), 16);
+    b = parseInt(h.slice(4, 6), 16);
+  } else {
+    const rgb = s.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (!rgb) return null;
+    r = Number(rgb[1]);
+    g = Number(rgb[2]);
+    b = Number(rgb[3]);
   }
-  const rgb = s.match(/^rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
-  if (rgb) {
-    const r = Math.round(Number(rgb[1]) * (1 - amount));
-    const g = Math.round(Number(rgb[2]) * (1 - amount));
-    const b = Math.round(Number(rgb[3]) * (1 - amount));
-    return `rgb(${r}, ${g}, ${b})`;
-  }
-  return s;
+  const lin = (c) => {
+    const x = c / 255;
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+}
+
+function isLightCssColor(cssColor) {
+  const L = relativeLuminance(cssColor);
+  return L != null && L > 0.65;
 }
 
 /**
- * Status summary filter chip (RFQ, Invoices, etc.) with tile colors from Settings.
+ * Icon sits on the white/card surface — never use a light text color meant for a dark badge fill.
+ * Prefer dark tile text; if text is white/light, use the tile background accent instead.
+ */
+function iconColorOnCard(tileBg, tileText) {
+  if (tileText && !isLightCssColor(tileText)) return tileText;
+  if (tileBg && !isLightCssColor(tileBg)) return tileBg;
+  if (tileText) return tileText;
+  return tileBg || undefined;
+}
+
+/**
+ * Status summary filter chip — compact neutral card with a status-color accent.
+ * Keeps Settings tile colors on the rail / count badge; label stays readable.
  */
 export default function StatusFilterPillButton({
   card,
@@ -43,40 +63,100 @@ export default function StatusFilterPillButton({
     typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
   const tileStyle = card.tileAppearance?.style || {};
   const tileBg = tileStyle.backgroundColor;
-  const checkBadgeStyle = tileBg
-    ? {
-        backgroundColor: darkerShade(tileBg),
-        color: tileStyle.color || "#fff",
-      }
-    : undefined;
-  const subtitle = labelOnly
-    ? ""
-    : card.subtitle != null && String(card.subtitle).trim() !== ""
-      ? String(card.subtitle)
-      : amountOnly
-        ? amountText
-        : `${card.count ?? 0} · ${amountText}`;
-  const pillClass = `status-filter-pill job-board-status-pill relative min-w-[5.5rem] rounded-lg border px-3 py-2 text-left transition-all duration-150 ${card.tileAppearance?.className ?? ""} ${
+  const tileText = tileStyle.color;
+  const tileTokens = String(card.tileAppearance?.className || "").split(/\s+/).filter(Boolean);
+  const tileBgClassName = tileTokens
+    .filter((c) => /^(bg-|dark:bg-|from-|to-|via-)/.test(c))
+    .join(" ");
+  const tileTextClassName = tileTokens
+    .filter((c) => /^(text-|dark:text-)/.test(c))
+    .join(" ");
+  const tileClassName = [tileBgClassName, tileTextClassName].filter(Boolean).join(" ");
+  const Icon = typeof card.icon === "function" ? card.icon : null;
+
+  const hasCustomSubtitle = card.subtitle != null && String(card.subtitle).trim() !== "";
+  const customSubtitle = hasCustomSubtitle ? String(card.subtitle) : "";
+  const showStats = !labelOnly;
+
+  const railStyle = tileBg ? { backgroundColor: tileBg } : undefined;
+  const countBadgeStyle =
+    tileBg || tileText
+      ? {
+          ...(tileBg ? { backgroundColor: tileBg } : {}),
+          ...(tileText ? { color: tileText } : {}),
+        }
+      : undefined;
+  const iconColor = iconColorOnCard(tileBg, tileText);
+  const iconStyle = iconColor ? { color: iconColor } : undefined;
+
+  const shellClass = [
+    "status-filter-pill group relative inline-flex cursor-pointer overflow-hidden rounded-lg border text-left transition-all duration-150",
+    "bg-card shadow-sm",
     active
-      ? "z-[1] opacity-100 saturate-100 pr-8"
-      : "border-border opacity-[0.88] saturate-[0.92] hover:opacity-100 hover:saturate-100 hover:shadow-sm pr-3"
-  } ${className}`.trim();
-  const pillStyle = card.tileAppearance?.style;
+      ? "border-primary ring-1 ring-primary/35"
+      : "border-border hover:border-primary/40 hover:shadow",
+    labelOnly ? "min-w-0 items-center" : "min-w-[8.25rem] max-w-[14rem] flex-col",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const rail = (
+    <span
+      className={`absolute inset-y-0 left-0 w-1 ${tileBg ? "" : tileBgClassName || "bg-primary/50"}`}
+      style={railStyle}
+      aria-hidden
+    />
+  );
+
+  const body = (
+    <span className={`block min-w-0 pl-3.5 ${labelOnly ? "px-3 py-0" : "pr-3 pt-2.5 pb-2.5"}`}>
+      <span className="flex min-w-0 items-center gap-2">
+        {Icon ? (
+          <Icon
+            className={`h-4 w-4 shrink-0 ${
+              iconStyle ? "" : tileTextClassName || "text-primary"
+            }`}
+            style={iconStyle}
+            aria-hidden
+          />
+        ) : null}
+        <span
+          className="min-w-0 flex-1 truncate text-xs font-semibold leading-snug text-title"
+          title={card.label}
+        >
+          {card.label}
+        </span>
+        {showStats && !amountOnly && !hasCustomSubtitle ? (
+          <span
+            className={`inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md px-1.5 text-[11px] font-bold tabular-nums leading-none ${
+              countBadgeStyle ? "" : tileClassName || "bg-primary/15 text-primary"
+            }`}
+            style={countBadgeStyle}
+          >
+            {card.count ?? 0}
+          </span>
+        ) : null}
+      </span>
+      {showStats ? (
+        hasCustomSubtitle || amountOnly ? (
+          <span className="mt-1.5 block truncate text-sm font-semibold tabular-nums text-secondary">
+            {hasCustomSubtitle ? customSubtitle : amountText}
+          </span>
+        ) : (
+          <span className="mt-1.5 block truncate text-sm font-bold tabular-nums text-title">
+            {amountText}
+          </span>
+        )
+      ) : null}
+    </span>
+  );
 
   if (readOnly) {
     return (
-      <div
-        className={`status-filter-pill job-board-status-pill relative min-w-[5.5rem] rounded-lg border px-3 py-2 pr-3 text-left opacity-100 saturate-100 ${card.tileAppearance?.className ?? ""}`}
-        style={pillStyle}
-        role="group"
-        aria-label={card.label}
-      >
-        <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
-        {subtitle ? (
-          <span className="mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums">
-            {subtitle}
-          </span>
-        ) : null}
+      <div className={shellClass.replace("cursor-pointer", "")} role="group" aria-label={card.label}>
+        {rail}
+        {body}
       </div>
     );
   }
@@ -85,31 +165,12 @@ export default function StatusFilterPillButton({
     <button
       type="button"
       onClick={onClick}
-      className={pillClass}
-      style={pillStyle}
+      className={shellClass}
       aria-pressed={active}
+      title={card.label}
     >
-      {active ? (
-        <span
-          className={`absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full ${
-            checkBadgeStyle ? "" : "bg-inherit brightness-[0.62] text-inherit"
-          }`}
-          style={checkBadgeStyle}
-          aria-hidden
-        >
-          <FiCheck className="h-2.5 w-2.5 shrink-0" strokeWidth={3} />
-        </span>
-      ) : null}
-      <span className="block whitespace-nowrap text-sm font-semibold leading-snug">{card.label}</span>
-      {subtitle ? (
-        <span
-          className={`mt-1 block whitespace-nowrap text-sm font-semibold leading-snug tabular-nums ${
-            active ? "opacity-100" : "opacity-95"
-          }`}
-        >
-          {subtitle}
-        </span>
-      ) : null}
+      {rail}
+      {body}
     </button>
   );
 }

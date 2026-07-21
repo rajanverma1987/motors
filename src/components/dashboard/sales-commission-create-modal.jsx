@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { FiCheck } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
@@ -8,10 +8,12 @@ import Input from "@/components/ui/input";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import SalesCommissionSalesPersonField from "@/components/dashboard/sales-commission-sales-person-field";
 import { formatDateMdy } from "@/lib/format-date";
+import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
+import { mergeUserSettings } from "@/lib/user-settings";
 
 const FORM_INITIAL = {
   salesPersonId: "",
@@ -39,6 +41,12 @@ export default function SalesCommissionCreateModal({
 }) {
   const toast = useToast();
   const fmt = useFormatMoney();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const statusDisplay = useMemo(() => {
+    if (presetQuote?.statusLabel) return presetQuote.statusLabel;
+    return resolveQuoteInvoiceStatusDisplayLabel(presetQuote?.jobStatus, mergedSettings);
+  }, [presetQuote?.statusLabel, presetQuote?.jobStatus, mergedSettings]);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(FORM_INITIAL);
   const [salesPersons, setSalesPersons] = useState([]);
@@ -264,8 +272,8 @@ export default function SalesCommissionCreateModal({
                   <dd className="truncate font-medium text-title">{presetQuote.customerName || "—"}</dd>
                 </div>
                 <div className="min-w-0">
-                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-secondary">Job status</dt>
-                  <dd className="truncate font-medium capitalize text-title">{presetQuote.jobStatus || "—"}</dd>
+                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-secondary">Status</dt>
+                  <dd className="truncate font-medium text-title">{statusDisplay}</dd>
                 </div>
               </dl>
             </div>

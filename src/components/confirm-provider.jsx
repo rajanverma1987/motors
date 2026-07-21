@@ -11,6 +11,7 @@ const defaultState = {
   message: "",
   confirmLabel: "Confirm",
   cancelLabel: "Cancel",
+  showCancel: true,
   variant: "warning",
   onConfirm: null,
   resolve: null,
@@ -35,8 +36,34 @@ export function ConfirmProvider({ children }) {
           message,
           confirmLabel,
           cancelLabel,
+          showCancel: true,
           variant,
           onConfirm,
+          resolve,
+        });
+      });
+    },
+    []
+  );
+
+  /** Message box (same UI as confirm, OK only) — use instead of toast for Simple portal flows. */
+  const alert = useCallback(
+    ({
+      title = "Notice",
+      message = "",
+      confirmLabel = "OK",
+      variant = "primary",
+    } = {}) => {
+      return new Promise((resolve) => {
+        setState({
+          open: true,
+          title,
+          message,
+          confirmLabel,
+          cancelLabel: "Cancel",
+          showCancel: false,
+          variant,
+          onConfirm: null,
           resolve,
         });
       });
@@ -51,11 +78,12 @@ export function ConfirmProvider({ children }) {
   }, [state.onConfirm, state.resolve]);
 
   const handleCancel = useCallback(() => {
-    state.resolve?.(false);
+    // Alert (no cancel): Escape / backdrop dismisses as acknowledged.
+    state.resolve?.(state.showCancel ? false : true);
     setState(defaultState);
-  }, [state.resolve]);
+  }, [state.resolve, state.showCancel]);
 
-  const value = { confirm };
+  const value = { confirm, alert };
 
   return (
     <ConfirmContext.Provider value={value}>
@@ -66,6 +94,7 @@ export function ConfirmProvider({ children }) {
         message={state.message}
         confirmLabel={state.confirmLabel}
         cancelLabel={state.cancelLabel}
+        showCancel={state.showCancel}
         variant={state.variant}
         onConfirm={handleConfirm}
         onCancel={handleCancel}
@@ -78,4 +107,10 @@ export function useConfirm() {
   const ctx = useContext(ConfirmContext);
   if (!ctx) throw new Error("useConfirm must be used within ConfirmProvider");
   return ctx.confirm;
+}
+
+export function useAlert() {
+  const ctx = useContext(ConfirmContext);
+  if (!ctx) throw new Error("useAlert must be used within ConfirmProvider");
+  return ctx.alert;
 }

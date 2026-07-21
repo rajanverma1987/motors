@@ -27,6 +27,7 @@ function sendMetaUrl(documentType, documentId) {
 
 /**
  * Preview the RFQ / invoice / PO document before emailing it to customer or vendor.
+ * Supports Classic documentId fetch OR local payloads (Simple portal).
  */
 export default function SendDocumentPreviewModal({
   open,
@@ -36,6 +37,12 @@ export default function SendDocumentPreviewModal({
   documentId,
   sendUrl,
   sendMethod = "POST",
+  sendBodyExtra = null,
+  localQuote = null,
+  localInvoicePayload = null,
+  localPo = null,
+  localVendor = null,
+  localSendMeta = null,
   onSent,
   zIndex = 60,
 }) {
@@ -53,8 +60,45 @@ export default function SendDocumentPreviewModal({
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
   const [emailCc, setEmailCc] = useState("");
 
+  const useLocalDocument = Boolean(localQuote || localInvoicePayload || localPo);
+
   useEffect(() => {
-    if (!open || !documentId || !documentType) {
+    if (!open || !documentType) {
+      setLoadError("");
+      setLoading(false);
+      setSending(false);
+      setSendMeta(null);
+      setQuote(null);
+      setInvoicePayload(null);
+      setPo(null);
+      setVendor(null);
+      setEmailCustomMessage("");
+      setEmailCc("");
+      return;
+    }
+
+    if (useLocalDocument) {
+      setLoadError("");
+      setLoading(false);
+      setSending(false);
+      setSendMeta(localSendMeta || null);
+      setQuote(localQuote || null);
+      setInvoicePayload(localInvoicePayload || null);
+      setPo(localPo || null);
+      setVendor(localVendor || null);
+      setEmailCustomMessage("");
+      setEmailCc("");
+      if (localSendMeta && !localSendMeta.toEmail) {
+        setLoadError(
+          documentType === "po"
+            ? "Vendor has no email address. Add an email to the vendor record."
+            : "Customer has no email address. Add an email to the customer record."
+        );
+      }
+      return;
+    }
+
+    if (!documentId) {
       setLoadError("");
       setLoading(false);
       setSending(false);
@@ -126,6 +170,12 @@ export default function SendDocumentPreviewModal({
     open,
     documentType,
     documentId,
+    useLocalDocument,
+    localQuote,
+    localInvoicePayload,
+    localPo,
+    localVendor,
+    localSendMeta,
     accountSettings?.logoUrl,
     accountSettings?.accountsBillingAddress,
     accountSettings?.accountsShippingAddress,
@@ -145,6 +195,7 @@ export default function SendDocumentPreviewModal({
         body: JSON.stringify({
           customMessage: emailCustomMessage.trim(),
           cc: emailCc.trim(),
+          ...(sendBodyExtra && typeof sendBodyExtra === "object" ? sendBodyExtra : {}),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -175,6 +226,7 @@ export default function SendDocumentPreviewModal({
       width="min(960px, 96vw)"
       zIndex={zIndex}
       showClose={!busy}
+      closeOnOutsideClick={false}
       actions={
         <>
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onClose}>
@@ -184,7 +236,7 @@ export default function SendDocumentPreviewModal({
             type="button"
             variant="primary"
             size="sm"
-            disabled={busy || !documentReady || !!loadError || smtpBlocked}
+            disabled={busy || !documentReady || !!loadError || smtpBlocked || !sendMeta?.toEmail}
             className="inline-flex items-center gap-1.5"
             onClick={handleSend}
           >
@@ -254,7 +306,7 @@ export default function SendDocumentPreviewModal({
             label="Message for email (optional)"
             value={emailCustomMessage}
             onChange={(e) => setEmailCustomMessage(e.target.value)}
-            placeholder="Add a personal note included in the email body above the document link…"
+            placeholder="Add a personal note included in the email body…"
             rows={3}
             maxLength={SEND_DOCUMENT_CUSTOM_MESSAGE_MAX}
             disabled={busy}
@@ -275,8 +327,12 @@ export default function SendDocumentPreviewModal({
             {smtpBlocked
               ? "Complete workspace SMTP settings before sending."
               : documentType === "po"
-                ? "Review the purchase order above. The vendor will receive an email with a link to view and update delivery status."
-                : "Review the document above. The customer will receive an email with a link to view it."}
+                ? useLocalDocument
+                  ? "Review the purchase order above. The vendor will receive an email about this PO."
+                  : "Review the purchase order above. The vendor will receive an email with a link to view and update delivery status."
+                : useLocalDocument
+                  ? "Review the document above. The customer will receive an email about this document."
+                  : "Review the document above. The customer will receive an email with a link to view it."}
           </p>
         </div>
       ) : null}

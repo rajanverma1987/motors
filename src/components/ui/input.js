@@ -36,6 +36,7 @@ export default function Input({
         onChange={onChange}
         readOnly={readOnly}
         disabled={disabled}
+        tabIndex={disabled ? -1 : undefined}
         required={required}
         maxLength={maxLength}
         autoComplete={autoComplete}

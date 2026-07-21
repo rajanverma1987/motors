@@ -215,12 +215,17 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </table>
       </section>
 
-      {q.customerNotes ? (
-        <section className="mb-3">
-          <h2 className={sectionLabel}>Customer notes</h2>
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{q.customerNotes}</p>
-        </section>
-      ) : null}
+      {(() => {
+        const mode = q.printNotesMode === "internal" ? "internal" : "customer";
+        const text = mode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
+        if (!text) return null;
+        return (
+          <section className="mb-3">
+            <h2 className={sectionLabel}>{mode === "internal" ? "Notes" : "Customer notes"}</h2>
+            <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{text}</p>
+          </section>
+        );
+      })()}
 
       </div>
 

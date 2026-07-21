@@ -7,6 +7,7 @@ export default function Button({
   className = "",
   disabled = false,
   form,
+  tabIndex,
   ...rest
 }) {
   const variants = {
@@ -26,10 +27,11 @@ export default function Button({
     <button
       type={type}
       onClick={onClick}
-      disabled={disabled}
       form={form}
       className={`inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 whitespace-normal text-center text-pretty rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
       {...rest}
+      disabled={disabled}
+      tabIndex={disabled ? -1 : tabIndex}
     >
       {children}
     </button>

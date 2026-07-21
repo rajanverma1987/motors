@@ -11,10 +11,7 @@ import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
 import CrmPlaceholder from "@/components/dashboard/crm-placeholder";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import { mergeUserSettings } from "@/lib/user-settings";
-import {
-  invoiceStatusSelectOptionsFromMerged,
-  invoiceStatusTileColorForValue,
-} from "@/lib/dropdown-catalog";
+import { invoiceStatusSelectOptionsFromMerged, invoiceStatusTileColorForValue, } from "@/lib/dropdown-catalog";
 import { invoiceLineTotal, invoiceTaxAmount } from "@/lib/invoice-amounts";
 import { normalizeTaxExempt } from "@/lib/quote-invoice-totals";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";

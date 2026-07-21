@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FiEdit2, FiTrash2, FiRotateCw, FiDownload } from "react-icons/fi";
+import { FiEdit2, FiTrash2, FiRotateCw, FiDownload, FiSearch } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
@@ -218,15 +218,17 @@ export default function Table({
   const compactFromSettings = !!dashboardUserSettings?.compactTables;
   const isCompact = dense || compactFromSettings;
 
-  const cellPy = isCompact ? "py-0.5" : "py-1.5";
-  const headerPy = isCompact ? "py-0.5" : "py-1.5";
+  const cellPy = isCompact ? "py-0" : "py-0.5";
+  /** Header stays roomier than body cells so column titles remain scannable. */
+  const headerPy = isCompact ? "py-1" : "py-1.5";
   const cellText = isCompact ? "text-xs" : "text-sm";
-  const actionPad = isCompact ? "p-1" : "p-1.5";
+  const headerText = isCompact ? "text-xs" : "text-sm";
+  const actionPad = isCompact ? "p-0.5" : "p-1";
   const actionIcon = isCompact ? "h-3.5 w-3.5" : "h-4 w-4";
 
   function cellPx(col) {
-    if (col.isSelect || col.isAction) return isCompact ? "px-1.5" : "px-2";
-    return isCompact ? "px-3" : "px-4";
+    if (col.isSelect || col.isAction) return "px-1";
+    return isCompact ? "px-1" : "px-1.5";
   }
 
   const [internalPage, setInternalPage] = useState(1);
@@ -242,8 +244,7 @@ export default function Table({
     const { row, col } = cellHover;
     const hitRow = rowIndex != null && row === rowIndex;
     const hitCol = col === colIndex;
-    if (hitRow && hitCol) return "bg-primary/12";
-    if (hitRow) return "bg-muted/40";
+    if (hitRow && hitCol) return "bg-primary/10";
     if (hitCol) return "bg-muted/30";
     return "";
   };
@@ -558,10 +559,16 @@ export default function Table({
     : "w-full border-collapse";
   const thClass = (col) => {
     const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
-    return `${cellPx(col)} ${headerPy} ${cellText} font-medium leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
+    return `${cellPx(col)} ${headerPy} ${headerText} font-semibold leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
   };
   const thStickyStyle = effectiveStickyHeader
-    ? { position: "sticky", top: 0, zIndex: 10, backgroundColor: "hsl(var(--card))", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" }
+    ? {
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        backgroundColor: "color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--card)))",
+        boxShadow: "inset 0 -1px 0 hsl(var(--border))",
+      }
     : undefined;
 
   const colgroup = (
@@ -575,7 +582,7 @@ export default function Table({
   const tableContent = (
     <table className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
-      <thead className="bg-card border-b border-border outline-none">
+      <thead className="border-b-2 border-border bg-primary/10 outline-none dark:bg-primary/15">
         <tr>
           {displayColumns.map((col, i) => {
             const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
@@ -666,21 +673,36 @@ export default function Table({
           displayData.map((row, i) => (
             <tr
               key={getRowId(row, i, rowKey)}
-              className={`border-b border-border last:border-b-0 ${striped && i % 2 === 1 ? "bg-card/50" : ""}`}
+              className={`border-b border-border last:border-b-0 transition-colors hover:bg-primary/[0.08] ${
+                striped && i % 2 === 1 ? "bg-card/50" : ""
+              }`}
+              onMouseEnter={() => setCellHover((prev) => ({ row: i, col: prev.col }))}
+              onMouseLeave={() => setCellHover((prev) => ({ row: null, col: prev.col }))}
             >
               {displayColumns.map((col, j) => {
                 const isPlaceholder = isCellPlaceholder(col, row, i);
                 const align =
                   alignClass[resolveColumnAlign(col, { value: row[col.key], isPlaceholder })] ?? "text-left";
-                const style = getEffectiveColStyle(col);
+                const widthStyle = getEffectiveColStyle(col);
+                const rowCellStyle =
+                  typeof col.getCellStyle === "function" ? col.getCellStyle(row[col.key], row, i) : null;
+                const rowCellClass =
+                  typeof col.getCellClassName === "function"
+                    ? col.getCellClassName(row[col.key], row, i)
+                    : "";
+                const style =
+                  rowCellStyle && typeof rowCellStyle === "object"
+                    ? { ...widthStyle, ...rowCellStyle }
+                    : widthStyle;
                 const isActionLikeColumn =
                   col.isAction || col.key === "actions" || col.key === "_actions";
                 /** Parent cursor does not override UA `button` cursor; target descendants explicitly. */
                 const actionCellCursor = "[&_button]:cursor-pointer [&_a]:cursor-pointer";
+                const hasRowCellColor = Boolean(rowCellStyle || rowCellClass);
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`${cellPx(col)} ${cellPy} ${cellText} leading-snug text-text tabular whitespace-nowrap ${align} ${cellBorderClass} ${cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}`}
+                    className={`${cellPx(col)} ${cellPy} ${cellText} leading-snug ${hasRowCellColor ? "" : "text-text"} tabular whitespace-nowrap ${align} ${cellBorderClass} ${hasRowCellColor ? "" : cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}${rowCellClass ? ` ${rowCellClass}` : ""}`}
                     style={style}
                     onMouseEnter={() => setCellHover({ row: i, col: j })}
                   >
@@ -773,14 +795,20 @@ export default function Table({
       {(hasSearch || hasRefresh || hasToolbarAfterRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
         <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
           {hasSearch && (
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={searchPlaceholder}
-              className="min-w-0 max-w-xs flex-1 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
-              aria-label="Search table"
-            />
+            <div className="relative min-w-0 max-w-xs flex-1">
+              <FiSearch
+                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={searchPlaceholder}
+                className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg py-2 pl-8 pr-3 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                aria-label="Search table"
+              />
+            </div>
           )}
           {hasRefresh && (
             <button
@@ -879,8 +907,8 @@ export default function Table({
       <div
         className={
           fillHeight
-            ? "ui-table-shell flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border"
-            : "ui-table-shell overflow-hidden rounded-lg border border-border"
+            ? "ui-table-shell flex min-h-0 flex-1 flex-col overflow-hidden border border-border"
+            : "ui-table-shell overflow-hidden border border-border"
         }
       >
         {effectiveStickyHeader ? (

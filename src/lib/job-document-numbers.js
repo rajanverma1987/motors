@@ -2,50 +2,35 @@ import Quote from "@/models/Quote";
 import Invoice from "@/models/Invoice";
 import WorkOrder from "@/models/WorkOrder";
 import {
-  applyDocumentPrefixIfAbsent,
-  effectiveInvoiceNumberPrefix,
   effectiveWorkOrderNumberPrefix,
   workOrderNumberPatternRegex,
   workOrderNumberStem,
 } from "@/lib/document-number-prefixes";
+import { computeNextJobNumber } from "@/lib/job-document-number-format";
+
+export {
+  computeNextJobNumber,
+  effectiveJobNumberPrefix,
+  formatJobSeries,
+  parseJobSeriesCounter,
+} from "@/lib/job-document-number-format";
 
 function escapeRegExp(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Job / RFQ / quote ID prefix from settings (e.g. CEMR-). Same field as invoice prefix. */
-export function effectiveJobNumberPrefix(mergedSettings) {
-  const p = effectiveInvoiceNumberPrefix(mergedSettings);
-  if (!p) return "";
-  return p.endsWith("-") ? p : `${p}-`;
-}
-
-/** Parse series counter from stored rfqNumber (A00001 or CEMR-A00001). */
-export function parseJobSeriesCounter(rfqNumber) {
-  const s = String(rfqNumber ?? "").trim();
-  const m = s.match(/A(\d+)$/i);
-  return m ? parseInt(m[1], 10) : 0;
-}
-
-export function formatJobSeries(counter) {
-  const n = Math.max(1, Number(counter) || 1);
-  return `A${String(n).padStart(5, "0")}`;
-}
-
 /**
  * Next unified job number: {prefix}A00001 (prefix from settings, e.g. CEMR-A00001).
- * @param {import("@/lib/user-settings").mergeUserSettings} mergedSettings
+ * @param {string} createdByEmail
+ * @param {ReturnType<typeof import("@/lib/user-settings").mergeUserSettings>} mergedSettings
  */
 export async function getNextJobNumber(createdByEmail, mergedSettings) {
   const email = createdByEmail.trim().toLowerCase();
-  const prefix = effectiveJobNumberPrefix(mergedSettings);
   const list = await Quote.find({ createdByEmail: email }, { rfqNumber: 1 }).lean();
-  let maxNum = 0;
-  for (const q of list) {
-    maxNum = Math.max(maxNum, parseJobSeriesCounter(q.rfqNumber));
-  }
-  const series = formatJobSeries(maxNum + 1);
-  return applyDocumentPrefixIfAbsent(prefix, series);
+  return computeNextJobNumber(
+    list.map((q) => q.rfqNumber),
+    mergedSettings
+  );
 }
 
 /**
@@ -75,7 +60,7 @@ export async function nextInvoiceNumberForQuote(email, quoteId, baseJobNumber) {
 
 /**
  * Work order numbers: W-CEMR-A00001-1, W-CEMR-A00001-2, …
- * @param {import("@/lib/user-settings").mergeUserSettings} mergedSettings
+ * @param {ReturnType<typeof import("@/lib/user-settings").mergeUserSettings>} mergedSettings
  */
 export async function nextWorkOrderNumberForJob(email, baseJobNumber, mergedSettings) {
   const woHead = effectiveWorkOrderNumberPrefix(mergedSettings);

@@ -138,6 +138,54 @@ html[data-compact-tables="true"] table.dashboard-data-table :is(th, td) {
   padding-bottom: 0.125rem;
 }
 
+/* Tab panel enter transitions (Tabs component) */
+@keyframes ui-tab-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes ui-tab-panel-enter-right {
+  from {
+    opacity: 0;
+    transform: translateX(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes ui-tab-panel-enter-left {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.ui-tab-panel-enter {
+  animation: ui-tab-panel-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ui-tab-panel-enter-right {
+  animation: ui-tab-panel-enter-right 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ui-tab-panel-enter-left {
+  animation: ui-tab-panel-enter-left 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ui-tab-panel-enter,
+  .ui-tab-panel-enter-right,
+  .ui-tab-panel-enter-left {
+    animation: none;
+  }
+}
+
 /* Dashboard display zoom — reset for print so layouts match paper */
 @media print {
   html {
