@@ -13,9 +13,11 @@ import ServiceProposalsPanel, {
   SIMPLE_LIST_VARIANT_PROPOSALS,
 } from "./service-proposals-panel";
 import PurchaseOrdersPanel from "./purchase-orders-panel";
+import CustomersPanel from "./customers-panel";
 import {
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_ACCOUNTS_PAYABLE,
+  SIMPLE_TAB_CUSTOMERS,
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_PURCHASE_ORDERS,
@@ -61,6 +63,7 @@ export default function DashboardsPageClient() {
   const [draftTo, setDraftTo] = useState(() => appliedTo || fyDefault.to);
   const [createNonce, setCreateNonce] = useState(0);
   const [poCreateNonce, setPoCreateNonce] = useState(0);
+  const [customerCreateNonce, setCustomerCreateNonce] = useState(0);
 
   useEffect(() => {
     if (isAllDates) {
@@ -119,6 +122,10 @@ export default function DashboardsPageClient() {
   );
 
   const handleAddNew = useCallback(() => {
+    if (activeTab === SIMPLE_TAB_CUSTOMERS) {
+      setCustomerCreateNonce((n) => n + 1);
+      return;
+    }
     if (activeTab === SIMPLE_TAB_PURCHASE_ORDERS) {
       setPoCreateNonce((n) => n + 1);
       return;
@@ -133,6 +140,11 @@ export default function DashboardsPageClient() {
 
   const tabs = useMemo(
     () => [
+      {
+        id: SIMPLE_TAB_CUSTOMERS,
+        label: "Customers",
+        children: <CustomersPanel createNonce={customerCreateNonce} />,
+      },
       {
         id: SIMPLE_TAB_SERVICE_PROPOSALS,
         label: "Service Proposals",
@@ -159,7 +171,7 @@ export default function DashboardsPageClient() {
         children: <BlankPanel title="Account Payables" />,
       },
     ],
-    [createNonce, poCreateNonce]
+    [createNonce, poCreateNonce, customerCreateNonce]
   );
 
   return (
@@ -209,7 +221,9 @@ export default function DashboardsPageClient() {
               Go
             </Button>
           </div>
-          {activeTab === SIMPLE_TAB_SERVICE_PROPOSALS || activeTab === SIMPLE_TAB_PURCHASE_ORDERS ? (
+          {activeTab === SIMPLE_TAB_CUSTOMERS ||
+          activeTab === SIMPLE_TAB_SERVICE_PROPOSALS ||
+          activeTab === SIMPLE_TAB_PURCHASE_ORDERS ? (
             <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleAddNew}>
               <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
               Add New

@@ -47,6 +47,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     cd: "",
     bars: "",
     motorPaint: "",
+    acDatasheet: null,
+    dcDatasheet: null,
     internalNotes: "",
     customerNotes: "",
     customerPo: "",
@@ -106,6 +108,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     quote: "",
     recordType: RECORD_TYPE_RFQ,
     attachments: [],
+    acDatasheet: source.acDatasheet && typeof source.acDatasheet === "object" ? { ...source.acDatasheet } : null,
+    dcDatasheet: source.dcDatasheet && typeof source.dcDatasheet === "object" ? { ...source.dcDatasheet } : null,
     scopeDetails,
     otherItems,
   };

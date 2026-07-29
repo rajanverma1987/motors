@@ -7,11 +7,12 @@ import Modal from "@/components/ui/modal";
 import SimpleSelect from "@/components/simple/simple-select";
 import { Form } from "@/components/ui/form-layout";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
+import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
@@ -48,6 +49,11 @@ import {
   resolveRecordTypeOnSave,
   sumLinePrices,
 } from "@/lib/simple-service-proposal-form";
+import {
+  buildAcDatasheetFromProposal,
+  buildDcDatasheetFromProposal,
+  datasheetHasData,
+} from "@/lib/simple-datasheet-form";
 import { listSimplePurchaseOrdersForJob } from "@/lib/simple-purchase-order-form";
 
 const FORM_ID = "simple-service-proposal-form";
@@ -231,6 +237,7 @@ export default function ServiceProposalFormModal({
   initialForm = null,
 }) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const { user } = useAuth();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
@@ -252,6 +259,7 @@ export default function ServiceProposalFormModal({
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [newCustomerForm, setNewCustomerForm] = useState(INITIAL_CUSTOMER_FORM);
   const [savingCustomer, setSavingCustomer] = useState(false);
+  const [datasheetOpen, setDatasheetOpen] = useState(false);
 
   const formatMoney = useCallback((n) => {
     const value = Number.isFinite(n) ? n : 0;
@@ -330,6 +338,7 @@ export default function ServiceProposalFormModal({
     setForm(initialForm ? { ...createEmptyServiceProposalForm(), ...initialForm } : createEmptyServiceProposalForm());
     setAttachmentsOpen(false);
     setCommissionOpen(false);
+    setDatasheetOpen(false);
     loadCustomers();
     loadEmployees();
     // Only reset when opening / switching records. Do not depend on loadCustomers/loadEmployees —
@@ -338,6 +347,43 @@ export default function ServiceProposalFormModal({
   }, [open, initialForm?.id]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const handleMotorTypeChange = async (nextType) => {
+    const next = String(nextType || "").toUpperCase() === "DC" ? "DC" : "AC";
+    if (form.motorPower === next) return;
+    const otherType = next === "AC" ? "DC" : "AC";
+    const otherSheet = otherType === "AC" ? form.acDatasheet : form.dcDatasheet;
+    if (datasheetHasData(otherSheet, otherType)) {
+      const ok = await confirm({
+        title: `Switch to ${next}?`,
+        message: `This will delete all ${otherType} datasheet data for this job. Do you want to continue?`,
+        confirmLabel: "Continue",
+        variant: "danger",
+      });
+      if (!ok) return;
+      setForm((f) => ({
+        ...f,
+        motorPower: next,
+        acDatasheet: otherType === "AC" ? null : f.acDatasheet,
+        dcDatasheet: otherType === "DC" ? null : f.dcDatasheet,
+      }));
+      return;
+    }
+    patch("motorPower", next);
+  };
+
+  const openDatasheet = () => {
+    if (form.recordType === RECORD_TYPE_RFQ) return;
+    setDatasheetOpen(true);
+  };
+
+  const handleDatasheetSave = (sheet) => {
+    const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
+    setForm((f) => ({
+      ...f,
+      ...(isDc ? { dcDatasheet: { ...sheet } } : { acDatasheet: { ...sheet } }),
+    }));
+  };
 
   const handleCustomerChange = (customerId) => {
     const c = customers.find((row) => row.id === customerId);
@@ -405,6 +451,16 @@ export default function ServiceProposalFormModal({
     [customers, form.customerId]
   );
 
+  const datasheetInitial = useMemo(() => {
+    const companyName =
+      selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
+    const meta = { companyName, technicianLabel: form.preparedBy || "" };
+    if (String(form.motorPower || "AC").toUpperCase() === "DC") {
+      return buildDcDatasheetFromProposal(form, meta);
+    }
+    return buildAcDatasheetFromProposal(form, meta);
+  }, [form, selectedCustomer]);
+
   const commissionPreset = useMemo(() => {
     if (!recordId) return null;
     const rfqNumber = String(form.documentNumber || "").trim() || recordId;
@@ -428,43 +484,71 @@ export default function ServiceProposalFormModal({
     mergedSettings,
   ]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.customerId) {
+  const saveForm = async (nextForm, { successMessage = "Service proposal saved." } = {}) => {
+    const payload = nextForm || form;
+    if (!payload.customerId) {
       await alert({ title: "Error", message: "Select a customer.", variant: "danger" });
-      return;
+      return null;
     }
     setSaving(true);
     try {
       const recordType = resolveRecordTypeOnSave(
-        form.recordType,
-        form.status,
+        payload.recordType,
+        payload.status,
         invoiceStatusValues,
         quoteStatusValues
       );
-      const withType = { ...form, recordType };
+      const withType = { ...payload, recordType };
       const saved = await onSave?.(withType);
       const savedId = String(saved?.id || withType.id || "").trim();
-      if (savedId) {
-        setForm((f) => ({
-          ...f,
-          ...withType,
-          id: savedId,
-          documentNumber: saved?.documentNumber ?? withType.documentNumber,
-          attachments: Array.isArray(saved?.attachments)
-            ? saved.attachments
-            : Array.isArray(f.attachments)
-              ? f.attachments
-              : [],
-        }));
-      }
-      await alert({ title: "Saved", message: "Service proposal saved." });
-      // Keep open so toolbar actions (e.g. Attachments) work on the saved record.
+      const merged = {
+        ...withType,
+        id: savedId || withType.id || "",
+        documentNumber: saved?.documentNumber ?? withType.documentNumber,
+        attachments: Array.isArray(saved?.attachments)
+          ? saved.attachments
+          : Array.isArray(withType.attachments)
+            ? withType.attachments
+            : [],
+      };
+      setForm((f) => ({
+        ...f,
+        ...merged,
+        attachments: Array.isArray(saved?.attachments)
+          ? saved.attachments
+          : Array.isArray(f.attachments)
+            ? f.attachments
+            : merged.attachments,
+      }));
+      await alert({ title: "Saved", message: successMessage });
+      return merged;
     } catch (err) {
       await alert({ title: "Error", message: err?.message || "Failed to save service proposal", variant: "danger" });
+      return null;
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await saveForm(form);
+  };
+
+  const handleConvertRecordType = async (nextType) => {
+    if (saving || copying) return;
+    const next = String(nextType || "").toUpperCase();
+    if (next !== RECORD_TYPE_JOB && next !== RECORD_TYPE_RFQ) return;
+    if (form.recordType === next) return;
+    await saveForm(
+      { ...form, recordType: next },
+      {
+        successMessage:
+          next === RECORD_TYPE_JOB
+            ? "Converted to Job and saved."
+            : "Converted to RFQ and saved.",
+      }
+    );
   };
 
   const handleAttached = (attachment, nextAttachments) => {
@@ -763,7 +847,7 @@ export default function ServiceProposalFormModal({
                         name="motorPower"
                         value={opt}
                         checked={form.motorPower === opt}
-                        onChange={() => patch("motorPower", opt)}
+                        onChange={() => handleMotorTypeChange(opt)}
                         className="h-3.5 w-3.5 accent-primary"
                       />
                       {opt}
@@ -782,24 +866,9 @@ export default function ServiceProposalFormModal({
                     title={
                       form.recordType === RECORD_TYPE_RFQ
                         ? "Available when RecordType is Job or Invoice"
-                        : "Edit datasheet"
+                        : `View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`
                     }
-                    onClick={stubAction("Edit")}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN} !px-3`}
-                    disabled={form.recordType === RECORD_TYPE_RFQ}
-                    title={
-                      form.recordType === RECORD_TYPE_RFQ
-                        ? "Available when RecordType is Job or Invoice"
-                        : "View datasheet"
-                    }
-                    onClick={stubAction("View Datasheet")}
+                    onClick={openDatasheet}
                   >
                     View Datasheet
                   </Button>
@@ -890,19 +959,14 @@ export default function ServiceProposalFormModal({
                   aria-label="Prepared By"
                 />
               </FieldRow>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap justify-end gap-1">
                 <Button
                   type="button"
                   variant="primary"
                   size="sm"
                   className={TOOLBAR_BTN}
-                  disabled={form.recordType !== RECORD_TYPE_RFQ}
-                  onClick={() =>
-                    setForm((f) => ({
-                      ...f,
-                      recordType: RECORD_TYPE_JOB,
-                    }))
-                  }
+                  disabled={form.recordType !== RECORD_TYPE_RFQ || saving || copying}
+                  onClick={() => handleConvertRecordType(RECORD_TYPE_JOB)}
                 >
                   Convert RFQ To Job
                 </Button>
@@ -911,13 +975,8 @@ export default function ServiceProposalFormModal({
                   variant="primary"
                   size="sm"
                   className={TOOLBAR_BTN}
-                  disabled={form.recordType !== RECORD_TYPE_JOB}
-                  onClick={() =>
-                    setForm((f) => ({
-                      ...f,
-                      recordType: RECORD_TYPE_RFQ,
-                    }))
-                  }
+                  disabled={form.recordType !== RECORD_TYPE_JOB || saving || copying}
+                  onClick={() => handleConvertRecordType(RECORD_TYPE_RFQ)}
                 >
                   Convert Job To RFQ
                 </Button>
@@ -1164,6 +1223,30 @@ export default function ServiceProposalFormModal({
           <SimpleCustomerFormFields form={newCustomerForm} setForm={setNewCustomerForm} />
         </Form>
       </Modal>
+
+      <SimpleDatasheetModal
+        open={datasheetOpen}
+        onClose={() => setDatasheetOpen(false)}
+        onSave={handleDatasheetSave}
+        motorType={form.motorPower === "DC" ? "DC" : "AC"}
+        initialDatasheet={datasheetInitial}
+        technicianOptions={preparedByOptions}
+        recordId={recordId || null}
+        attachments={Array.isArray(form.attachments) ? form.attachments : []}
+        onAttached={handleAttached}
+        printContext={{
+          customerName:
+            selectedCustomer?.companyName ||
+            selectedCustomer?.primaryContactName ||
+            "",
+          companyName:
+            selectedCustomer?.companyName ||
+            selectedCustomer?.primaryContactName ||
+            "",
+          documentNumber: String(form.documentNumber || "").trim(),
+          documentLabel: docLabel,
+        }}
+      />
     </>
   );
 }

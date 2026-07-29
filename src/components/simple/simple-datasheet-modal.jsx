@@ -1,0 +1,476 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import Button from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
+import { Form } from "@/components/ui/form-layout";
+import SimpleSelect from "@/components/simple/simple-select";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
+import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
+import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
+import SimpleAcAssemblyFields from "@/components/simple/simple-ac-assembly-fields";
+import { useAlert } from "@/components/confirm-provider";
+import {
+  AC_DATASHEET_FIELD_COLUMNS,
+  AC_DATASHEET_SECTIONS,
+  AC_DATASHEET_TAB_ASSEMBLY,
+  AC_DATASHEET_TAB_DISASSEMBLY,
+  DC_ARMATURE_FIELD_COLUMNS,
+  DC_DATASHEET_SECTIONS,
+  DC_DATASHEET_TAB_ARMATURE,
+  DC_FIELD_FRAME_FIELD_COLUMNS,
+  acDatasheetVisibleTabs,
+  createEmptyAcDatasheet,
+  createEmptyDcDatasheet,
+  dcDatasheetVisibleTabs,
+  normalizeAcDatasheet,
+  normalizeDcDatasheet,
+} from "@/lib/simple-datasheet-form";
+
+const FORM_ID = "simple-datasheet-form";
+const FIELD_INPUT =
+  "h-7 w-full min-w-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const FIELD_TEXTAREA =
+  "w-full min-w-0 resize-y rounded-sm border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
+const TOOLBAR_BTN = "h-7 shrink-0 rounded-sm px-2.5 text-xs font-semibold";
+const TAB_BTN =
+  "h-7 shrink-0 rounded-sm px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+
+function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
+  return (
+    <div className={`flex min-w-0 items-center gap-2 ${className}`}>
+      <label className={FIELD_LABEL} style={{ width: labelWidth }}>
+        {label}
+      </label>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+function DatasheetFieldGrid({ columns, values, onFieldChange, labelWidth = "7.25rem" }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      {columns.map((col, colIdx) => (
+        <div key={colIdx} className="flex min-w-0 flex-col gap-1.5">
+          {col.map((field) => (
+            <FieldRow key={field.key} label={field.label} labelWidth={labelWidth}>
+              <input
+                type="text"
+                value={values?.[field.key] ?? ""}
+                onChange={(e) => onFieldChange(field.key, e.target.value)}
+                className={FIELD_INPUT}
+                aria-label={field.label}
+              />
+            </FieldRow>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function NotesPanel({ label, value, onChange, ariaLabel }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-xs font-bold text-title">{label}</span>
+      <textarea
+        rows={8}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className={FIELD_TEXTAREA}
+        aria-label={ariaLabel || label}
+      />
+    </div>
+  );
+}
+
+/**
+ * AC / DC datasheet modal for Simple service proposals (layout from documents/AC.png, DC.png, Armature.png).
+ */
+export default function SimpleDatasheetModal({
+  open,
+  onClose,
+  onSave,
+  motorType = "AC",
+  initialDatasheet = null,
+  technicianOptions = [],
+  printContext = null,
+  recordId = null,
+  attachments = [],
+  onAttached,
+}) {
+  const alert = useAlert();
+  const isDc = String(motorType || "AC").toUpperCase() === "DC";
+  const [form, setForm] = useState(() =>
+    isDc ? createEmptyDcDatasheet() : createEmptyAcDatasheet()
+  );
+  const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const wasOpenRef = useRef(false);
+
+  const canAttach = Boolean(String(recordId || "").trim());
+
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
+      const next = isDc
+        ? normalizeDcDatasheet(initialDatasheet || {})
+        : normalizeAcDatasheet(initialDatasheet || {});
+      if (!isDc) {
+        const asm = next.assembly && typeof next.assembly === "object" ? next.assembly : {};
+        if (!String(asm.date || "").trim()) asm.date = String(next.date || "").slice(0, 10);
+        if (!String(asm.technicianName || "").trim()) {
+          asm.technicianName = String(next.technician || "").trim();
+        }
+        next.assembly = asm;
+      }
+      setForm(next);
+      setPrinting(false);
+      setAttachmentsOpen(false);
+    }
+    wasOpenRef.current = open;
+  }, [open, isDc, initialDatasheet]);
+
+  const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const patchNested = (blockKey, fieldKey, value) => {
+    setForm((f) => ({
+      ...f,
+      [blockKey]: {
+        ...(f[blockKey] && typeof f[blockKey] === "object" ? f[blockKey] : {}),
+        [fieldKey]: value,
+      },
+    }));
+  };
+
+  const handleDcSectionChange = (nextSection) => {
+    setForm((f) => {
+      const visible = dcDatasheetVisibleTabs(nextSection);
+      const activeTab = visible.includes(f.activeTab) ? f.activeTab : visible[0];
+      return { ...f, section: nextSection, activeTab };
+    });
+  };
+
+  const handleAcSectionChange = (nextSection) => {
+    setForm((f) => {
+      const visible = acDatasheetVisibleTabs(nextSection);
+      const activeTab = visible.includes(f.activeTab) ? f.activeTab : visible[0];
+      return { ...f, section: nextSection, activeTab };
+    });
+  };
+
+  const handlePrint = () => {
+    setPrinting(true);
+  };
+
+  const handlePrintDone = () => {
+    setPrinting(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onSave?.(isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form));
+      onClose?.();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to save datasheet",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const techOptions = useMemo(() => {
+    const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
+    const value = String(form.technician || "").trim();
+    if (value && !opts.some((o) => String(o.value) === value || String(o.label) === value)) {
+      return [{ value, label: value }, ...opts];
+    }
+    return opts;
+  }, [technicianOptions, form.technician]);
+
+  const technicianLabel = useMemo(() => {
+    const value = String(form.technician || "").trim();
+    if (!value) return "";
+    const match = techOptions.find((o) => String(o.value) === value || String(o.label) === value);
+    return match?.label || value;
+  }, [techOptions, form.technician]);
+
+  const resolvedPrintContext = useMemo(() => {
+    const ctx = printContext && typeof printContext === "object" ? printContext : {};
+    return {
+      customerName: String(ctx.customerName || "").trim(),
+      companyName: String(ctx.companyName || form.company || ctx.customerName || "").trim(),
+      documentNumber: String(ctx.documentNumber || form.jobNumber || "").trim(),
+      documentLabel: String(ctx.documentLabel || "RFQ#").trim() || "RFQ#",
+    };
+  }, [printContext, form.company, form.jobNumber]);
+
+  const printDatasheet = useMemo(
+    () => (isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form)),
+    [isDc, form]
+  );
+
+  const dcVisibleTabs = useMemo(
+    () => (isDc ? dcDatasheetVisibleTabs(form.section) : []),
+    [isDc, form.section]
+  );
+  const acVisibleTabs = useMemo(
+    () => (!isDc ? acDatasheetVisibleTabs(form.section) : []),
+    [isDc, form.section]
+  );
+
+  const activeDcTab = dcVisibleTabs.includes(form.activeTab) ? form.activeTab : dcVisibleTabs[0];
+  const isArmatureTab = activeDcTab === DC_DATASHEET_TAB_ARMATURE;
+  const dcBlockKey = isArmatureTab ? "armature" : "fieldFrame";
+  const dcColumns = isArmatureTab ? DC_ARMATURE_FIELD_COLUMNS : DC_FIELD_FRAME_FIELD_COLUMNS;
+  const dcBlock = form[dcBlockKey] && typeof form[dcBlockKey] === "object" ? form[dcBlockKey] : {};
+
+  const showAcTabStripe = !isDc && form.section === "Complete Motor";
+  const activeAcTab = acVisibleTabs.includes(form.activeTab) ? form.activeTab : acVisibleTabs[0];
+  const acBlockKey =
+    activeAcTab === AC_DATASHEET_TAB_DISASSEMBLY
+      ? "disassembly"
+      : activeAcTab === AC_DATASHEET_TAB_ASSEMBLY
+        ? "assembly"
+        : "dataSheet";
+  const acBlock = form[acBlockKey] && typeof form[acBlockKey] === "object" ? form[acBlockKey] : {};
+
+  const headerActions = (
+    <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving || printing}>
+      {saving ? "Saving…" : "Save"}
+    </Button>
+  );
+
+  return (
+    <>
+    <Modal
+      open={open && !printing}
+      onClose={() => !saving && !printing && onClose?.()}
+      title={isDc ? "Add/Edit DC Fields" : "Add/Edit AC Fields"}
+      size="6xl"
+      width="min(1100px, 96vw)"
+      height="min(90vh, 880px)"
+      showClose={!saving && !printing}
+      closeOnOutsideClick={false}
+      actions={headerActions}
+    >
+      <Form
+        id={FORM_ID}
+        onSubmit={handleSubmit}
+        className="flex min-h-0 flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-1">
+            {isDc ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="DC section">
+                {DC_DATASHEET_SECTIONS.map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="dcSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleDcSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="AC section">
+                {AC_DATASHEET_SECTIONS.map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="acSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleAcSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button type="button" variant="primary" size="sm" className={TOOLBAR_BTN} onClick={handlePrint}>
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!canAttach || saving || printing}
+              title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
+              onClick={() => setAttachmentsOpen(true)}
+            >
+              Attachments
+            </Button>
+          </div>
+        </div>
+
+        {isDc && form.section === "Complete Motor" ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="DC datasheet tabs">
+            {dcVisibleTabs.map((tab) => {
+              const active = tab === activeDcTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {showAcTabStripe ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="AC datasheet tabs">
+            {acVisibleTabs.map((tab) => {
+              const active = tab === activeAcTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <FieldRow label="Date" labelWidth="5.5rem">
+            <input
+              type="date"
+              value={String(form.date || "").slice(0, 10)}
+              className={FIELD_INPUT}
+              aria-label="Date"
+              disabled
+              readOnly
+            />
+          </FieldRow>
+          <FieldRow label="Technician" labelWidth="5.5rem">
+            <SimpleSelect
+              options={techOptions}
+              value={form.technician}
+              placeholder="Select…"
+              searchable
+              aria-label="Technician"
+              disabled
+            />
+          </FieldRow>
+          <FieldRow label="Job#" labelWidth="5.5rem">
+            <input
+              type="text"
+              value={form.jobNumber}
+              className={FIELD_INPUT}
+              aria-label="Job number"
+              disabled
+              readOnly
+            />
+          </FieldRow>
+          <FieldRow label="Company" labelWidth="5.5rem">
+            <input
+              type="text"
+              value={form.company}
+              className={FIELD_INPUT}
+              aria-label="Company"
+              disabled
+              readOnly
+            />
+          </FieldRow>
+        </div>
+
+        {isDc ? (
+          <>
+            <DatasheetFieldGrid
+              columns={dcColumns}
+              values={dcBlock}
+              onFieldChange={(key, value) => patchNested(dcBlockKey, key, value)}
+            />
+            <NotesPanel
+              label="Notes:"
+              value={dcBlock.notes ?? ""}
+              onChange={(v) => patchNested(dcBlockKey, "notes", v)}
+              ariaLabel={`${activeDcTab || "DC"} notes`}
+            />
+          </>
+        ) : acBlockKey === "dataSheet" ? (
+          <>
+            <DatasheetFieldGrid
+              columns={AC_DATASHEET_FIELD_COLUMNS}
+              values={acBlock}
+              onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
+            />
+            <NotesPanel
+              label="Notes:"
+              value={acBlock.notes ?? ""}
+              onChange={(v) => patchNested("dataSheet", "notes", v)}
+              ariaLabel="DataSheet notes"
+            />
+          </>
+        ) : acBlockKey === "disassembly" ? (
+          <SimpleAcDisassemblyFields
+            values={acBlock}
+            onChange={(key, value) => patchNested("disassembly", key, value)}
+          />
+        ) : (
+          <SimpleAcAssemblyFields
+            values={acBlock}
+            onChange={(key, value) => patchNested("assembly", key, value)}
+          />
+        )}
+      </Form>
+    </Modal>
+
+    {printing ? (
+      <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
+        <SimpleDatasheetPrintSheet
+          motorType={isDc ? "DC" : "AC"}
+          datasheet={printDatasheet}
+          printContext={resolvedPrintContext}
+          technicianLabel={technicianLabel}
+        />
+      </DocumentPrintOffscreenPortal>
+    ) : null}
+
+    <SimpleServiceProposalAttachmentsModal
+      open={attachmentsOpen}
+      onClose={() => setAttachmentsOpen(false)}
+      recordId={recordId || null}
+      attachments={Array.isArray(attachments) ? attachments : []}
+      onAttached={onAttached}
+    />
+    </>
+  );
+}
