@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   FiCheckCircle,
@@ -44,8 +44,6 @@ import {
 import {
   deleteSimpleServiceProposal,
   fetchSimpleServiceProposals,
-  migrateLocalSimplePurchaseOrdersIfNeeded,
-  migrateLocalSimpleServiceProposalsIfNeeded,
   saveSimpleServiceProposal,
 } from "@/lib/simple-portal-api";
 import { computeNextJobNumber } from "@/lib/job-document-number-format";
@@ -121,6 +119,8 @@ export default function ServiceProposalsPanel({
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRowIds, setSelectedRowIds] = useState([]);
+  /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
+  const lastHandledCreateNonceRef = useRef(createNonce);
 
   const quoteOpts = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -180,6 +180,8 @@ export default function ServiceProposalsPanel({
 
   useEffect(() => {
     if (!createNonce || isInvoices) return;
+    if (createNonce === lastHandledCreateNonceRef.current) return;
+    lastHandledCreateNonceRef.current = createNonce;
     setEditingId(null);
     setModalOpen(true);
   }, [createNonce, isInvoices]);
@@ -188,8 +190,6 @@ export default function ServiceProposalsPanel({
     let cancelled = false;
     (async () => {
       try {
-        const { idMap } = await migrateLocalSimpleServiceProposalsIfNeeded();
-        await migrateLocalSimplePurchaseOrdersIfNeeded(idMap);
         const [list, cust, emps] = await Promise.all([
           fetchSimpleServiceProposals(),
           fetchAllPaginatedDashboardItems("/api/dashboard/customers"),

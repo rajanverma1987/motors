@@ -2,12 +2,14 @@ import DashboardGuard from "@/components/dashboard/dashboard-guard";
 import DashboardShell from "@/components/dashboard/dashboard-shell";
 import UserDisplayZoom from "@/components/dashboard/user-display-zoom";
 import UserCompactTables from "@/components/dashboard/user-compact-tables";
+import StopClarityOnApp from "@/components/stop-clarity-on-app";
 import { UserSettingsProvider } from "@/contexts/user-settings-context";
 import { TrialUpgradeProvider } from "@/contexts/trial-upgrade-context";
 
 export default function DashboardLayout({ children }) {
   return (
     <DashboardGuard>
+      <StopClarityOnApp />
       <UserSettingsProvider>
         <TrialUpgradeProvider>
           <UserDisplayZoom />

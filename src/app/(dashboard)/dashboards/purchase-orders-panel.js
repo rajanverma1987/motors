@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Table from "@/components/ui/table";
@@ -14,7 +14,6 @@ import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
   deleteSimplePurchaseOrder,
   fetchSimplePurchaseOrders,
-  migrateLocalSimplePurchaseOrdersIfNeeded,
 } from "@/lib/simple-portal-api";
 import {
   resolveSimplePoType,
@@ -46,10 +45,10 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("view");
   const [editingPo, setEditingPo] = useState(null);
+  const lastHandledCreateNonceRef = useRef(createNonce);
 
   const reload = useCallback(async () => {
     try {
-      await migrateLocalSimplePurchaseOrdersIfNeeded();
       const list = await fetchSimplePurchaseOrders();
       setRows(Array.isArray(list) ? list : []);
     } catch {
@@ -88,6 +87,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
 
   useEffect(() => {
     if (!createNonce) return;
+    if (createNonce === lastHandledCreateNonceRef.current) return;
+    lastHandledCreateNonceRef.current = createNonce;
     setEditingPo(null);
     setModalMode("create");
     setModalOpen(true);

@@ -1,7 +1,5 @@
 /** Simple portal purchase orders — MongoDB via /api/dashboard/simple-purchase-orders. */
 
-export const SIMPLE_PURCHASE_ORDERS_STORAGE_KEY = "simple-portal-purchase-orders-v1";
-
 export const SIMPLE_PO_TYPE_JOB = "job";
 export const SIMPLE_PO_TYPE_SHOP = "shop";
 
@@ -138,30 +136,6 @@ export function computeNextSimplePoNumber(jobNumber, existingPos = []) {
     if (Number.isFinite(n) && n > max) max = n;
   }
   return `${job}-${max + 1}`;
-}
-
-export function loadStoredSimplePurchaseOrders() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(SIMPLE_PURCHASE_ORDERS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-/** @deprecated Prefer listSimplePurchaseOrdersForJobApi — kept for one-time localStorage migration. */
-export function listSimplePurchaseOrdersForJob(serviceProposalId, jobNumber) {
-  const sid = String(serviceProposalId || "").trim();
-  const job = String(jobNumber || "").trim();
-  return loadStoredSimplePurchaseOrders()
-    .filter((p) => {
-      if (sid && String(p.serviceProposalId || "").trim() === sid) return true;
-      if (job && String(p.jobNumber || "").trim() === job) return true;
-      return false;
-    })
-    .sort((a, b) => String(a.poNumber || "").localeCompare(String(b.poNumber || ""), undefined, { numeric: true }));
 }
 
 /** Map a stored PO row into editable form state. */

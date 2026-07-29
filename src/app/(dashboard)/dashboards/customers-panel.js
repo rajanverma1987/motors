@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -26,6 +26,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
   const [saving, setSaving] = useState(false);
+  const lastHandledCreateNonceRef = useRef(createNonce);
 
   const loadCustomers = useCallback(async ({ showError = true } = {}) => {
     setLoading(true);
@@ -73,6 +74,8 @@ export default function CustomersPanel({ createNonce = 0 }) {
 
   useEffect(() => {
     if (!createNonce) return;
+    if (createNonce === lastHandledCreateNonceRef.current) return;
+    lastHandledCreateNonceRef.current = createNonce;
     openCreate();
   }, [createNonce, openCreate]);
 

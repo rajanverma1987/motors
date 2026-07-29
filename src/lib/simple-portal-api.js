@@ -1,17 +1,9 @@
 /** Client helpers for Simple portal Mongo-backed service proposals & purchase orders. */
 
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
-import {
-  SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY,
-} from "@/lib/simple-service-proposal-form";
-import {
-  SIMPLE_PURCHASE_ORDERS_STORAGE_KEY,
-} from "@/lib/simple-purchase-order-form";
 
 const SP_API = "/api/dashboard/simple-service-proposals";
 const PO_API = "/api/dashboard/simple-purchase-orders";
-const SP_MIGRATED_FLAG = "simple-portal-sp-mongo-migrated-v1";
-const PO_MIGRATED_FLAG = "simple-portal-po-mongo-migrated-v1";
 
 async function readJson(res) {
   return res.json().catch(() => ({}));
@@ -107,96 +99,4 @@ export async function listSimplePurchaseOrdersForJobApi(serviceProposalId, jobNu
   return (Array.isArray(items) ? items : []).sort((a, b) =>
     String(a.poNumber || "").localeCompare(String(b.poNumber || ""), undefined, { numeric: true })
   );
-}
-
-/**
- * One-time: push browser localStorage rows into Mongo, then clear the key.
- * Maps old local ids → new Mongo ids for PO.serviceProposalId remapping.
- */
-export async function migrateLocalSimpleServiceProposalsIfNeeded() {
-  if (typeof window === "undefined") return { migrated: 0, idMap: {} };
-  if (window.localStorage.getItem(SP_MIGRATED_FLAG) === "1") {
-    return { migrated: 0, idMap: {} };
-  }
-  let local = [];
-  try {
-    const raw = window.localStorage.getItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    local = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    local = [];
-  }
-  if (!local.length) {
-    window.localStorage.setItem(SP_MIGRATED_FLAG, "1");
-    return { migrated: 0, idMap: {} };
-  }
-
-  const existing = await fetchSimpleServiceProposals().catch(() => []);
-  if (Array.isArray(existing) && existing.length > 0) {
-    // Server already has data — don't duplicate; drop local cache.
-    window.localStorage.removeItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY);
-    window.localStorage.setItem(SP_MIGRATED_FLAG, "1");
-    return { migrated: 0, idMap: {} };
-  }
-
-  const idMap = {};
-  let migrated = 0;
-  for (const row of local) {
-    const oldId = String(row?.id || "").trim();
-    try {
-      const saved = await createSimpleServiceProposal({ ...row, id: undefined });
-      if (oldId && saved?.id) idMap[oldId] = saved.id;
-      migrated += 1;
-    } catch {
-      /* continue remaining */
-    }
-  }
-  window.localStorage.removeItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY);
-  window.localStorage.setItem(SP_MIGRATED_FLAG, "1");
-  return { migrated, idMap };
-}
-
-export async function migrateLocalSimplePurchaseOrdersIfNeeded(idMap = {}) {
-  if (typeof window === "undefined") return { migrated: 0 };
-  if (window.localStorage.getItem(PO_MIGRATED_FLAG) === "1") {
-    return { migrated: 0 };
-  }
-  let local = [];
-  try {
-    const raw = window.localStorage.getItem(SIMPLE_PURCHASE_ORDERS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    local = Array.isArray(parsed) ? parsed : [];
-  } catch {
-    local = [];
-  }
-  if (!local.length) {
-    window.localStorage.setItem(PO_MIGRATED_FLAG, "1");
-    return { migrated: 0 };
-  }
-
-  const existing = await fetchSimplePurchaseOrders().catch(() => []);
-  if (Array.isArray(existing) && existing.length > 0) {
-    window.localStorage.removeItem(SIMPLE_PURCHASE_ORDERS_STORAGE_KEY);
-    window.localStorage.setItem(PO_MIGRATED_FLAG, "1");
-    return { migrated: 0 };
-  }
-
-  let migrated = 0;
-  for (const row of local) {
-    const oldSid = String(row?.serviceProposalId || "").trim();
-    const nextSid = (oldSid && idMap[oldSid]) || oldSid;
-    try {
-      await createSimplePurchaseOrder({
-        ...row,
-        id: undefined,
-        serviceProposalId: nextSid,
-      });
-      migrated += 1;
-    } catch {
-      /* continue */
-    }
-  }
-  window.localStorage.removeItem(SIMPLE_PURCHASE_ORDERS_STORAGE_KEY);
-  window.localStorage.setItem(PO_MIGRATED_FLAG, "1");
-  return { migrated };
 }

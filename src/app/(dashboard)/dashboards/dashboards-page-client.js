@@ -64,6 +64,7 @@ export default function DashboardsPageClient() {
   const [createNonce, setCreateNonce] = useState(0);
   const [poCreateNonce, setPoCreateNonce] = useState(0);
   const [customerCreateNonce, setCustomerCreateNonce] = useState(0);
+  const [pendingProposalCreate, setPendingProposalCreate] = useState(false);
 
   useEffect(() => {
     if (isAllDates) {
@@ -74,6 +75,14 @@ export default function DashboardsPageClient() {
     setDraftFrom(appliedFrom);
     setDraftTo(appliedTo);
   }, [appliedFrom, appliedTo, isAllDates, fyDefault.from, fyDefault.to]);
+
+  /** After switching to Service Proposals via Add New, bump nonce once the tab is active. */
+  useEffect(() => {
+    if (!pendingProposalCreate) return;
+    if (activeTab !== SIMPLE_TAB_SERVICE_PROPOSALS) return;
+    setPendingProposalCreate(false);
+    setCreateNonce((n) => n + 1);
+  }, [activeTab, pendingProposalCreate]);
 
   const replaceSearchParams = useCallback(
     (mutate) => {
@@ -131,9 +140,11 @@ export default function DashboardsPageClient() {
       return;
     }
     if (activeTab !== SIMPLE_TAB_SERVICE_PROPOSALS) {
+      setPendingProposalCreate(true);
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", SIMPLE_TAB_SERVICE_PROPOSALS);
       router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+      return;
     }
     setCreateNonce((n) => n + 1);
   }, [activeTab, router, searchParams]);
