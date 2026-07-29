@@ -23,11 +23,8 @@ import {
   createEmptySimplePurchaseOrderForm,
   emptyPoLine,
   formToSimplePurchaseOrderRow,
-  listSimplePurchaseOrdersForJob,
-  loadStoredSimplePurchaseOrders,
   parsePoMoney,
   resolveSimplePoType,
-  saveStoredSimplePurchaseOrders,
   SIMPLE_PO_PAYMENT_METHOD_OPTIONS,
   SIMPLE_PO_PAYMENT_STATUS_OPTIONS,
   SIMPLE_PO_TYPE_JOB,
@@ -35,7 +32,12 @@ import {
   SIMPLE_PO_TYPE_SHOP,
   storedPoToForm,
 } from "@/lib/simple-purchase-order-form";
-import { SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY } from "@/lib/simple-service-proposal-form";
+import {
+  fetchSimplePurchaseOrders,
+  fetchSimpleServiceProposals,
+  listSimplePurchaseOrdersForJobApi,
+  saveSimplePurchaseOrder,
+} from "@/lib/simple-portal-api";
 
 const FORM_ID = "simple-purchase-order-form";
 const ADD_VENDOR_FORM_ID = "simple-po-add-vendor-form";
@@ -178,15 +180,12 @@ export default function SimplePurchaseOrderFormModal({
         ? "New Shop Purchase Order"
         : `Purchase Order for Job - ${String(jobNumber || "").trim() || "—"}`;
 
-  const loadJobOptionsFromStorage = useCallback(() => {
-    if (typeof window === "undefined") return [];
+  const loadJobOptionsFromApi = useCallback(async () => {
     try {
-      const raw = window.localStorage.getItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      const list = Array.isArray(parsed) ? parsed : [];
+      const list = await fetchSimpleServiceProposals();
       const opts = [];
       const seen = new Set();
-      for (const row of list) {
+      for (const row of Array.isArray(list) ? list : []) {
         const num = String(row.documentNumber || row.quote || "").trim();
         const id = String(row.id || "").trim();
         if (!num || !id || seen.has(id)) continue;
@@ -202,15 +201,7 @@ export default function SimplePurchaseOrderFormModal({
     }
   }, []);
 
-  const refreshJobPos = useCallback(() => {
-    const sid = String(form.serviceProposalId || serviceProposalId || "").trim();
-    const job = String(form.jobNumber || jobNumber || "").trim();
-    const list = listSimplePurchaseOrdersForJob(sid, job);
-    setJobPos(list);
-    return list;
-  }, [serviceProposalId, jobNumber, form.serviceProposalId, form.jobNumber]);
-
-  const startCreate = useCallback(() => {
+  const startCreate = useCallback(async () => {
     const type =
       defaultPoType === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
     if (type === SIMPLE_PO_TYPE_SHOP) {
@@ -225,7 +216,7 @@ export default function SimplePurchaseOrderFormModal({
       );
       return;
     }
-    const existing = listSimplePurchaseOrdersForJob(serviceProposalId, jobNumber);
+    const existing = await listSimplePurchaseOrdersForJobApi(serviceProposalId, jobNumber);
     setJobPos(existing);
     const poNumber = computeNextSimplePoNumber(jobNumber, existing);
     setForm(
@@ -252,35 +243,43 @@ export default function SimplePurchaseOrderFormModal({
 
   useEffect(() => {
     if (!open) return;
+    let cancelled = false;
     setAddVendorOpen(false);
     setVendorForm(INITIAL_VENDOR_FORM);
-    loadJobOptionsFromStorage();
-    if (isViewMode) {
-      const sid = String(serviceProposalId || "").trim();
-      const job = String(jobNumber || "").trim();
-      const list = listSimplePurchaseOrdersForJob(sid, job);
-      // When opened from PO tab without job scope, load all POs for dropdown context of that job after pick
-      const preferred = String(initialPoId || "").trim();
-      let scoped = list;
-      if (preferred) {
-        const all = loadStoredSimplePurchaseOrders();
-        const hit = all.find((p) => String(p.id) === preferred);
-        if (hit) {
-          scoped = listSimplePurchaseOrdersForJob(hit.serviceProposalId, hit.jobNumber);
-          if (!scoped.length) scoped = [hit];
+    (async () => {
+      await loadJobOptionsFromApi();
+      if (cancelled) return;
+      if (isViewMode) {
+        const sid = String(serviceProposalId || "").trim();
+        const job = String(jobNumber || "").trim();
+        let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
+        if (cancelled) return;
+        const preferred = String(initialPoId || "").trim();
+        if (preferred) {
+          const all = await fetchSimplePurchaseOrders();
+          if (cancelled) return;
+          const hit = (Array.isArray(all) ? all : []).find((p) => String(p.id) === preferred);
+          if (hit) {
+            scoped = await listSimplePurchaseOrdersForJobApi(hit.serviceProposalId, hit.jobNumber);
+            if (!scoped.length) scoped = [hit];
+          }
         }
-      }
-      setJobPos(scoped);
-      if (scoped.length) {
-        const pick =
-          (preferred && scoped.find((p) => String(p.id) === preferred)) || scoped[0];
-        loadPoById(pick.id, scoped);
+        if (cancelled) return;
+        setJobPos(scoped);
+        if (scoped.length) {
+          const pick =
+            (preferred && scoped.find((p) => String(p.id) === preferred)) || scoped[0];
+          loadPoById(pick.id, scoped);
+        } else {
+          setForm(createEmptySimplePurchaseOrderForm());
+        }
       } else {
-        setForm(createEmptySimplePurchaseOrderForm());
+        await startCreate();
       }
-    } else {
-      startCreate();
-    }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [
     open,
     isViewMode,
@@ -289,7 +288,7 @@ export default function SimplePurchaseOrderFormModal({
     jobNumber,
     startCreate,
     loadPoById,
-    loadJobOptionsFromStorage,
+    loadJobOptionsFromApi,
   ]);
 
   useEffect(() => {
@@ -343,7 +342,7 @@ export default function SimplePurchaseOrderFormModal({
     loadPoById(poId, jobPos);
   };
 
-  const handlePoTypeChange = (nextType) => {
+  const handlePoTypeChange = async (nextType) => {
     const type = nextType === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
     if (type === SIMPLE_PO_TYPE_SHOP) {
       setForm((f) =>
@@ -358,26 +357,26 @@ export default function SimplePurchaseOrderFormModal({
       setJobPos([]);
       return;
     }
-    setForm((f) => {
-      const job = String(f.jobNumber || jobNumber || "").trim();
-      const sid = String(f.serviceProposalId || serviceProposalId || "").trim();
-      const existing = listSimplePurchaseOrdersForJob(sid, job);
-      setJobPos(existing);
-      return createEmptySimplePurchaseOrderForm({
+    const job = String(form.jobNumber || jobNumber || "").trim();
+    const sid = String(form.serviceProposalId || serviceProposalId || "").trim();
+    const existing = await listSimplePurchaseOrdersForJobApi(sid, job);
+    setJobPos(existing);
+    setForm((f) =>
+      createEmptySimplePurchaseOrderForm({
         ...f,
         poType: SIMPLE_PO_TYPE_JOB,
         serviceProposalId: sid,
         jobNumber: job,
         poNumber: job ? computeNextSimplePoNumber(job, existing) : "",
-      });
-    });
+      })
+    );
   };
 
-  const handleLinkedJobChange = (proposalId) => {
+  const handleLinkedJobChange = async (proposalId) => {
     const opt = jobOptions.find((o) => String(o.value) === String(proposalId));
     const job = String(opt?.jobNumber || opt?.label || "").trim();
     const sid = String(proposalId || "").trim();
-    const existing = listSimplePurchaseOrdersForJob(sid, job);
+    const existing = await listSimplePurchaseOrdersForJobApi(sid, job);
     setJobPos(existing);
     setForm((f) => ({
       ...f,
@@ -479,9 +478,8 @@ export default function SimplePurchaseOrderFormModal({
     setSaving(true);
     try {
       const vendor = vendors.find((v) => String(v.id) === String(form.vendorId));
-      const existing = loadStoredSimplePurchaseOrders();
       const forJob =
-        type === SIMPLE_PO_TYPE_JOB ? listSimplePurchaseOrdersForJob(sid, job) : [];
+        type === SIMPLE_PO_TYPE_JOB ? await listSimplePurchaseOrdersForJobApi(sid, job) : [];
       const nextPoNumber =
         type === SIMPLE_PO_TYPE_JOB && !isViewMode && !String(form.id || "").trim()
           ? poNumber || computeNextSimplePoNumber(job, forJob)
@@ -499,18 +497,23 @@ export default function SimplePurchaseOrderFormModal({
           vendorPhone: vendor?.phone || "",
         }
       );
-      const idx = existing.findIndex((p) => p.id === row.id);
-      const next = idx >= 0 ? existing.map((p, i) => (i === idx ? row : p)) : [row, ...existing];
-      saveStoredSimplePurchaseOrders(next);
-      onSaved?.(row);
+      const saved = await saveSimplePurchaseOrder({
+        ...row,
+        id: String(form.id || "").trim() || undefined,
+      });
+      onSaved?.(saved);
       if (type === SIMPLE_PO_TYPE_JOB) {
-        setJobPos(listSimplePurchaseOrdersForJob(row.serviceProposalId, row.jobNumber));
+        const nextList = await listSimplePurchaseOrdersForJobApi(
+          saved.serviceProposalId,
+          saved.jobNumber
+        );
+        setJobPos(nextList);
       }
-      await alert({ title: "Saved", message: `Purchase order ${row.poNumber} saved.` });
+      await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
       if (!isViewMode) {
         onClose?.();
       } else {
-        setForm(storedPoToForm(row));
+        setForm(storedPoToForm(saved));
       }
     } catch (err) {
       await alert({

@@ -54,7 +54,7 @@ import {
   buildDcDatasheetFromProposal,
   datasheetHasData,
 } from "@/lib/simple-datasheet-form";
-import { listSimplePurchaseOrdersForJob } from "@/lib/simple-purchase-order-form";
+import { listSimplePurchaseOrdersForJobApi } from "@/lib/simple-portal-api";
 
 const FORM_ID = "simple-service-proposal-form";
 const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
@@ -777,7 +777,7 @@ export default function ServiceProposalFormModal({
                     : "Save the record (with JOB# / RFQ#) before viewing purchase orders"
                 }
                 onClick={async () => {
-                  const list = listSimplePurchaseOrdersForJob(recordId, jobNumber);
+                  const list = await listSimplePurchaseOrdersForJobApi(recordId, jobNumber);
                   if (!list.length) {
                     await alert({
                       title: "No purchase orders",

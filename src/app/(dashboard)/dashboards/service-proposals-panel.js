@@ -40,8 +40,14 @@ import {
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
   resolveRecordTypeOnSave,
-  SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY,
 } from "@/lib/simple-service-proposal-form";
+import {
+  deleteSimpleServiceProposal,
+  fetchSimpleServiceProposals,
+  migrateLocalSimplePurchaseOrdersIfNeeded,
+  migrateLocalSimpleServiceProposalsIfNeeded,
+  saveSimpleServiceProposal,
+} from "@/lib/simple-portal-api";
 import { computeNextJobNumber } from "@/lib/job-document-number-format";
 
 export const SIMPLE_LIST_VARIANT_PROPOSALS = "proposals";
@@ -49,26 +55,6 @@ export const SIMPLE_LIST_VARIANT_INVOICES = "invoices";
 
 const FILTER_TAX_COLLECTED = "__tax_collected__";
 const FILTER_TAX_TO_COLLECT = "__tax_to_collect__";
-
-function loadStoredRows() {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredRows(rows) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY, JSON.stringify(rows));
-  } catch {
-    /* ignore quota */
-  }
-}
 
 function statusBareKey(status) {
   return String(status || "")
@@ -193,16 +179,6 @@ export default function ServiceProposalsPanel({
   );
 
   useEffect(() => {
-    setRows(loadStoredRows());
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
-    saveStoredRows(rows);
-  }, [rows, ready]);
-
-  useEffect(() => {
     if (!createNonce || isInvoices) return;
     setEditingId(null);
     setModalOpen(true);
@@ -212,15 +188,21 @@ export default function ServiceProposalsPanel({
     let cancelled = false;
     (async () => {
       try {
-        const [cust, emps] = await Promise.all([
+        const { idMap } = await migrateLocalSimpleServiceProposalsIfNeeded();
+        await migrateLocalSimplePurchaseOrdersIfNeeded(idMap);
+        const [list, cust, emps] = await Promise.all([
+          fetchSimpleServiceProposals(),
           fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
           fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
         ]);
         if (cancelled) return;
+        setRows(Array.isArray(list) ? list : []);
         setCustomers(Array.isArray(cust) ? cust : []);
         setEmployees(Array.isArray(emps) ? emps : []);
       } catch {
-        /* table still works with stored display fields */
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setReady(true);
       }
     })();
     return () => {
@@ -266,23 +248,27 @@ export default function ServiceProposalsPanel({
     const row = formToServiceProposalListRow(
       { ...form, documentNumber, ...(forceNew ? { id: "", recordType: RECORD_TYPE_RFQ } : {}) },
       {
-        id,
+        id: id || "",
         companyName: customerName(form.customerId) || (forceNew ? "" : editingRow?.companyName) || "",
         preparedByLabel: employeeLabel(form.preparedBy),
       }
     );
+    const saved = await saveSimpleServiceProposal(
+      { ...row, id: id || undefined },
+      { forceNew: forceNew || !id }
+    );
     setRows((prev) => {
-      const idx = forceNew ? -1 : prev.findIndex((r) => r.id === row.id);
+      const sid = String(saved?.id || "").trim();
+      const idx = sid ? prev.findIndex((r) => r.id === sid) : -1;
       if (idx >= 0) {
         const next = [...prev];
-        next[idx] = { ...prev[idx], ...row };
+        next[idx] = { ...prev[idx], ...saved };
         return next;
       }
-      return [row, ...prev];
+      return [saved, ...prev];
     });
-    setEditingId(row.id);
-    // Toast confirmation is shown by the form modal after onSave resolves.
-    return row;
+    setEditingId(saved.id);
+    return saved;
   };
 
   const handleAttachmentsChange = useCallback((recordId, attachments) => {
@@ -302,9 +288,18 @@ export default function ServiceProposalsPanel({
         variant: "danger",
       });
       if (!ok) return;
-      setRows((prev) => prev.filter((r) => r.id !== row.id));
-      setSelectedRowIds((prev) => prev.filter((id) => id !== row.id));
-      await alert({ title: "Deleted", message: isInvoices ? "Invoice deleted." : "Service proposal deleted." });
+      try {
+        await deleteSimpleServiceProposal(row.id);
+        setRows((prev) => prev.filter((r) => r.id !== row.id));
+        setSelectedRowIds((prev) => prev.filter((id) => id !== row.id));
+        await alert({ title: "Deleted", message: isInvoices ? "Invoice deleted." : "Service proposal deleted." });
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to delete.",
+          variant: "danger",
+        });
+      }
     },
     [confirm, alert, isInvoices]
   );
@@ -312,7 +307,15 @@ export default function ServiceProposalsPanel({
   const handleRowFieldChange = useCallback((rowId, patch) => {
     const id = String(rowId || "").trim();
     if (!id) return;
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+    setRows((prev) => {
+      const current = prev.find((r) => r.id === id);
+      if (!current) return prev;
+      const nextRow = { ...current, ...patch };
+      void saveSimpleServiceProposal(nextRow).catch(() => {
+        /* list stays optimistic; next reload corrects */
+      });
+      return prev.map((r) => (r.id === id ? nextRow : r));
+    });
   }, []);
 
   const handleRowStatusChange = useCallback(

@@ -1,4 +1,4 @@
-/** Simple portal purchase orders — localStorage until server persistence. */
+/** Simple portal purchase orders — MongoDB via /api/dashboard/simple-purchase-orders. */
 
 export const SIMPLE_PURCHASE_ORDERS_STORAGE_KEY = "simple-portal-purchase-orders-v1";
 
@@ -151,16 +151,7 @@ export function loadStoredSimplePurchaseOrders() {
   }
 }
 
-export function saveStoredSimplePurchaseOrders(rows) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(SIMPLE_PURCHASE_ORDERS_STORAGE_KEY, JSON.stringify(rows));
-  } catch {
-    /* ignore quota */
-  }
-}
-
-/** POs linked to a Simple job (by record id and/or job number). */
+/** @deprecated Prefer listSimplePurchaseOrdersForJobApi — kept for one-time localStorage migration. */
 export function listSimplePurchaseOrdersForJob(serviceProposalId, jobNumber) {
   const sid = String(serviceProposalId || "").trim();
   const job = String(jobNumber || "").trim();

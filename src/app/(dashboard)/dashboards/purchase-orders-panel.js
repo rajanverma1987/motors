@@ -12,9 +12,12 @@ import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
-  loadStoredSimplePurchaseOrders,
+  deleteSimplePurchaseOrder,
+  fetchSimplePurchaseOrders,
+  migrateLocalSimplePurchaseOrdersIfNeeded,
+} from "@/lib/simple-portal-api";
+import {
   resolveSimplePoType,
-  saveStoredSimplePurchaseOrders,
   SIMPLE_PO_TYPE_JOB,
   SIMPLE_PO_TYPE_SHOP,
   simplePoTypeLabel,
@@ -44,12 +47,18 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [modalMode, setModalMode] = useState("view");
   const [editingPo, setEditingPo] = useState(null);
 
-  const reload = useCallback(() => {
-    setRows(loadStoredSimplePurchaseOrders());
+  const reload = useCallback(async () => {
+    try {
+      await migrateLocalSimplePurchaseOrdersIfNeeded();
+      const list = await fetchSimplePurchaseOrders();
+      setRows(Array.isArray(list) ? list : []);
+    } catch {
+      setRows([]);
+    }
   }, []);
 
   useEffect(() => {
-    reload();
+    void reload();
   }, [reload]);
 
   useEffect(() => {
@@ -143,7 +152,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     setModalOpen(false);
     setEditingPo(null);
     setModalMode("view");
-    reload();
+    void reload();
   };
 
   const handleDelete = useCallback(
@@ -155,10 +164,17 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         variant: "danger",
       });
       if (!ok) return;
-      const next = loadStoredSimplePurchaseOrders().filter((p) => p.id !== row.id);
-      saveStoredSimplePurchaseOrders(next);
-      setRows(next);
-      await alert({ title: "Deleted", message: "Purchase order deleted." });
+      try {
+        await deleteSimplePurchaseOrder(row.id);
+        setRows((prev) => prev.filter((p) => p.id !== row.id));
+        await alert({ title: "Deleted", message: "Purchase order deleted." });
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to delete purchase order.",
+          variant: "danger",
+        });
+      }
     },
     [confirm, alert]
   );

@@ -2,9 +2,12 @@ import { NextResponse } from "next/server";
 import { createHash } from "crypto";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
+import { connectDB } from "@/lib/db";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clampString, LIMITS } from "@/lib/validation";
+import { isValidSimplePortalId, serializeSimplePortalDoc } from "@/lib/simple-portal-mongo";
 
 const UPLOAD_ROOT = "public/uploads/simple-service-proposals";
 const MAX_SIZE_MB = 10;
@@ -18,6 +21,7 @@ function getParams(context) {
 
 function sanitizeRecordId(raw) {
   const id = String(raw || "").trim();
+  if (isValidSimplePortalId(id)) return id;
   if (!/^[a-zA-Z0-9_-]{8,80}$/.test(id)) return "";
   return id;
 }
@@ -82,10 +86,26 @@ export async function POST(request, context) {
 
     const url = `/uploads/simple-service-proposals/${ownerKey}/${recordId}/${safeName}`;
     const name = (documentName || file.name || safeName).trim() || safeName;
+    const attachment = { url, name };
+
+    let item = null;
+    if (isValidSimplePortalId(recordId)) {
+      await connectDB();
+      const email = user.email.trim().toLowerCase();
+      const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
+      if (!doc) {
+        return NextResponse.json({ error: "Service proposal not found" }, { status: 404 });
+      }
+      const existing = Array.isArray(doc.attachments) ? doc.attachments : [];
+      doc.set("attachments", [...existing, attachment]);
+      await doc.save();
+      item = serializeSimplePortalDoc(doc);
+    }
 
     return NextResponse.json({
       ok: true,
-      attachment: { url, name },
+      attachment,
+      item,
       maxAttachments: MAX_ATTACHMENTS_HINT,
     });
   } catch (err) {
@@ -127,7 +147,23 @@ export async function DELETE(request, context) {
       unlinkSync(filePath);
     }
 
-    return NextResponse.json({ ok: true });
+    let item = null;
+    if (isValidSimplePortalId(recordId)) {
+      await connectDB();
+      const email = user.email.trim().toLowerCase();
+      const doc = await SimpleServiceProposal.findOne({ _id: recordId, createdByEmail: email });
+      if (doc) {
+        const existing = Array.isArray(doc.attachments) ? doc.attachments : [];
+        doc.set(
+          "attachments",
+          existing.filter((a) => String(a?.url || "").trim() !== url)
+        );
+        await doc.save();
+        item = serializeSimplePortalDoc(doc);
+      }
+    }
+
+    return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Simple service proposal attachment delete error:", err);
     return NextResponse.json({ error: err.message || "Delete failed" }, { status: 500 });

@@ -180,6 +180,7 @@ export function resolveRecordTypeOnSave(
 }
 
 export const SIMPLE_SERVICE_PROPOSALS_STORAGE_KEY = "simple-portal-service-proposals-v1";
+/** @deprecated Legacy browser cache key — data now lives in MongoDB (SimpleServiceProposal). */
 
 /** True when the list row should appear under the Invoices tab. */
 export function isSimpleInvoiceRecord(row, invoiceStatusValues = [], quoteStatusValues = []) {
