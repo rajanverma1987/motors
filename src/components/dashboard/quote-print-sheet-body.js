@@ -2,7 +2,7 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
@@ -22,6 +22,7 @@ const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
 export default function QuotePrintSheetBody({ quote: q, fmt }) {
   const { settings } = useUserSettings();
   const contextFmt = useFormatMoney();
+  const formatDate = useFormatDate();
   if (!q) return null;
 
   const format =
@@ -41,39 +42,44 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
     taxPercent: q.customerTaxPercent,
   });
 
+  const notesMode = q.printNotesMode === "internal" ? "internal" : "customer";
+  const notesText =
+    notesMode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
+
   return (
-    <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
-      <div className="flex-1 min-h-0">
-      <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
-        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+      <header className="mb-2 border-b border-neutral-300 pb-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <PrintShopLogo logoUrl={q.fromShopLogoUrl} alt="" />
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
-            <p className="font-semibold text-neutral-900">{q.fromShopName || "—"}</p>
-            {q.fromShopContact ? <p className="text-xs text-neutral-700">{q.fromShopContact}</p> : null}
-            {shippingAddress ? (
-              <div className="mt-1.5">
-                <p className={addressTitleLabel}>Shipping address</p>
-                <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
-              </div>
-            ) : null}
+          <div className="shrink-0 text-right">
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">
+              {SERVICE_PROPOSAL_DOCUMENT_TITLE}
+            </h1>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">{SERVICE_PROPOSAL_DOCUMENT_TITLE}</h1>
+        <div className="mt-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+          <p className="text-sm font-semibold text-neutral-900">{q.fromShopName || "—"}</p>
+          {q.fromShopContact ? <p className="text-xs text-neutral-700">{q.fromShopContact}</p> : null}
         </div>
       </header>
 
-      <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
+      <div className="mb-2 grid gap-2 border-b border-neutral-200 pb-2 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
           <p className="text-xs text-neutral-800">
             <span className="text-neutral-600">Payment terms: </span>
             <span className="font-medium">{q.fromPaymentTermsLabel || "—"}</span>
           </p>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <p className={addressTitleLabel}>Billing address</p>
             <p className="whitespace-pre-wrap text-xs text-neutral-800">{billingAddress || "—"}</p>
           </div>
+          {shippingAddress && shippingAddress !== billingAddress ? (
+            <div className="mt-1">
+              <p className={addressTitleLabel}>Shipping address</p>
+              <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
+            </div>
+          ) : null}
         </div>
         <div className="min-w-0 sm:text-right print:text-right">
           <p className={sectionLabel + " sm:text-right"}>To</p>
@@ -92,9 +98,9 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </div>
       </div>
 
-      <section className="mb-3">
+      <section className="mb-2">
         <h2 className={sectionLabel}>Service proposal info</h2>
-        <dl className="grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-4">
+        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className="text-neutral-600">RFQ#</dt>
             <dd className="font-medium text-neutral-900">{q.rfqNumber || "—"}</dd>
@@ -105,7 +111,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
           </div>
           <div>
             <dt className="text-neutral-600">Date</dt>
-            <dd className="text-neutral-900">{q.date || "—"}</dd>
+            <dd className="text-neutral-900">{formatDate(q.date)}</dd>
           </div>
           <div>
             <dt className="text-neutral-600">Prepared by</dt>
@@ -113,23 +119,23 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
           </div>
           <div>
             <dt className="text-neutral-600">Est. completion</dt>
-            <dd className="text-neutral-900">{q.estimatedCompletion || "—"}</dd>
+            <dd className="text-neutral-900">{formatDate(q.estimatedCompletion)}</dd>
           </div>
         </dl>
       </section>
 
-      <section className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
+      <section className="mb-2 rounded border border-neutral-200 bg-neutral-50/80 p-2">
         <MotorSummaryBlock
           identityLine={q.motorIdentityLine}
           specsLine={q.motorSpecsLine}
           motorType={q.motorType}
           fallback={q.motorLabel || q.motorId || "—"}
-          titleClassName="mb-1.5 text-sm font-semibold text-neutral-900"
+          titleClassName="mb-1 text-sm font-semibold text-neutral-900"
         />
       </section>
 
       {Array.isArray(q.scopeLines) && q.scopeLines.length > 0 && (
-        <section className="mb-3">
+        <section className="mb-2">
           <h2 className={sectionLabel}>Scope</h2>
           <table className={tableWrap + " w-full"}>
             <thead className={thRow}>
@@ -151,7 +157,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
       )}
 
       {Array.isArray(q.partsLines) && q.partsLines.length > 0 && (
-        <section className="mb-3">
+        <section className="mb-2">
           <h2 className={sectionLabel}>Other cost</h2>
           <table className={tableWrap + " w-full"}>
             <thead className={thRow}>
@@ -185,7 +191,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </section>
       )}
 
-      <section className="mb-3">
+      <section className="mb-2">
         <h2 className={sectionLabel}>Totals</h2>
         <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
@@ -215,26 +221,18 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </table>
       </section>
 
-      {(() => {
-        const mode = q.printNotesMode === "internal" ? "internal" : "customer";
-        const text = mode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
-        if (!text) return null;
-        return (
-          <section className="mb-3">
-            <h2 className={sectionLabel}>{mode === "internal" ? "Notes" : "Customer notes"}</h2>
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{text}</p>
-          </section>
-        );
-      })()}
-
-      </div>
+      <section className="mb-2 break-inside-avoid">
+        <h2 className={sectionLabel}>{notesMode === "internal" ? "Notes" : "Customer notes"}</h2>
+        <p className="min-h-[2.5rem] whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50/60 px-2 py-1.5 text-xs leading-relaxed text-neutral-900">
+          {notesText || "—"}
+        </p>
+      </section>
 
       <InvoicePaymentFooterPrint
         paymentOptions={q.invoicePaymentOptions}
         thankYouNote={q.invoiceThankYouNote}
         variant="dashboard"
         compact
-        thankYouAtPageFooter
       />
     </div>
   );

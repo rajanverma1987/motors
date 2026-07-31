@@ -57,9 +57,6 @@ export default function SimplePurchaseOrderPrintPreviewModal({
         closeOnOutsideClick={false}
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
             <Button
               type="button"
               variant="primary"

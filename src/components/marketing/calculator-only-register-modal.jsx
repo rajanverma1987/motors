@@ -150,20 +150,15 @@ export default function CalculatorOnlyRegisterModal({ open, onClose, nextPath = 
       zIndex={120}
       actions={
         step === "email" ? (
-          <>
-            <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={resetAndClose}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="calculator-only-email-form"
-              variant="primary"
-              size="sm"
-              disabled={busy || !email.trim() || portalExists}
-            >
-              {sendingCode ? "Sending…" : "Send code"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form="calculator-only-email-form"
+            variant="primary"
+            size="sm"
+            disabled={busy || !email.trim() || portalExists}
+          >
+            {sendingCode ? "Sending…" : "Send code"}
+          </Button>
         ) : step === "verify" ? (
           <>
             <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={() => setStep("email")}>
@@ -174,14 +169,9 @@ export default function CalculatorOnlyRegisterModal({ open, onClose, nextPath = 
             </Button>
           </>
         ) : (
-          <>
-            <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={resetAndClose}>
-              Cancel
-            </Button>
-            <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={busy}>
-              {submitting ? "Creating…" : "Create account"}
-            </Button>
-          </>
+          <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={busy}>
+            {submitting ? "Creating…" : "Create account"}
+          </Button>
         )
       }
     >

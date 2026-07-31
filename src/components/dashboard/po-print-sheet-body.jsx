@@ -2,6 +2,7 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { useFormatDate } from "@/contexts/user-settings-context";
 import {
   parsePoLineTaxPercent,
   poLineTaxAmount,
@@ -22,9 +23,11 @@ const tdCell = "border-t border-neutral-200 px-2 py-1.5 text-neutral-900";
  * Layout matches {@link InvoicePrintPreview} for consistent print quality.
  */
 export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLineStatus }) {
+  const formatDate = useFormatDate();
   if (!po) return null;
 
   const formatMoney = typeof fmt === "function" ? fmt : (v) => (v != null && v !== "" ? String(v) : "—");
+  const poDateRaw = po.poCutDate || po.createdAt || po.formattedCreatedAt || "";
 
   const v = vendor || {};
   const addrLine = [v.address, [v.city, v.state, v.zipCode].filter(Boolean).join(", ")].filter(Boolean).join(" — ");
@@ -54,24 +57,23 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
   const grandTotal = lineGrand + otherChargesTotal;
 
   return (
-    <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
-      <div className="flex-1 min-h-0">
-      <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
-        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+      <header className="mb-2 border-b border-neutral-300 pb-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <PrintShopLogo logoUrl={logoUrl} alt="" />
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
-            <p className="font-semibold text-neutral-900">{fromShopName || "—"}</p>
-            {fromShopContact ? <p className="text-xs text-neutral-700">{fromShopContact}</p> : null}
+          <div className="shrink-0 text-right">
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Purchase order</h1>
+            {po.poNumber ? <p className="mt-0.5 text-xs text-neutral-600">PO # {po.poNumber}</p> : null}
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">Purchase order</h1>
-          {po.poNumber ? <p className="mt-0.5 text-xs text-neutral-600">PO # {po.poNumber}</p> : null}
+        <div className="mt-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+          <p className="text-sm font-semibold text-neutral-900">{fromShopName || "—"}</p>
+          {fromShopContact ? <p className="text-xs text-neutral-700">{fromShopContact}</p> : null}
         </div>
       </header>
 
-      <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
+      <div className="mb-2 grid gap-2 border-b border-neutral-200 pb-2 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
           {billing ? <p className="whitespace-pre-wrap text-xs text-neutral-800">{billing}</p> : null}
           {showShipTo ? (
@@ -111,7 +113,9 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
           </div>
           <div>
             <dt className="text-neutral-600">Date</dt>
-            <dd className="text-neutral-900">{po.formattedCreatedAt || "—"}</dd>
+            <dd className="text-neutral-900">
+              {po.poCutDate || po.createdAt ? formatDate(poDateRaw) : po.formattedCreatedAt || "—"}
+            </dd>
           </div>
         </dl>
       </section>
@@ -212,19 +216,19 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
       </section>
 
       {String(po.notes || "").trim() ? (
-        <section className="mb-3">
+        <section className="mb-2 break-inside-avoid">
           <h2 className={sectionLabel}>Notes</h2>
-          <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{po.notes}</p>
+          <p className="min-h-[2.5rem] whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50/60 px-2 py-1.5 text-xs leading-relaxed text-neutral-900">
+            {String(po.notes).trim()}
+          </p>
         </section>
       ) : null}
-      </div>
 
       <InvoicePaymentFooterPrint
         paymentOptions=""
         thankYouNote={po.invoiceThankYouNote ?? settings?.invoiceThankYouNote}
         variant="dashboard"
         compact
-        thankYouAtPageFooter
       />
     </div>
   );

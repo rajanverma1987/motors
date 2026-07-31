@@ -1,7 +1,7 @@
 "use client";
 
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
 import {
   AC_DATASHEET_FIELD_COLUMNS,
   AC_DISASSEMBLY_STATUS_OPTIONS,
@@ -183,6 +183,7 @@ export default function SimpleDatasheetPrintSheet({
   technicianLabel = "",
 }) {
   const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
   const logoUrl = String(printContext.logoUrl || settings?.logoUrl || "").trim();
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
   const customerName = String(printContext.customerName || "").trim();
@@ -191,7 +192,8 @@ export default function SimpleDatasheetPrintSheet({
   ).trim();
   const documentLabel = String(printContext.documentLabel || "RFQ#").trim() || "RFQ#";
   const company = String(printContext.companyName || datasheet?.company || customerName).trim();
-  const date = String(datasheet?.date || "").trim();
+  const dateRaw = String(datasheet?.date || "").trim();
+  const date = dateRaw ? formatDate(dateRaw) : "—";
   const technician = String(technicianLabel || datasheet?.technician || "").trim();
 
   if (!isDc) {
@@ -246,7 +248,7 @@ export default function SimpleDatasheetPrintSheet({
               customerName={customerName}
               documentLabel={documentLabel}
               documentNumber={documentNumber}
-              date={assembly.date || date}
+              date={assembly.date ? formatDate(assembly.date) : date}
               technician={assembly.technicianName || technician}
               company={company}
               columns={[]}

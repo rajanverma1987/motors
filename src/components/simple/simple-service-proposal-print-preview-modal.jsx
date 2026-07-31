@@ -86,9 +86,6 @@ export default function SimpleServiceProposalPrintPreviewModal({
         closeOnOutsideClick={false}
         actions={
           <>
-            <Button type="button" variant="outline" size="sm" onClick={onClose}>
-              Cancel
-            </Button>
             <Button
               type="button"
               variant="primary"

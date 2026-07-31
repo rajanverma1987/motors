@@ -212,9 +212,6 @@ export default function CalculatorPaywallModal({
           </>
         )}
 
-        <Button type="button" variant="ghost" size="sm" className="self-start" disabled={!!busy} onClick={onClose}>
-          Cancel
-        </Button>
       </div>
     </Modal>
   );

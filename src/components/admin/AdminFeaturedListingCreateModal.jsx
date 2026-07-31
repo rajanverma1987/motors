@@ -115,14 +115,9 @@ export default function AdminFeaturedListingCreateModal({
       title="New featured listing + account"
       size="2xl"
       actions={
-        <>
-          <Button type="button" variant="outline" size="sm" onClick={close} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button type="submit" form="admin-featured-listing-form" variant="primary" size="sm" disabled={submitting}>
-            {submitting ? "Creating…" : "Create & send email"}
-          </Button>
-        </>
+        <Button type="submit" form="admin-featured-listing-form" variant="primary" size="sm" disabled={submitting}>
+          {submitting ? "Creating…" : "Create & send email"}
+        </Button>
       }
     >
       <p className="text-sm text-secondary">

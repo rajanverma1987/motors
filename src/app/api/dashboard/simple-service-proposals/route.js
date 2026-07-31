@@ -6,6 +6,7 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
+import { applySimpleServiceProposalInventoryLifecycle } from "@/lib/inventory-service";
 
 export async function GET(request) {
   try {
@@ -71,7 +72,20 @@ export async function POST(request) {
       dateCreated: String(payload.dateCreated || payload.date || "").trim(),
       companyName: String(payload.companyName || "").trim(),
     });
-    return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) }, { status: 201 });
+    const item = serializeSimplePortalDoc(doc);
+    try {
+      await applySimpleServiceProposalInventoryLifecycle(email, item.id, null, doc);
+    } catch (invErr) {
+      console.error("Simple SP inventory lifecycle on create:", invErr);
+      return NextResponse.json(
+        {
+          error: invErr.message || "Created, but inventory reserve/consume failed",
+          item,
+        },
+        { status: 500 }
+      );
+    }
+    return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {
     console.error("Dashboard create simple service proposal error:", err);
     return NextResponse.json({ error: err.message || "Failed to create service proposal" }, { status: 500 });

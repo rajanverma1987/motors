@@ -7,10 +7,10 @@ import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
 import { getFocusableElements } from "@/lib/focusable-elements";
 
 const TRIGGER =
-  "flex h-7 w-full min-w-0 items-center gap-1 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-left text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary/10";
+  "flex h-7 w-full min-w-0 items-center gap-1 rounded-none border border-border bg-primary/[0.04] px-1.5 text-left text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary/10";
 
 const PILL_TRIGGER =
-  "inline-flex h-auto min-h-0 w-full max-w-full items-center gap-1 rounded-sm border border-border bg-transparent px-2.5 py-0.5 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex h-auto min-h-0 w-full max-w-full items-center gap-1 rounded-none border border-border bg-transparent px-2.5 py-0.5 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60";
 
 const DROPDOWN_Z = 10050;
 
@@ -113,7 +113,7 @@ export default function SimpleSelect({
     window.addEventListener("resize", onMove);
     const t = window.setTimeout(() => {
       if (searchable) searchRef.current?.focus();
-      else listRef.current?.querySelector('[role="option"]')?.focus?.();
+      else listRef.current?.focus();
     }, 0);
     return () => {
       window.clearTimeout(t);
@@ -142,6 +142,12 @@ export default function SimpleSelect({
     setHighlight(idx >= 0 ? idx : 0);
   }, [open, filtered, value]);
 
+  useEffect(() => {
+    if (!open || highlight < 0 || !listRef.current) return;
+    const el = listRef.current.querySelector(`[data-opt-index="${highlight}"]`);
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlight, open, filtered]);
+
   const emit = (next) => {
     onChange?.({ target: { name, value: next } });
   };
@@ -153,6 +159,8 @@ export default function SimpleSelect({
 
   const onKeyDown = (e) => {
     if (disabled) return;
+    const inSearch = searchable && e.target === searchRef.current;
+
     if (!open) {
       if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Enter" || e.key === " ") {
         e.preventDefault();
@@ -173,15 +181,33 @@ export default function SimpleSelect({
     }
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlight((h) => (filtered.length ? (h + 1) % filtered.length : -1));
+      setHighlight((h) => {
+        if (!filtered.length) return -1;
+        if (h < 0) return 0;
+        return (h + 1) % filtered.length;
+      });
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlight((h) => (filtered.length ? (h - 1 + filtered.length) % filtered.length : -1));
+      setHighlight((h) => {
+        if (!filtered.length) return -1;
+        if (h < 0) return filtered.length - 1;
+        return (h - 1 + filtered.length) % filtered.length;
+      });
       return;
     }
-    if (e.key === "Enter") {
+    if (e.key === "Home") {
+      e.preventDefault();
+      if (filtered.length) setHighlight(0);
+      return;
+    }
+    if (e.key === "End") {
+      e.preventDefault();
+      if (filtered.length) setHighlight(filtered.length - 1);
+      return;
+    }
+    if (e.key === "Enter" || (e.key === " " && !inSearch)) {
       e.preventDefault();
       if (highlight >= 0 && filtered[highlight]) pick(filtered[highlight]);
     }
@@ -225,6 +251,14 @@ export default function SimpleSelect({
             <div
               ref={listRef}
               role="listbox"
+              tabIndex={-1}
+              aria-label={ariaLabel || placeholder}
+              aria-activedescendant={
+                highlight >= 0 && filtered[highlight]
+                  ? `${id}-opt-${highlight}`
+                  : undefined
+              }
+              onKeyDown={onKeyDown}
               style={{
                 position: "fixed",
                 top: rect.top,
@@ -232,7 +266,7 @@ export default function SimpleSelect({
                 width: rect.width,
                 zIndex: DROPDOWN_Z,
               }}
-              className="overflow-hidden rounded-sm border border-border bg-card shadow-lg dark:shadow-black/40"
+              className="overflow-hidden rounded-sm border border-border bg-card shadow-lg outline-none dark:shadow-black/40"
             >
               {searchable ? (
                 <div className="border-b border-border p-1">
@@ -243,11 +277,17 @@ export default function SimpleSelect({
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyDown={onKeyDown}
                     placeholder="Search…"
-                    className="h-7 w-full rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10"
+                    className="h-7 w-full rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10"
+                    aria-controls={`${id}-list`}
+                    aria-activedescendant={
+                      highlight >= 0 && filtered[highlight]
+                        ? `${id}-opt-${highlight}`
+                        : undefined
+                    }
                   />
                 </div>
               ) : null}
-              <ul className="max-h-52 overflow-auto py-0.5">
+              <ul id={`${id}-list`} className="max-h-52 overflow-auto py-0.5" role="presentation">
                 {filtered.length === 0 ? (
                   <li className="px-2 py-1.5 text-sm text-secondary">No options</li>
                 ) : (
@@ -255,12 +295,14 @@ export default function SimpleSelect({
                     const active = String(opt.value) === String(value);
                     const hi = idx === highlight;
                     return (
-                      <li key={String(opt.value)}>
+                      <li key={String(opt.value)} role="presentation">
                         <button
                           type="button"
+                          id={`${id}-opt-${idx}`}
+                          data-opt-index={idx}
                           role="option"
                           tabIndex={-1}
-                          aria-selected={active}
+                          aria-selected={hi || active}
                           className={`flex w-full px-2 py-1 text-left text-sm ${
                             active
                               ? "bg-primary text-white"

@@ -1,6 +1,7 @@
 "use client";
 
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import { useFormatDate } from "@/contexts/user-settings-context";
 import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import {
   motorSpecSectionsForPrint,
@@ -36,6 +37,7 @@ function SpecSection({ title, rows }) {
  * @param {{ workOrder?: object, inspections?: object[] }} props
  */
 export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [] }) {
+  const formatDate = useFormatDate();
   if (!wo) return null;
 
   const shopName = String(wo.fromShopName || "Motor shop").trim();
@@ -47,7 +49,7 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [
   const otherRows = (wo.quoteOtherCostForTech || []).filter((r) => String(r?.item ?? "").trim());
 
   const headerPairs = [
-    ["Date", wo.date || "—"],
+    ["Date", formatDate(wo.date)],
     ["RFQ#", wo.quoteRfqNumber || "—"],
     ["Company", wo.customerCompany || wo.companyName || "—"],
     ["Technician", wo.technicianName || "—"],
@@ -60,21 +62,22 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [
 
   return (
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b-2 border-neutral-800 pb-3 print:border-black">
-        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+      <header className="mb-4 border-b-2 border-neutral-800 pb-3 print:border-black">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <PrintShopLogo logoUrl={wo.fromShopLogoUrl} alt="" />
-          <div className="min-w-0">
-            <p className="text-base font-bold leading-tight text-neutral-900 print:text-[13pt] print:font-extrabold">
-              {shopName}
+          <div className="shrink-0 text-right">
+            <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 print:text-[26pt] print:font-black">
+              Work order
+            </h1>
+            <p className="mt-1 text-base font-bold tabular-nums text-neutral-900 print:text-[15pt] print:font-extrabold">
+              {woNum}
             </p>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 print:text-[26pt] print:font-black">
-            Work order
-          </h1>
-          <p className="mt-1 text-base font-bold tabular-nums text-neutral-900 print:text-[15pt] print:font-extrabold">
-            {woNum}
+        <div className="mt-1.5 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+          <p className="text-base font-bold leading-tight text-neutral-900 print:text-[13pt] print:font-extrabold">
+            {shopName}
           </p>
         </div>
       </header>

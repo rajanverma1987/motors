@@ -7,6 +7,10 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
+import {
+  applySimpleServiceProposalInventoryLifecycle,
+  releaseInventoryReservationsForSimple,
+} from "@/lib/inventory-service";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -51,6 +55,10 @@ export async function PUT(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const previous = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!previous) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     const body = await request.json().catch(() => ({}));
     const payload = sanitizeSimplePortalPayload(body);
     const update = {
@@ -71,6 +79,20 @@ export async function PUT(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+
+    try {
+      await applySimpleServiceProposalInventoryLifecycle(email, id, previous, doc);
+    } catch (invErr) {
+      console.error("Simple SP inventory lifecycle:", invErr);
+      return NextResponse.json(
+        {
+          error: invErr.message || "Saved, but inventory reserve/consume failed",
+          item: serializeSimplePortalDoc(doc),
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
   } catch (err) {
     console.error("Dashboard update simple service proposal error:", err);
@@ -91,6 +113,17 @@ export async function DELETE(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+
+    try {
+      await releaseInventoryReservationsForSimple(email, id);
+    } catch (invErr) {
+      console.error("Simple SP inventory release on delete:", invErr);
+      return NextResponse.json(
+        { error: invErr.message || "Failed to release inventory before delete" },
+        { status: 500 }
+      );
+    }
+
     const deleted = await SimpleServiceProposal.findOneAndDelete({ _id: id, createdByEmail: email }).lean();
     if (!deleted) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

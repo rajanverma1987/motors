@@ -5,6 +5,7 @@ import InventoryItem from "@/models/InventoryItem";
 import InventoryReservation from "@/models/InventoryReservation";
 import Quote from "@/models/Quote";
 import WorkOrder from "@/models/WorkOrder";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 
 function getParams(context) {
@@ -13,7 +14,7 @@ function getParams(context) {
     : Promise.resolve(context.params || {});
 }
 
-/** GET — reservation / consumption history for one inventory item (work orders, qty, dates). */
+/** GET — reservation / consumption history for one inventory item (work orders + Simple jobs). */
 export async function GET(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
@@ -41,9 +42,13 @@ export async function GET(request, context) {
       .lean();
 
     const quoteIdSet = new Set();
+    const simpleIdSet = new Set();
     const woIdSet = new Set();
     for (const r of reservations) {
-      if (r.quoteId) quoteIdSet.add(String(r.quoteId));
+      const qid = String(r.quoteId || "").trim();
+      if (qid) quoteIdSet.add(qid);
+      const sid = String(r.simpleServiceProposalId || "").trim();
+      if (sid) simpleIdSet.add(sid);
       const w1 = String(r.workOrderId || "").trim();
       if (w1 && mongoose.Types.ObjectId.isValid(w1)) woIdSet.add(w1);
       const w2 = String(r.consumedByWorkOrderId || "").trim();
@@ -51,15 +56,21 @@ export async function GET(request, context) {
     }
 
     const quoteIds = [...quoteIdSet].filter((q) => mongoose.Types.ObjectId.isValid(q));
+    const simpleIds = [...simpleIdSet].filter((s) => mongoose.Types.ObjectId.isValid(s));
     const woIds = [...woIdSet];
 
-    const [quotes, workOrders] = await Promise.all([
+    const [quotes, workOrders, simpleProposals] = await Promise.all([
       quoteIds.length
         ? Quote.find({ _id: { $in: quoteIds }, createdByEmail: email }).select("rfqNumber").lean()
         : [],
       woIds.length
         ? WorkOrder.find({ _id: { $in: woIds }, createdByEmail: email })
             .select("workOrderNumber quoteRfqNumber")
+            .lean()
+        : [],
+      simpleIds.length
+        ? SimpleServiceProposal.find({ _id: { $in: simpleIds }, createdByEmail: email })
+            .select("documentNumber recordType")
             .lean()
         : [],
     ]);
@@ -75,8 +86,35 @@ export async function GET(request, context) {
         quoteRfqNumber: String(w.quoteRfqNumber || "").trim(),
       };
     }
+    const simpleById = {};
+    for (const s of simpleProposals) {
+      simpleById[s._id.toString()] = {
+        documentNumber: String(s.documentNumber || "").trim(),
+        recordType: String(s.recordType || "").trim(),
+      };
+    }
 
     const rows = reservations.map((r) => {
+      const simpleId = String(r.simpleServiceProposalId || "").trim();
+      const simple = simpleId ? simpleById[simpleId] : null;
+      if (simple) {
+        const jobNumber = simple.documentNumber || "—";
+        return {
+          reservationId: r._id.toString(),
+          quoteId: "",
+          quoteRfqNumber: jobNumber,
+          jobNumber,
+          simpleServiceProposalId: simpleId,
+          workOrderId: "",
+          workOrderNumber: jobNumber,
+          qty: Number(r.qty) || 0,
+          status: r.status,
+          reservedAt: r.createdAt ? new Date(r.createdAt).toISOString() : null,
+          usedAt:
+            r.status === "consumed" && r.updatedAt ? new Date(r.updatedAt).toISOString() : null,
+        };
+      }
+
       const qid = String(r.quoteId || "");
       const rfqFromQuote = quoteRfqById[qid] || "";
       const reserveWoId = String(r.workOrderId || "").trim();
@@ -85,11 +123,14 @@ export async function GET(request, context) {
       const wo = displayWoId ? woById[displayWoId] : null;
       const workOrderNumber = wo?.workOrderNumber || "";
       const rfq = rfqFromQuote || wo?.quoteRfqNumber || "";
+      const jobNumber = workOrderNumber || rfq || (displayWoId ? "—" : "—");
 
       return {
         reservationId: r._id.toString(),
         quoteId: qid,
         quoteRfqNumber: rfq,
+        jobNumber,
+        simpleServiceProposalId: "",
         workOrderId: displayWoId || "",
         workOrderNumber: workOrderNumber || (displayWoId ? "—" : ""),
         qty: Number(r.qty) || 0,

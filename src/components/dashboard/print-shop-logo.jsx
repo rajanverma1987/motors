@@ -4,7 +4,7 @@
  * Shop logo sizing for all printable documents (invoice, quote, PO, repair-flow quotes, public links).
  */
 export const PRINT_SHOP_LOGO_IMG_CLASS =
-  "h-[5rem] max-h-[5rem] w-auto max-w-[17rem] shrink-0 object-contain object-left print:block";
+  "h-[2.75rem] max-h-[2.75rem] w-auto max-w-[12rem] shrink-0 object-contain object-left object-top print:block";
 
 /**
  * @param {{ logoUrl?: string|null, alt?: string, className?: string }} props

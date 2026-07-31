@@ -20,6 +20,9 @@ export function emptyOtherLine() {
     description: "",
     uom: "",
     price: "",
+    /** Optional — set when added from Inventory lookup */
+    qty: "",
+    inventoryItemId: "",
   };
 }
 

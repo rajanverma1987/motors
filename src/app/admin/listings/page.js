@@ -694,9 +694,6 @@ export default function AdminListingsPage() {
             </p>
           </div>
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button type="button" variant="outline" onClick={closeOnboardModal}>
-              Cancel
-            </Button>
             <Button type="submit" variant="primary" disabled={onboardSubmitting}>
               {onboardSubmitting ? "Creating…" : "Create client & open subscription"}
             </Button>
@@ -853,9 +850,6 @@ export default function AdminListingsPage() {
             rows={3}
           />
           <div className="flex justify-end gap-2 border-t border-border pt-4">
-            <Button variant="outline" onClick={() => setRejectModalOpen(false)}>
-              Cancel
-            </Button>
             <Button
               variant="danger"
               onClick={handleBulkReject}

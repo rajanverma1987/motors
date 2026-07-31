@@ -30,13 +30,13 @@ import {
 
 const FORM_ID = "simple-datasheet-form";
 const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_TEXTAREA =
-  "w-full min-w-0 resize-y rounded-sm border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-const TOOLBAR_BTN = "h-7 shrink-0 rounded-sm px-2.5 text-xs font-semibold";
+const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 const TAB_BTN =
-  "h-7 shrink-0 rounded-sm px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+  "h-7 shrink-0 rounded-none px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
   return (

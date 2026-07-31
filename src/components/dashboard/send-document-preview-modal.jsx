@@ -229,9 +229,6 @@ export default function SendDocumentPreviewModal({
       closeOnOutsideClick={false}
       actions={
         <>
-          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
           <Button
             type="button"
             variant="primary"

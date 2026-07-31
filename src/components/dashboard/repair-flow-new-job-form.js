@@ -84,7 +84,6 @@ const INITIAL_NEW_CUSTOMER = {
  * @param {(job: object) => void} [props.onFlowComplete] — e.g. standalone page “Open job” navigates to the job
  * @param {(job: object) => void} [props.onJobCreated] — right after POST create (e.g. refresh list)
  * @param {('create' | 'postCreate') => void} [props.onWorkflowStepChange] — for modal header / parent UI
- * @param {() => void} [props.onCancel]
  * @param {boolean} [props.embeddedInModal]
  * @param {(state: { loading: boolean, saving: boolean }) => void} [props.onFormStatusChange]
  */
@@ -93,7 +92,6 @@ export default function RepairFlowNewJobForm({
   onFlowComplete,
   onJobCreated,
   onWorkflowStepChange,
-  onCancel,
   embeddedInModal = false,
   onFormStatusChange,
 }) {
@@ -634,11 +632,6 @@ export default function RepairFlowNewJobForm({
                 {saving ? "Creating…" : "Create job"}
               </Button>
             ) : null}
-            {onCancel ? (
-              <Button type="button" variant="outline" onClick={onCancel} disabled={busy}>
-                Cancel
-              </Button>
-            ) : null}
           </div>
         ) : null}
       </Form>
@@ -896,20 +889,9 @@ export default function RepairFlowNewJobForm({
         size="lg"
         showClose={!savingNewCustomer}
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAddCustomerOpen(false)}
-              disabled={savingNewCustomer}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" form="rf-new-customer-form" variant="primary" size="sm" disabled={savingNewCustomer}>
-              {savingNewCustomer ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="rf-new-customer-form" variant="primary" size="sm" disabled={savingNewCustomer}>
+            {savingNewCustomer ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="rf-new-customer-form" onSubmit={submitNewCustomer} className="flex flex-col gap-4 !space-y-0">
@@ -952,14 +934,9 @@ export default function RepairFlowNewJobForm({
         width="min(960px, 94vw)"
         showClose={!savingNewMotor}
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setAddMotorOpen(false)} disabled={savingNewMotor}>
-              Cancel
-            </Button>
-            <Button type="submit" form="rf-new-motor-form" variant="primary" size="sm" disabled={savingNewMotor}>
-              {savingNewMotor ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="rf-new-motor-form" variant="primary" size="sm" disabled={savingNewMotor}>
+            {savingNewMotor ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="rf-new-motor-form" onSubmit={submitNewMotor} className="flex flex-col gap-4 !space-y-0">

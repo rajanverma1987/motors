@@ -23,9 +23,25 @@ export const SIMPLE_PO_PAYMENT_STATUS_OPTIONS = [
   { value: "Paid", label: "Paid" },
 ];
 
+export const SIMPLE_PO_RECEIVING_STATUS_ORDERED = "Ordered";
+export const SIMPLE_PO_RECEIVING_STATUS_PARTIAL = "Partially Received";
+export const SIMPLE_PO_RECEIVING_STATUS_RECEIVED = "Received";
+
+export const SIMPLE_PO_RECEIVING_STATUS_OPTIONS = [
+  { value: SIMPLE_PO_RECEIVING_STATUS_ORDERED, label: "Ordered" },
+  { value: SIMPLE_PO_RECEIVING_STATUS_PARTIAL, label: "Partially Received" },
+  { value: SIMPLE_PO_RECEIVING_STATUS_RECEIVED, label: "Received" },
+];
+
 export function parsePoMoney(value) {
   const n = Number.parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
   return Number.isFinite(n) ? n : 0;
+}
+
+function newId(prefix) {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 /** Resolve Job vs Shop for stored rows (legacy rows with a job link count as Job). */
@@ -51,16 +67,71 @@ export function simplePoTypeLabel(rowOrType) {
 
 export function emptyPoLine() {
   return {
-    id:
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `pol-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: newId("pol"),
     itemName: "",
     uom: "",
     quantity: "0",
     price: "0.00",
     taxPercent: "0",
+    receivedQty: "0",
+    receivingStatus: SIMPLE_PO_RECEIVING_STATUS_ORDERED,
+    receivedDate: "",
+    /** Optional — when set and line becomes Received, on-hand increases */
+    inventoryItemId: "",
   };
+}
+
+export function emptyPoPayment(overrides = {}) {
+  return {
+    id: newId("pop"),
+    date: todayIsoDate(),
+    amount: "",
+    method: "",
+    paidBy: "",
+    notes: "",
+    ...overrides,
+  };
+}
+
+/**
+ * Suggest receiving status from ordered vs received qty.
+ * @param {string|number} orderedQty
+ * @param {string|number} receivedQty
+ */
+export function suggestReceivingStatus(orderedQty, receivedQty) {
+  const ordered = parsePoMoney(orderedQty);
+  const received = parsePoMoney(receivedQty);
+  if (received <= 0) return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+  if (ordered > 0 && received >= ordered) return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
+  return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
+}
+
+export function resolvePoPaymentStatus(amountPaid, grandTotal) {
+  const paid = parsePoMoney(amountPaid);
+  const total = parsePoMoney(grandTotal);
+  if (paid <= 0) return "Unpaid";
+  if (total > 0 && paid + 0.0001 >= total) return "Paid";
+  if (paid > 0) return "Partial Paid";
+  return "Unpaid";
+}
+
+/**
+ * @param {Array<{ amount?: string|number, date?: string }>} payments
+ * @param {number} grandTotal
+ */
+export function computePoPaymentSummary(payments, grandTotal) {
+  const list = Array.isArray(payments) ? payments : [];
+  let amountPaid = 0;
+  let latestDate = "";
+  for (const p of list) {
+    amountPaid += parsePoMoney(p?.amount);
+    const d = String(p?.date || "").trim().slice(0, 10);
+    if (d && (!latestDate || d > latestDate)) latestDate = d;
+  }
+  const total = parsePoMoney(grandTotal);
+  const balance = Math.max(0, total - amountPaid);
+  const paymentStatus = resolvePoPaymentStatus(amountPaid, total);
+  return { amountPaid, balance, grandTotal: total, paymentStatus, latestPaymentDate: latestDate };
 }
 
 function todayIsoDate() {
@@ -91,6 +162,8 @@ export function createEmptySimplePurchaseOrderForm(overrides = {}) {
     paymentStatus: "Unpaid",
     comments: "",
     lineItems: [emptyPoLine()],
+    payments: [],
+    vendorDocuments: [],
     ...overrides,
   };
 }
@@ -138,22 +211,90 @@ export function computeNextSimplePoNumber(jobNumber, existingPos = []) {
   return `${job}-${max + 1}`;
 }
 
+function normalizeReceivingStatus(raw) {
+  const s = String(raw || "").trim().toLowerCase();
+  if (s === "received") return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
+  if (s.includes("partial")) return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
+  return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+}
+
+/**
+ * Overall PO / receiving status from line items.
+ * Ordered | Partially Received | Received
+ */
+export function resolvePoStatus(lineItems) {
+  const lines = (Array.isArray(lineItems) ? lineItems : []).filter((line) => poLineHasContent(line));
+  if (lines.length === 0) return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+  let received = 0;
+  let partial = 0;
+  for (const line of lines) {
+    const status = normalizeReceivingStatus(
+      line?.receivingStatus || suggestReceivingStatus(line?.quantity, line?.receivedQty)
+    );
+    if (status === SIMPLE_PO_RECEIVING_STATUS_RECEIVED) received += 1;
+    else if (status === SIMPLE_PO_RECEIVING_STATUS_PARTIAL) partial += 1;
+  }
+  if (received === lines.length) return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
+  if (partial > 0 || received > 0) return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
+  return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+}
+
 /** Map a stored PO row into editable form state. */
 export function storedPoToForm(row) {
   const base = createEmptySimplePurchaseOrderForm();
   if (!row || typeof row !== "object") return base;
   const lines = Array.isArray(row.lineItems)
-    ? row.lineItems.map((line) => ({ ...emptyPoLine(), ...line }))
+    ? row.lineItems.map((line) => {
+        const merged = { ...emptyPoLine(), ...line };
+        return {
+          ...merged,
+          receivedQty: merged.receivedQty != null && merged.receivedQty !== "" ? String(merged.receivedQty) : "0",
+          receivingStatus: normalizeReceivingStatus(merged.receivingStatus),
+          receivedDate: String(merged.receivedDate || "").slice(0, 10),
+        };
+      })
     : [];
   const withTrailing = [...lines];
   if (!withTrailing.length || lineHasContentForEdit(withTrailing[withTrailing.length - 1])) {
     withTrailing.push(emptyPoLine());
   }
+  const payments = Array.isArray(row.payments)
+    ? row.payments.map((p) => ({
+        ...emptyPoPayment(),
+        ...p,
+        id: String(p?.id || "").trim() || newId("pop"),
+        date: String(p?.date || "").slice(0, 10),
+        amount: p?.amount != null ? String(p.amount) : "",
+        method: String(p?.method || ""),
+        paidBy: String(p?.paidBy || ""),
+        notes: String(p?.notes || ""),
+      }))
+    : [];
+  const vendorDocuments = Array.isArray(row.vendorDocuments)
+    ? row.vendorDocuments
+        .map((d) => ({
+          url: String(d?.url || "").trim(),
+          name: String(d?.name || "").trim(),
+          uploadedAt: String(d?.uploadedAt || "").trim(),
+        }))
+        .filter((d) => d.url)
+    : [];
+
+  const totals = computePoFormTotals(withTrailing);
+  const paySummary = computePoPaymentSummary(payments, totals.grandTotal);
+
   return {
     ...base,
     ...row,
     poType: resolveSimplePoType(row),
     lineItems: withTrailing,
+    payments,
+    vendorDocuments,
+    paymentStatus: paySummary.paymentStatus || row.paymentStatus || "Unpaid",
+    poPaidDate:
+      paySummary.paymentStatus === "Unpaid"
+        ? ""
+        : paySummary.latestPaymentDate || String(row.poPaidDate || "").slice(0, 10),
   };
 }
 
@@ -165,6 +306,11 @@ function lineHasContentForEdit(line) {
       parsePoMoney(line?.price) ||
       parsePoMoney(line?.taxPercent)
   );
+}
+
+/** True when a line has enough content to appear on Receiving tab. */
+export function poLineHasContent(line) {
+  return lineHasContentForEdit(line);
 }
 
 /**
@@ -181,8 +327,15 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
   const lineItems = (Array.isArray(form.lineItems) ? form.lineItems : [])
     .map((line) => {
       const t = computePoLineTotals(line);
+      const receivedQty = String(line.receivedQty ?? "0");
+      const receivingStatus = normalizeReceivingStatus(
+        line.receivingStatus || suggestReceivingStatus(line.quantity, receivedQty)
+      );
       return {
         ...line,
+        receivedQty,
+        receivingStatus,
+        receivedDate: String(line.receivedDate || "").slice(0, 10),
         total: t.total,
         taxAmount: t.taxAmount,
         grandTotal: t.grandTotal,
@@ -196,6 +349,41 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         parsePoMoney(line.taxPercent)
     );
 
+  const payments = (Array.isArray(form.payments) ? form.payments : [])
+    .map((p) => ({
+      id: String(p?.id || "").trim() || newId("pop"),
+      date: String(p?.date || "").slice(0, 10),
+      amount: String(p?.amount ?? "").trim(),
+      method: String(p?.method || "").trim(),
+      paidBy: String(p?.paidBy || "").trim(),
+      notes: String(p?.notes || "").trim(),
+    }))
+    .filter((p) => parsePoMoney(p.amount) > 0 || p.date || p.method || p.notes);
+
+  const paySummary = computePoPaymentSummary(payments, totals.grandTotal);
+  const vendorDocuments = Array.isArray(form.vendorDocuments)
+    ? form.vendorDocuments
+        .map((d) => ({
+          url: String(d?.url || "").trim(),
+          name: String(d?.name || "").trim(),
+          uploadedAt: String(d?.uploadedAt || "").trim(),
+        }))
+        .filter((d) => d.url)
+    : [];
+
+  const allReceived =
+    lineItems.length > 0 &&
+    lineItems.every((l) => normalizeReceivingStatus(l.receivingStatus) === SIMPLE_PO_RECEIVING_STATUS_RECEIVED);
+  let poItemReceiveDate = String(form.poItemReceiveDate || "").slice(0, 10);
+  if (allReceived) {
+    let latest = "";
+    for (const l of lineItems) {
+      const d = String(l.receivedDate || "").slice(0, 10);
+      if (d && (!latest || d > latest)) latest = d;
+    }
+    poItemReceiveDate = latest || poItemReceiveDate || todayIsoDate();
+  }
+
   return {
     ...form,
     id,
@@ -203,6 +391,11 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
     vendorName: meta.vendorName || form.vendorName || "",
     vendorPhone: meta.vendorPhone || form.vendorPhone || "",
     lineItems: lineItems.length ? lineItems : [emptyPoLine()],
+    payments,
+    vendorDocuments,
+    paymentStatus: paySummary.paymentStatus,
+    poPaidDate: paySummary.paymentStatus === "Unpaid" ? "" : paySummary.latestPaymentDate || "",
+    poItemReceiveDate,
     total: totals.total,
     totalTax: totals.totalTax,
     grandTotal: totals.grandTotal,

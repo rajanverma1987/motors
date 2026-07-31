@@ -8,12 +8,15 @@ import {
   FiFileText,
   FiLayers,
   FiPackage,
+  FiPlus,
   FiTool,
   FiTrash2,
   FiXCircle,
 } from "react-icons/fi";
 import Table from "@/components/ui/table";
+import Button from "@/components/ui/button";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
@@ -53,6 +56,7 @@ export const SIMPLE_LIST_VARIANT_INVOICES = "invoices";
 
 const FILTER_TAX_COLLECTED = "__tax_collected__";
 const FILTER_TAX_TO_COLLECT = "__tax_to_collect__";
+const FILTER_AMOUNT_RECEIVABLE = "__amount_receivable__";
 
 function statusBareKey(status) {
   return String(status || "")
@@ -70,6 +74,7 @@ function isFullyPaidInvoiceStatus(status) {
 function statusCardIcon(label) {
   const l = String(label || "").toLowerCase();
   if (!l || l === "all") return FiLayers;
+  if (l.includes("receivable")) return FiClipboard;
   if (l.includes("tax collected") && !l.includes("to be")) return FiCheckCircle;
   if (l.includes("tax to be")) return FiClipboard;
   if (l.includes("reject")) return FiXCircle;
@@ -114,6 +119,7 @@ export default function ServiceProposalsPanel({
   const [ready, setReady] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
@@ -178,37 +184,39 @@ export default function ServiceProposalsPanel({
     [mergedSettings]
   );
 
+  const openCreate = useCallback(() => {
+    setEditingId(null);
+    setModalOpen(true);
+  }, []);
+
   useEffect(() => {
     if (!createNonce || isInvoices) return;
     if (createNonce === lastHandledCreateNonceRef.current) return;
     lastHandledCreateNonceRef.current = createNonce;
-    setEditingId(null);
-    setModalOpen(true);
-  }, [createNonce, isInvoices]);
+    openCreate();
+  }, [createNonce, isInvoices, openCreate]);
+
+  const reload = useCallback(async () => {
+    setReady(false);
+    try {
+      const [list, cust, emps] = await Promise.all([
+        fetchSimpleServiceProposals(),
+        fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
+        fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
+      ]);
+      setRows(Array.isArray(list) ? list : []);
+      setCustomers(Array.isArray(cust) ? cust : []);
+      setEmployees(Array.isArray(emps) ? emps : []);
+    } catch {
+      setRows([]);
+    } finally {
+      setReady(true);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const [list, cust, emps] = await Promise.all([
-          fetchSimpleServiceProposals(),
-          fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
-          fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
-        ]);
-        if (cancelled) return;
-        setRows(Array.isArray(list) ? list : []);
-        setCustomers(Array.isArray(cust) ? cust : []);
-        setEmployees(Array.isArray(emps) ? emps : []);
-      } catch {
-        if (!cancelled) setRows([]);
-      } finally {
-        if (!cancelled) setReady(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void reload();
+  }, [reload]);
 
   const employeeLabel = useCallback(
     (id) => buildEmployeeSelectOptions(employees, id).find((o) => o.value === id)?.label || id || "",
@@ -448,6 +456,14 @@ export default function ServiceProposalsPanel({
       const unpaid = pool.filter((r) => !isFullyPaidInvoiceStatus(r.status));
       buttons.push(
         {
+          key: FILTER_AMOUNT_RECEIVABLE,
+          label: "Amount Receivable",
+          count: unpaid.length,
+          amount: unpaid.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          tileAppearance: resolveStatusTileProps("", 3),
+          icon: statusCardIcon("Amount Receivable"),
+        },
+        {
           key: FILTER_TAX_COLLECTED,
           label: "Tax Collected",
           count: paid.length,
@@ -479,6 +495,9 @@ export default function ServiceProposalsPanel({
 
   const statusFilteredRows = useMemo(() => {
     if (!statusFilter) return rowsForDate;
+    if (statusFilter === FILTER_AMOUNT_RECEIVABLE) {
+      return rowsForDate.filter((r) => !isFullyPaidInvoiceStatus(r.status));
+    }
     if (statusFilter === FILTER_TAX_COLLECTED) {
       return rowsForDate.filter((r) => isFullyPaidInvoiceStatus(r.status));
     }
@@ -592,7 +611,29 @@ export default function ServiceProposalsPanel({
         sortable: true,
         render: (v) => formatDateMdy(v) || "—",
       },
-      { key: "companyName", label: "Company Name", sortable: true },
+      {
+        key: "companyName",
+        label: "Company Name",
+        sortable: true,
+        render: (v, row) => {
+          const customerId = String(row.customerId || "").trim();
+          const name = String(v || "").trim() || customerName(customerId) || "—";
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
+        },
+      },
       { key: "phone", label: "Phone", sortable: true },
       { key: "email", label: "Email", sortable: true },
       { key: "quotedBy", label: "Quoted By", sortable: true },
@@ -668,12 +709,12 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "jobStatus",
-        label: "Status",
+        label: "Job Status",
         sortable: true,
         className: "min-w-[9rem]",
         render: (v, row) => {
           if (String(row.recordType || "").toUpperCase() !== RECORD_TYPE_JOB) {
-            return "—";
+            return "";
           }
           const current = String(v || "").trim();
           const idx = jobStatusOptions.findIndex(
@@ -696,7 +737,7 @@ export default function ServiceProposalsPanel({
                 triggerStyle={pill.style || undefined}
                 placeholder="Select…"
                 searchable
-                aria-label="Status"
+                aria-label="Job Status"
               />
             </div>
           );
@@ -707,6 +748,7 @@ export default function ServiceProposalsPanel({
       handleDelete,
       handleRowStatusChange,
       handleRowJobStatusChange,
+      customerName,
       mergedSettings,
       quoteOpts,
       invoiceOpts,
@@ -719,22 +761,43 @@ export default function ServiceProposalsPanel({
     ]
   );
 
+  const invoiceSummaryKeys = useMemo(
+    () =>
+      new Set([FILTER_AMOUNT_RECEIVABLE, FILTER_TAX_COLLECTED, FILTER_TAX_TO_COLLECT]),
+    []
+  );
+  const mainStatusCards = useMemo(
+    () => statusSummaryCards.filter((c) => !invoiceSummaryKeys.has(c.key)),
+    [statusSummaryCards, invoiceSummaryKeys]
+  );
+  const invoiceSummaryCards = useMemo(
+    () => statusSummaryCards.filter((c) => invoiceSummaryKeys.has(c.key)),
+    [statusSummaryCards, invoiceSummaryKeys]
+  );
+
+  const renderStatusCard = (card) => (
+    <StatusFilterPillButton
+      key={card.key || "__all__"}
+      card={card}
+      active={(statusFilter || "") === (card.key || "")}
+      onClick={() => setStatusFilter(card.key || "")}
+      formatAmount={(n) =>
+        `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
+          maximumFractionDigits: 0,
+        })}`
+      }
+    />
+  );
+
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 flex-wrap gap-2.5">
-        {statusSummaryCards.map((card) => (
-          <StatusFilterPillButton
-            key={card.key || "__all__"}
-            card={card}
-            active={(statusFilter || "") === (card.key || "")}
-            onClick={() => setStatusFilter(card.key || "")}
-            formatAmount={(n) =>
-              `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
-                maximumFractionDigits: 0,
-              })}`
-            }
-          />
-        ))}
+      <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-2.5">
+        <div className="flex min-w-0 flex-wrap gap-2.5">{mainStatusCards.map(renderStatusCard)}</div>
+        {invoiceSummaryCards.length > 0 ? (
+          <div className="ml-auto flex min-w-0 flex-wrap justify-end gap-2.5">
+            {invoiceSummaryCards.map(renderStatusCard)}
+          </div>
+        ) : null}
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -742,9 +805,19 @@ export default function ServiceProposalsPanel({
           columns={columns}
           data={displayRows}
           rowKey="id"
+          loading={!ready}
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+          onRefresh={reload}
+          toolbarBeforeSearch={
+            isInvoices ? null : (
+              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Add New
+              </Button>
+            )
+          }
           selectable
           selectedRowIds={selectedRowIds}
           onSelectionChange={setSelectedRowIds}
@@ -780,6 +853,41 @@ export default function ServiceProposalsPanel({
         initialForm={editingRow}
         onSave={handleSave}
         onAttachmentsChange={handleAttachmentsChange}
+      />
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || openCustomerId || "").trim();
+          if (!cid) return;
+          const nextName =
+            String(customer?.companyName || "").trim() ||
+            String(customer?.primaryContactName || "").trim();
+          const nextPhone = String(customer?.phone || "").trim();
+          const nextEmail = String(customer?.email || "").trim();
+          setCustomers((prev) => {
+            const idx = prev.findIndex((c) => String(c.id || "") === cid);
+            if (idx < 0) return [...prev, { ...customer, id: cid }];
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...customer, id: cid };
+            return next;
+          });
+          if (!nextName && !nextPhone && !nextEmail) return;
+          setRows((prev) =>
+            prev.map((r) => {
+              if (String(r.customerId || "") !== cid) return r;
+              return {
+                ...r,
+                ...(nextName ? { companyName: nextName } : {}),
+                ...(nextPhone ? { phone: nextPhone } : {}),
+                ...(nextEmail ? { email: nextEmail } : {}),
+              };
+            })
+          );
+        }}
       />
     </div>
   );

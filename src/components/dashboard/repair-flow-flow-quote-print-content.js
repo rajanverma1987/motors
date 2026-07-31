@@ -59,9 +59,9 @@ export default function RepairFlowFlowQuotePrintContent({ job, quotes, fmt, acco
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-start gap-3 border-b border-border pb-3">
+      <div className="mb-4 flex flex-col items-start gap-1.5 border-b border-border pb-3">
         <PrintShopLogo logoUrl={accountSettings?.logoUrl} alt="" />
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 w-full">
           <CompanyAccountsPrint
             billingAddress={accountSettings?.accountsBillingAddress}
             paymentTermsLabel={paymentTermsLabel}

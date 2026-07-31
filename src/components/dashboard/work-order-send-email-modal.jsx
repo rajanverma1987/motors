@@ -140,22 +140,17 @@ export default function WorkOrderSendEmailModal({
       zIndex={zIndex}
       showClose={!busy}
       actions={
-        <>
-          <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            disabled={busy || loading || !previewReady || !!loadError}
-            className="inline-flex items-center gap-1.5"
-            onClick={handleSend}
-          >
-            <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-            {busy ? "Sending…" : "Send"}
-          </Button>
-        </>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          disabled={busy || loading || !previewReady || !!loadError}
+          className="inline-flex items-center gap-1.5"
+          onClick={handleSend}
+        >
+          <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+          {busy ? "Sending…" : "Send"}
+        </Button>
       }
     >
       {loading ? (

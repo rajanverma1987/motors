@@ -432,14 +432,9 @@ export default function AdminSubscriptionPlansPage() {
         title={editPlan ? `Edit plan — ${editPlan.name}` : "Edit plan"}
         size="md"
         actions={
-          <>
-            <Button type="button" variant="secondary" size="sm" disabled={editSaving} onClick={() => setEditPlan(null)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="admin-plan-edit-form" variant="primary" size="sm" disabled={editSaving}>
-              {editSaving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="admin-plan-edit-form" variant="primary" size="sm" disabled={editSaving}>
+            {editSaving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         {editPlan ? (

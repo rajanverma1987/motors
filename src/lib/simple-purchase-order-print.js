@@ -1,5 +1,5 @@
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
-import { formatDateMdy } from "@/lib/format-date";
+import { formatDateForCurrency } from "@/lib/format-date";
 import { parsePoMoney } from "@/lib/simple-purchase-order-form";
 
 /**
@@ -38,12 +38,8 @@ export function buildSimplePurchaseOrderPrintPayload({
   const ownerEmail = String(user?.email || "").trim();
   const fromShopContact = [user?.contactName, ownerEmail].filter(Boolean).join(" · ");
   const poDate = form?.poCutDate || form?.createdAt || "";
-  const formatted =
-    formatDateMdy(poDate) !== "—"
-      ? formatDateMdy(poDate)
-      : poDate
-        ? String(poDate)
-        : "";
+  const currency = String(accountSettings?.currency || "USD").trim();
+  const formatted = formatDateForCurrency(poDate, currency);
 
   return {
     po: {
@@ -54,6 +50,8 @@ export function buildSimplePurchaseOrderPrintPayload({
       lineItems: lines,
       notes: String(form?.comments || "").trim(),
       otherCharges: [],
+      poCutDate: String(form?.poCutDate || "").trim().slice(0, 10),
+      createdAt: form?.createdAt || "",
       fromShopName: shopName,
       fromShopContact,
       fromShopLogoUrl: String(accountSettings?.logoUrl || "").trim(),
@@ -63,7 +61,7 @@ export function buildSimplePurchaseOrderPrintPayload({
         ? accountsPaymentTermsLabel(accountSettings.accountsPaymentTerms)
         : "",
       invoiceThankYouNote: accountSettings?.invoiceThankYouNote ?? "",
-      formattedCreatedAt: formatted,
+      formattedCreatedAt: formatted === "—" ? "" : formatted,
     },
     vendor: vendor
       ? {

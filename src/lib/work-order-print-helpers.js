@@ -5,7 +5,7 @@ import {
   normalizeWorkOrderJobType,
 } from "@/lib/work-order-fields";
 import { getMotorInspectionViewEntries } from "@/lib/motor-inspection-fields";
-import { formatDateMdy } from "@/lib/format-date";
+import { formatDateLocale } from "@/lib/format-date";
 
 /** @param {unknown} value */
 export function normalizedMotorClass(value) {
@@ -93,7 +93,7 @@ export function motorSpecSectionsForPrint(data) {
  */
 export function inspectionsSectionsForPrint(inspections) {
   return sortInspectionsForPrint(inspections).map((insp, index) => {
-    const recorded = insp?.createdAt ? formatDateMdy(insp.createdAt) : "—";
+    const recorded = insp?.createdAt ? formatDateLocale(insp.createdAt) : "—";
     return {
       title: `${inspectionKindLabel(insp?.kind)} (${recorded})`,
       rows: inspectionFindingRows(insp?.findings).map(({ label, text }) => ({

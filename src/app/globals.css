@@ -186,6 +186,15 @@ html[data-compact-tables="true"] table.dashboard-data-table :is(th, td) {
   }
 }
 
+/* Simple `/dashboards` — square inputs + form buttons (page + portaled modals) */
+body.simple-dashboards-square-inputs input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+body.simple-dashboards-square-inputs textarea,
+body.simple-dashboards-square-inputs select,
+body.simple-dashboards-square-inputs button,
+body.simple-dashboards-square-inputs [role="button"] {
+  border-radius: 0 !important;
+}
+
 /* Dashboard display zoom — reset for print so layouts match paper */
 @media print {
   html {

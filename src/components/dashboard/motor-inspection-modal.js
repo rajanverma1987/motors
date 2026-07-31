@@ -35,9 +35,6 @@ export default function MotorInspectionModal({
       actions={
         <>
           {extraActions}
-          <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
           <Button type="submit" form={formId} variant="primary" size="sm" disabled={saving}>
             {saving ? "Saving…" : "Save inspection"}
           </Button>

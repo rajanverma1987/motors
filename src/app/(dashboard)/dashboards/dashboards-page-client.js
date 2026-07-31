@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiPlus } from "react-icons/fi";
+import {
+  FiClipboard,
+  FiFileText,
+  FiPackage,
+  FiShoppingCart,
+  FiUsers,
+} from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -13,12 +19,13 @@ import ServiceProposalsPanel, {
   SIMPLE_LIST_VARIANT_PROPOSALS,
 } from "./service-proposals-panel";
 import PurchaseOrdersPanel from "./purchase-orders-panel";
+import InventoryPanel from "./inventory-panel";
 import CustomersPanel from "./customers-panel";
 import {
   SIMPLE_PORTAL_PATH,
-  SIMPLE_TAB_ACCOUNTS_PAYABLE,
   SIMPLE_TAB_CUSTOMERS,
   SIMPLE_TAB_IDS,
+  SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_PURCHASE_ORDERS,
   SIMPLE_TAB_SERVICE_PROPOSALS,
@@ -32,19 +39,35 @@ import {
 } from "@/lib/all-jobs-date-filter";
 
 const DATE_FILTER_PILL_CLASS =
-  "!h-7 !min-h-7 shrink-0 !flex !items-center !justify-center !rounded !border-border/80 !px-2 !py-0 text-xs font-semibold !shadow-none";
+  "!h-7 !min-h-7 shrink-0 !flex !items-center !justify-center !rounded-none !border-border/80 !px-2 !py-0 text-xs font-semibold !shadow-none";
 const DATE_FILTER_INPUT_CLASS =
   "mb-0 !flex !w-auto !min-w-0 !flex-row !items-center !gap-1 [&_label]:mb-0 [&_label]:shrink-0 [&_label]:text-[11px] [&_label]:font-medium [&_label]:text-secondary";
 const DATE_FILTER_INPUT_FIELD_CLASS =
-  "!h-7 !min-h-7 !w-[8.75rem] !rounded !border-border/80 !px-1.5 !py-0 text-xs leading-none";
-const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 rounded px-2.5 text-xs";
+  "!h-7 !min-h-7 !w-[8.75rem] !rounded-none !border-border/80 !px-1.5 !py-0 text-xs leading-none";
+const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 !rounded-none px-2.5 text-xs";
 
-function BlankPanel({ title }) {
+/** Square UI — only used on Simple `/dashboards`. */
+const DASHBOARDS_SQUARE_UI_CLASS = [
+  "[&_button]:!rounded-none",
+  "[&_input]:!rounded-none",
+  "[&_textarea]:!rounded-none",
+  "[&_select]:!rounded-none",
+  "[&_.status-filter-pill]:!rounded-none",
+  "[&_.status-filter-pill_span]:!rounded-none",
+].join(" ");
+const DASHBOARDS_TAB_LIST_CLASS =
+  "shrink-0 !flex-nowrap !gap-2 !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent";
+const DASHBOARDS_TAB_BUTTON_CLASS =
+  "!box-border !flex !h-[5.75rem] !w-[5.75rem] !shrink-0 !flex-col !items-center !justify-center !rounded-none !px-1.5 !py-2 sm:!h-[6.25rem] sm:!w-[6.25rem]";
+
+function TabLabel({ icon: Icon, children }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <h2 className="text-lg font-semibold text-title">{title}</h2>
-      <p className="mt-1 text-sm text-secondary">Content coming soon.</p>
-    </div>
+    <span className="flex w-full flex-col items-center justify-center gap-1.5 text-center">
+      {Icon ? <Icon className="h-7 w-7 shrink-0 sm:h-8 sm:w-8" aria-hidden /> : null}
+      <span className="max-w-full px-0.5 text-[12px] font-bold leading-tight whitespace-normal sm:text-[13px]">
+        {children}
+      </span>
+    </span>
   );
 }
 
@@ -61,10 +84,6 @@ export default function DashboardsPageClient() {
 
   const [draftFrom, setDraftFrom] = useState(() => appliedFrom || fyDefault.from);
   const [draftTo, setDraftTo] = useState(() => appliedTo || fyDefault.to);
-  const [createNonce, setCreateNonce] = useState(0);
-  const [poCreateNonce, setPoCreateNonce] = useState(0);
-  const [customerCreateNonce, setCustomerCreateNonce] = useState(0);
-  const [pendingProposalCreate, setPendingProposalCreate] = useState(false);
 
   useEffect(() => {
     if (isAllDates) {
@@ -76,13 +95,13 @@ export default function DashboardsPageClient() {
     setDraftTo(appliedTo);
   }, [appliedFrom, appliedTo, isAllDates, fyDefault.from, fyDefault.to]);
 
-  /** After switching to Service Proposals via Add New, bump nonce once the tab is active. */
+  /** Square inputs/buttons in page + portaled form modals while Simple `/dashboards` is mounted. */
   useEffect(() => {
-    if (!pendingProposalCreate) return;
-    if (activeTab !== SIMPLE_TAB_SERVICE_PROPOSALS) return;
-    setPendingProposalCreate(false);
-    setCreateNonce((n) => n + 1);
-  }, [activeTab, pendingProposalCreate]);
+    document.body.classList.add("simple-dashboards-square-inputs");
+    return () => {
+      document.body.classList.remove("simple-dashboards-square-inputs");
+    };
+  }, []);
 
   const replaceSearchParams = useCallback(
     (mutate) => {
@@ -130,122 +149,91 @@ export default function DashboardsPageClient() {
     [activeTab, router, searchParams]
   );
 
-  const handleAddNew = useCallback(() => {
-    if (activeTab === SIMPLE_TAB_CUSTOMERS) {
-      setCustomerCreateNonce((n) => n + 1);
-      return;
-    }
-    if (activeTab === SIMPLE_TAB_PURCHASE_ORDERS) {
-      setPoCreateNonce((n) => n + 1);
-      return;
-    }
-    if (activeTab !== SIMPLE_TAB_SERVICE_PROPOSALS) {
-      setPendingProposalCreate(true);
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", SIMPLE_TAB_SERVICE_PROPOSALS);
-      router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
-      return;
-    }
-    setCreateNonce((n) => n + 1);
-  }, [activeTab, router, searchParams]);
-
   const tabs = useMemo(
     () => [
       {
         id: SIMPLE_TAB_CUSTOMERS,
-        label: "Customers",
-        children: <CustomersPanel createNonce={customerCreateNonce} />,
+        label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
+        children: <CustomersPanel />,
       },
       {
         id: SIMPLE_TAB_SERVICE_PROPOSALS,
-        label: "Service Proposals",
-        children: (
-          <ServiceProposalsPanel
-            variant={SIMPLE_LIST_VARIANT_PROPOSALS}
-            createNonce={createNonce}
-          />
-        ),
+        label: <TabLabel icon={FiFileText}>Service Proposals</TabLabel>,
+        children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_PROPOSALS} />,
       },
       {
         id: SIMPLE_TAB_INVOICES,
-        label: "Invoices",
+        label: <TabLabel icon={FiClipboard}>Invoices / Receivables</TabLabel>,
         children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_INVOICES} />,
       },
       {
         id: SIMPLE_TAB_PURCHASE_ORDERS,
-        label: "Purchase Orders",
-        children: <PurchaseOrdersPanel createNonce={poCreateNonce} />,
+        label: <TabLabel icon={FiShoppingCart}>Purchase / Payable</TabLabel>,
+        children: <PurchaseOrdersPanel />,
       },
       {
-        id: SIMPLE_TAB_ACCOUNTS_PAYABLE,
-        label: "Account Payables",
-        children: <BlankPanel title="Account Payables" />,
+        id: SIMPLE_TAB_INVENTORY,
+        label: <TabLabel icon={FiPackage}>Inventory</TabLabel>,
+        children: <InventoryPanel />,
       },
     ],
-    [createNonce, poCreateNonce, customerCreateNonce]
+    []
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div
+      className={`flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS}`}
+    >
       <div className="mb-2 shrink-0 border-b border-border pb-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            <StatusFilterPillButton
-              labelOnly
-              className={DATE_FILTER_PILL_CLASS}
-              card={{
-                key: "fy",
-                label: "FY",
-                tileAppearance: resolveStatusTileProps("", 5),
-              }}
-              active={isCurrentFy}
-              onClick={applyCurrentFy}
-            />
-            <StatusFilterPillButton
-              labelOnly
-              className={DATE_FILTER_PILL_CLASS}
-              card={{
-                key: "all",
-                label: "All",
-                tileAppearance: resolveStatusTileProps("", 6),
-              }}
-              active={isAllDates}
-              onClick={applyAllDates}
-            />
-            <Input
-              label="From"
-              type="date"
-              value={draftFrom}
-              onChange={(e) => setDraftFrom(e.target.value)}
-              className={DATE_FILTER_INPUT_CLASS}
-              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-            />
-            <Input
-              label="To"
-              type="date"
-              value={draftTo}
-              onChange={(e) => setDraftTo(e.target.value)}
-              className={DATE_FILTER_INPUT_CLASS}
-              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-            />
-            <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleGo}>
-              Go
-            </Button>
-          </div>
-          {activeTab === SIMPLE_TAB_CUSTOMERS ||
-          activeTab === SIMPLE_TAB_SERVICE_PROPOSALS ||
-          activeTab === SIMPLE_TAB_PURCHASE_ORDERS ? (
-            <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleAddNew}>
-              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-              Add New
-            </Button>
-          ) : null}
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <StatusFilterPillButton
+            labelOnly
+            className={DATE_FILTER_PILL_CLASS}
+            card={{
+              key: "fy",
+              label: "FY",
+              tileAppearance: resolveStatusTileProps("", 5),
+            }}
+            active={isCurrentFy}
+            onClick={applyCurrentFy}
+          />
+          <StatusFilterPillButton
+            labelOnly
+            className={DATE_FILTER_PILL_CLASS}
+            card={{
+              key: "all",
+              label: "All",
+              tileAppearance: resolveStatusTileProps("", 6),
+            }}
+            active={isAllDates}
+            onClick={applyAllDates}
+          />
+          <Input
+            label="From"
+            type="date"
+            value={draftFrom}
+            onChange={(e) => setDraftFrom(e.target.value)}
+            className={DATE_FILTER_INPUT_CLASS}
+            inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+          />
+          <Input
+            label="To"
+            type="date"
+            value={draftTo}
+            onChange={(e) => setDraftTo(e.target.value)}
+            className={DATE_FILTER_INPUT_CLASS}
+            inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+          />
+          <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleGo}>
+            Go
+          </Button>
         </div>
       </div>
 
       <Tabs
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-        listClassName="shrink-0"
+        listClassName={DASHBOARDS_TAB_LIST_CLASS}
+        tabButtonClassName={DASHBOARDS_TAB_BUTTON_CLASS}
         panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-4"
         value={activeTab}
         onChange={handleTabChange}

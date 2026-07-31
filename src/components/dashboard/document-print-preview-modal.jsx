@@ -119,22 +119,17 @@ export default function DocumentPrintPreviewModal({
         width="min(960px, 96vw)"
         zIndex={zIndex}
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" disabled={loading} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              disabled={loading || !documentReady || !!loadError}
-              className="inline-flex items-center gap-1.5"
-              onClick={handlePrint}
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={loading || !documentReady || !!loadError}
+            className="inline-flex items-center gap-1.5"
+            onClick={handlePrint}
+          >
+            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+            Print
+          </Button>
         }
       >
         {loading ? (

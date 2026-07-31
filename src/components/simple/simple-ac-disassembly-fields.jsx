@@ -6,9 +6,9 @@ import {
 } from "@/lib/simple-datasheet-form";
 
 const INPUT =
-  "h-7 w-[12.5rem] max-w-full shrink-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:bg-primary/10";
+  "h-7 w-[12.5rem] max-w-full shrink-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:bg-primary/10";
 const TEXTAREA =
-  "w-full min-w-0 resize-y rounded-sm border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10";
+  "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10";
 const LABEL = "w-[9.25rem] shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
 
 function TextField({ label, children, className = "" }) {

@@ -456,22 +456,17 @@ export default function RepairFlowPageClient() {
         headerClassName="flex-wrap"
         showClose={!formSaving}
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeCreateModal} disabled={formSaving}>
-              Cancel
+          createWorkflowStep === "create" ? (
+            <Button
+              type="submit"
+              form="repair-flow-new-job-modal"
+              variant="primary"
+              size="sm"
+              disabled={modalActionsDisabled}
+            >
+              {formSaving ? "Creating…" : "Create job"}
             </Button>
-            {createWorkflowStep === "create" ? (
-              <Button
-                type="submit"
-                form="repair-flow-new-job-modal"
-                variant="primary"
-                size="sm"
-                disabled={modalActionsDisabled}
-              >
-                {formSaving ? "Creating…" : "Create job"}
-              </Button>
-            ) : null}
-          </>
+          ) : null
         }
       >
         <div className="w-full min-w-0 max-w-none">

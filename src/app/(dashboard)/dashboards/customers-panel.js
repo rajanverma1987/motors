@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { FiLayers, FiPlus, FiUser, FiUserPlus } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import { Form } from "@/components/ui/form-layout";
 import Modal from "@/components/ui/modal";
+import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import { useAlert } from "@/components/confirm-provider";
 import {
@@ -14,60 +16,115 @@ import {
   INITIAL_CUSTOMER_FORM,
 } from "@/lib/customer-record-form";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
 
+const TYPE_CUSTOMER = "Customer";
+const TYPE_LEAD = "Lead";
+const FILTER_ALL = "";
+const FILTER_CUSTOMERS = TYPE_CUSTOMER;
+const FILTER_LEADS = TYPE_LEAD;
+
+const LEAD_STATUS_LABEL = {
+  new: "New",
+  contacted: "Contacted",
+  quoted: "Quoted",
+  won: "Won",
+  lost: "Lost",
+};
+
+const LEAD_STATUS_BADGE = {
+  new: "primary",
+  contacted: "warning",
+  quoted: "primary",
+  won: "success",
+  lost: "danger",
+};
+
+function leadToTableRow(lead) {
+  const id = String(lead?.id || "").trim();
+  return {
+    rowKey: `lead-${id}`,
+    id,
+    recordType: TYPE_LEAD,
+    companyName: String(lead?.company || "").trim() || String(lead?.name || "").trim() || "—",
+    primaryContactName: String(lead?.name || "").trim(),
+    phone: String(lead?.phone || "").trim(),
+    email: String(lead?.email || "").trim(),
+    ein: "",
+    creditLimit: "",
+    taxExempt: true,
+    taxPercent: "",
+    city: String(lead?.city || "").trim(),
+    state: "",
+    leadStatus: String(lead?.status || "new").trim() || "new",
+    leadSource: String(lead?.source || lead?.leadSource || "").trim(),
+    leadRaw: lead,
+  };
+}
+
+function customerToTableRow(customer) {
+  const id = String(customer?.id || "").trim();
+  return {
+    ...customer,
+    rowKey: `customer-${id}`,
+    id,
+    recordType: TYPE_CUSTOMER,
+  };
+}
+
 export default function CustomersPanel({ createNonce = 0 }) {
   const alert = useAlert();
-  const [rows, setRows] = useState([]);
+  const [customerRows, setCustomerRows] = useState([]);
+  const [leadRows, setLeadRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState(FILTER_ALL);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
   const [saving, setSaving] = useState(false);
+  const [leadDetail, setLeadDetail] = useState(null);
+  const [convertingFromLeadId, setConvertingFromLeadId] = useState(null);
   const lastHandledCreateNonceRef = useRef(createNonce);
 
-  const loadCustomers = useCallback(async ({ showError = true } = {}) => {
-    setLoading(true);
-    try {
-      const list = await fetchAllPaginatedDashboardItems("/api/dashboard/customers");
-      setRows(Array.isArray(list) ? list : []);
-    } catch (err) {
-      setRows([]);
-      if (showError) {
-        await alert({
-          title: "Error",
-          message: err.message || "Failed to load customers",
-          variant: "danger",
-        });
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [alert]);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
+  const loadAll = useCallback(
+    async ({ showError = true } = {}) => {
       setLoading(true);
       try {
-        const list = await fetchAllPaginatedDashboardItems("/api/dashboard/customers");
-        if (cancelled) return;
-        setRows(Array.isArray(list) ? list : []);
-      } catch {
-        if (!cancelled) setRows([]);
+        const [customers, leads] = await Promise.all([
+          fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
+          fetchAllPaginatedDashboardItems("/api/dashboard/leads"),
+        ]);
+        setCustomerRows(
+          (Array.isArray(customers) ? customers : []).map(customerToTableRow).filter((r) => r.id)
+        );
+        setLeadRows((Array.isArray(leads) ? leads : []).map(leadToTableRow).filter((r) => r.id));
+      } catch (err) {
+        setCustomerRows([]);
+        setLeadRows([]);
+        if (showError) {
+          await alert({
+            title: "Error",
+            message: err.message || "Failed to load customers and leads",
+            variant: "danger",
+          });
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    },
+    [alert]
+  );
+
+  useEffect(() => {
+    void loadAll({ showError: false });
+  }, [loadAll]);
 
   const openCreate = useCallback(() => {
     setEditingId(null);
+    setConvertingFromLeadId(null);
     setForm({ ...INITIAL_CUSTOMER_FORM });
     setModalOpen(true);
   }, []);
@@ -79,34 +136,91 @@ export default function CustomersPanel({ createNonce = 0 }) {
     openCreate();
   }, [createNonce, openCreate]);
 
-  const openEdit = useCallback(async (row) => {
-    const id = String(row?.id || "").trim();
-    if (!id) return;
-    setSaving(false);
-    setEditingId(id);
-    setForm(customerApiToForm(row));
-    setModalOpen(true);
-    try {
-      const res = await fetch(`/api/dashboard/customers/${id}`, {
-        credentials: "include",
-        cache: "no-store",
+  const openEditCustomer = useCallback(
+    async (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      setSaving(false);
+      setConvertingFromLeadId(null);
+      setEditingId(id);
+      setForm(customerApiToForm(row));
+      setModalOpen(true);
+      try {
+        const res = await fetch(`/api/dashboard/customers/${id}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to load customer");
+        if (data.customer) setForm(customerApiToForm(data.customer));
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err.message || "Failed to load customer",
+          variant: "danger",
+        });
+      }
+    },
+    [alert]
+  );
+
+  const startConvertLeadToCustomer = useCallback(
+    async (row) => {
+      const leadId = String(row?.id || "").trim();
+      if (!leadId) return;
+      const leadEmail = String(row?.email || "").trim().toLowerCase();
+      const leadCompany = String(row?.companyName || "").trim().toLowerCase();
+      const existing = customerRows.find((c) => {
+        const matchEmail = leadEmail && String(c.email || "").toLowerCase() === leadEmail;
+        const matchCompany =
+          leadCompany &&
+          leadCompany !== "—" &&
+          String(c.companyName || "").trim().toLowerCase() === leadCompany;
+        return matchEmail || matchCompany;
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to load customer");
-      if (data.customer) setForm(customerApiToForm(data.customer));
-    } catch (err) {
-      await alert({
-        title: "Error",
-        message: err.message || "Failed to load customer",
-        variant: "danger",
+      if (existing) {
+        setLeadDetail(null);
+        await alert({
+          title: "Customer already exists",
+          message: `A customer matching this lead already exists (${existing.companyName || "customer"}). Opening that record.`,
+        });
+        void openEditCustomer(existing);
+        return;
+      }
+      setLeadDetail(null);
+      setEditingId(null);
+      setConvertingFromLeadId(leadId);
+      setForm({
+        ...INITIAL_CUSTOMER_FORM,
+        companyName: String(row?.companyName || "").trim() === "—" ? "" : String(row?.companyName || "").trim(),
+        primaryContactName: String(row?.primaryContactName || "").trim(),
+        phone: String(row?.phone || "").trim(),
+        email: String(row?.email || "").trim(),
+        city: String(row?.city || "").trim(),
+        zipCode: String(row?.leadRaw?.zipCode || "").trim(),
+        notes: String(row?.leadRaw?.message || row?.leadRaw?.problemDescription || "").trim(),
       });
-    }
-  }, [alert]);
+      setModalOpen(true);
+    },
+    [alert, customerRows, openEditCustomer]
+  );
+
+  const openRow = useCallback(
+    (row) => {
+      if (row?.recordType === TYPE_LEAD) {
+        setLeadDetail(row);
+        return;
+      }
+      void openEditCustomer(row);
+    },
+    [openEditCustomer]
+  );
 
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
     setEditingId(null);
+    setConvertingFromLeadId(null);
     setForm({ ...INITIAL_CUSTOMER_FORM });
   };
 
@@ -129,13 +243,31 @@ export default function CustomersPanel({ createNonce = 0 }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || (editingId ? "Failed to update customer" : "Failed to create customer"));
-      await loadCustomers();
+      const leadIdToMarkWon = !editingId ? convertingFromLeadId : null;
+      if (leadIdToMarkWon) {
+        try {
+          await fetch(`/api/dashboard/leads/${leadIdToMarkWon}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ status: "won" }),
+          });
+        } catch {
+          /* customer saved; status update is best-effort */
+        }
+      }
+      await loadAll({ showError: false });
       setModalOpen(false);
       setEditingId(null);
+      setConvertingFromLeadId(null);
       setForm({ ...INITIAL_CUSTOMER_FORM });
       await alert({
         title: "Success",
-        message: editingId ? "Customer updated." : "Customer added.",
+        message: editingId
+          ? "Customer updated."
+          : leadIdToMarkWon
+            ? "Customer created. Lead marked as Won."
+            : "Customer added.",
       });
     } catch (err) {
       await alert({
@@ -148,11 +280,49 @@ export default function CustomersPanel({ createNonce = 0 }) {
     }
   };
 
+  const mergedRows = useMemo(() => [...customerRows, ...leadRows], [customerRows, leadRows]);
+
+  const typeFilterCards = useMemo(() => {
+    const tileFor = (index) => resolveStatusTileProps("", index);
+    return [
+      {
+        key: FILTER_ALL,
+        label: "All",
+        count: mergedRows.length,
+        amount: null,
+        tileAppearance: tileFor(0),
+        icon: FiLayers,
+      },
+      {
+        key: FILTER_CUSTOMERS,
+        label: "Customers",
+        count: customerRows.length,
+        amount: null,
+        tileAppearance: tileFor(2),
+        icon: FiUser,
+      },
+      {
+        key: FILTER_LEADS,
+        label: "Leads",
+        count: leadRows.length,
+        amount: null,
+        tileAppearance: tileFor(4),
+        icon: FiUserPlus,
+      },
+    ];
+  }, [mergedRows.length, customerRows.length, leadRows.length]);
+
+  const typeFilteredRows = useMemo(() => {
+    if (!typeFilter) return mergedRows;
+    return mergedRows.filter((r) => r.recordType === typeFilter);
+  }, [mergedRows, typeFilter]);
+
   const displayRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((row) => {
+    if (!q) return typeFilteredRows;
+    return typeFilteredRows.filter((row) => {
       const haystack = [
+        row.recordType,
         row.companyName,
         row.primaryContactName,
         row.phone,
@@ -161,6 +331,8 @@ export default function CustomersPanel({ createNonce = 0 }) {
         row.creditLimit,
         row.city,
         row.state,
+        row.leadStatus,
+        LEAD_STATUS_LABEL[row.leadStatus],
         row.taxExempt === false ? "no" : "yes",
         row.taxPercent,
       ]
@@ -168,10 +340,26 @@ export default function CustomersPanel({ createNonce = 0 }) {
         .join(" ");
       return haystack.includes(q);
     });
-  }, [rows, searchQuery]);
+  }, [typeFilteredRows, searchQuery]);
 
   const columns = useMemo(
     () => [
+      {
+        key: "recordType",
+        label: "Type",
+        sortable: true,
+        render: (v) => {
+          const isLead = v === TYPE_LEAD;
+          return (
+            <Badge
+              variant={isLead ? "warning" : "primary"}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {isLead ? TYPE_LEAD : TYPE_CUSTOMER}
+            </Badge>
+          );
+        },
+      },
       {
         key: "companyName",
         label: "Company",
@@ -180,7 +368,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
           <button
             type="button"
             className="font-medium text-primary hover:underline"
-            onClick={() => openEdit(row)}
+            onClick={() => openRow(row)}
           >
             {v || "—"}
           </button>
@@ -208,32 +396,38 @@ export default function CustomersPanel({ createNonce = 0 }) {
         key: "ein",
         label: "EIN",
         sortable: true,
-        render: (v) => v || "—",
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
       },
       {
         key: "creditLimit",
         label: "Credit Limit",
         sortable: true,
-        render: (v) => v || "—",
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
       },
       {
         key: "taxExempt",
         label: "Tax Exempted",
         sortable: true,
-        render: (_, row) => (
-          <Badge
-            variant={row.taxExempt === false ? "warning" : "success"}
-            className="rounded-full px-2.5 py-0.5 text-xs"
-          >
-            {row.taxExempt === false ? "No" : "Yes"}
-          </Badge>
-        ),
+        render: (_, row) => {
+          if (row.recordType === TYPE_LEAD) return "—";
+          return (
+            <Badge
+              variant={row.taxExempt === false ? "warning" : "success"}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {row.taxExempt === false ? "No" : "Yes"}
+            </Badge>
+          );
+        },
       },
       {
         key: "taxPercent",
         label: "Tax %",
         sortable: true,
-        render: (_, row) => (row.taxExempt === false ? row.taxPercent || "0" : "0"),
+        render: (_, row) => {
+          if (row.recordType === TYPE_LEAD) return "—";
+          return row.taxExempt === false ? row.taxPercent || "0" : "0";
+        },
       },
       {
         key: "city",
@@ -242,28 +436,57 @@ export default function CustomersPanel({ createNonce = 0 }) {
         render: (v) => v || "—",
       },
     ],
-    [openEdit]
+    [openRow]
   );
+
+  const emptyMessage = (() => {
+    if (mergedRows.length === 0) {
+      return "No customers or leads yet. Click Add New to create a customer, or wait for assigned leads.";
+    }
+    if (typeFilter === FILTER_CUSTOMERS && customerRows.length === 0) {
+      return "No customers yet. Click Add New to create one.";
+    }
+    if (typeFilter === FILTER_LEADS && leadRows.length === 0) {
+      return "No leads assigned to this shop yet.";
+    }
+    if (typeFilter && typeFilteredRows.length === 0) {
+      return `No ${String(typeFilter).toLowerCase()}s to show.`;
+    }
+    if (searchQuery.trim()) return "No rows match your search.";
+    return "No customers or leads yet.";
+  })();
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="mb-3 flex shrink-0 flex-wrap gap-2.5">
+        {typeFilterCards.map((card) => (
+          <StatusFilterPillButton
+            key={card.key || "__all__"}
+            card={card}
+            active={(typeFilter || "") === (card.key || "")}
+            onClick={() => setTypeFilter(card.key || FILTER_ALL)}
+            formatAmount={() => ""}
+          />
+        ))}
+      </div>
+
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Table
           columns={columns}
           data={displayRows}
-          rowKey="id"
+          rowKey="rowKey"
           loading={loading}
           searchable
           onSearch={setSearchQuery}
-          searchPlaceholder="Search company, contact, email…"
-          onRefresh={() => loadCustomers({ showError: true })}
-          emptyMessage={
-            rows.length === 0
-              ? "No customers yet. Click Add New to create one."
-              : searchQuery.trim()
-                ? "No customers match your search."
-                : "No customers yet."
+          searchPlaceholder="Search company, contact, email, type…"
+          onRefresh={() => loadAll({ showError: true })}
+          toolbarBeforeSearch={
+            <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+              Add New
+            </Button>
           }
+          emptyMessage={emptyMessage}
           fillHeight
           responsive
           dense
@@ -273,21 +496,22 @@ export default function CustomersPanel({ createNonce = 0 }) {
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={editingId ? "Edit customer" : "Add new customer"}
+        title={
+          editingId
+            ? "Edit customer"
+            : convertingFromLeadId
+              ? "Convert lead to customer"
+              : "Add new customer"
+        }
         size="6xl"
         width="min(1100px, 96vw)"
         height="min(84.6vh, 828px)"
         showClose={!saving}
         closeOnOutsideClick={false}
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : convertingFromLeadId ? "Create customer" : "Save"}
+          </Button>
         }
       >
         <Form
@@ -297,6 +521,73 @@ export default function CustomersPanel({ createNonce = 0 }) {
         >
           <SimpleCustomerFormFields form={form} setForm={setForm} />
         </Form>
+      </Modal>
+
+      <Modal
+        open={!!leadDetail}
+        onClose={() => setLeadDetail(null)}
+        title="Lead"
+        size="md"
+        showClose
+        closeOnOutsideClick
+        actions={
+          leadDetail ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => void startConvertLeadToCustomer(leadDetail)}
+            >
+              Convert to customer
+            </Button>
+          ) : null
+        }
+      >
+        {leadDetail ? (
+          <div className="flex flex-col gap-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                Lead
+              </Badge>
+              <Badge
+                variant={LEAD_STATUS_BADGE[leadDetail.leadStatus] || "default"}
+                className="rounded-full px-2.5 py-0.5 text-xs"
+              >
+                {LEAD_STATUS_LABEL[leadDetail.leadStatus] || leadDetail.leadStatus || "New"}
+              </Badge>
+            </div>
+            <dl className="grid gap-2 sm:grid-cols-2">
+              <div>
+                <dt className="text-xs font-bold text-secondary">Company</dt>
+                <dd className="text-title">{leadDetail.companyName || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-secondary">Contact</dt>
+                <dd className="text-title">{leadDetail.primaryContactName || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-secondary">Phone</dt>
+                <dd className="text-title">{leadDetail.phone || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-secondary">Email</dt>
+                <dd className="text-title">{leadDetail.email || "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-xs font-bold text-secondary">City</dt>
+                <dd className="text-title">{leadDetail.city || "—"}</dd>
+              </div>
+            </dl>
+            {String(leadDetail.leadRaw?.message || leadDetail.leadRaw?.problemDescription || "").trim() ? (
+              <div>
+                <dt className="text-xs font-bold text-secondary">Notes</dt>
+                <p className="mt-0.5 whitespace-pre-wrap text-title">
+                  {String(leadDetail.leadRaw?.message || leadDetail.leadRaw?.problemDescription || "").trim()}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </Modal>
     </div>
   );

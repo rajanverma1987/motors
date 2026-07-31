@@ -10,6 +10,7 @@ import {
 } from "react";
 import { USER_SETTINGS_DEFAULTS, mergeUserSettings } from "@/lib/user-settings";
 import { formatMoney } from "@/lib/format-currency";
+import { formatDateForCurrency } from "@/lib/format-date";
 
 const UserSettingsContext = createContext({
   settings: USER_SETTINGS_DEFAULTS,
@@ -70,4 +71,14 @@ export function useFormatMoney() {
       ? settings.currency.toUpperCase().trim()
       : "USD";
   return useCallback((value) => formatMoney(value, code || "USD"), [code]);
+}
+
+/** Format calendar dates using the country style for Settings → Currency (e.g. INR → dd/mm/yyyy). */
+export function useFormatDate() {
+  const { settings } = useUserSettings();
+  const code =
+    typeof settings?.currency === "string"
+      ? settings.currency.toUpperCase().trim()
+      : "USD";
+  return useCallback((value) => formatDateForCurrency(value, code || "USD"), [code]);
 }

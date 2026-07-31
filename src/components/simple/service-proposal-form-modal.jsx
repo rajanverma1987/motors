@@ -12,6 +12,11 @@ import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-se
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimpleMotorLogisticsModal, {
+  KIND_RECEIVING,
+  KIND_SHIPPING,
+} from "@/components/simple/simple-motor-logistics-modal";
+import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -60,11 +65,11 @@ const FORM_ID = "simple-service-proposal-form";
 const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
 
 const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_TEXTAREA =
-  "w-full min-w-0 flex-1 resize-y rounded-sm border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "w-full min-w-0 flex-1 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-const TOOLBAR_BTN = "h-7 shrink-0 rounded-sm px-2.5 text-xs font-semibold";
+const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 /** Line-item cells: square corners, flush packing (matches PO form tables). */
 const CELL_INPUT =
   "h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-xs text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
@@ -111,7 +116,7 @@ function lineHasContent(line, { withUom = false } = {}) {
   );
 }
 
-function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney }) {
+function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, headerAction = null }) {
   const total = sumLinePrices(lines);
   const isOther = title.toLowerCase().includes("other");
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
@@ -147,18 +152,19 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney }) {
 
   return (
     <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col border border-border bg-card">
-      <div className="mt-[10px] flex items-center gap-2 bg-transparent px-2 py-1">
-        <h4 className="text-xs font-bold uppercase tracking-wide text-black dark:text-title">{title}</h4>
+      <div className="mt-[10px] flex items-center justify-between gap-2 bg-transparent px-2 py-1">
+        <h4 className="min-w-0 text-xs font-bold uppercase tracking-wide text-black dark:text-title">{title}</h4>
+        {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         <table className="w-full border-collapse border-spacing-0 text-xs">
           <thead>
-            <tr className="bg-primary text-left text-xs text-white">
-              <th className="border-r border-primary/30 px-1 py-1 font-semibold">Description</th>
+            <tr className="border-b-2 border-border bg-primary/[0.04] text-left text-xs text-title">
+              <th className="border-r border-border px-1 py-1 font-semibold">Description</th>
               {isOther ? (
-                <th className="w-20 border-r border-primary/30 px-1 py-1 font-semibold">UOM</th>
+                <th className="w-20 border-r border-border px-1 py-1 font-semibold">UOM</th>
               ) : null}
-              <th className="w-28 border-r border-primary/30 px-1 py-1 font-semibold">Price</th>
+              <th className="w-28 border-r border-border px-1 py-1 font-semibold">Price</th>
               <th className="w-7 p-0.5" />
             </tr>
           </thead>
@@ -253,6 +259,8 @@ export default function ServiceProposalFormModal({
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
+  const [logisticsKind, setLogisticsKind] = useState(null);
+  const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printBundle, setPrintBundle] = useState(null);
   const [printSendMeta, setPrintSendMeta] = useState(null);
@@ -484,7 +492,7 @@ export default function ServiceProposalFormModal({
     mergedSettings,
   ]);
 
-  const saveForm = async (nextForm, { successMessage = "Service proposal saved." } = {}) => {
+  const saveForm = async (nextForm, { successMessage } = {}) => {
     const payload = nextForm || form;
     if (!payload.customerId) {
       await alert({ title: "Error", message: "Select a customer.", variant: "danger" });
@@ -520,7 +528,10 @@ export default function ServiceProposalFormModal({
             ? f.attachments
             : merged.attachments,
       }));
-      await alert({ title: "Saved", message: successMessage });
+      const message =
+        successMessage ||
+        (recordType === RECORD_TYPE_INVOICE ? "Invoice saved." : "Service proposal saved.");
+      await alert({ title: "Saved", message });
       return merged;
     } catch (err) {
       await alert({ title: "Error", message: err?.message || "Failed to save service proposal", variant: "danger" });
@@ -625,7 +636,20 @@ export default function ServiceProposalFormModal({
   const displayTitle = recordTypeDisplayTitle(form.recordType);
   const docLabel = recordTypeDocumentLabel(form.recordType);
 
-  const stubAction = (label) => () => void alert({ title: "Coming soon", message: `${label} — coming soon.` });
+  const docNumber = String(form.documentNumber || "").trim();
+  const canOpenLogistics = Boolean(form.id && docNumber);
+
+  const openLogistics = (kind) => {
+    if (!canOpenLogistics) {
+      void alert({
+        title: "Save required",
+        message: "Save the record with a document number (RFQ# / JOB# / Invoice#) before logging receiving or shipping.",
+        variant: "danger",
+      });
+      return;
+    }
+    setLogisticsKind(kind);
+  };
 
   const headerActions = (
     <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving || copying}>
@@ -672,9 +696,6 @@ export default function ServiceProposalFormModal({
           {/* Toolbar (title lives in modal header) */}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
             <div className="flex min-w-0 flex-wrap justify-start gap-1">
-              <Button type="button" variant="primary" size="sm" className={TOOLBAR_BTN} onClick={stubAction("Calculator")}>
-                Calculator
-              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -741,10 +762,34 @@ export default function ServiceProposalFormModal({
               </Button>
             </div>
             <div className="flex flex-wrap justify-end gap-1">
-              <Button type="button" variant="primary" size="sm" className={TOOLBAR_BTN} onClick={stubAction("Receiving")}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={!canOpenLogistics || saving || copying}
+                title={
+                  canOpenLogistics
+                    ? "Log motor receiving (same as Logistics → Motor receiving)"
+                    : "Save the record with a document number before receiving"
+                }
+                onClick={() => openLogistics(KIND_RECEIVING)}
+              >
                 Receiving
               </Button>
-              <Button type="button" variant="primary" size="sm" className={TOOLBAR_BTN} onClick={stubAction("Shipping")}>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={!canOpenLogistics || saving || copying}
+                title={
+                  canOpenLogistics
+                    ? "Log motor shipping (same as Logistics → Motor shipping)"
+                    : "Save the record with a document number before shipping"
+                }
+                onClick={() => openLogistics(KIND_SHIPPING)}
+              >
                 Shipping
               </Button>
               <Button
@@ -813,7 +858,7 @@ export default function ServiceProposalFormModal({
                   </div>
                   <button
                     type="button"
-                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm border border-border bg-primary text-white hover:opacity-90"
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
                     title="Add new customer"
                     aria-label="Add new customer"
                     onClick={openAddCustomer}
@@ -1110,6 +1155,18 @@ export default function ServiceProposalFormModal({
                 onChange={(otherItems) => patch("otherItems", otherItems)}
                 totalLabel="Total:"
                 formatMoney={formatMoney}
+                headerAction={
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="h-7 !rounded-none px-2 text-[11px]"
+                    onClick={() => setAddFromInventoryOpen(true)}
+                  >
+                    <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    Add From Inventory
+                  </Button>
+                }
               />
               <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
                 <FieldRow label="Total Amount" labelWidth="8rem">
@@ -1159,6 +1216,29 @@ export default function ServiceProposalFormModal({
         mode={purchaseOrderMode}
       />
 
+      <SimpleMotorLogisticsModal
+        open={Boolean(logisticsKind)}
+        onClose={() => setLogisticsKind(null)}
+        kind={logisticsKind || KIND_RECEIVING}
+        defaultJobNumber={docNumber}
+        defaultInvoiceNumber={docNumber}
+        zIndex={130}
+      />
+
+      <SimpleAddFromInventoryModal
+        open={addFromInventoryOpen}
+        onClose={() => setAddFromInventoryOpen(false)}
+        zIndex={140}
+        onAddLines={(newLines) => {
+          const existing = Array.isArray(form.otherItems) ? form.otherItems : [];
+          const filled = existing.filter((line) =>
+            lineHasContent(line, { withUom: true })
+          );
+          const next = [...filled, ...newLines, emptyOtherLine()];
+          patch("otherItems", next);
+        }}
+      />
+
       <SimpleServiceProposalAttachmentsModal
         open={attachmentsOpen}
         onClose={() => setAttachmentsOpen(false)}
@@ -1193,26 +1273,15 @@ export default function ServiceProposalFormModal({
         showClose={!savingCustomer}
         closeOnOutsideClick={false}
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAddCustomerOpen(false)}
-              disabled={savingCustomer}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form={ADD_CUSTOMER_FORM_ID}
-              variant="primary"
-              size="sm"
-              disabled={savingCustomer}
-            >
-              {savingCustomer ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form={ADD_CUSTOMER_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={savingCustomer}
+          >
+            {savingCustomer ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form

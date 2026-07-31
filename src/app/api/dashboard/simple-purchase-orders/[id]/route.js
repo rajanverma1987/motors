@@ -7,6 +7,7 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
+import { applySimplePoInventoryReceipts } from "@/lib/simple-po-line-receipts";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -51,6 +52,10 @@ export async function PUT(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const previous = await SimplePurchaseOrder.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!previous) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
     const body = await request.json().catch(() => ({}));
     const payload = sanitizeSimplePortalPayload(body);
     const update = {
@@ -73,6 +78,18 @@ export async function PUT(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    try {
+      await applySimplePoInventoryReceipts(email, previous.lineItems, doc.lineItems);
+    } catch (invErr) {
+      console.error("Simple PO inventory receipts:", invErr);
+      return NextResponse.json(
+        {
+          error: invErr.message || "Saved, but inventory receive failed",
+          item: serializeSimplePortalDoc(doc),
+        },
+        { status: 500 }
+      );
+    }
     return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
   } catch (err) {
     console.error("Dashboard update simple purchase order error:", err);
@@ -93,6 +110,20 @@ export async function DELETE(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const existing = await SimplePurchaseOrder.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    try {
+      // Treat delete as reverting all Received lines for inventory.
+      await applySimplePoInventoryReceipts(email, existing.lineItems, []);
+    } catch (invErr) {
+      console.error("Simple PO inventory reverse on delete:", invErr);
+      return NextResponse.json(
+        { error: invErr.message || "Failed to reverse inventory before delete" },
+        { status: 500 }
+      );
+    }
     const deleted = await SimplePurchaseOrder.findOneAndDelete({ _id: id, createdByEmail: email }).lean();
     if (!deleted) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });

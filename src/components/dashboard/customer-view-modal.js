@@ -3,59 +3,33 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
-import Select from "@/components/ui/select";
-import Textarea from "@/components/ui/textarea";
-import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
+import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerPayload, customerApiToForm, INITIAL_CUSTOMER_FORM } from "@/lib/customer-record-form";
-import { buildMotorPayload } from "@/lib/motor-record-form";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import {
   quoteStatusSelectOptionsFromMerged,
   quoteStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
-import {
-  resolveStatusTileProps,
-  resolveWorkOrderStatusTileProps,
-} from "@/lib/work-order-status-tiles";
-import CustomerEditFormFields from "@/components/dashboard/customer-edit-form-fields";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
-import WorkOrderFormModal from "@/components/dashboard/work-order-form-modal";
 import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
-import MotorQuickViewModal from "@/components/dashboard/motor-quick-view-modal";
 
 const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 
+const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
+const TH_CLASS =
+  "pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary";
+const TD_CLASS = "pl-[5px] pr-1 py-1 text-sm text-title whitespace-nowrap";
+const TABLE_WRAP = "overflow-x-auto rounded-sm border border-border";
+const TABLE_CLASS = "w-full min-w-[20rem] border-collapse text-sm";
+const THEAD_ROW = "border-b border-border bg-primary/[0.06] dark:bg-primary/10";
+
 const STATUS_PILL_CLASS =
   "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium";
-
-const MOTOR_TYPE_OPTIONS = [
-  { value: "", label: "Select type" },
-  { value: "AC", label: "AC" },
-  { value: "DC", label: "DC" },
-];
-
-const INITIAL_MOTOR_FORM = {
-  customerId: "",
-  serialNumber: "",
-  manufacturer: "",
-  model: "",
-  hp: "",
-  rpm: "",
-  voltage: "",
-  kw: "",
-  amps: "",
-  frameSize: "",
-  motorType: "",
-  slots: "",
-  coreLength: "",
-  coreDiameter: "",
-  bars: "",
-  notes: "",
-};
 
 function InvoiceStatusPill({ status, mergedSettings }) {
   const pill = invoiceStatusPillAppearance(status, mergedSettings);
@@ -91,55 +65,27 @@ function QuoteStatusPill({ status, mergedSettings }) {
   );
 }
 
-function WorkOrderStatusPill({ status, mergedSettings }) {
-  const label = status != null && String(status).trim() ? String(status).trim() : "—";
-  if (label === "—") return <span className="text-secondary">—</span>;
-  const statuses = Array.isArray(mergedSettings?.workOrderStatuses)
-    ? mergedSettings.workOrderStatuses
-    : [];
-  const idx = statuses.findIndex((x) => String(x).trim() === label);
-  const pill = resolveWorkOrderStatusTileProps(
-    label,
-    idx >= 0 ? idx : 0,
-    mergedSettings?.workOrderStatusTileColors ?? {}
-  );
-  return (
-    <span className={`${STATUS_PILL_CLASS} ${pill.className}`} style={pill.style}>
-      {label}
-    </span>
-  );
-}
-
 function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children }) {
   if (loading) {
     return (
       <div
-        className="flex min-h-[7rem] items-center justify-center gap-2 rounded border border-border bg-form-bg/30 py-8"
+        className="flex min-h-[4.5rem] items-center justify-center gap-2 rounded-sm border border-border bg-primary/[0.03] py-5 dark:bg-primary/10"
         role="status"
         aria-live="polite"
         aria-busy="true"
       >
         <span
-          className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+          className="inline-block h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
           aria-hidden
         />
-        <span className="text-sm text-secondary">Loading…</span>
+        <span className="text-xs text-secondary">Loading…</span>
       </div>
     );
   }
   if (isEmpty) {
-    return <p className="text-sm text-secondary">{emptyMessage}</p>;
+    return <p className="text-xs text-secondary">{emptyMessage}</p>;
   }
   return children;
-}
-
-function statusCountSummary(rows) {
-  const totals = new Map();
-  (Array.isArray(rows) ? rows : []).forEach((row) => {
-    const status = String(row?.status || "draft").trim() || "draft";
-    totals.set(status, (totals.get(status) || 0) + 1);
-  });
-  return Array.from(totals.entries()).map(([status, count]) => ({ status, count }));
 }
 
 function statusAmountSummary(rows, getAmount) {
@@ -154,7 +100,7 @@ function statusAmountSummary(rows, getAmount) {
 }
 
 /**
- * Full customer details modal — same as Customers page View (profile, activity, linked motors).
+ * Full customer details modal — profile + invoices/quotes activity.
  */
 export default function CustomerViewModal({
   open,
@@ -175,52 +121,27 @@ export default function CustomerViewModal({
   const formRef = useRef(form);
   formRef.current = form;
   const [activityLoading, setActivityLoading] = useState(false);
-  const [activity, setActivity] = useState({ quotes: [], workOrders: [], invoices: [] });
-  const [addMotorOpen, setAddMotorOpen] = useState(false);
-  const [motorForm, setMotorForm] = useState(INITIAL_MOTOR_FORM);
-  const [savingMotor, setSavingMotor] = useState(false);
-  const motorFormRef = useRef(motorForm);
-  motorFormRef.current = motorForm;
+  const [activity, setActivity] = useState({ quotes: [], invoices: [] });
 
   const [openInvoiceId, setOpenInvoiceId] = useState(null);
   const [openQuoteId, setOpenQuoteId] = useState(null);
-  const [openWorkOrderId, setOpenWorkOrderId] = useState(null);
-  const [openMotorId, setOpenMotorId] = useState(null);
 
   const openRecordBtnClass =
     "font-mono text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
   const resolvedId = String(customerId || customer?.id || "").trim();
 
-  const reloadCustomer = useCallback(async (id) => {
-    const cid = String(id || "").trim();
-    if (!cid) return null;
-    const res = await fetch(`/api/dashboard/customers/${cid}`, {
-      credentials: "include",
-      cache: "no-store",
-      headers: { Pragma: "no-cache", "Cache-Control": "no-cache" },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    setCustomer(data);
-    setForm(customerApiToForm(data));
-    onCustomerUpdated?.(data);
-    return data;
-  }, [onCustomerUpdated]);
-
   const refreshActivity = useCallback(async (cid) => {
     const id = String(cid || "").trim();
     if (!id) return;
     setActivityLoading(true);
     try {
-      const [quotesRes, workOrdersRes, invoicesRes] = await Promise.all([
+      const [quotesRes, invoicesRes] = await Promise.all([
         fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
-        fetch("/api/dashboard/work-orders", { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
       ]);
-      const [quotesData, workOrdersData, invoicesData] = await Promise.all([
+      const [quotesData, invoicesData] = await Promise.all([
         quotesRes.json().catch(() => []),
-        workOrdersRes.json().catch(() => []),
         invoicesRes.json().catch(() => []),
       ]);
       const invoiceQuoteIds = new Set(
@@ -231,22 +152,8 @@ export default function CustomerViewModal({
       const visibleQuotes = (Array.isArray(quotesData) ? quotesData : []).filter(
         (q) => !invoiceQuoteIds.has(String(q?.id || "").trim())
       );
-      const quoteAmountById = new Map(
-        (Array.isArray(quotesData) ? quotesData : []).map((q) => [
-          String(q?.id || ""),
-          Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0),
-        ])
-      );
       setActivity({
         quotes: visibleQuotes.filter((q) => String(q.customerId || "") === id),
-        workOrders: Array.isArray(workOrdersData)
-          ? workOrdersData
-              .filter((w) => String(w.customerId || "") === id)
-              .map((w) => ({
-                ...w,
-                linkedQuoteAmount: quoteAmountById.get(String(w?.quoteId || "")) || 0,
-              }))
-          : [],
         invoices: Array.isArray(invoicesData)
           ? invoicesData.filter((inv) => String(inv.customerId || "") === id)
           : [],
@@ -261,9 +168,8 @@ export default function CustomerViewModal({
       setCustomer(null);
       setForm(INITIAL_CUSTOMER_FORM);
       setLoadingCustomerId(null);
-      setActivity({ quotes: [], workOrders: [], invoices: [] });
+      setActivity({ quotes: [], invoices: [] });
       setActivityLoading(false);
-      setAddMotorOpen(false);
       return;
     }
     const id = String(customerId || "").trim();
@@ -318,11 +224,9 @@ export default function CustomerViewModal({
     activity.quotes,
     (q) => Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0)
   );
-  const workOrderStatusTotals = statusCountSummary(activity.workOrders);
 
   const handleClose = () => {
     queueMicrotask(() => {
-      setAddMotorOpen(false);
       onClose?.();
     });
   };
@@ -357,30 +261,6 @@ export default function CustomerViewModal({
     }
   };
 
-  const handleAddMotorSubmit = async (e) => {
-    e.preventDefault();
-    const current = motorFormRef.current;
-    if (!current.customerId?.trim()) return;
-    setSavingMotor(true);
-    try {
-      const res = await fetch("/api/dashboard/motors", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(buildMotorPayload(current)),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create motor");
-      toast.success("Customer's motor created and linked to this customer.");
-      setAddMotorOpen(false);
-      await reloadCustomer(customer?.id);
-    } catch (err) {
-      toast.error(err.message || "Failed to create motor");
-    } finally {
-      setSavingMotor(false);
-    }
-  };
-
   return (
     <>
       <Modal
@@ -388,6 +268,8 @@ export default function CustomerViewModal({
         onClose={handleClose}
         title="Customer details"
         size="7xl"
+        width="min(1200px, 96vw)"
+        height="min(88vh, 900px)"
         zIndex={zIndex}
         actions={
           customer ? (
@@ -405,94 +287,31 @@ export default function CustomerViewModal({
       >
         {loadingCustomerId ? (
           <div className="flex items-center justify-center py-12">
-            <span className="text-secondary">Loading…</span>
+            <span className="text-sm text-secondary">Loading…</span>
           </div>
         ) : customer ? (
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
+          <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
+            <div className="flex min-w-0 flex-col gap-4">
               <Form
                 id={CUSTOMER_VIEW_FORM_ID}
                 onSubmit={handleCustomerSave}
-                className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
+                className="flex min-h-0 flex-col gap-4 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
               >
-                <CustomerEditFormFields form={form} setForm={setForm} />
+                <SimpleCustomerFormFields form={form} setForm={setForm} layout="stacked" />
               </Form>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">Linked motors</h3>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setMotorForm({ ...INITIAL_MOTOR_FORM, customerId: customer.id });
-                      setAddMotorOpen(true);
-                    }}
-                  >
-                    Add customer&apos;s motor
-                  </Button>
-                </div>
-                {Array.isArray(customer.linkedMotors) && customer.linkedMotors.length > 0 ? (
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="w-full min-w-[320px] text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Serial number
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Manufacturer
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Model
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            HP
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-title">
-                        {customer.linkedMotors.map((m) => (
-                          <tr key={m.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">
-                              {m?.id ? (
-                                <button
-                                  type="button"
-                                  className={openRecordBtnClass}
-                                  onClick={() => setOpenMotorId(m.id)}
-                                  title="Open motor"
-                                >
-                                  {m.serialNumber || "—"}
-                                </button>
-                              ) : (
-                                m.serialNumber || "—"
-                              )}
-                            </td>
-                            <td className="px-3 py-2">{m.manufacturer || "—"}</td>
-                            <td className="px-3 py-2">{m.model || "—"}</td>
-                            <td className="px-3 py-2">{m.hp || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="text-sm text-secondary">Customer&apos;s motors: —</p>
-                )}
-              </div>
             </div>
 
-            <div className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
+            <div className="flex min-w-0 flex-col gap-4">
+              <div className="flex min-w-0 flex-col gap-2">
+                <p className={SECTION_TITLE}>
                   Invoices ({activityLoading ? "…" : activity.invoices.length})
-                </h3>
+                </p>
                 {!activityLoading && invoiceStatusTotals.length > 0 ? (
-                  <div className="mb-3 flex flex-wrap gap-2">
+                  <div className="mb-0.5 flex flex-wrap gap-1.5">
                     {invoiceStatusTotals.map((s) => (
                       <span key={`inv-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
                         <InvoiceStatusPill status={s.status} mergedSettings={mergedSettings} />
-                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                        <span className="text-xs font-semibold text-title">{moneyLabel(s.amount)}</span>
                       </span>
                     ))}
                   </div>
@@ -502,28 +321,20 @@ export default function CustomerViewModal({
                   isEmpty={activity.invoices.length === 0}
                   emptyMessage="No invoices found."
                 >
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
+                  <div className={TABLE_WRAP}>
+                    <table className={TABLE_CLASS}>
                       <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Invoice #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Date
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Status
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">
-                            Total
-                          </th>
+                        <tr className={THEAD_ROW}>
+                          <th className={TH_CLASS}>Invoice #</th>
+                          <th className={TH_CLASS}>Date</th>
+                          <th className={TH_CLASS}>Status</th>
+                          <th className={`${TH_CLASS} text-right`}>Total</th>
                         </tr>
                       </thead>
-                      <tbody className="text-title">
+                      <tbody>
                         {activity.invoices.map((inv) => (
                           <tr key={inv.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">
+                            <td className={TD_CLASS}>
                               {inv?.id ? (
                                 <button
                                   type="button"
@@ -537,11 +348,11 @@ export default function CustomerViewModal({
                                 inv.invoiceNumber || "—"
                               )}
                             </td>
-                            <td className="px-3 py-2">{inv.date || "—"}</td>
-                            <td className="px-3 py-2">
+                            <td className={TD_CLASS}>{inv.date || "—"}</td>
+                            <td className={TD_CLASS}>
                               <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className={`${TD_CLASS} text-right`}>
                               {moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}
                             </td>
                           </tr>
@@ -552,16 +363,16 @@ export default function CustomerViewModal({
                 </CustomerActivityTableBody>
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
+              <div className="flex min-w-0 flex-col gap-2">
+                <p className={SECTION_TITLE}>
                   Quotes ({activityLoading ? "…" : activity.quotes.length})
-                </h3>
+                </p>
                 {!activityLoading && quoteStatusTotals.length > 0 ? (
-                  <div className="mb-3 flex flex-wrap gap-2">
+                  <div className="mb-0.5 flex flex-wrap gap-1.5">
                     {quoteStatusTotals.map((s) => (
                       <span key={`quote-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
                         <QuoteStatusPill status={s.status} mergedSettings={mergedSettings} />
-                        <span className="text-sm text-title">{moneyLabel(s.amount)}</span>
+                        <span className="text-xs font-semibold text-title">{moneyLabel(s.amount)}</span>
                       </span>
                     ))}
                   </div>
@@ -571,28 +382,20 @@ export default function CustomerViewModal({
                   isEmpty={activity.quotes.length === 0}
                   emptyMessage="No quotes found."
                 >
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
+                  <div className={TABLE_WRAP}>
+                    <table className={TABLE_CLASS}>
                       <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            RFQ #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Date
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Status
-                          </th>
-                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">
-                            Total
-                          </th>
+                        <tr className={THEAD_ROW}>
+                          <th className={TH_CLASS}>RFQ #</th>
+                          <th className={TH_CLASS}>Date</th>
+                          <th className={TH_CLASS}>Status</th>
+                          <th className={`${TH_CLASS} text-right`}>Total</th>
                         </tr>
                       </thead>
-                      <tbody className="text-title">
+                      <tbody>
                         {activity.quotes.map((q) => (
                           <tr key={q.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">
+                            <td className={TD_CLASS}>
                               {q?.id ? (
                                 <button
                                   type="button"
@@ -606,11 +409,11 @@ export default function CustomerViewModal({
                                 q.rfqNumber || "—"
                               )}
                             </td>
-                            <td className="px-3 py-2">{q.date || "—"}</td>
-                            <td className="px-3 py-2">
+                            <td className={TD_CLASS}>{q.date || "—"}</td>
+                            <td className={TD_CLASS}>
                               <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
                             </td>
-                            <td className="px-3 py-2 text-right">
+                            <td className={`${TD_CLASS} text-right`}>
                               {moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}
                             </td>
                           </tr>
@@ -621,172 +424,9 @@ export default function CustomerViewModal({
                 </CustomerActivityTableBody>
               </div>
 
-              <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
-                  Work orders ({activityLoading ? "…" : activity.workOrders.length})
-                </h3>
-                {!activityLoading && workOrderStatusTotals.length > 0 ? (
-                  <div className="mb-3 flex flex-wrap gap-2">
-                    {workOrderStatusTotals.map((s) => (
-                      <span key={`wo-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
-                        <WorkOrderStatusPill status={s.status} mergedSettings={mergedSettings} />
-                        <span className="text-sm text-title">{s.count}</span>
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-                <CustomerActivityTableBody
-                  loading={activityLoading}
-                  isEmpty={activity.workOrders.length === 0}
-                  emptyMessage="No work orders found."
-                >
-                  <div className="overflow-x-auto rounded border border-border">
-                    <table className="dashboard-data-table w-full min-w-[560px] text-sm">
-                      <thead>
-                        <tr className="border-b border-border bg-card">
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            WO #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            RFQ #
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Date
-                          </th>
-                          <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">
-                            Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-title">
-                        {activity.workOrders.map((wo) => (
-                          <tr key={wo.id} className="border-b border-border last:border-b-0">
-                            <td className="px-3 py-2">
-                              {wo?.id ? (
-                                <button
-                                  type="button"
-                                  className={openRecordBtnClass}
-                                  onClick={() => setOpenWorkOrderId(wo.id)}
-                                  title="Open work order"
-                                >
-                                  {wo.workOrderNumber || "—"}
-                                </button>
-                              ) : (
-                                wo.workOrderNumber || "—"
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              {wo?.quoteId ? (
-                                <button
-                                  type="button"
-                                  className={openRecordBtnClass}
-                                  onClick={() => setOpenQuoteId(wo.quoteId)}
-                                  title="Open linked RFQ"
-                                >
-                                  {wo.quoteRfqNumber || "—"}
-                                </button>
-                              ) : (
-                                wo.quoteRfqNumber || "—"
-                              )}
-                            </td>
-                            <td className="px-3 py-2">{wo.date || "—"}</td>
-                            <td className="px-3 py-2">
-                              <WorkOrderStatusPill status={wo.status} mergedSettings={mergedSettings} />
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </CustomerActivityTableBody>
-              </div>
             </div>
           </div>
         ) : null}
-      </Modal>
-
-      <Modal
-        open={addMotorOpen}
-        onClose={() => setAddMotorOpen(false)}
-        title="Add customer's motor"
-        size="4xl"
-        zIndex={zIndex + 15}
-        actions={
-          <Button type="submit" form="customer-view-add-motor-form" variant="primary" size="sm" disabled={savingMotor}>
-            {savingMotor ? "Saving…" : "Save"}
-          </Button>
-        }
-      >
-        <Form
-          id="customer-view-add-motor-form"
-          onSubmit={handleAddMotorSubmit}
-          className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}
-        >
-          <FormSection title="Identification & details">
-            <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2 lg:grid-cols-4">
-              <Input
-                label="Serial number"
-                value={motorForm.serialNumber}
-                onChange={(e) => setMotorForm((f) => ({ ...f, serialNumber: e.target.value }))}
-                placeholder="Serial number"
-              />
-              <Input
-                label="Manufacturer"
-                value={motorForm.manufacturer}
-                onChange={(e) => setMotorForm((f) => ({ ...f, manufacturer: e.target.value }))}
-                placeholder="Manufacturer"
-              />
-              <Input
-                label="Model"
-                value={motorForm.model}
-                onChange={(e) => setMotorForm((f) => ({ ...f, model: e.target.value }))}
-                placeholder="Model"
-              />
-              <Select
-                label="Motor type"
-                options={MOTOR_TYPE_OPTIONS}
-                value={motorForm.motorType}
-                onChange={(e) => setMotorForm((f) => ({ ...f, motorType: e.target.value ?? "" }))}
-                placeholder="Select type"
-              />
-              <Input label="HP" value={motorForm.hp} onChange={(e) => setMotorForm((f) => ({ ...f, hp: e.target.value }))} />
-              <Input label="RPM" value={motorForm.rpm} onChange={(e) => setMotorForm((f) => ({ ...f, rpm: e.target.value }))} />
-              <Input
-                label="Voltage"
-                value={motorForm.voltage}
-                onChange={(e) => setMotorForm((f) => ({ ...f, voltage: e.target.value }))}
-              />
-              <Input label="KW" value={motorForm.kw} onChange={(e) => setMotorForm((f) => ({ ...f, kw: e.target.value }))} />
-              <Input label="AMPs" value={motorForm.amps} onChange={(e) => setMotorForm((f) => ({ ...f, amps: e.target.value }))} />
-              <Input
-                label="Frame size"
-                value={motorForm.frameSize}
-                onChange={(e) => setMotorForm((f) => ({ ...f, frameSize: e.target.value }))}
-              />
-              <Input label="Slots" value={motorForm.slots} onChange={(e) => setMotorForm((f) => ({ ...f, slots: e.target.value }))} />
-              <Input
-                label="Core length"
-                value={motorForm.coreLength}
-                onChange={(e) => setMotorForm((f) => ({ ...f, coreLength: e.target.value }))}
-              />
-              <Input
-                label="Core diameter"
-                value={motorForm.coreDiameter}
-                onChange={(e) => setMotorForm((f) => ({ ...f, coreDiameter: e.target.value }))}
-              />
-              <Input label="Bars" value={motorForm.bars} onChange={(e) => setMotorForm((f) => ({ ...f, bars: e.target.value }))} />
-            </div>
-          </FormSection>
-          <FormSection title="Notes">
-            <Textarea
-              label="Notes"
-              value={motorForm.notes}
-              onChange={(e) => setMotorForm((f) => ({ ...f, notes: e.target.value }))}
-              rows={3}
-              className="[&_label]:sr-only"
-            />
-          </FormSection>
-        </Form>
       </Modal>
 
       <InvoiceFormModal
@@ -805,25 +445,6 @@ export default function CustomerViewModal({
         quoteId={openQuoteId}
         onClose={() => setOpenQuoteId(null)}
         zIndex={zIndex + 25}
-      />
-
-      <WorkOrderFormModal
-        open={!!openWorkOrderId}
-        workOrderId={openWorkOrderId}
-        onClose={() => setOpenWorkOrderId(null)}
-        onAfterSave={() => {
-          setOpenWorkOrderId(null);
-          if (resolvedId) refreshActivity(resolvedId);
-        }}
-        zIndex={zIndex + 30}
-      />
-
-      <MotorQuickViewModal
-        open={!!openMotorId}
-        motorId={openMotorId}
-        customerName={customer?.companyName || customer?.primaryContactName || ""}
-        onClose={() => setOpenMotorId(null)}
-        zIndex={zIndex + 35}
       />
     </>
   );

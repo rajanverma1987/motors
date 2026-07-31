@@ -410,9 +410,6 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           />
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={() => setBulkOpen(false)}>
-            Cancel
-          </Button>
           <Button type="button" variant="primary" disabled={bulkSaving} onClick={saveBulk}>
             {bulkSaving ? "Saving…" : "Save values"}
           </Button>

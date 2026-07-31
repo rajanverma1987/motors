@@ -5,12 +5,12 @@ import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
 
 const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_TEXTAREA =
-  "w-full min-w-0 resize-y rounded-sm border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
 const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
-const TOOLBAR_BTN = "h-7 shrink-0 rounded-sm px-2.5 text-xs font-semibold";
+const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 
 const TAX_EXEMPT_OPTIONS = [
   { value: "yes", label: "Yes" },
@@ -30,9 +30,11 @@ function FieldRow({ label, labelWidth = "7rem", children, className = "", contro
 
 /**
  * Dense Access-like customer fields for Simple portal (matches Service Proposal form UI).
+ * @param {"grid"|"stacked"} [layout="grid"] — grid = 3 columns on large screens; stacked = single column (e.g. side panel).
  */
-export default function SimpleCustomerFormFields({ form, setForm }) {
+export default function SimpleCustomerFormFields({ form, setForm, layout = "grid" }) {
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const columnsClass = layout === "stacked" ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3";
 
   const addAdditionalContact = () => {
     setForm((f) => ({
@@ -70,7 +72,7 @@ export default function SimpleCustomerFormFields({ form, setForm }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className={`grid gap-4 ${columnsClass}`}>
         <div className="flex min-w-0 flex-col gap-2">
           <p className={SECTION_TITLE}>Company & contact</p>
           <FieldRow label="Company" labelWidth="6.75rem">
@@ -160,30 +162,36 @@ export default function SimpleCustomerFormFields({ form, setForm }) {
               className={FIELD_INPUT}
             />
           </FieldRow>
-          <FieldRow label="City" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.city}
-              onChange={(e) => patch("city", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
-          <FieldRow label="State" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.state}
-              onChange={(e) => patch("state", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
-          <FieldRow label="Zip" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.zipCode}
-              onChange={(e) => patch("zipCode", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
+          <div className="flex min-w-0 items-center gap-2">
+            <label className={FIELD_LABEL} style={{ width: "5.5rem" }}>
+              City
+            </label>
+            <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1.6fr)_auto_minmax(0,1.1fr)_auto_minmax(0,5rem)] items-center gap-x-1.5">
+              <input
+                type="text"
+                value={form.city}
+                onChange={(e) => patch("city", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="City"
+              />
+              <label className="shrink-0 text-xs font-bold text-title">State</label>
+              <input
+                type="text"
+                value={form.state}
+                onChange={(e) => patch("state", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="State"
+              />
+              <label className="shrink-0 text-xs font-bold text-title">Zip</label>
+              <input
+                type="text"
+                value={form.zipCode}
+                onChange={(e) => patch("zipCode", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="Zip"
+              />
+            </div>
+          </div>
           <FieldRow label="Country" labelWidth="5.5rem">
             <input
               type="text"
@@ -215,30 +223,36 @@ export default function SimpleCustomerFormFields({ form, setForm }) {
               className={FIELD_INPUT}
             />
           </FieldRow>
-          <FieldRow label="City" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.shippingCity}
-              onChange={(e) => patch("shippingCity", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
-          <FieldRow label="State" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.shippingState}
-              onChange={(e) => patch("shippingState", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
-          <FieldRow label="Zip" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.shippingZipCode}
-              onChange={(e) => patch("shippingZipCode", e.target.value)}
-              className={FIELD_INPUT}
-            />
-          </FieldRow>
+          <div className="flex min-w-0 items-center gap-2">
+            <label className={FIELD_LABEL} style={{ width: "5.5rem" }}>
+              City
+            </label>
+            <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1.6fr)_auto_minmax(0,1.1fr)_auto_minmax(0,5rem)] items-center gap-x-1.5">
+              <input
+                type="text"
+                value={form.shippingCity}
+                onChange={(e) => patch("shippingCity", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="Shipping city"
+              />
+              <label className="shrink-0 text-xs font-bold text-title">State</label>
+              <input
+                type="text"
+                value={form.shippingState}
+                onChange={(e) => patch("shippingState", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="Shipping state"
+              />
+              <label className="shrink-0 text-xs font-bold text-title">Zip</label>
+              <input
+                type="text"
+                value={form.shippingZipCode}
+                onChange={(e) => patch("shippingZipCode", e.target.value)}
+                className={`${FIELD_INPUT} !w-full`}
+                aria-label="Shipping zip"
+              />
+            </div>
+          </div>
           <FieldRow label="Country" labelWidth="5.5rem">
             <input
               type="text"
@@ -261,44 +275,69 @@ export default function SimpleCustomerFormFields({ form, setForm }) {
         {(form.additionalContacts || []).length === 0 ? (
           <p className="text-xs text-secondary">No additional contacts.</p>
         ) : (
-          <div className="flex flex-col gap-2">
-            {(form.additionalContacts || []).map((ac, index) => (
-              <div key={index} className="flex min-w-0 flex-wrap items-center gap-2">
-                <FieldRow label="Name" labelWidth="3.5rem" className="min-w-[12rem] flex-1" controlClassName="min-w-0 flex-1">
-                  <input
-                    type="text"
-                    value={ac.contactName}
-                    onChange={(e) => updateAdditionalContact(index, "contactName", e.target.value)}
-                    className={FIELD_INPUT}
-                  />
-                </FieldRow>
-                <FieldRow label="Phone" labelWidth="3.5rem" className="min-w-[11rem] flex-1" controlClassName="min-w-0 flex-1">
-                  <input
-                    type="tel"
-                    value={ac.phone}
-                    onChange={(e) => updateAdditionalContact(index, "phone", e.target.value)}
-                    className={FIELD_INPUT}
-                  />
-                </FieldRow>
-                <FieldRow label="Email" labelWidth="3.5rem" className="min-w-[13rem] flex-1" controlClassName="min-w-0 flex-1">
-                  <input
-                    type="email"
-                    value={ac.email}
-                    onChange={(e) => updateAdditionalContact(index, "email", e.target.value)}
-                    className={FIELD_INPUT}
-                  />
-                </FieldRow>
-                <button
-                  type="button"
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
-                  title="Remove contact"
-                  aria-label="Remove contact"
-                  onClick={() => removeAdditionalContact(index)}
-                >
-                  <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                </button>
-              </div>
-            ))}
+          <div className="overflow-x-auto rounded-sm border border-border">
+            <table className="w-full min-w-[28rem] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border bg-primary/[0.06] dark:bg-primary/10">
+                  <th className="w-10 pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    {" "}
+                  </th>
+                  <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    Name
+                  </th>
+                  <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    Phone
+                  </th>
+                  <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    Email
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {(form.additionalContacts || []).map((ac, index) => (
+                  <tr key={index} className="border-b border-border last:border-b-0">
+                    <td className="pl-[5px] pr-1 py-1 align-middle">
+                      <button
+                        type="button"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
+                        title="Remove contact"
+                        aria-label="Remove contact"
+                        onClick={() => removeAdditionalContact(index)}
+                      >
+                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </td>
+                    <td className="pl-[5px] pr-1 py-1 align-middle">
+                      <input
+                        type="text"
+                        value={ac.contactName}
+                        onChange={(e) => updateAdditionalContact(index, "contactName", e.target.value)}
+                        className={FIELD_INPUT}
+                        aria-label={`Contact ${index + 1} name`}
+                      />
+                    </td>
+                    <td className="pl-[5px] pr-1 py-1 align-middle">
+                      <input
+                        type="tel"
+                        value={ac.phone}
+                        onChange={(e) => updateAdditionalContact(index, "phone", e.target.value)}
+                        className={FIELD_INPUT}
+                        aria-label={`Contact ${index + 1} phone`}
+                      />
+                    </td>
+                    <td className="pl-[5px] pr-1 py-1 align-middle">
+                      <input
+                        type="email"
+                        value={ac.email}
+                        onChange={(e) => updateAdditionalContact(index, "email", e.target.value)}
+                        className={FIELD_INPUT}
+                        aria-label={`Contact ${index + 1} email`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

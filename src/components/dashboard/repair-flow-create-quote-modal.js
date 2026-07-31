@@ -324,9 +324,6 @@ export default function RepairFlowCreateQuoteModal({
       headerClassName="flex-wrap"
       actions={
         <>
-          <Button type="button" variant="outline" size="sm" onClick={handleClose} disabled={saving}>
-            Cancel
-          </Button>
           <Button
             type="submit"
             form={formId}

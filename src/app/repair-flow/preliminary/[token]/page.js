@@ -123,12 +123,13 @@ export default function RepairFlowPreliminaryRespondPage() {
       <div className="max-w-[57.6rem] mx-auto bg-white rounded-lg shadow print:shadow-none print:max-w-none">
         <div className="p-6 print:p-4 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-4 print:border-gray-300">
-            <div className="flex min-w-0 flex-1 flex-wrap items-start gap-3">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
               <PrintShopLogo logoUrl={data.shopLogoUrl} alt="" />
               <div className="min-w-0">
-                <p className="text-sm text-gray-500">Preliminary (pre-disassembly) quote</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">From</p>
+                <p className="text-sm font-semibold text-gray-900">{data.shopName || "—"}</p>
+                <p className="mt-1 text-sm text-gray-500">Preliminary (pre-disassembly) quote</p>
                 <h1 className="text-2xl font-semibold text-gray-900">Job {data.jobNumber || "—"}</h1>
-                <p className="mt-1 text-sm text-gray-600">{data.shopName}</p>
               </div>
             </div>
             <button

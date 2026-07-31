@@ -175,6 +175,8 @@ export default function Table({
   resizableColumns = false,
   // Optional: refresh callback (shows refresh icon to the right of search; call to refetch table data)
   onRefresh,
+  /** Optional node rendered immediately before the search input in the table toolbar. */
+  toolbarBeforeSearch = null,
   /** Optional node rendered immediately after the refresh control in the table toolbar. */
   toolbarAfterRefresh = null,
   /** Header label for the actions column (default "Actions"). Pass "" for a compact delete-only column. */
@@ -199,6 +201,7 @@ export default function Table({
   const hasColumnWidths = columns.some((c) => c.width || c.minWidth || c.maxWidth);
   const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
+  const hasToolbarBeforeSearch = toolbarBeforeSearch != null;
   const hasToolbarAfterRefresh = toolbarAfterRefresh != null;
 
   const [searchInput, setSearchInput] = useState("");
@@ -218,17 +221,18 @@ export default function Table({
   const compactFromSettings = !!dashboardUserSettings?.compactTables;
   const isCompact = dense || compactFromSettings;
 
-  const cellPy = isCompact ? "py-0" : "py-0.5";
+  const cellPy = isCompact ? "py-1" : "py-1.5";
   /** Header stays roomier than body cells so column titles remain scannable. */
-  const headerPy = isCompact ? "py-1" : "py-1.5";
-  const cellText = isCompact ? "text-xs" : "text-sm";
-  const headerText = isCompact ? "text-xs" : "text-sm";
+  const headerPy = isCompact ? "py-1.5" : "py-2";
+  /** Default text-xs=12px / text-sm=14px; +3px for readability. */
+  const cellText = isCompact ? "text-[15px]" : "text-[17px]";
+  const headerText = isCompact ? "text-[15px]" : "text-[17px]";
   const actionPad = isCompact ? "p-0.5" : "p-1";
   const actionIcon = isCompact ? "h-3.5 w-3.5" : "h-4 w-4";
 
   function cellPx(col) {
-    if (col.isSelect || col.isAction) return "px-1";
-    return isCompact ? "px-1" : "px-1.5";
+    if (col.isSelect || col.isAction) return "pl-[5px] pr-1";
+    return isCompact ? "pl-[5px] pr-1" : "pl-[5px] pr-1.5";
   }
 
   const [internalPage, setInternalPage] = useState(1);
@@ -566,7 +570,7 @@ export default function Table({
         position: "sticky",
         top: 0,
         zIndex: 10,
-        backgroundColor: "color-mix(in srgb, hsl(var(--primary)) 12%, hsl(var(--card)))",
+        backgroundColor: "color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)))",
         boxShadow: "inset 0 -1px 0 hsl(var(--border))",
       }
     : undefined;
@@ -582,7 +586,7 @@ export default function Table({
   const tableContent = (
     <table className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
-      <thead className="border-b-2 border-border bg-primary/10 outline-none dark:bg-primary/15">
+      <thead className="border-b-2 border-border bg-primary/[0.03] outline-none dark:bg-primary/5">
         <tr>
           {displayColumns.map((col, i) => {
             const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
@@ -660,7 +664,22 @@ export default function Table({
         </tr>
       </thead>
       <tbody>
-        {data.length === 0 && !loading ? (
+        {loading && data.length === 0 ? (
+          <tr>
+            <td
+              colSpan={displayColumns.length}
+              className={`px-4 ${isCompact ? "py-5" : "py-8"} text-center ${cellText} text-secondary`}
+            >
+              <span className="inline-flex items-center justify-center gap-2">
+                <span
+                  className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+                  aria-hidden
+                />
+                Loading…
+              </span>
+            </td>
+          </tr>
+        ) : data.length === 0 ? (
           <tr>
             <td
               colSpan={displayColumns.length}
@@ -792,8 +811,15 @@ export default function Table({
 
   return (
     <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-4" : "space-y-4"}>
-      {(hasSearch || hasRefresh || hasToolbarAfterRefresh || loading || (exportable && data.length > 0) || hasColumnSettings) && (
+      {(hasSearch ||
+        hasRefresh ||
+        hasToolbarBeforeSearch ||
+        hasToolbarAfterRefresh ||
+        loading ||
+        (exportable && data.length > 0) ||
+        hasColumnSettings) && (
         <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
+          {hasToolbarBeforeSearch ? <div className="shrink-0">{toolbarBeforeSearch}</div> : null}
           {hasSearch && (
             <div className="relative min-w-0 max-w-xs flex-1">
               <FiSearch
@@ -882,9 +908,6 @@ export default function Table({
               ))}
             </div>
             <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button variant="outline" onClick={() => setSettingsModalOpen(false)}>
-                Cancel
-              </Button>
               <Button variant="primary" onClick={saveColumnVisibility}>
                 Save
               </Button>

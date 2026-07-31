@@ -13,6 +13,7 @@ import { useState, useId, useCallback, useEffect, useRef } from "react";
  * @param {(id: string) => void} [props.onChange]
  * @param {string} [props.className]
  * @param {string} [props.listClassName]
+ * @param {string} [props.tabButtonClassName] – optional classes merged onto each tab button (e.g. square corners on one page)
  * @param {string} [props.panelClassName]
  * @param {"segmented"|"pills"} [props.variant] – segmented (default) or legacy loose pills
  * @param {string} [props.ariaLabel]
@@ -24,6 +25,7 @@ export default function Tabs({
   onChange,
   className = "",
   listClassName = "",
+  tabButtonClassName = "",
   panelClassName = "flex flex-col pt-6",
   variant = "segmented",
   ariaLabel = "Sections",
@@ -86,8 +88,8 @@ export default function Tabs({
     : `inline-flex max-w-full flex-wrap gap-2 ${listClassName}`;
 
   const tabButtonBase = isSegmented
-    ? "relative shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-semibold tracking-tight transition-[color,background-color,box-shadow,transform] duration-200 ease-out motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--bg))] sm:px-4"
-    : "relative shrink-0 cursor-pointer rounded-sm px-4 py-2.5 text-sm font-semibold tracking-tight transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-base";
+    ? "relative shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-bold tracking-tight transition-[color,background-color,box-shadow,transform] duration-200 ease-out motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--bg))] sm:px-4"
+    : "relative shrink-0 cursor-pointer rounded-sm px-4 py-2.5 text-sm font-bold tracking-tight transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-base";
 
   const panelAnimClass =
     animKey === 0
@@ -101,10 +103,10 @@ export default function Tabs({
       <div role="tablist" aria-label={ariaLabel} className={listClass}>
         {tabs.map((tab, index) => {
           const isActive = activeId === tab.id;
-          const activeClass = "bg-primary text-white shadow-sm";
+          const activeClass = "bg-primary font-bold text-white shadow-sm";
           const idleClass = isSegmented
-            ? "bg-transparent text-secondary hover:bg-card hover:text-title"
-            : "bg-primary/15 text-primary hover:bg-primary/25";
+            ? "bg-primary/10 font-bold text-primary hover:bg-primary/15"
+            : "bg-primary/15 font-bold text-primary hover:bg-primary/25";
           return (
             <button
               key={tab.id}
@@ -114,7 +116,7 @@ export default function Tabs({
               aria-selected={isActive}
               aria-controls={`${uid}-panel`}
               tabIndex={isActive ? 0 : -1}
-              className={`${tabButtonBase} ${isActive ? activeClass : idleClass}`}
+              className={`${tabButtonBase} ${isActive ? activeClass : idleClass} ${tabButtonClassName}`.trim()}
               onClick={() => setActiveId(tab.id)}
               onKeyDown={(e) => onTabKeyDown(e, index)}
             >

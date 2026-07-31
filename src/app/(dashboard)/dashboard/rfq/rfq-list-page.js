@@ -1569,26 +1569,15 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         zIndex={130}
         showClose={!savingNewCustomer}
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setAddCustomerModalOpen(false)}
-              disabled={savingNewCustomer}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="rfq-add-customer-form"
-              variant="primary"
-              size="sm"
-              disabled={savingNewCustomer}
-            >
-              {savingNewCustomer ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form="rfq-add-customer-form"
+            variant="primary"
+            size="sm"
+            disabled={savingNewCustomer}
+          >
+            {savingNewCustomer ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="rfq-add-customer-form" onSubmit={handleAddCustomerSubmit} className={`${FORM_SECTIONS_STACK_CLASS} !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none`}>

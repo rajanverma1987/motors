@@ -1,6 +1,6 @@
 "use client";
 
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
@@ -36,6 +36,7 @@ export default function InvoicePrintPreview({
   currency,
 }) {
   const contextFmt = useFormatMoney();
+  const formatDate = useFormatDate();
   const fmt =
     typeof fmtProp === "function"
       ? fmtProp
@@ -47,6 +48,9 @@ export default function InvoicePrintPreview({
 
   const billingAddress = String(fromBillingAddress || settings?.accountsBillingAddress || "").trim();
   const shippingAddress = String(fromShippingAddress || settings?.accountsShippingAddress || "").trim();
+  const notesMode = q.printNotesMode === "internal" ? "internal" : "customer";
+  const notesText =
+    notesMode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
 
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
@@ -56,39 +60,37 @@ export default function InvoicePrintPreview({
   });
 
   return (
-    <div className="mx-auto flex min-h-[100vh] max-w-[52.8rem] flex-col bg-white text-sm leading-snug text-neutral-900 print:min-h-screen print:max-w-none print:text-black">
-      <div className="flex-1 min-h-0">
-      {/* Masthead: logo + title (print-friendly contrast) */}
-      <header className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-neutral-300 pb-2">
-        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+    <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
+      <header className="mb-2 border-b border-neutral-300 pb-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <PrintShopLogo logoUrl={fromShopLogoUrl} alt="" />
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
-            <p className="font-semibold text-neutral-900">{fromShopName || "—"}</p>
-            {fromShopContact ? <p className="text-xs text-neutral-700">{fromShopContact}</p> : null}
-            {shippingAddress ? (
-              <div className="mt-1.5">
-                <p className={addressTitleLabel}>Shipping address</p>
-                <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
-              </div>
-            ) : null}
+          <div className="shrink-0 text-right">
+            <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Invoice</h1>
           </div>
         </div>
-        <div className="shrink-0 text-right">
-          <h1 className="text-2xl font-bold tracking-tight text-neutral-900 print:text-[22pt]">Invoice</h1>
+        <div className="mt-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">From</p>
+          <p className="text-sm font-semibold text-neutral-900">{fromShopName || "—"}</p>
+          {fromShopContact ? <p className="text-xs text-neutral-700">{fromShopContact}</p> : null}
         </div>
       </header>
 
-      <div className="mb-3 grid gap-3 border-b border-neutral-200 pb-3 sm:grid-cols-2 print:grid-cols-2">
+      <div className="mb-2 grid gap-2 border-b border-neutral-200 pb-2 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
           <p className="text-xs text-neutral-800">
             <span className="text-neutral-600">Payment terms: </span>
             <span className="font-medium">{fromPaymentTermsLabel || "—"}</span>
           </p>
-          <div className="mt-1.5">
+          <div className="mt-1">
             <p className={addressTitleLabel}>Billing address</p>
             <p className="whitespace-pre-wrap text-xs text-neutral-800">{billingAddress || "—"}</p>
           </div>
+          {shippingAddress && shippingAddress !== billingAddress ? (
+            <div className="mt-1">
+              <p className={addressTitleLabel}>Shipping address</p>
+              <p className="whitespace-pre-wrap text-xs text-neutral-800">{shippingAddress}</p>
+            </div>
+          ) : null}
         </div>
         <div className="flex min-w-0 justify-end print:justify-end">
           <div className="w-full max-w-[16rem] text-left">
@@ -109,9 +111,9 @@ export default function InvoicePrintPreview({
         </div>
       </div>
 
-      <section className="mb-3">
+      <section className="mb-2">
         <h2 className={sectionLabel}>Invoice info</h2>
-        <dl className="grid gap-x-3 gap-y-1.5 text-xs sm:grid-cols-2 lg:grid-cols-5">
+        <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-5">
           <div>
             <dt className={infoFieldLabel}>Invoice#</dt>
             <dd className="font-medium text-neutral-900">{q.invoiceNumber || "—"}</dd>
@@ -126,7 +128,7 @@ export default function InvoicePrintPreview({
           </div>
           <div>
             <dt className={infoFieldLabel}>Date</dt>
-            <dd className="text-neutral-900">{q.date || "—"}</dd>
+            <dd className="text-neutral-900">{formatDate(q.date)}</dd>
           </div>
           <div>
             <dt className={infoFieldLabel}>Prepared by</dt>
@@ -135,18 +137,18 @@ export default function InvoicePrintPreview({
         </dl>
       </section>
 
-      <section className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50/80 p-3">
+      <section className="mb-2 rounded border border-neutral-200 bg-neutral-50/80 p-2">
         <MotorSummaryBlock
           identityLine={q.motorIdentityLine}
           specsLine={q.motorSpecsLine}
           motorType={q.motorType}
           fallback={motorLabel || q.motorLabel || q.motorId || "—"}
-          titleClassName="mb-1.5 text-sm font-semibold text-neutral-900"
+          titleClassName="mb-1 text-sm font-semibold text-neutral-900"
         />
       </section>
 
       {Array.isArray(q.scopeLines) && q.scopeLines.length > 0 && (
-        <section className="mb-3">
+        <section className="mb-2">
           <h2 className={sectionLabel}>Scope</h2>
           <table className={tableWrap + " w-full"}>
             <thead className={thRow}>
@@ -168,7 +170,7 @@ export default function InvoicePrintPreview({
       )}
 
       {Array.isArray(q.partsLines) && q.partsLines.length > 0 && (
-        <section className="mb-3">
+        <section className="mb-2">
           <h2 className={sectionLabel}>Other cost</h2>
           <table className={tableWrap + " w-full"}>
             <thead className={thRow}>
@@ -203,7 +205,7 @@ export default function InvoicePrintPreview({
         </section>
       )}
 
-      <section className="mb-3">
+      <section className="mb-2">
         <h2 className={sectionLabel}>Totals</h2>
         <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
@@ -233,26 +235,18 @@ export default function InvoicePrintPreview({
         </table>
       </section>
 
-      {(() => {
-        const mode = q.printNotesMode === "internal" ? "internal" : "customer";
-        const text = mode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
-        if (!text) return null;
-        return (
-          <section className="mb-3">
-            <h2 className={sectionLabel}>{mode === "internal" ? "Notes" : "Customer notes"}</h2>
-            <p className="whitespace-pre-wrap text-xs leading-relaxed text-neutral-800">{text}</p>
-          </section>
-        );
-      })()}
-
-      </div>
+      <section className="mb-2 break-inside-avoid">
+        <h2 className={sectionLabel}>{notesMode === "internal" ? "Notes" : "Customer notes"}</h2>
+        <p className="min-h-[2.5rem] whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50/60 px-2 py-1.5 text-xs leading-relaxed text-neutral-900">
+          {notesText || "—"}
+        </p>
+      </section>
 
       <InvoicePaymentFooterPrint
         paymentOptions={invoicePaymentOptions}
         thankYouNote={invoiceThankYouNote}
         variant="dashboard"
         compact
-        thankYouAtPageFooter
       />
     </div>
   );

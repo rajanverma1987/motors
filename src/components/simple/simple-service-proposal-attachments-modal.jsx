@@ -10,7 +10,7 @@ import { useConfirm, useAlert } from "@/components/confirm-provider";
 const FORM_ID = "simple-sp-attachments-form";
 
 const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-sm border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
 
 function FieldRow({ label, labelWidth = "7.5rem", children }) {

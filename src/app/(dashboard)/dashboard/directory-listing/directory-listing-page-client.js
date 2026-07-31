@@ -354,14 +354,9 @@ export default function DirectoryListingPageClient() {
         title="Suggest improvements"
         size="lg"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeSuggestionModal} disabled={suggestionSubmitting}>
-              Cancel
-            </Button>
-            <Button type="submit" form="directory-listing-suggestion-form" variant="primary" size="sm" disabled={suggestionSubmitting}>
-              {suggestionSubmitting ? "Sending…" : "Send"}
-            </Button>
-          </>
+          <Button type="submit" form="directory-listing-suggestion-form" variant="primary" size="sm" disabled={suggestionSubmitting}>
+            {suggestionSubmitting ? "Sending…" : "Send"}
+          </Button>
         }
       >
         <p className="text-sm text-secondary">

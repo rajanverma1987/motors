@@ -240,14 +240,9 @@ export default function AdminLocationPagesPage() {
         title="Add location page"
         size="2xl"
         actions={
-          <>
-            <Button type="button" variant="secondary" size="sm" onClick={closeModal} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={submitting}>
-              {submitting ? "Creating…" : "Create"}
-            </Button>
-          </>
+          <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={submitting}>
+            {submitting ? "Creating…" : "Create"}
+          </Button>
         }
       >
         <Form id={FORM_ID} onSubmit={handleSubmit} className="flex flex-col gap-4 !space-y-0">

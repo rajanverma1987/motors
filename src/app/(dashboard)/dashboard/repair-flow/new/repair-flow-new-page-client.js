@@ -21,7 +21,6 @@ export default function RepairFlowNewPageClient() {
         <RepairFlowNewJobForm
           formId="new-repair-flow-job-page"
           onFlowComplete={(job) => router.push(`/dashboard/repair-flow/${job.id}`)}
-          onCancel={() => router.push("/dashboard/repair-flow")}
         />
       </div>
     </div>
