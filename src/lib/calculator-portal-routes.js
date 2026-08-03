@@ -1,12 +1,14 @@
-/** Calculator-only portal users may only use this dashboard route (and subpaths). */
-export const CALCULATOR_ONLY_DASHBOARD_PATH = "/dashboard/calculators";
+/** Calculator-only portal users use Simple Calculators tab (and subpaths under /dashboards). */
+export const CALCULATOR_ONLY_DASHBOARD_PATH = "/dashboards";
+export const CALCULATOR_ONLY_DASHBOARD_HREF = "/dashboards?tab=calculators";
 
 export function isCalculatorOnlyDashboardPath(pathname) {
   if (!pathname) return false;
-  return (
-    pathname === CALCULATOR_ONLY_DASHBOARD_PATH ||
-    pathname.startsWith(`${CALCULATOR_ONLY_DASHBOARD_PATH}/`)
-  );
+  if (pathname === CALCULATOR_ONLY_DASHBOARD_PATH || pathname.startsWith(`${CALCULATOR_ONLY_DASHBOARD_PATH}/`)) {
+    return true;
+  }
+  // Legacy Classic calculators route (redirects to Simple)
+  return pathname === "/dashboard/calculators" || pathname.startsWith("/dashboard/calculators/");
 }
 
 /** Dashboard APIs still needed for in-dashboard calculator tools. */

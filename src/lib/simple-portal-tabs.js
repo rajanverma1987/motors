@@ -7,6 +7,8 @@ export const SIMPLE_TAB_SERVICE_PROPOSALS = "service-proposals";
 export const SIMPLE_TAB_INVOICES = "invoices";
 export const SIMPLE_TAB_PURCHASE_ORDERS = "purchase-orders";
 export const SIMPLE_TAB_INVENTORY = "inventory";
+export const SIMPLE_TAB_REPORTS = "reports";
+export const SIMPLE_TAB_CALCULATORS = "calculators";
 
 /** @deprecated Use SIMPLE_TAB_INVOICES */
 export const SIMPLE_TAB_ACCOUNTS_RECEIVABLE = SIMPLE_TAB_INVOICES;
@@ -17,6 +19,8 @@ export const SIMPLE_TAB_IDS = [
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_PURCHASE_ORDERS,
   SIMPLE_TAB_INVENTORY,
+  SIMPLE_TAB_REPORTS,
+  SIMPLE_TAB_CALCULATORS,
 ];
 
 /**

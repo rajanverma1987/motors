@@ -226,7 +226,7 @@ export default function Table({
   const headerPy = isCompact ? "py-1.5" : "py-2";
   /** Default text-xs=12px / text-sm=14px; +3px for readability. */
   const cellText = isCompact ? "text-[15px]" : "text-[17px]";
-  const headerText = isCompact ? "text-[15px]" : "text-[17px]";
+  const headerText = isCompact ? "text-[12px]" : "text-[13px]";
   const actionPad = isCompact ? "p-0.5" : "p-1";
   const actionIcon = isCompact ? "h-3.5 w-3.5" : "h-4 w-4";
 

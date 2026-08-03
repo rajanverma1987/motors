@@ -16,6 +16,7 @@ function injectPoPrintStyles() {
   style.id = STYLE_ID;
   style.textContent = `
     @media print {
+      @page { size: letter; background: #ffffff; }
       body * { visibility: hidden !important; }
       .${PRINT_ROOT_CLASS},
       .${PRINT_ROOT_CLASS} * { visibility: visible !important; }

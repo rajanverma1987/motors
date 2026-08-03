@@ -13,6 +13,29 @@ function eventMatches(events, name) {
   return events.includes(name);
 }
 
+/**
+ * Emit a standard CRM webhook for a Simple/integration collection.
+ * @param {"created"|"updated"|"deleted"} action
+ */
+export async function emitCrmResourceEvent({
+  ownerEmail,
+  collection,
+  action,
+  resourceId,
+  data,
+}) {
+  const col = String(collection || "").trim();
+  const act = String(action || "").trim();
+  if (!col || !act) return;
+  await emitIntegrationEvent({
+    ownerEmail,
+    eventName: `crm.${col}.${act}`,
+    collection: col,
+    resourceId,
+    data,
+  });
+}
+
 export async function emitIntegrationEvent({
   ownerEmail,
   eventName,

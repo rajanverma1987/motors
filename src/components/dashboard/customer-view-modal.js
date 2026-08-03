@@ -10,13 +10,21 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerPayload, customerApiToForm, INITIAL_CUSTOMER_FORM } from "@/lib/customer-record-form";
 import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
 import {
+  invoiceStatusSelectOptionsFromMerged,
   quoteStatusSelectOptionsFromMerged,
   quoteStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
+import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
 import InvoiceFormModal from "@/components/dashboard/invoice-form-modal";
-import QuoteQuickViewModal from "@/components/dashboard/quote-quick-view-modal";
+import QuoteFormModal from "@/components/dashboard/quote-form-modal";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import {
+  formToServiceProposalListRow,
+  isSimpleInvoiceRecord,
+} from "@/lib/simple-service-proposal-form";
+import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
 
 const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 
@@ -99,8 +107,18 @@ function statusAmountSummary(rows, getAmount) {
   return Array.from(totals.entries()).map(([status, amount]) => ({ status, amount }));
 }
 
+function activityRowAmount(row) {
+  const direct = Number(row?.total);
+  if (Number.isFinite(direct)) return direct;
+  const labor = Number(row?.laborTotal || 0);
+  const parts = Number(row?.partsTotal || 0);
+  if (Number.isFinite(labor) || Number.isFinite(parts)) return (labor || 0) + (parts || 0);
+  return 0;
+}
+
 /**
  * Full customer details modal — profile + invoices/quotes activity.
+ * @param {"classic"|"simple"} [portal] — Simple opens full Service Proposal form for RFQ# / invoices.
  */
 export default function CustomerViewModal({
   open,
@@ -108,11 +126,22 @@ export default function CustomerViewModal({
   onClose,
   zIndex = 100,
   onCustomerUpdated,
+  portal = "classic",
 }) {
   const toast = useToast();
   const formatMoney = useFormatMoney();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const isSimple = portal === "simple";
+
+  const invoiceStatusValues = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedSettings).map((o) => o.value),
+    [mergedSettings]
+  );
+  const quoteStatusValues = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings).map((o) => o.value),
+    [mergedSettings]
+  );
 
   const [loadingCustomerId, setLoadingCustomerId] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -125,6 +154,7 @@ export default function CustomerViewModal({
 
   const [openInvoiceId, setOpenInvoiceId] = useState(null);
   const [openQuoteId, setOpenQuoteId] = useState(null);
+  const [openSimpleRecord, setOpenSimpleRecord] = useState(null);
 
   const openRecordBtnClass =
     "font-mono text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
@@ -136,6 +166,24 @@ export default function CustomerViewModal({
     if (!id) return;
     setActivityLoading(true);
     try {
+      if (isSimple) {
+        const list = await fetchAllPaginatedDashboardItems("/api/dashboard/simple-service-proposals");
+        const forCustomer = (Array.isArray(list) ? list : []).filter(
+          (row) => String(row?.customerId || "").trim() === id
+        );
+        const invoices = [];
+        const quotes = [];
+        for (const row of forCustomer) {
+          if (isSimpleInvoiceRecord(row, invoiceStatusValues, quoteStatusValues)) {
+            invoices.push(row);
+          } else {
+            quotes.push(row);
+          }
+        }
+        setActivity({ quotes, invoices });
+        return;
+      }
+
       const [quotesRes, invoicesRes] = await Promise.all([
         fetch("/api/dashboard/quotes", { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/invoices", { credentials: "include", cache: "no-store" }),
@@ -161,7 +209,7 @@ export default function CustomerViewModal({
     } finally {
       setActivityLoading(false);
     }
-  }, []);
+  }, [isSimple, invoiceStatusValues, quoteStatusValues]);
 
   useEffect(() => {
     if (!open) {
@@ -170,6 +218,9 @@ export default function CustomerViewModal({
       setLoadingCustomerId(null);
       setActivity({ quotes: [], invoices: [] });
       setActivityLoading(false);
+      setOpenInvoiceId(null);
+      setOpenQuoteId(null);
+      setOpenSimpleRecord(null);
       return;
     }
     const id = String(customerId || "").trim();
@@ -216,14 +267,26 @@ export default function CustomerViewModal({
     return Number.isFinite(n) ? formatMoney(n) : "—";
   };
 
-  const invoiceStatusTotals = statusAmountSummary(
-    activity.invoices,
-    (inv) => Number(inv?.laborTotal || 0) + Number(inv?.partsTotal || 0)
-  );
-  const quoteStatusTotals = statusAmountSummary(
-    activity.quotes,
-    (q) => Number(q?.laborTotal || 0) + Number(q?.partsTotal || 0)
-  );
+  const invoiceStatusTotals = statusAmountSummary(activity.invoices, activityRowAmount);
+  const quoteStatusTotals = statusAmountSummary(activity.quotes, activityRowAmount);
+
+  const openSimpleProposal = (row) => {
+    if (!row?.id) return;
+    setOpenSimpleRecord(row);
+  };
+
+  const handleSimpleProposalSave = async (nextForm, options = {}) => {
+    const companyName =
+      String(customer?.companyName || "").trim() ||
+      String(nextForm?.companyName || "").trim();
+    const row = formToServiceProposalListRow(nextForm, {
+      id: options.forceNew ? undefined : nextForm.id,
+      companyName,
+    });
+    const saved = await saveSimpleServiceProposal(row, { forceNew: Boolean(options.forceNew) });
+    if (resolvedId) await refreshActivity(resolvedId);
+    return saved;
+  };
 
   const handleClose = () => {
     queueMicrotask(() => {
@@ -339,21 +402,27 @@ export default function CustomerViewModal({
                                 <button
                                   type="button"
                                   className={openRecordBtnClass}
-                                  onClick={() => setOpenInvoiceId(inv.id)}
+                                  onClick={() =>
+                                    isSimple ? openSimpleProposal(inv) : setOpenInvoiceId(inv.id)
+                                  }
                                   title="Open invoice"
                                 >
-                                  {inv.invoiceNumber || "—"}
+                                  {isSimple
+                                    ? inv.documentNumber || inv.quote || inv.invoiceNumber || "—"
+                                    : inv.invoiceNumber || "—"}
                                 </button>
                               ) : (
-                                inv.invoiceNumber || "—"
+                                (isSimple ? inv.documentNumber : inv.invoiceNumber) || "—"
                               )}
                             </td>
-                            <td className={TD_CLASS}>{inv.date || "—"}</td>
+                            <td className={TD_CLASS}>
+                              {inv.date || inv.dateCreated || inv.invoiceSubmitDate || "—"}
+                            </td>
                             <td className={TD_CLASS}>
                               <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
                             </td>
                             <td className={`${TD_CLASS} text-right`}>
-                              {moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}
+                              {moneyLabel(activityRowAmount(inv))}
                             </td>
                           </tr>
                         ))}
@@ -400,21 +469,25 @@ export default function CustomerViewModal({
                                 <button
                                   type="button"
                                   className={openRecordBtnClass}
-                                  onClick={() => setOpenQuoteId(q.id)}
-                                  title="Open RFQ"
+                                  onClick={() =>
+                                    isSimple ? openSimpleProposal(q) : setOpenQuoteId(q.id)
+                                  }
+                                  title={isSimple ? "Open service proposal" : "Open RFQ"}
                                 >
-                                  {q.rfqNumber || "—"}
+                                  {isSimple
+                                    ? q.documentNumber || q.quote || q.rfqNumber || "—"
+                                    : q.rfqNumber || "—"}
                                 </button>
                               ) : (
-                                q.rfqNumber || "—"
+                                (isSimple ? q.documentNumber || q.quote : q.rfqNumber) || "—"
                               )}
                             </td>
-                            <td className={TD_CLASS}>{q.date || "—"}</td>
+                            <td className={TD_CLASS}>{q.date || q.dateCreated || "—"}</td>
                             <td className={TD_CLASS}>
                               <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
                             </td>
                             <td className={`${TD_CLASS} text-right`}>
-                              {moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}
+                              {moneyLabel(activityRowAmount(q))}
                             </td>
                           </tr>
                         ))}
@@ -429,23 +502,55 @@ export default function CustomerViewModal({
         ) : null}
       </Modal>
 
-      <InvoiceFormModal
-        open={!!openInvoiceId}
-        invoiceId={openInvoiceId}
-        onClose={() => setOpenInvoiceId(null)}
-        onAfterSave={() => {
-          setOpenInvoiceId(null);
-          if (resolvedId) refreshActivity(resolvedId);
-        }}
-        zIndex={zIndex + 20}
-      />
+      {!isSimple ? (
+        <InvoiceFormModal
+          open={!!openInvoiceId}
+          invoiceId={openInvoiceId}
+          onClose={() => setOpenInvoiceId(null)}
+          onAfterSave={() => {
+            setOpenInvoiceId(null);
+            if (resolvedId) refreshActivity(resolvedId);
+          }}
+          zIndex={zIndex + 20}
+        />
+      ) : null}
 
-      <QuoteQuickViewModal
-        open={!!openQuoteId}
-        quoteId={openQuoteId}
-        onClose={() => setOpenQuoteId(null)}
-        zIndex={zIndex + 25}
-      />
+      {!isSimple ? (
+        <QuoteFormModal
+          open={!!openQuoteId}
+          quoteId={openQuoteId}
+          onClose={() => setOpenQuoteId(null)}
+          onAfterSave={() => {
+            setOpenQuoteId(null);
+            if (resolvedId) refreshActivity(resolvedId);
+          }}
+          zIndex={zIndex + 25}
+        />
+      ) : null}
+
+      {isSimple ? (
+        <ServiceProposalFormModal
+          open={!!openSimpleRecord}
+          onClose={() => setOpenSimpleRecord(null)}
+          initialForm={openSimpleRecord}
+          onSave={handleSimpleProposalSave}
+          onAttachmentsChange={async (recordId, attachments) => {
+            const id = String(recordId || "").trim();
+            if (!id) return;
+            const current =
+              activity.quotes.find((r) => String(r.id) === id) ||
+              activity.invoices.find((r) => String(r.id) === id) ||
+              openSimpleRecord;
+            if (!current) return;
+            const nextRow = { ...current, attachments: Array.isArray(attachments) ? attachments : [] };
+            await saveSimpleServiceProposal(nextRow);
+            setOpenSimpleRecord((prev) =>
+              prev && String(prev.id) === id ? { ...prev, attachments: nextRow.attachments } : prev
+            );
+            if (resolvedId) await refreshActivity(resolvedId);
+          }}
+        />
+      ) : null}
     </>
   );
 }

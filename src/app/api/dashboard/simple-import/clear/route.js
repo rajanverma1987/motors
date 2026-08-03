@@ -2,40 +2,23 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import Customer from "@/models/Customer";
-import Motor from "@/models/Motor";
-import Quote from "@/models/Quote";
-import WorkOrder from "@/models/WorkOrder";
-import Invoice from "@/models/Invoice";
 import Vendor from "@/models/Vendor";
 import InventoryItem from "@/models/InventoryItem";
-import PurchaseOrder from "@/models/PurchaseOrder";
 import Employee from "@/models/Employee";
 import SalesPerson from "@/models/SalesPerson";
-import SalesCommission from "@/models/SalesCommission";
-import MotorRepairJob from "@/models/MotorRepairJob";
-import MotorRepairFlowQuote from "@/models/MotorRepairFlowQuote";
-import MotorRepairInspection from "@/models/MotorRepairInspection";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 
-const CLEAR_CONFIRM_PHRASE = "CLEAR_ALL_IMPORT_DATA";
+const CLEAR_CONFIRM_PHRASE = "CLEAR_ALL_SIMPLE_IMPORT_DATA";
 
 const ALL_COLLECTION_KEYS = [
   "customers",
-  "customerAdditionalContacts",
-  "motors",
-  "quotes",
-  "quoteScopeLines",
-  "quotePartLines",
-  "workOrders",
-  "invoices",
   "vendors",
   "inventoryItems",
-  "purchaseOrders",
   "employees",
   "salesPersons",
-  "salesCommissions",
-  "repairFlowJobs",
-  "repairFlowQuotes",
-  "repairFlowInspections",
+  "simpleServiceProposals",
+  "simplePurchaseOrders",
 ];
 
 export async function POST(request) {
@@ -59,38 +42,18 @@ export async function POST(request) {
       switch (collection) {
         case "customers":
           return Customer.deleteMany({ createdByEmail: ownerEmail });
-        case "customerAdditionalContacts":
-          return Customer.updateMany({ createdByEmail: ownerEmail }, { $set: { additionalContacts: [] } });
-        case "motors":
-          return Motor.deleteMany({ createdByEmail: ownerEmail });
-        case "quotes":
-          return Quote.deleteMany({ createdByEmail: ownerEmail });
-        case "quoteScopeLines":
-          return Quote.updateMany({ createdByEmail: ownerEmail }, { $set: { scopeLines: [], laborTotal: "0.00" } });
-        case "quotePartLines":
-          return Quote.updateMany({ createdByEmail: ownerEmail }, { $set: { partsLines: [], partsTotal: "0.00" } });
-        case "workOrders":
-          return WorkOrder.deleteMany({ createdByEmail: ownerEmail });
-        case "invoices":
-          return Invoice.deleteMany({ createdByEmail: ownerEmail });
         case "vendors":
           return Vendor.deleteMany({ createdByEmail: ownerEmail });
         case "inventoryItems":
           return InventoryItem.deleteMany({ createdByEmail: ownerEmail });
-        case "purchaseOrders":
-          return PurchaseOrder.deleteMany({ createdByEmail: ownerEmail });
         case "employees":
           return Employee.deleteMany({ createdByEmail: ownerEmail });
         case "salesPersons":
           return SalesPerson.deleteMany({ createdByEmail: ownerEmail });
-        case "salesCommissions":
-          return SalesCommission.deleteMany({ createdByEmail: ownerEmail });
-        case "repairFlowJobs":
-          return MotorRepairJob.deleteMany({ createdByEmail: ownerEmail });
-        case "repairFlowQuotes":
-          return MotorRepairFlowQuote.deleteMany({ createdByEmail: ownerEmail });
-        case "repairFlowInspections":
-          return MotorRepairInspection.deleteMany({ createdByEmail: ownerEmail });
+        case "simpleServiceProposals":
+          return SimpleServiceProposal.deleteMany({ createdByEmail: ownerEmail });
+        case "simplePurchaseOrders":
+          return SimplePurchaseOrder.deleteMany({ createdByEmail: ownerEmail });
         default:
           return null;
       }
@@ -116,8 +79,7 @@ export async function POST(request) {
     );
     return NextResponse.json({ ok: true, deletedCount });
   } catch (err) {
-    console.error("Import clear error:", err);
+    console.error("Simple import clear error:", err);
     return NextResponse.json({ error: err?.message || "Failed to clear collections" }, { status: 500 });
   }
 }
-

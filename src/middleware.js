@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  CALCULATOR_ONLY_DASHBOARD_PATH,
+  CALCULATOR_ONLY_DASHBOARD_HREF,
   isCalculatorOnlyAllowedDashboardApi,
   isCalculatorOnlyDashboardPath,
 } from "@/lib/calculator-portal-routes";
@@ -31,7 +31,7 @@ export function middleware(request) {
       return NextResponse.redirect(loginUrl);
     }
     if (calcOnlyPortal && !isCalculatorOnlyDashboardPath(pathname)) {
-      return NextResponse.redirect(new URL(CALCULATOR_ONLY_DASHBOARD_PATH, request.url));
+      return NextResponse.redirect(new URL(CALCULATOR_ONLY_DASHBOARD_HREF, request.url));
     }
   }
 

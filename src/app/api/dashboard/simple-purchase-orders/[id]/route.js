@@ -8,6 +8,7 @@ import {
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
 import { applySimplePoInventoryReceipts } from "@/lib/simple-po-line-receipts";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -78,6 +79,7 @@ export async function PUT(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    const item = serializeSimplePortalDoc(doc);
     try {
       await applySimplePoInventoryReceipts(email, previous.lineItems, doc.lineItems);
     } catch (invErr) {
@@ -85,12 +87,19 @@ export async function PUT(request, context) {
       return NextResponse.json(
         {
           error: invErr.message || "Saved, but inventory receive failed",
-          item: serializeSimplePortalDoc(doc),
+          item,
         },
         { status: 500 }
       );
     }
-    return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "purchaseOrders",
+      action: "updated",
+      resourceId: item.id,
+      data: item,
+    });
+    return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple purchase order error:", err);
     return NextResponse.json({ error: err.message || "Failed to update purchase order" }, { status: 500 });
@@ -128,6 +137,13 @@ export async function DELETE(request, context) {
     if (!deleted) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "purchaseOrders",
+      action: "deleted",
+      resourceId: id,
+      data: serializeSimplePortalDoc(deleted),
+    });
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("Dashboard delete simple purchase order error:", err);

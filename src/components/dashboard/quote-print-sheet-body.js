@@ -2,6 +2,7 @@
 
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import PrintSheetContinuedNotes from "@/components/dashboard/print-sheet-continued-notes";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
@@ -191,7 +192,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </section>
       )}
 
-      <section className="mb-2">
+      <section className="print-totals-block mb-2 break-inside-avoid">
         <h2 className={sectionLabel}>Totals</h2>
         <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
@@ -221,19 +222,26 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         </table>
       </section>
 
-      <section className="mb-2 break-inside-avoid">
-        <h2 className={sectionLabel}>{notesMode === "internal" ? "Notes" : "Customer notes"}</h2>
-        <p className="min-h-[2.5rem] whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50/60 px-2 py-1.5 text-xs leading-relaxed text-neutral-900">
-          {notesText || "—"}
-        </p>
-      </section>
-
-      <InvoicePaymentFooterPrint
-        paymentOptions={q.invoicePaymentOptions}
-        thankYouNote={q.invoiceThankYouNote}
-        variant="dashboard"
-        compact
-      />
+      {notesText ? (
+        <PrintSheetContinuedNotes
+          notesHeading={notesMode === "internal" ? "Notes" : "Customer notes"}
+          notesText={notesText}
+        >
+          <InvoicePaymentFooterPrint
+            paymentOptions={q.invoicePaymentOptions}
+            thankYouNote={q.invoiceThankYouNote}
+            variant="dashboard"
+            compact
+          />
+        </PrintSheetContinuedNotes>
+      ) : (
+        <InvoicePaymentFooterPrint
+          paymentOptions={q.invoicePaymentOptions}
+          thankYouNote={q.invoiceThankYouNote}
+          variant="dashboard"
+          compact
+        />
+      )}
     </div>
   );
 }

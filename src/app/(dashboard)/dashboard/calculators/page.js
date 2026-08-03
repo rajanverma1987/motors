@@ -1,10 +1,11 @@
-import CalculatorsPageClient from "./calculators-page-client";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Calculators",
   description: "Quick shop calculators — power, FLA, speed, torque, belts, and bench electrical.",
 };
 
+/** Classic route — calculators live on Simple `/dashboards?tab=calculators`. */
 export default function CalculatorsPage() {
-  return <CalculatorsPageClient />;
+  redirect("/dashboards?tab=calculators");
 }

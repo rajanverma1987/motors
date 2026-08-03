@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import {
   FiCheckCircle,
   FiClipboard,
@@ -124,7 +125,6 @@ export default function ServiceProposalsPanel({
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRowIds, setSelectedRowIds] = useState([]);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
 
@@ -240,6 +240,23 @@ export default function ServiceProposalsPanel({
     setEditingId(row.id);
     setModalOpen(true);
   };
+
+  const handleDeepLinkOpen = useCallback(
+    (openId) => {
+      const row = rows.find((r) => String(r.id) === openId);
+      if (!row) return true;
+      const rowIsInvoice = isSimpleInvoiceRecord(row, invoiceStatusValues, quoteStatusValues);
+      if (isInvoices !== rowIsInvoice) return true;
+      openEdit(row);
+      return true;
+    },
+    [rows, isInvoices, invoiceStatusValues, quoteStatusValues]
+  );
+
+  useSimpleOpenParam({
+    ready,
+    onOpen: handleDeepLinkOpen,
+  });
 
   const handleSave = async (form, options = {}) => {
     const forceNew = options?.forceNew === true;
@@ -818,9 +835,6 @@ export default function ServiceProposalsPanel({
               </Button>
             )
           }
-          selectable
-          selectedRowIds={selectedRowIds}
-          onSelectionChange={setSelectedRowIds}
           emptyMessage={
             scopedRows.length === 0
               ? isInvoices
@@ -860,6 +874,7 @@ export default function ServiceProposalsPanel({
         customerId={openCustomerId}
         onClose={() => setOpenCustomerId(null)}
         zIndex={120}
+        portal="simple"
         onCustomerUpdated={(customer) => {
           const cid = String(customer?.id || openCustomerId || "").trim();
           if (!cid) return;

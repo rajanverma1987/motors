@@ -88,12 +88,21 @@ export async function getAdminListingStats(options = {}) {
   const overallMap = new Map(overallViews.map((r) => [String(r._id), r.count || 0]));
   const quoteMap = new Map(quoteCounts.map((r) => [String(r._id), r.count || 0]));
 
+  const summary = {
+    visitsThisMonth: monthlyViews.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
+    visitsOverall: overallViews.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
+    quoteRequestCount: quoteCounts.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
+    shopsWithVisits: 0,
+  };
+
   const visitedIds = [...overallMap.entries()]
     .filter(([, count]) => count > 0)
     .map(([id]) => id);
 
+  summary.shopsWithVisits = visitedIds.length;
+
   if (visitedIds.length === 0) {
-    return { items: [], totalCount: 0, page, pageSize, monthLabel: monthPrefix };
+    return { items: [], totalCount: 0, page, pageSize, monthLabel: monthPrefix, summary };
   }
 
   const listings = await Listing.find({
@@ -138,6 +147,7 @@ export async function getAdminListingStats(options = {}) {
     page,
     pageSize,
     monthLabel: monthPrefix,
+    summary,
   };
 }
 

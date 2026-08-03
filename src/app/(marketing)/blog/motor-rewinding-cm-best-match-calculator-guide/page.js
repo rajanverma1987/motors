@@ -103,7 +103,7 @@ export default function BlogCmBestMatchGuidePage() {
             If you rewind industrial or commercial motors, you constantly translate between <strong className="text-title">original winding data</strong>,{" "}
             <strong className="text-title">target circular mils</strong>, and{" "}
             <strong className="text-title">what is actually on your shelf</strong>. The{" "}
-            <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
+            <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               IQMotorBase dashboard calculators
             </Link>{" "}
             include <strong className="text-title">CM Best Match</strong> so the computer does the combinatorial search while you keep engineering judgment.
@@ -295,7 +295,7 @@ export default function BlogCmBestMatchGuidePage() {
               <div>
                 <h3 className="text-lg font-semibold text-title">Where is the calculator in the app?</h3>
                 <p className="mt-2 leading-relaxed">
-                  Dashboard → <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">Calculators</Link> → CM Best Match tab.
+                  Dashboard → <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">Calculators</Link> → CM Best Match tab.
                 </p>
               </div>
             </div>

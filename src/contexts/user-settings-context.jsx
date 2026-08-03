@@ -58,6 +58,24 @@ export function useUserSettings() {
   return useContext(UserSettingsContext);
 }
 
+/**
+ * Seed settings without fetching /api/dashboard/settings (e.g. public customer portal).
+ * @param {{ settings?: object, children: import("react").ReactNode }} props
+ */
+export function UserSettingsValueProvider({ settings, children }) {
+  const value = useMemo(
+    () => ({
+      settings: mergeUserSettings(settings),
+      loading: false,
+      refresh: async () => {},
+    }),
+    [settings]
+  );
+  return (
+    <UserSettingsContext.Provider value={value}>{children}</UserSettingsContext.Provider>
+  );
+}
+
 export function useCompactTables() {
   const { settings } = useUserSettings();
   return !!settings?.compactTables;

@@ -6,6 +6,7 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 export async function GET(request) {
   try {
@@ -88,7 +89,15 @@ export async function POST(request) {
       poCutDate: String(payload.poCutDate || "").trim(),
       dueDate: String(payload.dueDate || "").trim(),
     });
-    return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) }, { status: 201 });
+    const item = serializeSimplePortalDoc(doc);
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "purchaseOrders",
+      action: "created",
+      resourceId: item.id,
+      data: item,
+    });
+    return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {
     console.error("Dashboard create simple purchase order error:", err);
     return NextResponse.json({ error: err.message || "Failed to create purchase order" }, { status: 500 });

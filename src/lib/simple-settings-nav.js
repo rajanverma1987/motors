@@ -1,0 +1,69 @@
+/** Simple `/dashboards/settings` side-menu sections. */
+
+export const SIMPLE_SETTINGS_PATH = "/dashboards/settings";
+
+export const SIMPLE_SETTINGS_SECTIONS = [
+  { id: "account", label: "Account" },
+  { id: "branding", label: "Branding" },
+  { id: "display", label: "Display" },
+  { id: "accounts", label: "Accounts" },
+  { id: "dropdowns", label: "Dropdowns" },
+  { id: "inventory", label: "Inventory" },
+  { id: "smtp", label: "Email Settings" },
+  { id: "master", label: "Master" },
+  { id: "data-upload", label: "Data Upload" },
+  { id: "api-integration", label: "API Integration" },
+  { id: "subscription", label: "Subscription" },
+  { id: "support", label: "Support" },
+];
+
+export const SIMPLE_SETTINGS_SECTION_IDS = SIMPLE_SETTINGS_SECTIONS.map((s) => s.id);
+
+/** Sections that use the shared settings draft + sticky Save bar. */
+export const SIMPLE_SETTINGS_DRAFT_SECTION_IDS = new Set([
+  "account",
+  "branding",
+  "display",
+  "accounts",
+  "dropdowns",
+  "inventory",
+  "smtp",
+]);
+
+export const SIMPLE_MASTER_TABS = [
+  { id: "employees", label: "Employees" },
+  { id: "vendors", label: "Vendors" },
+  { id: "sales-persons", label: "Sales Persons" },
+];
+
+export const SIMPLE_MASTER_TAB_IDS = SIMPLE_MASTER_TABS.map((t) => t.id);
+
+/**
+ * @param {string | null | undefined} section
+ */
+export function resolveSimpleSettingsSection(section) {
+  const id = String(section || "").trim();
+  return SIMPLE_SETTINGS_SECTION_IDS.includes(id) ? id : "account";
+}
+
+/**
+ * @param {string | null | undefined} tab
+ */
+export function resolveSimpleMasterTab(tab) {
+  const id = String(tab || "").trim();
+  return SIMPLE_MASTER_TAB_IDS.includes(id) ? id : "employees";
+}
+
+/**
+ * @param {string} section
+ * @param {Record<string, string>} [extra]
+ */
+export function simpleSettingsHref(section, extra = {}) {
+  const params = new URLSearchParams();
+  params.set("section", resolveSimpleSettingsSection(section));
+  for (const [key, value] of Object.entries(extra || {})) {
+    const v = String(value ?? "").trim();
+    if (key && v) params.set(key, v);
+  }
+  return `${SIMPLE_SETTINGS_PATH}?${params.toString()}`;
+}

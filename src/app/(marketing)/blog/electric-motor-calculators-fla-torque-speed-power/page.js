@@ -110,7 +110,7 @@ export default function BlogElectricMotorCalculatorsPage() {
         <article className="prose prose-neutral max-w-none dark:prose-invert">
           <p className="lead text-lg text-secondary leading-relaxed">
             This guide maps directly to the tabs in{" "}
-            <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
+            <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               Dashboard → Calculators
             </Link>
             : <strong className="text-title">Power &amp; current</strong>, <strong className="text-title">Speed &amp; drives</strong>,{" "}

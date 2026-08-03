@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import {
-  CALCULATOR_ONLY_DASHBOARD_PATH,
+  CALCULATOR_ONLY_DASHBOARD_HREF,
   isCalculatorOnlyDashboardPath,
 } from "@/lib/calculator-portal-routes";
 import { isSimplePortalPath } from "@/lib/portal-view";
@@ -24,7 +24,7 @@ export default function DashboardShell({ children }) {
 
   useEffect(() => {
     if (!mounted || !calcOnly || onCalculatorsRoute) return;
-    router.replace(CALCULATOR_ONLY_DASHBOARD_PATH);
+    router.replace(CALCULATOR_ONLY_DASHBOARD_HREF);
   }, [mounted, calcOnly, onCalculatorsRoute, router]);
 
   if (!mounted) {

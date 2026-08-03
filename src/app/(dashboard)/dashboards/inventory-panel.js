@@ -11,6 +11,7 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 
 const ADJUST_FORM_ID = "simple-inventory-adjust-form";
 
@@ -116,6 +117,18 @@ export default function InventoryPanel() {
     setEditingItem(row);
     setItemModalOpen(true);
   }, []);
+
+  useSimpleOpenParam({
+    ready: !loading,
+    onOpen: useCallback(
+      (openId) => {
+        const row = items.find((r) => String(r.id) === openId);
+        if (row) openEdit(row);
+        return true;
+      },
+      [items, openEdit]
+    ),
+  });
 
   const closeUsage = useCallback(() => {
     setUsageFor(null);

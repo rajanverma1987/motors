@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { authenticateIntegrationApiKey } from "@/lib/integration-auth";
 import { getIntegrationCollection, sanitizeIntegrationDoc } from "@/lib/integration-collections";
-import { emitIntegrationEvent } from "@/lib/integration-webhooks";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 function scopeAllows(scopes, collection) {
   return Array.isArray(scopes) && (scopes.includes("*") || scopes.includes(collection));
@@ -60,10 +60,10 @@ export async function POST(request, context) {
     await connectDB();
     const doc = await cfg.model.create(payload);
     const serialized = sanitizeIntegrationDoc(doc, cfg);
-    await emitIntegrationEvent({
+    await emitCrmResourceEvent({
       ownerEmail: auth.ownerEmail,
-      eventName: `crm.${collection}.created`,
       collection,
+      action: "created",
       resourceId: serialized.id,
       data: serialized,
     });

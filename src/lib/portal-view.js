@@ -24,19 +24,25 @@ export function portalViewFromPathname(pathname) {
 /**
  * Map a path from one portal to the other.
  * Simple view hub is `/dashboards` (optional `?tab=`).
+ * Settings: `/dashboards/settings` ↔ `/dashboard/settings`.
  * @param {string} pathname
  * @param {typeof PORTAL_VIEW_CLASSIC | typeof PORTAL_VIEW_SIMPLE} targetView
  * @param {string} [search] Query string including leading `?`
  */
 export function switchPortalPath(pathname, targetView, search = "") {
   const query = search || "";
+  const pathOnly = (pathname || "").split("?")[0] || CLASSIC_PORTAL_PREFIX;
+  const onSettings =
+    pathOnly === `${CLASSIC_PORTAL_PREFIX}/settings` ||
+    pathOnly === `${SIMPLE_PORTAL_PREFIX}/settings`;
 
   if (targetView === PORTAL_VIEW_SIMPLE) {
+    if (onSettings) return `${SIMPLE_PORTAL_PREFIX}/settings`;
     return `${SIMPLE_PORTAL_PREFIX}${query}`;
   }
 
-  const pathOnly = (pathname || "").split("?")[0] || CLASSIC_PORTAL_PREFIX;
   if (isSimplePortalPath(pathOnly)) {
+    if (onSettings) return `${CLASSIC_PORTAL_PREFIX}/settings`;
     return `${CLASSIC_PORTAL_PREFIX}/all-jobs`;
   }
 

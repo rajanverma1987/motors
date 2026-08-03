@@ -16,6 +16,12 @@ const simplePurchaseOrderSchema = new mongoose.Schema(
     paymentStatus: { type: String, default: "Unpaid", trim: true },
     poCutDate: { type: String, default: "", trim: true },
     dueDate: { type: String, default: "", trim: true },
+    /** Import metadata for external system linking */
+    sourceSystem: { type: String, default: "", trim: true },
+    externalRef: { type: String, default: "", trim: true },
+    importBatchId: { type: String, default: "", trim: true },
+    importedAt: { type: Date, default: null },
+    importStatus: { type: String, default: "", trim: true },
   },
   { timestamps: true, strict: false }
 );
@@ -26,6 +32,10 @@ simplePurchaseOrderSchema.index({ createdByEmail: 1, serviceProposalId: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, jobNumber: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, vendorId: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, poCutDate: -1 });
+simplePurchaseOrderSchema.index(
+  { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
+  { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }
+);
 
 export default mongoose.models.SimplePurchaseOrder ||
   mongoose.model("SimplePurchaseOrder", simplePurchaseOrderSchema);

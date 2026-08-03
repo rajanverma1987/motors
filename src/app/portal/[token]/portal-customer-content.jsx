@@ -1,25 +1,43 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { useCallback, useMemo, useState } from "react";
+import { FiBriefcase, FiClipboard, FiFileText, FiPrinter, FiTool } from "react-icons/fi";
+import Badge from "@/components/ui/badge";
+import Button from "@/components/ui/button";
+import Tabs from "@/components/ui/tabs";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
+import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import { formatMoney } from "@/lib/format-currency";
+import { formatDateForCurrency } from "@/lib/format-date";
 
-const CURRENCY = "USD";
-const fmt = (v) => formatMoney(v, CURRENCY);
-
-function partsLineTotal(row) {
-  const qty = parseFloat(row?.qty ?? "1");
-  const price = parseFloat(row?.price ?? "0");
-  if (!Number.isFinite(qty) || !Number.isFinite(price)) return null;
-  return Math.round(qty * price * 100) / 100;
+function fmtMoney(value, currency) {
+  return formatMoney(value, currency || "USD");
 }
 
-function AttachmentLinks({ attachments, className = "" }) {
+function fmtDate(value, currency) {
+  if (!value) return "";
+  const formatted = formatDateForCurrency(value, currency || "USD");
+  return formatted === "—" ? "" : formatted;
+}
+
+function statusBadgeVariant(status) {
+  const s = String(status || "").toLowerCase();
+  if (!s) return "default";
+  if (/\b(paid|approved|accepted|won|complete|completed|closed|delivered)\b/.test(s)) return "success";
+  if (/\b(rejected|lost|cancelled|canceled|void|declined)\b/.test(s)) return "danger";
+  if (/\b(partial|pending|submitted|progress|quoted|contacted)\b/.test(s)) return "warning";
+  return "primary";
+}
+
+function AttachmentLinks({ attachments }) {
   if (!Array.isArray(attachments) || attachments.length === 0) return null;
   return (
-    <div className={className}>
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Attachments</h3>
-      <ul className="list-inside list-disc space-y-1 text-sm text-title">
+    <div className="mt-3">
+      <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+        Attachments
+      </h4>
+      <ul className="space-y-1 text-sm text-title">
         {attachments.map((a, i) => (
           <li key={`${a.url}-${i}`}>
             <a
@@ -37,111 +55,37 @@ function AttachmentLinks({ attachments, className = "" }) {
   );
 }
 
-function PhotoLinks({ urls, label }) {
-  const list = (Array.isArray(urls) ? urls : []).map(String).filter(Boolean);
-  if (list.length === 0) return null;
-  return (
-    <div className="mt-2">
-      <p className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">{label}</p>
-      <ul className="flex flex-wrap gap-2">
-        {list.map((url, i) => (
-          <li key={`${url}-${i}`}>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs font-medium text-primary underline hover:opacity-90"
-            >
-              {label === "Motor photos" ? `Photo ${i + 1}` : `Image ${i + 1}`}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function QuoteDetailCard({ quote, printScope, outcomeLabel }) {
-  const printId = `q-${quote.id}`;
-  const hideWhenPrintingOther = printScope && printScope !== printId ? "print:hidden" : "";
-  const hasScopeTable = Array.isArray(quote.scopeLines) && quote.scopeLines.length > 0;
-  const hasParts = Array.isArray(quote.partsLines) && quote.partsLines.length > 0;
+function LineTables({ doc, currency }) {
+  const hasScope = Array.isArray(doc.scopeLines) && doc.scopeLines.length > 0;
+  const hasOther = Array.isArray(doc.otherLines) && doc.otherLines.length > 0;
 
   return (
-    <article
-      className={`mb-6 rounded-lg border border-border bg-card p-4 shadow-sm last:mb-0 ${hideWhenPrintingOther}`}
-      data-portal-print={printId}
-    >
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
-        <div>
-          <h3 className="text-lg font-semibold text-title">
-            {quote.rfqNumber ? `RFQ ${quote.rfqNumber}` : "Service proposal"}
-          </h3>
-          <p className="mt-1 text-sm text-secondary">
-            {[quote.date && `Quote date: ${quote.date}`, quote.customerPo && `Your PO#: ${quote.customerPo}`]
-              .filter(Boolean)
-              .join(" · ") || null}
-            {quote.estimatedCompletion ? (
-              <span className="block mt-0.5">Estimated completion: {quote.estimatedCompletion}</span>
-            ) : null}
-          </p>
-          {outcomeLabel ? (
-            <p className="mt-2 text-sm font-medium text-title">Outcome: {outcomeLabel}</p>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-center gap-2 print:hidden">
-          {quote.respondToken ? (
-            <>
-              <Link
-                href={`/quote/respond/${encodeURIComponent(quote.respondToken)}`}
-                className="inline-flex rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-title hover:bg-muted"
-              >
-                Full page
-              </Link>
-              <a
-                href={`/quote/respond/${encodeURIComponent(quote.respondToken)}#print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-title hover:bg-muted"
-              >
-                Print / PDF
-              </a>
-            </>
-          ) : null}
-        </div>
-      </div>
-
-      {quote.motorLabel ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Motor</h4>
-          <p className="text-sm text-title">{quote.motorLabel}</p>
-        </section>
-      ) : null}
-
-      {quote.repairScope?.trim() && !hasScopeTable ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Scope</h4>
-          <p className="whitespace-pre-wrap text-sm text-title">{quote.repairScope}</p>
-        </section>
-      ) : null}
-
-      {hasScopeTable ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Scope & labor</h4>
-          <div className="overflow-x-auto rounded border border-border">
+    <>
+      {hasScope ? (
+        <section className="mb-3">
+          <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+            Scope details
+          </h4>
+          <div className="overflow-x-auto border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/80 border-b border-border">
+              <thead className="border-b border-border bg-primary/[0.04]">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-secondary">Description</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary w-[7rem]">Price</th>
+                  <th className="px-2.5 py-1.5 text-left text-xs font-medium text-secondary">
+                    Description
+                  </th>
+                  <th className="w-28 px-2.5 py-1.5 text-right text-xs font-medium text-secondary">
+                    Price
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {quote.scopeLines.map((row, i) => (
+                {doc.scopeLines.map((row, i) => (
                   <tr key={i} className="border-t border-border">
-                    <td className="px-3 py-2 align-top text-title whitespace-pre-wrap">{row.scope || "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-title">
-                      {row.price ? fmt(row.price) : "—"}
+                    <td className="whitespace-pre-wrap px-2.5 py-1.5 align-top text-title">
+                      {row.description || "—"}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
+                      {row.price ? fmtMoney(row.price, currency) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -151,157 +95,38 @@ function QuoteDetailCard({ quote, printScope, outcomeLabel }) {
         </section>
       ) : null}
 
-      {hasParts ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Other cost</h4>
-          <div className="overflow-x-auto rounded border border-border">
+      {hasOther ? (
+        <section className="mb-3">
+          <h4 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+            Other items
+          </h4>
+          <div className="overflow-x-auto border border-border">
             <table className="w-full text-sm">
-              <thead className="bg-muted/80 border-b border-border">
+              <thead className="border-b border-border bg-primary/[0.04]">
                 <tr>
-                  <th className="px-3 py-2 text-left font-medium text-secondary">Item</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary w-12">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-secondary w-14">UOM</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary">Unit price</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary">Line total</th>
+                  <th className="px-2.5 py-1.5 text-left text-xs font-medium text-secondary">Item</th>
+                  <th className="w-12 px-2.5 py-1.5 text-right text-xs font-medium text-secondary">
+                    Qty
+                  </th>
+                  <th className="w-14 px-2.5 py-1.5 text-left text-xs font-medium text-secondary">
+                    UOM
+                  </th>
+                  <th className="px-2.5 py-1.5 text-right text-xs font-medium text-secondary">
+                    Price
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {quote.partsLines.map((row, i) => {
-                  const lt = partsLineTotal(row);
-                  return (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-3 py-2 text-title">{row.item || "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-title">{row.qty ?? "1"}</td>
-                      <td className="px-3 py-2 text-title">{row.uom || "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums text-title">
-                        {row.price ? fmt(row.price) : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-title">
-                        {lt != null ? fmt(lt) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mb-4 rounded border border-border bg-muted/30 p-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Amounts</h4>
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Scope total</dt>
-            <dd className="font-medium text-right sm:text-left text-title">
-              {quote.laborTotal ? fmt(quote.laborTotal) : "—"}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Other cost total</dt>
-            <dd className="font-medium text-right sm:text-left text-title">
-              {quote.partsTotal ? fmt(quote.partsTotal) : "—"}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Subtotal</dt>
-            <dd className="font-medium text-right sm:text-left text-title">{fmt(quote.subtotal)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Tax</dt>
-            <dd className="font-medium text-right sm:text-left text-title">{fmt(quote.taxAmount)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 border-t border-border pt-2 sm:col-span-2 sm:flex sm:justify-between">
-            <dt className="font-semibold text-title">Grand total</dt>
-            <dd className="font-semibold text-right text-title">{fmt(quote.grandTotal)}</dd>
-          </div>
-        </dl>
-      </section>
-
-      {quote.customerNotes?.trim() ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Notes from the shop</h4>
-          <p className="whitespace-pre-wrap text-sm text-title">{quote.customerNotes}</p>
-        </section>
-      ) : null}
-
-      <AttachmentLinks attachments={quote.attachments} />
-    </article>
-  );
-}
-
-function InvoiceDetailCard({ inv, printScope }) {
-  const printId = `i-${inv.id}`;
-  const hideWhenPrintingOther = printScope && printScope !== printId ? "print:hidden" : "";
-  const hasScope = Array.isArray(inv.scopeLines) && inv.scopeLines.length > 0;
-  const hasParts = Array.isArray(inv.partsLines) && inv.partsLines.length > 0;
-
-  return (
-    <article
-      className={`mb-6 rounded-lg border border-border bg-card p-4 shadow-sm last:mb-0 ${hideWhenPrintingOther}`}
-      data-portal-print={printId}
-    >
-      <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border pb-3">
-        <div>
-          <h3 className="text-lg font-semibold text-title">
-            Invoice {inv.invoiceNumber || inv.rfqNumber || "—"}
-          </h3>
-          <p className="mt-1 text-sm text-secondary">
-            {[inv.date && `Date: ${inv.date}`, inv.customerPo && `Your PO#: ${inv.customerPo}`]
-              .filter(Boolean)
-              .join(" · ")}
-            {inv.estimatedCompletion ? (
-              <span className="block mt-0.5">Est. completion: {inv.estimatedCompletion}</span>
-            ) : null}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
-          {inv.viewToken ? (
-            <>
-              <Link
-                href={`/invoice/view/${encodeURIComponent(inv.viewToken)}`}
-                className="inline-flex rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-title hover:bg-muted"
-              >
-                Full page
-              </Link>
-              <a
-                href={`/invoice/view/${encodeURIComponent(inv.viewToken)}#print`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-title hover:bg-muted"
-              >
-                Print / PDF
-              </a>
-            </>
-          ) : (
-            <span className="text-xs text-secondary">Print link unavailable — contact the shop.</span>
-          )}
-        </div>
-      </div>
-
-      {inv.motorLabel ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Motor</h4>
-          <p className="text-sm text-title">{inv.motorLabel}</p>
-        </section>
-      ) : null}
-
-      {hasScope ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Scope</h4>
-          <div className="overflow-x-auto rounded border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/80 border-b border-border">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-secondary">Description</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary w-[7rem]">Price</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inv.scopeLines.map((row, i) => (
+                {doc.otherLines.map((row, i) => (
                   <tr key={i} className="border-t border-border">
-                    <td className="px-3 py-2 align-top text-title whitespace-pre-wrap">{row.scope || "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums">{row.price ? fmt(row.price) : "—"}</td>
+                    <td className="px-2.5 py-1.5 text-title">{row.description || "—"}</td>
+                    <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
+                      {row.qty || "1"}
+                    </td>
+                    <td className="px-2.5 py-1.5 text-title">{row.uom || "—"}</td>
+                    <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
+                      {row.price ? fmtMoney(row.price, currency) : "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -309,274 +134,381 @@ function InvoiceDetailCard({ inv, printScope }) {
           </div>
         </section>
       ) : null}
+    </>
+  );
+}
 
-      {hasParts ? (
-        <section className="mb-4">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Other cost</h4>
-          <div className="overflow-x-auto rounded border border-border">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/80 border-b border-border">
-                <tr>
-                  <th className="px-3 py-2 text-left font-medium text-secondary">Item</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary w-12">Qty</th>
-                  <th className="px-3 py-2 text-left font-medium text-secondary w-14">UOM</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary">Unit</th>
-                  <th className="px-3 py-2 text-right font-medium text-secondary">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inv.partsLines.map((row, i) => {
-                  const lt = partsLineTotal(row);
-                  return (
-                    <tr key={i} className="border-t border-border">
-                      <td className="px-3 py-2 text-title">{row.item || "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.qty ?? "1"}</td>
-                      <td className="px-3 py-2 text-title">{row.uom || "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{row.price ? fmt(row.price) : "—"}</td>
-                      <td className="px-3 py-2 text-right tabular-nums">{lt != null ? fmt(lt) : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+function AmountsBlock({ doc, currency, showPaid }) {
+  return (
+    <section className="mb-3 border border-border bg-primary/[0.03] p-3">
+      <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+        Amounts
+      </h4>
+      <dl className="grid gap-1.5 text-sm sm:grid-cols-2">
+        <div className="flex justify-between gap-2">
+          <dt className="text-secondary">Scope total</dt>
+          <dd className="tabular-nums text-title">{fmtMoney(doc.scopeTotal, currency)}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-secondary">Other items</dt>
+          <dd className="tabular-nums text-title">{fmtMoney(doc.otherTotal, currency)}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-secondary">Subtotal</dt>
+          <dd className="tabular-nums text-title">{fmtMoney(doc.subtotal, currency)}</dd>
+        </div>
+        <div className="flex justify-between gap-2">
+          <dt className="text-secondary">Tax</dt>
+          <dd className="tabular-nums text-title">{fmtMoney(doc.taxAmount, currency)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 border-t border-border pt-1.5 sm:col-span-2">
+          <dt className="font-semibold text-title">Grand total</dt>
+          <dd className="font-semibold tabular-nums text-title">
+            {fmtMoney(doc.grandTotal, currency)}
+          </dd>
+        </div>
+        {showPaid ? (
+          <div className="flex justify-between gap-2 sm:col-span-2">
+            <dt className="text-secondary">Payment</dt>
+            <dd className="font-medium text-title">{doc.isPaid ? "Paid" : "Unpaid"}</dd>
           </div>
-        </section>
-      ) : null}
-
-      <section className="mb-4 rounded border border-border bg-muted/30 p-3">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-2">Totals & payments</h4>
-        <dl className="grid gap-2 text-sm sm:grid-cols-2">
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Scope total</dt>
-            <dd className="tabular-nums text-right sm:text-left">{inv.laborTotal ? fmt(inv.laborTotal) : "—"}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Other cost total</dt>
-            <dd className="tabular-nums text-right sm:text-left">{inv.partsTotal ? fmt(inv.partsTotal) : "—"}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Subtotal</dt>
-            <dd className="tabular-nums text-right sm:text-left">{fmt(inv.subtotal)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Tax</dt>
-            <dd className="tabular-nums text-right sm:text-left">{fmt(inv.taxAmount)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 border-t border-border pt-2 sm:col-span-2">
-            <dt className="font-semibold text-title">Grand total</dt>
-            <dd className="font-semibold text-right tabular-nums">{fmt(inv.grandTotal)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Recorded payments</dt>
-            <dd className="tabular-nums text-right sm:text-left">{fmt(inv.totalPaid)}</dd>
-          </div>
-          <div className="flex justify-between gap-2 sm:block">
-            <dt className="text-secondary">Balance due</dt>
-            <dd className="font-medium text-right sm:text-left tabular-nums">{fmt(inv.balanceDue)}</dd>
-          </div>
-        </dl>
-        {Array.isArray(inv.payments) && inv.payments.length > 0 ? (
-          <ul className="mt-3 space-y-1 border-t border-border pt-3 text-xs text-secondary">
-            {inv.payments.map((p, i) => (
-              <li key={i} className="tabular-nums">
-                {p.paymentDate || "—"} — {fmt(p.amount)}
-                {p.method ? ` · ${p.method}` : ""}
-                {p.reference ? ` · Ref. ${p.reference}` : ""}
-              </li>
-            ))}
-          </ul>
         ) : null}
-      </section>
+      </dl>
+    </section>
+  );
+}
 
-      {inv.customerNotes?.trim() ? (
-        <section>
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Notes</h4>
-          <p className="whitespace-pre-wrap text-sm text-title">{inv.customerNotes}</p>
+function ProposalCard({ doc, currency, onPrint, showOutcome, printBusy }) {
+  const meta = [
+    doc.dateCreated && `Date: ${fmtDate(doc.dateCreated, currency)}`,
+    doc.customerPo && `Your PO#: ${doc.customerPo}`,
+    doc.dueDate && `Due: ${fmtDate(doc.dueDate, currency)}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const canPrint = Boolean(doc.printBundle?.quote || doc.printBundle?.invoicePayload);
+
+  return (
+    <article className="mb-4 border border-border bg-card/40 p-3 last:mb-0 dark:bg-card/20">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2 border-b border-border pb-2">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant={doc.recordType === "INVOICE" ? "success" : "primary"}
+              className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
+            >
+              {doc.recordType || "RFQ"}
+            </Badge>
+            {doc.status ? (
+              <Badge
+                variant={statusBadgeVariant(doc.status)}
+                className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
+              >
+                {doc.status}
+              </Badge>
+            ) : null}
+            {doc.jobStatus ? (
+              <Badge
+                variant="default"
+                className="rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
+              >
+                {doc.jobStatus}
+              </Badge>
+            ) : null}
+          </div>
+          <h3 className="mt-1.5 text-lg font-semibold tracking-tight text-title">
+            {doc.documentLabel} {doc.documentNumber || "—"}
+          </h3>
+          {meta ? <p className="mt-0.5 text-xs text-secondary">{meta}</p> : null}
+          {showOutcome && doc.outcomeLabel ? (
+            <p className="mt-1 text-xs font-medium text-title">Outcome: {doc.outcomeLabel}</p>
+          ) : null}
+          {doc.recordType === "INVOICE" && doc.invoicePaidDate ? (
+            <p className="mt-0.5 text-xs text-secondary">
+              Paid: {fmtDate(doc.invoicePaidDate, currency)}
+            </p>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-7 shrink-0 rounded-none px-2.5 text-xs"
+          disabled={!canPrint || printBusy}
+          onClick={() => onPrint(doc)}
+        >
+          <FiPrinter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Print
+        </Button>
+      </div>
+
+      {doc.motorLabel ? (
+        <section className="mb-3">
+          <h4 className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+            Motor
+          </h4>
+          <p className="text-sm text-title">{doc.motorLabel}</p>
         </section>
       ) : null}
+
+      <LineTables doc={doc} currency={currency} />
+      <AmountsBlock doc={doc} currency={currency} showPaid={doc.recordType === "INVOICE"} />
+
+      {doc.customerNotes ? (
+        <section className="mb-2">
+          <h4 className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-secondary">
+            Notes from the shop
+          </h4>
+          <p className="whitespace-pre-wrap text-sm text-title">{doc.customerNotes}</p>
+        </section>
+      ) : null}
+
+      <AttachmentLinks attachments={doc.attachments} />
     </article>
   );
 }
 
+function MotorsPanel({ motors }) {
+  if (!motors.length) {
+    return <p className="text-sm text-secondary">No motors on file yet.</p>;
+  }
+  return (
+    <div className="space-y-3">
+      {motors.map((m) => (
+        <div
+          key={m.id}
+          className="border border-border bg-card/40 p-3 dark:bg-card/20"
+        >
+          <dl className="grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">Manufacturer / model</dt>
+              <dd className="font-medium text-title">
+                {[m.manufacturer, m.modelNumber].filter(Boolean).join(" ") || "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">HP / kW</dt>
+              <dd className="text-title">{m.hpKw || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">Frame / type</dt>
+              <dd className="text-title">{m.frameType || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">Volts</dt>
+              <dd className="text-title">{m.volts || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">Amps</dt>
+              <dd className="text-title">{m.amps || "—"}</dd>
+            </div>
+            <div>
+              <dt className="text-[11px] font-medium text-secondary">RPM</dt>
+              <dd className="text-title">{m.rpm || "—"}</dd>
+            </div>
+          </dl>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptySection({ message }) {
+  return <p className="text-sm text-secondary">{message}</p>;
+}
+
 export default function PortalCustomerContent({ data }) {
-  const { customer, motors = [], repairsInProgress = [], repairHistory = [], invoices = [] } = data;
-  const [printScope, setPrintScope] = useState(null);
+  const {
+    customer,
+    shop = {},
+    motors = [],
+    repairsInProgress = [],
+    repairHistory = [],
+    invoices = [],
+  } = data;
+  const currency = shop.currency || "USD";
+  const [tab, setTab] = useState("active");
+  const [printDoc, setPrintDoc] = useState(null);
 
-  const clearPrint = useCallback(() => setPrintScope(null), []);
+  const fmt = useCallback((value) => formatMoney(value, currency), [currency]);
 
-  useEffect(() => {
-    window.addEventListener("afterprint", clearPrint);
-    return () => window.removeEventListener("afterprint", clearPrint);
-  }, [clearPrint]);
+  const startPrint = useCallback((doc) => {
+    if (!doc?.printBundle) return;
+    setPrintDoc(doc);
+  }, []);
 
-  const startPrint = (id) => {
-    setPrintScope(id);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => window.print());
-    });
-  };
+  const handlePrintDone = useCallback(() => {
+    setPrintDoc(null);
+  }, []);
 
-  const shellPrintHide = printScope ? "print:hidden" : "";
+  const printBusy = Boolean(printDoc);
+  const printBundle = printDoc?.printBundle || null;
+
+  const tabs = useMemo(
+    () => [
+      {
+        id: "active",
+        label: (
+          <span className="inline-flex items-center gap-1.5">
+            <FiClipboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Active ({repairsInProgress.length})
+          </span>
+        ),
+        children: (
+          <div>
+            <p className="mb-3 text-sm text-secondary">
+              Open service proposals and jobs for this account.
+            </p>
+            {repairsInProgress.length === 0 ? (
+              <EmptySection message="No active repairs." />
+            ) : (
+              repairsInProgress.map((doc) => (
+                <ProposalCard
+                  key={doc.id}
+                  doc={doc}
+                  currency={currency}
+                  onPrint={startPrint}
+                  printBusy={printBusy}
+                />
+              ))
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "history",
+        label: (
+          <span className="inline-flex items-center gap-1.5">
+            <FiBriefcase className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            History ({repairHistory.length})
+          </span>
+        ),
+        children: (
+          <div>
+            <p className="mb-3 text-sm text-secondary">Closed proposals and past work.</p>
+            {repairHistory.length === 0 ? (
+              <EmptySection message="No closed repairs on file." />
+            ) : (
+              repairHistory.map((doc) => (
+                <ProposalCard
+                  key={doc.id}
+                  doc={doc}
+                  currency={currency}
+                  onPrint={startPrint}
+                  showOutcome
+                  printBusy={printBusy}
+                />
+              ))
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "invoices",
+        label: (
+          <span className="inline-flex items-center gap-1.5">
+            <FiFileText className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Invoices ({invoices.length})
+          </span>
+        ),
+        children: (
+          <div>
+            <p className="mb-3 text-sm text-secondary">Invoice totals and payment status.</p>
+            {invoices.length === 0 ? (
+              <EmptySection message="No invoices on file yet." />
+            ) : (
+              invoices.map((doc) => (
+                <ProposalCard
+                  key={doc.id}
+                  doc={doc}
+                  currency={currency}
+                  onPrint={startPrint}
+                  printBusy={printBusy}
+                />
+              ))
+            )}
+          </div>
+        ),
+      },
+      {
+        id: "motors",
+        label: (
+          <span className="inline-flex items-center gap-1.5">
+            <FiTool className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            Motors ({motors.length})
+          </span>
+        ),
+        children: (
+          <div>
+            <p className="mb-3 text-sm text-secondary">Motors from your service proposals.</p>
+            <MotorsPanel motors={motors} />
+          </div>
+        ),
+      },
+    ],
+    [currency, invoices, motors, printBusy, repairHistory, repairsInProgress, startPrint]
+  );
 
   return (
     <div className="min-h-screen bg-bg">
-      <div className="mx-auto max-w-[67.2rem] px-4 py-8">
-        <header className={`mb-8 border-b border-border pb-6 ${shellPrintHide}`}>
-          <h1 className="text-2xl font-bold text-title">Motor repair portal</h1>
-          <p className="mt-1 text-secondary">
-            Welcome, {customer.name || customer.companyName || "Customer"}
-          </p>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <header className="mb-6 border-b border-border pb-5">
+          <div className="flex flex-wrap items-center gap-3">
+            {shop.logoUrl ? (
+              <img
+                src={shop.logoUrl}
+                alt=""
+                className="h-10 w-auto max-w-[10rem] object-contain"
+              />
+            ) : null}
+            <div className="min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight text-title">
+                Customer portal
+              </h1>
+              <p className="mt-1 text-sm text-secondary">
+                Welcome, {customer.name || customer.companyName || "Customer"}
+              </p>
+            </div>
+          </div>
         </header>
 
-        <section className={`mb-10 ${printScope ? "print:hidden" : ""}`}>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary mb-3">Your motors</h2>
-          {motors.length === 0 ? (
-            <p className="text-sm text-secondary">No motors on file yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {motors.map((m) => (
-                <div key={m.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
-                  <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">Serial</dt>
-                      <dd className="text-title font-medium">{m.serialNumber || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">Manufacturer / model</dt>
-                      <dd className="text-title">
-                        {[m.manufacturer, m.model].filter(Boolean).join(" ") || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">HP / RPM</dt>
-                      <dd className="text-title">
-                        {[m.hp && `${m.hp} HP`, m.rpm && `${m.rpm} RPM`].filter(Boolean).join(" · ") || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">Voltage</dt>
-                      <dd className="text-title">{m.voltage || "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">Frame / type</dt>
-                      <dd className="text-title">
-                        {[m.frameSize, m.motorType].filter(Boolean).join(" · ") || "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-secondary">kW / Amps</dt>
-                      <dd className="text-title">
-                        {[m.kw && `${m.kw} kW`, m.amps && `${m.amps} A`].filter(Boolean).join(" · ") || "—"}
-                      </dd>
-                    </div>
-                  </dl>
-                  {m.notes?.trim() ? (
-                    <div className="mt-3 border-t border-border pt-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-secondary mb-1">Notes</p>
-                      <p className="whitespace-pre-wrap text-sm text-title">{m.notes}</p>
-                    </div>
-                  ) : null}
-                  <PhotoLinks urls={m.motorPhotos} label="Motor photos" />
-                  <PhotoLinks urls={m.nameplateImages} label="Nameplate images" />
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="mb-10">
-          <div className={shellPrintHide}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary mb-1">Active repairs</h2>
-            <p className="mb-3 text-sm text-secondary">
-              Proposals and amounts for work in progress. Use <strong>Print / PDF</strong> for a clean copy, or print this
-              page from your browser.
-            </p>
-          </div>
-          {repairsInProgress.length === 0 ? (
-            <p className={`text-sm text-secondary ${printScope ? "print:hidden" : ""}`}>No repairs in progress.</p>
-          ) : (
-            <>
-              {repairsInProgress.map((q) => (
-                <div key={q.id} className="relative">
-                  <QuoteDetailCard quote={q} printScope={printScope} />
-                  <div className="mb-2 flex justify-end print:hidden">
-                    <button
-                      type="button"
-                      onClick={() => startPrint(`q-${q.id}`)}
-                      className="text-xs font-medium text-primary underline hover:opacity-90"
-                    >
-                      Print this proposal only
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </section>
-
-        <section className="mb-10">
-          <div className={shellPrintHide}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary mb-1">Repair history</h2>
-            <p className="mb-3 text-sm text-secondary">Past proposals with outcomes and amounts.</p>
-          </div>
-          {repairHistory.length === 0 ? (
-            <p className={`text-sm text-secondary ${printScope ? "print:hidden" : ""}`}>
-              No completed or closed repairs on file.
-            </p>
-          ) : (
-            repairHistory.map((q) => (
-              <div key={q.id} className="relative">
-                <QuoteDetailCard quote={q} printScope={printScope} outcomeLabel={q.outcomeLabel} />
-                <div className="mb-2 flex justify-end print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => startPrint(`q-${q.id}`)}
-                    className="text-xs font-medium text-primary underline hover:opacity-90"
-                  >
-                    Print this proposal only
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </section>
-
-        <section className={`mb-10 ${printScope ? "print:hidden" : ""}`}>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary mb-3">Test reports</h2>
-          <p className="text-sm text-secondary">
-            Test reports and extra files from your shop appear as <strong>Attachments</strong> under each proposal
-            above when provided.
-          </p>
-        </section>
-
-        <section>
-          <div className={shellPrintHide}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-secondary mb-1">Invoices</h2>
-            <p className="mb-3 text-sm text-secondary">
-              Line items, totals, and payments. Open <strong>Full page</strong> for the printable layout, or use{" "}
-              <strong>Print / PDF</strong>.
-            </p>
-          </div>
-          {invoices.length === 0 ? (
-            <p className={`text-sm text-secondary ${printScope ? "print:hidden" : ""}`}>No invoices on file yet.</p>
-          ) : (
-            invoices.map((inv) => (
-              <div key={inv.id} className="relative">
-                <InvoiceDetailCard inv={inv} printScope={printScope} />
-                <div className="mb-2 flex justify-end print:hidden">
-                  <button
-                    type="button"
-                    onClick={() => startPrint(`i-${inv.id}`)}
-                    className="text-xs font-medium text-primary underline hover:opacity-90"
-                  >
-                    Print this invoice only
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </section>
+        <Tabs
+          tabs={tabs}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Portal sections"
+          listClassName="!rounded-none"
+          tabButtonClassName="!rounded-none"
+          panelClassName="flex min-h-0 flex-col pt-4"
+        />
       </div>
+
+      {printBundle?.documentType === "quote" && printBundle.quote ? (
+        <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
+          <QuotePrintSheetBody quote={printBundle.quote} fmt={fmt} />
+        </DocumentPrintOffscreenPortal>
+      ) : null}
+
+      {printBundle?.documentType === "invoice" && printBundle.invoicePayload ? (
+        <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
+          <InvoicePrintPreview
+            invoice={printBundle.invoicePayload.invoice}
+            motorLabel={printBundle.invoicePayload.motorLabel}
+            fromShopName={printBundle.invoicePayload.fromShopName}
+            fromShopContact={printBundle.invoicePayload.fromShopContact}
+            fromShopLogoUrl={printBundle.invoicePayload.fromShopLogoUrl}
+            fromBillingAddress={printBundle.invoicePayload.fromBillingAddress}
+            fromShippingAddress={printBundle.invoicePayload.fromShippingAddress}
+            fromPaymentTermsLabel={printBundle.invoicePayload.fromPaymentTermsLabel}
+            customerToName={printBundle.invoicePayload.customerToName}
+            customerBillingAddress={printBundle.invoicePayload.customerBillingAddress}
+            invoicePaymentOptions={printBundle.invoicePayload.invoicePaymentOptions}
+            invoiceThankYouNote={printBundle.invoicePayload.invoiceThankYouNote}
+            fmt={fmt}
+            currency={currency}
+          />
+        </DocumentPrintOffscreenPortal>
+      ) : null}
     </div>
   );
 }

@@ -107,7 +107,7 @@ export default function TechnicianMobileAppPage() {
           <p className="mt-4 leading-relaxed text-secondary">
             This works especially well with the mobile app: scan the job Tag QR, review motor context, use calculator results,
             and log updates in one flow. Explore the{" "}
-            <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
+            <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               calculators module
             </Link>{" "}
             in the CRM.

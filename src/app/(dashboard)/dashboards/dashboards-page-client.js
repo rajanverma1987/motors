@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  FiBarChart2,
   FiClipboard,
   FiFileText,
   FiPackage,
   FiShoppingCart,
+  FiSliders,
   FiUsers,
 } from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
@@ -14,6 +16,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+import { useAuth } from "@/contexts/auth-context";
 import ServiceProposalsPanel, {
   SIMPLE_LIST_VARIANT_INVOICES,
   SIMPLE_LIST_VARIANT_PROPOSALS,
@@ -21,13 +24,17 @@ import ServiceProposalsPanel, {
 import PurchaseOrdersPanel from "./purchase-orders-panel";
 import InventoryPanel from "./inventory-panel";
 import CustomersPanel from "./customers-panel";
+import ReportsPanel from "./reports-panel";
+import CalculatorsPanel from "./calculators-panel";
 import {
   SIMPLE_PORTAL_PATH,
+  SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_CUSTOMERS,
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_PURCHASE_ORDERS,
+  SIMPLE_TAB_REPORTS,
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 import {
@@ -74,8 +81,14 @@ function TabLabel({ icon: Icon, children }) {
 export default function DashboardsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const calcOnly = !!user?.calculatorOnlyAccount;
   const tabParam = searchParams.get("tab");
-  const activeTab = SIMPLE_TAB_IDS.includes(tabParam) ? tabParam : SIMPLE_TAB_SERVICE_PROPOSALS;
+  const activeTab = calcOnly
+    ? SIMPLE_TAB_CALCULATORS
+    : SIMPLE_TAB_IDS.includes(tabParam)
+      ? tabParam
+      : SIMPLE_TAB_SERVICE_PROPOSALS;
 
   const fyDefault = useMemo(() => currentAllJobsFinancialYearRange(), []);
   const { from: appliedFrom, to: appliedTo } = parseAllJobsDateRange(searchParams);
@@ -142,15 +155,24 @@ export default function DashboardsPageClient() {
   const handleTabChange = useCallback(
     (nextTab) => {
       if (!nextTab || nextTab === activeTab) return;
+      if (calcOnly && nextTab !== SIMPLE_TAB_CALCULATORS) return;
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", nextTab);
       router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
     },
-    [activeTab, router, searchParams]
+    [activeTab, calcOnly, router, searchParams]
   );
 
-  const tabs = useMemo(
-    () => [
+  useEffect(() => {
+    if (!calcOnly) return;
+    if (tabParam === SIMPLE_TAB_CALCULATORS) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", SIMPLE_TAB_CALCULATORS);
+    router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+  }, [calcOnly, router, searchParams, tabParam]);
+
+  const tabs = useMemo(() => {
+    const all = [
       {
         id: SIMPLE_TAB_CUSTOMERS,
         label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
@@ -176,59 +198,71 @@ export default function DashboardsPageClient() {
         label: <TabLabel icon={FiPackage}>Inventory</TabLabel>,
         children: <InventoryPanel />,
       },
-    ],
-    []
-  );
+      {
+        id: SIMPLE_TAB_REPORTS,
+        label: <TabLabel icon={FiBarChart2}>Reports</TabLabel>,
+        children: <ReportsPanel />,
+      },
+      {
+        id: SIMPLE_TAB_CALCULATORS,
+        label: <TabLabel icon={FiSliders}>Calculators</TabLabel>,
+        children: <CalculatorsPanel />,
+      },
+    ];
+    return calcOnly ? all.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : all;
+  }, [calcOnly]);
 
   return (
     <div
       className={`flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS}`}
     >
-      <div className="mb-2 shrink-0 border-b border-border pb-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <StatusFilterPillButton
-            labelOnly
-            className={DATE_FILTER_PILL_CLASS}
-            card={{
-              key: "fy",
-              label: "FY",
-              tileAppearance: resolveStatusTileProps("", 5),
-            }}
-            active={isCurrentFy}
-            onClick={applyCurrentFy}
-          />
-          <StatusFilterPillButton
-            labelOnly
-            className={DATE_FILTER_PILL_CLASS}
-            card={{
-              key: "all",
-              label: "All",
-              tileAppearance: resolveStatusTileProps("", 6),
-            }}
-            active={isAllDates}
-            onClick={applyAllDates}
-          />
-          <Input
-            label="From"
-            type="date"
-            value={draftFrom}
-            onChange={(e) => setDraftFrom(e.target.value)}
-            className={DATE_FILTER_INPUT_CLASS}
-            inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-          />
-          <Input
-            label="To"
-            type="date"
-            value={draftTo}
-            onChange={(e) => setDraftTo(e.target.value)}
-            className={DATE_FILTER_INPUT_CLASS}
-            inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-          />
-          <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleGo}>
-            Go
-          </Button>
+      {activeTab !== SIMPLE_TAB_CALCULATORS && !calcOnly ? (
+        <div className="mb-2 shrink-0 border-b border-border pb-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+            <StatusFilterPillButton
+              labelOnly
+              className={DATE_FILTER_PILL_CLASS}
+              card={{
+                key: "fy",
+                label: "FY",
+                tileAppearance: resolveStatusTileProps("", 5),
+              }}
+              active={isCurrentFy}
+              onClick={applyCurrentFy}
+            />
+            <StatusFilterPillButton
+              labelOnly
+              className={DATE_FILTER_PILL_CLASS}
+              card={{
+                key: "all",
+                label: "All",
+                tileAppearance: resolveStatusTileProps("", 6),
+              }}
+              active={isAllDates}
+              onClick={applyAllDates}
+            />
+            <Input
+              label="From"
+              type="date"
+              value={draftFrom}
+              onChange={(e) => setDraftFrom(e.target.value)}
+              className={DATE_FILTER_INPUT_CLASS}
+              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+            />
+            <Input
+              label="To"
+              type="date"
+              value={draftTo}
+              onChange={(e) => setDraftTo(e.target.value)}
+              className={DATE_FILTER_INPUT_CLASS}
+              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+            />
+            <Button type="button" variant="primary" size="sm" className={DATE_FILTER_BUTTON_CLASS} onClick={handleGo}>
+              Go
+            </Button>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <Tabs
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"

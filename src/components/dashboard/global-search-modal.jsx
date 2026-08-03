@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Modal from "@/components/ui/modal";
 import { FiSearch, FiExternalLink, FiChevronDown, FiChevronRight } from "react-icons/fi";
+import { isSimplePortalPath } from "@/lib/portal-view";
 
 /**
  * @typedef {{ type: string, typeLabel: string, id: string, title: string, subtitle?: string, openHref: string, linked?: Array<{ type: string, label: string, title: string, openHref: string }> }} SearchHit
@@ -11,6 +12,8 @@ import { FiSearch, FiExternalLink, FiChevronDown, FiChevronRight } from "react-i
 
 export default function GlobalSearchModal({ open, onClose }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const isSimple = isSimplePortalPath(pathname);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState(/** @type {SearchHit[]} */ ([]));
   const [loading, setLoading] = useState(false);
@@ -29,32 +32,38 @@ export default function GlobalSearchModal({ open, onClose }) {
     }
   }, [open]);
 
-  const runSearch = useCallback(async (q) => {
-    const t = q.trim();
-    if (t.length < 2) {
-      setResults([]);
-      setHint(t.length ? "Type at least 2 characters" : "");
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setHint("");
-    try {
-      const res = await fetch(`/api/dashboard/search?q=${encodeURIComponent(t)}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Search failed");
-      setResults(Array.isArray(data.results) ? data.results : []);
-      if (!data.results?.length) setHint("No matches");
-    } catch {
-      setResults([]);
-      setHint("Search failed");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const runSearch = useCallback(
+    async (q) => {
+      const t = q.trim();
+      if (t.length < 2) {
+        setResults([]);
+        setHint(t.length ? "Type at least 2 characters" : "");
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setHint("");
+      try {
+        const endpoint = isSimple
+          ? `/api/dashboard/simple-search?q=${encodeURIComponent(t)}`
+          : `/api/dashboard/search?q=${encodeURIComponent(t)}`;
+        const res = await fetch(endpoint, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Search failed");
+        setResults(Array.isArray(data.results) ? data.results : []);
+        if (!data.results?.length) setHint("No matches");
+      } catch {
+        setResults([]);
+        setHint("Search failed");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [isSimple]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -78,7 +87,9 @@ export default function GlobalSearchModal({ open, onClose }) {
     <Modal open={open} onClose={onClose} title="Search" size="2xl">
       <div className="flex flex-col gap-3">
         <p className="text-xs text-secondary">
-          Leads, customers, motors, quotes, work orders, invoices, vendors, purchase orders
+          {isSimple
+            ? "Customers, leads, service proposals, invoices, purchase orders, inventory, vendors"
+            : "Leads, customers, motors, quotes, work orders, invoices, vendors, purchase orders"}
         </p>
         <div className="relative">
           <FiSearch

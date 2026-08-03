@@ -11,6 +11,7 @@ import {
   applySimpleServiceProposalInventoryLifecycle,
   releaseInventoryReservationsForSimple,
 } from "@/lib/inventory-service";
+import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -80,6 +81,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    const item = serializeSimplePortalDoc(doc);
     try {
       await applySimpleServiceProposalInventoryLifecycle(email, id, previous, doc);
     } catch (invErr) {
@@ -87,13 +89,20 @@ export async function PUT(request, context) {
       return NextResponse.json(
         {
           error: invErr.message || "Saved, but inventory reserve/consume failed",
-          item: serializeSimplePortalDoc(doc),
+          item,
         },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ ok: true, item: serializeSimplePortalDoc(doc) });
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "serviceProposals",
+      action: "updated",
+      resourceId: item.id,
+      data: item,
+    });
+    return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple service proposal error:", err);
     return NextResponse.json({ error: err.message || "Failed to update service proposal" }, { status: 500 });
@@ -128,6 +137,13 @@ export async function DELETE(request, context) {
     if (!deleted) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    void emitCrmResourceEvent({
+      ownerEmail: email,
+      collection: "serviceProposals",
+      action: "deleted",
+      resourceId: id,
+      data: serializeSimplePortalDoc(deleted),
+    });
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("Dashboard delete simple service proposal error:", err);

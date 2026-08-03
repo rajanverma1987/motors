@@ -71,4 +71,3 @@ export function toCsv(rows) {
   const matrix = Array.isArray(rows) ? rows : [];
   return matrix.map((r) => (Array.isArray(r) ? r : []).map(escapeCsvCell).join(",")).join("\r\n");
 }
-

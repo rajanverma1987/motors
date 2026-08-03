@@ -45,7 +45,7 @@ function LoginPageContent() {
     if (!mounted) return;
     if (user) {
       const dest = user.calculatorOnlyAccount
-        ? nextPath || "/dashboard/calculators"
+        ? nextPath || "/dashboards?tab=calculators"
         : afterLoginPath;
       router.replace(dest);
     }
@@ -65,7 +65,7 @@ function LoginPageContent() {
       const result = await login(form.email, form.password);
       if (result.ok) {
         const dest = result.user?.calculatorOnlyAccount
-          ? nextPath || "/dashboard/calculators"
+          ? nextPath || "/dashboards?tab=calculators"
           : afterLoginPath;
         router.push(dest);
         return;

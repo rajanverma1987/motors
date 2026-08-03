@@ -33,9 +33,9 @@ function Note({ children }) {
 function Panel({ title, children, className = "" }) {
   return (
     <section
-      className={`rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20 ${className}`}
+      className={`rounded-none border border-border bg-card/40 p-4 dark:bg-card/20 ${className}`}
     >
-      {title ? <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-title">{title}</h2> : null}
+      {title ? <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-title">{title}</h2> : null}
       <div className="flex flex-col gap-4">{children}</div>
     </section>
   );
@@ -43,7 +43,7 @@ function Panel({ title, children, className = "" }) {
 
 function ResultRow({ label, value, unit }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 dark:bg-muted/20">
+    <div className="flex flex-wrap items-baseline justify-between gap-2 rounded-none bg-muted/40 px-3 py-2 dark:bg-muted/20">
       <span className="text-sm text-secondary">{label}</span>
       <span className="font-mono text-sm font-semibold tabular-nums text-title">
         {value}
@@ -470,15 +470,18 @@ function DeltaWyePanel() {
   );
 }
 
-export default function CalculatorsPageClient() {
+/**
+ * Simple portal Calculators tab — shop calculators (moved from Classic /dashboard/calculators).
+ */
+export default function CalculatorsPanel() {
   const tabs = useMemo(
     () => [
       {
         id: "rewind_cost",
         label: "Rewind cost",
         children: (
-          <div className="flex flex-col gap-4">
-            <div className="max-w-3xl">
+          <div className="flex w-full max-w-full flex-col gap-4 md:max-w-[50%]">
+            <div>
               <h2 className="text-lg font-semibold text-title">Motor rewind &amp; repair cost calculator</h2>
               <p className="mt-1 text-sm text-secondary">
                 US ballpark pricing—the same model as the public{" "}
@@ -495,7 +498,7 @@ export default function CalculatorsPageClient() {
             </div>
             <MotorRewindCostCalculator
               variant="dashboard"
-              calculatorSourcePage="/dashboard/calculators"
+              calculatorSourcePage="/dashboards?tab=calculators"
             />
           </div>
         ),
@@ -550,15 +553,20 @@ export default function CalculatorsPageClient() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <header className="mb-6 shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Calculators</h1>
+      <header className="mb-4 shrink-0">
+        <h2 className="text-2xl font-semibold tracking-tight text-title">Calculators</h2>
         <p className="mt-1 max-w-[57.6rem] text-sm text-secondary">
           Motor math for estimates—confirm with code and nameplates in the field.
         </p>
       </header>
       <div className="min-h-0 flex-1 overflow-auto pb-8">
         <CalculatorSubscriptionGate>
-          <Tabs tabs={tabs} defaultTab="rewind_cost" listClassName="gap-x-0" />
+          <Tabs
+            tabs={tabs}
+            defaultTab="rewind_cost"
+            listClassName="!rounded-none gap-x-0"
+            tabButtonClassName="!rounded-none"
+          />
         </CalculatorSubscriptionGate>
       </div>
     </div>

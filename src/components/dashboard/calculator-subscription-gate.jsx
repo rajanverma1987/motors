@@ -27,7 +27,7 @@ export default function CalculatorSubscriptionGate({ children }) {
   }
 
   if (!user) {
-    return <CalculatorAccountGate nextPath="/dashboard/calculators" />;
+    return <CalculatorAccountGate nextPath="/dashboards?tab=calculators" />;
   }
 
   const calcOnlyPortal = !!(user?.calculatorOnlyAccount || access.calculatorOnlyTier);
@@ -61,7 +61,7 @@ export default function CalculatorSubscriptionGate({ children }) {
         open={paywallOpen}
         onClose={() => setPaywallOpen(false)}
         showSingleUse={false}
-        nextPath="/dashboard/calculators"
+        nextPath="/dashboards?tab=calculators"
         pricing={{ ...access.pricing, loginUrl: access.loginUrl, registerUrl: access.registerUrl }}
       />
     </div>

@@ -4,6 +4,7 @@ import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-
 import { formatMoney } from "@/lib/format-currency";
 import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-payment-footer";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
+import PrintSheetContinuedNotes from "@/components/dashboard/print-sheet-continued-notes";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
@@ -205,7 +206,7 @@ export default function InvoicePrintPreview({
         </section>
       )}
 
-      <section className="mb-2">
+      <section className="print-totals-block mb-2 break-inside-avoid">
         <h2 className={sectionLabel}>Totals</h2>
         <table className="w-full border border-neutral-300 text-xs tabular-nums print:text-[11px]">
           <tbody>
@@ -235,19 +236,26 @@ export default function InvoicePrintPreview({
         </table>
       </section>
 
-      <section className="mb-2 break-inside-avoid">
-        <h2 className={sectionLabel}>{notesMode === "internal" ? "Notes" : "Customer notes"}</h2>
-        <p className="min-h-[2.5rem] whitespace-pre-wrap rounded border border-neutral-200 bg-neutral-50/60 px-2 py-1.5 text-xs leading-relaxed text-neutral-900">
-          {notesText || "—"}
-        </p>
-      </section>
-
-      <InvoicePaymentFooterPrint
-        paymentOptions={invoicePaymentOptions}
-        thankYouNote={invoiceThankYouNote}
-        variant="dashboard"
-        compact
-      />
+      {notesText ? (
+        <PrintSheetContinuedNotes
+          notesHeading={notesMode === "internal" ? "Notes" : "Customer notes"}
+          notesText={notesText}
+        >
+          <InvoicePaymentFooterPrint
+            paymentOptions={invoicePaymentOptions}
+            thankYouNote={invoiceThankYouNote}
+            variant="dashboard"
+            compact
+          />
+        </PrintSheetContinuedNotes>
+      ) : (
+        <InvoicePaymentFooterPrint
+          paymentOptions={invoicePaymentOptions}
+          thankYouNote={invoiceThankYouNote}
+          variant="dashboard"
+          compact
+        />
+      )}
     </div>
   );
 }

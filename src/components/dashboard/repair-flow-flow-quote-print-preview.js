@@ -93,6 +93,7 @@ export default function RepairFlowFlowQuotePrintPreview({ open, jobId, onClose, 
     style.id = styleId;
     style.textContent = `
       @media print {
+        @page { size: letter; background: #ffffff; }
         body * { visibility: hidden; }
         .repair-flow-quote-print-root,
         .repair-flow-quote-print-root * { visibility: visible; }

@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  serverExternalPackages: ["pdfkit"],
+  serverExternalPackages: ["pdfkit", "exceljs"],
   /** Runtime uploads live under public/uploads — never bundle them into server traces. */
   outputFileTracingExcludes: {
     "*": ["./public/uploads/**/*"],

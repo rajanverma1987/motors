@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { FiLayers, FiPlus, FiUser, FiUserPlus } from "react-icons/fi";
+import { FiCopy, FiLayers, FiPlus, FiUser, FiUserPlus } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -17,6 +17,8 @@ import {
 } from "@/lib/customer-record-form";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { parseSimpleOpenParam } from "@/lib/simple-portal-open";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
 
@@ -87,6 +89,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [saving, setSaving] = useState(false);
   const [leadDetail, setLeadDetail] = useState(null);
   const [convertingFromLeadId, setConvertingFromLeadId] = useState(null);
+  const [copyingPortalId, setCopyingPortalId] = useState("");
   const lastHandledCreateNonceRef = useRef(createNonce);
 
   const loadAll = useCallback(
@@ -215,6 +218,63 @@ export default function CustomersPanel({ createNonce = 0 }) {
     },
     [openEditCustomer]
   );
+
+  const handleCopyPortalLink = useCallback(
+    async (customerId) => {
+      const id = String(customerId || "").trim();
+      if (!id || copyingPortalId) return;
+      setCopyingPortalId(id);
+      try {
+        const res = await fetch(
+          `/api/dashboard/customer-portal/link?customerId=${encodeURIComponent(id)}`,
+          { credentials: "include", cache: "no-store" }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to get link");
+        const url = String(data.url || "").trim();
+        if (!url) throw new Error("Portal link was empty");
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(url);
+          await alert({
+            title: "Copied",
+            message: "Customer portal link copied to clipboard.",
+          });
+        } else {
+          window.prompt("Copy this customer portal link:", url);
+        }
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to copy portal link",
+          variant: "danger",
+        });
+      } finally {
+        setCopyingPortalId("");
+      }
+    },
+    [alert, copyingPortalId]
+  );
+
+  const handleDeepLinkOpen = useCallback(
+    (rawOpen) => {
+      const { kind, id } = parseSimpleOpenParam(rawOpen);
+      if (!id) return true;
+      if (kind === "lead") {
+        const lead = leadRows.find((r) => String(r.id) === id);
+        if (lead) openRow(lead);
+        return true;
+      }
+      const customer = customerRows.find((r) => String(r.id) === id);
+      if (customer) openRow(customer);
+      return true;
+    },
+    [leadRows, customerRows, openRow]
+  );
+
+  useSimpleOpenParam({
+    ready: !loading,
+    onOpen: handleDeepLinkOpen,
+  });
 
   const closeModal = () => {
     if (saving) return;
@@ -345,18 +405,36 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const columns = useMemo(
     () => [
       {
-        key: "recordType",
-        label: "Type",
-        sortable: true,
-        render: (v) => {
-          const isLead = v === TYPE_LEAD;
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-14",
+        render: (_, row) => {
+          if (row.recordType === TYPE_LEAD) return null;
+          const busy = copyingPortalId === row.id;
           return (
-            <Badge
-              variant={isLead ? "warning" : "primary"}
-              className="rounded-full px-2.5 py-0.5 text-xs"
-            >
-              {isLead ? TYPE_LEAD : TYPE_CUSTOMER}
-            </Badge>
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                className="rounded p-0.5 text-primary hover:bg-primary/10 disabled:opacity-50"
+                title="Copy customer portal link"
+                aria-label="Copy customer portal link"
+                disabled={Boolean(copyingPortalId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleCopyPortalLink(row.id);
+                }}
+              >
+                {busy ? (
+                  <span
+                    className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                    aria-hidden
+                  />
+                ) : (
+                  <FiCopy className="h-3.5 w-3.5" aria-hidden />
+                )}
+              </button>
+            </div>
           );
         },
       },
@@ -364,15 +442,26 @@ export default function CustomersPanel({ createNonce = 0 }) {
         key: "companyName",
         label: "Company",
         sortable: true,
-        render: (v, row) => (
-          <button
-            type="button"
-            className="font-medium text-primary hover:underline"
-            onClick={() => openRow(row)}
-          >
-            {v || "—"}
-          </button>
-        ),
+        render: (v, row) => {
+          const isLead = row.recordType === TYPE_LEAD;
+          return (
+            <div className="flex min-w-0 items-center gap-1.5">
+              <Badge
+                variant={isLead ? "warning" : "primary"}
+                className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
+              >
+                {isLead ? TYPE_LEAD : TYPE_CUSTOMER}
+              </Badge>
+              <button
+                type="button"
+                className="min-w-0 truncate font-medium text-primary hover:underline"
+                onClick={() => openRow(row)}
+              >
+                {v || "—"}
+              </button>
+            </div>
+          );
+        },
       },
       {
         key: "primaryContactName",
@@ -436,7 +525,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
         render: (v) => v || "—",
       },
     ],
-    [openRow]
+    [copyingPortalId, handleCopyPortalLink, openRow]
   );
 
   const emptyMessage = (() => {
@@ -509,9 +598,23 @@ export default function CustomersPanel({ createNonce = 0 }) {
         showClose={!saving}
         closeOnOutsideClick={false}
         actions={
-          <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
-            {saving ? "Saving…" : convertingFromLeadId ? "Create customer" : "Save"}
-          </Button>
+          <>
+            {editingId ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving || Boolean(copyingPortalId)}
+                onClick={() => void handleCopyPortalLink(editingId)}
+              >
+                <FiCopy className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {copyingPortalId === editingId ? "Copying…" : "Copy portal link"}
+              </Button>
+            ) : null}
+            <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : convertingFromLeadId ? "Create customer" : "Save"}
+            </Button>
+          </>
         }
       >
         <Form

@@ -34,6 +34,7 @@ import {
   SIMPLE_PO_TYPE_SHOP,
   simplePoTypeLabel,
 } from "@/lib/simple-purchase-order-form";
+import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 
 const FILTER_ALL = "";
 const FILTER_PAID = "Paid";
@@ -258,6 +259,27 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     setModalMode("view");
     setModalOpen(true);
   };
+
+  useSimpleOpenParam({
+    ready: !loading,
+    onOpen: useCallback(
+      (openId) => {
+        const row = rows.find((r) => String(r.id) === openId);
+        if (row) openEdit(row);
+        return true;
+      },
+      [rows]
+    ),
+  });
+
+  useSimpleOpenParam({
+    ready: true,
+    paramKey: "openVendor",
+    onOpen: useCallback((vendorId) => {
+      if (vendorId) setOpenVendorId(vendorId);
+      return true;
+    }, []),
+  });
 
   const closeModal = () => {
     setModalOpen(false);

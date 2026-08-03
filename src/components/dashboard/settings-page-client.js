@@ -11,7 +11,6 @@ import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import SettingsDataUploadPanel from "@/components/dashboard/settings-data-upload-panel";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
 import {
   USER_SETTINGS_DEFAULTS,
@@ -739,11 +738,6 @@ export default function SettingsPageClient() {
         ),
       },
       {
-        id: "data-upload",
-        label: "Data Upload",
-        children: <SettingsDataUploadPanel />,
-      },
-      {
         id: "more",
         label: "More",
         children: (
@@ -817,13 +811,11 @@ export default function SettingsPageClient() {
 
       <Tabs defaultTab="account" value={activeTab} onChange={setActiveTab} tabs={settingsTabs} />
 
-      {activeTab !== "data-upload" ? (
-        <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
-          <Button variant="primary" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </Button>
-        </div>
-      ) : null}
+      <div className="sticky bottom-0 -mx-4 border-t border-border bg-bg/95 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
+        <Button variant="primary" onClick={handleSave} disabled={saving}>
+          {saving ? "Saving…" : "Save changes"}
+        </Button>
+      </div>
     </div>
   );
 }

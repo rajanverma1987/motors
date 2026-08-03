@@ -1,0 +1,133 @@
+import { formatDateForCurrency } from "@/lib/format-date";
+import {
+  parseMoneyInput,
+  sumLinePrices,
+  RECORD_TYPE_INVOICE,
+  RECORD_TYPE_JOB,
+  RECORD_TYPE_RFQ,
+} from "@/lib/simple-service-proposal-form";
+import {
+  computePoFormTotals,
+  computePoPaymentSummary,
+  resolvePoStatus,
+  simplePoTypeLabel,
+} from "@/lib/simple-purchase-order-form";
+
+function normalizeYmd(raw) {
+  const s = String(raw ?? "").trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+}
+
+/**
+ * @param {unknown} value — YYYY-MM-DD string or Date
+ */
+export function toYmd(value) {
+  if (!value) return "";
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return "";
+    return value.toISOString().slice(0, 10);
+  }
+  const s = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return "";
+}
+
+/**
+ * @param {unknown} dayValue
+ * @param {string} fromYmd
+ * @param {string} toYmd
+ */
+export function dayInRange(dayValue, fromYmd, toYmd) {
+  const from = normalizeYmd(fromYmd);
+  const to = normalizeYmd(toYmd);
+  if (!from && !to) return true;
+  if (from && to && from > to) return true;
+  const day = toYmd(dayValue);
+  if (!day) return false;
+  if (from && day < from) return false;
+  if (to && day > to) return false;
+  return true;
+}
+
+/**
+ * Prefer document date field, then createdAt.
+ * @param {Record<string, unknown>} doc
+ * @param {string[]} fieldOrder
+ */
+export function resolveDocDay(doc, fieldOrder = ["dateCreated", "date", "poCutDate", "createdAt"]) {
+  for (const key of fieldOrder) {
+    const day = toYmd(doc?.[key]);
+    if (day) return day;
+  }
+  return "";
+}
+
+export function computeSpMoney(doc) {
+  const scopeTotal = sumLinePrices(doc?.scopeDetails);
+  const otherTotal = sumLinePrices(doc?.otherItems);
+  const showTax = doc?.customerTaxExempt === false;
+  const taxPct = showTax ? parseMoneyInput(doc?.taxPercent) : 0;
+  const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;
+  const grandTotal = scopeTotal + otherTotal + taxAmount;
+  return { scopeTotal, otherTotal, taxAmount, grandTotal };
+}
+
+export function computePoMoney(doc) {
+  const totals = computePoFormTotals(doc?.lineItems);
+  const pay = computePoPaymentSummary(doc?.payments, totals.grandTotal);
+  return {
+    grandTotal: totals.grandTotal,
+    amountPaid: pay.amountPaid,
+    unpaid: pay.balance,
+    paymentStatus: pay.paymentStatus || doc?.paymentStatus || "Unpaid",
+    poStatus: resolvePoStatus(doc?.lineItems),
+    poTypeLabel: simplePoTypeLabel(doc),
+    latestPaymentDate: pay.latestPaymentDate || "",
+  };
+}
+
+export function isInvoiceSp(doc) {
+  return String(doc?.recordType || "").toUpperCase() === RECORD_TYPE_INVOICE;
+}
+
+export function isPipelineSp(doc) {
+  const t = String(doc?.recordType || RECORD_TYPE_RFQ).toUpperCase();
+  return t === RECORD_TYPE_RFQ || t === RECORD_TYPE_JOB;
+}
+
+export function moneyCell(n) {
+  const value = Number.isFinite(n) ? n : 0;
+  return Math.round(value * 100) / 100;
+}
+
+export function boolLabel(v) {
+  return v ? "Yes" : "No";
+}
+
+/**
+ * Excel cell date in the shop’s country format (from settings currency).
+ * Empty values stay blank (not "—").
+ * @param {unknown} value
+ * @param {string} [currencyCode]
+ */
+export function formatReportDate(value, currencyCode) {
+  if (value == null || value === "") return "";
+  const formatted = formatDateForCurrency(value, currencyCode || "USD");
+  return formatted === "—" ? "" : formatted;
+}
+
+/** Rough bucket for SP doc status filter (open vs closed). */
+export function matchPipelineStatusBucket(status, bucket) {
+  const key = String(bucket || "").trim().toLowerCase();
+  if (!key) return true;
+  const s = String(status || "").trim().toLowerCase();
+  const closed =
+    /\b(closed|accepted|lost|rejected|cancelled|canceled|void|won|complete|completed|declined)\b/.test(
+      s
+    );
+  if (key === "closed") return closed;
+  if (key === "open") return !closed;
+  return true;
+}

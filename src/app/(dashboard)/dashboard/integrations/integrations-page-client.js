@@ -9,29 +9,9 @@ import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
-const COLLECTION_NAMES = [
-  "customers",
-  "motors",
-  "quotes",
-  "workOrders",
-  "invoices",
-  "inventoryItems",
-  "vendors",
-  "purchaseOrders",
-  "employees",
-  "logisticsEntries",
-  "leads",
-  "supportTickets",
-  "marketplaceItems",
-  "marketplaceOrders",
-  "policies",
-  "directoryListings",
-];
+import { INTEGRATION_WEBHOOK_EVENT_NAMES } from "@/lib/integration-collection-names";
 
-const EVENT_TEMPLATES = COLLECTION_NAMES.flatMap((c) => [
-  `crm.${c}.created`,
-  `crm.${c}.updated`,
-]);
+const EVENT_TEMPLATES = INTEGRATION_WEBHOOK_EVENT_NAMES;
 
 export default function IntegrationsPageClient() {
   const toast = useToast();

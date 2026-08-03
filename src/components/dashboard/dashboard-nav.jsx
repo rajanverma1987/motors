@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { FiLogOut, FiSearch, FiSettings } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
@@ -10,14 +10,23 @@ import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switche
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
+import { isSimplePortalPath } from "@/lib/portal-view";
+import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 
 export default function DashboardNav() {
   const { user, logout } = useAuth();
   const { settings } = useUserSettings();
+  const pathname = usePathname();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
   const calculatorOnly = !!user?.calculatorOnlyAccount;
-  const homeHref = calculatorOnly ? "/dashboard/calculators" : DEFAULT_PORTAL_LANDING_PATH;
+  const simplePortal = isSimplePortalPath(pathname);
+  const homeHref = calculatorOnly
+    ? "/dashboards?tab=calculators"
+    : simplePortal
+      ? SIMPLE_PORTAL_PATH
+      : DEFAULT_PORTAL_LANDING_PATH;
+  const settingsHref = simplePortal ? `${SIMPLE_PORTAL_PATH}/settings` : "/dashboard/settings";
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -44,19 +53,20 @@ export default function DashboardNav() {
         <Link
           href={homeHref}
           className="flex min-w-0 max-w-[min(100%,28rem)] shrink-0 items-center gap-3"
-          title={user?.email}
+          title={user?.shopName || user?.email || "Dashboard"}
         >
           {settings?.logoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={settings.logoUrl}
-              alt=""
-              className="h-8 w-auto max-h-8 max-w-[100px] object-contain object-left"
+              alt={user?.shopName || "Shop logo"}
+              className="h-8 w-auto max-h-8 max-w-[160px] object-contain object-left"
             />
-          ) : null}
-          <span className="truncate text-lg font-semibold text-title hover:text-primary">
-            {user?.shopName || "Dashboard"}
-          </span>
+          ) : (
+            <span className="truncate text-lg font-semibold text-title hover:text-primary">
+              {user?.shopName || "Dashboard"}
+            </span>
+          )}
         </Link>
         <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
           <DashboardViewSwitcher />
@@ -83,7 +93,7 @@ export default function DashboardNav() {
               </button>
               <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
               <Link
-                href="/dashboard/settings"
+                href={settingsHref}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white"
                 title="Settings"
                 aria-label="Settings"

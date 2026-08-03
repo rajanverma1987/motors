@@ -66,7 +66,7 @@ export default function CalculatorsSubscriptionPageClient() {
                 <FiCheck className="h-4 w-4 shrink-0" aria-hidden />
                 Monthly calculators access active
               </span>
-              <Link href="/dashboard/calculators" className="text-sm font-medium text-primary hover:underline">
+              <Link href="/dashboards?tab=calculators" className="text-sm font-medium text-primary hover:underline">
                 Open dashboard calculators →
               </Link>
             </div>
@@ -84,7 +84,7 @@ export default function CalculatorsSubscriptionPageClient() {
             </div>
           ) : user && access.authenticated && access.fullCrmIncludesCalculators ? (
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link href="/dashboard/calculators" className="text-sm font-medium text-primary hover:underline">
+              <Link href="/dashboards?tab=calculators" className="text-sm font-medium text-primary hover:underline">
                 Open dashboard calculators (included with your shop account) →
               </Link>
             </div>
@@ -99,7 +99,7 @@ export default function CalculatorsSubscriptionPageClient() {
         </h2>
         <p className="mt-2 text-sm text-secondary">
           Previews of each tab in{" "}
-          <Link href="/dashboard/calculators" className="font-medium text-primary hover:underline">
+          <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
             Dashboard → Calculators
           </Link>
           . Log in to run them after you subscribe.

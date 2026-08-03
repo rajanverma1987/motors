@@ -22,7 +22,7 @@ const PROTECTED_PAGE_COPY = {
     detail:
       "Plan, assign, and track repair work by stage with technician updates, turnaround visibility, and linked customer jobs.",
   },
-  "/dashboard/calculators": {
+  "/dashboards": {
     title: "Technician calculators",
     detail:
       "Built-in calculation tools for day-to-day shop-floor decisions so technicians can validate values quickly during repair and testing.",

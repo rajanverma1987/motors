@@ -10,7 +10,7 @@ import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-f
 import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
-import SalesCommissionCreateModal from "@/components/dashboard/sales-commission-create-modal";
+import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleMotorLogisticsModal, {
   KIND_RECEIVING,
@@ -572,6 +572,15 @@ export default function ServiceProposalFormModal({
       await alert({ title: "Error", message: "Select a customer before copying.", variant: "danger" });
       return;
     }
+    const ok = await confirm({
+      title: "Copy & create new?",
+      message:
+        "This creates a new RFQ from the current record (new document number, no attachments). Continue?",
+      confirmLabel: "Copy & Create New",
+      cancelLabel: "Cancel",
+    });
+    if (!ok) return;
+
     setCopying(true);
     try {
       const cloned = cloneServiceProposalAsNewRfq(form);
@@ -1202,7 +1211,7 @@ export default function ServiceProposalFormModal({
         </div>
       </Modal>
 
-      <SalesCommissionCreateModal
+      <SimpleSalesCommissionModal
         open={commissionOpen && !!commissionPreset?.quoteId}
         onClose={() => setCommissionOpen(false)}
         presetQuote={commissionPreset}

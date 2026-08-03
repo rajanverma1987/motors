@@ -195,13 +195,42 @@ body.simple-dashboards-square-inputs [role="button"] {
   border-radius: 0 !important;
 }
 
-/* Dashboard display zoom — reset for print so layouts match paper */
+/* Dashboard display zoom — reset for print so layouts match paper.
+   Print is always light-theme (ignore UI dark mode). */
 @media print {
   html {
     zoom: 1 !important;
     font-size: 95% !important;
+    color-scheme: light !important;
   }
   html[data-app-zoom] {
     --app-zoom-factor: 1 !important;
+  }
+  /* Force light design tokens even when html still has .dark */
+  html.dark {
+    --bg: 32 22% 99%;
+    --card: 30 18% 98%;
+    --form-bg: 28 12% 96%;
+    --text: 25 35% 12%;
+    --title: 22 40% 9%;
+    --primary: 26 52% 38%;
+    --secondary: 24 14% 40%;
+    --border: 28 14% 91%;
+    --accent: 24 95% 53%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
+    --danger: 0 72% 51%;
+  }
+  html,
+  body {
+    background: #ffffff !important;
+    color: #111111 !important;
+    color-scheme: light !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  @page {
+    size: letter;
+    background: #ffffff;
   }
 }

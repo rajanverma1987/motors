@@ -70,7 +70,7 @@ const PEOPLE_NAV = [
 ];
 
 const TOOLS_NAV = [
-  { href: "/dashboard/calculators", label: "Calculators", icon: FiSliders },
+  { href: "/dashboards?tab=calculators", label: "Calculators", icon: FiSliders },
   { href: "/dashboard/subscription", label: "Subscription", icon: FiRepeat },
   { href: "/dashboard/reports", label: "Reports", icon: FiBarChart2 },
   { href: "/dashboard/integrations", label: "API integrations", icon: FiKey },
@@ -90,7 +90,7 @@ const NAV_GROUPS = [
   { title: "Tools & reports", items: TOOLS_NAV },
 ];
 
-const CALCULATOR_ONLY_NAV = [{ href: "/dashboard/calculators", label: "Calculators", icon: FiSliders }];
+const CALCULATOR_ONLY_NAV = [{ href: "/dashboards?tab=calculators", label: "Calculators", icon: FiSliders }];
 
 function navItemIsActive(pathname, href) {
   return pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));

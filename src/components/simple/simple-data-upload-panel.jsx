@@ -4,74 +4,24 @@ import { useMemo, useRef, useState } from "react";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
-import { useToast } from "@/components/toast-provider";
-import { useConfirm } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { FiDownload, FiUpload, FiFilePlus, FiTrash2 } from "react-icons/fi";
 
-const IMPORT_TREE = [
-  {
-    collection: "customers",
-    label: "Customers",
-    children: [
-      { collection: "customerAdditionalContacts", label: "Additional Contacts", children: [] },
-      {
-        collection: "motors",
-        label: "Motors",
-        children: [
-          {
-            collection: "quotes",
-            label: "RFQs",
-            children: [
-              { collection: "quoteScopeLines", label: "RFQ Scope Lines (labor)", children: [] },
-              { collection: "quotePartLines", label: "RFQ Other Cost Lines", children: [] },
-              { collection: "workOrders", label: "Work Orders", children: [] },
-              { collection: "invoices", label: "Invoices", children: [] },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  {
-    collection: "vendors",
-    label: "Vendors",
-    children: [{ collection: "purchaseOrders", label: "Purchase Orders", children: [] }],
-  },
-  { collection: "employees", label: "Employees", children: [] },
-  { collection: "salesPersons", label: "Sales Persons", children: [] },
-  { collection: "salesCommissions", label: "Sales commission", children: [] },
-  { collection: "inventoryItems", label: "Inventory Items", children: [] },
-  {
-    collection: "repairFlowJobs",
-    label: "Repair Flow Jobs",
-    children: [
-      { collection: "repairFlowQuotes", label: "Repair Flow Quotes", children: [] },
-      { collection: "repairFlowInspections", label: "Repair Flow Inspections", children: [] },
-    ],
-  },
+/** Flat parent→child order for Simple import collections. */
+const IMPORT_COLLECTIONS = [
+  { collection: "customers", label: "Customers" },
+  { collection: "vendors", label: "Vendors" },
+  { collection: "inventoryItems", label: "Inventory Items" },
+  { collection: "employees", label: "Employees" },
+  { collection: "salesPersons", label: "Sales Persons" },
+  { collection: "simpleServiceProposals", label: "Service Proposals" },
+  { collection: "simplePurchaseOrders", label: "Purchase Orders" },
 ];
 
-function flattenTree(nodes, level = 0, parentCollection = "") {
-  const out = [];
-  for (const n of nodes) {
-    out.push({
-      collection: n.collection,
-      label: n.label,
-      level,
-      parentCollection,
-      hasChildren: Array.isArray(n.children) && n.children.length > 0,
-    });
-    if (n.children?.length) {
-      out.push(...flattenTree(n.children, level + 1, n.collection));
-    }
-  }
-  return out;
-}
-
-export default function SettingsDataUploadPanel() {
-  const toast = useToast();
+export default function SimpleDataUploadPanel() {
+  const alert = useAlert();
   const confirm = useConfirm();
-  const rows = useMemo(() => flattenTree(IMPORT_TREE), []);
+  const rows = useMemo(() => IMPORT_COLLECTIONS, []);
   const [files, setFiles] = useState({});
   const [busyByCollection, setBusyByCollection] = useState({});
   const [statsByCollection, setStatsByCollection] = useState({});
@@ -91,7 +41,7 @@ export default function SettingsDataUploadPanel() {
   async function ensureCollectionsLoaded() {
     if (loadedCollections) return allowedCollections;
     try {
-      const res = await fetch("/api/dashboard/import/template", { cache: "no-store" });
+      const res = await fetch("/api/dashboard/simple-import/template", { cache: "no-store" });
       const json = await res.json();
       const list = Array.isArray(json?.collections) ? json.collections.map((x) => String(x.value)) : [];
       const next = new Set(list);
@@ -99,7 +49,11 @@ export default function SettingsDataUploadPanel() {
       setLoadedCollections(true);
       return next;
     } catch {
-      toast.error("Could not load import collections list.");
+      await alert({
+        title: "Error",
+        message: "Could not load import collections list.",
+        variant: "danger",
+      });
       return new Set();
     }
   }
@@ -107,10 +61,10 @@ export default function SettingsDataUploadPanel() {
   async function downloadTemplate(collection) {
     await ensureCollectionsLoaded();
     try {
-      const res = await fetch(`/api/dashboard/import/template?collection=${encodeURIComponent(collection)}`, {
-        method: "GET",
-        cache: "no-store",
-      });
+      const res = await fetch(
+        `/api/dashboard/simple-import/template?collection=${encodeURIComponent(collection)}`,
+        { method: "GET", cache: "no-store" },
+      );
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d?.error || "Template download failed");
@@ -124,7 +78,11 @@ export default function SettingsDataUploadPanel() {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      toast.error(err.message || "Template download failed");
+      await alert({
+        title: "Error",
+        message: err.message || "Template download failed",
+        variant: "danger",
+      });
     }
   }
 
@@ -132,7 +90,11 @@ export default function SettingsDataUploadPanel() {
     await ensureCollectionsLoaded();
     const file = files[collection];
     if (!file) {
-      toast.error("Please choose a CSV file first.");
+      await alert({
+        title: "Missing file",
+        message: "Please choose a CSV file first.",
+        variant: "danger",
+      });
       return;
     }
     const rowMeta = rows.find((r) => r.collection === collection);
@@ -151,7 +113,7 @@ export default function SettingsDataUploadPanel() {
     }, 250);
     try {
       const csvText = await file.text();
-      const res = await fetch("/api/dashboard/import/run", {
+      const res = await fetch("/api/dashboard/simple-import/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ collection, csvText }),
@@ -176,13 +138,24 @@ export default function SettingsDataUploadPanel() {
         a.download = `${collection}-invalid-records.csv`;
         a.click();
         URL.revokeObjectURL(url);
-        toast.error("Invalid records are not imported. Please fix in the CSV and re-upload.");
+        await alert({
+          title: "Import completed with errors",
+          message: "Invalid records are not imported. Please fix in the CSV and re-upload.",
+          variant: "danger",
+        });
       } else {
-        toast.success(`${json.importedRows ?? 0} rows imported for ${collection}.`);
+        await alert({
+          title: "Import complete",
+          message: `${json.importedRows ?? 0} rows imported for ${rowMeta?.label || collection}.`,
+        });
       }
     } catch (err) {
       setUploadModal((prev) => ({ ...prev, running: false }));
-      toast.error(err.message || "Import failed");
+      await alert({
+        title: "Error",
+        message: err.message || "Import failed",
+        variant: "danger",
+      });
     } finally {
       clearInterval(tick);
       setTimeout(() => setBusyByCollection((p) => ({ ...p, [collection]: false })), 150);
@@ -194,7 +167,7 @@ export default function SettingsDataUploadPanel() {
     const first = await confirm({
       title: "Clear all collections?",
       message:
-        "This will permanently delete ALL records from Data Upload collections for your account. Do you want to continue?",
+        "This will permanently delete ALL records from Simple Data Upload collections for your account. Do you want to continue?",
       confirmLabel: "Continue",
       cancelLabel: "Cancel",
       variant: "danger",
@@ -211,19 +184,26 @@ export default function SettingsDataUploadPanel() {
 
     setClearingAll(true);
     try {
-      const res = await fetch("/api/dashboard/import/clear", {
+      const res = await fetch("/api/dashboard/simple-import/clear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirmPhrase: "CLEAR_ALL_IMPORT_DATA" }),
+        body: JSON.stringify({ confirmPhrase: "CLEAR_ALL_SIMPLE_IMPORT_DATA" }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(json?.error || "Failed to clear collections.");
 
       setFiles({});
       setStatsByCollection({});
-      toast.success(`Cleared records successfully (${json?.deletedCount || 0} deleted).`);
+      await alert({
+        title: "Cleared",
+        message: `Cleared records successfully (${json?.deletedCount || 0} deleted).`,
+      });
     } catch (err) {
-      toast.error(err.message || "Failed to clear collections.");
+      await alert({
+        title: "Error",
+        message: err.message || "Failed to clear collections.",
+        variant: "danger",
+      });
     } finally {
       setClearingAll(false);
     }
@@ -252,11 +232,11 @@ export default function SettingsDataUploadPanel() {
 
     setClearingByCollection((p) => ({ ...p, [collection]: true }));
     try {
-      const res = await fetch("/api/dashboard/import/clear", {
+      const res = await fetch("/api/dashboard/simple-import/clear", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          confirmPhrase: "CLEAR_ALL_IMPORT_DATA",
+          confirmPhrase: "CLEAR_ALL_SIMPLE_IMPORT_DATA",
           collection,
         }),
       });
@@ -268,9 +248,16 @@ export default function SettingsDataUploadPanel() {
         delete next[collection];
         return next;
       });
-      toast.success(`Deleted ${label} data (${json?.deletedCount || 0} affected).`);
+      await alert({
+        title: "Deleted",
+        message: `Deleted ${label} data (${json?.deletedCount || 0} affected).`,
+      });
     } catch (err) {
-      toast.error(err.message || `Failed to clear ${label}.`);
+      await alert({
+        title: "Error",
+        message: err.message || `Failed to clear ${label}.`,
+        variant: "danger",
+      });
     } finally {
       setClearingByCollection((p) => ({ ...p, [collection]: false }));
     }
@@ -281,10 +268,9 @@ export default function SettingsDataUploadPanel() {
       <FormContainer>
         <FormSectionTitle as="h2">Data Upload</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Import data collection-by-collection in parent-child order. Download the template, fill it, upload CSV, and
-          only valid records will be imported. Invalid rows are exported immediately with error reasons. RFQ templates
-          match the RFQ page: write-up status, tax fields, scope lines (labor), other-cost lines, then work orders or
-          invoices linked by <span className="font-medium text-title">quote_external_ref</span>.
+          Import Simple portal data collection-by-collection in parent→child order. Download the template, fill it,
+          upload CSV, and only valid records will be imported. Invalid rows are exported immediately with error
+          reasons. Import customers and vendors before service proposals and purchase orders.
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
           <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>
@@ -300,8 +286,8 @@ export default function SettingsDataUploadPanel() {
           </Button>
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
-          Recommended sequence: parent records first (for example Customers), then child records (Motors, RFQs, scope /
-          other-cost line items, then work orders or invoices).
+          Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
+          Purchase Orders.
         </div>
         <p className="mb-4 text-xs text-secondary">
           Use the <FiFilePlus className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> icon to choose a CSV file, then{" "}
@@ -309,23 +295,15 @@ export default function SettingsDataUploadPanel() {
         </p>
         <div className="space-y-4">
           {rows.map((row) => {
-            const levelPad = row.level * 18;
             const busy = !!busyByCollection[row.collection];
             const clearingOne = !!clearingByCollection[row.collection];
             const stats = statsByCollection[row.collection];
             const file = files[row.collection] || null;
             return (
-              <div
-                key={row.collection}
-                className="rounded-lg border border-border bg-bg p-4 shadow-sm"
-                style={{ marginLeft: `${levelPad}px` }}
-              >
+              <div key={row.collection} className="rounded-lg border border-border bg-bg p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-title">
-                      {row.label}
-                      {row.hasChildren ? <span className="ml-2 text-xs text-secondary">(parent)</span> : null}
-                    </p>
+                    <p className="font-medium text-title">{row.label}</p>
                     <p className="text-xs text-secondary">Collection key: {row.collection}</p>
                     {file ? <p className="mt-1 text-xs text-secondary">Selected file: {file.name}</p> : null}
                     {stats ? (
@@ -442,4 +420,3 @@ export default function SettingsDataUploadPanel() {
     </div>
   );
 }
-

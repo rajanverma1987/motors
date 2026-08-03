@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
-import { listImportCollections, templateCsvForCollection } from "@/lib/import/collections";
+import { listSimpleImportCollections, templateCsvForSimpleCollection } from "@/lib/simple-import/collections";
 
 export async function GET(request) {
   const user = await getPortalUserFromRequest(request);
@@ -10,9 +10,9 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const collection = String(searchParams.get("collection") || "").trim();
   if (!collection) {
-    return NextResponse.json({ collections: listImportCollections() });
+    return NextResponse.json({ collections: listSimpleImportCollections() });
   }
-  const csv = templateCsvForCollection(collection);
+  const csv = templateCsvForSimpleCollection(collection);
   if (!csv) {
     return NextResponse.json({ error: "Unknown collection" }, { status: 404 });
   }
@@ -25,4 +25,3 @@ export async function GET(request) {
     },
   });
 }
-

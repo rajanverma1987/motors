@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
-import { importCollectionCsv } from "@/lib/import/collections";
+import { importSimpleCollectionCsv } from "@/lib/simple-import/collections";
 
 export async function POST(request) {
   const user = await getPortalUserFromRequest(request);
@@ -20,15 +20,14 @@ export async function POST(request) {
     if (!csvText.trim()) {
       return NextResponse.json({ error: "csvText is required" }, { status: 400 });
     }
-    const result = await importCollectionCsv({
+    const result = await importSimpleCollectionCsv({
       collection,
       csvText,
       ownerEmail: user.email.trim().toLowerCase(),
     });
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    console.error("Import run error:", err);
+    console.error("Simple import run error:", err);
     return NextResponse.json({ error: err?.message || "Import failed" }, { status: 400 });
   }
 }
-

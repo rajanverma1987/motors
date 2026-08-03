@@ -54,7 +54,7 @@ export default function Navbar() {
   const { user, mounted } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const dashboardHref = user?.calculatorOnlyAccount
-    ? "/dashboard/calculators"
+    ? "/dashboards?tab=calculators"
     : DEFAULT_PORTAL_LANDING_PATH;
 
   useEffect(() => {

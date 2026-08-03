@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import PortalCustomerContent from "./portal-customer-content";
+import { UserSettingsValueProvider } from "@/contexts/user-settings-context";
 
 export default function PortalViewPage() {
   const params = useParams();
@@ -39,19 +40,32 @@ export default function PortalViewPage() {
     };
   }, [token]);
 
+  const seededSettings = useMemo(() => {
+    const shop = data?.shop || {};
+    return {
+      currency: shop.currency || "USD",
+      logoUrl: shop.logoUrl || "",
+      accountsBillingAddress: shop.accountsBillingAddress || "",
+      accountsShippingAddress: shop.accountsShippingAddress || "",
+      accountsPaymentTerms: shop.accountsPaymentTerms || "net30",
+      invoicePaymentOptions: shop.invoicePaymentOptions || "",
+      invoiceThankYouNote: shop.invoiceThankYouNote || "",
+    };
+  }, [data?.shop]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <p className="text-secondary">Loading…</p>
+      <div className="flex min-h-screen items-center justify-center bg-bg p-6">
+        <p className="text-sm text-secondary">Loading…</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-bg flex items-center justify-center p-6">
-        <div className="text-center max-w-[33.6rem]">
-          <p className="font-medium text-danger">{error || "Portal not found"}</p>
+      <div className="flex min-h-screen items-center justify-center bg-bg p-6">
+        <div className="max-w-md border border-border bg-card/40 p-6 text-center dark:bg-card/20">
+          <p className="font-semibold text-danger">{error || "Portal not found"}</p>
           <p className="mt-2 text-sm text-secondary">
             This link may be invalid or expired. Please contact your repair shop for a new link.
           </p>
@@ -60,5 +74,9 @@ export default function PortalViewPage() {
     );
   }
 
-  return <PortalCustomerContent data={data} />;
+  return (
+    <UserSettingsValueProvider settings={seededSettings}>
+      <PortalCustomerContent data={data} />
+    </UserSettingsValueProvider>
+  );
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { beginPrintLightTheme } from "@/lib/print-light-theme";
 
 const STYLE_ID = "document-print-offscreen-styles";
 const PRINT_ROOT_CLASS = "document-print-offscreen-root";
@@ -13,23 +14,57 @@ function injectDocumentPrintStyles() {
   style.id = STYLE_ID;
   style.textContent = `
     @media print {
-      body * { visibility: hidden !important; }
-      .${PRINT_ROOT_CLASS},
-      .${PRINT_ROOT_CLASS} * { visibility: visible !important; }
+      @page {
+        size: letter;
+        background: #ffffff;
+      }
+      html, body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        color: #111111 !important;
+        color-scheme: light !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      /* Hide app chrome; keep normal document flow for real multi-page breaks */
+      body > *:not(.${PRINT_ROOT_CLASS}) {
+        display: none !important;
+      }
       .${PRINT_ROOT_CLASS} {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
+        display: block !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
         width: 100% !important;
         height: auto !important;
-        min-height: 100% !important;
+        min-height: 0 !important;
+        max-height: none !important;
         overflow: visible !important;
         opacity: 1 !important;
-        background: white !important;
-        z-index: 2147483647 !important;
-        padding: 1rem !important;
+        background: #ffffff !important;
+        color: #111111 !important;
+        padding: 0.5in !important;
+        z-index: auto !important;
+        box-shadow: none !important;
+        border: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .${PRINT_ROOT_CLASS} * {
+        box-shadow: none !important;
+      }
+      .${PRINT_ROOT_CLASS} .print-totals-block {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      .${PRINT_ROOT_CLASS} .print-notes-block {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
+      }
+      .${PRINT_ROOT_CLASS} tr {
+        break-inside: avoid !important;
+        page-break-inside: avoid !important;
       }
     }
   `;
@@ -48,11 +83,15 @@ const OFFSCREEN_STYLE = {
   opacity: 0,
   pointerEvents: "none",
   zIndex: -1,
-  overflow: "hidden",
+  overflow: "visible",
+  background: "#ffffff",
+  color: "#111111",
+  colorScheme: "light",
 };
 
 /**
  * Off-screen print portal — opens the system print dialog only (no full-screen overlay).
+ * Always prints as a light document (ignores UI dark mode).
  */
 export default function DocumentPrintOffscreenPortal({ open, onClose, children }) {
   const onCloseRef = useRef(onClose);
@@ -65,7 +104,9 @@ export default function DocumentPrintOffscreenPortal({ open, onClose, children }
 
   useLayoutEffect(() => {
     if (!open) return;
+    const restoreTheme = beginPrintLightTheme();
     const handleAfterPrint = () => {
+      restoreTheme();
       onCloseRef.current?.();
     };
     window.addEventListener("afterprint", handleAfterPrint);
@@ -75,13 +116,19 @@ export default function DocumentPrintOffscreenPortal({ open, onClose, children }
     return () => {
       cancelAnimationFrame(id);
       window.removeEventListener("afterprint", handleAfterPrint);
+      restoreTheme();
     };
   }, [open]);
 
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className={`${PRINT_ROOT_CLASS} bg-white text-title`} style={OFFSCREEN_STYLE} aria-hidden="true">
+    <div
+      className={`${PRINT_ROOT_CLASS} bg-white text-neutral-900`}
+      style={OFFSCREEN_STYLE}
+      aria-hidden="true"
+      data-print-theme="light"
+    >
       {children}
     </div>,
     document.body
