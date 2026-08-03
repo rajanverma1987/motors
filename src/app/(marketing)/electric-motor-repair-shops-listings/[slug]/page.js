@@ -333,7 +333,7 @@ export default async function ListingDetailPage({ params }) {
                 Sign in to your IQMotorBase account to update this directory listing—services, service area, photos,
                 and contact details—whenever they change.{" "}
                 <Link
-                  href={`/login?next=${encodeURIComponent("/dashboard/directory-listing")}`}
+                  href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
                   className="font-medium text-primary underline-offset-2 hover:underline"
                 >
                   Sign in to edit your listing

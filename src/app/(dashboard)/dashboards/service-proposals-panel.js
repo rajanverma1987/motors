@@ -19,6 +19,11 @@ import Button from "@/components/ui/button";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import {
+  SIMPLE_SCREEN_FILTERS_CLASS,
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -807,17 +812,17 @@ export default function ServiceProposalsPanel({
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 flex-wrap items-start justify-between gap-2.5">
-        <div className="flex min-w-0 flex-wrap gap-2.5">{mainStatusCards.map(renderStatusCard)}</div>
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0 items-start justify-between`}>
+        <div className="flex min-w-0 flex-wrap gap-2">{mainStatusCards.map(renderStatusCard)}</div>
         {invoiceSummaryCards.length > 0 ? (
-          <div className="ml-auto flex min-w-0 flex-wrap justify-end gap-2.5">
+          <div className="ml-auto flex min-w-0 flex-wrap justify-end gap-2">
             {invoiceSummaryCards.map(renderStatusCard)}
           </div>
         ) : null}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table
           columns={columns}
           data={displayRows}

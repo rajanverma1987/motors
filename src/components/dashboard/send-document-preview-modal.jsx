@@ -270,7 +270,7 @@ export default function SendDocumentPreviewModal({
             >
               <p>{sendMeta.smtp.message}</p>
               <Link
-                href="/dashboard/settings"
+                href="/dashboards/settings"
                 className="mt-2 inline-block font-medium underline underline-offset-2"
                 onClick={() => onClose?.()}
               >

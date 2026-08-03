@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useId, useCallback, useEffect, useRef } from "react";
+import { useState, useId, useCallback, useEffect, useRef, useMemo } from "react";
 
 /**
  * Tabs – segmented control for category navigation.
@@ -17,6 +17,8 @@ import { useState, useId, useCallback, useEffect, useRef } from "react";
  * @param {string} [props.panelClassName]
  * @param {"segmented"|"pills"} [props.variant] – segmented (default) or legacy loose pills
  * @param {string} [props.ariaLabel]
+ * @param {boolean} [props.animatePanel=true] – slide-in animation when switching panels
+ * @param {boolean} [props.keepMounted=false] – keep visited panels mounted (no remount flicker/refetch)
  */
 export default function Tabs({
   tabs = [],
@@ -29,6 +31,8 @@ export default function Tabs({
   panelClassName = "flex flex-col pt-6",
   variant = "segmented",
   ariaLabel = "Sections",
+  animatePanel = true,
+  keepMounted = false,
 }) {
   const [internalValue, setInternalValue] = useState(defaultTab ?? tabs[0]?.id ?? "");
   const activeId = value !== undefined ? value : internalValue;
@@ -43,8 +47,20 @@ export default function Tabs({
   const prevIndexRef = useRef(tabs.findIndex((t) => t.id === activeId));
   const [slideDir, setSlideDir] = useState(0); // -1 left, 1 right
   const [animKey, setAnimKey] = useState(0);
+  const [visitedIds, setVisitedIds] = useState(() => new Set(activeId ? [activeId] : []));
 
   useEffect(() => {
+    if (!activeId) return;
+    setVisitedIds((prev) => {
+      if (prev.has(activeId)) return prev;
+      const next = new Set(prev);
+      next.add(activeId);
+      return next;
+    });
+  }, [activeId]);
+
+  useEffect(() => {
+    if (!animatePanel || keepMounted) return;
     const nextIndex = tabs.findIndex((t) => t.id === activeId);
     const prevIndex = prevIndexRef.current;
     if (nextIndex >= 0 && prevIndex >= 0 && nextIndex !== prevIndex) {
@@ -52,7 +68,7 @@ export default function Tabs({
       setAnimKey((k) => k + 1);
     }
     if (nextIndex >= 0) prevIndexRef.current = nextIndex;
-  }, [activeId, tabs]);
+  }, [activeId, tabs, animatePanel, keepMounted]);
 
   const onTabKeyDown = useCallback(
     (e, index) => {
@@ -92,11 +108,16 @@ export default function Tabs({
     : "relative shrink-0 cursor-pointer rounded-sm px-4 py-2.5 text-sm font-bold tracking-tight transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 sm:px-5 sm:py-2.5 sm:text-base";
 
   const panelAnimClass =
-    animKey === 0
+    !animatePanel || keepMounted || animKey === 0
       ? ""
       : slideDir < 0
         ? "ui-tab-panel-enter-left"
         : "ui-tab-panel-enter-right";
+
+  const mountedTabs = useMemo(() => {
+    if (!keepMounted) return activeTab ? [activeTab] : [];
+    return tabs.filter((tab) => tab.id === activeId || visitedIds.has(tab.id));
+  }, [keepMounted, tabs, visitedIds, activeTab, activeId]);
 
   return (
     <div className={`flex flex-col ${className}`}>
@@ -114,7 +135,7 @@ export default function Tabs({
               role="tab"
               id={`${uid}-tab-${tab.id}`}
               aria-selected={isActive}
-              aria-controls={`${uid}-panel`}
+              aria-controls={`${uid}-panel-${tab.id}`}
               tabIndex={isActive ? 0 : -1}
               className={`${tabButtonBase} ${isActive ? activeClass : idleClass} ${tabButtonClassName}`.trim()}
               onClick={() => setActiveId(tab.id)}
@@ -125,16 +146,35 @@ export default function Tabs({
           );
         })}
       </div>
-      <div
-        key={`${activeTab?.id ?? "panel"}-${animKey}`}
-        role="tabpanel"
-        id={`${uid}-panel`}
-        aria-labelledby={activeTab ? `${uid}-tab-${activeTab.id}` : undefined}
-        className={`min-h-0 min-w-0 ${panelClassName} ${panelAnimClass}`}
-        tabIndex={0}
-      >
-        {activeTab?.children ?? null}
-      </div>
+      {keepMounted ? (
+        mountedTabs.map((tab) => {
+          const isActive = tab.id === activeId;
+          return (
+            <div
+              key={tab.id}
+              role="tabpanel"
+              id={`${uid}-panel-${tab.id}`}
+              aria-labelledby={`${uid}-tab-${tab.id}`}
+              hidden={!isActive}
+              className={`min-h-0 min-w-0 ${panelClassName} ${isActive ? "" : "!hidden"}`}
+              tabIndex={isActive ? 0 : -1}
+            >
+              {tab.children}
+            </div>
+          );
+        })
+      ) : (
+        <div
+          key={`${activeTab?.id ?? "panel"}-${animKey}`}
+          role="tabpanel"
+          id={`${uid}-panel-${activeTab?.id ?? "active"}`}
+          aria-labelledby={activeTab ? `${uid}-tab-${activeTab.id}` : undefined}
+          className={`min-h-0 min-w-0 ${panelClassName} ${panelAnimClass}`}
+          tabIndex={0}
+        >
+          {activeTab?.children ?? null}
+        </div>
+      )}
     </div>
   );
 }

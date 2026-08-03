@@ -12,6 +12,10 @@ import {
   releaseInventoryReservationsForSimple,
 } from "@/lib/inventory-service";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import {
+  notifySimpleJobBoardDeleted,
+  notifySimpleJobBoardFromSp,
+} from "@/lib/job-board-emit";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -102,6 +106,7 @@ export async function PUT(request, context) {
       resourceId: item.id,
       data: item,
     });
+    void notifySimpleJobBoardFromSp(email, previous, doc);
     return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple service proposal error:", err);
@@ -144,6 +149,9 @@ export async function DELETE(request, context) {
       resourceId: id,
       data: serializeSimplePortalDoc(deleted),
     });
+    if (String(deleted.recordType || "").toUpperCase() === "JOB") {
+      void notifySimpleJobBoardDeleted(email, id);
+    }
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("Dashboard delete simple service proposal error:", err);

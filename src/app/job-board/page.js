@@ -89,12 +89,12 @@ function JobBoardSharePageInner() {
             {isProtected ? "This job board is private to CRM users." : error || "Job board not found"}
           </h1>
           <p className="mt-3 text-sm text-secondary">
-            This page shows live shop-floor work orders with status columns, customer references, and active job flow for
+            This page shows live shop-floor jobs with status columns, customer references, and active job flow for
             a repair center. Access is restricted to shared secure links or authenticated CRM users.
           </p>
           <p className="mt-2 text-sm text-secondary">
             {isProtected
-              ? "If you run a motor repair or rewinding business, request CRM access to manage leads, quotes, work orders, technician workflows, and billing in one system."
+              ? "If you run a motor repair or rewinding business, request CRM access to manage customers, service proposals, jobs, and billing in one system."
               : "This link may be invalid or expired. Ask your shop to send a new job board link."}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">

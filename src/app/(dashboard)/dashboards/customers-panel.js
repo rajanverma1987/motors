@@ -9,16 +9,21 @@ import { Form } from "@/components/ui/form-layout";
 import Modal from "@/components/ui/modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert } from "@/components/confirm-provider";
 import {
   buildCustomerPayload,
-  customerApiToForm,
   INITIAL_CUSTOMER_FORM,
 } from "@/lib/customer-record-form";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { parseSimpleOpenParam } from "@/lib/simple-portal-open";
+import {
+  SIMPLE_SCREEN_FILTERS_CLASS,
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
 
@@ -84,12 +89,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState(FILTER_ALL);
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
   const [saving, setSaving] = useState(false);
   const [leadDetail, setLeadDetail] = useState(null);
   const [convertingFromLeadId, setConvertingFromLeadId] = useState(null);
   const [copyingPortalId, setCopyingPortalId] = useState("");
+  const [viewCustomerId, setViewCustomerId] = useState(null);
   const lastHandledCreateNonceRef = useRef(createNonce);
 
   const loadAll = useCallback(
@@ -126,7 +131,6 @@ export default function CustomersPanel({ createNonce = 0 }) {
   }, [loadAll]);
 
   const openCreate = useCallback(() => {
-    setEditingId(null);
     setConvertingFromLeadId(null);
     setForm({ ...INITIAL_CUSTOMER_FORM });
     setModalOpen(true);
@@ -139,33 +143,14 @@ export default function CustomersPanel({ createNonce = 0 }) {
     openCreate();
   }, [createNonce, openCreate]);
 
-  const openEditCustomer = useCallback(
-    async (row) => {
-      const id = String(row?.id || "").trim();
-      if (!id) return;
-      setSaving(false);
-      setConvertingFromLeadId(null);
-      setEditingId(id);
-      setForm(customerApiToForm(row));
-      setModalOpen(true);
-      try {
-        const res = await fetch(`/api/dashboard/customers/${id}`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Failed to load customer");
-        if (data.customer) setForm(customerApiToForm(data.customer));
-      } catch (err) {
-        await alert({
-          title: "Error",
-          message: err.message || "Failed to load customer",
-          variant: "danger",
-        });
-      }
-    },
-    [alert]
-  );
+  const openCustomerDetails = useCallback((rowOrId) => {
+    const id =
+      typeof rowOrId === "string" || typeof rowOrId === "number"
+        ? String(rowOrId || "").trim()
+        : String(rowOrId?.id || "").trim();
+    if (!id) return;
+    setViewCustomerId(id);
+  }, []);
 
   const startConvertLeadToCustomer = useCallback(
     async (row) => {
@@ -187,11 +172,10 @@ export default function CustomersPanel({ createNonce = 0 }) {
           title: "Customer already exists",
           message: `A customer matching this lead already exists (${existing.companyName || "customer"}). Opening that record.`,
         });
-        void openEditCustomer(existing);
+        openCustomerDetails(existing);
         return;
       }
       setLeadDetail(null);
-      setEditingId(null);
       setConvertingFromLeadId(leadId);
       setForm({
         ...INITIAL_CUSTOMER_FORM,
@@ -205,7 +189,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
       });
       setModalOpen(true);
     },
-    [alert, customerRows, openEditCustomer]
+    [alert, customerRows, openCustomerDetails]
   );
 
   const openRow = useCallback(
@@ -214,9 +198,9 @@ export default function CustomersPanel({ createNonce = 0 }) {
         setLeadDetail(row);
         return;
       }
-      void openEditCustomer(row);
+      openCustomerDetails(row);
     },
-    [openEditCustomer]
+    [openCustomerDetails]
   );
 
   const handleCopyPortalLink = useCallback(
@@ -279,7 +263,6 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const closeModal = () => {
     if (saving) return;
     setModalOpen(false);
-    setEditingId(null);
     setConvertingFromLeadId(null);
     setForm({ ...INITIAL_CUSTOMER_FORM });
   };
@@ -293,17 +276,15 @@ export default function CustomersPanel({ createNonce = 0 }) {
     setSaving(true);
     try {
       const payload = buildCustomerPayload(form);
-      const url = editingId ? `/api/dashboard/customers/${editingId}` : "/api/dashboard/customers";
-      const method = editingId ? "PATCH" : "POST";
-      const res = await fetch(url, {
-        method,
+      const res = await fetch("/api/dashboard/customers", {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || (editingId ? "Failed to update customer" : "Failed to create customer"));
-      const leadIdToMarkWon = !editingId ? convertingFromLeadId : null;
+      if (!res.ok) throw new Error(data.error || "Failed to create customer");
+      const leadIdToMarkWon = convertingFromLeadId;
       if (leadIdToMarkWon) {
         try {
           await fetch(`/api/dashboard/leads/${leadIdToMarkWon}`, {
@@ -316,19 +297,16 @@ export default function CustomersPanel({ createNonce = 0 }) {
           /* customer saved; status update is best-effort */
         }
       }
+      const createdId = String(data?.customer?.id || data?.id || "").trim();
       await loadAll({ showError: false });
       setModalOpen(false);
-      setEditingId(null);
       setConvertingFromLeadId(null);
       setForm({ ...INITIAL_CUSTOMER_FORM });
       await alert({
         title: "Success",
-        message: editingId
-          ? "Customer updated."
-          : leadIdToMarkWon
-            ? "Customer created. Lead marked as Won."
-            : "Customer added.",
+        message: leadIdToMarkWon ? "Customer created. Lead marked as Won." : "Customer added.",
       });
+      if (createdId) setViewCustomerId(createdId);
     } catch (err) {
       await alert({
         title: "Error",
@@ -546,8 +524,8 @@ export default function CustomersPanel({ createNonce = 0 }) {
   })();
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 flex-wrap gap-2.5">
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
         {typeFilterCards.map((card) => (
           <StatusFilterPillButton
             key={card.key || "__all__"}
@@ -559,7 +537,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
         ))}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table
           columns={columns}
           data={displayRows}
@@ -582,39 +560,30 @@ export default function CustomersPanel({ createNonce = 0 }) {
         />
       </div>
 
+      <CustomerViewModal
+        open={Boolean(viewCustomerId)}
+        customerId={viewCustomerId}
+        onClose={() => setViewCustomerId(null)}
+        zIndex={120}
+        portal="simple"
+        onCustomerUpdated={() => {
+          void loadAll({ showError: false });
+        }}
+      />
+
       <Modal
         open={modalOpen}
         onClose={closeModal}
-        title={
-          editingId
-            ? "Edit customer"
-            : convertingFromLeadId
-              ? "Convert lead to customer"
-              : "Add new customer"
-        }
+        title={convertingFromLeadId ? "Convert lead to customer" : "Add new customer"}
         size="6xl"
         width="min(1100px, 96vw)"
         height="min(84.6vh, 828px)"
         showClose={!saving}
         closeOnOutsideClick={false}
         actions={
-          <>
-            {editingId ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={saving || Boolean(copyingPortalId)}
-                onClick={() => void handleCopyPortalLink(editingId)}
-              >
-                <FiCopy className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {copyingPortalId === editingId ? "Copying…" : "Copy portal link"}
-              </Button>
-            ) : null}
-            <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
-              {saving ? "Saving…" : convertingFromLeadId ? "Create customer" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={CUSTOMER_FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : convertingFromLeadId ? "Create customer" : "Save"}
+          </Button>
         }
       >
         <Form

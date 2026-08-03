@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { FiArrowLeft } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import Select from "@/components/ui/select";
@@ -16,6 +18,11 @@ import SimpleMasterSection from "@/components/simple/settings/simple-master-sect
 import SimpleSubscriptionSection from "@/components/simple/settings/simple-subscription-section";
 import SimpleSupportSection from "@/components/simple/settings/simple-support-section";
 import SimpleApiIntegrationSection from "@/components/simple/settings/simple-api-integration-section";
+import SimpleDirectoryListingSection from "@/components/simple/settings/simple-directory-listing-section";
+import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
+import SimpleMarketplaceSection from "@/components/simple/settings/simple-marketplace-section";
+import SimpleJobPostingsSection from "@/components/simple/settings/simple-job-postings-section";
+import SimpleAccessControlSection from "@/components/simple/settings/simple-access-control-section";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
 import {
   USER_SETTINGS_DEFAULTS,
@@ -39,6 +46,8 @@ import {
   resolveSimpleSettingsSection,
   simpleSettingsHref,
 } from "@/lib/simple-settings-nav";
+import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
+import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 
 const PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10 rows" },
@@ -789,6 +798,31 @@ export default function SettingsPageClient() {
         ),
       },
       {
+        id: "job-board",
+        label: "Shop Floor Job Board",
+        children: <SimpleJobBoardSection />,
+      },
+      {
+        id: "directory-listing",
+        label: "Directory Listing",
+        children: <SimpleDirectoryListingSection />,
+      },
+      {
+        id: "marketplace",
+        label: "Marketplace",
+        children: <SimpleMarketplaceSection />,
+      },
+      {
+        id: "job-postings",
+        label: "Job Postings",
+        children: <SimpleJobPostingsSection />,
+      },
+      {
+        id: "access-controls",
+        label: "Access Controls",
+        children: <SimpleAccessControlSection />,
+      },
+      {
         id: "data-upload",
         label: "Data Upload",
         children: <SimpleDataUploadPanel />,
@@ -861,38 +895,53 @@ export default function SettingsPageClient() {
 
   if (loading) {
     return (
-      <div className="w-full min-w-0 py-10">
+      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} w-full min-w-0 py-8`}>
+        <Link
+          href={SIMPLE_PORTAL_PATH}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-secondary transition-colors hover:text-primary"
+        >
+          <FiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          Back to dashboard
+        </Link>
         <p className="text-secondary">Loading settings…</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col">
-      <div className="mb-4 shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Settings</h1>
+    <div className={`${SIMPLE_PORTAL_ROOT_CLASS} simple-settings-shell`}>
+      <div className="simple-settings-header">
+        <Link
+          href={SIMPLE_PORTAL_PATH}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm text-secondary transition-colors hover:text-primary"
+        >
+          <FiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          Back to dashboard
+        </Link>
+        <h1 className="text-xl font-semibold tracking-tight text-title">Settings</h1>
         <p className="mt-1 text-sm text-secondary">
           Shop defaults, masters, data upload, billing, and support.
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row md:gap-6">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:gap-4">
         <nav
-          className="shrink-0 border-b border-border pb-3 md:w-44 md:border-b-0 md:border-r md:pb-0 md:pr-4"
+          className="simple-settings-nav shrink-0 border-b md:border-b-0 md:border-r"
           aria-label="Settings sections"
         >
-          <ul className="flex flex-row gap-1 overflow-x-auto md:flex-col md:overflow-visible">
+          <ul className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
             {SIMPLE_SETTINGS_SECTIONS.map((item) => {
               const active = item.id === activeSection;
               return (
                 <li key={item.id} className="shrink-0">
                   <button
                     type="button"
+                    data-active={active ? "true" : "false"}
                     onClick={() => goSection(item.id, item.id === "master" ? { masterTab } : {})}
-                    className={`w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm transition-colors md:w-full ${
+                    className={`w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm md:w-full ${
                       active
-                        ? "bg-primary/10 font-semibold text-primary"
-                        : "text-secondary hover:bg-muted/40 hover:text-title"
+                        ? "font-semibold text-primary"
+                        : "text-secondary hover:bg-card hover:text-title"
                     }`}
                   >
                     {item.label}
@@ -903,13 +952,13 @@ export default function SettingsPageClient() {
           </ul>
         </nav>
 
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto pb-4">
+        <div className="simple-settings-content">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {sectionContentById[activeSection] || sectionContentById.account}
           </div>
 
           {showSaveBar ? (
-            <div className="sticky bottom-0 border-t border-border bg-bg/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-bg/80">
+            <div className="sticky bottom-0 mt-3 border-t border-border bg-card/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80">
               <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>

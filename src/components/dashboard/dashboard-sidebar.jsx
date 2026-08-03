@@ -58,7 +58,7 @@ const PROCUREMENT_NAV = [
 ];
 
 const OPERATIONS_NAV = [
-  { href: "/dashboard/job-board", label: "Shop floor job board", icon: FiGrid },
+  { href: "/dashboards/settings?section=job-board", label: "Shop floor job board", icon: FiGrid },
   { href: "/dashboard/logistics", label: "Receiving & Shipping", icon: FiBox },
 ];
 

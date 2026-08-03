@@ -56,7 +56,7 @@ export default function DashboardShell({ children }) {
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div
               className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain ${
-                simpleView ? "p-1 sm:p-1.5" : "p-[10px]"
+                simpleView ? "px-2 py-0 sm:px-3" : "p-[10px]"
               }`}
             >
               {children}

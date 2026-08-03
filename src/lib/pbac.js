@@ -1,42 +1,53 @@
 /**
  * Policy-Based Access Control (PBAC) for the CRM dashboard.
  * Pages and actions define what can be governed by policies.
+ *
+ * `PAGES` matches Simple `/dashboards` hub + settings (product going forward).
+ * Legacy Classic page ids remain accepted when loading older policies.
  */
 
 /** Standard actions that can be granted per page */
 export const ACTIONS = ["view", "create", "edit", "delete"];
 
-/** Dashboard pages that can be protected (id = path segment, label for UI) */
+/** Simple portal pages shown in Access Controls UI */
 export const PAGES = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "leads", label: "Leads" },
-  { id: "customers", label: "Customers" },
-  { id: "motors", label: "Customer's motors" },
-  { id: "quotes", label: "Quotes" },
-  { id: "work-orders", label: "Work orders" },
-  { id: "invoices", label: "Invoices" },
-  { id: "accounts-receivable", label: "Accounts receivable" },
-  { id: "taxes", label: "Taxes" },
-  { id: "job-board", label: "Shop floor job board" },
-  { id: "motor-tag", label: "Motor tag (work orders)" },
-  { id: "vendors", label: "Vendors" },
-  { id: "purchase-orders", label: "Purchase orders" },
-  { id: "accounts-payable", label: "Accounts payable" },
-  { id: "logistics", label: "Receiving & Shipping" },
-  { id: "employees", label: "Employees" },
-  { id: "job-postings", label: "Job postings (careers)" },
-  { id: "calculators", label: "Calculators" },
-  { id: "reports", label: "Reports" },
-  { id: "customer-portal", label: "Customer portal" },
-  { id: "access-control", label: "Access control" },
-  { id: "settings", label: "Settings" },
-  { id: "support", label: "Support" },
+  { id: "customers", label: "Customers (incl. leads)" },
+  { id: "service-proposals", label: "Service Proposals" },
+  { id: "invoices", label: "Invoice / Receivables" },
+  { id: "purchase-orders", label: "Purchase / Payable" },
   { id: "inventory", label: "Inventory" },
-  { id: "marketplace", label: "Marketplace (CRM)" },
+  { id: "reports", label: "Reports" },
+  { id: "calculators", label: "Calculators" },
+  { id: "settings", label: "Settings" },
+  { id: "job-board", label: "Shop floor job board" },
+  { id: "directory-listing", label: "Directory listing" },
+  { id: "marketplace", label: "Marketplace" },
+  { id: "job-postings", label: "Job postings" },
+  { id: "employees", label: "Employees (Master)" },
+  { id: "vendors", label: "Vendors (Master)" },
+  { id: "sales-person", label: "Sales persons (Master)" },
+  { id: "access-control", label: "Access controls" },
   { id: "integrations", label: "API integrations" },
+  { id: "subscription", label: "Subscription" },
+  { id: "support", label: "Support" },
 ];
 
-const PAGE_IDS = new Set(PAGES.map((p) => p.id));
+/** Classic-only page ids still valid on stored policies until re-saved */
+export const LEGACY_PAGE_IDS = [
+  "dashboard",
+  "leads",
+  "motors",
+  "quotes",
+  "work-orders",
+  "accounts-receivable",
+  "taxes",
+  "motor-tag",
+  "accounts-payable",
+  "logistics",
+  "customer-portal",
+];
+
+const PAGE_IDS = new Set([...PAGES.map((p) => p.id), ...LEGACY_PAGE_IDS]);
 const ACTION_SET = new Set(ACTIONS);
 
 /**

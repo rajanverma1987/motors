@@ -4,6 +4,11 @@ import {
   isCalculatorOnlyAllowedDashboardApi,
   isCalculatorOnlyDashboardPath,
 } from "@/lib/calculator-portal-routes";
+import {
+  CLASSIC_PORTAL_UI_ENABLED,
+  classicPathToSimpleRedirect,
+  isClassicPortalPath,
+} from "@/lib/portal-view";
 
 /** Edge-safe: tier is set on login/register and refreshed by GET /api/auth/me */
 function hasCalculatorOnlyTierCookie(cookieHeader) {
@@ -32,6 +37,11 @@ export function middleware(request) {
     }
     if (calcOnlyPortal && !isCalculatorOnlyDashboardPath(pathname)) {
       return NextResponse.redirect(new URL(CALCULATOR_ONLY_DASHBOARD_HREF, request.url));
+    }
+    // Hide Classic UI: keep code, redirect all `/dashboard…` to Simple `/dashboards…`
+    if (!CLASSIC_PORTAL_UI_ENABLED && isClassicPortalPath(pathname)) {
+      const target = classicPathToSimpleRedirect(pathname, request.nextUrl.search || "");
+      return NextResponse.redirect(new URL(target, request.url));
     }
   }
 

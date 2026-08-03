@@ -552,7 +552,7 @@ export default function CalculatorsPanel() {
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="simple-portal flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <header className="mb-4 shrink-0">
         <h2 className="text-2xl font-semibold tracking-tight text-title">Calculators</h2>
         <p className="mt-1 max-w-[57.6rem] text-sm text-secondary">

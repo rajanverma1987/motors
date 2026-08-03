@@ -13,6 +13,7 @@ import {
   parseAllJobsDateRange,
 } from "@/lib/all-jobs-date-filter";
 import { useFormatDate } from "@/contexts/user-settings-context";
+import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 
 function emptyFiltersForCatalog() {
   /** @type {Record<string, Record<string, string>>} */
@@ -99,32 +100,29 @@ export default function ReportsPanel() {
   }, [formatDate, from, to]);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-      <div className="mb-5 shrink-0">
-        <h2 className="text-2xl font-semibold tracking-tight text-title">Reports</h2>
+    <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto`}>
+      <div className="mb-4 shrink-0">
+        <h2 className="text-lg font-semibold tracking-tight text-title">Reports</h2>
         <p className="mt-1 text-sm text-secondary">
-          Excel downloads for your Simple portal data. Date-filtered reports use the hub range:{" "}
+          Excel downloads for your shop data. Date-filtered reports use the hub range:{" "}
           <span className="font-medium text-title">{rangeLabel}</span>.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {SIMPLE_REPORT_CATALOG.map((report) => {
           const busy = busyId === report.id;
           const filters = report.filters || [];
           const values = filtersByReport[report.id] || {};
 
           return (
-            <div
-              key={report.id}
-              className="flex min-h-0 flex-col gap-3 rounded-sm border border-border bg-card/40 p-4 dark:bg-card/20"
-            >
+            <div key={report.id} className="simple-report-card">
               <div className="flex min-w-0 items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xl font-semibold leading-snug tracking-tight text-title">
+                  <h3 className="text-base font-semibold leading-snug tracking-tight text-title">
                     {report.title}
                   </h3>
-                  <p className="mt-1.5 text-xs leading-relaxed text-secondary">{report.description}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-secondary">{report.description}</p>
                 </div>
                 <Button
                   type="button"

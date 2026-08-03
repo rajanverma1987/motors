@@ -1,0 +1,585 @@
+"use client";
+
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { FiEdit2, FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
+import Table from "@/components/ui/table";
+import Modal from "@/components/ui/modal";
+import Input from "@/components/ui/input";
+import Textarea from "@/components/ui/textarea";
+import Select from "@/components/ui/select";
+import { Form, FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { sortRowsClient } from "@/lib/client-table-sort";
+import { formatDateMdy } from "@/lib/format-date";
+
+const STATUS_OPTIONS = [
+  { value: "draft", label: "Draft (not public)" },
+  { value: "published", label: "Published" },
+  { value: "sold", label: "Sold" },
+];
+
+const CAT_OPTIONS = [
+  { value: "parts", label: "Parts & components" },
+  { value: "motors", label: "Motors & drives" },
+  { value: "tools", label: "Tools & equipment" },
+  { value: "surplus", label: "Surplus / used" },
+  { value: "other", label: "Other" },
+];
+
+const ORDER_STATUS_OPTS = [
+  { value: "new", label: "New" },
+  { value: "contacted", label: "Contacted" },
+  { value: "closed", label: "Closed" },
+];
+
+function parseImagesText(text) {
+  return String(text || "")
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+}
+
+function itemStatusBadge(status) {
+  if (status === "published") {
+    return (
+      <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
+        Published
+      </Badge>
+    );
+  }
+  if (status === "sold") {
+    return (
+      <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+        Sold
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+      Draft
+    </Badge>
+  );
+}
+
+const EMPTY_ITEM = {
+  title: "",
+  description: "",
+  category: "other",
+  priceDisplay: "",
+  condition: "",
+  images: [],
+  status: "draft",
+};
+
+export default function SimpleMarketplaceSection() {
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const [tab, setTab] = useState("items");
+  const [items, setItems] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_ITEM);
+  const [saving, setSaving] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [iRes, oRes] = await Promise.all([
+        fetch("/api/dashboard/marketplace/items", { credentials: "include", cache: "no-store" }),
+        fetch("/api/dashboard/marketplace/orders", { credentials: "include", cache: "no-store" }),
+      ]);
+      const iData = await iRes.json();
+      const oData = await oRes.json();
+      if (iRes.ok) setItems(Array.isArray(iData) ? iData : []);
+      else setItems([]);
+      if (oRes.ok) setOrders(Array.isArray(oData) ? oData : []);
+      else setOrders([]);
+    } catch {
+      await alert({ title: "Error", message: "Could not load marketplace", variant: "danger" });
+      setItems([]);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [alert]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  const openCreate = () => {
+    setEditingId(null);
+    setForm({ ...EMPTY_ITEM });
+    setModalOpen(true);
+  };
+
+  const openEdit = (row) => {
+    setEditingId(row.id);
+    setForm({
+      title: row.title || "",
+      description: row.description || "",
+      category: row.category || "other",
+      priceDisplay: row.priceDisplay || "",
+      condition: row.condition || "",
+      images: Array.isArray(row.images) ? row.images.filter(Boolean).slice(0, 10) : [],
+      status: row.status || "draft",
+    });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+  };
+
+  const submitItem = async (e) => {
+    e.preventDefault();
+    if (!form.title?.trim()) {
+      await alert({ title: "Title required", message: "Title is required.", variant: "danger" });
+      return;
+    }
+    const images = (Array.isArray(form.images) ? form.images : []).filter(Boolean).slice(0, 10);
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      category: form.category,
+      priceDisplay: form.priceDisplay.trim(),
+      condition: form.condition.trim(),
+      images,
+      status: form.status,
+    };
+    setSaving(true);
+    try {
+      if (editingId) {
+        const res = await fetch(`/api/dashboard/marketplace/items/${editingId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || "Update failed");
+        await alert({ title: "Saved", message: "Listing updated." });
+      } else {
+        const res = await fetch("/api/dashboard/marketplace/items", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error || "Save failed");
+        await alert({ title: "Saved", message: "Listing created." });
+      }
+      closeModal();
+      load();
+    } catch (err) {
+      await alert({ title: "Error", message: err.message || "Failed", variant: "danger" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onImageFiles = async (e) => {
+    const input = e.target;
+    const files = input.files;
+    if (!files?.length) return;
+    setUploadingImage(true);
+    try {
+      let acc = [...(Array.isArray(form.images) ? form.images : [])];
+      for (const file of Array.from(files)) {
+        if (acc.length >= 10) break;
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/dashboard/marketplace/upload-image", {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Upload failed");
+        if (data.url) acc = [...acc, data.url].slice(0, 10);
+      }
+      setForm((f) => ({ ...f, images: acc }));
+    } catch (err) {
+      await alert({ title: "Upload failed", message: err.message || "Upload failed", variant: "danger" });
+    } finally {
+      setUploadingImage(false);
+      input.value = "";
+    }
+  };
+
+  const deleteItem = async (row) => {
+    const ok1 = await confirm({
+      title: "Delete listing?",
+      message: "This removes the item from your CRM and the public marketplace.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: "Confirm delete",
+      message: "Are you sure? This listing will be permanently removed.",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok2) return;
+    try {
+      const res = await fetch(`/api/dashboard/marketplace/items/${row.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Delete failed");
+      await alert({ title: "Deleted", message: "Listing deleted." });
+      load();
+    } catch (e) {
+      await alert({ title: "Error", message: e.message || "Could not delete", variant: "danger" });
+    }
+  };
+
+  const [itemsSort, setItemsSort] = useState({ key: null, direction: "asc" });
+  const [ordersSort, setOrdersSort] = useState({ key: null, direction: "asc" });
+  const handleItemsSort = useCallback((key, direction) => setItemsSort({ key, direction }), []);
+  const handleOrdersSort = useCallback((key, direction) => setOrdersSort({ key, direction }), []);
+
+  const getOrderSortValue = useCallback((row, key) => {
+    if (key === "createdAt") {
+      const t = row?.createdAt ? new Date(row.createdAt).getTime() : NaN;
+      return Number.isFinite(t) ? t : null;
+    }
+    return row?.[key];
+  }, []);
+
+  const sortedItems = useMemo(() => sortRowsClient(items, itemsSort), [items, itemsSort]);
+  const sortedOrders = useMemo(
+    () => sortRowsClient(orders, ordersSort, getOrderSortValue),
+    [orders, ordersSort, getOrderSortValue]
+  );
+
+  const patchOrderStatus = async (row, status) => {
+    try {
+      const res = await fetch(`/api/dashboard/marketplace/orders/${row.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ status }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "Update failed");
+      await alert({ title: "Updated", message: "Order updated." });
+      load();
+    } catch (e) {
+      await alert({ title: "Error", message: e.message || "Failed", variant: "danger" });
+    }
+  };
+
+  const itemColumns = useMemo(
+    () => [
+      {
+        key: "actions",
+        label: "",
+        render: (_, row) => (
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => openEdit(row)}
+              className="rounded p-1.5 text-primary hover:bg-primary/10"
+              aria-label="Edit"
+            >
+              <FiEdit2 className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => deleteItem(row)}
+              className="rounded p-1.5 text-danger hover:bg-danger/10"
+              aria-label="Delete"
+            >
+              <FiTrash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ),
+      },
+      { key: "title", label: "Title", sortable: true },
+      { key: "category", label: "Category", sortable: true },
+      { key: "priceDisplay", label: "Price / note", sortable: true },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        render: (v) => itemStatusBadge(v),
+      },
+      {
+        key: "slug",
+        label: "Public link",
+        sortable: true,
+        render: (v) =>
+          v ? (
+            <a
+              href={`/marketplace/${v}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline"
+            >
+              View
+            </a>
+          ) : (
+            "—"
+          ),
+      },
+    ],
+    []
+  );
+
+  const orderColumns = useMemo(
+    () => [
+      { key: "itemTitleSnapshot", label: "Item", sortable: true },
+      { key: "buyerName", label: "Buyer", sortable: true },
+      { key: "buyerEmail", label: "Email", sortable: true },
+      { key: "buyerPhone", label: "Phone", sortable: true },
+      { key: "quantity", label: "Qty", sortable: true },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        render: (v, row) => (
+          <select
+            className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-title"
+            value={v || "new"}
+            onChange={(e) => patchOrderStatus(row, e.target.value)}
+            aria-label="Order status"
+          >
+            {ORDER_STATUS_OPTS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        ),
+      },
+      {
+        key: "buyerMessage",
+        label: "Message",
+        sortable: true,
+        render: (v) => (
+          <span className="line-clamp-2 max-w-[200px]" title={v}>
+            {v || "—"}
+          </span>
+        ),
+      },
+      {
+        key: "createdAt",
+        label: "Date",
+        sortable: true,
+        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+      },
+    ],
+    []
+  );
+
+  const tabBtn = (id, label) => (
+    <button
+      type="button"
+      onClick={() => setTab(id)}
+      className={`whitespace-nowrap rounded-none px-2.5 py-1.5 text-sm transition-colors ${
+        tab === id
+          ? "bg-primary/10 font-semibold text-primary"
+          : "text-secondary hover:bg-muted/40 hover:text-title"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 pb-8">
+      <FormContainer>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <FormSectionTitle as="h2">Marketplace</FormSectionTitle>
+            <p className="mt-1 text-sm text-secondary">
+              Publish surplus publicly; buyers request—you close the sale offline.
+            </p>
+          </div>
+          {tab === "items" ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={openCreate}
+              className="inline-flex items-center gap-1.5"
+            >
+              <FiPlus className="h-4 w-4 shrink-0" />
+              New listing
+            </Button>
+          ) : null}
+        </div>
+        <div className="mt-4 flex flex-wrap gap-1 border-t border-border pt-3">
+          {tabBtn("items", "My listings")}
+          {tabBtn("orders", "Buyer requests")}
+        </div>
+      </FormContainer>
+
+      {tab === "items" ? (
+        <Table
+          columns={itemColumns}
+          data={sortedItems}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No listings yet. Create one to show on the public marketplace when published."
+          onRefresh={load}
+          sortState={itemsSort}
+          onSort={handleItemsSort}
+          responsive
+        />
+      ) : (
+        <Table
+          columns={orderColumns}
+          data={sortedOrders}
+          rowKey="id"
+          loading={loading}
+          emptyMessage="No buyer requests yet."
+          onRefresh={load}
+          sortState={ordersSort}
+          onSort={handleOrdersSort}
+          responsive
+        />
+      )}
+
+      <Modal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editingId ? "Edit listing" : "New listing"}
+        size="2xl"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="simple-mp-item-form" variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : editingId ? "Update" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <Form id="simple-mp-item-form" onSubmit={submitItem} className="flex flex-col gap-3 !space-y-0">
+          <Input
+            label="Title"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+            required
+          />
+          <Textarea
+            label="Description"
+            value={form.description}
+            onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            rows={5}
+            placeholder="Condition, specs, pickup/shipping notes…"
+          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <Select
+              label="Category"
+              options={CAT_OPTIONS}
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value ?? "other" }))}
+              searchable={false}
+            />
+            <Select
+              label="Visibility"
+              options={STATUS_OPTIONS}
+              value={form.status}
+              onChange={(e) => setForm((f) => ({ ...f, status: e.target.value ?? "draft" }))}
+              searchable={false}
+            />
+            <Input
+              label="Price / pricing note"
+              value={form.priceDisplay}
+              onChange={(e) => setForm((f) => ({ ...f, priceDisplay: e.target.value }))}
+              placeholder="e.g. $450, Make offer, Call for quote"
+            />
+            <Input
+              label="Condition"
+              value={form.condition}
+              onChange={(e) => setForm((f) => ({ ...f, condition: e.target.value }))}
+              placeholder="New, used, rebuilt…"
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-secondary">Photos</p>
+            <p className="mb-2 text-xs text-secondary">
+              Up to 10 images. Upload files or paste URLs — they appear on your public listing.
+            </p>
+            {form.images.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {form.images.map((url, i) => (
+                  <div
+                    key={`${url}-${i}`}
+                    className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-lg border border-border bg-muted"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="h-full w-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute right-1 top-1 rounded bg-card/95 p-1 text-danger shadow-sm ring-1 ring-border hover:bg-card"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          images: f.images.filter((_, j) => j !== i),
+                        }))
+                      }
+                      aria-label="Remove photo"
+                    >
+                      <FiX className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                multiple
+                className="hidden"
+                onChange={onImageFiles}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploadingImage || form.images.length >= 10}
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5"
+              >
+                {uploadingImage ? (
+                  "Uploading…"
+                ) : (
+                  <>
+                    <FiUpload className="h-4 w-4 shrink-0" />
+                    Upload photos
+                  </>
+                )}
+              </Button>
+              <span className="text-xs text-secondary">{form.images.length}/10</span>
+            </div>
+            <Textarea
+              label="Image URLs (optional, one per line)"
+              value={form.images.join("\n")}
+              onChange={(e) => setForm((f) => ({ ...f, images: parseImagesText(e.target.value) }))}
+              rows={3}
+              placeholder="https://… or use uploads only"
+            />
+          </div>
+        </Form>
+      </Modal>
+    </div>
+  );
+}

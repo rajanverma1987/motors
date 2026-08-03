@@ -8,6 +8,7 @@ import {
 } from "@/lib/simple-portal-mongo";
 import { applySimpleServiceProposalInventoryLifecycle } from "@/lib/inventory-service";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
 
 export async function GET(request) {
   try {
@@ -93,6 +94,7 @@ export async function POST(request) {
       resourceId: item.id,
       data: item,
     });
+    void notifySimpleJobBoardFromSp(email, null, doc);
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {
     console.error("Dashboard create simple service proposal error:", err);

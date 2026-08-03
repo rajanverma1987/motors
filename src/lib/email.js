@@ -347,7 +347,7 @@ export async function sendNewWebsiteLeadNotificationToShop({
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
-  const leadsUrl = `${base}/dashboard/leads`;
+  const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
   const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
   const subject = `New lead for ${listingCompanyName || "your shop"} – IQMotorBase.com`;
@@ -388,7 +388,7 @@ export async function sendCrmWelcomeEmail({
 }) {
   const site = getPublicSiteUrl();
   const loginUrl = `${site}/login`;
-  const settingsUrl = `${site}/dashboard/settings`;
+  const settingsUrl = `${site}/dashboards/settings`;
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const greet = contactName ? ` ${esc(contactName)}` : "";
@@ -423,8 +423,8 @@ export async function sendListingFeaturedAccountEmail({
 }) {
   const site = getPublicSiteUrl();
   const loginUrl = `${site}/login`;
-  const leadsUrl = `${site}/dashboard/leads`;
-  const directoryUrl = `${site}/dashboard/directory-listing`;
+  const leadsUrl = `${site}/dashboards?tab=customers`;
+  const directoryUrl = `${site}/dashboards/settings?section=directory-listing`;
   const contactUrl = `${site}/contact`;
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -465,7 +465,7 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
       ? `team at ${esc(shopName.trim())}`
       : "there";
   const pricingUrl = `${site}/pricing`;
-  const subscriptionUrl = `${site}/dashboard/subscription`;
+  const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
   const contactUrl = `${site}/contact`;
   const subject = "How is IQMotorBase working for your shop?";
   const html = `
@@ -516,7 +516,7 @@ export async function sendListingStatsOutreachEmail({
   const fullListingUrl = listingUrl?.startsWith("http") ? listingUrl : `${site}${listingUrl || ""}`;
   const softwareUrl = `${site}/motor-repair-shop-management-software`;
   const pricingUrl = `${site}/pricing`;
-  const subscriptionUrl = `${site}/dashboard/subscription`;
+  const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
   const contactUrl = `${site}/contact`;
   const subject = `Your IQMotorBase listing stats — ${esc(companyName || "repair center")}`;
   const html = `
@@ -568,7 +568,7 @@ export async function sendSubscriptionPlanAttachedEmail({
   const site = getPublicSiteUrl();
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const subUrl = `${site}/dashboard/subscription`;
+  const subUrl = `${site}/dashboards/settings?section=subscription`;
   const isPaypal = String(planType || "").toLowerCase() === "paypal";
   const priceLine =
     customPrice != null && !Number.isNaN(Number(customPrice))

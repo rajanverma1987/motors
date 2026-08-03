@@ -12,6 +12,7 @@ import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
 
 const ADJUST_FORM_ID = "simple-inventory-adjust-form";
 
@@ -367,7 +368,7 @@ export default function InventoryPanel() {
   );
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
       <Table
         columns={columns}
         data={displayRows}

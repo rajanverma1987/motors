@@ -1,5 +1,7 @@
 "use client";
 
+import { useStatusFilterCardDesign } from "@/components/simple/status-filter-card-design";
+
 /** Approximate relative luminance (0–1) for hex/rgb CSS colors. */
 function relativeLuminance(cssColor) {
   if (!cssColor || typeof cssColor !== "string") return null;
@@ -33,10 +35,6 @@ function isLightCssColor(cssColor) {
   return L != null && L > 0.65;
 }
 
-/**
- * Icon sits on the white/card surface — never use a light text color meant for a dark badge fill.
- * Prefer dark tile text; if text is white/light, use the tile background accent instead.
- */
 function iconColorOnCard(tileBg, tileText) {
   if (tileText && !isLightCssColor(tileText)) return tileText;
   if (tileBg && !isLightCssColor(tileBg)) return tileBg;
@@ -44,23 +42,7 @@ function iconColorOnCard(tileBg, tileText) {
   return tileBg || undefined;
 }
 
-/**
- * Status summary filter chip — compact neutral card with a status-color accent.
- * Keeps Settings tile colors on the rail / count badge; label stays readable.
- */
-export default function StatusFilterPillButton({
-  card,
-  active,
-  onClick,
-  formatAmount,
-  readOnly = false,
-  amountOnly = false,
-  className = "",
-  /** When true, only the label row is shown (no subtitle / count line). */
-  labelOnly = false,
-}) {
-  const amountText =
-    typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
+function useTileTokens(card) {
   const tileStyle = card.tileAppearance?.style || {};
   const tileBg = tileStyle.backgroundColor;
   const tileText = tileStyle.color;
@@ -72,13 +54,461 @@ export default function StatusFilterPillButton({
     .filter((c) => /^(text-|dark:text-)/.test(c))
     .join(" ");
   const tileClassName = [tileBgClassName, tileTextClassName].filter(Boolean).join(" ");
+  return { tileBg, tileText, tileBgClassName, tileTextClassName, tileClassName };
+}
+
+function CountBadge({ count, countBadgeStyle, tileClassName, className = "" }) {
+  return (
+    <span
+      className={`inline-flex h-5 min-w-[1.35rem] shrink-0 items-center justify-center px-1.5 text-[11px] font-bold tabular-nums leading-none ${
+        countBadgeStyle ? "" : tileClassName || "bg-primary/15 text-primary"
+      } ${className}`}
+      style={countBadgeStyle}
+    >
+      {count}
+    </span>
+  );
+}
+
+function IconWell({ Icon, iconWellStyle, tileBgClassName, tileTextClassName, tileText, iconStyle }) {
+  if (!Icon) return null;
+  return (
+    <span
+      className={`inline-flex h-6 w-6 shrink-0 items-center justify-center ${
+        iconWellStyle ? "" : tileBgClassName || "bg-primary/12"
+      }`}
+      style={iconWellStyle}
+      aria-hidden
+    >
+      <Icon
+        className={`h-3.5 w-3.5 ${
+          iconWellStyle
+            ? isLightCssColor(tileText)
+              ? "text-white"
+              : ""
+            : tileTextClassName || "text-primary"
+        }`}
+        style={iconWellStyle ? (tileText ? { color: tileText } : undefined) : iconStyle}
+      />
+    </span>
+  );
+}
+
+function LabelOnlyBody({ Icon, card, iconStyle, tileTextClassName }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5 px-2.5 py-1 pl-3">
+      {Icon ? (
+        <Icon
+          className={`h-3.5 w-3.5 shrink-0 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
+          style={iconStyle}
+          aria-hidden
+        />
+      ) : null}
+      <span className="truncate text-xs font-semibold text-title" title={card.label}>
+        {card.label}
+      </span>
+    </span>
+  );
+}
+
+/** Strip — top accent bar, icon well, uppercase label, amount below. */
+function BodyStrip(props) {
+  const {
+    Icon,
+    card,
+    active,
+    amountText,
+    displayValue,
+    showCount,
+    count,
+    countBadgeStyle,
+    tileClassName,
+    accentStyle,
+    tileBg,
+    tileBgClassName,
+    iconWellStyle,
+    tileTextClassName,
+    tileText,
+    iconStyle,
+  } = props;
+  return (
+    <>
+      <span
+        className={`absolute inset-x-0 top-0 h-[3px] ${tileBg ? "" : tileBgClassName || "bg-primary"}`}
+        style={accentStyle}
+        aria-hidden
+      />
+      <span className="flex min-w-0 flex-col gap-1 px-2.5 pb-2 pt-2.5">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <IconWell
+            Icon={Icon}
+            iconWellStyle={iconWellStyle}
+            tileBgClassName={tileBgClassName}
+            tileTextClassName={tileTextClassName}
+            tileText={tileText}
+            iconStyle={iconStyle}
+          />
+          <span
+            className="min-w-0 flex-1 truncate text-[11px] font-semibold uppercase tracking-wide text-secondary"
+            title={card.label}
+          >
+            {card.label}
+          </span>
+          {showCount ? (
+            <CountBadge count={count} countBadgeStyle={countBadgeStyle} tileClassName={tileClassName} />
+          ) : null}
+        </span>
+        <span
+          className={`block truncate text-base font-bold leading-none tabular-nums tracking-tight ${
+            active ? "text-primary" : "text-title"
+          }`}
+          title={displayValue}
+        >
+          {displayValue}
+        </span>
+      </span>
+    </>
+  );
+}
+
+/** Rail — thick left accent, classic summary card. */
+function BodyRail(props) {
+  const {
+    Icon,
+    card,
+    active,
+    displayValue,
+    showCount,
+    count,
+    countBadgeStyle,
+    tileClassName,
+    accentStyle,
+    tileBg,
+    tileBgClassName,
+    iconStyle,
+    tileTextClassName,
+  } = props;
+  return (
+    <>
+      <span
+        className={`absolute inset-y-0 left-0 w-1 ${tileBg ? "" : tileBgClassName || "bg-primary"}`}
+        style={accentStyle}
+        aria-hidden
+      />
+      <span className="flex min-w-0 flex-col gap-1.5 px-3 py-2.5 pl-3.5">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {Icon ? (
+            <Icon
+              className={`h-3.5 w-3.5 shrink-0 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
+              style={iconStyle}
+              aria-hidden
+            />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold text-title" title={card.label}>
+            {card.label}
+          </span>
+          {showCount ? (
+            <CountBadge count={count} countBadgeStyle={countBadgeStyle} tileClassName={tileClassName} />
+          ) : null}
+        </span>
+        <span
+          className={`block truncate text-lg font-bold leading-none tabular-nums ${
+            active ? "text-primary" : "text-title"
+          }`}
+          title={displayValue}
+        >
+          {displayValue}
+        </span>
+      </span>
+    </>
+  );
+}
+
+/** Amount — dollar first, label secondary. */
+function BodyAmount(props) {
+  const {
+    Icon,
+    card,
+    active,
+    displayValue,
+    showCount,
+    count,
+    countBadgeStyle,
+    tileClassName,
+    accentStyle,
+    tileBg,
+    tileBgClassName,
+    iconStyle,
+    tileTextClassName,
+  } = props;
+  return (
+    <>
+      <span
+        className={`absolute inset-x-0 bottom-0 h-[2px] ${tileBg ? "" : tileBgClassName || "bg-primary"}`}
+        style={accentStyle}
+        aria-hidden
+      />
+      <span className="flex min-w-0 flex-col gap-1 px-2.5 py-2">
+        <span
+          className={`block truncate text-lg font-bold leading-none tabular-nums tracking-tight ${
+            active ? "text-primary" : "text-title"
+          }`}
+          title={displayValue}
+        >
+          {displayValue}
+        </span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          {Icon ? (
+            <Icon
+              className={`h-3 w-3 shrink-0 opacity-80 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
+              style={iconStyle}
+              aria-hidden
+            />
+          ) : null}
+          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-secondary" title={card.label}>
+            {card.label}
+          </span>
+          {showCount ? (
+            <CountBadge count={count} countBadgeStyle={countBadgeStyle} tileClassName={tileClassName} />
+          ) : null}
+        </span>
+      </span>
+    </>
+  );
+}
+
+/** Split — content left, tall count panel right. */
+function BodySplit(props) {
+  const {
+    Icon,
+    card,
+    active,
+    displayValue,
+    showCount,
+    count,
+    countBadgeStyle,
+    tileClassName,
+    tileBg,
+    tileBgClassName,
+    tileText,
+    tileTextClassName,
+    iconStyle,
+  } = props;
+  const panelStyle = tileBg
+    ? { backgroundColor: tileBg, color: tileText || undefined }
+    : undefined;
+  return (
+    <span className="flex min-h-[3.5rem] min-w-0">
+      <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5 px-2.5 py-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {Icon ? (
+            <Icon
+              className={`h-4 w-4 shrink-0 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
+              style={iconStyle}
+              aria-hidden
+            />
+          ) : null}
+          <span className="min-w-0 truncate text-sm font-semibold text-title" title={card.label}>
+            {card.label}
+          </span>
+        </span>
+        <span
+          className={`block truncate text-lg font-bold leading-none tabular-nums ${
+            active ? "text-primary" : "text-title"
+          }`}
+          title={displayValue}
+        >
+          {displayValue}
+        </span>
+      </span>
+      {showCount ? (
+        <span
+          className={`flex w-11 shrink-0 flex-col items-center justify-center border-l border-border/70 text-base font-bold tabular-nums ${
+            panelStyle ? "" : tileClassName || "bg-primary/10 text-primary"
+          }`}
+          style={panelStyle}
+        >
+          {count}
+        </span>
+      ) : (
+        <span
+          className={`w-1 shrink-0 ${tileBg ? "" : tileBgClassName || "bg-primary"}`}
+          style={tileBg ? { backgroundColor: tileBg } : undefined}
+          aria-hidden
+        />
+      )}
+    </span>
+  );
+}
+
+/** Soft — status-tinted wash, no accent bar. */
+function BodySoft(props) {
+  const {
+    Icon,
+    card,
+    active,
+    displayValue,
+    showCount,
+    count,
+    tileBg,
+    tileText,
+    tileBgClassName,
+    tileTextClassName,
+    iconStyle,
+  } = props;
+  const washStyle = tileBg
+    ? {
+        backgroundColor: tileBg,
+        color: tileText || undefined,
+        opacity: undefined,
+      }
+    : undefined;
+  return (
+    <span
+      className={`flex min-w-0 flex-col gap-1 px-2.5 py-2 ${
+        washStyle ? "bg-opacity-100" : tileBgClassName || "bg-primary/8"
+      }`}
+      style={
+        washStyle
+          ? {
+              backgroundColor: tileBg.includes("rgb")
+                ? tileBg.replace(/rgba?\(([^)]+)\)/, (_, inner) => {
+                    const parts = inner.split(",").map((p) => p.trim());
+                    if (parts.length >= 3) return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, 0.22)`;
+                    return tileBg;
+                  })
+                : tileBg.length === 7
+                  ? `${tileBg}38`
+                  : tileBg,
+            }
+          : undefined
+      }
+    >
+      <span className="flex min-w-0 items-center gap-1.5">
+        {Icon ? (
+          <Icon
+            className={`h-3.5 w-3.5 shrink-0 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
+            style={iconStyle}
+            aria-hidden
+          />
+        ) : null}
+        <span
+          className="min-w-0 flex-1 truncate text-xs font-semibold text-title"
+          title={card.label}
+          style={tileText ? { color: tileText } : undefined}
+        >
+          {card.label}
+        </span>
+        {showCount ? (
+          <span
+            className="inline-flex h-5 min-w-[1.35rem] shrink-0 items-center justify-center border border-current/20 bg-white/50 px-1.5 text-[11px] font-bold tabular-nums text-title dark:bg-black/20"
+          >
+            {count}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={`block truncate text-base font-bold leading-none tabular-nums ${
+          active ? "text-primary" : "text-title"
+        }`}
+        title={displayValue}
+      >
+        {displayValue}
+      </span>
+    </span>
+  );
+}
+
+/** Ink — type-led, no icon chrome, outlined count. */
+function BodyInk(props) {
+  const {
+    card,
+    active,
+    displayValue,
+    showCount,
+    count,
+    accentStyle,
+    tileBg,
+    tileBgClassName,
+    tileText,
+    tileTextClassName,
+  } = props;
+  const labelStyle = tileText || tileBg ? { color: tileText || tileBg } : undefined;
+  return (
+    <span className="flex min-w-0 flex-col gap-0.5 px-2.5 py-2">
+      <span className="flex min-w-0 items-baseline justify-between gap-2">
+        <span
+          className={`min-w-0 truncate text-[11px] font-bold uppercase tracking-[0.08em] ${
+            labelStyle ? "" : tileTextClassName || "text-primary"
+          }`}
+          title={card.label}
+          style={labelStyle}
+        >
+          {card.label}
+        </span>
+        {showCount ? (
+          <span className="inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center border border-border px-1 text-[10px] font-bold tabular-nums text-secondary">
+            {count}
+          </span>
+        ) : null}
+      </span>
+      <span
+        className={`block truncate text-base font-bold leading-tight tabular-nums tracking-tight ${
+          active ? "text-primary" : "text-title"
+        }`}
+        title={displayValue}
+      >
+        {displayValue}
+      </span>
+      <span
+        className={`mt-0.5 h-px w-8 ${tileBg ? "" : tileBgClassName || "bg-primary"}`}
+        style={accentStyle}
+        aria-hidden
+      />
+    </span>
+  );
+}
+
+const BODY_BY_VARIANT = {
+  strip: BodyStrip,
+  rail: BodyRail,
+  amount: BodyAmount,
+  split: BodySplit,
+  soft: BodySoft,
+  ink: BodyInk,
+};
+
+/**
+ * Status summary filter card — supports multiple design variants (Simple design picker).
+ */
+export default function StatusFilterPillButton({
+  card,
+  active,
+  onClick,
+  formatAmount,
+  readOnly = false,
+  amountOnly = false,
+  className = "",
+  labelOnly = false,
+  /** Optional override; default is Split. */
+  variant: variantProp,
+}) {
+  const design = useStatusFilterCardDesign();
+  const variant = variantProp || design?.variant || "split";
+
+  const amountText =
+    typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
+  const { tileBg, tileText, tileBgClassName, tileTextClassName, tileClassName } = useTileTokens(card);
   const Icon = typeof card.icon === "function" ? card.icon : null;
 
   const hasCustomSubtitle = card.subtitle != null && String(card.subtitle).trim() !== "";
   const customSubtitle = hasCustomSubtitle ? String(card.subtitle) : "";
   const showStats = !labelOnly;
+  const count = card.count ?? 0;
+  const showCount = showStats && !amountOnly && !hasCustomSubtitle;
+  const displayValue = hasCustomSubtitle || amountOnly ? (hasCustomSubtitle ? customSubtitle : amountText) : amountText;
 
-  const railStyle = tileBg ? { backgroundColor: tileBg } : undefined;
+  const accentStyle = tileBg ? { backgroundColor: tileBg } : undefined;
   const countBadgeStyle =
     tileBg || tileText
       ? {
@@ -88,75 +518,69 @@ export default function StatusFilterPillButton({
       : undefined;
   const iconColor = iconColorOnCard(tileBg, tileText);
   const iconStyle = iconColor ? { color: iconColor } : undefined;
+  const iconWellStyle = tileBg
+    ? { backgroundColor: tileBg, color: tileText || undefined }
+    : undefined;
 
   const shellClass = [
-    "status-filter-pill group relative inline-flex cursor-pointer overflow-hidden rounded-lg border text-left transition-all duration-150",
-    "bg-card shadow-sm",
+    "status-filter-pill group relative inline-flex overflow-hidden border text-left transition-[border-color,background-color,box-shadow,transform] duration-150 ease-out",
+    "rounded-none bg-card",
+    `status-filter-pill--${variant}`,
     active
-      ? "border-primary ring-1 ring-primary/35"
-      : "border-border hover:border-primary/40 hover:shadow",
-    labelOnly ? "min-w-0 items-center" : "min-w-[8.25rem] max-w-[14rem] flex-col",
+      ? "border-primary bg-primary/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]"
+      : "border-border/90 hover:border-primary/45 hover:bg-primary/[0.03]",
+    labelOnly ? "min-w-0 items-center" : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
+    variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
+    variant === "soft" && !labelOnly && !active ? "!bg-transparent hover:!bg-transparent" : "",
+    readOnly ? "" : "cursor-pointer",
     className,
   ]
     .filter(Boolean)
     .join(" ");
 
-  const rail = (
-    <span
-      className={`absolute inset-y-0 left-0 w-1 ${tileBg ? "" : tileBgClassName || "bg-primary/50"}`}
-      style={railStyle}
-      aria-hidden
-    />
-  );
+  const bodyProps = {
+    Icon,
+    card,
+    active,
+    amountText,
+    displayValue,
+    showCount,
+    count,
+    countBadgeStyle,
+    tileClassName,
+    accentStyle,
+    tileBg,
+    tileBgClassName,
+    tileText,
+    tileTextClassName,
+    iconWellStyle,
+    iconStyle,
+  };
 
-  const body = (
-    <span className={`block min-w-0 pl-3.5 ${labelOnly ? "px-3 py-0" : "pr-3 pt-2.5 pb-2.5"}`}>
-      <span className="flex min-w-0 items-center gap-2">
-        {Icon ? (
-          <Icon
-            className={`h-4 w-4 shrink-0 ${
-              iconStyle ? "" : tileTextClassName || "text-primary"
-            }`}
-            style={iconStyle}
-            aria-hidden
-          />
-        ) : null}
-        <span
-          className="min-w-0 flex-1 truncate text-xs font-semibold leading-snug text-title"
-          title={card.label}
-        >
-          {card.label}
-        </span>
-        {showStats && !amountOnly && !hasCustomSubtitle ? (
-          <span
-            className={`inline-flex h-5 min-w-[1.25rem] shrink-0 items-center justify-center rounded-md px-1.5 text-[11px] font-bold tabular-nums leading-none ${
-              countBadgeStyle ? "" : tileClassName || "bg-primary/15 text-primary"
-            }`}
-            style={countBadgeStyle}
-          >
-            {card.count ?? 0}
-          </span>
-        ) : null}
-      </span>
-      {showStats ? (
-        hasCustomSubtitle || amountOnly ? (
-          <span className="mt-1.5 block truncate text-sm font-semibold tabular-nums text-secondary">
-            {hasCustomSubtitle ? customSubtitle : amountText}
-          </span>
-        ) : (
-          <span className="mt-1.5 block truncate text-sm font-bold tabular-nums text-title">
-            {amountText}
-          </span>
-        )
-      ) : null}
-    </span>
+  const Body = BODY_BY_VARIANT[variant] || BodyStrip;
+
+  const content = labelOnly ? (
+    <>
+      <span
+        className={`absolute inset-y-0 left-0 w-[3px] ${tileBg ? "" : tileBgClassName || "bg-primary/50"}`}
+        style={accentStyle}
+        aria-hidden
+      />
+      <LabelOnlyBody
+        Icon={Icon}
+        card={card}
+        iconStyle={iconStyle}
+        tileTextClassName={tileTextClassName}
+      />
+    </>
+  ) : (
+    <Body {...bodyProps} />
   );
 
   if (readOnly) {
     return (
-      <div className={shellClass.replace("cursor-pointer", "")} role="group" aria-label={card.label}>
-        {rail}
-        {body}
+      <div className={shellClass} role="group" aria-label={card.label}>
+        {content}
       </div>
     );
   }
@@ -169,8 +593,7 @@ export default function StatusFilterPillButton({
       aria-pressed={active}
       title={card.label}
     >
-      {rail}
-      {body}
+      {content}
     </button>
   );
 }

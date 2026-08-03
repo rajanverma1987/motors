@@ -17,6 +17,11 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
+import {
+  SIMPLE_SCREEN_FILTERS_CLASS,
+  SIMPLE_SCREEN_PANEL_CLASS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 import { formatDateMdy } from "@/lib/format-date";
 import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
@@ -490,8 +495,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const isCreate = modalMode === "create";
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="mb-3 flex shrink-0 flex-wrap gap-2.5">
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
         {paymentSummaryCards.map((card) => (
           <StatusFilterPillButton
             key={card.key || "__all__"}
@@ -507,7 +512,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ))}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table
           columns={columns}
           data={displayRows}
