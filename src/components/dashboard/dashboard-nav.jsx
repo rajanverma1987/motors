@@ -8,14 +8,12 @@ import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
 import { useAuth } from "@/contexts/auth-context";
-import { useUserSettings } from "@/contexts/user-settings-context";
 import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath } from "@/lib/portal-view";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
 
 export default function DashboardNav() {
   const { user, logout } = useAuth();
-  const { settings } = useUserSettings();
   const pathname = usePathname();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -24,6 +22,12 @@ export default function DashboardNav() {
   const onSimpleHub = simplePortal && pathname === SIMPLE_PORTAL_PATH && !calculatorOnly;
   const homeHref = calculatorOnly ? "/dashboards?tab=calculators" : SIMPLE_PORTAL_PATH;
   const settingsHref = `${SIMPLE_PORTAL_PATH}/settings`;
+  const companyName = String(user?.shopName || "").trim() || "Dashboard";
+  const userDisplayName =
+    String(user?.contactName || "").trim() || String(user?.email || "").trim() || "";
+  const iconBtnClass = `inline-flex h-9 w-9 items-center justify-center border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white ${
+    simplePortal ? "rounded-none" : "rounded-md"
+  }`;
 
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -46,7 +50,7 @@ export default function DashboardNav() {
 
   return (
     <nav
-      className={`border-b border-border bg-card px-4 sm:px-6 ${
+      className={`dashboard-nav border-b border-border px-4 sm:px-6 ${
         simplePortal ? "py-2.5" : "py-3"
       }`}
     >
@@ -54,24 +58,15 @@ export default function DashboardNav() {
         <Link
           href={homeHref}
           className="flex min-w-0 max-w-[min(100%,14rem)] shrink-0 items-center gap-3 sm:max-w-[min(100%,18rem)]"
-          title={user?.shopName || user?.email || "Dashboard"}
+          title={companyName}
         >
-          {settings?.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={settings.logoUrl}
-              alt={user?.shopName || "Shop logo"}
-              className="h-8 w-auto max-h-8 max-w-[160px] object-contain object-left"
-            />
-          ) : (
-            <span
-              className={`truncate font-semibold text-title hover:text-primary ${
-                simplePortal ? "text-base tracking-tight" : "text-lg"
-              }`}
-            >
-              {user?.shopName || "Dashboard"}
-            </span>
-          )}
+          <span
+            className={`truncate font-semibold text-title hover:text-primary ${
+              simplePortal ? "text-base tracking-tight" : "text-lg"
+            }`}
+          >
+            {companyName}
+          </span>
         </Link>
         {CLASSIC_PORTAL_UI_ENABLED ? (
           <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
@@ -89,31 +84,16 @@ export default function DashboardNav() {
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
-                className={`relative flex min-w-0 cursor-text items-center border border-border bg-bg py-2 pl-9 pr-3 text-left text-sm text-secondary transition-colors hover:border-primary/30 hover:bg-muted/30 focus:outline-none focus:ring-2 focus:ring-primary ${
-                  simplePortal ? "rounded-none" : "rounded-md"
-                } ${onSimpleHub ? "w-full max-w-[16rem] flex-1 xl:max-w-[20rem]" : "w-full max-w-[33.6rem] flex-1"}`}
+                className={iconBtnClass}
+                title="Search (⌘K or Ctrl+K)"
                 aria-label="Open search (⌘K or Ctrl+K)"
               >
-                <FiSearch
-                  className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary"
-                  aria-hidden
-                />
-                <span className="min-w-0 flex-1 truncate pr-2 text-left">Search…</span>
-                <kbd
-                  className="pointer-events-none hidden shrink-0 rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[10px] text-secondary sm:inline"
-                  aria-hidden
-                >
-                  {typeof navigator !== "undefined" && /Mac|iPhone|iPad/i.test(navigator.userAgent || "")
-                    ? "⌘K"
-                    : "Ctrl+K"}
-                </kbd>
+                <FiSearch className="h-5 w-5" aria-hidden />
               </button>
               <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
               <Link
                 href={settingsHref}
-                className={`inline-flex h-9 w-9 items-center justify-center border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white ${
-                  simplePortal ? "rounded-none" : "rounded-md"
-                }`}
+                className={iconBtnClass}
                 title="Settings"
                 aria-label="Settings"
               >
@@ -122,12 +102,18 @@ export default function DashboardNav() {
             </>
           ) : null}
           <ThemeToggle />
+          {userDisplayName ? (
+            <span
+              className="hidden min-w-0 max-w-[10rem] truncate text-sm font-medium text-title sm:inline"
+              title={userDisplayName}
+            >
+              {userDisplayName}
+            </span>
+          ) : null}
           <button
             type="button"
             onClick={handleLogout}
-            className={`inline-flex h-9 w-9 items-center justify-center border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white ${
-              simplePortal ? "rounded-none" : "rounded-md"
-            }`}
+            className={iconBtnClass}
             title="Log out"
             aria-label="Log out"
           >

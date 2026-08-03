@@ -69,6 +69,15 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Soft gray nav — slightly darker than page/card, not near-black */
+.dashboard-nav {
+  background-color: hsl(28 10% 95.5%);
+}
+
+html.dark .dashboard-nav {
+  background-color: hsl(24 10% 11%);
+}
+
 html.dark body {
   color-scheme: dark;
   /* Slightly softer rendering on OLED / long reads */
