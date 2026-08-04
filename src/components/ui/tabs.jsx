@@ -121,7 +121,11 @@ export default function Tabs({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      <div role="tablist" aria-label={ariaLabel} className={listClass}>
+      <div
+        role="tablist"
+        aria-label={ariaLabel}
+        className={`relative z-20 shrink-0 ${listClass}`}
+      >
         {tabs.map((tab, index) => {
           const isActive = activeId === tab.id;
           const activeClass = "bg-primary font-bold text-white shadow-sm";
@@ -147,29 +151,34 @@ export default function Tabs({
         })}
       </div>
       {keepMounted ? (
-        mountedTabs.map((tab) => {
-          const isActive = tab.id === activeId;
-          return (
-            <div
-              key={tab.id}
-              role="tabpanel"
-              id={`${uid}-panel-${tab.id}`}
-              aria-labelledby={`${uid}-tab-${tab.id}`}
-              hidden={!isActive}
-              className={`min-h-0 min-w-0 ${panelClassName} ${isActive ? "" : "!hidden"}`}
-              tabIndex={isActive ? 0 : -1}
-            >
-              {tab.children}
-            </div>
-          );
-        })
+        <div className="relative z-0 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {mountedTabs.map((tab) => {
+            const isActive = tab.id === activeId;
+            return (
+              <div
+                key={tab.id}
+                role="tabpanel"
+                id={`${uid}-panel-${tab.id}`}
+                aria-labelledby={`${uid}-tab-${tab.id}`}
+                aria-hidden={!isActive}
+                hidden={!isActive}
+                inert={!isActive ? true : undefined}
+                tabIndex={isActive ? 0 : -1}
+                className={`min-h-0 min-w-0 ${panelClassName} ${isActive ? "flex" : ""}`}
+                style={isActive ? undefined : { display: "none" }}
+              >
+                {tab.children}
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div
           key={`${activeTab?.id ?? "panel"}-${animKey}`}
           role="tabpanel"
           id={`${uid}-panel-${activeTab?.id ?? "active"}`}
           aria-labelledby={activeTab ? `${uid}-tab-${activeTab.id}` : undefined}
-          className={`min-h-0 min-w-0 ${panelClassName} ${panelAnimClass}`}
+          className={`relative z-0 min-h-0 min-w-0 ${panelClassName} ${panelAnimClass}`}
           tabIndex={0}
         >
           {activeTab?.children ?? null}

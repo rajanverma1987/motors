@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   FiBarChart2,
@@ -45,7 +45,7 @@ const DASHBOARDS_SQUARE_UI_CLASS = [
   "[&_.status-filter-pill_span]:!rounded-none",
 ].join(" ");
 const DASHBOARDS_TAB_LIST_CLASS =
-  "simple-hub-tablist shrink-0 !flex-nowrap !gap-0 !overflow-x-auto !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent";
+  "simple-hub-tablist shrink-0 !flex-nowrap !gap-[2px] !overflow-x-auto !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent";
 const DASHBOARDS_TAB_BUTTON_CLASS =
   "!box-border !flex !h-[4.75rem] !min-w-0 !flex-1 !flex-col !items-center !justify-center !rounded-none !px-1 !py-2 sm:!h-[5.25rem]";
 
@@ -66,11 +66,19 @@ export default function DashboardsPageClient() {
   const { user } = useAuth();
   const calcOnly = !!user?.calculatorOnlyAccount;
   const tabParam = searchParams.get("tab");
-  const activeTab = calcOnly
+  const urlTab = calcOnly
     ? SIMPLE_TAB_CALCULATORS
     : SIMPLE_TAB_IDS.includes(tabParam)
       ? tabParam
       : SIMPLE_TAB_SERVICE_PROPOSALS;
+  /** Immediate UI feedback — URL sync via router.replace can lag and feel like dead clicks. */
+  const [pendingTab, setPendingTab] = useState(null);
+  const activeTab =
+    pendingTab && SIMPLE_TAB_IDS.includes(pendingTab) ? pendingTab : urlTab;
+
+  useEffect(() => {
+    setPendingTab(null);
+  }, [urlTab]);
 
   /** Square inputs/buttons in page + portaled form modals while Simple `/dashboards` is mounted. */
   useEffect(() => {
@@ -84,6 +92,7 @@ export default function DashboardsPageClient() {
     (nextTab) => {
       if (!nextTab || nextTab === activeTab) return;
       if (calcOnly && nextTab !== SIMPLE_TAB_CALCULATORS) return;
+      setPendingTab(nextTab);
       const params = new URLSearchParams(searchParams.toString());
       params.set("tab", nextTab);
       router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });

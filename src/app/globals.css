@@ -237,10 +237,12 @@ body.simple-dashboards-square-inputs [role="button"] {
 
 /* Continuous hub tab stripe — strong, one-bar navigation */
 .simple-portal .simple-hub-tablist {
+  position: relative;
+  z-index: 20;
   display: flex !important;
   width: 100%;
   flex-wrap: nowrap !important;
-  gap: 0 !important;
+  gap: 2px !important;
   overflow-x: auto;
   margin-top: 0 !important;
   border: 2px solid hsl(var(--primary) / 0.45);
@@ -249,9 +251,14 @@ body.simple-dashboards-square-inputs [role="button"] {
     0 1px 0 hsl(var(--primary) / 0.12),
     0 6px 18px hsl(var(--primary) / 0.1);
   padding: 0 !important;
+  /* Keep tab clicks above any keepMounted panel paint / overflow */
+  isolation: isolate;
 }
 
 .simple-portal .simple-hub-tablist [role="tab"] {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
   flex: 1 1 0;
   min-width: 4.75rem;
   border: 0 !important;
@@ -277,7 +284,7 @@ body.simple-dashboards-square-inputs [role="button"] {
 .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] {
   background: hsl(var(--primary)) !important;
   color: #fff !important;
-  box-shadow: inset 0 -3px 0 hsl(26 45% 22%) !important;
+  box-shadow: none !important;
   z-index: 1;
 }
 
@@ -300,7 +307,7 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"] {
 }
 
 html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] {
-  box-shadow: inset 0 -3px 0 hsl(26 40% 16%) !important;
+  box-shadow: none !important;
 }
 
 .simple-portal .simple-screen-filters {
