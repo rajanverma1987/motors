@@ -11,6 +11,7 @@ import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 
 const CLEAR_CONFIRM_PHRASE = "CLEAR_ALL_SIMPLE_IMPORT_DATA";
 
+/** Parent docs only — child line clears are nested field updates, not separate models. */
 const ALL_COLLECTION_KEYS = [
   "customers",
   "vendors",
@@ -19,6 +20,12 @@ const ALL_COLLECTION_KEYS = [
   "salesPersons",
   "simpleServiceProposals",
   "simplePurchaseOrders",
+];
+
+const CLEARABLE_COLLECTION_KEYS = [
+  ...ALL_COLLECTION_KEYS,
+  "simpleServiceProposalScopeDetails",
+  "simpleServiceProposalOtherItems",
 ];
 
 export async function POST(request) {
@@ -54,13 +61,23 @@ export async function POST(request) {
           return SimpleServiceProposal.deleteMany({ createdByEmail: ownerEmail });
         case "simplePurchaseOrders":
           return SimplePurchaseOrder.deleteMany({ createdByEmail: ownerEmail });
+        case "simpleServiceProposalScopeDetails":
+          return SimpleServiceProposal.updateMany(
+            { createdByEmail: ownerEmail },
+            { $set: { scopeDetails: [] } },
+          );
+        case "simpleServiceProposalOtherItems":
+          return SimpleServiceProposal.updateMany(
+            { createdByEmail: ownerEmail },
+            { $set: { otherItems: [] } },
+          );
         default:
           return null;
       }
     };
 
     if (requestedCollection) {
-      if (!ALL_COLLECTION_KEYS.includes(requestedCollection)) {
+      if (!CLEARABLE_COLLECTION_KEYS.includes(requestedCollection)) {
         return NextResponse.json({ error: "Unknown collection." }, { status: 400 });
       }
       const result = await deleteOne(requestedCollection);

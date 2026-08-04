@@ -15,6 +15,18 @@ const IMPORT_COLLECTIONS = [
   { collection: "employees", label: "Employees" },
   { collection: "salesPersons", label: "Sales Persons" },
   { collection: "simpleServiceProposals", label: "Service Proposals" },
+  {
+    collection: "simpleServiceProposalScopeDetails",
+    label: "Scope Details",
+    childOf: "Service Proposals",
+    hint: "One row per scope line. Import Service Proposals first. Link with service_proposal_external_ref.",
+  },
+  {
+    collection: "simpleServiceProposalOtherItems",
+    label: "Other Items",
+    childOf: "Service Proposals",
+    hint: "One row per parts/other line. Import Service Proposals first. Optional inventory_item_external_ref.",
+  },
   { collection: "simplePurchaseOrders", label: "Purchase Orders" },
 ];
 
@@ -270,7 +282,8 @@ export default function SimpleDataUploadPanel() {
         <p className="mb-4 text-sm text-secondary">
           Import Simple portal data collection-by-collection in parent→child order. Download the template, fill it,
           upload CSV, and only valid records will be imported. Invalid rows are exported immediately with error
-          reasons. Import customers and vendors before service proposals and purchase orders.
+          reasons. Import customers before service proposals. For proposals, import header rows first, then Scope
+          Details and Other Items as separate CSVs (plain columns — no JSON).
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
           <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>
@@ -287,7 +300,7 @@ export default function SimpleDataUploadPanel() {
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
           Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
-          Purchase Orders.
+          Scope Details → Other Items → Purchase Orders.
         </div>
         <p className="mb-4 text-xs text-secondary">
           Use the <FiFilePlus className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> icon to choose a CSV file, then{" "}
@@ -300,10 +313,24 @@ export default function SimpleDataUploadPanel() {
             const stats = statsByCollection[row.collection];
             const file = files[row.collection] || null;
             return (
-              <div key={row.collection} className="rounded-lg border border-border bg-bg p-4 shadow-sm">
+              <div
+                key={row.collection}
+                className={`rounded-lg border border-border bg-bg p-4 shadow-sm ${
+                  row.childOf ? "ml-4 border-l-4 border-l-primary/40 sm:ml-8" : ""
+                }`}
+              >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-title">{row.label}</p>
+                    <p className="font-medium text-title">
+                      {row.childOf ? (
+                        <span className="text-secondary">
+                          {row.childOf}
+                          <span className="mx-1.5 text-border">/</span>
+                        </span>
+                      ) : null}
+                      {row.label}
+                    </p>
+                    {row.hint ? <p className="mt-0.5 text-xs text-secondary">{row.hint}</p> : null}
                     <p className="text-xs text-secondary">Collection key: {row.collection}</p>
                     {file ? <p className="mt-1 text-xs text-secondary">Selected file: {file.name}</p> : null}
                     {stats ? (

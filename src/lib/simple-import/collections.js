@@ -362,8 +362,6 @@ const IMPORT_COLLECTIONS = {
       "prepared_by",
       "internal_notes",
       "customer_notes",
-      "scope_details_json",
-      "other_items_json",
     ],
     sample: {
       source_system: "manual_csv",
@@ -388,8 +386,6 @@ const IMPORT_COLLECTIONS = {
       prepared_by: "Mike Turner",
       internal_notes: "Rush job",
       customer_notes: "Call before ship",
-      scope_details_json: '[{"description":"Rewind","price":"1200"}]',
-      other_items_json: '[{"description":"Bearing","uom":"ea","price":"45","qty":"1"}]',
     },
     validateRow: (r) => {
       const errs = [];
@@ -398,20 +394,6 @@ const IMPORT_COLLECTIONS = {
       const recordType = s(r.record_type || "RFQ").toUpperCase();
       if (!["RFQ", "JOB", "INVOICE"].includes(recordType)) {
         errs.push("record_type must be RFQ, JOB, or INVOICE");
-      }
-      if (s(r.scope_details_json)) {
-        try {
-          parseJsonArrayField(r.scope_details_json, "scope_details_json");
-        } catch (err) {
-          errs.push(err.message || "scope_details_json must be valid JSON array");
-        }
-      }
-      if (s(r.other_items_json)) {
-        try {
-          parseJsonArrayField(r.other_items_json, "other_items_json");
-        } catch (err) {
-          errs.push(err.message || "other_items_json must be valid JSON array");
-        }
       }
       return errs;
     },
@@ -423,27 +405,7 @@ const IMPORT_COLLECTIONS = {
       );
       if (!customerId) throw new Error("customer_external_ref not found");
 
-      const scopeRaw = s(r.scope_details_json)
-        ? parseJsonArrayField(r.scope_details_json, "scope_details_json")
-        : [];
-      const otherRaw = s(r.other_items_json)
-        ? parseJsonArrayField(r.other_items_json, "other_items_json")
-        : [];
-
-      const scopeDetails = scopeRaw.map((it) => ({
-        id: s(it?.id) || newLineId("scope"),
-        description: s(it?.description),
-        price: s(it?.price),
-      }));
-      const otherItems = otherRaw.map((it) => ({
-        id: s(it?.id) || newLineId("other"),
-        description: s(it?.description),
-        uom: s(it?.uom),
-        price: s(it?.price),
-        qty: s(it?.qty),
-        inventoryItemId: s(it?.inventoryItemId ?? it?.inventory_item_id),
-      }));
-
+      // Header-only upsert — do not touch scopeDetails / otherItems (import those via child CSVs).
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -467,12 +429,166 @@ const IMPORT_COLLECTIONS = {
         preparedBy: s(r.prepared_by),
         internalNotes: s(r.internal_notes),
         customerNotes: s(r.customer_notes),
-        scopeDetails,
-        otherItems,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
       };
+    },
+  },
+  /** Child of Service Proposals — one CSV row per scope line (no JSON). */
+  simpleServiceProposalScopeDetails: {
+    label: "Service Proposal — Scope Details",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "description",
+      "price",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-SCOPE-1",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      description: "Rewind stator",
+      price: "1200",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) {
+        errs.push("service_proposal_external_ref is required");
+      }
+      if (!s(r.description)) errs.push("description is required");
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      const lineRef = s(r.external_ref);
+      return {
+        serviceProposalId,
+        line: {
+          id: lineRef,
+          externalRef: lineRef,
+          sourceSystem: s(r.source_system || "manual_csv"),
+          description: s(r.description),
+          price: s(r.price),
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const list = Array.isArray(doc.scopeDetails) ? doc.scopeDetails.map((x) => ({ ...(x.toObject?.() || x) })) : [];
+      const lineId = s(payload.line.id);
+      const idx = list.findIndex((x) => s(x?.id) === lineId || s(x?.externalRef) === lineId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...payload.line };
+      else list.push(payload.line);
+      doc.set("scopeDetails", list);
+      doc.markModified("scopeDetails");
+      await doc.save();
+    },
+  },
+  /** Child of Service Proposals — one CSV row per other/parts line (no JSON). */
+  simpleServiceProposalOtherItems: {
+    label: "Service Proposal — Other Items",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "description",
+      "uom",
+      "price",
+      "qty",
+      "inventory_item_external_ref",
+      "inventory_item_source_system",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-OTHER-1",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      description: "6205 Bearing",
+      uom: "ea",
+      price: "45",
+      qty: "1",
+      inventory_item_external_ref: "",
+      inventory_item_source_system: "manual_csv",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) {
+        errs.push("service_proposal_external_ref is required");
+      }
+      if (!s(r.description)) errs.push("description is required");
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      let inventoryItemId = "";
+      if (s(r.inventory_item_external_ref)) {
+        inventoryItemId = ctx.resolveRef(
+          "inventoryItems",
+          s(r.inventory_item_source_system || "manual_csv"),
+          s(r.inventory_item_external_ref),
+        );
+        if (!inventoryItemId) {
+          throw new Error("inventory_item_external_ref not found — import Inventory Items first");
+        }
+      }
+      const lineRef = s(r.external_ref);
+      return {
+        serviceProposalId,
+        line: {
+          id: lineRef,
+          externalRef: lineRef,
+          sourceSystem: s(r.source_system || "manual_csv"),
+          description: s(r.description),
+          uom: s(r.uom),
+          price: s(r.price),
+          qty: s(r.qty),
+          inventoryItemId,
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const list = Array.isArray(doc.otherItems) ? doc.otherItems.map((x) => ({ ...(x.toObject?.() || x) })) : [];
+      const lineId = s(payload.line.id);
+      const idx = list.findIndex((x) => s(x?.id) === lineId || s(x?.externalRef) === lineId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...payload.line };
+      else list.push(payload.line);
+      doc.set("otherItems", list);
+      doc.markModified("otherItems");
+      await doc.save();
     },
   },
   simplePurchaseOrders: {
@@ -642,23 +758,27 @@ function rowsToObjects(csvText) {
 }
 
 async function fetchRefMaps(ownerEmail) {
-  const [customers, vendors, employees, salesPersons, simpleServiceProposals] = await Promise.all([
-    Customer.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-      .select("_id sourceSystem externalRef")
-      .lean(),
-    Vendor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-      .select("_id sourceSystem externalRef")
-      .lean(),
-    Employee.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-      .select("_id sourceSystem externalRef")
-      .lean(),
-    SalesPerson.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-      .select("_id sourceSystem externalRef")
-      .lean(),
-    SimpleServiceProposal.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-      .select("_id sourceSystem externalRef")
-      .lean(),
-  ]);
+  const [customers, vendors, inventoryItems, employees, salesPersons, simpleServiceProposals] =
+    await Promise.all([
+      Customer.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+      Vendor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+      InventoryItem.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+      Employee.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+      SalesPerson.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+      SimpleServiceProposal.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+        .select("_id sourceSystem externalRef")
+        .lean(),
+    ]);
 
   const toMap = (items) => {
     const m = new Map();
@@ -671,6 +791,7 @@ async function fetchRefMaps(ownerEmail) {
   return {
     customers: toMap(customers),
     vendors: toMap(vendors),
+    inventoryItems: toMap(inventoryItems),
     employees: toMap(employees),
     salesPersons: toMap(salesPersons),
     simpleServiceProposals: toMap(simpleServiceProposals),
