@@ -7,6 +7,7 @@ import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
+const MAX_DOCUMENTS = 50;
 function sanitizeAdditionalContacts(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.slice(0, MAX_ADDITIONAL_CONTACTS).map((item) => ({
@@ -14,6 +15,16 @@ function sanitizeAdditionalContacts(arr) {
     phone: clampString(item?.phone, 30),
     email: item?.email?.trim() && isValidEmail(item.email) ? item.email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
   }));
+}
+function sanitizeDocuments(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .slice(0, MAX_DOCUMENTS)
+    .map((item) => ({
+      name: clampString(item?.name ?? item?.documentName, LIMITS.name.max),
+      url: clampString(item?.url ?? item?.path ?? item?.documents, 500),
+    }))
+    .filter((d) => d.name || d.url);
 }
 
 function getParams(context) {
@@ -117,10 +128,19 @@ export async function PATCH(request, context) {
     }
     const body = await request.json();
     const {
+      customerNumber,
       companyName,
       primaryContactName,
       phone,
+      fax,
       email,
+      alternatePhone,
+      alternateEmail,
+      billingContact,
+      customerType,
+      paymentTerms,
+      preferredPaymentMethod,
+      preferredContactMethod,
       address,
       city,
       state,
@@ -132,6 +152,7 @@ export async function PATCH(request, context) {
       shippingZipCode,
       shippingCountry,
       additionalContacts,
+      documents,
       notes,
       ein,
       creditLimit,
@@ -144,13 +165,33 @@ export async function PATCH(request, context) {
       }
       doc.companyName = clampString(companyName, LIMITS.companyName.max);
     }
+    if (customerNumber !== undefined) doc.customerNumber = clampString(customerNumber, 50);
     if (primaryContactName !== undefined) doc.primaryContactName = clampString(primaryContactName, LIMITS.name.max);
     if (phone !== undefined) doc.phone = clampString(phone, 30);
+    if (fax !== undefined) doc.fax = clampString(fax, 30);
     if (email !== undefined) {
       if (email?.trim() && !isValidEmail(email)) {
         return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
       }
       doc.email = email?.trim() ? email.trim().toLowerCase().slice(0, LIMITS.email.max) : "";
+    }
+    if (alternatePhone !== undefined) doc.alternatePhone = clampString(alternatePhone, 30);
+    if (alternateEmail !== undefined) {
+      if (alternateEmail?.trim() && !isValidEmail(alternateEmail)) {
+        return NextResponse.json({ error: "Please enter a valid alternate email address." }, { status: 400 });
+      }
+      doc.alternateEmail = alternateEmail?.trim()
+        ? alternateEmail.trim().toLowerCase().slice(0, LIMITS.email.max)
+        : "";
+    }
+    if (billingContact !== undefined) doc.billingContact = clampString(billingContact, LIMITS.name.max);
+    if (customerType !== undefined) doc.customerType = clampString(customerType, 80);
+    if (paymentTerms !== undefined) doc.paymentTerms = clampString(paymentTerms, 80);
+    if (preferredPaymentMethod !== undefined) {
+      doc.preferredPaymentMethod = clampString(preferredPaymentMethod, 80);
+    }
+    if (preferredContactMethod !== undefined) {
+      doc.preferredContactMethod = clampString(preferredContactMethod, 80);
     }
     if (address !== undefined) doc.address = clampString(address, LIMITS.shortText.max);
     if (city !== undefined) doc.city = clampString(city, LIMITS.city.max);
@@ -165,6 +206,10 @@ export async function PATCH(request, context) {
     if (additionalContacts !== undefined) {
       doc.additionalContacts = sanitizeAdditionalContacts(additionalContacts);
       doc.markModified("additionalContacts");
+    }
+    if (documents !== undefined) {
+      doc.documents = sanitizeDocuments(documents);
+      doc.markModified("documents");
     }
     if (notes !== undefined) doc.notes = clampString(notes, LIMITS.message.max);
     if (ein !== undefined) doc.ein = clampString(ein, 50);

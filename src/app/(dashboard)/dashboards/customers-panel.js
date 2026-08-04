@@ -361,10 +361,19 @@ export default function CustomersPanel({ createNonce = 0 }) {
     return typeFilteredRows.filter((row) => {
       const haystack = [
         row.recordType,
+        row.customerNumber,
         row.companyName,
         row.primaryContactName,
+        row.customerType,
         row.phone,
+        row.fax,
         row.email,
+        row.alternatePhone,
+        row.alternateEmail,
+        row.billingContact,
+        row.paymentTerms,
+        row.preferredPaymentMethod,
+        row.preferredContactMethod,
         row.ein,
         row.creditLimit,
         row.city,
@@ -417,6 +426,13 @@ export default function CustomersPanel({ createNonce = 0 }) {
         },
       },
       {
+        key: "customerNumber",
+        label: "ID",
+        sortable: true,
+        className: "w-20",
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
+      },
+      {
         key: "companyName",
         label: "Company",
         sortable: true,
@@ -448,6 +464,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
         render: (v) => v || "—",
       },
       {
+        key: "customerType",
+        label: "Type",
+        sortable: true,
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
+      },
+      {
         key: "phone",
         label: "Phone",
         sortable: true,
@@ -458,6 +480,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
         label: "Email",
         sortable: true,
         render: (v) => v || "—",
+      },
+      {
+        key: "paymentTerms",
+        label: "Terms",
+        sortable: true,
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
       },
       {
         key: "ein",

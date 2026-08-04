@@ -55,10 +55,19 @@ const IMPORT_COLLECTIONS = {
     model: Customer,
     headers: [
       ...BASE_HEADERS,
+      "customer_number",
       "company_name",
       "primary_contact_name",
       "phone",
+      "fax",
       "email",
+      "alternate_phone",
+      "alternate_email",
+      "billing_contact",
+      "customer_type",
+      "payment_terms",
+      "preferred_payment_method",
+      "preferred_contact_method",
       "address",
       "city",
       "state",
@@ -75,14 +84,24 @@ const IMPORT_COLLECTIONS = {
       "tax_percent",
       "notes",
       "additional_contacts",
+      "documents_json",
     ],
     sample: {
       source_system: "manual_csv",
       external_ref: "CUST-1001",
+      customer_number: "001",
       company_name: "Acme Pumps",
       primary_contact_name: "John Smith",
       phone: "+1 713 555 0101",
+      fax: "+1 713 555 0199",
       email: "john@acmepumps.com",
+      alternate_phone: "+1 713 555 0102",
+      alternate_email: "billing@acmepumps.com",
+      billing_contact: "Jane Roe",
+      customer_type: "Industrial",
+      payment_terms: "NET 30",
+      preferred_payment_method: "ACH",
+      preferred_contact_method: "Email",
       address: "123 Main St",
       city: "Houston",
       state: "Texas",
@@ -99,6 +118,7 @@ const IMPORT_COLLECTIONS = {
       tax_percent: "0",
       notes: "Priority account",
       additional_contacts: '[{"contactName":"Jane Roe","phone":"+1 713 555 0102","email":"jane@acmepumps.com"}]',
+      documents_json: '[{"name":"tax exempt","url":"C:\\\\Docs\\\\Acme\\\\tax-exempt.pdf"}]',
     },
     validateRow: (r) => {
       const errs = [];
@@ -111,6 +131,13 @@ const IMPORT_COLLECTIONS = {
           errs.push(err.message || "additional_contacts must be valid JSON array");
         }
       }
+      if (s(r.documents_json)) {
+        try {
+          parseJsonArrayField(r.documents_json, "documents_json");
+        } catch (err) {
+          errs.push(err.message || "documents_json must be valid JSON array");
+        }
+      }
       return errs;
     },
     buildPayload: (r, ctx) => {
@@ -118,10 +145,19 @@ const IMPORT_COLLECTIONS = {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
         externalRef: s(r.external_ref),
+        customerNumber: s(r.customer_number),
         companyName: s(r.company_name),
         primaryContactName: s(r.primary_contact_name),
         phone: s(r.phone),
+        fax: s(r.fax),
         email: s(r.email).toLowerCase(),
+        alternatePhone: s(r.alternate_phone),
+        alternateEmail: s(r.alternate_email).toLowerCase(),
+        billingContact: s(r.billing_contact),
+        customerType: s(r.customer_type),
+        paymentTerms: s(r.payment_terms),
+        preferredPaymentMethod: s(r.preferred_payment_method),
+        preferredContactMethod: s(r.preferred_contact_method),
         address: s(r.address),
         city: s(r.city),
         state: s(r.state),
@@ -148,6 +184,15 @@ const IMPORT_COLLECTIONS = {
           phone: s(c?.phone),
           email: s(c?.email).toLowerCase(),
         }));
+      }
+      if (s(r.documents_json)) {
+        const docs = parseJsonArrayField(r.documents_json, "documents_json");
+        payload.documents = docs
+          .map((d) => ({
+            name: s(d?.name ?? d?.documentName ?? d?.document_name),
+            url: s(d?.url ?? d?.path ?? d?.documents),
+          }))
+          .filter((d) => d.name || d.url);
       }
       return payload;
     },

@@ -13,6 +13,7 @@ import { userIsTrialAccount, shopCustomerCount } from "@/lib/trial-account-restr
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
+const MAX_DOCUMENTS = 50;
 function sanitizeAdditionalContacts(arr) {
   if (!Array.isArray(arr)) return [];
   return arr.slice(0, MAX_ADDITIONAL_CONTACTS).map((item) => ({
@@ -20,6 +21,16 @@ function sanitizeAdditionalContacts(arr) {
     phone: clampString(item?.phone, 30),
     email: item?.email?.trim() && isValidEmail(item.email) ? item.email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
   }));
+}
+function sanitizeDocuments(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .slice(0, MAX_DOCUMENTS)
+    .map((item) => ({
+      name: clampString(item?.name ?? item?.documentName, LIMITS.name.max),
+      url: clampString(item?.url ?? item?.path ?? item?.documents, 500),
+    }))
+    .filter((d) => d.name || d.url);
 }
 
 export async function GET(request) {
@@ -127,10 +138,19 @@ export async function POST(request) {
     }
     const body = await request.json();
     const {
+      customerNumber,
       companyName,
       primaryContactName,
       phone,
+      fax,
       email,
+      alternatePhone,
+      alternateEmail,
+      billingContact,
+      customerType,
+      paymentTerms,
+      preferredPaymentMethod,
+      preferredContactMethod,
       address,
       city,
       state,
@@ -142,6 +162,7 @@ export async function POST(request) {
       shippingZipCode,
       shippingCountry,
       additionalContacts,
+      documents,
       notes,
       ein,
       creditLimit,
@@ -154,11 +175,25 @@ export async function POST(request) {
     if (email?.trim() && !isValidEmail(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
+    if (alternateEmail?.trim() && !isValidEmail(alternateEmail)) {
+      return NextResponse.json({ error: "Please enter a valid alternate email address." }, { status: 400 });
+    }
     const doc = await Customer.create({
+      customerNumber: clampString(customerNumber, 50),
       companyName: clampString(companyName, LIMITS.companyName.max),
       primaryContactName: clampString(primaryContactName, LIMITS.name.max),
       phone: clampString(phone, 30),
+      fax: clampString(fax, 30),
       email: email?.trim() ? email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
+      alternatePhone: clampString(alternatePhone, 30),
+      alternateEmail: alternateEmail?.trim()
+        ? alternateEmail.trim().toLowerCase().slice(0, LIMITS.email.max)
+        : "",
+      billingContact: clampString(billingContact, LIMITS.name.max),
+      customerType: clampString(customerType, 80),
+      paymentTerms: clampString(paymentTerms, 80),
+      preferredPaymentMethod: clampString(preferredPaymentMethod, 80),
+      preferredContactMethod: clampString(preferredContactMethod, 80),
       address: clampString(address, LIMITS.shortText.max),
       city: clampString(city, LIMITS.city.max),
       state: clampString(state, LIMITS.state.max),
@@ -170,6 +205,7 @@ export async function POST(request) {
       shippingZipCode: clampString(shippingZipCode, LIMITS.zip.max),
       shippingCountry: clampString(shippingCountry, 100),
       additionalContacts: sanitizeAdditionalContacts(additionalContacts),
+      documents: sanitizeDocuments(documents),
       notes: clampString(notes, LIMITS.message.max),
       ein: clampString(ein, 50),
       creditLimit: clampString(creditLimit, 50),

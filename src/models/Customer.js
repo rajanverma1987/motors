@@ -2,10 +2,20 @@ import mongoose from "mongoose";
 
 const customerSchema = new mongoose.Schema(
   {
+    /** Shop-facing customer number / ID (e.g. "001") — not the Mongo _id */
+    customerNumber: { type: String, default: "", trim: true },
     companyName: { type: String, default: "", trim: true },
     primaryContactName: { type: String, default: "", trim: true },
     phone: { type: String, default: "", trim: true },
+    fax: { type: String, default: "", trim: true },
     email: { type: String, default: "", trim: true },
+    alternatePhone: { type: String, default: "", trim: true },
+    alternateEmail: { type: String, default: "", trim: true },
+    billingContact: { type: String, default: "", trim: true },
+    customerType: { type: String, default: "", trim: true },
+    paymentTerms: { type: String, default: "", trim: true },
+    preferredPaymentMethod: { type: String, default: "", trim: true },
+    preferredContactMethod: { type: String, default: "", trim: true },
     address: { type: String, default: "", trim: true },
     city: { type: String, default: "", trim: true },
     state: { type: String, default: "", trim: true },
@@ -22,6 +32,13 @@ const customerSchema = new mongoose.Schema(
         contactName: { type: String, default: "", trim: true },
         phone: { type: String, default: "", trim: true },
         email: { type: String, default: "", trim: true },
+      },
+    ],
+    /** Customer documents: { name, url } — url may be a web path or legacy file path */
+    documents: [
+      {
+        name: { type: String, default: "", trim: true },
+        url: { type: String, default: "", trim: true },
       },
     ],
     notes: { type: String, default: "", trim: true },
