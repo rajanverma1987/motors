@@ -8,7 +8,7 @@ import {
   FiEdit2,
   FiLayers,
   FiPlus,
-  FiTrash2,
+  FiX,
 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
@@ -320,37 +320,23 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
+        key: "edit",
         label: "",
         sortable: false,
-        className: "w-20",
+        className: "w-10",
         render: (_, row) => (
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              className="rounded p-0.5 text-primary hover:bg-primary/10"
-              title="Edit"
-              aria-label="Edit"
-              onClick={(e) => {
-                e.stopPropagation();
-                openEdit(row);
-              }}
-            >
-              <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <button
-              type="button"
-              className="rounded p-0.5 text-danger hover:bg-danger/10"
-              title="Delete"
-              aria-label="Delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDelete(row);
-              }}
-            >
-              <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="rounded p-0.5 text-primary hover:bg-primary/10"
+            title="Edit"
+            aria-label="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(row);
+            }}
+          >
+            <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
         ),
       },
       {
@@ -487,6 +473,26 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         label: "Last Payment Date",
         sortable: true,
         render: (v) => formatDateMdy(v) || "—",
+      },
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-10",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Delete"
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
       },
     ],
     [handleDelete]

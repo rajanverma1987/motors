@@ -314,6 +314,7 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+  margin-top: 0.75rem;
   margin-bottom: 0.75rem;
 }
 
@@ -322,8 +323,13 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   border-radius: 0 !important;
 }
 
-.simple-portal .simple-screen-filters .status-filter-pill[aria-pressed="true"] {
+/* Soft cards keep status fill; selection is handled in the component (inset frame + check). */
+.simple-portal .simple-screen-filters .status-filter-pill:not(.status-filter-pill--soft)[aria-pressed="true"] {
   background: hsl(var(--primary) / 0.09) !important;
+}
+
+.simple-portal .simple-screen-filters .status-filter-pill--soft {
+  background: transparent !important;
 }
 
 .simple-portal .simple-screen-table-wrap {

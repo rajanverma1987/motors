@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import SimpleSelect from "@/components/simple/simple-select";
@@ -23,6 +23,7 @@ import { useUserSettings } from "@/contexts/user-settings-context";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import {
   buildCustomerPayload,
+  uploadCustomerDocumentFiles,
   INITIAL_CUSTOMER_FORM,
 } from "@/lib/customer-record-form";
 import {
@@ -69,10 +70,15 @@ const FIELD_INPUT =
 const FIELD_TEXTAREA =
   "w-full min-w-0 flex-1 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
+const TOOLBAR_BTN = "h-9 shrink-0 rounded-none px-2.5 py-2 text-xs font-semibold";
 /** Line-item cells: square corners, flush packing (matches PO form tables). */
 const CELL_INPUT =
   "h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-xs text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
+/** Full cell grid — keep as complete class strings for Tailwind detection. */
+const LINE_CELL =
+  "border border-solid border-[hsl(var(--title)/0.35)] bg-card p-0 dark:border-[hsl(var(--title)/0.4)]";
+const LINE_HEAD =
+  "border border-solid border-[hsl(var(--title)/0.35)] bg-primary/[0.04] px-1 py-1 font-semibold dark:border-[hsl(var(--title)/0.4)]";
 const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
 
 const MOTOR_FIELDS = [
@@ -120,6 +126,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
   const total = sumLinePrices(lines);
   const isOther = title.toLowerCase().includes("other");
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
+  const [seedEmpty] = useState(() => newEmptyLine());
 
   const ensureTrailingEmpty = (rows) => {
     const list = Array.isArray(rows) ? [...rows] : [];
@@ -129,51 +136,55 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
     }
     const kept = lastFilled >= 0 ? list.slice(0, lastFilled + 1) : [];
     const trailing = list.slice(lastFilled + 1).filter((row) => !lineHasContent(row, { withUom: isOther }));
-    const emptyRow = trailing[0] || newEmptyLine();
+    const emptyRow = trailing[0] || seedEmpty;
     return [...kept, emptyRow];
   };
 
+  const displayLines = useMemo(
+    () => ensureTrailingEmpty(Array.isArray(lines) ? lines : []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureTrailingEmpty closes over isOther/seedEmpty
+    [lines, isOther, seedEmpty]
+  );
+
   const updateLine = (id, patch) => {
-    const next = lines.map((line) => (line.id === id ? { ...line, ...patch } : line));
+    const next = displayLines.map((line) => (line.id === id ? { ...line, ...patch } : line));
     onChange(ensureTrailingEmpty(next));
   };
 
   const removeLine = (id) => {
-    const target = lines.find((line) => line.id === id);
+    const target = displayLines.find((line) => line.id === id);
     if (
       target &&
       !lineHasContent(target, { withUom: isOther }) &&
-      lines.filter((l) => !lineHasContent(l, { withUom: isOther })).length <= 1
+      displayLines.filter((l) => !lineHasContent(l, { withUom: isOther })).length <= 1
     ) {
       return;
     }
-    onChange(ensureTrailingEmpty(lines.filter((line) => line.id !== id)));
+    onChange(ensureTrailingEmpty(displayLines.filter((line) => line.id !== id)));
   };
 
   return (
-    <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col border border-border bg-card">
+    <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col bg-card">
       <div className="mt-[10px] flex items-center justify-between gap-2 bg-transparent px-2 py-1">
         <h4 className="min-w-0 text-xs font-bold uppercase tracking-wide text-black dark:text-title">{title}</h4>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse border-spacing-0 text-xs">
+        <table className="w-full border-collapse border-spacing-0 text-xs text-title">
           <thead>
-            <tr className="border-b-2 border-border bg-primary/[0.04] text-left text-xs text-title">
-              <th className="border-r border-border px-1 py-1 font-semibold">Description</th>
-              {isOther ? (
-                <th className="w-20 border-r border-border px-1 py-1 font-semibold">UOM</th>
-              ) : null}
-              <th className="w-28 border-r border-border px-1 py-1 font-semibold">Price</th>
-              <th className="w-7 p-0.5" />
+            <tr className="text-left text-xs text-title">
+              <th className={LINE_HEAD}>Description</th>
+              {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
+              <th className={`w-36 ${LINE_HEAD}`}>Price</th>
             </tr>
           </thead>
           <tbody>
-            {lines.map((line, idx) => {
-              const isBlankTrail = !lineHasContent(line, { withUom: isOther }) && idx === lines.length - 1;
+            {displayLines.map((line, idx) => {
+              const isBlankTrail =
+                !lineHasContent(line, { withUom: isOther }) && idx === displayLines.length - 1;
               return (
-                <tr key={line.id} className="border-t border-border bg-card">
-                  <td className="border-r border-border p-0">
+                <tr key={line.id}>
+                  <td className={LINE_CELL}>
                     <input
                       type="text"
                       value={line.description}
@@ -182,7 +193,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                     />
                   </td>
                   {isOther ? (
-                    <td className="border-r border-border p-0">
+                    <td className={LINE_CELL}>
                       <input
                         type="text"
                         value={line.uom ?? ""}
@@ -192,27 +203,29 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                       />
                     </td>
                   ) : null}
-                  <td className="border-r border-border p-0">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      value={line.price}
-                      onChange={(e) => updateLine(line.id, { price: e.target.value })}
-                      className={`${CELL_INPUT} text-right tabular-nums`}
-                    />
-                  </td>
-                  <td className="p-0 text-center">
-                    {!isBlankTrail ? (
-                      <button
-                        type="button"
-                        className="rounded-none p-0.5 text-danger hover:bg-danger/10"
-                        title="Remove line"
-                        aria-label="Remove line"
-                        onClick={() => removeLine(line.id)}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    ) : null}
+                  <td className={LINE_CELL}>
+                    <div className="flex min-w-0 items-center">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={line.price}
+                        onChange={(e) => updateLine(line.id, { price: e.target.value })}
+                        className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                      />
+                      {!isBlankTrail ? (
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                          title="Remove line"
+                          aria-label="Remove line"
+                          onClick={() => removeLine(line.id)}
+                        >
+                          <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                      ) : (
+                        <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
@@ -220,7 +233,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2 border-t border-border bg-muted/40 px-1 py-0.5 text-xs">
+      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-xs dark:border-[hsl(var(--title)/0.4)]">
         <span className="font-bold text-title">{totalLabel}</span>
         <input
           readOnly
@@ -310,11 +323,6 @@ export default function ServiceProposalFormModal({
     [employees, form.preparedBy]
   );
 
-  const approvedByOptions = useMemo(
-    () => buildEmployeeSelectOptions(employees, form.proposalApprovedBy),
-    [employees, form.proposalApprovedBy]
-  );
-
   const loadCustomers = useCallback(async () => {
     setLoadingCustomers(true);
     try {
@@ -343,7 +351,18 @@ export default function ServiceProposalFormModal({
 
   useEffect(() => {
     if (!open) return;
-    setForm(initialForm ? { ...createEmptyServiceProposalForm(), ...initialForm } : createEmptyServiceProposalForm());
+    setForm(() => {
+      const base = createEmptyServiceProposalForm();
+      if (!initialForm) return base;
+      const next = { ...base, ...initialForm };
+      if (!Array.isArray(next.scopeDetails) || next.scopeDetails.length === 0) {
+        next.scopeDetails = [emptyScopeLine()];
+      }
+      if (!Array.isArray(next.otherItems) || next.otherItems.length === 0) {
+        next.otherItems = [emptyOtherLine()];
+      }
+      return next;
+    });
     setAttachmentsOpen(false);
     setCommissionOpen(false);
     setDatasheetOpen(false);
@@ -381,7 +400,6 @@ export default function ServiceProposalFormModal({
   };
 
   const openDatasheet = () => {
-    if (form.recordType === RECORD_TYPE_RFQ) return;
     setDatasheetOpen(true);
   };
 
@@ -414,11 +432,12 @@ export default function ServiceProposalFormModal({
   const handleAddCustomerSubmit = async (e) => {
     e.preventDefault();
     if (!newCustomerForm.companyName?.trim()) {
-      await alert({ title: "Error", message: "Company name is required.", variant: "danger" });
+      await alert({ title: "Error", message: "Customer is required.", variant: "danger" });
       return;
     }
     setSavingCustomer(true);
     try {
+      const pendingDocuments = Array.isArray(newCustomerForm.documents) ? newCustomerForm.documents : [];
       const res = await fetch("/api/dashboard/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -430,6 +449,27 @@ export default function ServiceProposalFormModal({
       const saved = data.customer;
       const id = saved?.id;
       if (!id) throw new Error("Invalid response");
+      try {
+        await uploadCustomerDocumentFiles(id, pendingDocuments);
+      } catch (uploadErr) {
+        await loadCustomers();
+        setForm((f) => ({
+          ...f,
+          customerId: id,
+          customerEmail: saved.email || "",
+          customerPhone: saved.phone || "",
+          customerTaxExempt: saved.taxExempt !== false,
+          taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
+        }));
+        setAddCustomerOpen(false);
+        setNewCustomerForm({ ...INITIAL_CUSTOMER_FORM });
+        await alert({
+          title: "Customer created",
+          message: `Customer was saved, but document upload failed: ${uploadErr.message || "Upload failed"}`,
+          variant: "danger",
+        });
+        return;
+      }
       await loadCustomers();
       setForm((f) => ({
         ...f,
@@ -440,6 +480,7 @@ export default function ServiceProposalFormModal({
         taxPercent: saved.taxExempt !== false ? "" : String(saved.taxPercent ?? ""),
       }));
       setAddCustomerOpen(false);
+      setNewCustomerForm({ ...INITIAL_CUSTOMER_FORM });
       await alert({ title: "Success", message: "Customer added and selected." });
     } catch (err) {
       await alert({ title: "Error", message: err.message || "Failed to create customer", variant: "danger" });
@@ -916,12 +957,7 @@ export default function ServiceProposalFormModal({
                     variant="primary"
                     size="sm"
                     className={`${TOOLBAR_BTN} !px-3`}
-                    disabled={form.recordType === RECORD_TYPE_RFQ}
-                    title={
-                      form.recordType === RECORD_TYPE_RFQ
-                        ? "Available when RecordType is Job or Invoice"
-                        : `View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`
-                    }
+                    title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
                     onClick={openDatasheet}
                   >
                     View Datasheet
@@ -1045,13 +1081,11 @@ export default function ServiceProposalFormModal({
                 />
               </FieldRow>
               <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <SimpleSelect
-                  options={approvedByOptions}
+                <input
+                  type="text"
                   value={form.proposalApprovedBy}
                   onChange={(e) => patch("proposalApprovedBy", e.target.value)}
-                  placeholder={loadingEmployees ? "Loading…" : "Select…"}
-                  disabled={loadingEmployees}
-                  searchable
+                  className={FIELD_INPUT}
                   aria-label="Proposal Approved By"
                 />
               </FieldRow>
@@ -1231,6 +1265,17 @@ export default function ServiceProposalFormModal({
         kind={logisticsKind || KIND_RECEIVING}
         defaultJobNumber={docNumber}
         defaultInvoiceNumber={docNumber}
+        defaultShippingPo={form.shippingPo || form.customerPo || ""}
+        serviceProposalId={recordId}
+        onShippingPoSaved={(shippingPo) => patch("shippingPo", shippingPo)}
+        customerName={
+          selectedCustomer?.companyName ||
+          selectedCustomer?.primaryContactName ||
+          ""
+        }
+        companyName={user?.shopName || ""}
+        customerEmail={String(form.customerEmail || selectedCustomer?.email || "").trim()}
+        customerPhone={String(form.customerPhone || selectedCustomer?.phone || "").trim()}
         zIndex={130}
       />
 
@@ -1312,6 +1357,9 @@ export default function ServiceProposalFormModal({
         recordId={recordId || null}
         attachments={Array.isArray(form.attachments) ? form.attachments : []}
         onAttached={handleAttached}
+        jobStatusOptions={jobStatusOptions}
+        jobStatus={form.jobStatus}
+        onJobStatusChange={(next) => patch("jobStatus", next)}
         printContext={{
           customerName:
             selectedCustomer?.companyName ||
@@ -1321,8 +1369,11 @@ export default function ServiceProposalFormModal({
             selectedCustomer?.companyName ||
             selectedCustomer?.primaryContactName ||
             "",
+          customerPhone: String(form.customerPhone || selectedCustomer?.phone || "").trim(),
+          customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
           documentNumber: String(form.documentNumber || "").trim(),
           documentLabel: docLabel,
+          jobStatus: form.jobStatus,
         }}
       />
     </>

@@ -76,6 +76,52 @@ function normalizeDocuments(raw) {
   }));
 }
 
+/** Persist only uploaded docs (with url). Pending local File rows are uploaded after create. */
+export function documentsForPayload(raw) {
+  return normalizeDocuments(raw).filter((d) => d.url);
+}
+
+export async function uploadCustomerDocumentFiles(customerId, pendingDocs) {
+  const id = String(customerId || "").trim();
+  const list = Array.isArray(pendingDocs) ? pendingDocs.filter((d) => d?._pendingFile) : [];
+  if (!id || list.length === 0) return null;
+  const body = new FormData();
+  for (const d of list) {
+    body.append("files", d._pendingFile);
+    body.append("documentNames", String(d.name || d._pendingFile.name || "Document").trim());
+  }
+  const res = await fetch(`/api/dashboard/customers/${encodeURIComponent(id)}/documents`, {
+    method: "POST",
+    credentials: "include",
+    body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Document upload failed");
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+export async function deleteCustomerDocumentFile(customerId, url) {
+  const id = String(customerId || "").trim();
+  const documentUrl = String(url || "").trim();
+  if (!id || !documentUrl) throw new Error("Document url is required");
+  const res = await fetch(`/api/dashboard/customers/${encodeURIComponent(id)}/documents`, {
+    method: "DELETE",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: documentUrl }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Document delete failed");
+  return Array.isArray(data.documents) ? data.documents : [];
+}
+
+export function resolveCustomerDocumentHref(url) {
+  const u = String(url || "").trim();
+  if (!u) return "";
+  if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("/")) return u;
+  return `/${u}`;
+}
+
 /** @param {Record<string, unknown>} data */
 export function customerApiToForm(data) {
   const d = data || {};
@@ -146,7 +192,7 @@ export function buildCustomerPayload(form) {
     shippingZipCode: f.shippingZipCode ?? "",
     shippingCountry: f.shippingCountry ?? "United States",
     additionalContacts: Array.isArray(f.additionalContacts) ? f.additionalContacts : [],
-    documents: normalizeDocuments(f.documents),
+    documents: documentsForPayload(f.documents),
     notes: f.notes ?? "",
     ein: f.ein ?? "",
     creditLimit: f.creditLimit ?? "",

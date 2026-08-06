@@ -7,6 +7,7 @@ import { FiLogOut, FiSearch, FiSettings } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
+import { StatusFilterCardDesignSelect } from "@/components/simple/status-filter-card-design";
 import { useAuth } from "@/contexts/auth-context";
 import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath } from "@/lib/portal-view";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
@@ -77,9 +78,12 @@ export default function DashboardNav() {
           {!calculatorOnly ? (
             <>
               {onSimpleHub ? (
-                <Suspense fallback={null}>
-                  <SimpleHubDateFilter className="hidden lg:flex" />
-                </Suspense>
+                <>
+                  <StatusFilterCardDesignSelect />
+                  <Suspense fallback={null}>
+                    <SimpleHubDateFilter className="hidden lg:flex" />
+                  </Suspense>
+                </>
               ) : null}
               <button
                 type="button"

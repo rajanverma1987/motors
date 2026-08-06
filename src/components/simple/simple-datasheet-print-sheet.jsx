@@ -4,8 +4,8 @@ import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
 import {
   AC_DATASHEET_FIELD_COLUMNS,
-  AC_DISASSEMBLY_STATUS_OPTIONS,
   AC_DISASSEMBLY_SURGE_FAILURE_KEYS,
+  AC_DISASSEMBLY_VISUAL_STATUS_ROWS,
   DC_ARMATURE_FIELD_COLUMNS,
   DC_FIELD_FRAME_FIELD_COLUMNS,
 } from "@/lib/simple-datasheet-form";
@@ -17,9 +17,9 @@ function cellValue(v) {
 
 function PrintMetaRow({ label, value }) {
   return (
-    <div className="flex min-w-0 gap-1 text-[11px] leading-tight">
-      <span className="shrink-0 font-semibold text-black">{label}:</span>
-      <span className="min-w-0 break-words text-black">{cellValue(value)}</span>
+    <div className="flex min-w-0 items-baseline gap-1.5 leading-relaxed">
+      <span className="shrink-0 text-xs font-normal text-black">{label}:</span>
+      <span className="min-w-0 break-words text-sm font-bold text-black">{cellValue(value)}</span>
     </div>
   );
 }
@@ -27,13 +27,13 @@ function PrintMetaRow({ label, value }) {
 function PrintFieldGrid({ columns, values }) {
   if (!Array.isArray(columns) || columns.length === 0) return null;
   return (
-    <div className="grid grid-cols-3 gap-x-4 gap-y-1">
+    <div className="grid grid-cols-3 gap-x-6 gap-y-2">
       {columns.map((col, colIdx) => (
-        <div key={colIdx} className="flex min-w-0 flex-col gap-0.5">
+        <div key={colIdx} className="flex min-w-0 flex-col gap-1.5">
           {col.map((field) => (
-            <div key={field.key} className="flex min-w-0 items-baseline gap-1 text-[11px] leading-tight">
-              <span className="w-[7.5rem] shrink-0 text-right font-semibold text-black">{field.label}</span>
-              <span className="min-w-0 flex-1 border-b border-black/30 px-0.5 text-black">
+            <div key={field.key} className="flex min-w-0 items-baseline gap-2 leading-relaxed">
+              <span className="w-[8.5rem] shrink-0 text-right text-xs font-normal text-black">{field.label}</span>
+              <span className="min-w-0 flex-1 border-b border-black/35 px-1 pb-0.5 text-sm font-bold text-black">
                 {cellValue(values?.[field.key])}
               </span>
             </div>
@@ -44,7 +44,52 @@ function PrintFieldGrid({ columns, values }) {
   );
 }
 
-function DatasheetPrintPage({
+function PrintNotes({ label = "Notes:", notes }) {
+  return (
+    <div className="mt-5">
+      <div className="mb-1.5 text-xs font-normal text-black">{label}</div>
+      <div className="min-h-[5rem] whitespace-pre-wrap border border-black/40 p-3 text-sm font-bold leading-relaxed text-black">
+        {cellValue(notes) === "—" ? "" : String(notes || "")}
+      </div>
+    </div>
+  );
+}
+
+function PrintSection({ title, children }) {
+  return (
+    <section className="bg-white text-black">
+      <h2 className="mb-4 border-b-2 border-black pb-1.5 text-xl font-bold uppercase tracking-wide text-black">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function PrintTabPage({ headerProps, title, pageBreakBefore = false, children }) {
+  return (
+    <div
+      className="bg-white px-1 py-2 text-black"
+      style={pageBreakBefore ? { pageBreakBefore: "always", breakBefore: "page" } : undefined}
+    >
+      <PrintDocumentHeader title={title} {...headerProps} />
+      {children}
+    </div>
+  );
+}
+
+function PrintHeaderMetaRow({ label, value }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <span className="text-[11px] font-normal uppercase tracking-[0.08em] text-black/70">{label}</span>
+      <span className="min-w-0 break-words text-base font-bold leading-snug text-black">
+        {cellValue(value)}
+      </span>
+    </div>
+  );
+}
+
+function PrintDocumentHeader({
   title,
   logoUrl,
   customerName,
@@ -53,42 +98,25 @@ function DatasheetPrintPage({
   date,
   technician,
   company,
-  columns,
-  values,
-  notes,
-  notesLabel = "Notes:",
-  children = null,
-  pageBreakBefore = false,
+  customerPhone = "",
+  customerEmail = "",
 }) {
   return (
-    <div
-      className="bg-white text-black"
-      style={pageBreakBefore ? { pageBreakBefore: "always", breakBefore: "page" } : undefined}
-    >
-      <div className="mb-3 border-b border-black pb-2">
-        <div className="mb-2 flex items-center gap-3">
-          <PrintShopLogo logoUrl={logoUrl} alt="" />
-          <h1 className="min-w-0 flex-1 text-center text-lg font-bold tracking-wide">{title}</h1>
-        </div>
-        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 sm:grid-cols-3">
-          <PrintMetaRow label="Customer" value={customerName} />
-          <PrintMetaRow label={documentLabel || "RFQ#"} value={documentNumber} />
-          <PrintMetaRow label="Company" value={company || customerName} />
-          <PrintMetaRow label="Date" value={date} />
-          <PrintMetaRow label="Technician" value={technician} />
-          <PrintMetaRow label="Job#" value={documentNumber} />
-        </div>
+    <div className="mb-7 border-b-[3px] border-black pb-5">
+      <div className="mb-4 flex items-center gap-4">
+        <PrintShopLogo logoUrl={logoUrl} alt="" />
+        <h1 className="min-w-0 flex-1 text-center text-2xl font-bold tracking-wide">{title}</h1>
       </div>
-      {children}
-      <PrintFieldGrid columns={columns} values={values} />
-      {notes != null || notesLabel ? (
-        <div className="mt-4">
-          <div className="mb-1 text-[11px] font-semibold text-black">{notesLabel}</div>
-          <div className="min-h-[4rem] whitespace-pre-wrap border border-black/40 p-2 text-[11px] leading-snug text-black">
-            {cellValue(notes) === "—" ? "" : String(notes || "")}
-          </div>
-        </div>
-      ) : null}
+      <div className="mt-1 grid grid-cols-2 gap-x-8 gap-y-3.5 border border-black/25 bg-black/[0.03] px-4 py-3.5 sm:grid-cols-3">
+        <PrintHeaderMetaRow label="Customer" value={customerName} />
+        <PrintHeaderMetaRow label={documentLabel || "RFQ#"} value={documentNumber} />
+        <PrintHeaderMetaRow label="Company" value={company || customerName} />
+        <PrintHeaderMetaRow label="Phone" value={customerPhone} />
+        <PrintHeaderMetaRow label="Email" value={customerEmail} />
+        <PrintHeaderMetaRow label="Date" value={date} />
+        <PrintHeaderMetaRow label="Technician" value={technician} />
+        <PrintHeaderMetaRow label="Job#" value={documentNumber} />
+      </div>
     </div>
   );
 }
@@ -98,64 +126,99 @@ function boolYes(v) {
   return s === "true" || s === "1" || s === "yes" || s === "on" ? "Yes" : "—";
 }
 
-function statusLabel(value, options) {
-  const hit = (options || []).find((o) => o.value === value);
-  return hit?.label || cellValue(value);
+function PrintTestBlock({ title, children }) {
+  return (
+    <div className="mt-5">
+      <h3 className="mb-2.5 border-b border-black/40 pb-1 text-sm font-bold tracking-wide text-black">
+        {title}
+      </h3>
+      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">{children}</div>
+    </div>
+  );
 }
 
-function AcDisassemblyPrintBody({ values }) {
+function AcDisassemblyPrintBody({ values, jobStatusLabel = "" }) {
   const v = values || {};
-  const visual =
-    v.visualStatus === "good" ? "Visually Good" : v.visualStatus === "burned" ? "Visually Burned" : cellValue(v.visualStatus);
   const magger = v.maggerTest === "pass" ? "Pass" : v.maggerTest === "fail" ? "Fail" : cellValue(v.maggerTest);
+  const highPot = v.highPotTest === "pass" ? "Pass" : v.highPotTest === "fail" ? "Fail" : cellValue(v.highPotTest);
   const surge = v.surgeTest === "pass" ? "Pass" : v.surgeTest === "fail" ? "Fail" : cellValue(v.surgeTest);
   const pairs = [
-    ["IncomingLeads", v.incomingLeads],
-    ["Marked Motor Sides", v.markedMotorSides],
+    [
+      "Marked Motor Sides",
+      [
+        boolYes(v.markedMotorSidesF1) === "Yes" ? "F1" : "",
+        boolYes(v.markedMotorSidesF2) === "Yes" ? "F2" : "",
+        String(v.markedMotorSidesNotes || "").trim(),
+      ]
+        .filter(Boolean)
+        .join(" · ") || v.markedMotorSides,
+    ],
     ["Junction Box Location", v.junctionBoxLocation],
-    ["Broken Parts Notes", v.brokenPartsNotes],
+    ["Incoming Notes", v.brokenPartsNotes],
     ["End Bell Fit DE", v.endBellFitDE],
     ["End Bell Fit ODE", v.endBellFitODE],
-    ["Rotor Fit DE", v.rotorFitDE],
-    ["Rotor Fit ODE", v.rotorFitODE],
-    ["Shaft Measurement", v.shaftMeasurement],
+    ["Shaft Measurement DE", v.rotorFitDE],
+    ["Shaft Management ODE", v.rotorFitODE],
     ["Shaft Runout", v.shaftRunout],
-    ["Number Of Bearings", v.numberOfBearings],
+    ["Number Of Bearings DE", v.numberOfBearingsDE ?? v.numberOfBearings],
+    ["Number Of Bearings ODE", v.numberOfBearingsODE],
     ["Bearing Size DE", v.bearingSizeDE],
     ["Bearing Size ODE", v.bearingSizeODE],
     ["Seal Size DE", v.sealSizeDE],
     ["Seal Size ODE", v.sealSizeODE],
     ["Other Notes", v.otherNotes],
-    ["Magger Voltage", v.maggerVoltage],
-    ["Magger Micro Amps", v.maggerMicroAmps],
-    ["Magger Test Result", magger],
-    ["Surge Voltage", v.surgeVoltage],
-    ["Surge Test Result", surge],
   ];
   return (
-    <div className="space-y-2 text-[11px]">
-      <PrintMetaRow label="Visual Status" value={visual} />
-      <PrintMetaRow label="Status" value={statusLabel(v.status, AC_DISASSEMBLY_STATUS_OPTIONS)} />
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+    <div className="space-y-4 text-xs">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
+        {AC_DISASSEMBLY_VISUAL_STATUS_ROWS.map(({ key, label }) => (
+          <PrintMetaRow
+            key={key}
+            label={label}
+            value={
+              v[key] === "good" ? "Good" : v[key] === "bad" ? "Bad" : cellValue(v[key])
+            }
+          />
+        ))}
+      </div>
+      <PrintMetaRow label="Visual Status Notes" value={v.visualStatusNotes} />
+      <PrintMetaRow label="Status" value={jobStatusLabel || v.status} />
+      <div className="grid grid-cols-2 gap-x-8 gap-y-1.5">
         {pairs.map(([label, value]) => (
           <PrintMetaRow key={label} label={label} value={value} />
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+
+      <PrintTestBlock title="Magger Test">
+        <PrintMetaRow label="Magger Voltage" value={v.maggerVoltage} />
+        <PrintMetaRow label="Meggar Readings" value={v.maggerMicroAmps} />
+        <PrintMetaRow label="Result" value={magger} />
+      </PrintTestBlock>
+
+      <PrintTestBlock title="High-pot test">
+        <PrintMetaRow label="High-pot Voltage" value={v.highPotVoltage} />
+        <PrintMetaRow label="High-pot Micro Amps" value={v.highPotMicroAmps} />
+        <PrintMetaRow label="Result" value={highPot} />
+      </PrintTestBlock>
+
+      <PrintTestBlock title="Surge Test">
+        <PrintMetaRow label="Surge Voltage" value={v.surgeVoltage} />
+        <PrintMetaRow label="Result" value={surge} />
         {AC_DISASSEMBLY_SURGE_FAILURE_KEYS.map(({ key, label }) => (
           <PrintMetaRow key={key} label={label} value={boolYes(v[key])} />
         ))}
-      </div>
+      </PrintTestBlock>
     </div>
   );
 }
 
 function AcAssemblyPrintBody({ values }) {
   const v = values || {};
-  const pairs = [
-    ["Date", v.date],
-    ["Technician Name", v.technicianName],
-    ["Voltage Test", v.voltageTest],
+  const magger = v.maggerTest === "pass" ? "Pass" : v.maggerTest === "fail" ? "Fail" : cellValue(v.maggerTest);
+  const highPot = v.highPotTest === "pass" ? "Pass" : v.highPotTest === "fail" ? "Fail" : cellValue(v.highPotTest);
+  const surge = v.surgeTest === "pass" ? "Pass" : v.surgeTest === "fail" ? "Fail" : cellValue(v.surgeTest);
+  const testRunPairs = [
+    ["Run Voltage Test", v.voltageTest],
     ["RPM", v.rpm],
     ["Lead1 Amp", v.lead1Amp],
     ["Lead2 Amp", v.lead2Amp],
@@ -165,16 +228,35 @@ function AcAssemblyPrintBody({ values }) {
     ["Motor Outgoing Paint", v.motorOutgoingPaint],
   ];
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
-      {pairs.map(([label, value]) => (
-        <PrintMetaRow key={label} label={label} value={value} />
-      ))}
+    <div className="space-y-4 text-xs">
+      <PrintTestBlock title="Magger Test">
+        <PrintMetaRow label="Magger Voltage" value={v.maggerVoltage} />
+        <PrintMetaRow label="Meggar Readings" value={v.maggerMicroAmps} />
+        <PrintMetaRow label="Result" value={magger} />
+      </PrintTestBlock>
+      <PrintTestBlock title="High-pot test">
+        <PrintMetaRow label="High-pot Voltage" value={v.highPotVoltage} />
+        <PrintMetaRow label="High-pot Micro Amps" value={v.highPotMicroAmps} />
+        <PrintMetaRow label="Result" value={highPot} />
+      </PrintTestBlock>
+      <PrintTestBlock title="Surge Test">
+        <PrintMetaRow label="Surge Voltage" value={v.surgeVoltage} />
+        <PrintMetaRow label="Result" value={surge} />
+        {AC_DISASSEMBLY_SURGE_FAILURE_KEYS.map(({ key, label }) => (
+          <PrintMetaRow key={key} label={label} value={boolYes(v[key])} />
+        ))}
+      </PrintTestBlock>
+      <PrintTestBlock title="Test Runs">
+        {testRunPairs.map(([label, value]) => (
+          <PrintMetaRow key={label} label={label} value={value} />
+        ))}
+      </PrintTestBlock>
     </div>
   );
 }
 
 /**
- * Printable datasheet sheet(s). Complete Motor prints Field Frame then Armature (page break).
+ * Printable datasheet — continuous sections (no forced page break per tab).
  */
 export default function SimpleDatasheetPrintSheet({
   motorType = "AC",
@@ -192,9 +274,23 @@ export default function SimpleDatasheetPrintSheet({
   ).trim();
   const documentLabel = String(printContext.documentLabel || "RFQ#").trim() || "RFQ#";
   const company = String(printContext.companyName || datasheet?.company || customerName).trim();
+  const customerPhone = String(printContext.customerPhone || "").trim();
+  const customerEmail = String(printContext.customerEmail || "").trim();
   const dateRaw = String(datasheet?.date || "").trim();
   const date = dateRaw ? formatDate(dateRaw) : "—";
   const technician = String(technicianLabel || datasheet?.technician || "").trim();
+
+  const headerProps = {
+    logoUrl,
+    customerName,
+    documentLabel,
+    documentNumber,
+    date,
+    technician,
+    company,
+    customerPhone,
+    customerEmail,
+  };
 
   if (!isDc) {
     const section = String(datasheet?.section || "Complete Motor").trim();
@@ -210,54 +306,29 @@ export default function SimpleDatasheetPrintSheet({
 
     return (
       <div className="bg-white text-black">
-        <DatasheetPrintPage
-          title="AC DataSheet"
-          logoUrl={logoUrl}
-          customerName={customerName}
-          documentLabel={documentLabel}
-          documentNumber={documentNumber}
-          date={date}
-          technician={technician}
-          company={company}
-          columns={AC_DATASHEET_FIELD_COLUMNS}
-          values={dataSheet}
-          notes={dataSheet?.notes}
-        />
+        <PrintTabPage headerProps={headerProps} title="AC DataSheet">
+          <PrintSection title="DataSheet">
+            <PrintFieldGrid columns={AC_DATASHEET_FIELD_COLUMNS} values={dataSheet} />
+            <PrintNotes notes={dataSheet?.notes} />
+          </PrintSection>
+        </PrintTabPage>
         {complete ? (
           <>
-            <DatasheetPrintPage
-              title="AC Disassembly"
-              logoUrl={logoUrl}
-              customerName={customerName}
-              documentLabel={documentLabel}
-              documentNumber={documentNumber}
-              date={date}
-              technician={technician}
-              company={company}
-              columns={[]}
-              values={{}}
-              notes={disassembly.finalNotes}
-              notesLabel="Final Notes:"
-              pageBreakBefore
-            >
-              <AcDisassemblyPrintBody values={disassembly} />
-            </DatasheetPrintPage>
-            <DatasheetPrintPage
-              title="AC Assembly"
-              logoUrl={logoUrl}
-              customerName={customerName}
-              documentLabel={documentLabel}
-              documentNumber={documentNumber}
-              date={assembly.date ? formatDate(assembly.date) : date}
-              technician={assembly.technicianName || technician}
-              company={company}
-              columns={[]}
-              values={{}}
-              notes={assembly.notes}
-              pageBreakBefore
-            >
-              <AcAssemblyPrintBody values={assembly} />
-            </DatasheetPrintPage>
+            <PrintTabPage headerProps={headerProps} title="AC Disassembly" pageBreakBefore>
+              <PrintSection title="Disassembly">
+                <AcDisassemblyPrintBody
+                  values={disassembly}
+                  jobStatusLabel={String(printContext.jobStatusLabel || printContext.jobStatus || "").trim()}
+                />
+                <PrintNotes label="Final Notes:" notes={disassembly.finalNotes} />
+              </PrintSection>
+            </PrintTabPage>
+            <PrintTabPage headerProps={headerProps} title="AC Assembly" pageBreakBefore>
+              <PrintSection title="Assembly">
+                <AcAssemblyPrintBody values={assembly} />
+                <PrintNotes notes={assembly.notes} />
+              </PrintSection>
+            </PrintTabPage>
           </>
         ) : null}
       </div>
@@ -274,35 +345,24 @@ export default function SimpleDatasheetPrintSheet({
   return (
     <div className="bg-white text-black">
       {showFieldFrame ? (
-        <DatasheetPrintPage
-          title="DC Field Frame"
-          logoUrl={logoUrl}
-          customerName={customerName}
-          documentLabel={documentLabel}
-          documentNumber={documentNumber}
-          date={date}
-          technician={technician}
-          company={company}
-          columns={DC_FIELD_FRAME_FIELD_COLUMNS}
-          values={fieldFrame}
-          notes={fieldFrame.notes}
-        />
+        <PrintTabPage headerProps={headerProps} title="DC Field Frame">
+          <PrintSection title="Field Frame">
+            <PrintFieldGrid columns={DC_FIELD_FRAME_FIELD_COLUMNS} values={fieldFrame} />
+            <PrintNotes notes={fieldFrame.notes} />
+          </PrintSection>
+        </PrintTabPage>
       ) : null}
       {showArmature ? (
-        <DatasheetPrintPage
+        <PrintTabPage
+          headerProps={headerProps}
           title="DC Armature"
-          logoUrl={logoUrl}
-          customerName={customerName}
-          documentLabel={documentLabel}
-          documentNumber={documentNumber}
-          date={date}
-          technician={technician}
-          company={company}
-          columns={DC_ARMATURE_FIELD_COLUMNS}
-          values={armature}
-          notes={armature.notes}
           pageBreakBefore={showFieldFrame}
-        />
+        >
+          <PrintSection title="Armature">
+            <PrintFieldGrid columns={DC_ARMATURE_FIELD_COLUMNS} values={armature} />
+            <PrintNotes notes={armature.notes} />
+          </PrintSection>
+        </PrintTabPage>
       ) : null}
     </div>
   );

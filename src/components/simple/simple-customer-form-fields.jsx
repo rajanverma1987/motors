@@ -1,13 +1,18 @@
 "use client";
 
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { useRef, useState } from "react";
+import { FiEye, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import {
   CUSTOMER_TYPE_OPTIONS,
+  deleteCustomerDocumentFile,
   PAYMENT_TERMS_OPTIONS,
   PREFERRED_CONTACT_METHOD_OPTIONS,
   PREFERRED_PAYMENT_METHOD_OPTIONS,
+  resolveCustomerDocumentHref,
+  uploadCustomerDocumentFiles,
 } from "@/lib/customer-record-form";
 
 const FIELD_INPUT =
@@ -15,7 +20,8 @@ const FIELD_INPUT =
 const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
+const SECTION_TITLE =
+  "mb-1.5 border-b border-primary/25 pb-1 text-sm font-bold uppercase tracking-wide text-primary";
 const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 
 const TAX_EXEMPT_OPTIONS = [
@@ -51,14 +57,22 @@ function PairRow({ leftLabel, rightLabel, left, right, labelWidth = "6.5rem" }) 
 /**
  * Dense Access-like customer fields for Simple portal (matches Service Proposal form UI).
  * @param {"grid"|"stacked"} [layout="grid"] — grid = 3 columns on large screens; stacked = single column (e.g. side panel).
+ * @param {string} [customerId] — when set, files upload immediately; otherwise queued until customer is created.
  */
-export default function SimpleCustomerFormFields({ form, setForm, layout = "grid" }) {
+export default function SimpleCustomerFormFields({ form, setForm, layout = "grid", customerId = "" }) {
+  const alert = useAlert();
+  const confirm = useConfirm();
+  const fileInputRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [deletingKey, setDeletingKey] = useState("");
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const isStacked = layout === "stacked";
   const columnsClass = isStacked ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3";
   /** Customer details (stacked) uses slightly shorter labels so pairs fit cleanly. */
   const labelW = isStacked ? "6.5rem" : "7.25rem";
   const pairLabelW = isStacked ? "5.75rem" : "6.5rem";
+  const resolvedCustomerId = String(customerId || "").trim();
+  const docsBusy = uploading || Boolean(deletingKey);
 
   const addAdditionalContact = () => {
     setForm((f) => ({
@@ -83,11 +97,51 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
     }));
   };
 
-  const addDocument = () => {
-    setForm((f) => ({
-      ...f,
-      documents: [...(f.documents || []), { name: "", url: "" }],
-    }));
+  const openFilePicker = () => {
+    if (docsBusy) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleFilesSelected = async (e) => {
+    const files = Array.from(e.target.files || []).filter((f) => f && typeof f === "object");
+    e.target.value = "";
+    if (files.length === 0) return;
+
+    if (!resolvedCustomerId) {
+      setForm((f) => ({
+        ...f,
+        documents: [
+          ...(f.documents || []),
+          ...files.map((file) => ({
+            name: String(file.name || "Document").trim() || "Document",
+            url: "",
+            _pendingKey: `pending_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            _pendingFile: file,
+          })),
+        ],
+      }));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const pending = files.map((file) => ({
+        name: String(file.name || "Document").trim() || "Document",
+        _pendingFile: file,
+      }));
+      const documents = await uploadCustomerDocumentFiles(resolvedCustomerId, pending);
+      if (documents) {
+        setForm((f) => ({ ...f, documents }));
+      }
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Document upload failed",
+        variant: "danger",
+      });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const updateDocument = (index, field, value) => {
@@ -99,11 +153,49 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
     });
   };
 
-  const removeDocument = (index) => {
+  const removeDocument = async (index) => {
+    const doc = (form.documents || [])[index];
+    if (!doc || docsBusy) return;
+    const label = String(doc.name || "this document").trim() || "this document";
+    const ok = await confirm({
+      title: "Remove document",
+      message: `Remove “${label}”?${doc.url ? " The uploaded file will be deleted." : ""}`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
+
+    const rowKey = doc.url || doc._pendingKey || String(index);
+    if (resolvedCustomerId && doc.url) {
+      setDeletingKey(rowKey);
+      try {
+        const documents = await deleteCustomerDocumentFile(resolvedCustomerId, doc.url);
+        setForm((f) => ({ ...f, documents }));
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to remove document",
+          variant: "danger",
+        });
+      } finally {
+        setDeletingKey("");
+      }
+      return;
+    }
+
     setForm((f) => ({
       ...f,
       documents: (f.documents || []).filter((_, i) => i !== index),
     }));
+  };
+
+  const openDocument = (doc) => {
+    const href = resolveCustomerDocumentHref(doc?.url);
+    if (!href) {
+      void alert({ title: "Error", message: "File is not available yet.", variant: "danger" });
+      return;
+    }
+    window.open(href, "_blank", "noopener,noreferrer");
   };
 
   const copyBillingToShipping = () => {
@@ -132,23 +224,23 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               placeholder="e.g. 001"
             />
           </FieldRow>
-          <FieldRow label="Customer name" labelWidth={labelW}>
+          <FieldRow label="Contact Name" labelWidth={labelW}>
             <input
               type="text"
               value={form.primaryContactName}
               onChange={(e) => patch("primaryContactName", e.target.value)}
               className={FIELD_INPUT}
-              aria-label="Customer name"
+              aria-label="Contact Name"
             />
           </FieldRow>
-          <FieldRow label="Company" labelWidth={labelW}>
+          <FieldRow label="Customer" labelWidth={labelW}>
             <input
               type="text"
               required
               value={form.companyName}
               onChange={(e) => patch("companyName", e.target.value)}
               className={FIELD_INPUT}
-              aria-label="Company name"
+              aria-label="Customer"
             />
           </FieldRow>
           {isStacked ? (
@@ -555,9 +647,6 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
             <table className="w-full min-w-[28rem] border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border bg-primary/[0.06] dark:bg-primary/10">
-                  <th className="w-10 pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
-                    {" "}
-                  </th>
                   <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
                     Name
                   </th>
@@ -567,22 +656,14 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                   <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
                     Email
                   </th>
+                  <th className="w-10 pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    {" "}
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {(form.additionalContacts || []).map((ac, index) => (
                   <tr key={index} className="border-b border-border last:border-b-0">
-                    <td className="pl-[5px] pr-1 py-1 align-middle">
-                      <button
-                        type="button"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
-                        title="Remove contact"
-                        aria-label="Remove contact"
-                        onClick={() => removeAdditionalContact(index)}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </td>
                     <td className="pl-[5px] pr-1 py-1 align-middle">
                       <input
                         type="text"
@@ -610,6 +691,17 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                         aria-label={`Contact ${index + 1} email`}
                       />
                     </td>
+                    <td className="pl-[5px] pr-1 py-1 align-middle text-center">
+                      <button
+                        type="button"
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
+                        title="Remove contact"
+                        aria-label="Remove contact"
+                        onClick={() => removeAdditionalContact(index)}
+                      >
+                        <FiX className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -632,13 +724,31 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <p className={`${SECTION_TITLE} mb-0`}>Documents</p>
-          <Button type="button" variant="outline" size="sm" className={TOOLBAR_BTN} onClick={addDocument}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={TOOLBAR_BTN}
+            onClick={openFilePicker}
+            disabled={docsBusy}
+          >
             <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Add document
+            {uploading ? "Uploading…" : "Add document"}
           </Button>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={handleFilesSelected}
+          aria-hidden
+          tabIndex={-1}
+        />
         <p className="text-xs text-secondary">
-          Store document name and path or URL (e.g. tax exempt certificate location).
+          {resolvedCustomerId
+            ? "Upload files (e.g. tax exempt certificate). Files are saved immediately."
+            : "Upload files (e.g. tax exempt certificate). Files are saved when you create the customer."}
         </p>
         {(form.documents || []).length === 0 ? (
           <p className="text-xs text-secondary">No documents.</p>
@@ -654,44 +764,67 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                     Document name
                   </th>
                   <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
-                    Path / URL
+                    File
+                  </th>
+                  <th className="w-10 pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
+                    {" "}
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {(form.documents || []).map((doc, index) => (
-                  <tr key={index} className="border-b border-border last:border-b-0">
-                    <td className="pl-[5px] pr-1 py-1 align-middle">
-                      <button
-                        type="button"
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
-                        title="Remove document"
-                        aria-label="Remove document"
-                        onClick={() => removeDocument(index)}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </td>
-                    <td className="pl-[5px] pr-1 py-1 align-middle">
-                      <input
-                        type="text"
-                        value={doc.name || ""}
-                        onChange={(e) => updateDocument(index, "name", e.target.value)}
-                        className={FIELD_INPUT}
-                        aria-label={`Document ${index + 1} name`}
-                      />
-                    </td>
-                    <td className="pl-[5px] pr-1 py-1 align-middle">
-                      <input
-                        type="text"
-                        value={doc.url || ""}
-                        onChange={(e) => updateDocument(index, "url", e.target.value)}
-                        className={FIELD_INPUT}
-                        aria-label={`Document ${index + 1} path or URL`}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {(form.documents || []).map((doc, index) => {
+                  const rowKey = doc.url || doc._pendingKey || `doc-${index}`;
+                  const fileLabel = doc._pendingFile
+                    ? doc._pendingFile.name || "Pending upload"
+                    : doc.url
+                      ? doc.url.split("/").pop() || "Uploaded file"
+                      : "—";
+                  return (
+                    <tr key={rowKey} className="border-b border-border last:border-b-0">
+                      <td className="pl-[5px] pr-1 py-1 align-middle">
+                        {doc.url ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
+                            title="View file"
+                            aria-label="View file"
+                            onClick={() => openDocument(doc)}
+                          >
+                            <FiEye className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        ) : null}
+                      </td>
+                      <td className="pl-[5px] pr-1 py-1 align-middle">
+                        <input
+                          type="text"
+                          value={doc.name || ""}
+                          onChange={(e) => updateDocument(index, "name", e.target.value)}
+                          className={FIELD_INPUT}
+                          aria-label={`Document ${index + 1} name`}
+                          disabled={docsBusy}
+                        />
+                      </td>
+                      <td className="pl-[5px] pr-1 py-1 align-middle">
+                        <span className="block truncate text-xs text-secondary" title={fileLabel}>
+                          {doc._pendingFile ? "Pending upload — " : ""}
+                          {fileLabel}
+                        </span>
+                      </td>
+                      <td className="pl-[5px] pr-1 py-1 align-middle text-center">
+                        <button
+                          type="button"
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10 disabled:opacity-50"
+                          title="Remove document"
+                          aria-label="Remove document"
+                          disabled={docsBusy}
+                          onClick={() => removeDocument(index)}
+                        >
+                          <FiX className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { FiDownload, FiEye, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiEye, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
@@ -236,12 +236,13 @@ export default function SimpleServiceProposalAttachmentsModal({
               <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40 dark:bg-card">
-                    <th className="w-28 px-2 py-1 text-left text-xs font-bold uppercase tracking-wide text-title">
+                    <th className="w-20 px-2 py-1 text-left text-xs font-bold uppercase tracking-wide text-title">
                       Actions
                     </th>
                     <th className="px-2 py-1 text-left text-xs font-bold uppercase tracking-wide text-title">
                       Document
                     </th>
+                    <th className="w-10 px-2 py-1 text-left text-xs font-bold uppercase tracking-wide text-title" />
                   </tr>
                 </thead>
                 <tbody>
@@ -271,22 +272,24 @@ export default function SimpleServiceProposalAttachmentsModal({
                             >
                               <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
                             </button>
-                            <button
-                              type="button"
-                              title="Delete"
-                              aria-label={`Delete ${row.name || "document"}`}
-                              disabled={busy}
-                              className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-danger hover:bg-danger/10 disabled:opacity-40"
-                              onClick={() => deleteAttachment(row, index)}
-                            >
-                              <FiTrash2 className={`h-4 w-4 shrink-0 ${rowBusy ? "animate-pulse" : ""}`} aria-hidden />
-                            </button>
                           </div>
                         </td>
                         <td className="min-w-0 px-2 py-1">
                           <span className="block truncate text-title" title={row.name || row.url}>
                             {row.name || row.url}
                           </span>
+                        </td>
+                        <td className="px-1.5 py-1 text-center">
+                          <button
+                            type="button"
+                            title="Delete"
+                            aria-label={`Delete ${row.name || "document"}`}
+                            disabled={busy}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-danger hover:bg-danger/10 disabled:opacity-40"
+                            onClick={() => deleteAttachment(row, index)}
+                          >
+                            <FiX className={`h-4 w-4 shrink-0 ${rowBusy ? "animate-pulse" : ""}`} aria-hidden />
+                          </button>
                         </td>
                       </tr>
                     );

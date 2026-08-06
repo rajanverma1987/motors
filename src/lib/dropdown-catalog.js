@@ -84,37 +84,71 @@ function normalizeWoEntry(entry, ctx = {}) {
   };
 }
 
+function parseSortOrder(raw, fallbackIndex) {
+  const n = Number(raw);
+  if (Number.isFinite(n)) return Math.trunc(n);
+  return fallbackIndex * 10;
+}
+
+function resolveFilterGroup(rawFilterGroup, label, value) {
+  const fromField = clampDropdownLabel(rawFilterGroup);
+  if (fromField) return fromField;
+  const fromLabel = clampDropdownLabel(label);
+  if (fromLabel) return fromLabel;
+  return String(value || "").trim().slice(0, 120);
+}
+
+/** Case-insensitive key for matching Filter Group names. */
+export function filterGroupKey(raw) {
+  return String(raw ?? "")
+    .trim()
+    .toLowerCase();
+}
+
 function normalizeQuoteEntries(rawEntries) {
   const quoteCtx = { tiles: {} };
-  let list = Array.isArray(rawEntries)
-    ? rawEntries.map((e) => normalizeWoEntry(e, quoteCtx)).filter(Boolean)
-    : [];
+  const rawList = Array.isArray(rawEntries) ? rawEntries : [];
+  const pairs = [];
+  for (const raw of rawList) {
+    const row = normalizeWoEntry(raw, quoteCtx);
+    if (row) pairs.push({ row, raw });
+  }
 
   const seen = new Set();
   const uniq = [];
-  for (const row of list) {
+  for (const { row, raw } of pairs) {
     const valueLower = row.value.toLowerCase();
     if (seen.has(valueLower)) continue;
     seen.add(valueLower);
+    const label =
+      clampDropdownLabel(row.label) ||
+      DEFAULT_QUOTE_LABELS[valueLower] ||
+      valueLower;
+    const sortOrder = parseSortOrder(raw?.sortOrder, uniq.length);
+    const filterGroup = resolveFilterGroup(raw?.filterGroup, label, valueLower);
     uniq.push({
       ...row,
       value: valueLower,
-      label:
-        clampDropdownLabel(row.label) ||
-        DEFAULT_QUOTE_LABELS[valueLower] ||
-        valueLower,
+      label,
+      filterGroup,
+      sortOrder,
     });
     if (uniq.length >= MAX_QUOTE_STATUS_OPTIONS) break;
   }
 
   if (!uniq.length) {
-    return QUOTE_STATUS_VALUES.map((value) => ({
-      value,
-      label: DEFAULT_QUOTE_LABELS[value] || value,
-      tileBgColor: "",
-      tileTextColor: "",
-      tileColor: "",
-    }));
+    return QUOTE_STATUS_VALUES.map((value, index) => {
+      const label = DEFAULT_QUOTE_LABELS[value] || value;
+      return {
+        value,
+        label,
+        filterGroup: label,
+        sortOrder: index * 10,
+        tileBgColor: "",
+        tileTextColor: "",
+        tileColor: "",
+      };
+    });
   }
   return uniq;
 }
@@ -293,6 +327,110 @@ export function quoteStatusTileColorForValue(mergedSettings, value, fallbackInde
     tileTextColor: entry?.tileTextColor ?? "",
     index: idx >= 0 ? idx : fallbackIndex,
   };
+}
+
+/** Filter card key for a Filter Group (`fg:<normalized>`). */
+export function quoteStatusFilterGroupCardKey(groupLabel) {
+  return `fg:${filterGroupKey(groupLabel)}`;
+}
+
+export function isQuoteStatusFilterGroupKey(key) {
+  return String(key || "")
+    .trim()
+    .toLowerCase()
+    .startsWith("fg:");
+}
+
+/**
+ * One summary-card spec per distinct Filter Group (combined member statuses).
+ * Card label/color come from the member with lowest sortOrder (entries order as tiebreak).
+ */
+export function buildQuoteStatusFilterCardSpecs(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.quote_status?.entries;
+  const list = Array.isArray(entries) ? entries : normalizeQuoteEntries([]);
+
+  /** @type {Map<string, { members: typeof list, top: (typeof list)[number], topIndex: number }>} */
+  const groups = new Map();
+  for (let i = 0; i < list.length; i++) {
+    const e = list[i];
+    const gk = filterGroupKey(e.filterGroup || e.label || e.value);
+    if (!gk) continue;
+    let g = groups.get(gk);
+    if (!g) {
+      g = { members: [], top: e, topIndex: i };
+      groups.set(gk, g);
+    }
+    g.members.push(e);
+    const eOrder = Number.isFinite(Number(e.sortOrder)) ? Number(e.sortOrder) : i * 10;
+    const topOrder = Number.isFinite(Number(g.top.sortOrder))
+      ? Number(g.top.sortOrder)
+      : g.topIndex * 10;
+    if (eOrder < topOrder || (eOrder === topOrder && i < g.topIndex)) {
+      g.top = e;
+      g.topIndex = i;
+    }
+  }
+
+  const specs = [...groups.entries()].map(([gk, g]) => {
+    const sortOrder = Number.isFinite(Number(g.top.sortOrder))
+      ? Number(g.top.sortOrder)
+      : g.topIndex * 10;
+    return {
+      key: `fg:${gk}`,
+      label: String(g.top.filterGroup || g.top.label || g.top.value || "").trim() || gk,
+      memberValues: g.members.map((m) => String(m.value ?? "").trim().toLowerCase()).filter(Boolean),
+      sortOrder,
+      tileValue: String(g.top.value ?? "").trim().toLowerCase(),
+      topIndex: g.topIndex,
+    };
+  });
+
+  specs.sort((a, b) => {
+    if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+    return String(a.label).localeCompare(String(b.label), undefined, { sensitivity: "base" });
+  });
+  return specs;
+}
+
+/** Numeric order for Proposal Status column sort; unknown statuses sort last. */
+export function quoteStatusSortOrderForValue(mergedSettings, value) {
+  const entries = mergedSettings?.controlledDropdowns?.quote_status?.entries;
+  const list = Array.isArray(entries) ? entries : normalizeQuoteEntries([]);
+  const v = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/^invoice:/, "");
+  const idx = list.findIndex((e) => String(e.value ?? "").toLowerCase().trim() === v);
+  if (idx < 0) return Number.MAX_SAFE_INTEGER;
+  const order = Number(list[idx].sortOrder);
+  return Number.isFinite(order) ? order : idx * 10;
+}
+
+/**
+ * Whether a row status matches a filter key (exact slug, invoice: slug, or fg: filter group).
+ */
+export function quoteStatusMatchesFilter(rowStatus, filterKey, mergedSettings) {
+  const s = String(rowStatus || "")
+    .trim()
+    .toLowerCase();
+  const f = String(filterKey || "")
+    .trim()
+    .toLowerCase();
+  if (!f) return true;
+  if (isQuoteStatusFilterGroupKey(f)) {
+    const specs = buildQuoteStatusFilterCardSpecs(mergedSettings);
+    const spec = specs.find((c) => c.key === f);
+    if (!spec) return false;
+    const bare = s.replace(/^invoice:/, "");
+    return spec.memberValues.includes(bare) || spec.memberValues.includes(s);
+  }
+  if (s === f) return true;
+  const sBare = s.replace(/^invoice:/, "");
+  const fBare = f.replace(/^invoice:/, "");
+  if (f.startsWith("invoice:") || s.startsWith("invoice:")) {
+    return sBare === fBare;
+  }
+  return false;
 }
 
 /** Allowed invoice status slugs (lowercase) from merged settings. */

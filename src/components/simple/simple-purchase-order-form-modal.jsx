@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiDownload, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -896,7 +896,6 @@ export default function SimplePurchaseOrderFormModal({
                       <table className="w-full min-w-[52rem] border-collapse border-spacing-0 text-xs">
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
-                            <th className="w-7 border-r border-border p-0.5 text-left font-semibold" />
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
                             <th className="w-20 border-r border-border px-1 py-1 text-left font-semibold">UOM</th>
                             <th className="w-20 border-r border-border px-1 py-1 text-right font-semibold">Quantity</th>
@@ -904,7 +903,8 @@ export default function SimplePurchaseOrderFormModal({
                             <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Total</th>
                             <th className="w-16 border-r border-border px-1 py-1 text-right font-semibold">Tax%</th>
                             <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Tax Amount</th>
-                            <th className="w-28 px-1 py-1 text-right font-semibold">Grand Total</th>
+                            <th className="w-28 border-r border-border px-1 py-1 text-right font-semibold">Grand Total</th>
+                            <th className="w-7 p-0.5 text-left font-semibold" />
                           </tr>
                         </thead>
                         <tbody>
@@ -915,20 +915,6 @@ export default function SimplePurchaseOrderFormModal({
                               (idx < (form.lineItems || []).length - 1 || lineHasContent(line));
                             return (
                               <tr key={line.id} className="border-t border-border bg-card">
-                                <td className="border-r border-border p-0">
-                                  {canRemove ? (
-                                    <button
-                                      type="button"
-                                      className="rounded-none p-0.5 text-danger hover:bg-danger/10"
-                                      title="Remove line"
-                                      aria-label="Remove line"
-                                      onClick={() => removeLine(line.id)}
-                                      disabled={saving}
-                                    >
-                                      <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                                    </button>
-                                  ) : null}
-                                </td>
                                 <td className="border-r border-border p-0">
                                   <input
                                     type="text"
@@ -993,13 +979,27 @@ export default function SimplePurchaseOrderFormModal({
                                     className={`${CELL_INPUT_MUTED} text-right tabular-nums`}
                                   />
                                 </td>
-                                <td className="p-0">
+                                <td className="border-r border-border p-0">
                                   <input
                                     type="text"
                                     readOnly
                                     value={formatMoney(t.grandTotal)}
                                     className={`${CELL_INPUT_MUTED} text-right font-semibold tabular-nums`}
                                   />
+                                </td>
+                                <td className="p-0 text-center">
+                                  {canRemove ? (
+                                    <button
+                                      type="button"
+                                      className="rounded-none p-0.5 text-danger hover:bg-danger/10"
+                                      title="Remove line"
+                                      aria-label="Remove line"
+                                      onClick={() => removeLine(line.id)}
+                                      disabled={saving}
+                                    >
+                                      <FiX className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                  ) : null}
                                 </td>
                               </tr>
                             );
@@ -1051,7 +1051,7 @@ export default function SimplePurchaseOrderFormModal({
               },
               {
                 id: TAB_RECEIVING,
-                label: "Receiving",
+                label: "Material Receiving",
                 children: (
                   <>
                     {contentLines.length === 0 ? (
@@ -1119,22 +1119,28 @@ export default function SimplePurchaseOrderFormModal({
                 label: "Payment",
                 children: (
                   <div className="flex flex-col gap-4">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="text-xs text-secondary">
+                    <div className="flex flex-wrap items-center gap-4">
+                      <div className="text-sm text-secondary">
                         Grand Total:{" "}
-                        <span className="font-bold text-title">{formatMoney(paymentSummary.grandTotal)}</span>
+                        <span className="text-base font-bold text-title">
+                          {formatMoney(paymentSummary.grandTotal)}
+                        </span>
                       </div>
-                      <div className="text-xs text-secondary">
+                      <div className="text-sm text-secondary">
                         Amount Paid:{" "}
-                        <span className="font-bold text-title">{formatMoney(paymentSummary.amountPaid)}</span>
+                        <span className="text-base font-bold text-title">
+                          {formatMoney(paymentSummary.amountPaid)}
+                        </span>
                       </div>
-                      <div className="text-xs text-secondary">
+                      <div className="text-sm text-secondary">
                         Balance:{" "}
-                        <span className="font-bold text-title">{formatMoney(paymentSummary.balance)}</span>
+                        <span className="text-base font-bold text-title">
+                          {formatMoney(paymentSummary.balance)}
+                        </span>
                       </div>
                       <Badge
                         variant={paymentStatusBadgeVariant(paymentSummary.paymentStatus)}
-                        className="rounded-full px-2.5 py-0.5 text-xs"
+                        className="rounded-full px-3 py-1 text-sm"
                       >
                         {paymentSummary.paymentStatus}
                       </Badge>
@@ -1193,7 +1199,7 @@ export default function SimplePurchaseOrderFormModal({
                           />
                         </FieldRow>
                         <Button type="button" variant="primary" size="sm" onClick={handleAddPayment} disabled={saving}>
-                          Add
+                          Add Payment Record
                         </Button>
                       </div>
                     </div>
@@ -1202,12 +1208,12 @@ export default function SimplePurchaseOrderFormModal({
                       <table className="w-full min-w-[40rem] border-collapse text-xs">
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
-                            <th className="w-10 border-r border-border px-1 py-1 text-left font-semibold" />
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Date</th>
                             <th className="border-r border-border px-1 py-1 text-right font-semibold">Amount</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Method</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Paid By</th>
-                            <th className="px-1 py-1 text-left font-semibold">Notes</th>
+                            <th className="border-r border-border px-1 py-1 text-left font-semibold">Notes</th>
+                            <th className="w-10 px-1 py-1 text-left font-semibold" />
                           </tr>
                         </thead>
                         <tbody>
@@ -1223,7 +1229,14 @@ export default function SimplePurchaseOrderFormModal({
                                 paidByOptions.find((o) => o.value === p.paidBy)?.label || p.paidBy || "—";
                               return (
                                 <tr key={p.id} className="border-t border-border bg-card">
-                                  <td className="border-r border-border p-0.5">
+                                  <td className="border-r border-border px-1 py-1 text-title">{p.date || "—"}</td>
+                                  <td className="border-r border-border px-1 py-1 text-right font-semibold tabular-nums text-title">
+                                    {formatMoney(parsePoMoney(p.amount))}
+                                  </td>
+                                  <td className="border-r border-border px-1 py-1 text-title">{p.method || "—"}</td>
+                                  <td className="border-r border-border px-1 py-1 text-title">{paidByLabel}</td>
+                                  <td className="border-r border-border px-1 py-1 text-title">{p.notes || "—"}</td>
+                                  <td className="px-1 py-0.5 text-center">
                                     <button
                                       type="button"
                                       className="rounded p-0.5 text-danger hover:bg-danger/10"
@@ -1232,16 +1245,9 @@ export default function SimplePurchaseOrderFormModal({
                                       onClick={() => handleDeletePayment(p.id)}
                                       disabled={saving}
                                     >
-                                      <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
+                                      <FiX className="h-3.5 w-3.5" aria-hidden />
                                     </button>
                                   </td>
-                                  <td className="border-r border-border px-1 py-1 text-title">{p.date || "—"}</td>
-                                  <td className="border-r border-border px-1 py-1 text-right font-semibold tabular-nums text-title">
-                                    {formatMoney(parsePoMoney(p.amount))}
-                                  </td>
-                                  <td className="border-r border-border px-1 py-1 text-title">{p.method || "—"}</td>
-                                  <td className="border-r border-border px-1 py-1 text-title">{paidByLabel}</td>
-                                  <td className="px-1 py-1 text-title">{p.notes || "—"}</td>
                                 </tr>
                               );
                             })
@@ -1273,14 +1279,15 @@ export default function SimplePurchaseOrderFormModal({
                       <table className="w-full border-collapse text-xs">
                         <thead>
                           <tr className="border-b-2 border-border bg-primary/[0.04] text-title">
-                            <th className="w-24 px-1 py-1 text-left font-semibold">Actions</th>
+                            <th className="w-16 px-1 py-1 text-left font-semibold">Actions</th>
                             <th className="px-1 py-1 text-left font-semibold">Vendor invoices & documents</th>
+                            <th className="w-10 px-1 py-1 text-left font-semibold" />
                           </tr>
                         </thead>
                         <tbody>
                           {(form.vendorDocuments || []).length === 0 ? (
                             <tr>
-                              <td colSpan={2} className="px-2 py-3 text-center text-secondary">
+                              <td colSpan={3} className="px-2 py-3 text-center text-secondary">
                                 No vendor documents yet. Use Add Attachments after saving.
                               </td>
                             </tr>
@@ -1315,19 +1322,21 @@ export default function SimplePurchaseOrderFormModal({
                                       >
                                         <FiDownload className="h-3.5 w-3.5" aria-hidden />
                                       </a>
-                                      <button
-                                        type="button"
-                                        className="rounded p-0.5 text-danger hover:bg-danger/10"
-                                        title="Delete"
-                                        aria-label="Delete"
-                                        disabled={saving || !form.id}
-                                        onClick={() => handleDeleteVendorDocument(doc)}
-                                      >
-                                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                                      </button>
                                     </div>
                                   </td>
                                   <td className="px-1 py-1 text-title">{doc.name || doc.url || "—"}</td>
+                                  <td className="px-1 py-0.5 text-center">
+                                    <button
+                                      type="button"
+                                      className="rounded p-0.5 text-danger hover:bg-danger/10"
+                                      title="Delete"
+                                      aria-label="Delete"
+                                      disabled={saving || !form.id}
+                                      onClick={() => handleDeleteVendorDocument(doc)}
+                                    >
+                                      <FiX className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                  </td>
                                 </tr>
                               );
                             })

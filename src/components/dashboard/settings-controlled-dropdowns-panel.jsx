@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FiTrash2 } from "react-icons/fi";
+import { FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
@@ -88,6 +88,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   const entries =
     selectedKey === "quote_status" ? quoteEntries : selectedKey === "invoice_status" ? invoiceEntries : woEntries;
   const showEntryLabels = selectedKey === "quote_status" || selectedKey === "invoice_status";
+  const showQuoteFilterGroupColumns = selectedKey === "quote_status";
   const showShopFloorColumn = selectedKey === "work_order_status";
 
   const patchEntries = (next) => {
@@ -114,6 +115,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       {
         value: nextVal.slice(0, 80),
         label: "",
+        filterGroup: "",
+        sortOrder: entries.length * 10,
         tileBgColor: "",
         tileTextColor: "",
         tileColor: "",
@@ -164,11 +167,16 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       return;
     }
     const prevByLower = new Map(entries.map((e) => [e.value.toLowerCase(), e]));
-    const next = lines.map((value) => {
+    const next = lines.map((value, lineIdx) => {
       const prev = prevByLower.get(value.toLowerCase());
       return {
         value: value.slice(0, 80),
         label: prev?.label ?? "",
+        filterGroup: prev?.filterGroup ?? "",
+        sortOrder:
+          prev?.sortOrder != null && Number.isFinite(Number(prev.sortOrder))
+            ? Math.trunc(Number(prev.sortOrder))
+            : lineIdx * 10,
         tileBgColor: prev?.tileBgColor ?? "",
         tileTextColor: prev?.tileTextColor ?? "",
         tileColor: prev?.tileColor || "",
@@ -213,6 +221,14 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                 Use <span className="font-medium text-title">Shop floor</span> to show or hide each status as a column on
                 the shop floor job board (work orders in hidden statuses are not listed there).
               </>
+            ) : null}
+            {showQuoteFilterGroupColumns ? (
+              <>
+                {" "}
+                Statuses that share the same <span className="font-medium text-title">Filter Group</span> appear as one
+                summary filter card on Service Proposals. <span className="font-medium text-title">Sort</span> controls
+                status column order in the table; the lowest Sort in a group sets that card&apos;s color.
+              </>
             ) : null}{" "}
             Quote statuses are stored on each RFQ; keep an{" "}
             <span className="font-medium text-title">approved</span>-labeled option if you use{" "}
@@ -246,35 +262,29 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className="w-full min-w-[36rem] text-sm">
+            <table className={`w-full text-sm ${showQuoteFilterGroupColumns ? "min-w-[48rem]" : "min-w-[36rem]"}`}>
               <thead className="border-b border-border bg-form-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-secondary">
                 <tr>
-                  <th className="w-12 px-3 py-2" aria-label="Actions" />
                   <th className="w-24 px-3 py-2">Order</th>
                   <th className="px-3 py-2">Value</th>
                   {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
+                  {showQuoteFilterGroupColumns ? (
+                    <>
+                      <th className="min-w-[8rem] px-3 py-2">Filter Group</th>
+                      <th className="w-24 px-3 py-2">Sort</th>
+                    </>
+                  ) : null}
                   {showShopFloorColumn ? (
                     <th className="px-3 py-2 text-center">Shop floor</th>
                   ) : null}
                   <th className="min-w-[14rem] px-3 py-2">Tile colors</th>
                   <th className="px-3 py-2 text-right">Preview</th>
+                  <th className="w-12 px-3 py-2" aria-label="Delete" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {entries.map((row, idx) => (
                   <tr key={row.value}>
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        onClick={() => removeValue(row.value)}
-                        disabled={entries.length <= 1}
-                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label={`Delete ${chipLabel(row)}`}
-                        title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
-                      >
-                        <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                    </td>
                     <td className="px-3 py-2">
                       <div className="flex gap-1">
                         <button
@@ -311,6 +321,39 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           placeholder={row.value}
                         />
                       </td>
+                    ) : null}
+                    {showQuoteFilterGroupColumns ? (
+                      <>
+                        <td className="px-3 py-2">
+                          <Input
+                            value={row.filterGroup ?? ""}
+                            onChange={(e) => {
+                              const next = [...entries];
+                              next[idx] = { ...next[idx], filterGroup: e.target.value ?? "" };
+                              patchEntries(next);
+                            }}
+                            className="!gap-0"
+                            placeholder={row.label || row.value}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="number"
+                            value={row.sortOrder ?? idx * 10}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const n = Number(raw);
+                              const next = [...entries];
+                              next[idx] = {
+                                ...next[idx],
+                                sortOrder: Number.isFinite(n) ? Math.trunc(n) : idx * 10,
+                              };
+                              patchEntries(next);
+                            }}
+                            className="!gap-0"
+                          />
+                        </td>
+                      </>
                     ) : null}
                     {showShopFloorColumn ? (
                       <td className="px-3 py-2 text-center">
@@ -354,6 +397,18 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                       </span>
                         );
                       })()}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => removeValue(row.value)}
+                        disabled={entries.length <= 1}
+                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Delete ${chipLabel(row)}`}
+                        title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
+                      >
+                        <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                      </button>
                     </td>
                   </tr>
                 ))}

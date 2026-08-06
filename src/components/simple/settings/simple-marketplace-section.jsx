@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { FiEdit2, FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiUpload, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -284,27 +284,17 @@ export default function SimpleMarketplaceSection() {
   const itemColumns = useMemo(
     () => [
       {
-        key: "actions",
+        key: "edit",
         label: "",
         render: (_, row) => (
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={() => openEdit(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10"
-              aria-label="Edit"
-            >
-              <FiEdit2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => deleteItem(row)}
-              className="rounded p-1.5 text-danger hover:bg-danger/10"
-              aria-label="Delete"
-            >
-              <FiTrash2 className="h-4 w-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => openEdit(row)}
+            className="rounded p-1.5 text-primary hover:bg-primary/10"
+            aria-label="Edit"
+          >
+            <FiEdit2 className="h-4 w-4" />
+          </button>
         ),
       },
       { key: "title", label: "Title", sortable: true },
@@ -333,6 +323,20 @@ export default function SimpleMarketplaceSection() {
           ) : (
             "—"
           ),
+      },
+      {
+        key: "actions",
+        label: "",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => deleteItem(row)}
+            className="rounded p-1.5 text-danger hover:bg-danger/10"
+            aria-label="Delete"
+          >
+            <FiX className="h-4 w-4" />
+          </button>
+        ),
       },
     ],
     []

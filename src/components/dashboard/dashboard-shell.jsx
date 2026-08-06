@@ -12,6 +12,7 @@ import DashboardNav from "@/components/dashboard/dashboard-nav";
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
 import ListingUpgradeBanner from "@/components/dashboard/listing-upgrade-banner";
 import StripContextualAiWidget from "@/components/dashboard/strip-contextual-ai-widget";
+import { StatusFilterCardDesignProvider } from "@/components/simple/status-filter-card-design";
 
 /** Renders dashboard chrome only when the user is allowed on the current route. */
 export default function DashboardShell({ children }) {
@@ -44,7 +45,7 @@ export default function DashboardShell({ children }) {
   }
 
   return (
-    <>
+    <StatusFilterCardDesignProvider>
       <StripContextualAiWidget />
       <div className="flex h-screen flex-col overflow-hidden bg-bg">
         <header className="shrink-0">
@@ -64,6 +65,6 @@ export default function DashboardShell({ children }) {
           </main>
         </div>
       </div>
-    </>
+    </StatusFilterCardDesignProvider>
   );
 }

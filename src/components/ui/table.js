@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FiEdit2, FiTrash2, FiRotateCw, FiDownload, FiSearch } from "react-icons/fi";
+import { FiEdit2, FiX, FiRotateCw, FiDownload, FiSearch } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
@@ -156,7 +156,7 @@ export default function Table({
   // Optional: dense padding
   dense = false,
   // Optional: empty cell placeholder (global or column.emptyCell)
-  emptyCell = "—",
+  emptyCell = "-",
   // Optional: footer row (array of values keyed by column key, or array of row objects for multiple footer rows)
   footer,
   // Optional: export CSV
@@ -440,7 +440,7 @@ export default function Table({
     : [];
 
   const visibleDataColumns = columns.filter((c) => !hiddenColumnKeys.includes(c.key));
-  const displayColumns = [...selectColumn, ...actionsColumn, ...visibleDataColumns];
+  const displayColumns = [...selectColumn, ...visibleDataColumns, ...actionsColumn];
 
   const openSettingsModal = () => {
     setDraftHiddenKeys([...hiddenColumnKeys]);
@@ -491,7 +491,7 @@ export default function Table({
               className={`cursor-pointer rounded ${actionPad} text-danger hover:bg-danger/10 outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-danger`}
               aria-label="Delete"
             >
-              <FiTrash2 className={`${actionIcon} shrink-0`} aria-hidden />
+              <FiX className={`${actionIcon} shrink-0`} aria-hidden />
             </button>
           )}
         </div>

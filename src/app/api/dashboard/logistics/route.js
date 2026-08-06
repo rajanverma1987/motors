@@ -3,10 +3,12 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import LogisticsEntry from "@/models/LogisticsEntry";
 import PurchaseOrder from "@/models/PurchaseOrder";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
 import { applyPoLineReceiptStatuses } from "@/lib/po-line-receipts";
 import { syncLogisticsChargesToPo } from "@/lib/logistics-po-charges";
+import { isValidSimplePortalId } from "@/lib/simple-portal-mongo";
 
 function toRow(doc) {
   return {
@@ -22,6 +24,8 @@ function toRow(doc) {
     droppedBy: doc.droppedBy || "",
     pickedBy: doc.pickedBy || "",
     charges: doc.charges || "",
+    paidBy: doc.paidBy || "",
+    shippingPo: doc.shippingPo || "",
     logisticsChargesPaidBy: doc.logisticsChargesPaidBy || "",
     logisticsChargesAmount: doc.logisticsChargesAmount || "",
     notes: doc.notes || "",
@@ -39,17 +43,28 @@ function normalizePayload(body, email) {
     date: clampString(body?.date, 30),
     invoiceNumber: clampString(body?.invoiceNumber, 100),
     jobNumber: clampString(body?.jobNumber, 100),
+    shippingPo: "",
     mannerOfTransport: clampString(body?.mannerOfTransport, LIMITS.shortText.max),
     freight: clampString(body?.freight, LIMITS.shortText.max),
     droppedBy: clampString(body?.droppedBy, LIMITS.shortText.max),
     pickedBy: clampString(body?.pickedBy, LIMITS.shortText.max),
     charges: clampString(body?.charges, 50),
+    paidBy: "",
     logisticsChargesPaidBy: "",
     logisticsChargesAmount: "",
     notes: clampString(body?.notes, LIMITS.message.max),
     purchaseOrderId: null,
     poNumberSnapshot: "",
   };
+  if (kind === "motor_receiving" || kind === "motor_shipping") {
+    const paidBy = String(body?.paidBy ?? "").trim().toLowerCase();
+    if (paidBy === "customer" || paidBy === "company") {
+      out.paidBy = paidBy;
+    }
+  }
+  if (kind === "motor_shipping") {
+    out.shippingPo = clampString(body?.shippingPo, 100);
+  }
   if (kind === "vendor_po_receiving" && body?.purchaseOrderId) {
     const id = String(body.purchaseOrderId).trim();
     if (mongoose.Types.ObjectId.isValid(id)) out.purchaseOrderId = new mongoose.Types.ObjectId(id);
@@ -133,6 +148,16 @@ export async function POST(request) {
       createdByEmail: email,
       ...payload,
     });
+
+    if (payload.kind === "motor_shipping") {
+      const spId = String(body?.serviceProposalId || "").trim();
+      if (isValidSimplePortalId(spId)) {
+        await SimpleServiceProposal.updateOne(
+          { _id: spId, createdByEmail: email },
+          { $set: { shippingPo: payload.shippingPo || "" } }
+        );
+      }
+    }
 
     if (payload.kind === "vendor_po_receiving") {
       await LogisticsEntry.updateOne(

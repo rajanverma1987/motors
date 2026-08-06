@@ -69,7 +69,7 @@ export function parseCalendarDate(value) {
 export function formatDateMdy(value) {
   const d = parseCalendarDate(value);
   if (!d) {
-    if (value == null || value === "") return "—";
+    if (value == null || value === "") return "-";
     return String(value);
   }
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
@@ -83,7 +83,7 @@ export function formatDateMdy(value) {
 export function formatDateLocale(value, locale) {
   const d = parseCalendarDate(value);
   if (!d) {
-    if (value == null || value === "") return "—";
+    if (value == null || value === "") return "-";
     return String(value);
   }
   try {

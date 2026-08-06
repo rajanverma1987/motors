@@ -34,6 +34,8 @@ function toRow(doc) {
     droppedBy: doc.droppedBy || "",
     pickedBy: doc.pickedBy || "",
     charges: doc.charges || "",
+    paidBy: doc.paidBy || "",
+    shippingPo: doc.shippingPo || "",
     logisticsChargesPaidBy: doc.logisticsChargesPaidBy || "",
     logisticsChargesAmount: doc.logisticsChargesAmount || "",
     notes: doc.notes || "",
@@ -73,6 +75,16 @@ export async function PATCH(request, context) {
     if (body.pickedBy !== undefined) patch.pickedBy = clampString(body.pickedBy, LIMITS.shortText.max);
     if (body.charges !== undefined) patch.charges = clampString(body.charges, 50);
     if (body.notes !== undefined) patch.notes = clampString(body.notes, LIMITS.message.max);
+    if (
+      (existing.kind === "motor_receiving" || existing.kind === "motor_shipping") &&
+      body.paidBy !== undefined
+    ) {
+      const paidBy = String(body.paidBy ?? "").trim().toLowerCase();
+      patch.paidBy = paidBy === "customer" || paidBy === "company" ? paidBy : "";
+    }
+    if (existing.kind === "motor_shipping" && body.shippingPo !== undefined) {
+      patch.shippingPo = clampString(body.shippingPo, 100);
+    }
     if (existing.kind === "vendor_po_receiving") {
       if (body.logisticsChargesPaidBy !== undefined) {
         const paidBy = String(body.logisticsChargesPaidBy ?? "").trim().toLowerCase();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -279,32 +279,17 @@ export default function SimpleAccessControlSection() {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
+        key: "edit",
         label: "",
         render: (_, row) => (
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => openEdit(row)}
-              className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-              aria-label="Edit"
-            >
-              <FiEdit2 className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => handleDelete(row)}
-              disabled={deletingId === row.id}
-              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
-              aria-label="Delete"
-            >
-              {deletingId === row.id ? (
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-danger border-t-transparent" />
-              ) : (
-                <FiTrash2 className="h-4 w-4" />
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => openEdit(row)}
+            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+            aria-label="Edit"
+          >
+            <FiEdit2 className="h-4 w-4" />
+          </button>
         ),
       },
       {
@@ -349,6 +334,25 @@ export default function SimpleAccessControlSection() {
           const pages = res.filter((r) => r.actions?.length);
           return pages.length ? `${pages.length} page${pages.length !== 1 ? "s" : ""}` : "—";
         },
+      },
+      {
+        key: "actions",
+        label: "",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => handleDelete(row)}
+            disabled={deletingId === row.id}
+            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
+            aria-label="Delete"
+          >
+            {deletingId === row.id ? (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-danger border-t-transparent" />
+            ) : (
+              <FiX className="h-4 w-4" />
+            )}
+          </button>
+        ),
       },
     ],
     [deletingId]

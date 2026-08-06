@@ -11,7 +11,7 @@ import {
   FiPackage,
   FiPlus,
   FiTool,
-  FiTrash2,
+  FiX,
   FiXCircle,
 } from "react-icons/fi";
 import Table from "@/components/ui/table";
@@ -33,6 +33,9 @@ import {
   quoteStatusSelectOptionsFromMerged,
   quoteStatusTileColorForValue,
   buildCombinedQuoteInvoiceStatusOptions,
+  buildQuoteStatusFilterCardSpecs,
+  quoteStatusMatchesFilter,
+  quoteStatusSortOrderForValue,
   workOrderStatusSelectOptionsFromMerged,
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
@@ -41,6 +44,7 @@ import { formatDateMdy } from "@/lib/format-date";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-date-filter";
+import { sortRowsClient } from "@/lib/client-table-sort";
 import {
   formatSimpleMoney,
   formToServiceProposalListRow,
@@ -109,6 +113,36 @@ function resolveRowStatusPill(status, mergedSettings, quoteOpts, invoiceOpts) {
   return { style: pill.style, className: pill.className || "", label };
 }
 
+/** Full-cell status highlight (flush to cell edges; keep control padding inside). */
+function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
+  const resolved = resolveRowStatusPill(row?.status, mergedSettings, quoteOpts, invoiceOpts);
+  if (!resolved) return { style: null, className: "" };
+  return {
+    style: resolved.style || null,
+    className: `!p-0 ${resolved.className || ""}`.trim(),
+  };
+}
+
+function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors) {
+  if (String(row?.recordType || "").toUpperCase() !== RECORD_TYPE_JOB) {
+    return { style: null, className: "!p-0" };
+  }
+  const current = String(row?.jobStatus || "").trim();
+  if (!current) return { style: null, className: "!p-0" };
+  const idx = (jobStatusOptions || []).findIndex(
+    (o) => String(o.value).toLowerCase() === current.toLowerCase()
+  );
+  const pill = resolveWorkOrderStatusTileProps(
+    current,
+    idx >= 0 ? idx : 0,
+    workOrderStatusTileColors || {}
+  );
+  return {
+    style: pill.style || null,
+    className: `!p-0 ${pill.className || ""}`.trim(),
+  };
+}
+
 export default function ServiceProposalsPanel({
   variant = SIMPLE_LIST_VARIANT_PROPOSALS,
   createNonce = 0,
@@ -130,6 +164,7 @@ export default function ServiceProposalsPanel({
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
 
@@ -389,32 +424,33 @@ export default function ServiceProposalsPanel({
     [scopedRows, dateFrom, dateTo]
   );
 
-  const statusMatchesFilter = useCallback((rowStatus, filterKey) => {
-    const s = String(rowStatus || "")
-      .trim()
-      .toLowerCase();
-    const f = String(filterKey || "")
-      .trim()
-      .toLowerCase();
-    if (!f) return true;
-    if (s === f) return true;
-    const sBare = s.replace(/^invoice:/, "");
-    const fBare = f.replace(/^invoice:/, "");
-    if (f.startsWith("invoice:") || s.startsWith("invoice:")) {
-      return sBare === fBare;
-    }
-    return false;
-  }, []);
+  const statusMatchesFilter = useCallback(
+    (rowStatus, filterKey) => {
+      if (!isInvoices) {
+        return quoteStatusMatchesFilter(rowStatus, filterKey, mergedSettings);
+      }
+      const s = String(rowStatus || "")
+        .trim()
+        .toLowerCase();
+      const f = String(filterKey || "")
+        .trim()
+        .toLowerCase();
+      if (!f) return true;
+      if (s === f) return true;
+      const sBare = s.replace(/^invoice:/, "");
+      const fBare = f.replace(/^invoice:/, "");
+      if (f.startsWith("invoice:") || s.startsWith("invoice:")) {
+        return sBare === fBare;
+      }
+      return false;
+    },
+    [isInvoices, mergedSettings]
+  );
 
   const statusSummaryCards = useMemo(() => {
     const pool = rowsForDate;
-    const keysLower = new Set(statusOptionsForCards.map((o) => o.value.toLowerCase()));
-    const bareKeys = new Set(
-      statusOptionsForCards.map((o) => statusBareKey(o.value)).filter(Boolean)
-    );
     const tileAppearanceForKey = (statusKey, fallbackIndex) => {
       if (statusKey === "") return resolveStatusTileProps("", 0);
-      if (statusKey === "__other__") return resolveStatusTileProps("", 17);
       const bare = statusBareKey(statusKey);
       if (isInvoices) {
         const invIdx = invoiceOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
@@ -434,33 +470,43 @@ export default function ServiceProposalsPanel({
       return resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
     };
 
-    const buttons = statusOptionsForCards.map((opt, optIdx) => {
-      const key = opt.value;
-      const matched = pool.filter((r) => statusMatchesFilter(r.status, key));
-      return {
-        key,
-        label: opt.label,
-        count: matched.length,
-        amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
-        tileAppearance: tileAppearanceForKey(key, optIdx),
-        icon: statusCardIcon(opt.label),
-      };
-    });
+    /** @type {Array<{ key: string, label: string, count: number, amount: number, tileAppearance: ReturnType<typeof resolveStatusTileProps>, icon: typeof FiLayers }>} */
+    let buttons;
 
-    const orphans = pool.filter((r) => {
-      const s = String(r.status || "").trim().toLowerCase();
-      if (!s) return true;
-      if (keysLower.has(s) || bareKeys.has(statusBareKey(s))) return false;
-      return !statusOptionsForCards.some((opt) => statusMatchesFilter(s, opt.value));
-    });
-    if (orphans.length) {
-      buttons.push({
-        key: "__other__",
-        label: "Other",
-        count: orphans.length,
-        amount: orphans.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
-        tileAppearance: tileAppearanceForKey("__other__", 17),
-        icon: statusCardIcon("Other"),
+    if (!isInvoices) {
+      const specs = buildQuoteStatusFilterCardSpecs(mergedSettings);
+      buttons = specs.map((spec, optIdx) => {
+        const matched = pool.filter((r) => statusMatchesFilter(r.status, spec.key));
+        const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
+          mergedSettings,
+          spec.tileValue,
+          spec.topIndex >= 0 ? spec.topIndex : optIdx
+        );
+        return {
+          key: spec.key,
+          label: spec.label,
+          count: matched.length,
+          amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          tileAppearance: resolveStatusTileProps(tileColor, index, {
+            tileBgColor,
+            tileTextColor,
+            tileColor,
+          }),
+          icon: statusCardIcon(spec.label),
+        };
+      });
+    } else {
+      buttons = statusOptionsForCards.map((opt, optIdx) => {
+        const key = opt.value;
+        const matched = pool.filter((r) => statusMatchesFilter(r.status, key));
+        return {
+          key,
+          label: opt.label,
+          count: matched.length,
+          amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          tileAppearance: tileAppearanceForKey(key, optIdx),
+          icon: statusCardIcon(opt.label),
+        };
       });
     }
 
@@ -526,46 +572,51 @@ export default function ServiceProposalsPanel({
     if (statusFilter === FILTER_TAX_TO_COLLECT) {
       return rowsForDate.filter((r) => !isFullyPaidInvoiceStatus(r.status));
     }
-    if (statusFilter === "__other__") {
-      return rowsForDate.filter((r) => {
-        const s = String(r.status || "").trim().toLowerCase();
-        if (!s) return true;
-        return !statusOptionsForCards.some((opt) => statusMatchesFilter(s, opt.value));
-      });
-    }
     return rowsForDate.filter((r) => statusMatchesFilter(r.status, statusFilter));
-  }, [rowsForDate, statusFilter, statusOptionsForCards, statusMatchesFilter]);
+  }, [rowsForDate, statusFilter, statusMatchesFilter]);
+
+  const getProposalSortValue = useCallback(
+    (row, key) => {
+      if (key === "status" && !isInvoices) {
+        return quoteStatusSortOrderForValue(mergedSettings, row?.status);
+      }
+      return row?.[key];
+    },
+    [isInvoices, mergedSettings]
+  );
 
   const displayRows = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return statusFilteredRows;
-    return statusFilteredRows.filter((row) => {
-      const haystack = [
-        row.quote,
-        row.documentNumber,
-        row.companyName,
-        row.phone,
-        row.email,
-        row.quotedBy,
-        row.quoteType,
-        row.notes,
-        row.status,
-        row.jobStatus,
-        row.date,
-        row.dateCreated,
-        row.dueDate,
-        row.submitDate,
-        row.acceptDate,
-        row.total != null ? String(row.total) : "",
-        row.taxCollected != null ? String(row.taxCollected) : "",
-        formatSimpleMoney(Number(row.total) || 0),
-        formatSimpleMoney(Number(row.taxCollected) || 0),
-      ]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ");
-      return haystack.includes(q);
-    });
-  }, [statusFilteredRows, searchQuery]);
+    const filtered = !q
+      ? statusFilteredRows
+      : statusFilteredRows.filter((row) => {
+          const haystack = [
+            row.quote,
+            row.documentNumber,
+            row.companyName,
+            row.phone,
+            row.email,
+            row.quotedBy,
+            row.quoteType,
+            row.notes,
+            row.status,
+            row.jobStatus,
+            row.date,
+            row.dateCreated,
+            row.dueDate,
+            row.submitDate,
+            row.acceptDate,
+            row.total != null ? String(row.total) : "",
+            row.taxCollected != null ? String(row.taxCollected) : "",
+            formatSimpleMoney(Number(row.total) || 0),
+            formatSimpleMoney(Number(row.taxCollected) || 0),
+          ]
+            .map((v) => String(v ?? "").toLowerCase())
+            .join(" ");
+          return haystack.includes(q);
+        });
+    return sortRowsClient(filtered, tableSort, getProposalSortValue);
+  }, [statusFilteredRows, searchQuery, tableSort, getProposalSortValue]);
 
   const currencySubtotals = useMemo(() => {
     let total = 0;
@@ -594,26 +645,6 @@ export default function ServiceProposalsPanel({
   const columns = useMemo(
     () => [
       {
-        key: "actions",
-        label: "",
-        sortable: false,
-        className: "w-12",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Delete"
-            aria-label="Delete"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row);
-            }}
-          >
-            <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ),
-      },
-      {
         key: "quote",
         label: isInvoices ? "Invoice#" : "Quote/Job",
         sortable: true,
@@ -623,7 +654,7 @@ export default function ServiceProposalsPanel({
             className="font-medium text-primary hover:underline"
             onClick={() => openEdit(row)}
           >
-            {v || "—"}
+            {v || "-"}
           </button>
         ),
       },
@@ -631,7 +662,7 @@ export default function ServiceProposalsPanel({
         key: "date",
         label: "Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        render: (v) => formatDateMdy(v) || "-",
       },
       {
         key: "companyName",
@@ -639,8 +670,8 @@ export default function ServiceProposalsPanel({
         sortable: true,
         render: (v, row) => {
           const customerId = String(row.customerId || "").trim();
-          const name = String(v || "").trim() || customerName(customerId) || "—";
-          if (!customerId || name === "—") return name;
+          const name = String(v || "").trim() || customerName(customerId) || "-";
+          if (!customerId || name === "-") return name;
           return (
             <button
               type="button"
@@ -661,16 +692,6 @@ export default function ServiceProposalsPanel({
       { key: "quotedBy", label: "Quoted By", sortable: true },
       { key: "quoteType", label: "Quote Type", sortable: true },
       {
-        key: "notes",
-        label: "Notes",
-        sortable: false,
-        render: (v) => (
-          <span className="block max-w-[10rem] truncate text-secondary" title={v || ""}>
-            {v || "—"}
-          </span>
-        ),
-      },
-      {
         key: "total",
         label: currencyHeader("Total", currencySubtotals.total),
         sortable: true,
@@ -687,30 +708,53 @@ export default function ServiceProposalsPanel({
         render: (v) => formatSimpleMoney(Number(v) || 0),
       },
       {
-        key: "dueDate",
-        label: "Due Date",
-        sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
-      },
-      {
         key: "submitDate",
         label: "Submit date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+        render: (v) => {
+          const text = formatDateMdy(v);
+          return (
+            <span
+              className={`block px-1.5 py-1 tabular-nums ${text ? "font-semibold" : "font-normal"}`}
+            >
+              {text || "-"}
+            </span>
+          );
+        },
       },
       {
         key: "acceptDate",
         label: "Accept Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+        render: (v) => {
+          const text = formatDateMdy(v);
+          return (
+            <span
+              className={`block px-1.5 py-1 tabular-nums ${text ? "font-semibold" : "font-normal"}`}
+            >
+              {text || "-"}
+            </span>
+          );
+        },
       },
       {
         key: "status",
         label: isInvoices ? "Invoice Status" : "Proposal Status",
         sortable: true,
         className: "min-w-[10rem]",
+        getCellStyle: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+        getCellClassName: (_, row) =>
+          proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
         render: (v, row) => {
-          const resolved = resolveRowStatusPill(row.status || v, mergedSettings, quoteOpts, invoiceOpts);
           return (
             <div className="min-w-[8rem] max-w-[14rem]" onClick={(e) => e.stopPropagation()}>
               <SimpleSelect
@@ -719,8 +763,7 @@ export default function ServiceProposalsPanel({
                 options={statusOptions}
                 value={row.status || ""}
                 onChange={(e) => handleRowStatusChange(row, e.target.value)}
-                triggerClassName={resolved?.className || ""}
-                triggerStyle={resolved?.style || undefined}
+                triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
                 placeholder="Select…"
                 searchable
                 aria-label="Status"
@@ -734,19 +777,23 @@ export default function ServiceProposalsPanel({
         label: "Job Status",
         sortable: true,
         className: "min-w-[9rem]",
+        getCellStyle: (_, row) =>
+          jobStatusCellChrome(
+            row,
+            jobStatusOptions,
+            mergedSettings.workOrderStatusTileColors
+          ).style,
+        getCellClassName: (_, row) =>
+          jobStatusCellChrome(
+            row,
+            jobStatusOptions,
+            mergedSettings.workOrderStatusTileColors
+          ).className,
         render: (v, row) => {
           if (String(row.recordType || "").toUpperCase() !== RECORD_TYPE_JOB) {
             return "";
           }
           const current = String(v || "").trim();
-          const idx = jobStatusOptions.findIndex(
-            (o) => String(o.value).toLowerCase() === current.toLowerCase()
-          );
-          const pill = resolveWorkOrderStatusTileProps(
-            current,
-            idx >= 0 ? idx : 0,
-            mergedSettings.workOrderStatusTileColors || {}
-          );
           return (
             <div className="min-w-[7rem] max-w-[12rem]" onClick={(e) => e.stopPropagation()}>
               <SimpleSelect
@@ -755,8 +802,7 @@ export default function ServiceProposalsPanel({
                 options={jobStatusOptions}
                 value={current}
                 onChange={(e) => handleRowJobStatusChange(row, e.target.value)}
-                triggerClassName={pill.className || ""}
-                triggerStyle={pill.style || undefined}
+                triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
                 placeholder="Select…"
                 searchable
                 aria-label="Job Status"
@@ -764,6 +810,37 @@ export default function ServiceProposalsPanel({
             </div>
           );
         },
+      },
+      {
+        key: "notes",
+        label: "Notes",
+        sortable: false,
+        className: "min-w-[18rem]",
+        render: (v) => (
+          <span className="block min-w-[18rem] max-w-[28rem] whitespace-normal break-words font-normal text-secondary" title={v || ""}>
+            {v || "-"}
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-12",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Delete"
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
       },
     ],
     [
@@ -831,6 +908,8 @@ export default function ServiceProposalsPanel({
           searchable
           onSearch={setSearchQuery}
           searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+          sortState={tableSort}
+          onSort={(key, direction) => setTableSort({ key, direction })}
           onRefresh={reload}
           toolbarBeforeSearch={
             isInvoices ? null : (

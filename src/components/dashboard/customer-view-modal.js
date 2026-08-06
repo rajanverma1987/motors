@@ -299,7 +299,7 @@ export default function CustomerViewModal({
     const id = String(customer?.id || resolvedId || "").trim();
     const current = formRef.current;
     if (!id || !current.companyName?.trim()) {
-      toast.error("Company name is required.");
+      toast.error("Customer is required.");
       return;
     }
     setSavingCustomer(true);
@@ -353,18 +353,24 @@ export default function CustomerViewModal({
             <span className="text-sm text-secondary">Loading…</span>
           </div>
         ) : customer ? (
-          <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
-            <div className="flex min-w-0 flex-col gap-4">
+          <div className="relative h-full min-h-0">
+            <div className="absolute inset-0 grid min-h-0 gap-5 overflow-y-auto lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:overflow-hidden">
+            <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
               <Form
                 id={CUSTOMER_VIEW_FORM_ID}
                 onSubmit={handleCustomerSave}
                 className="flex min-h-0 flex-col gap-4 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
               >
-                <SimpleCustomerFormFields form={form} setForm={setForm} layout="stacked" />
+                <SimpleCustomerFormFields
+                  form={form}
+                  setForm={setForm}
+                  layout="stacked"
+                  customerId={String(customer?.id || resolvedId || "").trim()}
+                />
               </Form>
             </div>
 
-            <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:overflow-y-auto lg:overscroll-contain">
               <div className="flex min-w-0 flex-col gap-2">
                 <p className={SECTION_TITLE}>
                   Invoices ({activityLoading ? "…" : activity.invoices.length})
@@ -497,6 +503,7 @@ export default function CustomerViewModal({
                 </CustomerActivityTableBody>
               </div>
 
+            </div>
             </div>
           </div>
         ) : null}

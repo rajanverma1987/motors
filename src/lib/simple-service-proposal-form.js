@@ -55,6 +55,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     internalNotes: "",
     customerNotes: "",
     customerPo: "",
+    /** Motor shipping PO override (distinct from customerPo) */
+    shippingPo: "",
     dateCreated: todayISODate(),
     preparedBy: "",
     documentNumber: "",

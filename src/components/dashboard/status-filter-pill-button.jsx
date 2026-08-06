@@ -341,7 +341,42 @@ function BodySplit(props) {
   );
 }
 
-/** Soft — status-tinted wash, no accent bar. */
+function SoftSelectedMark({ accentColor }) {
+  const accent = accentColor || "hsl(var(--primary))";
+  return (
+    <span
+      className="inline-flex h-7 w-7 shrink-0 items-center justify-center"
+      title="Selected"
+      aria-hidden
+    >
+      <svg
+        viewBox="0 0 24 24"
+        className="h-7 w-7 drop-shadow-[0_1px_3px_rgba(0,0,0,0.22)]"
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="11" fill={accent} />
+        <circle
+          cx="12"
+          cy="12"
+          r="10.25"
+          fill="none"
+          stroke="rgba(255,255,255,0.45)"
+          strokeWidth="1.25"
+        />
+        <path
+          d="M7.25 12.4 10.4 15.5 16.85 8.6"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="2.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  );
+}
+
+/** Soft — filled with status colors from dropdown settings (full strength). */
 function BodySoft(props) {
   const {
     Icon,
@@ -350,67 +385,66 @@ function BodySoft(props) {
     displayValue,
     showCount,
     count,
+    countBadgeStyle,
+    tileClassName,
     tileBg,
     tileText,
-    tileBgClassName,
     tileTextClassName,
     iconStyle,
   } = props;
-  const washStyle = tileBg
-    ? {
-        backgroundColor: tileBg,
-        color: tileText || undefined,
-        opacity: undefined,
-      }
+  const fillStyle = tileBg
+    ? { backgroundColor: tileBg, color: tileText || undefined }
     : undefined;
+  const labelStyle = tileText ? { color: tileText } : undefined;
+  const amountStyle = tileText ? { color: tileText } : undefined;
   return (
     <span
-      className={`flex min-w-0 flex-col gap-1 px-2.5 py-2 ${
-        washStyle ? "bg-opacity-100" : tileBgClassName || "bg-primary/8"
+      className={`flex w-max max-w-none flex-col gap-1.5 px-2.5 py-2 ${
+        fillStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       }`}
-      style={
-        washStyle
-          ? {
-              backgroundColor: tileBg.includes("rgb")
-                ? tileBg.replace(/rgba?\(([^)]+)\)/, (_, inner) => {
-                    const parts = inner.split(",").map((p) => p.trim());
-                    if (parts.length >= 3) return `rgba(${parts[0]}, ${parts[1]}, ${parts[2]}, 0.22)`;
-                    return tileBg;
-                  })
-                : tileBg.length === 7
-                  ? `${tileBg}38`
-                  : tileBg,
-            }
-          : undefined
-      }
+      style={fillStyle}
     >
-      <span className="flex min-w-0 items-center gap-1.5">
-        {Icon ? (
+      <span className="flex items-center gap-2">
+        {active ? (
+          <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
+        ) : Icon ? (
           <Icon
-            className={`h-3.5 w-3.5 shrink-0 ${iconStyle ? "" : tileTextClassName || "text-primary"}`}
-            style={iconStyle}
+            className={`h-5 w-5 shrink-0 ${
+              fillStyle || iconStyle ? "" : tileTextClassName || "text-primary"
+            }`}
+            style={fillStyle ? (tileText ? { color: tileText } : undefined) : iconStyle}
             aria-hidden
           />
         ) : null}
         <span
-          className="min-w-0 flex-1 truncate text-xs font-semibold text-title"
-          title={card.label}
-          style={tileText ? { color: tileText } : undefined}
+          className={`whitespace-nowrap text-sm font-bold leading-snug ${
+            labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
+          }`}
+          style={labelStyle}
         >
           {card.label}
         </span>
         {showCount ? (
-          <span
-            className="inline-flex h-5 min-w-[1.35rem] shrink-0 items-center justify-center border border-current/20 bg-white/50 px-1.5 text-[11px] font-bold tabular-nums text-title dark:bg-black/20"
-          >
-            {count}
-          </span>
+          <CountBadge
+            count={count}
+            countBadgeStyle={
+              fillStyle
+                ? {
+                    backgroundColor: "rgba(255,255,255,0.55)",
+                    color: tileText || "#111827",
+                  }
+                : countBadgeStyle
+            }
+            tileClassName={tileClassName}
+            className="mt-0.5 border border-black/10 dark:border-white/15"
+          />
         ) : null}
       </span>
       <span
         className={`block truncate text-base font-bold leading-none tabular-nums ${
-          active ? "text-primary" : "text-title"
+          amountStyle || fillStyle ? "" : "text-title"
         }`}
+        style={amountStyle}
         title={displayValue}
       >
         {displayValue}
@@ -490,11 +524,11 @@ export default function StatusFilterPillButton({
   amountOnly = false,
   className = "",
   labelOnly = false,
-  /** Optional override; default is Split. */
+  /** Optional override; default is Soft. */
   variant: variantProp,
 }) {
   const design = useStatusFilterCardDesign();
-  const variant = variantProp || design?.variant || "split";
+  const variant = variantProp || design?.variant || "soft";
 
   const amountText =
     typeof formatAmount === "function" ? formatAmount(card.amount) : String(card.amount ?? "");
@@ -522,16 +556,32 @@ export default function StatusFilterPillButton({
     ? { backgroundColor: tileBg, color: tileText || undefined }
     : undefined;
 
+  const isSoft = variant === "soft" && !labelOnly;
+  const softShell = isSoft
+    ? [
+        "!bg-transparent hover:!bg-transparent overflow-visible",
+        active
+          ? "border-transparent shadow-[inset_0_0_0_2px_rgba(0,0,0,0.34),0_2px_10px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.55),0_2px_10px_rgba(0,0,0,0.35)]"
+          : "border-black/10 opacity-[0.7] hover:opacity-100 dark:border-white/15",
+      ].join(" ")
+    : "";
+
   const shellClass = [
-    "status-filter-pill group relative inline-flex overflow-hidden border text-left transition-[border-color,background-color,box-shadow,transform] duration-150 ease-out",
+    "status-filter-pill group relative inline-flex border text-left transition-[border-color,background-color,box-shadow,opacity,transform] duration-150 ease-out",
+    isSoft ? "" : "overflow-hidden",
     "rounded-none bg-card",
     `status-filter-pill--${variant}`,
-    active
-      ? "border-primary bg-primary/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]"
-      : "border-border/90 hover:border-primary/45 hover:bg-primary/[0.03]",
-    labelOnly ? "min-w-0 items-center" : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
+    isSoft
+      ? softShell
+      : active
+        ? "border-primary bg-primary/[0.07] shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.25)]"
+        : "border-border/90 hover:border-primary/45 hover:bg-primary/[0.03]",
+    labelOnly
+      ? "min-w-0 items-center"
+      : isSoft
+        ? "w-max min-w-[7.5rem] max-w-none flex-col"
+        : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
     variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
-    variant === "soft" && !labelOnly && !active ? "!bg-transparent hover:!bg-transparent" : "",
     readOnly ? "" : "cursor-pointer",
     className,
   ]

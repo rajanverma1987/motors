@@ -1,11 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import SimpleMotorShippingPrintSheet from "@/components/simple/simple-motor-shipping-print-sheet";
+import SimpleMotorShippingSendModal from "@/components/simple/simple-motor-shipping-send-modal";
 import { useAlert } from "@/components/confirm-provider";
+import { useAuth } from "@/contexts/auth-context";
+import { useUserSettings } from "@/contexts/user-settings-context";
+import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
 
 const FORM_ID = "simple-motor-logistics-form";
 
@@ -51,11 +59,13 @@ function emptyForm(kind, defaults = {}) {
     date: todayISODate(),
     jobNumber: kind === KIND_RECEIVING ? String(defaults.jobNumber || "").trim() : "",
     invoiceNumber: kind === KIND_SHIPPING ? String(defaults.invoiceNumber || "").trim() : "",
+    shippingPo: kind === KIND_SHIPPING ? String(defaults.shippingPo || "").trim() : "",
     mannerOfTransport: "",
     freight: "",
     droppedBy: "",
     pickedBy: "",
     charges: "",
+    paidBy: "",
     notes: "",
   };
 }
@@ -69,30 +79,81 @@ export default function SimpleMotorLogisticsModal({
   kind = KIND_RECEIVING,
   defaultJobNumber = "",
   defaultInvoiceNumber = "",
+  defaultShippingPo = "",
+  serviceProposalId = "",
+  onShippingPoSaved,
+  customerName = "",
+  companyName = "",
+  customerEmail = "",
+  customerPhone = "",
   zIndex = 130,
 }) {
   const alert = useAlert();
+  const { user } = useAuth();
+  const { settings } = useUserSettings();
   const isReceiving = kind === KIND_RECEIVING;
   const [form, setForm] = useState(() =>
-    emptyForm(kind, { jobNumber: defaultJobNumber, invoiceNumber: defaultInvoiceNumber })
+    emptyForm(kind, {
+      jobNumber: defaultJobNumber,
+      invoiceNumber: defaultInvoiceNumber,
+      shippingPo: defaultShippingPo,
+    })
   );
   const [saving, setSaving] = useState(false);
+  const [printing, setPrinting] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
+
+  const customerLabel = String(customerName || "").trim() || "Customer";
+  const companyLabel = String(companyName || "").trim() || "Company";
+  const paidByOptions = [
+    { value: "", label: "Select paid by" },
+    { value: "customer", label: customerLabel },
+    { value: "company", label: companyLabel },
+  ];
+  const paidByLabel =
+    form.paidBy === "customer" ? customerLabel : form.paidBy === "company" ? companyLabel : "";
 
   useEffect(() => {
     if (!open) {
       setSaving(false);
+      setPrinting(false);
+      setSendOpen(false);
       return;
     }
     setForm(
       emptyForm(kind, {
         jobNumber: defaultJobNumber,
         invoiceNumber: defaultInvoiceNumber,
+        shippingPo: defaultShippingPo,
       })
     );
-  }, [open, kind, defaultJobNumber, defaultInvoiceNumber]);
+  }, [open, kind, defaultJobNumber, defaultInvoiceNumber, defaultShippingPo]);
 
   const title = isReceiving ? "Motor receiving" : "Motor shipping";
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const openSendTo = async () => {
+    const toEmail = String(customerEmail || "").trim();
+    if (!toEmail) {
+      await alert({
+        title: "Email required",
+        message: "Customer has no email address. Add an email on the service proposal first.",
+        variant: "danger",
+      });
+      return;
+    }
+    setSendOpen(true);
+  };
+
+  const shippingSendMeta = {
+    toEmail: String(customerEmail || "").trim(),
+    toName: String(customerName || "").trim(),
+    from: resolveOutboundFromPreview(settings, companyName || user?.shopName || ""),
+    documentLabel: form.invoiceNumber
+      ? `Motor shipping ${form.invoiceNumber}`
+      : "Motor shipping",
+    smtp: getWorkspaceSmtpDeliveryNotice(settings),
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -102,17 +163,21 @@ export default function SimpleMotorLogisticsModal({
     }
     setSaving(true);
     try {
+      const shippingPo = isReceiving ? "" : String(form.shippingPo || "").trim();
       const payload = {
         kind: isReceiving ? KIND_RECEIVING : KIND_SHIPPING,
         date: String(form.date || "").trim(),
         jobNumber: isReceiving ? String(form.jobNumber || "").trim() : "",
         invoiceNumber: isReceiving ? "" : String(form.invoiceNumber || "").trim(),
+        shippingPo,
         mannerOfTransport: String(form.mannerOfTransport || "").trim(),
         freight: String(form.freight || "").trim(),
         droppedBy: isReceiving ? String(form.droppedBy || "").trim() : "",
         pickedBy: isReceiving ? "" : String(form.pickedBy || "").trim(),
         charges: String(form.charges || "").trim(),
+        paidBy: String(form.paidBy || "").trim(),
         notes: String(form.notes || "").trim(),
+        serviceProposalId: isReceiving ? "" : String(serviceProposalId || "").trim(),
       };
       const res = await fetch("/api/dashboard/logistics", {
         method: "POST",
@@ -122,6 +187,9 @@ export default function SimpleMotorLogisticsModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to save logistics entry");
+      if (!isReceiving) {
+        onShippingPoSaved?.(shippingPo);
+      }
       await alert({
         title: "Success",
         message: isReceiving ? "Motor receiving saved." : "Motor shipping saved.",
@@ -139,10 +207,11 @@ export default function SimpleMotorLogisticsModal({
   };
 
   return (
+    <>
     <Modal
-      open={open}
+      open={open && !printing}
       onClose={() => {
-        if (saving) return;
+        if (saving || sendOpen) return;
         onClose?.();
       }}
       title={title}
@@ -152,9 +221,37 @@ export default function SimpleMotorLogisticsModal({
       showClose={!saving}
       closeOnOutsideClick={false}
       actions={
-        <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
+        <>
+          {!isReceiving ? (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="inline-flex items-center gap-1.5"
+                disabled={saving}
+                onClick={() => setPrinting(true)}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="inline-flex items-center gap-1.5"
+                disabled={saving}
+                onClick={openSendTo}
+              >
+                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                Send to
+              </Button>
+            </>
+          ) : null}
+          <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </>
       }
     >
       <Form
@@ -177,17 +274,30 @@ export default function SimpleMotorLogisticsModal({
             />
           </FieldRow>
         ) : (
-          <FieldRow label="Invoice #">
-            <input
-              type="text"
-              value={form.invoiceNumber}
-              onChange={(e) => patch("invoiceNumber", e.target.value)}
-              className={FIELD_INPUT}
-              placeholder="e.g. INV-1001"
-              disabled={saving}
-              aria-label="Invoice number"
-            />
-          </FieldRow>
+          <>
+            <FieldRow label="Invoice #">
+              <input
+                type="text"
+                value={form.invoiceNumber}
+                onChange={(e) => patch("invoiceNumber", e.target.value)}
+                className={FIELD_INPUT}
+                placeholder="e.g. INV-1001"
+                disabled={saving}
+                aria-label="Invoice number"
+              />
+            </FieldRow>
+            <FieldRow label="PO Number">
+              <input
+                type="text"
+                value={form.shippingPo}
+                onChange={(e) => patch("shippingPo", e.target.value)}
+                className={FIELD_INPUT}
+                placeholder="Shipping PO"
+                disabled={saving}
+                aria-label="PO Number"
+              />
+            </FieldRow>
+          </>
         )}
 
         <FieldRow label="Date">
@@ -258,6 +368,17 @@ export default function SimpleMotorLogisticsModal({
           />
         </FieldRow>
 
+        <FieldRow label="Paid By">
+          <SimpleSelect
+            options={paidByOptions}
+            value={form.paidBy}
+            onChange={(e) => patch("paidBy", e.target.value)}
+            searchable={false}
+            disabled={saving}
+            aria-label="Paid by"
+          />
+        </FieldRow>
+
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className={SECTION_TITLE}>Notes</p>
           <textarea
@@ -272,6 +393,36 @@ export default function SimpleMotorLogisticsModal({
         </div>
       </Form>
     </Modal>
+
+    {printing && !isReceiving ? (
+      <DocumentPrintOffscreenPortal
+        open
+        onClose={() => {
+          setPrinting(false);
+        }}
+      >
+        <SimpleMotorShippingPrintSheet
+          entry={form}
+          customerName={customerName}
+          companyName={companyName || user?.shopName || ""}
+          customerEmail={customerEmail}
+          customerPhone={customerPhone}
+          paidByLabel={paidByLabel}
+        />
+      </DocumentPrintOffscreenPortal>
+    ) : null}
+
+    {!isReceiving ? (
+      <SimpleMotorShippingSendModal
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        entry={form}
+        sendMeta={shippingSendMeta}
+        paidByLabel={paidByLabel}
+        zIndex={zIndex + 10}
+      />
+    ) : null}
+    </>
   );
 }
 

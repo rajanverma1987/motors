@@ -12,7 +12,7 @@ export const STATUS_FILTER_CARD_VARIANTS = [
 ];
 
 export const STATUS_FILTER_CARD_STORAGE_KEY = "simple.statusFilterCardVariant";
-const DEFAULT_VARIANT = "split";
+const DEFAULT_VARIANT = "soft";
 
 const StatusFilterCardDesignContext = createContext({
   variant: DEFAULT_VARIANT,

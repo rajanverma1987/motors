@@ -1,9 +1,7 @@
 "use client";
 
-import {
-  AC_DISASSEMBLY_STATUS_OPTIONS,
-  AC_DISASSEMBLY_SURGE_FAILURE_KEYS,
-} from "@/lib/simple-datasheet-form";
+import { AC_DISASSEMBLY_VISUAL_STATUS_ROWS } from "@/lib/simple-datasheet-form";
+import SimpleAcElectricalTestsFields from "@/components/simple/simple-ac-electrical-tests-fields";
 
 const INPUT =
   "h-7 w-[12.5rem] max-w-full shrink-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:bg-primary/10";
@@ -38,38 +36,28 @@ function DeOdeRow({ leftLabel, leftControl, rightLabel, rightControl }) {
   );
 }
 
-function SectionBar({ children }) {
+function GoodBadRow({ name, label, value, onChange }) {
   return (
-    <div className="mb-2 rounded-sm bg-primary px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
-      {children}
-    </div>
-  );
-}
-
-function ResultBox({ name, label, value, onChange }) {
-  return (
-    <div
-      className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-sm border border-border bg-card px-2.5 py-1"
-      role="radiogroup"
-      aria-label={label}
-    >
-      <span className="text-xs font-bold text-title">{label}</span>
-      {[
-        { value: "pass", label: "Pass" },
-        { value: "fail", label: "Fail" },
-      ].map((opt) => (
-        <label key={opt.value} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-          <input
-            type="radio"
-            name={name}
-            value={opt.value}
-            checked={value === opt.value}
-            onChange={() => onChange(opt.value)}
-            className="h-3.5 w-3.5 accent-primary"
-          />
-          {opt.label}
-        </label>
-      ))}
+    <div className="flex min-w-0 items-center gap-3 border-b border-border/70 py-1.5 last:border-b-0">
+      <span className="w-[8.5rem] shrink-0 text-xs font-bold text-title">{label}</span>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="radiogroup" aria-label={label}>
+        {[
+          { value: "good", label: "Good" },
+          { value: "bad", label: "Bad" },
+        ].map((opt) => (
+          <label key={opt.value} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+            <input
+              type="radio"
+              name={name}
+              value={opt.value}
+              checked={value === opt.value}
+              onChange={() => onChange(opt.value)}
+              className="h-3.5 w-3.5 accent-primary"
+            />
+            {opt.label}
+          </label>
+        ))}
+      </div>
     </div>
   );
 }
@@ -81,69 +69,116 @@ function boolChecked(v) {
 
 /**
  * AC Disassembly tab — layout aligned to documents/Disassembly.png.
+ * Status checkboxes mirror Service Proposal job Status dropdown (two-way via props).
  */
-export default function SimpleAcDisassemblyFields({ values = {}, onChange }) {
+export default function SimpleAcDisassemblyFields({
+  values = {},
+  onChange,
+  statusOptions = [],
+  statusValue = "",
+  onStatusChange,
+}) {
   const patch = (key, value) => onChange?.(key, value);
   const v = values || {};
+  const statusOpts = Array.isArray(statusOptions) ? statusOptions : [];
+  const currentStatus = String(statusValue || "").trim();
+  const statusMatches = (optValue) =>
+    currentStatus.toLowerCase() === String(optValue || "").trim().toLowerCase();
 
   return (
-    <div className="flex max-w-[48rem] flex-col gap-4">
-      {/* Visual + Status */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-[14rem_minmax(0,1fr)]">
-        <fieldset className="rounded-sm border border-border px-3 py-2">
-          <legend className="px-1 text-xs font-bold text-title">Visual Status</legend>
-          <div className="flex flex-col gap-1.5" role="radiogroup" aria-label="Visual status">
-            {[
-              { value: "good", label: "Visually Good" },
-              { value: "burned", label: "Visually Burned" },
-            ].map((opt) => (
-              <label key={opt.value} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-                <input
-                  type="radio"
-                  name="acDisassemblyVisual"
-                  value={opt.value}
-                  checked={v.visualStatus === opt.value}
-                  onChange={() => patch("visualStatus", opt.value)}
-                  className="h-3.5 w-3.5 accent-primary"
-                />
-                {opt.label}
-              </label>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      {/* Visual (50%) + Status (50%) */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <fieldset className="min-w-0 rounded-sm border border-border px-3 py-2">
+          <legend className="px-1 text-sm font-bold text-title">Visual Status</legend>
+          <div className="flex flex-col">
+            {AC_DISASSEMBLY_VISUAL_STATUS_ROWS.map((row) => (
+              <GoodBadRow
+                key={row.key}
+                name={`acDisassemblyVisual_${row.key}`}
+                label={row.label}
+                value={v[row.key] ?? ""}
+                onChange={(val) => patch(row.key, val)}
+              />
             ))}
+          </div>
+          <div className="mt-2 flex min-w-0 flex-col gap-1">
+            <span className="text-xs font-bold text-title">Notes</span>
+            <textarea
+              rows={3}
+              value={v.visualStatusNotes ?? ""}
+              onChange={(e) => patch("visualStatusNotes", e.target.value)}
+              className={TEXTAREA}
+              aria-label="Visual status notes"
+            />
           </div>
         </fieldset>
 
-        <fieldset className="rounded-sm border border-border px-3 py-2">
-          <legend className="px-1 text-xs font-bold text-title">Status</legend>
-          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" role="radiogroup" aria-label="Disassembly status">
-            {AC_DISASSEMBLY_STATUS_OPTIONS.map((opt) => (
-              <label key={opt.value} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-                <input
-                  type="radio"
-                  name="acDisassemblyStatus"
-                  value={opt.value}
-                  checked={v.status === opt.value}
-                  onChange={() => patch("status", opt.value)}
-                  className="h-3.5 w-3.5 accent-primary"
-                />
-                {opt.label}
-              </label>
-            ))}
-          </div>
+        <fieldset className="min-w-0 rounded-sm border border-border px-3 py-2">
+          <legend className="px-1 text-sm font-bold text-title">Status</legend>
+          {statusOpts.length === 0 ? (
+            <p className="text-xs text-secondary">No job statuses configured. Add them in Settings.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2" role="group" aria-label="Job status">
+              {statusOpts.map((opt) => {
+                const value = String(opt.value || "").trim();
+                const checked = statusMatches(value);
+                return (
+                  <label
+                    key={value}
+                    className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => onStatusChange?.(checked ? "" : value)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt.label || value}
+                  </label>
+                );
+              })}
+            </div>
+          )}
         </fieldset>
       </div>
 
       {/* Intake */}
       <div className="flex flex-col gap-1.5">
-        <TextField label="IncomingLeads">
-          <input type="text" value={v.incomingLeads ?? ""} onChange={(e) => patch("incomingLeads", e.target.value)} className={INPUT} />
-        </TextField>
-        <TextField label="Marked Motor Sides">
-          <input type="text" value={v.markedMotorSides ?? ""} onChange={(e) => patch("markedMotorSides", e.target.value)} className={INPUT} />
-        </TextField>
+        <div className="flex min-w-0 items-center gap-2">
+          <label className={LABEL}>Marked Motor Sides</label>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
+            {[
+              { key: "markedMotorSidesF1", label: "F1" },
+              { key: "markedMotorSidesF2", label: "F2" },
+            ].map((opt) => (
+              <label
+                key={opt.key}
+                className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold leading-none text-title"
+              >
+                <input
+                  type="checkbox"
+                  checked={boolChecked(v[opt.key])}
+                  onChange={(e) => patch(opt.key, e.target.checked ? "true" : "false")}
+                  className="h-3.5 w-3.5 shrink-0 accent-primary"
+                />
+                {opt.label}
+              </label>
+            ))}
+            <textarea
+              rows={2}
+              value={v.markedMotorSidesNotes ?? ""}
+              onChange={(e) => patch("markedMotorSidesNotes", e.target.value)}
+              className={`${TEXTAREA} !h-[3.25rem] !min-h-[3.25rem] !w-80 !max-w-full !resize-none !leading-snug`}
+              placeholder="Notes"
+              aria-label="Marked motor sides notes"
+            />
+          </div>
+        </div>
         <TextField label="Junction Box Location">
           <input type="text" value={v.junctionBoxLocation ?? ""} onChange={(e) => patch("junctionBoxLocation", e.target.value)} className={INPUT} />
         </TextField>
-        <WideField label="Broken Parts Notes">
+        <WideField label="Incoming Notes">
           <textarea rows={2} value={v.brokenPartsNotes ?? ""} onChange={(e) => patch("brokenPartsNotes", e.target.value)} className={TEXTAREA} />
         </WideField>
       </div>
@@ -161,20 +196,34 @@ export default function SimpleAcDisassemblyFields({ values = {}, onChange }) {
           rightControl={<input type="text" value={v.endBellFitODE ?? ""} onChange={(e) => patch("endBellFitODE", e.target.value)} className={INPUT} />}
         />
         <DeOdeRow
-          leftLabel="Rotor Fit DE"
+          leftLabel="Shaft Measurement DE"
           leftControl={<input type="text" value={v.rotorFitDE ?? ""} onChange={(e) => patch("rotorFitDE", e.target.value)} className={INPUT} />}
-          rightLabel="Rotor Fit ODE"
+          rightLabel="Shaft Management ODE"
           rightControl={<input type="text" value={v.rotorFitODE ?? ""} onChange={(e) => patch("rotorFitODE", e.target.value)} className={INPUT} />}
         />
         <DeOdeRow
-          leftLabel="Shaft Measurement"
-          leftControl={<input type="text" value={v.shaftMeasurement ?? ""} onChange={(e) => patch("shaftMeasurement", e.target.value)} className={INPUT} />}
-          rightLabel="Shaft Runout"
-          rightControl={<input type="text" value={v.shaftRunout ?? ""} onChange={(e) => patch("shaftRunout", e.target.value)} className={INPUT} />}
+          leftLabel="Shaft Runout"
+          leftControl={<input type="text" value={v.shaftRunout ?? ""} onChange={(e) => patch("shaftRunout", e.target.value)} className={INPUT} />}
         />
         <DeOdeRow
-          leftLabel="Number Of Bearings"
-          leftControl={<input type="text" value={v.numberOfBearings ?? "0"} onChange={(e) => patch("numberOfBearings", e.target.value)} className={INPUT} />}
+          leftLabel="Number Of Bearings DE"
+          leftControl={
+            <input
+              type="text"
+              value={v.numberOfBearingsDE ?? v.numberOfBearings ?? "0"}
+              onChange={(e) => patch("numberOfBearingsDE", e.target.value)}
+              className={INPUT}
+            />
+          }
+          rightLabel="Number Of Bearings ODE"
+          rightControl={
+            <input
+              type="text"
+              value={v.numberOfBearingsODE ?? "0"}
+              onChange={(e) => patch("numberOfBearingsODE", e.target.value)}
+              className={INPUT}
+            />
+          }
         />
         <DeOdeRow
           leftLabel="Bearing Size DE"
@@ -194,53 +243,11 @@ export default function SimpleAcDisassemblyFields({ values = {}, onChange }) {
         <textarea rows={2} value={v.otherNotes ?? ""} onChange={(e) => patch("otherNotes", e.target.value)} className={TEXTAREA} />
       </WideField>
 
-      {/* Magger */}
-      <div>
-        <SectionBar>Magger Test</SectionBar>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TextField label="Magger Voltage">
-            <input type="text" value={v.maggerVoltage ?? "0"} onChange={(e) => patch("maggerVoltage", e.target.value)} className={INPUT} />
-          </TextField>
-          <TextField label="Magger Micro Amps">
-            <input type="text" value={v.maggerMicroAmps ?? "0"} onChange={(e) => patch("maggerMicroAmps", e.target.value)} className={INPUT} />
-          </TextField>
-          <ResultBox
-            name="acDisassemblyMagger"
-            label="Magger Test"
-            value={v.maggerTest ?? ""}
-            onChange={(val) => patch("maggerTest", val)}
-          />
-        </div>
-      </div>
-
-      {/* Surge */}
-      <div>
-        <SectionBar>Surge Test</SectionBar>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TextField label="Surge Voltage">
-            <input type="text" value={v.surgeVoltage ?? "0"} onChange={(e) => patch("surgeVoltage", e.target.value)} className={INPUT} />
-          </TextField>
-          <ResultBox
-            name="acDisassemblySurge"
-            label="SurgeTest"
-            value={v.surgeTest ?? ""}
-            onChange={(val) => patch("surgeTest", val)}
-          />
-        </div>
-        <div className="mt-2.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-          {AC_DISASSEMBLY_SURGE_FAILURE_KEYS.map(({ key, label }) => (
-            <label key={key} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-              <input
-                type="checkbox"
-                checked={boolChecked(v[key])}
-                onChange={(e) => patch(key, e.target.checked ? "true" : "false")}
-                className="h-3.5 w-3.5 accent-primary"
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-      </div>
+      <SimpleAcElectricalTestsFields
+        values={v}
+        onChange={patch}
+        idPrefix="acDisassembly"
+      />
 
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-xs font-bold text-title">Final Notes:</span>

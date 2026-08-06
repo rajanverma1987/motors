@@ -100,6 +100,10 @@ export default function SimpleDatasheetModal({
   recordId = null,
   attachments = [],
   onAttached,
+  /** Service Proposal job Status options + value (Disassembly Status section). */
+  jobStatusOptions = [],
+  jobStatus = "",
+  onJobStatusChange,
 }) {
   const alert = useAlert();
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
@@ -204,13 +208,21 @@ export default function SimpleDatasheetModal({
 
   const resolvedPrintContext = useMemo(() => {
     const ctx = printContext && typeof printContext === "object" ? printContext : {};
+    const jobStatusValue = String(ctx.jobStatus || jobStatus || "").trim();
+    const jobStatusHit = (Array.isArray(jobStatusOptions) ? jobStatusOptions : []).find(
+      (o) => String(o.value || "").trim().toLowerCase() === jobStatusValue.toLowerCase()
+    );
     return {
       customerName: String(ctx.customerName || "").trim(),
       companyName: String(ctx.companyName || form.company || ctx.customerName || "").trim(),
+      customerPhone: String(ctx.customerPhone || "").trim(),
+      customerEmail: String(ctx.customerEmail || "").trim(),
       documentNumber: String(ctx.documentNumber || form.jobNumber || "").trim(),
       documentLabel: String(ctx.documentLabel || "RFQ#").trim() || "RFQ#",
+      jobStatus: jobStatusValue,
+      jobStatusLabel: jobStatusHit?.label || jobStatusValue,
     };
-  }, [printContext, form.company, form.jobNumber]);
+  }, [printContext, form.company, form.jobNumber, jobStatus, jobStatusOptions]);
 
   const printDatasheet = useMemo(
     () => (isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form)),
@@ -320,6 +332,60 @@ export default function SimpleDatasheetModal({
           </div>
         </div>
 
+        <div
+          className="flex flex-col gap-2 border-b-2 border-primary/40 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
+          aria-label="Shared job fields"
+        >
+          <div className="min-w-0 flex-1 basis-[10rem]">
+            <div className="mb-1 text-sm font-bold text-title">Date</div>
+            <input
+              type="date"
+              value={String(form.date || "").slice(0, 10)}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label="Date"
+              disabled
+              readOnly
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-[1.2] basis-[12rem]">
+            <div className="mb-1 text-sm font-bold text-title">Technician</div>
+            <SimpleSelect
+              options={techOptions}
+              value={form.technician}
+              placeholder="Select…"
+              searchable
+              aria-label="Technician"
+              disabled
+              triggerClassName="!border-0 !bg-transparent !px-0 !font-semibold"
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-1 basis-[9rem]">
+            <div className="mb-1 text-sm font-bold text-title">Job#</div>
+            <input
+              type="text"
+              value={form.jobNumber}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label="Job number"
+              disabled
+              readOnly
+            />
+          </div>
+          <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
+          <div className="min-w-0 flex-[1.4] basis-[12rem]">
+            <div className="mb-1 text-sm font-bold text-title">Company</div>
+            <input
+              type="text"
+              value={form.company}
+              className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
+              aria-label="Company"
+              disabled
+              readOnly
+            />
+          </div>
+        </div>
+
         {isDc && form.section === "Complete Motor" ? (
           <div className="flex flex-wrap gap-1" role="tablist" aria-label="DC datasheet tabs">
             {dcVisibleTabs.map((tab) => {
@@ -368,49 +434,6 @@ export default function SimpleDatasheetModal({
           </div>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <FieldRow label="Date" labelWidth="5.5rem">
-            <input
-              type="date"
-              value={String(form.date || "").slice(0, 10)}
-              className={FIELD_INPUT}
-              aria-label="Date"
-              disabled
-              readOnly
-            />
-          </FieldRow>
-          <FieldRow label="Technician" labelWidth="5.5rem">
-            <SimpleSelect
-              options={techOptions}
-              value={form.technician}
-              placeholder="Select…"
-              searchable
-              aria-label="Technician"
-              disabled
-            />
-          </FieldRow>
-          <FieldRow label="Job#" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.jobNumber}
-              className={FIELD_INPUT}
-              aria-label="Job number"
-              disabled
-              readOnly
-            />
-          </FieldRow>
-          <FieldRow label="Company" labelWidth="5.5rem">
-            <input
-              type="text"
-              value={form.company}
-              className={FIELD_INPUT}
-              aria-label="Company"
-              disabled
-              readOnly
-            />
-          </FieldRow>
-        </div>
-
         {isDc ? (
           <>
             <DatasheetFieldGrid
@@ -431,6 +454,7 @@ export default function SimpleDatasheetModal({
               columns={AC_DATASHEET_FIELD_COLUMNS}
               values={acBlock}
               onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
+              labelWidth="10.5rem"
             />
             <NotesPanel
               label="Notes:"
@@ -443,6 +467,9 @@ export default function SimpleDatasheetModal({
           <SimpleAcDisassemblyFields
             values={acBlock}
             onChange={(key, value) => patchNested("disassembly", key, value)}
+            statusOptions={jobStatusOptions}
+            statusValue={jobStatus}
+            onStatusChange={onJobStatusChange}
           />
         ) : (
           <SimpleAcAssemblyFields

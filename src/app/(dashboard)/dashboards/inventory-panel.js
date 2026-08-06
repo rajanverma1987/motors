@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiEdit2, FiPlus, FiX } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -247,37 +247,23 @@ export default function InventoryPanel() {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
+        key: "edit",
         label: "",
         sortable: false,
-        className: "w-20",
+        className: "w-10",
         render: (_, row) => (
-          <div className="flex items-center gap-0.5">
-            <button
-              type="button"
-              className="rounded p-0.5 text-primary hover:bg-primary/10"
-              title="Edit"
-              aria-label="Edit"
-              onClick={(e) => {
-                e.stopPropagation();
-                openEdit(row);
-              }}
-            >
-              <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-            <button
-              type="button"
-              className="rounded p-0.5 text-danger hover:bg-danger/10"
-              title="Delete"
-              aria-label="Delete"
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleDelete(row);
-              }}
-            >
-              <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="rounded p-0.5 text-primary hover:bg-primary/10"
+            title="Edit"
+            aria-label="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEdit(row);
+            }}
+          >
+            <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
         ),
       },
       {
@@ -363,6 +349,26 @@ export default function InventoryPanel() {
         render: (v) => <span className="tabular-nums">{v}</span>,
       },
       { key: "location", label: "Location", sortable: true },
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-10",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Delete"
+            aria-label="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
+      },
     ],
     [handleDelete, openEdit, openUsage]
   );

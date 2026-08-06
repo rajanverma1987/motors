@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { FiDownload, FiEye, FiTrash2 } from "react-icons/fi";
+import { FiDownload, FiEye, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
@@ -200,8 +200,9 @@ export default function SimplePurchaseOrderAttachmentsModal({
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="border-b-2 border-border bg-primary/[0.04] text-title">
-                <th className="w-20 px-1 py-1 text-left font-semibold">Actions</th>
+                <th className="w-16 px-1 py-1 text-left font-semibold">Actions</th>
                 <th className="px-1 py-1 text-left font-semibold">Name</th>
+                <th className="w-10 px-1 py-1 text-left font-semibold" />
               </tr>
             </thead>
             <tbody>
@@ -229,19 +230,21 @@ export default function SimplePurchaseOrderAttachmentsModal({
                       >
                         <FiDownload className="h-3.5 w-3.5" aria-hidden />
                       </button>
-                      <button
-                        type="button"
-                        className="rounded p-0.5 text-danger hover:bg-danger/10"
-                        title="Delete"
-                        aria-label="Delete"
-                        onClick={() => deleteAttachment(row, index)}
-                        disabled={busy || deletingUrl === row.url}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
                     </div>
                   </td>
                   <td className="px-1 py-0.5 text-title">{row.name || "—"}</td>
+                  <td className="px-1 py-0.5 text-center">
+                    <button
+                      type="button"
+                      className="rounded p-0.5 text-danger hover:bg-danger/10"
+                      title="Delete"
+                      aria-label="Delete"
+                      onClick={() => deleteAttachment(row, index)}
+                      disabled={busy || deletingUrl === row.url}
+                    >
+                      <FiX className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

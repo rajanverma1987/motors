@@ -16,7 +16,7 @@ export const AC_DATASHEET_FIELD_COLUMNS = [
     { key: "poles", label: "Poles" },
     { key: "hz", label: "HZ" },
     { key: "phase", label: "Phase" },
-    { key: "wdg_type", label: "Wdg Type" },
+    { key: "wdg_type", label: "Winding Type" },
   ],
   [
     { key: "slots", label: "Slots" },
@@ -29,19 +29,20 @@ export const AC_DATASHEET_FIELD_COLUMNS = [
     { key: "conn", label: "Conn." },
     { key: "jumper", label: "Jumper" },
     { key: "conn_end", label: "Conn. End" },
-    { key: "wind_end", label: "Wind End" },
+    { key: "wind_end", label: "Opposite Connection End" },
     { key: "lead_length", label: "Lead Length" },
     { key: "no_of_leads", label: "No. of Leads" },
+    { key: "leads_numbered_as", label: "Leads Numbered As" },
   ],
   [
     { key: "core_length", label: "Core Length" },
     { key: "core_dia", label: "Core Dia." },
     { key: "b_iron", label: "B. Iron" },
-    { key: "sl_depth", label: "Sl. Depth" },
-    { key: "t_width", label: "T. Width" },
-    { key: "lugs_hole_size", label: "Lugs/Hole Size" },
+    { key: "sl_depth", label: "Slot Depth" },
+    { key: "t_width", label: "Tooth Width" },
+    { key: "lugs_hole_size", label: "Lugs Size / Hole Size" },
     { key: "overloads", label: "Overloads" },
-    { key: "therm", label: "Therm." },
+    { key: "therm", label: "Themrister" },
     { key: "heaters", label: "Heaters" },
     { key: "head_size", label: "Head Size" },
     { key: "distance", label: "Distance" },
@@ -248,17 +249,6 @@ function emptyAcDataSheetBlock(overrides = {}) {
   };
 }
 
-/** Disassembly status radios (documents/Disassembly.png). */
-export const AC_DISASSEMBLY_STATUS_OPTIONS = [
-  { value: "inspection_done_quotes", label: "Inspection done, sent for Quotes" },
-  { value: "job_proceeded", label: "Job Proceeded" },
-  { value: "stator_to_winding", label: "Stator to Winding" },
-  { value: "parts_to_cleaning", label: "Parts to Cleaning" },
-  { value: "parts_ordered", label: "Parts Ordered" },
-  { value: "outsourced", label: "Outsourced" },
-  { value: "parts_to_machining", label: "Parts to Machining" },
-];
-
 export const AC_DISASSEMBLY_SURGE_FAILURE_KEYS = [
   { key: "surgeFailCoilToCoil", label: "Surge Fail Coil To Coil" },
   { key: "surgeFailTurnToTurn", label: "Surge Fail Turn To Turn" },
@@ -267,21 +257,37 @@ export const AC_DISASSEMBLY_SURGE_FAILURE_KEYS = [
   { key: "surgeFailSinglePhased", label: "Surge Fail Single Phased" },
 ];
 
+/** Visual Status Good/Bad rows on AC Disassembly tab. */
+export const AC_DISASSEMBLY_VISUAL_STATUS_ROWS = [
+  { key: "windingStatus", label: "Winding Status" },
+  { key: "leadsStatus", label: "Leads Status" },
+  { key: "coreIronStatus", label: "Core Iron" },
+  { key: "frameStatus", label: "Frame" },
+];
+
 function emptyAcDisassemblyBlock(overrides = {}) {
   const base = {
     visualStatus: "",
+    windingStatus: "",
+    leadsStatus: "",
+    coreIronStatus: "",
+    frameStatus: "",
+    visualStatusNotes: "",
     status: "",
-    incomingLeads: "",
     markedMotorSides: "",
+    markedMotorSidesF1: "false",
+    markedMotorSidesF2: "false",
+    markedMotorSidesNotes: "",
     junctionBoxLocation: "",
     brokenPartsNotes: "",
     endBellFitDE: "",
     endBellFitODE: "",
     rotorFitDE: "",
     rotorFitODE: "",
-    shaftMeasurement: "",
     shaftRunout: "",
     numberOfBearings: "0",
+    numberOfBearingsDE: "0",
+    numberOfBearingsODE: "0",
     bearingSizeDE: "",
     bearingSizeODE: "",
     sealSizeDE: "",
@@ -290,6 +296,9 @@ function emptyAcDisassemblyBlock(overrides = {}) {
     maggerVoltage: "0",
     maggerMicroAmps: "0",
     maggerTest: "",
+    highPotVoltage: "0",
+    highPotMicroAmps: "0",
+    highPotTest: "",
     surgeVoltage: "0",
     surgeTest: "",
     surgeFailCoilToCoil: "false",
@@ -306,6 +315,19 @@ function emptyAcAssemblyBlock(overrides = {}) {
   const base = {
     date: "",
     technicianName: "",
+    maggerVoltage: "0",
+    maggerMicroAmps: "0",
+    maggerTest: "",
+    highPotVoltage: "0",
+    highPotMicroAmps: "0",
+    highPotTest: "",
+    surgeVoltage: "0",
+    surgeTest: "",
+    surgeFailCoilToCoil: "false",
+    surgeFailTurnToTurn: "false",
+    surgeFailPhaseToPhase: "false",
+    surgeFailPhaseToGround: "false",
+    surgeFailSinglePhased: "false",
     voltageTest: "",
     rpm: "",
     lead1Amp: "",

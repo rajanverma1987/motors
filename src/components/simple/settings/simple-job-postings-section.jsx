@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { FiArrowLeft, FiEdit2, FiPlus, FiExternalLink, FiTrash2, FiUsers } from "react-icons/fi";
+import { FiArrowLeft, FiEdit2, FiPlus, FiExternalLink, FiX, FiUsers } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
@@ -300,7 +300,7 @@ export default function SimpleJobPostingsSection() {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
+        key: "edit",
         label: "",
         render: (_, row) => {
           const count = typeof row.applicationCount === "number" ? row.applicationCount : 0;
@@ -322,14 +322,6 @@ export default function SimpleJobPostingsSection() {
                 aria-label="Edit job posting"
               >
                 <FiEdit2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDeleteRow(row)}
-                className="rounded p-1.5 text-danger hover:bg-danger/10"
-                aria-label="Delete job posting"
-              >
-                <FiTrash2 className="h-4 w-4" />
               </button>
             </div>
           );
@@ -383,6 +375,20 @@ export default function SimpleJobPostingsSection() {
         label: "Updated",
         sortable: true,
         render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+      },
+      {
+        key: "actions",
+        label: "",
+        render: (_, row) => (
+          <button
+            type="button"
+            onClick={() => handleDeleteRow(row)}
+            className="rounded p-1.5 text-danger hover:bg-danger/10"
+            aria-label="Delete job posting"
+          >
+            <FiX className="h-4 w-4" />
+          </button>
+        ),
       },
     ],
     [openEditModal, handleDeleteRow, openApplicants]

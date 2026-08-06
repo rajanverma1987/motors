@@ -14,6 +14,7 @@ import { useAlert } from "@/components/confirm-provider";
 import {
   buildCustomerPayload,
   INITIAL_CUSTOMER_FORM,
+  uploadCustomerDocumentFiles,
 } from "@/lib/customer-record-form";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
@@ -270,11 +271,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.companyName?.trim()) {
-      await alert({ title: "Error", message: "Company name is required.", variant: "danger" });
+      await alert({ title: "Error", message: "Customer is required.", variant: "danger" });
       return;
     }
     setSaving(true);
     try {
+      const pendingDocuments = Array.isArray(form.documents) ? form.documents : [];
       const payload = buildCustomerPayload(form);
       const res = await fetch("/api/dashboard/customers", {
         method: "POST",
@@ -298,6 +300,23 @@ export default function CustomersPanel({ createNonce = 0 }) {
         }
       }
       const createdId = String(data?.customer?.id || data?.id || "").trim();
+      if (createdId) {
+        try {
+          await uploadCustomerDocumentFiles(createdId, pendingDocuments);
+        } catch (uploadErr) {
+          await loadAll({ showError: false });
+          setModalOpen(false);
+          setConvertingFromLeadId(null);
+          setForm({ ...INITIAL_CUSTOMER_FORM });
+          if (createdId) setViewCustomerId(createdId);
+          await alert({
+            title: "Customer created",
+            message: `Customer was saved, but document upload failed: ${uploadErr.message || "Upload failed"}`,
+            variant: "danger",
+          });
+          return;
+        }
+      }
       await loadAll({ showError: false });
       setModalOpen(false);
       setConvertingFromLeadId(null);

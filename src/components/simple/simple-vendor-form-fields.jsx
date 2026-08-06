@@ -1,6 +1,6 @@
 "use client";
 
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 
 const FIELD_INPUT =
@@ -177,27 +177,15 @@ export default function SimpleVendorFormFields({ form, setForm, disabled = false
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border bg-primary/[0.06] dark:bg-primary/10">
-                  <th className="w-10 pl-[5px] pr-1 py-1" />
                   <th className="pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary">
                     Part / material
                   </th>
+                  <th className="w-10 pl-[5px] pr-1 py-1" />
                 </tr>
               </thead>
               <tbody>
                 {parts.map((part, index) => (
                   <tr key={index} className="border-b border-border last:border-b-0">
-                    <td className="pl-[5px] pr-1 py-1 align-middle">
-                      <button
-                        type="button"
-                        disabled={disabled}
-                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10 disabled:opacity-50"
-                        title="Remove part"
-                        aria-label="Remove part"
-                        onClick={() => removePart(index)}
-                      >
-                        <FiTrash2 className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </td>
                     <td className="pl-[5px] pr-1 py-1 align-middle">
                       <input
                         type="text"
@@ -207,6 +195,18 @@ export default function SimpleVendorFormFields({ form, setForm, disabled = false
                         className={FIELD_INPUT}
                         aria-label={`Part ${index + 1}`}
                       />
+                    </td>
+                    <td className="pl-[5px] pr-1 py-1 align-middle text-center">
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-danger hover:bg-danger/10 disabled:opacity-50"
+                        title="Remove part"
+                        aria-label="Remove part"
+                        onClick={() => removePart(index)}
+                      >
+                        <FiX className="h-3.5 w-3.5" aria-hidden />
+                      </button>
                     </td>
                   </tr>
                 ))}
