@@ -1,3 +1,5 @@
+import { toInputDateValue } from "@/lib/format-date";
+
 /**
  * Client-side sort for dashboard `<Table>` when `sortState.key` is set.
  * @template T
@@ -25,6 +27,14 @@ export function sortRowsClient(rows, sortState, getSortValue) {
   return list;
 }
 
+/** True for ISO / slash / dot / dash calendar dates (not plain numbers). */
+function looksLikeDateString(s) {
+  const t = String(s || "").trim();
+  if (!t) return false;
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return true;
+  return /^\d{1,4}[./\-]\d{1,2}[./\-]\d{1,4}$/.test(t);
+}
+
 function compareValues(va, vb) {
   if (Object.is(va, vb)) return 0;
 
@@ -46,12 +56,26 @@ function compareValues(va, vb) {
 
   const sa = String(va).trim();
   const sb = String(vb).trim();
+
+  // Dates like "6/11/2026" must not use parseFloat (that yields 6 and sorts by day/month only).
+  if (looksLikeDateString(sa) && looksLikeDateString(sb)) {
+    const da = toInputDateValue(sa);
+    const db = toInputDateValue(sb);
+    if (da && db) {
+      if (da < db) return -1;
+      if (da > db) return 1;
+      return 0;
+    }
+  }
+
   const stripNum = (s) => s.replace(/[$,\s]/g, "");
   const na = Number.parseFloat(stripNum(sa));
   const nb = Number.parseFloat(stripNum(sb));
   const looksNumeric =
     sa !== "" &&
     sb !== "" &&
+    !looksLikeDateString(sa) &&
+    !looksLikeDateString(sb) &&
     Number.isFinite(na) &&
     Number.isFinite(nb) &&
     /^-?\d/.test(stripNum(sa)) &&
