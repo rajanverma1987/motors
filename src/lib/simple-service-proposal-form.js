@@ -1,10 +1,21 @@
 /** Empty / initial shape for Simple portal service proposal form. */
 
+import { toInputDateValue } from "@/lib/format-date";
+
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
 export const RECORD_TYPE_INVOICE = "INVOICE";
 
 export const RECORD_TYPES = [RECORD_TYPE_RFQ, RECORD_TYPE_JOB, RECORD_TYPE_INVOICE];
+
+export const QUOTE_TYPE_VALUES = ["Phone", "Email", "Walk-in", "Other"];
+
+function normalizeQuoteTypeValue(raw) {
+  const t = String(raw ?? "").trim();
+  if (!t) return "";
+  const hit = QUOTE_TYPE_VALUES.find((q) => q.toLowerCase() === t.toLowerCase());
+  return hit || t;
+}
 
 export function emptyScopeLine() {
   return {
@@ -311,4 +322,94 @@ export function formToServiceProposalListRow(form, meta = {}) {
     companyName: meta.companyName || "",
     preparedByLabel: meta.preparedByLabel || "",
   });
+}
+
+/**
+ * Hydrate the Service Proposal form from a list row or full API document.
+ * Maps table aliases (date, notes, phone, …) back onto form fields and normalizes dates for date inputs.
+ *
+ * @param {Record<string, unknown>|null|undefined} doc
+ */
+export function simpleServiceProposalDocToForm(doc) {
+  const d = doc && typeof doc === "object" ? doc : {};
+  const base = createEmptyServiceProposalForm();
+  const next = { ...base };
+
+  for (const key of Object.keys(base)) {
+    if (d[key] !== undefined && d[key] !== null) next[key] = d[key];
+  }
+
+  next.id = String(d.id || "").trim();
+  next.customerId = String(d.customerId || "").trim();
+  next.customerEmail = String(d.customerEmail || d.email || "").trim();
+  next.customerPhone = String(d.customerPhone || d.phone || "").trim();
+  next.customerTaxExempt = d.customerTaxExempt !== false;
+  next.taxPercent = String(d.taxPercent ?? next.taxPercent ?? "").trim();
+  next.motorPower = String(d.motorPower || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+  next.namePlate = String(d.namePlate || "Original").trim() || "Original";
+  next.documentNumber = String(d.documentNumber || d.quote || "").trim();
+  next.recordType = String(d.recordType || RECORD_TYPE_RFQ)
+    .trim()
+    .toUpperCase() || RECORD_TYPE_RFQ;
+  next.status = String(d.status || "").trim();
+  next.jobStatus = String(d.jobStatus || "").trim();
+  next.preparedBy = String(d.preparedBy || "").trim();
+  next.proposalApprovedBy = String(d.proposalApprovedBy || "").trim();
+  next.quoteType = normalizeQuoteTypeValue(d.quoteType);
+  next.customerPo = String(d.customerPo || "").trim();
+  next.shippingPo = String(d.shippingPo || "").trim();
+  next.internalNotes = String(d.internalNotes ?? d.notes ?? "").trim();
+  next.customerNotes = String(d.customerNotes || "").trim();
+  next.manufacturer = String(d.manufacturer || "").trim();
+  next.hpKw = String(d.hpKw || "").trim();
+  next.frameType = String(d.frameType || "").trim();
+  next.modelNumber = String(d.modelNumber || "").trim();
+  next.volts = String(d.volts || "").trim();
+  next.amps = String(d.amps || "").trim();
+  next.rpm = String(d.rpm || "").trim();
+  next.sl = String(d.sl || "").trim();
+  next.cl = String(d.cl || "").trim();
+  next.cd = String(d.cd || "").trim();
+  next.bars = String(d.bars || "").trim();
+  next.motorPaint = String(d.motorPaint || "").trim();
+
+  const hasId = Boolean(String(d.id || "").trim());
+  const dateCreated = toInputDateValue(d.dateCreated || d.date);
+  next.dateCreated = dateCreated || (hasId ? "" : base.dateCreated);
+  next.dueDate = toInputDateValue(d.dueDate);
+  next.proposalSubmitDate = toInputDateValue(d.proposalSubmitDate || d.submitDate);
+  next.proposalAcceptedDate = toInputDateValue(d.proposalAcceptedDate || d.acceptDate);
+  next.invoiceSubmitDate = toInputDateValue(d.invoiceSubmitDate);
+  next.invoicePaidDate = toInputDateValue(d.invoicePaidDate);
+
+  next.scopeDetails =
+    Array.isArray(d.scopeDetails) && d.scopeDetails.length
+      ? d.scopeDetails.map((line) => ({
+          ...emptyScopeLine(),
+          ...(line && typeof line === "object" ? line : {}),
+          id: String(line?.id || "").trim() || emptyScopeLine().id,
+          description: String(line?.description || "").trim(),
+          price: String(line?.price ?? "").trim(),
+        }))
+      : [emptyScopeLine()];
+
+  next.otherItems =
+    Array.isArray(d.otherItems) && d.otherItems.length
+      ? d.otherItems.map((line) => ({
+          ...emptyOtherLine(),
+          ...(line && typeof line === "object" ? line : {}),
+          id: String(line?.id || "").trim() || emptyOtherLine().id,
+          description: String(line?.description || "").trim(),
+          uom: String(line?.uom || "").trim(),
+          price: String(line?.price ?? "").trim(),
+          qty: String(line?.qty ?? "").trim(),
+          inventoryItemId: String(line?.inventoryItemId || "").trim(),
+        }))
+      : [emptyOtherLine()];
+
+  next.attachments = Array.isArray(d.attachments) ? d.attachments : [];
+  next.acDatasheet = d.acDatasheet && typeof d.acDatasheet === "object" ? d.acDatasheet : null;
+  next.dcDatasheet = d.dcDatasheet && typeof d.dcDatasheet === "object" ? d.dcDatasheet : null;
+
+  return next;
 }

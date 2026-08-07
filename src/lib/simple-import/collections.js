@@ -10,6 +10,15 @@ import { parseCsv, toCsv } from "@/lib/simple-import/csv";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveConfiguredStatusSlug } from "@/lib/dropdown-catalog";
 import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
+import {
+  AC_DATASHEET_FIELD_COLUMNS,
+  DC_ARMATURE_FIELD_COLUMNS,
+  DC_FIELD_FRAME_FIELD_COLUMNS,
+  createEmptyAcDatasheet,
+  createEmptyDcDatasheet,
+  normalizeAcDatasheet,
+  normalizeDcDatasheet,
+} from "@/lib/simple-datasheet-form";
 
 function s(v) {
   return String(v ?? "").trim();
@@ -42,6 +51,51 @@ function parseJsonArrayField(raw, fieldName) {
   }
   return parsed;
 }
+
+function parseJsonObjectField(raw, fieldName) {
+  const txt = s(raw);
+  if (!txt) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(txt);
+  } catch {
+    throw new Error(`${fieldName} must be valid JSON object`);
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error(`${fieldName} must be a JSON object`);
+  }
+  return parsed;
+}
+
+function datasheetFieldKeys(columns) {
+  const keys = [];
+  for (const group of columns || []) {
+    for (const f of group || []) {
+      if (f?.key) keys.push(String(f.key));
+    }
+  }
+  return keys;
+}
+
+/** Collect prefixed CSV cells; skip blanks so partial uploads do not wipe existing values. */
+function pickPrefixedFields(row, prefix, keys) {
+  const out = {};
+  for (const k of keys) {
+    const csvKey = `${prefix}${k}`;
+    if (!Object.prototype.hasOwnProperty.call(row, csvKey)) continue;
+    const val = s(row[csvKey]);
+    if (!val) continue;
+    out[k] = val;
+  }
+  return out;
+}
+
+const AC_DS_FIELD_KEYS = datasheetFieldKeys(AC_DATASHEET_FIELD_COLUMNS);
+const DC_FF_FIELD_KEYS = datasheetFieldKeys(DC_FIELD_FRAME_FIELD_COLUMNS);
+const DC_ARM_FIELD_KEYS = datasheetFieldKeys(DC_ARMATURE_FIELD_COLUMNS);
+const AC_DS_CSV_HEADERS = AC_DS_FIELD_KEYS.map((k) => `ds_${k}`);
+const DC_FF_CSV_HEADERS = DC_FF_FIELD_KEYS.map((k) => `ff_${k}`);
+const DC_ARM_CSV_HEADERS = DC_ARM_FIELD_KEYS.map((k) => `arm_${k}`);
 
 function key(sourceSystem, externalRef) {
   return `${s(sourceSystem).toLowerCase()}::${s(externalRef).toLowerCase()}`;
@@ -555,7 +609,7 @@ const IMPORT_COLLECTIONS = {
       const proposalAcceptedDate = s(r.proposal_accepted_date);
 
       // Header-only upsert — do not touch scopeDetails / otherItems / datasheets / attachments
-      // (import line items via child CSVs; datasheets stay in-app).
+      // (import line items + datasheets via child CSVs).
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -767,6 +821,249 @@ const IMPORT_COLLECTIONS = {
       doc.set("otherItems", list);
       doc.markModified("otherItems");
       await refreshServiceProposalListTotals(doc);
+    },
+  },
+  /** Child of Service Proposals — one CSV row sets/merges AC datasheet on the parent. */
+  simpleServiceProposalAcDatasheets: {
+    label: "Service Proposal — AC Datasheet",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref"],
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "date",
+      "technician",
+      "section",
+      "active_tab",
+      ...AC_DS_CSV_HEADERS,
+      "ds_notes",
+      "disassembly_json",
+      "assembly_json",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-AC-DS",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      date: "2026-08-01",
+      technician: "Alex Tech",
+      section: "Complete Motor",
+      active_tab: "DataSheet",
+      ds_hp: "50",
+      ds_make: "Siemens",
+      ds_model: "1LA7",
+      ds_frame: "286T",
+      ds_volts: "460",
+      ds_amps: "62",
+      ds_rpm: "1780",
+      ds_hz: "60",
+      ds_phase: "3",
+      ds_slots: "36",
+      ds_notes: "Imported AC datasheet",
+      disassembly_json: "",
+      assembly_json: "",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) {
+        errs.push("service_proposal_external_ref is required");
+      }
+      const section = s(r.section);
+      if (section && !["Complete Motor", "Field Frame"].includes(section)) {
+        errs.push('section must be "Complete Motor" or "Field Frame"');
+      }
+      const tab = s(r.active_tab);
+      if (tab && !["DataSheet", "Disassembly", "Assembly"].includes(tab)) {
+        errs.push('active_tab must be "DataSheet", "Disassembly", or "Assembly"');
+      }
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      const disassembly = parseJsonObjectField(r.disassembly_json, "disassembly_json");
+      const assembly = parseJsonObjectField(r.assembly_json, "assembly_json");
+      return {
+        serviceProposalId,
+        sheet: {
+          date: s(r.date),
+          technician: s(r.technician),
+          section: s(r.section),
+          activeTab: s(r.active_tab),
+          dataSheet: {
+            ...pickPrefixedFields(r, "ds_", AC_DS_FIELD_KEYS),
+            ...(s(r.ds_notes) ? { notes: s(r.ds_notes) } : {}),
+          },
+          disassembly,
+          assembly,
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const existingRaw =
+        doc.acDatasheet && typeof doc.acDatasheet === "object"
+          ? typeof doc.acDatasheet.toObject === "function"
+            ? doc.acDatasheet.toObject()
+            : doc.acDatasheet
+          : null;
+      const existing = existingRaw ? normalizeAcDatasheet(existingRaw) : createEmptyAcDatasheet();
+      const patch = payload.sheet || {};
+      const next = normalizeAcDatasheet({
+        ...existing,
+        date: patch.date || existing.date,
+        technician: patch.technician || existing.technician,
+        jobNumber: s(doc.documentNumber || doc.quote || existing.jobNumber),
+        company: s(doc.companyName || existing.company),
+        section: patch.section || existing.section,
+        activeTab: patch.activeTab || existing.activeTab,
+        dataSheet: {
+          ...existing.dataSheet,
+          ...(patch.dataSheet || {}),
+        },
+        disassembly: patch.disassembly
+          ? { ...existing.disassembly, ...patch.disassembly }
+          : existing.disassembly,
+        assembly: patch.assembly ? { ...existing.assembly, ...patch.assembly } : existing.assembly,
+      });
+      doc.set("acDatasheet", next);
+      doc.markModified("acDatasheet");
+      if (!s(doc.motorPower)) doc.set("motorPower", "AC");
+      await doc.save();
+    },
+  },
+  /** Child of Service Proposals — one CSV row sets/merges DC datasheet on the parent. */
+  simpleServiceProposalDcDatasheets: {
+    label: "Service Proposal — DC Datasheet",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref"],
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "date",
+      "technician",
+      "section",
+      "active_tab",
+      ...DC_FF_CSV_HEADERS,
+      "ff_notes",
+      ...DC_ARM_CSV_HEADERS,
+      "arm_notes",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-DC-DS",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      date: "2026-08-01",
+      technician: "Alex Tech",
+      section: "Complete Motor",
+      active_tab: "Field Frame",
+      ff_hp: "25",
+      ff_make: "GE",
+      ff_volts: "250",
+      ff_amps: "90",
+      ff_shunt_turns: "1200",
+      ff_notes: "Imported DC field frame",
+      arm_hp: "25",
+      arm_slots: "41",
+      arm_bars: "123",
+      arm_notes: "Imported DC armature",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) {
+        errs.push("service_proposal_external_ref is required");
+      }
+      const section = s(r.section);
+      if (section && !["Complete Motor", "Field Frame", "Armature"].includes(section)) {
+        errs.push('section must be "Complete Motor", "Field Frame", or "Armature"');
+      }
+      const tab = s(r.active_tab);
+      if (tab && !["Field Frame", "Armature"].includes(tab)) {
+        errs.push('active_tab must be "Field Frame" or "Armature"');
+      }
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      return {
+        serviceProposalId,
+        sheet: {
+          date: s(r.date),
+          technician: s(r.technician),
+          section: s(r.section),
+          activeTab: s(r.active_tab),
+          fieldFrame: {
+            ...pickPrefixedFields(r, "ff_", DC_FF_FIELD_KEYS),
+            ...(s(r.ff_notes) ? { notes: s(r.ff_notes) } : {}),
+          },
+          armature: {
+            ...pickPrefixedFields(r, "arm_", DC_ARM_FIELD_KEYS),
+            ...(s(r.arm_notes) ? { notes: s(r.arm_notes) } : {}),
+          },
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const existingRaw =
+        doc.dcDatasheet && typeof doc.dcDatasheet === "object"
+          ? typeof doc.dcDatasheet.toObject === "function"
+            ? doc.dcDatasheet.toObject()
+            : doc.dcDatasheet
+          : null;
+      const existing = existingRaw ? normalizeDcDatasheet(existingRaw) : createEmptyDcDatasheet();
+      const patch = payload.sheet || {};
+      const next = normalizeDcDatasheet({
+        ...existing,
+        date: patch.date || existing.date,
+        technician: patch.technician || existing.technician,
+        jobNumber: s(doc.documentNumber || doc.quote || existing.jobNumber),
+        company: s(doc.companyName || existing.company),
+        section: patch.section || existing.section,
+        activeTab: patch.activeTab || existing.activeTab,
+        fieldFrame: {
+          ...existing.fieldFrame,
+          ...(patch.fieldFrame || {}),
+        },
+        armature: {
+          ...existing.armature,
+          ...(patch.armature || {}),
+        },
+      });
+      doc.set("dcDatasheet", next);
+      doc.markModified("dcDatasheet");
+      if (!s(doc.motorPower)) doc.set("motorPower", "DC");
+      await doc.save();
     },
   },
   simplePurchaseOrders: {

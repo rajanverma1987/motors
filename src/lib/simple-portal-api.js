@@ -36,6 +36,11 @@ export async function fetchSimpleServiceProposals() {
   return fetchAllPaginatedDashboardItems(SP_API);
 }
 
+export async function fetchSimpleServiceProposal(id) {
+  const data = await api(`${SP_API}/${encodeURIComponent(id)}`);
+  return data.item;
+}
+
 export async function createSimpleServiceProposal(row) {
   const data = await api(SP_API, { method: "POST", body: JSON.stringify(row) });
   return data.item;

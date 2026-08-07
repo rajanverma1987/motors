@@ -321,34 +321,47 @@ export function quoteStatusSelectOptionsFromMerged(mergedSettings) {
 /**
  * Resolve a status slug or display label (from CSV / legacy data) to the configured
  * quote or invoice option value used by Simple lists and filters.
+ *
+ * Encoding matches buildCombinedQuoteInvoiceStatusOptions / Invoices panel selects:
+ * - quote statuses → bare slug
+ * - invoice-only statuses → bare slug
+ * - invoice statuses that share a slug with quote → `invoice:<slug>` (only when needed)
  */
 export function resolveConfiguredStatusSlug(raw, mergedSettings) {
   const t = String(raw ?? "").trim();
   if (!t) return "";
   const lower = t.toLowerCase();
   const bare = lower.replace(/^invoice:/, "");
+  const forcedInvoice = lower.startsWith("invoice:");
   const quoteOpts = quoteStatusSelectOptionsFromMerged(mergedSettings);
   const invOpts = invoiceStatusSelectOptionsFromMerged(mergedSettings);
 
   const quoteByValue = quoteOpts.find((o) => String(o.value).toLowerCase() === bare);
+  const invByValue = invOpts.find((o) => String(o.value).toLowerCase() === bare);
+
+  if (forcedInvoice && invByValue) {
+    return quoteByValue ? `invoice:${invByValue.value}` : invByValue.value;
+  }
+
   if (quoteByValue) return quoteByValue.value;
 
-  const invByValue = invOpts.find((o) => String(o.value).toLowerCase() === bare);
   if (invByValue) {
-    const alsoQuote = quoteOpts.some((o) => String(o.value).toLowerCase() === bare);
-    if (lower.startsWith("invoice:") || !alsoQuote) return `invoice:${invByValue.value}`;
+    // Invoice-only: bare value so SimpleSelect matches invoice status options.
     return invByValue.value;
   }
 
   const quoteByLabel = quoteOpts.find((o) => String(o.label || "").toLowerCase() === lower);
   if (quoteByLabel) return quoteByLabel.value;
 
-  const invByLabel = invOpts.find((o) => String(o.label || "").toLowerCase() === lower);
+  const invByLabel = invOpts.find(
+    (o) =>
+      String(o.label || "").toLowerCase() === lower ||
+      String(o.label || "").toLowerCase() === bare
+  );
   if (invByLabel) {
-    const alsoQuote = quoteOpts.some(
-      (o) => String(o.value).toLowerCase() === String(invByLabel.value).toLowerCase()
-    );
-    return alsoQuote ? invByLabel.value : `invoice:${invByLabel.value}`;
+    const invVal = String(invByLabel.value || "").trim();
+    const alsoQuote = quoteOpts.some((o) => String(o.value).toLowerCase() === invVal.toLowerCase());
+    return alsoQuote ? `invoice:${invVal}` : invVal;
   }
 
   return t;

@@ -27,6 +27,18 @@ const IMPORT_COLLECTIONS = [
     childOf: "Service Proposals",
     hint: "One row per parts/other line. Import Service Proposals first. Optional inventory_item_external_ref.",
   },
+  {
+    collection: "simpleServiceProposalAcDatasheets",
+    label: "AC Datasheet",
+    childOf: "Service Proposals",
+    hint: "One row per proposal AC datasheet. Import Service Proposals first. Columns use ds_* for DataSheet fields; optional disassembly_json / assembly_json.",
+  },
+  {
+    collection: "simpleServiceProposalDcDatasheets",
+    label: "DC Datasheet",
+    childOf: "Service Proposals",
+    hint: "One row per proposal DC datasheet. Import Service Proposals first. Columns use ff_* (Field Frame) and arm_* (Armature).",
+  },
   { collection: "simplePurchaseOrders", label: "Purchase Orders" },
 ];
 
@@ -283,8 +295,8 @@ export default function SimpleDataUploadPanel() {
           Import Simple portal data collection-by-collection in parent→child order. Download each template (columns
           match that collection&apos;s form/model), fill it, and upload — only valid rows import. Invalid rows are
           exported with error reasons. Recommended sequence: Customers → Vendors → Inventory / Employees / Sales
-          Persons → Service Proposals → Scope Details → Other Items → Purchase Orders. Proposal datasheets stay
-          in-app; vendor/customer/PO file links can use JSON URL columns where the template includes them.
+          Persons → Service Proposals → Scope Details → Other Items → AC/DC Datasheets → Purchase Orders.
+          Vendor/customer/PO file links can use JSON URL columns where the template includes them.
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
           <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>
@@ -301,7 +313,7 @@ export default function SimpleDataUploadPanel() {
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
           Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
-          Scope Details → Other Items → Purchase Orders.
+          Scope Details → Other Items → AC Datasheet → DC Datasheet → Purchase Orders.
         </div>
         <p className="mb-4 text-xs text-secondary">
           Use the <FiFilePlus className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> icon to choose a CSV file, then{" "}

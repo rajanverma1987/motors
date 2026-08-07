@@ -32,6 +32,7 @@ import {
   buildCombinedQuoteInvoiceStatusOptions,
   workOrderStatusSelectOptionsFromMerged,
   resolveQuoteInvoiceStatusDisplayLabel,
+  resolveConfiguredStatusSlug,
 } from "@/lib/dropdown-catalog";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -53,6 +54,7 @@ import {
   recordTypeDisplayTitle,
   recordTypeDocumentLabel,
   resolveRecordTypeOnSave,
+  simpleServiceProposalDocToForm,
   sumLinePrices,
 } from "@/lib/simple-service-proposal-form";
 import {
@@ -60,7 +62,10 @@ import {
   buildDcDatasheetFromProposal,
   datasheetHasData,
 } from "@/lib/simple-datasheet-form";
-import { listSimplePurchaseOrdersForJobApi } from "@/lib/simple-portal-api";
+import {
+  fetchSimpleServiceProposal,
+  listSimplePurchaseOrdersForJobApi,
+} from "@/lib/simple-portal-api";
 
 const FORM_ID = "simple-service-proposal-form";
 const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
@@ -101,7 +106,7 @@ const QUOTE_TYPE_OPTIONS = [
   { value: "Email", label: "Email" },
   { value: "Walk-in", label: "Walk-in" },
   { value: "Other", label: "Other" },
-];
+]; // keep in sync with QUOTE_TYPE_VALUES in simple-service-proposal-form.js
 
 function FieldRow({ label, labelWidth = "7.5rem", children, className = "", controlClassName = "" }) {
   return (
@@ -351,27 +356,58 @@ export default function ServiceProposalFormModal({
 
   useEffect(() => {
     if (!open) return;
-    setForm(() => {
-      const base = createEmptyServiceProposalForm();
-      if (!initialForm) return base;
-      const next = { ...base, ...initialForm };
-      if (!Array.isArray(next.scopeDetails) || next.scopeDetails.length === 0) {
-        next.scopeDetails = [emptyScopeLine()];
-      }
-      if (!Array.isArray(next.otherItems) || next.otherItems.length === 0) {
-        next.otherItems = [emptyOtherLine()];
-      }
-      return next;
-    });
+    let cancelled = false;
     setAttachmentsOpen(false);
     setCommissionOpen(false);
     setDatasheetOpen(false);
     loadCustomers();
     loadEmployees();
+
+    const applyDoc = (doc) => {
+      const next = simpleServiceProposalDocToForm(doc || {});
+      next.status = resolveConfiguredStatusSlug(next.status, mergedSettings) || next.status;
+      next.jobStatus = String(next.jobStatus || "").trim();
+      setForm(next);
+    };
+
+    (async () => {
+      const id = String(initialForm?.id || "").trim();
+      if (id) {
+        try {
+          const item = await fetchSimpleServiceProposal(id);
+          if (!cancelled && item) {
+            applyDoc(item);
+            return;
+          }
+        } catch {
+          /* fall back to list row */
+        }
+      }
+      if (!cancelled) applyDoc(initialForm || {});
+    })();
+
+    return () => {
+      cancelled = true;
+    };
     // Only reset when opening / switching records. Do not depend on loadCustomers/loadEmployees —
     // stable callbacks keep nested modals open (e.g. after attachment delete).
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key on open + record id
   }, [open, initialForm?.id]);
+
+  /** CSV / legacy rows may store Prepared By as a name — map to employee id when options load. */
+  useEffect(() => {
+    if (!open || !employees.length) return;
+    setForm((f) => {
+      const pb = String(f.preparedBy || "").trim();
+      if (!pb) return f;
+      if (employees.some((e) => String(e.id) === pb)) return f;
+      const byName = employees.find(
+        (e) => String(e.name || "").trim().toLowerCase() === pb.toLowerCase()
+      );
+      if (!byName?.id) return f;
+      return { ...f, preparedBy: String(byName.id) };
+    });
+  }, [open, employees]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 

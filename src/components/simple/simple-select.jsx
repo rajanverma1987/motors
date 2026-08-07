@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FiChevronDown } from "react-icons/fi";
 import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
@@ -13,6 +13,10 @@ const PILL_TRIGGER =
   "inline-flex h-auto min-h-0 w-full max-w-full items-center gap-1 rounded-none border border-border bg-transparent px-2.5 py-0.5 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60";
 
 const DROPDOWN_Z = 10050;
+/** Matches `max-h-52` on the options list. */
+const LIST_MAX_PX = 208;
+const MENU_GAP_PX = 2;
+const SEARCH_ESTIMATE_PX = 40;
 
 /**
  * Compact select styled for Simple portal dense forms (light primary field chrome).
@@ -95,9 +99,44 @@ export default function SimpleSelect({
   };
 
   const updateRect = () => {
-    if (!triggerRef.current) return;
+    if (!triggerRef.current || typeof window === "undefined") return;
     const r = mapRectForBodyFixedPosition(triggerRef.current.getBoundingClientRect());
-    setRect({ top: r.bottom + 2, left: r.left, width: Math.max(r.width, 140) });
+    const width = Math.max(r.width, 140);
+    const vh = window.innerHeight;
+    const spaceBelow = vh - r.bottom - MENU_GAP_PX;
+    const spaceAbove = r.top - MENU_GAP_PX;
+
+    let needed = LIST_MAX_PX + (searchable ? SEARCH_ESTIMATE_PX : 0);
+    if (listRef.current) {
+      const panel = listRef.current;
+      const searchEl = panel.querySelector("[data-simple-select-search]");
+      const listEl = panel.querySelector("[data-simple-select-list]");
+      const searchH = searchEl ? searchEl.offsetHeight : 0;
+      const listH = listEl ? Math.min(listEl.scrollHeight, LIST_MAX_PX) : LIST_MAX_PX;
+      needed = searchH + listH + 2;
+    }
+
+    const openUpward = needed > spaceBelow && spaceAbove > spaceBelow;
+    const available = openUpward ? spaceAbove : spaceBelow;
+    const maxHeight = Math.max(80, Math.min(needed, available));
+
+    if (openUpward) {
+      setRect({
+        placement: "top",
+        bottom: vh - r.top + MENU_GAP_PX,
+        left: r.left,
+        width,
+        maxHeight,
+      });
+      return;
+    }
+    setRect({
+      placement: "bottom",
+      top: r.bottom + MENU_GAP_PX,
+      left: r.left,
+      width,
+      maxHeight,
+    });
   };
 
   useEffect(() => {
@@ -121,6 +160,14 @@ export default function SimpleSelect({
       window.removeEventListener("resize", onMove);
     };
   }, [open, searchable]);
+
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    updateRect();
+    // Remeasure after the portal mounts so we can flip using the real menu height.
+    const raf = requestAnimationFrame(() => updateRect());
+    return () => cancelAnimationFrame(raf);
+  }, [open, filtered, query, searchable]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -261,15 +308,18 @@ export default function SimpleSelect({
               onKeyDown={onKeyDown}
               style={{
                 position: "fixed",
-                top: rect.top,
                 left: rect.left,
                 width: rect.width,
+                maxHeight: rect.maxHeight,
                 zIndex: DROPDOWN_Z,
+                ...(rect.placement === "top"
+                  ? { bottom: rect.bottom, top: "auto" }
+                  : { top: rect.top, bottom: "auto" }),
               }}
-              className="overflow-hidden rounded-sm border border-border bg-card shadow-lg outline-none dark:shadow-black/40"
+              className="flex flex-col overflow-hidden rounded-sm border border-border bg-card shadow-lg outline-none dark:shadow-black/40"
             >
               {searchable ? (
-                <div className="border-b border-border p-1">
+                <div data-simple-select-search className="shrink-0 border-b border-border p-1">
                   <input
                     ref={searchRef}
                     type="text"
@@ -287,7 +337,13 @@ export default function SimpleSelect({
                   />
                 </div>
               ) : null}
-              <ul id={`${id}-list`} className="max-h-52 overflow-auto py-0.5" role="presentation">
+              <ul
+                id={`${id}-list`}
+                data-simple-select-list
+                className="min-h-0 flex-1 overflow-auto py-0.5"
+                style={{ maxHeight: LIST_MAX_PX }}
+                role="presentation"
+              >
                 {filtered.length === 0 ? (
                   <li className="px-2 py-1.5 text-sm text-secondary">No options</li>
                 ) : (

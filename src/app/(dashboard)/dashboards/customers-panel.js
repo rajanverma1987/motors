@@ -604,6 +604,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
           fillHeight
           responsive
           dense
+          textSize="xs"
         />
       </div>
 

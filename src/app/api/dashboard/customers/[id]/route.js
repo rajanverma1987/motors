@@ -74,12 +74,27 @@ export async function GET(request, context) {
       model: m.model ?? "",
       hp: m.hp ?? "",
     }));
+    const documents = Array.isArray(doc.documents)
+      ? doc.documents.map((d) => ({
+          name: String(d?.name ?? "").trim(),
+          url: String(d?.url ?? "").trim(),
+        }))
+      : [];
     const out = {
       id: customerId,
+      customerNumber: doc.customerNumber ?? "",
       companyName: doc.companyName ?? "",
       primaryContactName: doc.primaryContactName ?? "",
       phone: doc.phone ?? "",
+      fax: doc.fax ?? "",
       email: doc.email ?? "",
+      alternatePhone: doc.alternatePhone ?? "",
+      alternateEmail: doc.alternateEmail ?? "",
+      billingContact: doc.billingContact ?? "",
+      customerType: doc.customerType ?? "",
+      paymentTerms: doc.paymentTerms ?? "",
+      preferredPaymentMethod: doc.preferredPaymentMethod ?? "",
+      preferredContactMethod: doc.preferredContactMethod ?? "",
       address: doc.address ?? "",
       city: doc.city ?? "",
       state: doc.state ?? "",
@@ -91,6 +106,7 @@ export async function GET(request, context) {
       shippingZipCode: doc.shippingZipCode ?? "",
       shippingCountry: doc.shippingCountry ?? "United States",
       additionalContacts,
+      documents,
       notes: doc.notes ?? "",
       ein: doc.ein ?? "",
       creditLimit: doc.creditLimit ?? "",

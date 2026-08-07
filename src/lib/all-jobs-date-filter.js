@@ -1,10 +1,12 @@
+import { toInputDateValue } from "@/lib/format-date";
+
 /** URL query keys for All jobs date range (`/dashboard/all-jobs`). */
 export const ALL_JOBS_DATE_FROM_PARAM = "from";
 export const ALL_JOBS_DATE_TO_PARAM = "to";
 
 function normalizeYmd(raw) {
-  const s = String(raw ?? "").trim().slice(0, 10);
-  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : "";
+  // Accept ISO or locale/country-styled dates from URL or UI drafts.
+  return toInputDateValue(raw);
 }
 
 /** April–March financial year containing today. */
@@ -43,7 +45,7 @@ export function recordInAllJobsDateRange(record, fromYmd, toYmd) {
   const to = normalizeYmd(toYmd);
   if (!from && !to) return true;
   if (from && to && from > to) return true;
-  const day = String(record?.date ?? "").trim().slice(0, 10);
+  const day = toInputDateValue(record?.date);
   if (!day) return false;
   if (from && day < from) return false;
   if (to && day > to) return false;

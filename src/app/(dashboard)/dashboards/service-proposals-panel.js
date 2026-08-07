@@ -16,6 +16,8 @@ import {
 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Button from "@/components/ui/button";
+import Modal from "@/components/ui/modal";
+import Textarea from "@/components/ui/textarea";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
@@ -26,7 +28,7 @@ import {
 } from "@/lib/simple-screen-ui";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
 import {
   invoiceStatusSelectOptionsFromMerged,
   invoiceStatusTileColorForValue,
@@ -41,7 +43,6 @@ import {
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { formatDateMdy } from "@/lib/format-date";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-date-filter";
@@ -66,6 +67,8 @@ import { computeNextJobNumber } from "@/lib/job-document-number-format";
 export const SIMPLE_LIST_VARIANT_PROPOSALS = "proposals";
 export const SIMPLE_LIST_VARIANT_INVOICES = "invoices";
 
+const NOTES_EDIT_FORM_ID = "simple-proposal-notes-edit-form";
+
 const FILTER_TAX_COLLECTED = "__tax_collected__";
 const FILTER_TAX_TO_COLLECT = "__tax_to_collect__";
 const FILTER_AMOUNT_RECEIVABLE = "__amount_receivable__";
@@ -75,6 +78,20 @@ function statusBareKey(status) {
     .trim()
     .toLowerCase()
     .replace(/^invoice:/, "");
+}
+
+/** Match Invoices-panel statusOptions encoding (`invoice:` only when slug also exists in quote). */
+function toInvoiceStatusSelectValue(status, quoteStatusValues) {
+  const bare = statusBareKey(status);
+  if (!bare) return "";
+  const quoteValues = new Set(
+    (Array.isArray(quoteStatusValues) ? quoteStatusValues : []).map((v) =>
+      String(v || "")
+        .trim()
+        .toLowerCase()
+    )
+  );
+  return quoteValues.has(bare) ? `invoice:${bare}` : bare;
 }
 
 /** True when invoice status is Fully Paid (settings slug or labeled). */
@@ -125,8 +142,14 @@ function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
   };
 }
 
-function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors) {
-  if (String(row?.recordType || "").toUpperCase() !== RECORD_TYPE_JOB) {
+function rowShowsJobStatus(row, isInvoices = false) {
+  if (isInvoices) return true;
+  const t = String(row?.recordType || "").toUpperCase();
+  return t === RECORD_TYPE_JOB || t === RECORD_TYPE_INVOICE;
+}
+
+function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors, isInvoices = false) {
+  if (!rowShowsJobStatus(row, isInvoices)) {
     return { style: null, className: "!p-0" };
   }
   const current = String(row?.jobStatus || "").trim();
@@ -154,6 +177,7 @@ export default function ServiceProposalsPanel({
   const confirm = useConfirm();
   const searchParams = useSearchParams();
   const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
 
@@ -161,6 +185,8 @@ export default function ServiceProposalsPanel({
   const [ready, setReady] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [notesEdit, setNotesEdit] = useState(null);
+  const [notesDraft, setNotesDraft] = useState("");
   const [openCustomerId, setOpenCustomerId] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -401,6 +427,29 @@ export default function ServiceProposalsPanel({
       return prev.map((r) => (r.id === id ? nextRow : r));
     });
   }, []);
+
+  const openNotesEdit = useCallback((row) => {
+    const id = String(row?.id || "").trim();
+    if (!id) return;
+    setNotesEdit({ id, quote: String(row?.quote || "").trim() });
+    setNotesDraft(String(row?.notes ?? ""));
+  }, []);
+
+  const closeNotesEdit = useCallback(() => {
+    setNotesEdit(null);
+    setNotesDraft("");
+  }, []);
+
+  const handleNotesSave = useCallback(
+    (e) => {
+      e?.preventDefault?.();
+      const id = String(notesEdit?.id || "").trim();
+      if (!id) return;
+      handleRowFieldChange(id, { notes: notesDraft });
+      closeNotesEdit();
+    },
+    [notesEdit, notesDraft, handleRowFieldChange, closeNotesEdit]
+  );
 
   const handleRowStatusChange = useCallback(
     (row, nextStatus) => {
@@ -685,7 +734,11 @@ export default function ServiceProposalsPanel({
         key: "date",
         label: "Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "-",
+        align: "right",
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "-";
+        },
       },
       {
         key: "companyName",
@@ -734,17 +787,19 @@ export default function ServiceProposalsPanel({
         key: "submitDate",
         label: "Submit date",
         sortable: true,
+        align: "right",
         getCellStyle: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
         getCellClassName: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
         render: (v) => {
-          const text = formatDateMdy(v);
+          const text = formatDate(v);
+          const shown = text && text !== "-" ? text : "";
           return (
             <span
-              className={`block px-1.5 py-1 tabular-nums ${text ? "font-semibold" : "font-normal"}`}
+              className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
             >
-              {text || "-"}
+              {shown || "-"}
             </span>
           );
         },
@@ -753,17 +808,19 @@ export default function ServiceProposalsPanel({
         key: "acceptDate",
         label: "Accept Date",
         sortable: true,
+        align: "right",
         getCellStyle: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
         getCellClassName: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
         render: (v) => {
-          const text = formatDateMdy(v);
+          const text = formatDate(v);
+          const shown = text && text !== "-" ? text : "";
           return (
             <span
-              className={`block px-1.5 py-1 tabular-nums ${text ? "font-semibold" : "font-normal"}`}
+              className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
             >
-              {text || "-"}
+              {shown || "-"}
             </span>
           );
         },
@@ -784,7 +841,11 @@ export default function ServiceProposalsPanel({
                 variant="pill"
                 className="w-full"
                 options={statusOptions}
-                value={row.status || ""}
+                value={
+                  isInvoices
+                    ? toInvoiceStatusSelectValue(row.status, quoteStatusValues)
+                    : row.status || ""
+                }
                 onChange={(e) => handleRowStatusChange(row, e.target.value)}
                 triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
                 placeholder="Select…"
@@ -804,16 +865,18 @@ export default function ServiceProposalsPanel({
           jobStatusCellChrome(
             row,
             jobStatusOptions,
-            mergedSettings.workOrderStatusTileColors
+            mergedSettings.workOrderStatusTileColors,
+            isInvoices
           ).style,
         getCellClassName: (_, row) =>
           jobStatusCellChrome(
             row,
             jobStatusOptions,
-            mergedSettings.workOrderStatusTileColors
+            mergedSettings.workOrderStatusTileColors,
+            isInvoices
           ).className,
         render: (v, row) => {
-          if (String(row.recordType || "").toUpperCase() !== RECORD_TYPE_JOB) {
+          if (!rowShowsJobStatus(row, isInvoices)) {
             return "";
           }
           const current = String(v || "").trim();
@@ -838,12 +901,23 @@ export default function ServiceProposalsPanel({
         key: "notes",
         label: "Notes",
         sortable: false,
-        className: "min-w-[18rem]",
-        render: (v) => (
-          <span className="block min-w-[18rem] max-w-[28rem] whitespace-normal break-words font-normal text-secondary" title={v || ""}>
-            {v || "-"}
-          </span>
-        ),
+        className: "min-w-[12rem] max-w-[20rem]",
+        render: (v, row) => {
+          const text = String(v || "").trim();
+          return (
+            <button
+              type="button"
+              className="block w-full min-w-[12rem] max-w-[20rem] truncate text-left font-normal text-secondary hover:text-foreground"
+              title={text || "Click to add notes"}
+              onClick={(e) => {
+                e.stopPropagation();
+                openNotesEdit(row);
+              }}
+            >
+              {text || "-"}
+            </button>
+          );
+        },
       },
       {
         key: "actions",
@@ -870,6 +944,7 @@ export default function ServiceProposalsPanel({
       handleDelete,
       handleRowStatusChange,
       handleRowJobStatusChange,
+      openNotesEdit,
       customerName,
       mergedSettings,
       quoteOpts,
@@ -880,6 +955,8 @@ export default function ServiceProposalsPanel({
       currencySubtotals.total,
       currencySubtotals.taxCollected,
       isInvoices,
+      quoteStatusValues,
+      formatDate,
     ]
   );
 
@@ -962,6 +1039,7 @@ export default function ServiceProposalsPanel({
           fillHeight
           responsive
           dense
+          textSize="xs"
         />
       </div>
 
@@ -975,6 +1053,35 @@ export default function ServiceProposalsPanel({
         onSave={handleSave}
         onAttachmentsChange={handleAttachmentsChange}
       />
+
+      <Modal
+        open={!!notesEdit}
+        onClose={closeNotesEdit}
+        title={notesEdit?.quote ? `Notes — ${notesEdit.quote}` : "Notes"}
+        size="md"
+        actions={
+          <>
+            <Button type="button" variant="secondary" size="sm" onClick={closeNotesEdit}>
+              Cancel
+            </Button>
+            <Button type="submit" form={NOTES_EDIT_FORM_ID} variant="primary" size="sm">
+              Save
+            </Button>
+          </>
+        }
+      >
+        <form id={NOTES_EDIT_FORM_ID} onSubmit={handleNotesSave} className="flex flex-col gap-3">
+          <Textarea
+            id="simple-proposal-notes-edit"
+            label="Notes"
+            value={notesDraft}
+            onChange={(e) => setNotesDraft(e.target.value)}
+            rows={8}
+            placeholder="Enter notes…"
+            textareaClassName="min-h-[10rem]"
+          />
+        </form>
+      </Modal>
 
       <CustomerViewModal
         open={!!openCustomerId}

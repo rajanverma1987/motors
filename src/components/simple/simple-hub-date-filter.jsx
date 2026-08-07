@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
+import { useUserSettings } from "@/contexts/user-settings-context";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import {
   ALL_JOBS_DATE_FROM_PARAM,
@@ -13,6 +14,11 @@ import {
   isAllJobsCurrentFinancialYear,
   parseAllJobsDateRange,
 } from "@/lib/all-jobs-date-filter";
+import {
+  dateLocaleFromCurrency,
+  formatDateLocale,
+  toInputDateValue,
+} from "@/lib/format-date";
 import {
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_CALCULATORS,
@@ -30,29 +36,36 @@ const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 !rounded-none px-2.5 text-xs";
 
 /**
  * Hub date range controls for Simple `/dashboards` (lives in navbar).
+ * Native calendar via type="date" (ISO value); title shows Settings country format.
  */
 export default function SimpleHubDateFilter({ className = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { settings } = useUserSettings();
   const tabParam = searchParams.get("tab");
   const activeTab = SIMPLE_TAB_IDS.includes(tabParam) ? tabParam : SIMPLE_TAB_SERVICE_PROPOSALS;
+
+  const dateLocale = useMemo(
+    () => dateLocaleFromCurrency(settings?.currency) || "en-US",
+    [settings?.currency]
+  );
 
   const fyDefault = useMemo(() => currentAllJobsFinancialYearRange(), []);
   const { from: appliedFrom, to: appliedTo } = parseAllJobsDateRange(searchParams);
   const isAllDates = !appliedFrom && !appliedTo;
   const isCurrentFy = isAllJobsCurrentFinancialYear(appliedFrom, appliedTo);
 
-  const [draftFrom, setDraftFrom] = useState(() => appliedFrom || fyDefault.from);
-  const [draftTo, setDraftTo] = useState(() => appliedTo || fyDefault.to);
+  const [draftFrom, setDraftFrom] = useState(() => toInputDateValue(appliedFrom || fyDefault.from));
+  const [draftTo, setDraftTo] = useState(() => toInputDateValue(appliedTo || fyDefault.to));
 
   useEffect(() => {
     if (isAllDates) {
-      setDraftFrom(fyDefault.from);
-      setDraftTo(fyDefault.to);
+      setDraftFrom(toInputDateValue(fyDefault.from));
+      setDraftTo(toInputDateValue(fyDefault.to));
       return;
     }
-    setDraftFrom(appliedFrom);
-    setDraftTo(appliedTo);
+    setDraftFrom(toInputDateValue(appliedFrom));
+    setDraftTo(toInputDateValue(appliedTo));
   }, [appliedFrom, appliedTo, isAllDates, fyDefault.from, fyDefault.to]);
 
   const replaceSearchParams = useCallback(
@@ -67,8 +80,8 @@ export default function SimpleHubDateFilter({ className = "" }) {
 
   const applyDateRange = useCallback(
     (from, to) => {
-      const nextFrom = String(from || "").trim().slice(0, 10);
-      const nextTo = String(to || "").trim().slice(0, 10);
+      const nextFrom = toInputDateValue(from);
+      const nextTo = toInputDateValue(to);
       replaceSearchParams((params) => {
         if (nextFrom) params.set(ALL_JOBS_DATE_FROM_PARAM, nextFrom);
         else params.delete(ALL_JOBS_DATE_FROM_PARAM);
@@ -78,6 +91,9 @@ export default function SimpleHubDateFilter({ className = "" }) {
     },
     [replaceSearchParams]
   );
+
+  const fromTitle = draftFrom ? formatDateLocale(draftFrom, dateLocale) : "";
+  const toTitle = draftTo ? formatDateLocale(draftTo, dateLocale) : "";
 
   if (activeTab === SIMPLE_TAB_CALCULATORS) return null;
 
@@ -109,22 +125,26 @@ export default function SimpleHubDateFilter({ className = "" }) {
         active={isAllDates}
         onClick={() => applyDateRange("", "")}
       />
-      <Input
-        label="From"
-        type="date"
-        value={draftFrom}
-        onChange={(e) => setDraftFrom(e.target.value)}
-        className={DATE_FILTER_INPUT_CLASS}
-        inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-      />
-      <Input
-        label="To"
-        type="date"
-        value={draftTo}
-        onChange={(e) => setDraftTo(e.target.value)}
-        className={DATE_FILTER_INPUT_CLASS}
-        inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-      />
+      <div title={fromTitle || undefined}>
+        <Input
+          label="From"
+          type="date"
+          value={draftFrom}
+          onChange={(e) => setDraftFrom(e.target.value)}
+          className={DATE_FILTER_INPUT_CLASS}
+          inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+        />
+      </div>
+      <div title={toTitle || undefined}>
+        <Input
+          label="To"
+          type="date"
+          value={draftTo}
+          onChange={(e) => setDraftTo(e.target.value)}
+          className={DATE_FILTER_INPUT_CLASS}
+          inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+        />
+      </div>
       <Button
         type="button"
         variant="primary"

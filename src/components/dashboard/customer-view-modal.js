@@ -13,6 +13,7 @@ import {
   invoiceStatusSelectOptionsFromMerged,
   quoteStatusSelectOptionsFromMerged,
   quoteStatusTileColorForValue,
+  resolveConfiguredStatusSlug,
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
@@ -39,9 +40,21 @@ const THEAD_ROW = "border-b border-border bg-primary/[0.06] dark:bg-primary/10";
 const STATUS_PILL_CLASS =
   "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-medium";
 
+/** Collapse CSV/label/slug variants so summary pills don't duplicate the same status. */
+function activityStatusGroupKey(raw, mergedSettings) {
+  const resolved = resolveConfiguredStatusSlug(raw, mergedSettings);
+  return (
+    String(resolved || raw || "draft")
+      .trim()
+      .toLowerCase()
+      .replace(/^invoice:/, "") || "draft"
+  );
+}
+
 function InvoiceStatusPill({ status, mergedSettings }) {
-  const pill = invoiceStatusPillAppearance(status, mergedSettings);
-  const label = invoiceStatusLabel(status, mergedSettings);
+  const key = activityStatusGroupKey(status, mergedSettings);
+  const pill = invoiceStatusPillAppearance(key, mergedSettings);
+  const label = invoiceStatusLabel(key, mergedSettings);
   return (
     <span className={`${STATUS_PILL_CLASS} ${pill.className}`} style={pill.style}>
       {label}
@@ -50,7 +63,7 @@ function InvoiceStatusPill({ status, mergedSettings }) {
 }
 
 function QuoteStatusPill({ status, mergedSettings }) {
-  const s = String(status || "draft").toLowerCase();
+  const s = activityStatusGroupKey(status, mergedSettings);
   const opts = quoteStatusSelectOptionsFromMerged(mergedSettings);
   const optIdx = opts.findIndex((o) => String(o.value).toLowerCase() === s);
   const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
@@ -96,10 +109,11 @@ function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children })
   return children;
 }
 
-function statusAmountSummary(rows, getAmount) {
+function statusAmountSummary(rows, getAmount, normalizeKey) {
   const totals = new Map();
   (Array.isArray(rows) ? rows : []).forEach((row) => {
-    const status = String(row?.status || "draft").trim() || "draft";
+    const raw = String(row?.status || "draft").trim() || "draft";
+    const status = typeof normalizeKey === "function" ? normalizeKey(raw) : raw.toLowerCase();
     const amount = Number.parseFloat(String(getAmount(row) ?? "0"));
     const safeAmount = Number.isFinite(amount) ? amount : 0;
     totals.set(status, (totals.get(status) || 0) + safeAmount);
@@ -267,8 +281,12 @@ export default function CustomerViewModal({
     return Number.isFinite(n) ? formatMoney(n) : "—";
   };
 
-  const invoiceStatusTotals = statusAmountSummary(activity.invoices, activityRowAmount);
-  const quoteStatusTotals = statusAmountSummary(activity.quotes, activityRowAmount);
+  const invoiceStatusTotals = statusAmountSummary(activity.invoices, activityRowAmount, (raw) =>
+    activityStatusGroupKey(raw, mergedSettings)
+  );
+  const quoteStatusTotals = statusAmountSummary(activity.quotes, activityRowAmount, (raw) =>
+    activityStatusGroupKey(raw, mergedSettings)
+  );
 
   const openSimpleProposal = (row) => {
     if (!row?.id) return;
