@@ -315,6 +315,11 @@ export default function SimpleDataUploadPanel() {
           Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
           Scope Details → Other Items → AC Datasheet → DC Datasheet → Purchase Orders.
         </div>
+        <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
+          Date columns must use <span className="font-medium text-title">YYYY-MM-DD</span> (example:{" "}
+          <span className="font-medium text-title">2026-08-01</span>). Templates already use this format. Avoid
+          locale slash dates like 08/01/2026.
+        </div>
         <p className="mb-4 text-xs text-secondary">
           Use the <FiFilePlus className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> icon to choose a CSV file, then{" "}
           <FiUpload className="mx-1 inline h-3.5 w-3.5 align-text-bottom" /> to import.

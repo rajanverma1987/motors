@@ -20,6 +20,28 @@ import {
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
 import { sanitizeSimplePortalPayload } from "@/lib/simple-portal-mongo";
+import {
+  csvCalendarDateToMongo,
+  normalizeCsvCalendarDate,
+  validateCsvDateColumns,
+} from "@/lib/simple-import/csv-dates";
+
+const SP_CSV_DATE_COLUMNS = [
+  "date_created",
+  "due_date",
+  "proposal_submit_date",
+  "proposal_accepted_date",
+  "invoice_submit_date",
+  "invoice_paid_date",
+];
+
+const PO_CSV_DATE_COLUMNS = [
+  "po_cut_date",
+  "due_date",
+  "po_invoice_receive_date",
+  "po_item_receive_date",
+  "po_paid_date",
+];
 
 function s(v) {
   return String(v ?? "").trim();
@@ -571,6 +593,7 @@ const IMPORT_COLLECTIONS = {
       if (motorPower && !["AC", "DC"].includes(motorPower)) {
         errs.push("motor_power must be AC or DC");
       }
+      errs.push(...validateCsvDateColumns(r, SP_CSV_DATE_COLUMNS));
       return errs;
     },
     buildPayload: async (r, ctx) => {
@@ -593,7 +616,7 @@ const IMPORT_COLLECTIONS = {
       const settingsDoc = await UserSettings.findOne({ ownerEmail: ctx.ownerEmail }).lean();
       const mergedSettings = mergeUserSettings(settingsDoc?.settings);
       const documentNumber = s(r.document_number);
-      const dateCreated = s(r.date_created);
+      const dateCreated = csvCalendarDateToMongo(r.date_created);
       const preparedBy = s(r.prepared_by);
       const internalNotes = s(r.internal_notes);
       const companyName = s(r.company_name) || s(customer?.companyName);
@@ -606,8 +629,8 @@ const IMPORT_COLLECTIONS = {
         ? boolish(r.customer_tax_exempt, true)
         : customer?.taxExempt !== false;
       const taxPercent = s(r.tax_percent) || s(customer?.taxPercent || "0") || "0";
-      const proposalSubmitDate = s(r.proposal_submit_date);
-      const proposalAcceptedDate = s(r.proposal_accepted_date);
+      const proposalSubmitDate = csvCalendarDateToMongo(r.proposal_submit_date);
+      const proposalAcceptedDate = csvCalendarDateToMongo(r.proposal_accepted_date);
 
       // Header-only upsert — do not touch scopeDetails / otherItems / datasheets / attachments
       // (import line items + datasheets via child CSVs).
@@ -644,13 +667,13 @@ const IMPORT_COLLECTIONS = {
         quotedBy: preparedBy,
         proposalApprovedBy: s(r.proposal_approved_by),
         quoteType: s(r.quote_type),
-        dueDate: s(r.due_date),
+        dueDate: csvCalendarDateToMongo(r.due_date),
         proposalSubmitDate,
         proposalAcceptedDate,
         submitDate: proposalSubmitDate,
         acceptDate: proposalAcceptedDate,
-        invoiceSubmitDate: s(r.invoice_submit_date),
-        invoicePaidDate: s(r.invoice_paid_date),
+        invoiceSubmitDate: csvCalendarDateToMongo(r.invoice_submit_date),
+        invoicePaidDate: csvCalendarDateToMongo(r.invoice_paid_date),
         internalNotes,
         notes: internalNotes,
         customerNotes: s(r.customer_notes),
@@ -881,6 +904,7 @@ const IMPORT_COLLECTIONS = {
       if (tab && !["DataSheet", "Disassembly", "Assembly"].includes(tab)) {
         errs.push('active_tab must be "DataSheet", "Disassembly", or "Assembly"');
       }
+      errs.push(...validateCsvDateColumns(r, ["date"]));
       return errs;
     },
     buildPayload: (r, ctx) => {
@@ -897,7 +921,7 @@ const IMPORT_COLLECTIONS = {
       return {
         serviceProposalId,
         sheet: {
-          date: s(r.date),
+          date: normalizeCsvCalendarDate(r.date),
           technician: s(r.technician),
           section: s(r.section),
           activeTab: s(r.active_tab),
@@ -1001,6 +1025,7 @@ const IMPORT_COLLECTIONS = {
       if (tab && !["Field Frame", "Armature"].includes(tab)) {
         errs.push('active_tab must be "Field Frame" or "Armature"');
       }
+      errs.push(...validateCsvDateColumns(r, ["date"]));
       return errs;
     },
     buildPayload: (r, ctx) => {
@@ -1015,7 +1040,7 @@ const IMPORT_COLLECTIONS = {
       return {
         serviceProposalId,
         sheet: {
-          date: s(r.date),
+          date: normalizeCsvCalendarDate(r.date),
           technician: s(r.technician),
           section: s(r.section),
           activeTab: s(r.active_tab),
@@ -1149,6 +1174,33 @@ const IMPORT_COLLECTIONS = {
           errs.push(err.message || "vendor_documents_json must be valid JSON array");
         }
       }
+      errs.push(...validateCsvDateColumns(r, PO_CSV_DATE_COLUMNS));
+      if (s(r.payments_json)) {
+        try {
+          const pays = parseJsonArrayField(r.payments_json, "payments_json");
+          pays.forEach((p, idx) => {
+            const d = s(p?.date);
+            if (d && !normalizeCsvCalendarDate(d)) {
+              errs.push(`payments_json[${idx}].date must be a valid date (use YYYY-MM-DD)`);
+            }
+          });
+        } catch {
+          /* already reported */
+        }
+      }
+      if (s(r.line_items_json)) {
+        try {
+          const lines = parseJsonArrayField(r.line_items_json, "line_items_json");
+          lines.forEach((it, idx) => {
+            const d = s(it?.receivedDate ?? it?.received_date);
+            if (d && !normalizeCsvCalendarDate(d)) {
+              errs.push(`line_items_json[${idx}].receivedDate must be a valid date (use YYYY-MM-DD)`);
+            }
+          });
+        } catch {
+          /* already reported */
+        }
+      }
       return errs;
     },
     buildPayload: async (r, ctx) => {
@@ -1209,7 +1261,7 @@ const IMPORT_COLLECTIONS = {
           taxPercent: s(it?.taxPercent ?? it?.tax_percent ?? "0") || "0",
           receivedQty: s(it?.receivedQty ?? it?.received_qty ?? "0") || "0",
           receivingStatus: s(it?.receivingStatus ?? it?.receiving_status ?? "Ordered") || "Ordered",
-          receivedDate: s(it?.receivedDate ?? it?.received_date),
+          receivedDate: csvCalendarDateToMongo(it?.receivedDate ?? it?.received_date),
           inventoryItemId,
         };
       });
@@ -1217,7 +1269,7 @@ const IMPORT_COLLECTIONS = {
       const payRaw = s(r.payments_json) ? parseJsonArrayField(r.payments_json, "payments_json") : [];
       const payments = payRaw.map((p) => ({
         id: s(p?.id) || newLineId("pop"),
-        date: s(p?.date),
+        date: csvCalendarDateToMongo(p?.date),
         amount: s(p?.amount),
         method: s(p?.method),
         paidBy: s(p?.paidBy ?? p?.paid_by),
@@ -1246,11 +1298,11 @@ const IMPORT_COLLECTIONS = {
         vendorPhone: s(r.vendor_phone) || vendorPhoneFromDb,
         serviceProposalId,
         jobNumber: s(r.job_number),
-        poCutDate: s(r.po_cut_date),
-        dueDate: s(r.due_date),
-        poInvoiceReceiveDate: s(r.po_invoice_receive_date),
-        poItemReceiveDate: s(r.po_item_receive_date),
-        poPaidDate: s(r.po_paid_date),
+        poCutDate: csvCalendarDateToMongo(r.po_cut_date),
+        dueDate: csvCalendarDateToMongo(r.due_date),
+        poInvoiceReceiveDate: csvCalendarDateToMongo(r.po_invoice_receive_date),
+        poItemReceiveDate: csvCalendarDateToMongo(r.po_item_receive_date),
+        poPaidDate: csvCalendarDateToMongo(r.po_paid_date),
         paymentMethod: s(r.payment_method),
         paidBy: s(r.paid_by),
         paymentStatus: s(r.payment_status || "Unpaid") || "Unpaid",
