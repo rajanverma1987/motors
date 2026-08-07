@@ -12,7 +12,7 @@ import TileColorPicker from "@/components/ui/tile-color-picker";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { DROPDOWN_DEFINITIONS } from "@/lib/dropdown-catalog";
+import { DROPDOWN_DEFINITIONS, filterGroupKey } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveStatusTileProps, serializeTileColorForMap } from "@/lib/work-order-status-tiles";
 
@@ -117,6 +117,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         label: "",
         filterGroup: "",
         sortOrder: entries.length * 10,
+        filterGroupBgColor: "",
+        filterGroupTextColor: "",
         tileBgColor: "",
         tileTextColor: "",
         tileColor: "",
@@ -177,6 +179,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           prev?.sortOrder != null && Number.isFinite(Number(prev.sortOrder))
             ? Math.trunc(Number(prev.sortOrder))
             : lineIdx * 10,
+        filterGroupBgColor: prev?.filterGroupBgColor ?? "",
+        filterGroupTextColor: prev?.filterGroupTextColor ?? "",
         tileBgColor: prev?.tileBgColor ?? "",
         tileTextColor: prev?.tileTextColor ?? "",
         tileColor: prev?.tileColor || "",
@@ -226,8 +230,10 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               <>
                 {" "}
                 Statuses that share the same <span className="font-medium text-title">Filter Group</span> appear as one
-                summary filter card on Service Proposals. <span className="font-medium text-title">Sort</span> controls
-                status column order in the table; the lowest Sort in a group sets that card&apos;s color.
+                summary filter card on Service Proposals.{" "}
+                <span className="font-medium text-title">Filter Group colors</span> style those cards (shared across
+                statuses in the group; if unset, the lowest-Sort member&apos;s tile colors are used).{" "}
+                <span className="font-medium text-title">Sort</span> controls status column order in the table.
               </>
             ) : null}{" "}
             Quote statuses are stored on each RFQ; keep an{" "}
@@ -262,7 +268,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-border">
-            <table className={`w-full text-sm ${showQuoteFilterGroupColumns ? "min-w-[48rem]" : "min-w-[36rem]"}`}>
+            <table className={`w-full text-sm ${showQuoteFilterGroupColumns ? "min-w-[62rem]" : "min-w-[36rem]"}`}>
               <thead className="border-b border-border bg-form-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-secondary">
                 <tr>
                   <th className="w-24 px-3 py-2">Order</th>
@@ -272,6 +278,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                     <>
                       <th className="min-w-[8rem] px-3 py-2">Filter Group</th>
                       <th className="w-24 px-3 py-2">Sort</th>
+                      <th className="min-w-[14rem] px-3 py-2">Filter Group colors</th>
                     </>
                   ) : null}
                   {showShopFloorColumn ? (
@@ -328,8 +335,27 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           <Input
                             value={row.filterGroup ?? ""}
                             onChange={(e) => {
+                              const nextName = e.target.value ?? "";
+                              const nextKey = filterGroupKey(nextName || row.label || row.value);
+                              const peer =
+                                nextKey &&
+                                entries.find(
+                                  (e2, i2) =>
+                                    i2 !== idx &&
+                                    filterGroupKey(e2.filterGroup || e2.label || e2.value) === nextKey &&
+                                    (e2.filterGroupBgColor || e2.filterGroupTextColor)
+                                );
                               const next = [...entries];
-                              next[idx] = { ...next[idx], filterGroup: e.target.value ?? "" };
+                              next[idx] = {
+                                ...next[idx],
+                                filterGroup: nextName,
+                                ...(peer
+                                  ? {
+                                      filterGroupBgColor: peer.filterGroupBgColor ?? "",
+                                      filterGroupTextColor: peer.filterGroupTextColor ?? "",
+                                    }
+                                  : {}),
+                              };
                               patchEntries(next);
                             }}
                             className="!gap-0"
@@ -351,6 +377,28 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                               patchEntries(next);
                             }}
                             className="!gap-0"
+                          />
+                        </td>
+                        <td className="px-3 py-2 align-top">
+                          <TileColorPicker
+                            bgColor={row.filterGroupBgColor ?? ""}
+                            textColor={row.filterGroupTextColor ?? ""}
+                            onChange={({ tileBgColor, tileTextColor }) => {
+                              const gk = filterGroupKey(row.filterGroup || row.label || row.value);
+                              const next = entries.map((e, i) => {
+                                const sameGroup =
+                                  i === idx ||
+                                  (gk &&
+                                    filterGroupKey(e.filterGroup || e.label || e.value) === gk);
+                                if (!sameGroup) return e;
+                                return {
+                                  ...e,
+                                  filterGroupBgColor: tileBgColor ?? "",
+                                  filterGroupTextColor: tileTextColor ?? "",
+                                };
+                              });
+                              patchEntries(next);
+                            }}
                           />
                         </td>
                       </>

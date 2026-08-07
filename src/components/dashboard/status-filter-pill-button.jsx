@@ -562,12 +562,12 @@ export default function StatusFilterPillButton({
         "!bg-transparent hover:!bg-transparent overflow-visible",
         active
           ? "border-transparent shadow-[inset_0_0_0_2px_rgba(0,0,0,0.34),0_2px_10px_rgba(0,0,0,0.1)] dark:shadow-[inset_0_0_0_2px_rgba(255,255,255,0.55),0_2px_10px_rgba(0,0,0,0.35)]"
-          : "border-black/10 opacity-[0.7] hover:opacity-100 dark:border-white/15",
+          : "border-black/10 dark:border-white/15",
       ].join(" ")
     : "";
 
   const shellClass = [
-    "status-filter-pill group relative inline-flex border text-left transition-[border-color,background-color,box-shadow,opacity,transform] duration-150 ease-out",
+    "status-filter-pill group relative inline-flex border text-left transition-[border-color,background-color,box-shadow,transform] duration-150 ease-out",
     isSoft ? "" : "overflow-hidden",
     "rounded-none bg-card",
     `status-filter-pill--${variant}`,

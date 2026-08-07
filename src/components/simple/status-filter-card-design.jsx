@@ -7,7 +7,7 @@ export const STATUS_FILTER_CARD_VARIANTS = [
   { id: "rail", label: "Rail", hint: "Left color rail" },
   { id: "amount", label: "Amount", hint: "Dollar first" },
   { id: "split", label: "Split", hint: "Count panel on right" },
-  { id: "soft", label: "Soft", hint: "Tinted wash" },
+  { id: "soft", label: "Soft", hint: "Filled with exact status colors" },
   { id: "ink", label: "Ink", hint: "Minimal type-led" },
 ];
 

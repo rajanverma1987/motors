@@ -4,7 +4,11 @@
  */
 
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
-import { tileFieldsFromEntry, serializeTileColorForMap } from "@/lib/work-order-status-tiles";
+import {
+  normalizeHexColor,
+  tileFieldsFromEntry,
+  serializeTileColorForMap,
+} from "@/lib/work-order-status-tiles";
 
 /** Default quote statuses when Settings → Dropdowns has never been configured (legacy). */
 export const QUOTE_STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
@@ -132,6 +136,8 @@ function normalizeQuoteEntries(rawEntries) {
       label,
       filterGroup,
       sortOrder,
+      filterGroupBgColor: normalizeHexColor(raw?.filterGroupBgColor) || "",
+      filterGroupTextColor: normalizeHexColor(raw?.filterGroupTextColor) || "",
     });
     if (uniq.length >= MAX_QUOTE_STATUS_OPTIONS) break;
   }
@@ -144,6 +150,8 @@ function normalizeQuoteEntries(rawEntries) {
         label,
         filterGroup: label,
         sortOrder: index * 10,
+        filterGroupBgColor: "",
+        filterGroupTextColor: "",
         tileBgColor: "",
         tileTextColor: "",
         tileColor: "",
@@ -343,7 +351,8 @@ export function isQuoteStatusFilterGroupKey(key) {
 
 /**
  * One summary-card spec per distinct Filter Group (combined member statuses).
- * Card label/color come from the member with lowest sortOrder (entries order as tiebreak).
+ * Card label/order come from the member with lowest sortOrder (entries order as tiebreak).
+ * Card colors use Filter Group colors (shared); fall back to that top member's status tile colors.
  */
 export function buildQuoteStatusFilterCardSpecs(mergedSettings) {
   const entries = mergedSettings?.controlledDropdowns?.quote_status?.entries;
@@ -375,6 +384,13 @@ export function buildQuoteStatusFilterCardSpecs(mergedSettings) {
     const sortOrder = Number.isFinite(Number(g.top.sortOrder))
       ? Number(g.top.sortOrder)
       : g.topIndex * 10;
+    const colorSource =
+      g.members.find(
+        (m) =>
+          normalizeHexColor(m.filterGroupBgColor) || normalizeHexColor(m.filterGroupTextColor)
+      ) || g.top;
+    const filterGroupBgColor = normalizeHexColor(colorSource.filterGroupBgColor) || "";
+    const filterGroupTextColor = normalizeHexColor(colorSource.filterGroupTextColor) || "";
     return {
       key: `fg:${gk}`,
       label: String(g.top.filterGroup || g.top.label || g.top.value || "").trim() || gk,
@@ -382,6 +398,8 @@ export function buildQuoteStatusFilterCardSpecs(mergedSettings) {
       sortOrder,
       tileValue: String(g.top.value ?? "").trim().toLowerCase(),
       topIndex: g.topIndex,
+      filterGroupBgColor,
+      filterGroupTextColor,
     };
   });
 

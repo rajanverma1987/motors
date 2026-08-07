@@ -477,17 +477,21 @@ export default function ServiceProposalsPanel({
       const specs = buildQuoteStatusFilterCardSpecs(mergedSettings);
       buttons = specs.map((spec, optIdx) => {
         const matched = pool.filter((r) => statusMatchesFilter(r.status, spec.key));
-        const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
+        const fallback = quoteStatusTileColorForValue(
           mergedSettings,
           spec.tileValue,
           spec.topIndex >= 0 ? spec.topIndex : optIdx
         );
+        const tileBgColor = spec.filterGroupBgColor || fallback.tileBgColor || "";
+        const tileTextColor = spec.filterGroupTextColor || fallback.tileTextColor || "";
+        const tileColor =
+          tileBgColor || tileTextColor ? "" : fallback.tileColor || "";
         return {
           key: spec.key,
           label: spec.label,
           count: matched.length,
           amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
-          tileAppearance: resolveStatusTileProps(tileColor, index, {
+          tileAppearance: resolveStatusTileProps(tileColor, fallback.index, {
             tileBgColor,
             tileTextColor,
             tileColor,
