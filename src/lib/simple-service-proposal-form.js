@@ -214,6 +214,91 @@ export function formatSimpleMoney(n) {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+/** Totals from scope / other lines (+ tax when customer is not tax-exempt). */
+export function computeSimpleServiceProposalTotals(form) {
+  const scopeTotal = sumLinePrices(form?.scopeDetails);
+  const otherTotal = sumLinePrices(form?.otherItems);
+  const subtotal = scopeTotal + otherTotal;
+  const showTax = form?.customerTaxExempt === false;
+  const taxPct = showTax ? parseMoneyInput(form?.taxPercent) : 0;
+  const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;
+  return {
+    proposalTotal: subtotal,
+    taxCollected: taxAmount,
+    total: subtotal + taxAmount,
+  };
+}
+
+function lineListHasMoney(lines) {
+  return Array.isArray(lines) && lines.some((line) => String(line?.price ?? "").trim() !== "");
+}
+
+/**
+ * Normalize a Mongo/API service-proposal doc (incl. CSV imports) into Service Proposals table shape.
+ * Maps stored form fields onto list aliases (quote, date, phone, quotedBy, notes, totals, …).
+ *
+ * @param {Record<string, unknown>} doc
+ * @param {{ companyName?: string, preparedByLabel?: string, phone?: string, email?: string, id?: string }|null} [meta]
+ */
+export function toSimpleServiceProposalListRow(doc, meta = null) {
+  const form = doc && typeof doc === "object" ? doc : {};
+  const m = meta && typeof meta === "object" ? meta : {};
+  const documentNumber = String(form.documentNumber ?? form.quote ?? "").trim();
+  const id =
+    String(m.id || form.id || "").trim() ||
+    (typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `sp-${Date.now()}`);
+
+  const computed = computeSimpleServiceProposalTotals(form);
+  const hasLineMoney =
+    lineListHasMoney(form.scopeDetails) || lineListHasMoney(form.otherItems);
+  const storedTotal = Number(form.total);
+  const totals = hasLineMoney
+    ? computed
+    : {
+        proposalTotal:
+          Number.isFinite(Number(form.proposalTotal)) && Number(form.proposalTotal) !== 0
+            ? Number(form.proposalTotal)
+            : computed.proposalTotal,
+        taxCollected:
+          Number.isFinite(Number(form.taxCollected)) && Number(form.taxCollected) !== 0
+            ? Number(form.taxCollected)
+            : computed.taxCollected,
+        total: Number.isFinite(storedTotal) && storedTotal !== 0 ? storedTotal : computed.total,
+      };
+
+  const phone =
+    String(form.customerPhone || form.phone || m.phone || "").trim() || "";
+  const email =
+    String(form.customerEmail || form.email || m.email || "").trim() || "";
+
+  return {
+    ...form,
+    id,
+    documentNumber,
+    quote: documentNumber,
+    date: String(form.dateCreated || form.date || "").trim(),
+    companyName: String(m.companyName || form.companyName || "").trim(),
+    phone,
+    email,
+    customerPhone: String(form.customerPhone || phone).trim(),
+    customerEmail: String(form.customerEmail || email).trim(),
+    quotedBy: String(m.preparedByLabel || form.quotedBy || form.preparedBy || "").trim(),
+    quoteType: String(form.quoteType || "").trim(),
+    notes: String(form.notes || form.internalNotes || "").trim(),
+    total: totals.total,
+    proposalTotal: totals.proposalTotal,
+    taxCollected: totals.taxCollected,
+    submitDate: String(form.submitDate || form.proposalSubmitDate || "").trim(),
+    acceptDate: String(form.acceptDate || form.proposalAcceptedDate || "").trim(),
+    status: String(form.status || "").trim(),
+    jobStatus: String(form.jobStatus || "").trim(),
+    dueDate: String(form.dueDate || "").trim(),
+    updatedAt: form.updatedAt || new Date().toISOString(),
+  };
+}
+
 /**
  * Map form + display helpers into a list-row for the Service Proposals table.
  * Caller must set `documentNumber` (Classic job/RFQ series) before calling when creating.
@@ -221,39 +306,9 @@ export function formatSimpleMoney(n) {
  * @param {{ companyName?: string, preparedByLabel?: string, approvedByLabel?: string, id?: string }} [meta]
  */
 export function formToServiceProposalListRow(form, meta = {}) {
-  const scopeTotal = sumLinePrices(form.scopeDetails);
-  const otherTotal = sumLinePrices(form.otherItems);
-  const subtotal = scopeTotal + otherTotal;
-  const showTax = form.customerTaxExempt === false;
-  const taxPct = showTax ? parseMoneyInput(form.taxPercent) : 0;
-  const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;
-  const documentNumber = String(form?.documentNumber ?? "").trim();
-  const id =
-    String(meta.id || form.id || "").trim() ||
-    (typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `sp-${Date.now()}`);
-
-  return {
-    ...form,
-    id,
-    documentNumber,
-    quote: documentNumber,
-    date: form.dateCreated || "",
+  return toSimpleServiceProposalListRow(form, {
+    ...meta,
     companyName: meta.companyName || "",
-    phone: form.customerPhone || "",
-    email: form.customerEmail || "",
-    quotedBy: meta.preparedByLabel || form.preparedBy || "",
-    quoteType: form.quoteType || "",
-    notes: form.internalNotes || "",
-    total: subtotal + taxAmount,
-    proposalTotal: subtotal,
-    taxCollected: taxAmount,
-    submitDate: form.proposalSubmitDate || "",
-    acceptDate: form.proposalAcceptedDate || "",
-    status: form.status || "",
-    jobStatus: form.jobStatus || "",
-    dueDate: form.dueDate || "",
-    updatedAt: new Date().toISOString(),
-  };
+    preparedByLabel: meta.preparedByLabel || "",
+  });
 }

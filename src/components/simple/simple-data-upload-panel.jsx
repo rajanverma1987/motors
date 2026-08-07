@@ -280,10 +280,11 @@ export default function SimpleDataUploadPanel() {
       <FormContainer>
         <FormSectionTitle as="h2">Data Upload</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Import Simple portal data collection-by-collection in parent→child order. Download the template, fill it,
-          upload CSV, and only valid records will be imported. Invalid rows are exported immediately with error
-          reasons. Import customers before service proposals. For proposals, import header rows first, then Scope
-          Details and Other Items as separate CSVs (plain columns — no JSON).
+          Import Simple portal data collection-by-collection in parent→child order. Download each template (columns
+          match that collection&apos;s form/model), fill it, and upload — only valid rows import. Invalid rows are
+          exported with error reasons. Recommended sequence: Customers → Vendors → Inventory / Employees / Sales
+          Persons → Service Proposals → Scope Details → Other Items → Purchase Orders. Proposal datasheets stay
+          in-app; vendor/customer/PO file links can use JSON URL columns where the template includes them.
         </p>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-form-bg/70 p-3">
           <p className="text-xs text-secondary">Use this only when you need to reset all uploaded collection data.</p>

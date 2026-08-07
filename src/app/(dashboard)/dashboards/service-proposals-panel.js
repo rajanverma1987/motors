@@ -36,6 +36,7 @@ import {
   buildQuoteStatusFilterCardSpecs,
   quoteStatusMatchesFilter,
   quoteStatusSortOrderForValue,
+  resolveConfiguredStatusSlug,
   workOrderStatusSelectOptionsFromMerged,
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
@@ -48,6 +49,7 @@ import { sortRowsClient } from "@/lib/client-table-sort";
 import {
   formatSimpleMoney,
   formToServiceProposalListRow,
+  toSimpleServiceProposalListRow,
   isSimpleInvoiceRecord,
   RECORD_TYPE_INVOICE,
   RECORD_TYPE_JOB,
@@ -244,15 +246,32 @@ export default function ServiceProposalsPanel({
         fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
       ]);
-      setRows(Array.isArray(list) ? list : []);
-      setCustomers(Array.isArray(cust) ? cust : []);
+      const customersList = Array.isArray(cust) ? cust : [];
+      const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
+      const normalized = (Array.isArray(list) ? list : []).map((doc) => {
+        const customer = byId.get(String(doc?.customerId || "").trim()) || null;
+        return toSimpleServiceProposalListRow(
+          {
+            ...doc,
+            status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
+          },
+          {
+            companyName: customer?.companyName || "",
+            phone: customer?.phone || "",
+            email: customer?.email || "",
+            preparedByLabel: "",
+          }
+        );
+      });
+      setRows(normalized);
+      setCustomers(customersList);
       setEmployees(Array.isArray(emps) ? emps : []);
     } catch {
       setRows([]);
     } finally {
       setReady(true);
     }
-  }, []);
+  }, [mergedSettings]);
 
   useEffect(() => {
     void reload();

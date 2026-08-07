@@ -5,7 +5,11 @@ import Employee from "@/models/Employee";
 import SalesPerson from "@/models/SalesPerson";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
+import UserSettings from "@/models/UserSettings";
 import { parseCsv, toCsv } from "@/lib/simple-import/csv";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { resolveConfiguredStatusSlug } from "@/lib/dropdown-catalog";
+import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
 
 function s(v) {
   return String(v ?? "").trim();
@@ -47,12 +51,23 @@ function newLineId(prefix) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+async function refreshServiceProposalListTotals(doc) {
+  if (!doc) return;
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  const totals = computeSimpleServiceProposalTotals(plain);
+  doc.set("proposalTotal", totals.proposalTotal);
+  doc.set("taxCollected", totals.taxCollected);
+  doc.set("total", totals.total);
+  await doc.save();
+}
+
 const BASE_HEADERS = ["source_system", "external_ref"];
 
 const IMPORT_COLLECTIONS = {
   customers: {
     label: "Customers",
     model: Customer,
+    requiredHeaders: [...BASE_HEADERS, "company_name"],
     headers: [
       ...BASE_HEADERS,
       "customer_number",
@@ -200,6 +215,7 @@ const IMPORT_COLLECTIONS = {
   vendors: {
     label: "Vendors",
     model: Vendor,
+    requiredHeaders: [...BASE_HEADERS, "name"],
     headers: [
       ...BASE_HEADERS,
       "name",
@@ -213,6 +229,7 @@ const IMPORT_COLLECTIONS = {
       "parts_supplied_csv",
       "payment_terms",
       "notes",
+      "attachments_json",
     ],
     sample: {
       source_system: "manual_csv",
@@ -227,42 +244,63 @@ const IMPORT_COLLECTIONS = {
       zip_code: "77002",
       parts_supplied_csv: "Bearing|Copper wire|Insulation paper",
       payment_terms: "Net 30",
-      notes: "",
+      notes: "Preferred bearing vendor",
+      attachments_json: "[]",
     },
     validateRow: (r) => {
       const errs = [];
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.name)) errs.push("name is required");
+      if (s(r.attachments_json)) {
+        try {
+          parseJsonArrayField(r.attachments_json, "attachments_json");
+        } catch (err) {
+          errs.push(err.message || "attachments_json must be valid JSON array");
+        }
+      }
       return errs;
     },
-    buildPayload: (r, ctx) => ({
-      createdByEmail: ctx.ownerEmail,
-      sourceSystem: s(r.source_system || "manual_csv"),
-      externalRef: s(r.external_ref),
-      name: s(r.name),
-      contactName: s(r.contact_name),
-      phone: s(r.phone),
-      email: s(r.email).toLowerCase(),
-      address: s(r.address),
-      city: s(r.city),
-      state: s(r.state),
-      zipCode: s(r.zip_code),
-      partsSupplied: s(r.parts_supplied_csv)
-        ? s(r.parts_supplied_csv)
-            .split("|")
-            .map((x) => s(x))
-            .filter(Boolean)
-        : [],
-      paymentTerms: s(r.payment_terms),
-      notes: s(r.notes),
-      importBatchId: ctx.batchId,
-      importedAt: new Date(),
-      importStatus: "imported",
-    }),
+    buildPayload: (r, ctx) => {
+      const payload = {
+        createdByEmail: ctx.ownerEmail,
+        sourceSystem: s(r.source_system || "manual_csv"),
+        externalRef: s(r.external_ref),
+        name: s(r.name),
+        contactName: s(r.contact_name),
+        phone: s(r.phone),
+        email: s(r.email).toLowerCase(),
+        address: s(r.address),
+        city: s(r.city),
+        state: s(r.state),
+        zipCode: s(r.zip_code),
+        partsSupplied: s(r.parts_supplied_csv)
+          ? s(r.parts_supplied_csv)
+              .split("|")
+              .map((x) => s(x))
+              .filter(Boolean)
+          : [],
+        paymentTerms: s(r.payment_terms),
+        notes: s(r.notes),
+        importBatchId: ctx.batchId,
+        importedAt: new Date(),
+        importStatus: "imported",
+      };
+      if (s(r.attachments_json)) {
+        const docs = parseJsonArrayField(r.attachments_json, "attachments_json");
+        payload.attachments = docs
+          .map((d) => ({
+            name: s(d?.name ?? d?.documentName ?? d?.document_name),
+            url: s(d?.url ?? d?.path),
+          }))
+          .filter((d) => d.name || d.url);
+      }
+      return payload;
+    },
   },
   inventoryItems: {
     label: "Inventory Items",
     model: InventoryItem,
+    requiredHeaders: [...BASE_HEADERS, "name"],
     headers: [...BASE_HEADERS, "name", "sku", "uom", "on_hand", "reserved", "threshold", "location", "notes"],
     sample: {
       source_system: "manual_csv",
@@ -271,10 +309,10 @@ const IMPORT_COLLECTIONS = {
       sku: "BRG-6205",
       uom: "ea",
       on_hand: "40",
-      reserved: "5",
+      reserved: "0",
       threshold: "8",
       location: "Rack A2",
-      notes: "",
+      notes: "Deep groove ball bearing",
     },
     validateRow: (r) => {
       const errs = [];
@@ -291,7 +329,7 @@ const IMPORT_COLLECTIONS = {
       externalRef: s(r.external_ref),
       name: s(r.name),
       sku: s(r.sku),
-      uom: s(r.uom || "ea"),
+      uom: s(r.uom || "ea") || "ea",
       onHand: n(r.on_hand, 0),
       reserved: n(r.reserved, 0),
       threshold: n(r.threshold, 0),
@@ -305,12 +343,12 @@ const IMPORT_COLLECTIONS = {
   employees: {
     label: "Employees",
     model: Employee,
+    requiredHeaders: [...BASE_HEADERS, "name"],
     headers: [
       ...BASE_HEADERS,
       "name",
       "email",
       "role",
-      "role_options_hint",
       "phone",
       "can_login",
       "technician_app_access",
@@ -321,7 +359,6 @@ const IMPORT_COLLECTIONS = {
       name: "Mike Turner",
       email: "mike@shop.com",
       role: "Technician",
-      role_options_hint: "Technician|Lead|Office|Supervisor|Manager|Other",
       phone: "+1 713 555 0140",
       can_login: "false",
       technician_app_access: "true",
@@ -332,28 +369,25 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.name)) errs.push("name is required");
       return errs;
     },
-    buildPayload: (r, ctx) => {
-      const canLoginRaw = s(r.can_login).toLowerCase();
-      const appAccessRaw = s(r.technician_app_access).toLowerCase();
-      return {
-        createdByEmail: ctx.ownerEmail,
-        sourceSystem: s(r.source_system || "manual_csv"),
-        externalRef: s(r.external_ref),
-        name: s(r.name),
-        email: s(r.email).toLowerCase(),
-        role: s(r.role),
-        phone: s(r.phone),
-        canLogin: canLoginRaw === "true" || canLoginRaw === "yes" || canLoginRaw === "1",
-        technicianAppAccess: appAccessRaw === "true" || appAccessRaw === "yes" || appAccessRaw === "1",
-        importBatchId: ctx.batchId,
-        importedAt: new Date(),
-        importStatus: "imported",
-      };
-    },
+    buildPayload: (r, ctx) => ({
+      createdByEmail: ctx.ownerEmail,
+      sourceSystem: s(r.source_system || "manual_csv"),
+      externalRef: s(r.external_ref),
+      name: s(r.name),
+      email: s(r.email).toLowerCase(),
+      role: s(r.role),
+      phone: s(r.phone),
+      canLogin: boolish(r.can_login, false),
+      technicianAppAccess: boolish(r.technician_app_access, false),
+      importBatchId: ctx.batchId,
+      importedAt: new Date(),
+      importStatus: "imported",
+    }),
   },
   salesPersons: {
     label: "Sales Persons",
     model: SalesPerson,
+    requiredHeaders: [...BASE_HEADERS, "name"],
     headers: [...BASE_HEADERS, "name", "phone", "email", "bank_detail"],
     sample: {
       source_system: "manual_csv",
@@ -385,6 +419,8 @@ const IMPORT_COLLECTIONS = {
   simpleServiceProposals: {
     label: "Service Proposals",
     model: SimpleServiceProposal,
+    /** Older CSVs may omit newer optional columns; these must always be present. */
+    requiredHeaders: [...BASE_HEADERS, "customer_external_ref"],
     headers: [
       ...BASE_HEADERS,
       "customer_external_ref",
@@ -395,7 +431,13 @@ const IMPORT_COLLECTIONS = {
       "job_status",
       "date_created",
       "company_name",
+      "customer_phone",
+      "customer_email",
+      "customer_tax_exempt",
+      "tax_percent",
       "customer_po",
+      "shipping_po",
+      "motor_power",
       "nameplate",
       "manufacturer",
       "hp_kw",
@@ -404,7 +446,19 @@ const IMPORT_COLLECTIONS = {
       "volts",
       "amps",
       "rpm",
+      "sl",
+      "cl",
+      "cd",
+      "bars",
+      "motor_paint",
       "prepared_by",
+      "proposal_approved_by",
+      "quote_type",
+      "due_date",
+      "proposal_submit_date",
+      "proposal_accepted_date",
+      "invoice_submit_date",
+      "invoice_paid_date",
       "internal_notes",
       "customer_notes",
     ],
@@ -415,11 +469,17 @@ const IMPORT_COLLECTIONS = {
       customer_source_system: "manual_csv",
       document_number: "RFQ-0001",
       record_type: "RFQ",
-      status: "Open",
+      status: "Proposal Submitted",
       job_status: "",
       date_created: "2026-08-01",
       company_name: "Acme Pumps",
+      customer_phone: "+1 713 555 0101",
+      customer_email: "john@acmepumps.com",
+      customer_tax_exempt: "true",
+      tax_percent: "0",
       customer_po: "PO-7788",
+      shipping_po: "",
+      motor_power: "AC",
       nameplate: "Original",
       manufacturer: "Siemens",
       hp_kw: "50",
@@ -428,7 +488,19 @@ const IMPORT_COLLECTIONS = {
       volts: "460",
       amps: "62",
       rpm: "1780",
+      sl: "",
+      cl: "",
+      cd: "",
+      bars: "",
+      motor_paint: "",
       prepared_by: "Mike Turner",
+      proposal_approved_by: "",
+      quote_type: "Email",
+      due_date: "2026-08-15",
+      proposal_submit_date: "2026-08-02",
+      proposal_accepted_date: "",
+      invoice_submit_date: "",
+      invoice_paid_date: "",
       internal_notes: "Rush job",
       customer_notes: "Call before ship",
     },
@@ -437,12 +509,16 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.external_ref)) errs.push("external_ref is required");
       if (!s(r.customer_external_ref)) errs.push("customer_external_ref is required");
       const recordType = s(r.record_type || "RFQ").toUpperCase();
-      if (!["RFQ", "JOB", "INVOICE"].includes(recordType)) {
+      if (recordType && !["RFQ", "JOB", "INVOICE"].includes(recordType)) {
         errs.push("record_type must be RFQ, JOB, or INVOICE");
+      }
+      const motorPower = s(r.motor_power || "AC").toUpperCase();
+      if (motorPower && !["AC", "DC"].includes(motorPower)) {
+        errs.push("motor_power must be AC or DC");
       }
       return errs;
     },
-    buildPayload: (r, ctx) => {
+    buildPayload: async (r, ctx) => {
       const customerId = ctx.resolveRef(
         "customers",
         s(r.customer_source_system || "manual_csv"),
@@ -450,20 +526,53 @@ const IMPORT_COLLECTIONS = {
       );
       if (!customerId) throw new Error("customer_external_ref not found");
 
-      // Header-only upsert — do not touch scopeDetails / otherItems (import those via child CSVs).
+      let customer = null;
+      try {
+        customer = await Customer.findOne({ _id: customerId, createdByEmail: ctx.ownerEmail })
+          .select("companyName phone email taxExempt taxPercent")
+          .lean();
+      } catch {
+        customer = null;
+      }
+
+      const settingsDoc = await UserSettings.findOne({ ownerEmail: ctx.ownerEmail }).lean();
+      const mergedSettings = mergeUserSettings(settingsDoc?.settings);
+      const documentNumber = s(r.document_number);
+      const dateCreated = s(r.date_created);
+      const preparedBy = s(r.prepared_by);
+      const internalNotes = s(r.internal_notes);
+      const companyName = s(r.company_name) || s(customer?.companyName);
+      const customerPhone = s(r.customer_phone) || s(customer?.phone);
+      const customerEmail = (s(r.customer_email) || s(customer?.email)).toLowerCase();
+      const status = resolveConfiguredStatusSlug(r.status, mergedSettings);
+      const motorPower = s(r.motor_power || "AC").toUpperCase() || "AC";
+      const hasTaxExemptCol = Object.prototype.hasOwnProperty.call(r, "customer_tax_exempt") && s(r.customer_tax_exempt) !== "";
+      const customerTaxExempt = hasTaxExemptCol
+        ? boolish(r.customer_tax_exempt, true)
+        : customer?.taxExempt !== false;
+      const taxPercent = s(r.tax_percent) || s(customer?.taxPercent || "0") || "0";
+      const proposalSubmitDate = s(r.proposal_submit_date);
+      const proposalAcceptedDate = s(r.proposal_accepted_date);
+
+      // Header-only upsert — do not touch scopeDetails / otherItems / datasheets / attachments
+      // (import line items via child CSVs; datasheets stay in-app).
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
         externalRef: s(r.external_ref),
         customerId,
-        documentNumber: s(r.document_number),
+        documentNumber,
+        quote: documentNumber,
         recordType: s(r.record_type || "RFQ").toUpperCase() || "RFQ",
-        status: s(r.status),
+        status,
         jobStatus: s(r.job_status),
-        dateCreated: s(r.date_created),
-        companyName: s(r.company_name),
+        dateCreated,
+        date: dateCreated,
+        companyName,
         customerPo: s(r.customer_po),
-        namePlate: s(r.nameplate || "Original"),
+        shippingPo: s(r.shipping_po),
+        motorPower,
+        namePlate: s(r.nameplate || "Original") || "Original",
         manufacturer: s(r.manufacturer),
         hpKw: s(r.hp_kw),
         frameType: s(r.frame_type),
@@ -471,9 +580,31 @@ const IMPORT_COLLECTIONS = {
         volts: s(r.volts),
         amps: s(r.amps),
         rpm: s(r.rpm),
-        preparedBy: s(r.prepared_by),
-        internalNotes: s(r.internal_notes),
+        sl: s(r.sl),
+        cl: s(r.cl),
+        cd: s(r.cd),
+        bars: s(r.bars),
+        motorPaint: s(r.motor_paint),
+        preparedBy,
+        quotedBy: preparedBy,
+        proposalApprovedBy: s(r.proposal_approved_by),
+        quoteType: s(r.quote_type),
+        dueDate: s(r.due_date),
+        proposalSubmitDate,
+        proposalAcceptedDate,
+        submitDate: proposalSubmitDate,
+        acceptDate: proposalAcceptedDate,
+        invoiceSubmitDate: s(r.invoice_submit_date),
+        invoicePaidDate: s(r.invoice_paid_date),
+        internalNotes,
+        notes: internalNotes,
         customerNotes: s(r.customer_notes),
+        customerPhone,
+        customerEmail,
+        phone: customerPhone,
+        email: customerEmail,
+        customerTaxExempt,
+        taxPercent,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
@@ -486,6 +617,7 @@ const IMPORT_COLLECTIONS = {
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref", "description"],
     headers: [
       ...BASE_HEADERS,
       "service_proposal_external_ref",
@@ -544,7 +676,7 @@ const IMPORT_COLLECTIONS = {
       else list.push(payload.line);
       doc.set("scopeDetails", list);
       doc.markModified("scopeDetails");
-      await doc.save();
+      await refreshServiceProposalListTotals(doc);
     },
   },
   /** Child of Service Proposals — one CSV row per other/parts line (no JSON). */
@@ -553,6 +685,7 @@ const IMPORT_COLLECTIONS = {
     model: SimpleServiceProposal,
     skipModelValidation: true,
     parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref", "description"],
     headers: [
       ...BASE_HEADERS,
       "service_proposal_external_ref",
@@ -633,45 +766,60 @@ const IMPORT_COLLECTIONS = {
       else list.push(payload.line);
       doc.set("otherItems", list);
       doc.markModified("otherItems");
-      await doc.save();
+      await refreshServiceProposalListTotals(doc);
     },
   },
   simplePurchaseOrders: {
     label: "Purchase Orders",
     model: SimplePurchaseOrder,
+    requiredHeaders: [...BASE_HEADERS, "vendor_external_ref", "po_type"],
     headers: [
       ...BASE_HEADERS,
       "po_type",
       "po_number",
       "vendor_external_ref",
       "vendor_source_system",
+      "vendor_phone",
       "service_proposal_external_ref",
       "service_proposal_source_system",
       "job_number",
       "po_cut_date",
       "due_date",
+      "po_invoice_receive_date",
+      "po_item_receive_date",
+      "po_paid_date",
+      "payment_method",
+      "paid_by",
       "payment_status",
       "comments",
       "line_items_json",
       "payments_json",
+      "vendor_documents_json",
     ],
     sample: {
       source_system: "manual_csv",
       external_ref: "SPO-2026-01",
       po_type: "job",
-      po_number: "P00012",
+      po_number: "JOB-0001-1",
       vendor_external_ref: "VEND-55",
       vendor_source_system: "manual_csv",
+      vendor_phone: "+1 281 555 7722",
       service_proposal_external_ref: "SSP-1001",
       service_proposal_source_system: "manual_csv",
       job_number: "JOB-0001",
       po_cut_date: "2026-08-01",
       due_date: "2026-08-15",
+      po_invoice_receive_date: "",
+      po_item_receive_date: "",
+      po_paid_date: "",
+      payment_method: "ACH",
+      paid_by: "",
       payment_status: "Unpaid",
-      comments: "",
+      comments: "Need by Friday",
       line_items_json:
-        '[{"itemName":"6205 Bearing","uom":"ea","quantity":"2","price":"45","receivingStatus":"Ordered"}]',
-      payments_json: "[]",
+        '[{"itemName":"6205 Bearing","uom":"ea","quantity":"2","price":"45","taxPercent":"0","receivedQty":"0","receivingStatus":"Ordered","receivedDate":"","inventory_item_external_ref":"INVITEM-501","inventory_item_source_system":"manual_csv"}]',
+      payments_json: '[{"date":"2026-08-10","amount":"90","method":"ACH","paidBy":"AP","notes":""}]',
+      vendor_documents_json: "[]",
     },
     validateRow: (r) => {
       const errs = [];
@@ -696,6 +844,13 @@ const IMPORT_COLLECTIONS = {
           errs.push(err.message || "payments_json must be valid JSON array");
         }
       }
+      if (s(r.vendor_documents_json)) {
+        try {
+          parseJsonArrayField(r.vendor_documents_json, "vendor_documents_json");
+        } catch (err) {
+          errs.push(err.message || "vendor_documents_json must be valid JSON array");
+        }
+      }
       return errs;
     },
     buildPayload: async (r, ctx) => {
@@ -707,11 +862,13 @@ const IMPORT_COLLECTIONS = {
       if (!vendorId) throw new Error("vendor_external_ref not found");
 
       let vendorName = "";
+      let vendorPhoneFromDb = "";
       try {
         const vendor = await Vendor.findOne({ _id: vendorId, createdByEmail: ctx.ownerEmail })
-          .select("name")
+          .select("name phone")
           .lean();
         vendorName = s(vendor?.name);
+        vendorPhoneFromDb = s(vendor?.phone);
       } catch {
         vendorName = "";
       }
@@ -730,18 +887,34 @@ const IMPORT_COLLECTIONS = {
       const lineRaw = s(r.line_items_json)
         ? parseJsonArrayField(r.line_items_json, "line_items_json")
         : [];
-      const lineItems = lineRaw.map((it) => ({
-        id: s(it?.id) || newLineId("pol"),
-        itemName: s(it?.itemName ?? it?.description),
-        uom: s(it?.uom),
-        quantity: s(it?.quantity ?? it?.qty ?? "0"),
-        price: s(it?.price ?? it?.unitPrice ?? "0.00"),
-        taxPercent: s(it?.taxPercent ?? it?.tax_percent ?? "0"),
-        receivedQty: s(it?.receivedQty ?? it?.received_qty ?? "0"),
-        receivingStatus: s(it?.receivingStatus ?? it?.receiving_status ?? "Ordered"),
-        receivedDate: s(it?.receivedDate ?? it?.received_date),
-        inventoryItemId: s(it?.inventoryItemId ?? it?.inventory_item_id),
-      }));
+      const lineItems = lineRaw.map((it) => {
+        let inventoryItemId = s(it?.inventoryItemId ?? it?.inventory_item_id);
+        const invExt = s(it?.inventory_item_external_ref ?? it?.inventoryItemExternalRef);
+        if (!inventoryItemId && invExt) {
+          inventoryItemId = ctx.resolveRef(
+            "inventoryItems",
+            s(it?.inventory_item_source_system ?? it?.inventoryItemSourceSystem ?? "manual_csv"),
+            invExt,
+          );
+          if (!inventoryItemId) {
+            throw new Error(
+              `inventory_item_external_ref "${invExt}" not found — import Inventory Items first`
+            );
+          }
+        }
+        return {
+          id: s(it?.id) || newLineId("pol"),
+          itemName: s(it?.itemName ?? it?.description),
+          uom: s(it?.uom),
+          quantity: s(it?.quantity ?? it?.qty ?? "0") || "0",
+          price: s(it?.price ?? it?.unitPrice ?? "0.00") || "0.00",
+          taxPercent: s(it?.taxPercent ?? it?.tax_percent ?? "0") || "0",
+          receivedQty: s(it?.receivedQty ?? it?.received_qty ?? "0") || "0",
+          receivingStatus: s(it?.receivingStatus ?? it?.receiving_status ?? "Ordered") || "Ordered",
+          receivedDate: s(it?.receivedDate ?? it?.received_date),
+          inventoryItemId,
+        };
+      });
 
       const payRaw = s(r.payments_json) ? parseJsonArrayField(r.payments_json, "payments_json") : [];
       const payments = payRaw.map((p) => ({
@@ -753,6 +926,17 @@ const IMPORT_COLLECTIONS = {
         notes: s(p?.notes),
       }));
 
+      let vendorDocuments = [];
+      if (s(r.vendor_documents_json)) {
+        const docs = parseJsonArrayField(r.vendor_documents_json, "vendor_documents_json");
+        vendorDocuments = docs
+          .map((d) => ({
+            name: s(d?.name ?? d?.documentName ?? d?.document_name),
+            url: s(d?.url ?? d?.path),
+          }))
+          .filter((d) => d.name || d.url);
+      }
+
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -761,14 +945,21 @@ const IMPORT_COLLECTIONS = {
         poNumber: s(r.po_number),
         vendorId,
         vendorName,
+        vendorPhone: s(r.vendor_phone) || vendorPhoneFromDb,
         serviceProposalId,
         jobNumber: s(r.job_number),
         poCutDate: s(r.po_cut_date),
         dueDate: s(r.due_date),
-        paymentStatus: s(r.payment_status || "Unpaid"),
+        poInvoiceReceiveDate: s(r.po_invoice_receive_date),
+        poItemReceiveDate: s(r.po_item_receive_date),
+        poPaidDate: s(r.po_paid_date),
+        paymentMethod: s(r.payment_method),
+        paidBy: s(r.paid_by),
+        paymentStatus: s(r.payment_status || "Unpaid") || "Unpaid",
         comments: s(r.comments),
         lineItems,
         payments,
+        vendorDocuments,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
@@ -784,8 +975,9 @@ export function listSimpleImportCollections() {
 export function templateCsvForSimpleCollection(collection) {
   const cfg = IMPORT_COLLECTIONS[collection];
   if (!cfg) return null;
-  const rows = [cfg.headers, cfg.headers.map((h) => cfg.sample?.[h] ?? "")];
-  return toCsv(rows);
+  const headers = Array.isArray(cfg.headers) ? cfg.headers : [];
+  const sampleRow = headers.map((h) => cfg.sample?.[h] ?? "");
+  return toCsv([headers, sampleRow]);
 }
 
 function rowsToObjects(csvText) {
@@ -849,7 +1041,8 @@ export async function importSimpleCollectionCsv({ collection, csvText, ownerEmai
 
   const { headers, rows } = rowsToObjects(csvText);
   if (!headers.length) throw new Error("CSV is empty");
-  const missingHeaders = cfg.headers.filter((h) => !headers.includes(h));
+  const requiredHeaders = Array.isArray(cfg.requiredHeaders) ? cfg.requiredHeaders : cfg.headers;
+  const missingHeaders = requiredHeaders.filter((h) => !headers.includes(h));
   if (missingHeaders.length) {
     throw new Error(`Missing required template columns: ${missingHeaders.join(", ")}`);
   }
@@ -862,7 +1055,10 @@ export async function importSimpleCollectionCsv({ collection, csvText, ownerEmai
   const invalid = [];
   const validPayloads = [];
   for (let i = 0; i < rows.length; i += 1) {
-    const row = rows[i];
+    const row = { ...rows[i] };
+    for (const h of cfg.headers) {
+      if (!Object.prototype.hasOwnProperty.call(row, h)) row[h] = "";
+    }
     const errs = cfg.validateRow ? cfg.validateRow(row) : [];
     if (errs.length) {
       invalid.push({ rowNumber: i + 2, row, reason: errs.join("; ") });
