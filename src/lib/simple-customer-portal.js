@@ -15,6 +15,7 @@ import {
   PRINT_NOTES_CUSTOMER,
   buildSimpleServiceProposalPrintBundle,
 } from "@/lib/simple-service-proposal-print";
+import { toInputDateValue } from "@/lib/format-date";
 
 function moneyFixed(n) {
   const value = Number.isFinite(n) ? n : 0;
@@ -105,12 +106,12 @@ export function mapSimpleSpForPortal(doc) {
           ? "Job"
           : "Service proposal",
     customerPo: String(doc?.customerPo || "").trim(),
-    dateCreated: String(doc?.dateCreated || "").trim(),
-    dueDate: String(doc?.dueDate || "").trim(),
-    proposalSubmitDate: String(doc?.proposalSubmitDate || "").trim(),
-    proposalAcceptedDate: String(doc?.proposalAcceptedDate || "").trim(),
-    invoiceSubmitDate: String(doc?.invoiceSubmitDate || "").trim(),
-    invoicePaidDate: String(doc?.invoicePaidDate || "").trim(),
+    dateCreated: toInputDateValue(doc?.dateCreated),
+    dueDate: toInputDateValue(doc?.dueDate),
+    proposalSubmitDate: toInputDateValue(doc?.proposalSubmitDate),
+    proposalAcceptedDate: toInputDateValue(doc?.proposalAcceptedDate),
+    invoiceSubmitDate: toInputDateValue(doc?.invoiceSubmitDate),
+    invoicePaidDate: toInputDateValue(doc?.invoicePaidDate),
     status,
     jobStatus,
     motorLabel: motorLabelFromSp(doc),

@@ -68,8 +68,8 @@ export async function PUT(request, context) {
       vendorId: String(payload.vendorId ?? "").trim(),
       vendorName: String(payload.vendorName ?? "").trim(),
       paymentStatus: String(payload.paymentStatus || "Unpaid").trim() || "Unpaid",
-      poCutDate: String(payload.poCutDate ?? "").trim(),
-      dueDate: String(payload.dueDate ?? "").trim(),
+      poCutDate: payload.poCutDate ?? null,
+      dueDate: payload.dueDate ?? null,
     };
     const doc = await SimplePurchaseOrder.findOneAndUpdate(
       { _id: id, createdByEmail: email },

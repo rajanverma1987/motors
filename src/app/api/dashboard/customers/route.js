@@ -43,7 +43,10 @@ export async function GET(request) {
     const email = user.email.trim().toLowerCase();
     const { searchParams } = new URL(request.url);
     const includePagination =
-      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+      searchParams.has("page") ||
+      searchParams.has("pageSize") ||
+      searchParams.has("q") ||
+      searchParams.has("sortBy");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
@@ -55,11 +58,15 @@ export async function GET(request) {
       primaryContactName: "primaryContactName",
       phone: "phone",
       email: "email",
+      customerNumber: "customerNumber",
+      customerType: "customerType",
       ein: "ein",
       creditLimit: "creditLimit",
       taxExempt: "taxExempt",
       taxPercent: "taxPercent",
       city: "city",
+      state: "state",
+      paymentTerms: "paymentTerms",
       createdAt: "createdAt",
     };
     const sortField = sortFieldMap[sortBy] || "companyName";

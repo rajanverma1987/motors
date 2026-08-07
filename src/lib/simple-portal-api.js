@@ -32,8 +32,49 @@ async function api(path, init = {}) {
   return data;
 }
 
+/**
+ * Fetch all Simple service proposals (pages through API). Prefer fetchSimpleServiceProposalsPage for tables.
+ */
 export async function fetchSimpleServiceProposals() {
   return fetchAllPaginatedDashboardItems(SP_API);
+}
+
+/**
+ * Server-paginated list for Simple Service Proposals / Invoices tables.
+ * @param {{
+ *   page?: number,
+ *   pageSize?: number,
+ *   q?: string,
+ *   sortBy?: string,
+ *   sortDir?: string,
+ *   listKind?: "proposals"|"invoices",
+ *   status?: string,
+ *   from?: string,
+ *   to?: string,
+ * }} [query]
+ */
+export async function fetchSimpleServiceProposalsPage(query = {}) {
+  const params = new URLSearchParams();
+  params.set("page", String(Math.max(1, Number(query.page) || 1)));
+  params.set("pageSize", String(Math.min(100, Math.max(1, Number(query.pageSize) || 25))));
+  if (query.q) params.set("q", String(query.q).trim());
+  if (query.sortBy) {
+    params.set("sortBy", String(query.sortBy));
+    params.set("sortDir", query.sortDir === "asc" ? "asc" : "desc");
+  }
+  if (query.listKind) params.set("listKind", String(query.listKind));
+  if (query.status) params.set("status", String(query.status));
+  if (query.from) params.set("from", String(query.from).slice(0, 10));
+  if (query.to) params.set("to", String(query.to).slice(0, 10));
+  const data = await api(`${SP_API}?${params.toString()}`);
+  return {
+    items: Array.isArray(data?.items) ? data.items : [],
+    page: Number(data?.page) || 1,
+    pageSize: Number(data?.pageSize) || 25,
+    totalCount: Number(data?.totalCount) || 0,
+    totals: data?.totals || { total: 0, taxCollected: 0, count: 0 },
+    statusBuckets: Array.isArray(data?.statusBuckets) ? data.statusBuckets : [],
+  };
 }
 
 export async function fetchSimpleServiceProposal(id) {
@@ -71,6 +112,33 @@ export async function fetchSimplePurchaseOrders(query = {}) {
   if (query.q) params.set("q", query.q);
   const qs = params.toString();
   return fetchAllPaginatedDashboardItems(qs ? `${PO_API}?${qs}` : PO_API);
+}
+
+/**
+ * Server-paginated Simple purchase orders list.
+ */
+export async function fetchSimplePurchaseOrdersPage(query = {}) {
+  const params = new URLSearchParams();
+  params.set("page", String(Math.max(1, Number(query.page) || 1)));
+  params.set("pageSize", String(Math.min(100, Math.max(1, Number(query.pageSize) || 25))));
+  if (query.q) params.set("q", String(query.q).trim());
+  if (query.sortBy) {
+    params.set("sortBy", String(query.sortBy));
+    params.set("sortDir", query.sortDir === "asc" ? "asc" : "desc");
+  }
+  if (query.paymentStatus) params.set("paymentStatus", String(query.paymentStatus));
+  if (query.from) params.set("from", String(query.from).slice(0, 10));
+  if (query.to) params.set("to", String(query.to).slice(0, 10));
+  if (query.serviceProposalId) params.set("serviceProposalId", String(query.serviceProposalId));
+  if (query.jobNumber) params.set("jobNumber", String(query.jobNumber));
+  const data = await api(`${PO_API}?${params.toString()}`);
+  return {
+    items: Array.isArray(data?.items) ? data.items : [],
+    page: Number(data?.page) || 1,
+    pageSize: Number(data?.pageSize) || 25,
+    totalCount: Number(data?.totalCount) || 0,
+    paymentBuckets: Array.isArray(data?.paymentBuckets) ? data.paymentBuckets : [],
+  };
 }
 
 export async function createSimplePurchaseOrder(row) {

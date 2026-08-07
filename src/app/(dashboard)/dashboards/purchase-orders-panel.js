@@ -23,13 +23,13 @@ import {
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
 import { formatDateMdy } from "@/lib/format-date";
-import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-date-filter";
+import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
   deleteSimplePurchaseOrder,
-  fetchSimplePurchaseOrders,
+  fetchSimplePurchaseOrdersPage,
 } from "@/lib/simple-portal-api";
 import {
   computePoPaymentSummary,
@@ -93,6 +93,11 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [vendorById, setVendorById] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [paymentFilter, setPaymentFilter] = useState(FILTER_ALL);
+  const [tableSort, setTableSort] = useState({ key: "poCutDate", direction: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [paymentBuckets, setPaymentBuckets] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState("view");
   const [editingPo, setEditingPo] = useState(null);
@@ -102,18 +107,35 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await fetchSimplePurchaseOrders();
-      setRows(Array.isArray(list) ? list : []);
+      const pageData = await fetchSimplePurchaseOrdersPage({
+        page,
+        pageSize,
+        q: searchQuery,
+        sortBy: tableSort?.key || "poCutDate",
+        sortDir: tableSort?.direction || "desc",
+        paymentStatus: paymentFilter || "",
+        from: dateFrom,
+        to: dateTo,
+      });
+      setRows(Array.isArray(pageData.items) ? pageData.items : []);
+      setTotalCount(Number(pageData.totalCount) || 0);
+      setPaymentBuckets(Array.isArray(pageData.paymentBuckets) ? pageData.paymentBuckets : []);
     } catch {
       setRows([]);
+      setTotalCount(0);
+      setPaymentBuckets([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, pageSize, searchQuery, tableSort, paymentFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,88 +198,48 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     [rows, vendorById]
   );
 
-  const rowsForDate = useMemo(
-    () =>
-      enrichedRows.filter((row) =>
-        recordInAllJobsDateRange(
-          { date: row.poCutDate || row.dueDate || row.createdAt || "" },
-          dateFrom,
-          dateTo
-        )
-      ),
-    [enrichedRows, dateFrom, dateTo]
-  );
-
   const paymentSummaryCards = useMemo(() => {
-    const pool = rowsForDate;
     const tileFor = (index) => resolveStatusTileProps("", index);
-    const sumGrand = (list) => list.reduce((sum, r) => sum + (Number(r.grandTotal) || 0), 0);
-    const byStatus = (key) =>
-      pool.filter((r) => normalizePaymentStatus(r.paymentStatus) === key);
-
+    const bucketMap = new Map();
+    for (const b of paymentBuckets) {
+      const key = normalizePaymentStatus(b.paymentStatus);
+      const prev = bucketMap.get(key) || { count: 0, amount: 0 };
+      bucketMap.set(key, {
+        count: prev.count + (Number(b.count) || 0),
+        amount: prev.amount + (Number(b.amount) || 0),
+      });
+    }
+    const allCount = [...bucketMap.values()].reduce((s, b) => s + b.count, 0);
+    const allAmount = [...bucketMap.values()].reduce((s, b) => s + b.amount, 0);
     const statusCards = [
       { key: FILTER_PAID, label: "Paid", tileIndex: 2 },
       { key: FILTER_UNPAID, label: "Unpaid", tileIndex: 4 },
       { key: FILTER_PARTIAL_PAID, label: "Partial Paid", tileIndex: 3 },
     ].map(({ key, label, tileIndex }) => {
-      const matched = byStatus(key);
+      const hit = bucketMap.get(key) || { count: 0, amount: 0 };
       return {
         key,
         label,
-        count: matched.length,
-        amount: sumGrand(matched),
+        count: hit.count,
+        amount: hit.amount,
         tileAppearance: tileFor(tileIndex),
         icon: paymentFilterIcon(label),
       };
     });
-
     return [
       {
         key: FILTER_ALL,
         label: "All",
-        count: pool.length,
-        amount: sumGrand(pool),
+        count: allCount,
+        amount: allAmount,
         tileAppearance: tileFor(0),
         icon: paymentFilterIcon("All"),
       },
       ...statusCards,
     ];
-  }, [rowsForDate]);
+  }, [paymentBuckets]);
 
-  const paymentFilteredRows = useMemo(() => {
-    if (!paymentFilter) return rowsForDate;
-    return rowsForDate.filter(
-      (r) => normalizePaymentStatus(r.paymentStatus) === paymentFilter
-    );
-  }, [rowsForDate, paymentFilter]);
-
-  const displayRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return paymentFilteredRows;
-    return paymentFilteredRows.filter((row) => {
-      const haystack = [
-        row.poNumber,
-        row.jobNumber,
-        row.vendorName,
-        row.vendorPhone,
-        row.poStatus,
-        row.paymentStatus,
-        row.paymentMethod,
-        row.comments,
-        row.dueDate,
-        row.poCutDate,
-        row.lastPaymentDate,
-        simplePoTypeLabel(row),
-        row.grandTotal != null ? String(row.grandTotal) : "",
-        formatSimpleMoney(Number(row.grandTotal) || 0),
-        formatSimpleMoney(Number(row.paidAmount) || 0),
-        formatSimpleMoney(Number(row.unpaidAmount) || 0),
-      ]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ");
-      return haystack.includes(q);
-    });
-  }, [paymentFilteredRows, searchQuery]);
+  const displayRows = enrichedRows;
 
   const openEdit = (row) => {
     setEditingPo(row);
@@ -508,7 +490,10 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             key={card.key || "__all__"}
             card={card}
             active={(paymentFilter || "") === (card.key || "")}
-            onClick={() => setPaymentFilter(card.key || FILTER_ALL)}
+            onClick={() => {
+              setPage(1);
+              setPaymentFilter(card.key || FILTER_ALL);
+            }}
             formatAmount={(n) =>
               `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
                 maximumFractionDigits: 0,
@@ -525,8 +510,16 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           rowKey="id"
           loading={loading}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search purchase orders…"
+          sortState={tableSort}
+          onSort={(key, direction) => {
+            setPage(1);
+            setTableSort({ key, direction });
+          }}
           onRefresh={reload}
           toolbarBeforeSearch={
             <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
@@ -535,19 +528,25 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             </Button>
           }
           emptyMessage={
-            rows.length === 0
-              ? "No purchase orders yet. Click Add New for a Shop PO, or create a Job PO from a service proposal."
-              : (dateFrom || dateTo) && rowsForDate.length === 0
-                ? "No purchase orders in this date range."
-                : paymentFilter && paymentFilteredRows.length === 0
+            totalCount === 0
+              ? searchQuery.trim()
+                ? "No purchase orders match your search."
+                : paymentFilter
                   ? `No ${paymentFilter.toLowerCase()} purchase orders.`
-                  : searchQuery.trim()
-                    ? "No purchase orders match your search."
-                    : "No purchase orders yet."
+                  : dateFrom || dateTo
+                    ? "No purchase orders in this date range."
+                    : "No purchase orders yet. Click Add New for a Shop PO, or create a Job PO from a service proposal."
+              : "No purchase orders yet."
           }
           fillHeight
           responsive
           dense
+          paginateClientSide={false}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
         />
       </div>
 

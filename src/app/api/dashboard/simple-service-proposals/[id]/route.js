@@ -73,7 +73,8 @@ export async function PUT(request, context) {
       recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
       status: String(payload.status ?? "").trim(),
       jobStatus: String(payload.jobStatus ?? "").trim(),
-      dateCreated: String(payload.dateCreated || payload.date || "").trim(),
+      dateCreated: payload.dateCreated ?? null,
+      date: payload.date ?? payload.dateCreated ?? null,
       companyName: String(payload.companyName ?? "").trim(),
     };
     const doc = await SimpleServiceProposal.findOneAndUpdate(

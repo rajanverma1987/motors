@@ -16,7 +16,6 @@ import {
   INITIAL_CUSTOMER_FORM,
   uploadCustomerDocumentFiles,
 } from "@/lib/customer-record-form";
-import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { parseSimpleOpenParam } from "@/lib/simple-portal-open";
@@ -89,6 +88,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState(FILTER_ALL);
+  const [tableSort, setTableSort] = useState({ key: "companyName", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [customerTotalCount, setCustomerTotalCount] = useState(0);
+  const [leadTotalCount, setLeadTotalCount] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
   const [saving, setSaving] = useState(false);
@@ -98,21 +103,55 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [viewCustomerId, setViewCustomerId] = useState(null);
   const lastHandledCreateNonceRef = useRef(createNonce);
 
+  const showingLeads = typeFilter === FILTER_LEADS;
+
   const loadAll = useCallback(
     async ({ showError = true } = {}) => {
       setLoading(true);
       try {
-        const [customers, leads] = await Promise.all([
-          fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
-          fetchAllPaginatedDashboardItems("/api/dashboard/leads"),
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(pageSize),
+        });
+        if (searchQuery.trim()) params.set("q", searchQuery.trim());
+        if (tableSort?.key) {
+          params.set("sortBy", tableSort.key);
+          params.set("sortDir", tableSort.direction || "asc");
+        }
+        const endpoint = showingLeads
+          ? `/api/dashboard/leads?${params}`
+          : `/api/dashboard/customers?${params}`;
+        const countParams = new URLSearchParams({ page: "1", pageSize: "1" });
+        const [listRes, custCountRes, leadCountRes] = await Promise.all([
+          fetch(endpoint, { credentials: "include", cache: "no-store" }),
+          fetch(`/api/dashboard/customers?${countParams}`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
+          fetch(`/api/dashboard/leads?${countParams}`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
         ]);
-        setCustomerRows(
-          (Array.isArray(customers) ? customers : []).map(customerToTableRow).filter((r) => r.id)
-        );
-        setLeadRows((Array.isArray(leads) ? leads : []).map(leadToTableRow).filter((r) => r.id));
+        const listData = await listRes.json().catch(() => ({}));
+        const custCountData = await custCountRes.json().catch(() => ({}));
+        const leadCountData = await leadCountRes.json().catch(() => ({}));
+        if (!listRes.ok) throw new Error(listData.error || "Failed to load");
+        const items = Array.isArray(listData.items) ? listData.items : [];
+        if (showingLeads) {
+          setLeadRows(items.map(leadToTableRow).filter((r) => r.id));
+          setCustomerRows([]);
+        } else {
+          setCustomerRows(items.map(customerToTableRow).filter((r) => r.id));
+          setLeadRows([]);
+        }
+        setTotalCount(Number(listData.totalCount) || 0);
+        setCustomerTotalCount(Number(custCountData.totalCount) || 0);
+        setLeadTotalCount(Number(leadCountData.totalCount) || 0);
       } catch (err) {
         setCustomerRows([]);
         setLeadRows([]);
+        setTotalCount(0);
         if (showError) {
           await alert({
             title: "Error",
@@ -124,7 +163,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
         setLoading(false);
       }
     },
-    [alert]
+    [alert, page, pageSize, searchQuery, tableSort, showingLeads]
   );
 
   useEffect(() => {
@@ -337,15 +376,13 @@ export default function CustomersPanel({ createNonce = 0 }) {
     }
   };
 
-  const mergedRows = useMemo(() => [...customerRows, ...leadRows], [customerRows, leadRows]);
-
   const typeFilterCards = useMemo(() => {
     const tileFor = (index) => resolveStatusTileProps("", index);
     return [
       {
         key: FILTER_ALL,
         label: "All",
-        count: mergedRows.length,
+        count: customerTotalCount + leadTotalCount,
         amount: null,
         tileAppearance: tileFor(0),
         icon: FiLayers,
@@ -353,7 +390,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
       {
         key: FILTER_CUSTOMERS,
         label: "Customers",
-        count: customerRows.length,
+        count: customerTotalCount,
         amount: null,
         tileAppearance: tileFor(2),
         icon: FiUser,
@@ -361,52 +398,15 @@ export default function CustomersPanel({ createNonce = 0 }) {
       {
         key: FILTER_LEADS,
         label: "Leads",
-        count: leadRows.length,
+        count: leadTotalCount,
         amount: null,
         tileAppearance: tileFor(4),
         icon: FiUserPlus,
       },
     ];
-  }, [mergedRows.length, customerRows.length, leadRows.length]);
+  }, [customerTotalCount, leadTotalCount]);
 
-  const typeFilteredRows = useMemo(() => {
-    if (!typeFilter) return mergedRows;
-    return mergedRows.filter((r) => r.recordType === typeFilter);
-  }, [mergedRows, typeFilter]);
-
-  const displayRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return typeFilteredRows;
-    return typeFilteredRows.filter((row) => {
-      const haystack = [
-        row.recordType,
-        row.customerNumber,
-        row.companyName,
-        row.primaryContactName,
-        row.customerType,
-        row.phone,
-        row.fax,
-        row.email,
-        row.alternatePhone,
-        row.alternateEmail,
-        row.billingContact,
-        row.paymentTerms,
-        row.preferredPaymentMethod,
-        row.preferredContactMethod,
-        row.ein,
-        row.creditLimit,
-        row.city,
-        row.state,
-        row.leadStatus,
-        LEAD_STATUS_LABEL[row.leadStatus],
-        row.taxExempt === false ? "no" : "yes",
-        row.taxPercent,
-      ]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ");
-      return haystack.includes(q);
-    });
-  }, [typeFilteredRows, searchQuery]);
+  const displayRows = showingLeads ? leadRows : customerRows;
 
   const columns = useMemo(
     () => [
@@ -554,19 +554,17 @@ export default function CustomersPanel({ createNonce = 0 }) {
   );
 
   const emptyMessage = (() => {
-    if (mergedRows.length === 0) {
+    if (customerTotalCount === 0 && leadTotalCount === 0) {
       return "No customers or leads yet. Click Add New to create a customer, or wait for assigned leads.";
     }
-    if (typeFilter === FILTER_CUSTOMERS && customerRows.length === 0) {
+    if (totalCount === 0 && searchQuery.trim()) return "No rows match your search.";
+    if (typeFilter === FILTER_CUSTOMERS && totalCount === 0) {
       return "No customers yet. Click Add New to create one.";
     }
-    if (typeFilter === FILTER_LEADS && leadRows.length === 0) {
+    if (typeFilter === FILTER_LEADS && totalCount === 0) {
       return "No leads assigned to this shop yet.";
     }
-    if (typeFilter && typeFilteredRows.length === 0) {
-      return `No ${String(typeFilter).toLowerCase()}s to show.`;
-    }
-    if (searchQuery.trim()) return "No rows match your search.";
+    if (totalCount === 0) return "No customers or leads yet.";
     return "No customers or leads yet.";
   })();
 
@@ -578,7 +576,10 @@ export default function CustomersPanel({ createNonce = 0 }) {
             key={card.key || "__all__"}
             card={card}
             active={(typeFilter || "") === (card.key || "")}
-            onClick={() => setTypeFilter(card.key || FILTER_ALL)}
+            onClick={() => {
+              setPage(1);
+              setTypeFilter(card.key || FILTER_ALL);
+            }}
             formatAmount={() => ""}
           />
         ))}
@@ -591,8 +592,16 @@ export default function CustomersPanel({ createNonce = 0 }) {
           rowKey="rowKey"
           loading={loading}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder="Search company, contact, email, type…"
+          sortState={tableSort}
+          onSort={(key, direction) => {
+            setPage(1);
+            setTableSort({ key, direction });
+          }}
           onRefresh={() => loadAll({ showError: true })}
           toolbarBeforeSearch={
             <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
@@ -605,6 +614,12 @@ export default function CustomersPanel({ createNonce = 0 }) {
           responsive
           dense
           textSize="xs"
+          paginateClientSide={false}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
         />
       </div>
 

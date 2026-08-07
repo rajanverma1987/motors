@@ -179,12 +179,66 @@ export function parseCalendarDate(value, options = {}) {
  * @returns {string}
  */
 export function toInputDateValue(value, options = {}) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    // BSON calendar dates are stored at UTC noon — prefer UTC parts so TZ never shifts the day.
+    if (value.getUTCHours() === 12 && value.getUTCMinutes() === 0 && value.getUTCSeconds() === 0) {
+      const y = value.getUTCFullYear();
+      const m = String(value.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(value.getUTCDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+  }
   const d = parseCalendarDate(value, options);
   if (!d) return "";
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/**
+ * Persist a calendar day as BSON Date at UTC noon (avoids TZ day-shift).
+ * Empty / unparseable → null (clears the field).
+ * @param {unknown} value
+ * @param {{ locale?: string }} [options]
+ * @returns {Date|null}
+ */
+export function toMongoCalendarDate(value, options = {}) {
+  if (value == null || value === "") return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const ymd = toInputDateValue(value, options);
+    if (!ymd) return null;
+    const [y, m, d] = ymd.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+  }
+  const ymd = toInputDateValue(value, options);
+  if (!ymd) return null;
+  const [y, m, d] = ymd.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0));
+}
+
+/**
+ * Mongo `$gte` / `$lte` bounds for calendar-day Date fields (inclusive).
+ * @param {string} fromYmd
+ * @param {string} toYmd
+ * @returns {{ $gte?: Date, $lte?: Date } | null}
+ */
+export function mongoCalendarDateRange(fromYmd, toYmd) {
+  const from = toInputDateValue(fromYmd);
+  const to = toInputDateValue(toYmd);
+  if (!from && !to) return null;
+  if (from && to && from > to) return null;
+  /** @type {{ $gte?: Date, $lte?: Date }} */
+  const range = {};
+  if (from) {
+    const [y, m, d] = from.split("-").map(Number);
+    range.$gte = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+  }
+  if (to) {
+    const [y, m, d] = to.split("-").map(Number);
+    range.$lte = new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999));
+  }
+  return range;
 }
 
 /**

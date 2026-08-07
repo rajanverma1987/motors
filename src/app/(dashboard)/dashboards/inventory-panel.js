@@ -10,7 +10,6 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
 
@@ -51,6 +50,10 @@ export default function InventoryPanel() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -67,10 +70,26 @@ export default function InventoryPanel() {
     async ({ showError = true } = {}) => {
       setLoading(true);
       try {
-        const list = await fetchAllPaginatedDashboardItems("/api/dashboard/inventory/items");
-        setItems(Array.isArray(list) ? list : []);
+        const params = new URLSearchParams({
+          page: String(page),
+          pageSize: String(pageSize),
+        });
+        if (searchQuery.trim()) params.set("q", searchQuery.trim());
+        if (tableSort?.key) {
+          params.set("sortBy", tableSort.key);
+          params.set("sortDir", tableSort.direction || "asc");
+        }
+        const res = await fetch(`/api/dashboard/inventory/items?${params}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Could not load inventory");
+        setItems(Array.isArray(data.items) ? data.items : []);
+        setTotalCount(Number(data.totalCount) || 0);
       } catch (e) {
         setItems([]);
+        setTotalCount(0);
         if (showError) {
           await alert({
             title: "Error",
@@ -82,32 +101,14 @@ export default function InventoryPanel() {
         setLoading(false);
       }
     },
-    [alert]
+    [alert, page, pageSize, searchQuery, tableSort]
   );
 
   useEffect(() => {
     void load({ showError: false });
   }, [load]);
 
-  const displayRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((row) => {
-      const haystack = [
-        row.name,
-        row.sku,
-        row.uom,
-        row.location,
-        row.onHand,
-        row.reserved,
-        row.available,
-        row.threshold,
-      ]
-        .map((v) => String(v ?? "").toLowerCase())
-        .join(" ");
-      return haystack.includes(q);
-    });
-  }, [items, searchQuery]);
+  const displayRows = items;
 
   const openCreate = useCallback(() => {
     setEditingItem(null);
@@ -381,8 +382,16 @@ export default function InventoryPanel() {
         rowKey="id"
         loading={loading}
         searchable
-        onSearch={setSearchQuery}
+        onSearch={(q) => {
+          setPage(1);
+          setSearchQuery(q);
+        }}
         searchPlaceholder="Search part, SKU, UOM, location, qty…"
+        sortState={tableSort}
+        onSort={(key, direction) => {
+          setPage(1);
+          setTableSort({ key, direction });
+        }}
         onRefresh={load}
         toolbarBeforeSearch={
           <Button
@@ -397,15 +406,21 @@ export default function InventoryPanel() {
           </Button>
         }
         emptyMessage={
-          items.length === 0
-            ? "No parts yet. Click Add New, or receive stock on a vendor PO."
-            : searchQuery.trim()
+          totalCount === 0
+            ? searchQuery.trim()
               ? "No parts match your search."
               : "No parts yet. Click Add New, or receive stock on a vendor PO."
+            : "No parts yet. Click Add New, or receive stock on a vendor PO."
         }
         fillHeight
         responsive
         dense
+        paginateClientSide={false}
+        pagination={{ page, pageSize, totalCount }}
+        onPageChange={(nextPage, nextPageSize) => {
+          setPage(nextPage);
+          setPageSize(nextPageSize);
+        }}
       />
 
       <SimpleInventoryItemModal

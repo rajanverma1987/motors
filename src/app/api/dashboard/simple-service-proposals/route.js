@@ -9,6 +9,16 @@ import {
 import { applySimpleServiceProposalInventoryLifecycle } from "@/lib/inventory-service";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
+import {
+  andMongoClauses,
+  loadMergedSettingsForEmail,
+  mongoInvoiceKindClause,
+  mongoProposalKindClause,
+  mongoSpDateRangeClause,
+  mongoStatusFilterClause,
+  simpleSpSortField,
+  statusSortRankExpression,
+} from "@/lib/simple-service-proposal-list-query";
 
 export async function GET(request) {
   try {
@@ -20,33 +30,165 @@ export async function GET(request) {
     const email = user.email.trim().toLowerCase();
     const { searchParams } = new URL(request.url);
     const includePagination =
-      searchParams.has("page") || searchParams.has("pageSize") || searchParams.has("q");
+      searchParams.has("page") ||
+      searchParams.has("pageSize") ||
+      searchParams.has("q") ||
+      searchParams.has("sortBy") ||
+      searchParams.has("listKind") ||
+      searchParams.has("from") ||
+      searchParams.has("to") ||
+      searchParams.has("status");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
     const qText = String(searchParams.get("q") || "").trim();
-    const recordType = String(searchParams.get("recordType") || "").trim().toUpperCase();
+    const listKind = String(searchParams.get("listKind") || "").trim().toLowerCase();
+    const statusFilter = String(searchParams.get("status") || "").trim();
+    const from = String(searchParams.get("from") || "").trim().slice(0, 10);
+    const to = String(searchParams.get("to") || "").trim().slice(0, 10);
+    const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortMul = sortDir === "asc" ? 1 : -1;
 
-    const q = { createdByEmail: email };
-    if (recordType) q.recordType = recordType;
+    const mergedSettings = await loadMergedSettingsForEmail(email);
+    const isInvoices = listKind === "invoices" || listKind === "invoice";
+
+    const kindClause =
+      listKind === "invoices" || listKind === "invoice"
+        ? mongoInvoiceKindClause(mergedSettings)
+        : listKind === "proposals" || listKind === "proposal"
+          ? mongoProposalKindClause(mergedSettings)
+          : null;
+    const dateClause = mongoSpDateRangeClause(from, to);
+    const statusClause = mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoices });
+
+    let searchClause = null;
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [
-        { documentNumber: rx },
-        { companyName: rx },
-        { status: rx },
-        { jobStatus: rx },
-        { customerId: rx },
-      ];
+      searchClause = {
+        $or: [
+          { documentNumber: rx },
+          { quote: rx },
+          { companyName: rx },
+          { status: rx },
+          { jobStatus: rx },
+          { customerId: rx },
+          { customerPhone: rx },
+          { customerEmail: rx },
+          { phone: rx },
+          { email: rx },
+          { quotedBy: rx },
+          { quoteType: rx },
+          { internalNotes: rx },
+          { notes: rx },
+        ],
+      };
     }
 
-    const [totalCount, list] = await Promise.all([
-      SimpleServiceProposal.countDocuments(q),
-      SimpleServiceProposal.find(q).sort({ updatedAt: -1 }).skip(skip).limit(pageSize).lean(),
+    const baseMatch = andMongoClauses({ createdByEmail: email }, kindClause, dateClause);
+    const listMatch = andMongoClauses(baseMatch, statusClause, searchClause);
+
+    const sortField = simpleSpSortField(sortBy);
+    const useStatusRank = sortBy === "status" && !isInvoices;
+
+    const summaryPromise = SimpleServiceProposal.aggregate([
+      { $match: baseMatch },
+      {
+        $group: {
+          _id: { $toLower: { $ifNull: ["$status", ""] } },
+          count: { $sum: 1 },
+          amount: { $sum: { $convert: { input: "$total", to: "double", onError: 0, onNull: 0 } } },
+          taxCollected: {
+            $sum: { $convert: { input: "$taxCollected", to: "double", onError: 0, onNull: 0 } },
+          },
+        },
+      },
     ]);
-    const items = list.map((doc) => serializeSimplePortalDoc(doc));
+
+    const totalsPromise = SimpleServiceProposal.aggregate([
+      { $match: listMatch },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: { $convert: { input: "$total", to: "double", onError: 0, onNull: 0 } } },
+          taxCollected: {
+            $sum: { $convert: { input: "$taxCollected", to: "double", onError: 0, onNull: 0 } },
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    let items = [];
+    let totalCount = 0;
+
+    if (useStatusRank) {
+      const [agg, summaryRows, totalsRows] = await Promise.all([
+        SimpleServiceProposal.aggregate([
+          { $match: listMatch },
+          { $addFields: { __statusRank: statusSortRankExpression(mergedSettings) } },
+          { $sort: { __statusRank: sortMul, updatedAt: -1 } },
+          {
+            $facet: {
+              total: [{ $count: "n" }],
+              page: [{ $skip: skip }, { $limit: pageSize }],
+            },
+          },
+        ]),
+        summaryPromise,
+        totalsPromise,
+      ]);
+      totalCount = Number(agg?.[0]?.total?.[0]?.n) || 0;
+      items = (agg?.[0]?.page || []).map((doc) => serializeSimplePortalDoc(doc));
+      if (!includePagination) return NextResponse.json(items);
+      const totalsRow = totalsRows?.[0] || {};
+      return NextResponse.json({
+        items,
+        page,
+        pageSize,
+        totalCount,
+        totals: {
+          total: Number(totalsRow.total) || 0,
+          taxCollected: Number(totalsRow.taxCollected) || 0,
+          count: Number(totalsRow.count) || totalCount,
+        },
+        statusBuckets: (summaryRows || []).map((r) => ({
+          status: String(r._id || ""),
+          count: Number(r.count) || 0,
+          amount: Number(r.amount) || 0,
+          taxCollected: Number(r.taxCollected) || 0,
+        })),
+      });
+    }
+
+    const sort = { [sortField]: sortMul, updatedAt: -1 };
+    const [count, list, summaryRows, totalsRows] = await Promise.all([
+      SimpleServiceProposal.countDocuments(listMatch),
+      SimpleServiceProposal.find(listMatch).sort(sort).skip(skip).limit(pageSize).lean(),
+      summaryPromise,
+      totalsPromise,
+    ]);
+    totalCount = count;
+    items = list.map((doc) => serializeSimplePortalDoc(doc));
     if (!includePagination) return NextResponse.json(items);
-    return NextResponse.json({ items, page, pageSize, totalCount });
+    const totalsRow = totalsRows?.[0] || {};
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      totalCount,
+      totals: {
+        total: Number(totalsRow.total) || 0,
+        taxCollected: Number(totalsRow.taxCollected) || 0,
+        count: Number(totalsRow.count) || totalCount,
+      },
+      statusBuckets: (summaryRows || []).map((r) => ({
+        status: String(r._id || ""),
+        count: Number(r.count) || 0,
+        amount: Number(r.amount) || 0,
+        taxCollected: Number(r.taxCollected) || 0,
+      })),
+    });
   } catch (err) {
     console.error("Dashboard list simple service proposals error:", err);
     return NextResponse.json({ error: "Failed to list service proposals" }, { status: 500 });
@@ -71,7 +213,8 @@ export async function POST(request) {
       recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
       status: String(payload.status || "").trim(),
       jobStatus: String(payload.jobStatus || "").trim(),
-      dateCreated: String(payload.dateCreated || payload.date || "").trim(),
+      dateCreated: payload.dateCreated ?? null,
+      date: payload.date ?? payload.dateCreated ?? null,
       companyName: String(payload.companyName || "").trim(),
     });
     const item = serializeSimplePortalDoc(doc);

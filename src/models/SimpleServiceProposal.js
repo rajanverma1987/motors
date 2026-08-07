@@ -12,7 +12,7 @@ const simpleServiceProposalSchema = new mongoose.Schema(
     recordType: { type: String, default: "RFQ", trim: true },
     status: { type: String, default: "", trim: true },
     jobStatus: { type: String, default: "", trim: true },
-    dateCreated: { type: String, default: "", trim: true },
+    dateCreated: { type: Date, default: null },
     companyName: { type: String, default: "", trim: true },
     /** Import metadata for external system linking */
     sourceSystem: { type: String, default: "", trim: true },

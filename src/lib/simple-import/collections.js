@@ -19,6 +19,7 @@ import {
   normalizeAcDatasheet,
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
+import { sanitizeSimplePortalPayload } from "@/lib/simple-portal-mongo";
 
 function s(v) {
   return String(v ?? "").trim();
@@ -1385,7 +1386,7 @@ export async function importSimpleCollectionCsv({ collection, csvText, ownerEmai
 
   let imported = 0;
   for (const item of validPayloads) {
-    const payload = item.payload;
+    const payload = sanitizeSimplePortalPayload(item.payload);
     try {
       if (typeof cfg.importRow === "function") {
         await cfg.importRow({ payload, ownerEmail, row: item.row, rowNumber: item.rowNumber });

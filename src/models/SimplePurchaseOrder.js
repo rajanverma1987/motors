@@ -14,8 +14,8 @@ const simplePurchaseOrderSchema = new mongoose.Schema(
     vendorId: { type: String, default: "", trim: true },
     vendorName: { type: String, default: "", trim: true },
     paymentStatus: { type: String, default: "Unpaid", trim: true },
-    poCutDate: { type: String, default: "", trim: true },
-    dueDate: { type: String, default: "", trim: true },
+    poCutDate: { type: Date, default: null },
+    dueDate: { type: Date, default: null },
     /** Import metadata for external system linking */
     sourceSystem: { type: String, default: "", trim: true },
     externalRef: { type: String, default: "", trim: true },

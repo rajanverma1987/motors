@@ -36,8 +36,6 @@ import {
   quoteStatusTileColorForValue,
   buildCombinedQuoteInvoiceStatusOptions,
   buildQuoteStatusFilterCardSpecs,
-  quoteStatusMatchesFilter,
-  quoteStatusSortOrderForValue,
   resolveConfiguredStatusSlug,
   workOrderStatusSelectOptionsFromMerged,
 } from "@/lib/dropdown-catalog";
@@ -45,8 +43,7 @@ import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/w
 import { mergeUserSettings } from "@/lib/user-settings";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
-import { parseAllJobsDateRange, recordInAllJobsDateRange } from "@/lib/all-jobs-date-filter";
-import { sortRowsClient } from "@/lib/client-table-sort";
+import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import {
   formatSimpleMoney,
   formToServiceProposalListRow,
@@ -59,7 +56,8 @@ import {
 } from "@/lib/simple-service-proposal-form";
 import {
   deleteSimpleServiceProposal,
-  fetchSimpleServiceProposals,
+  fetchSimpleServiceProposal,
+  fetchSimpleServiceProposalsPage,
   saveSimpleServiceProposal,
 } from "@/lib/simple-portal-api";
 import { computeNextJobNumber } from "@/lib/job-document-number-format";
@@ -192,7 +190,12 @@ export default function ServiceProposalsPanel({
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [tableSort, setTableSort] = useState({ key: null, direction: "asc" });
+  const [tableSort, setTableSort] = useState({ key: "date", direction: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [statusBuckets, setStatusBuckets] = useState([]);
+  const [listTotals, setListTotals] = useState({ total: 0, taxCollected: 0, count: 0 });
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
 
@@ -267,14 +270,24 @@ export default function ServiceProposalsPanel({
   const reload = useCallback(async () => {
     setReady(false);
     try {
-      const [list, cust, emps] = await Promise.all([
-        fetchSimpleServiceProposals(),
+      const [pageData, cust, emps] = await Promise.all([
+        fetchSimpleServiceProposalsPage({
+          page,
+          pageSize,
+          q: searchQuery,
+          sortBy: tableSort?.key || "date",
+          sortDir: tableSort?.direction || "desc",
+          listKind: isInvoices ? "invoices" : "proposals",
+          status: statusFilter,
+          from: dateFrom,
+          to: dateTo,
+        }),
         fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
       ]);
       const customersList = Array.isArray(cust) ? cust : [];
       const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
-      const normalized = (Array.isArray(list) ? list : []).map((doc) => {
+      const normalized = (Array.isArray(pageData.items) ? pageData.items : []).map((doc) => {
         const customer = byId.get(String(doc?.customerId || "").trim()) || null;
         return toSimpleServiceProposalListRow(
           {
@@ -282,26 +295,46 @@ export default function ServiceProposalsPanel({
             status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
           },
           {
-            companyName: customer?.companyName || "",
-            phone: customer?.phone || "",
-            email: customer?.email || "",
+            companyName: customer?.companyName || doc?.companyName || "",
+            phone: customer?.phone || doc?.phone || doc?.customerPhone || "",
+            email: customer?.email || doc?.email || doc?.customerEmail || "",
             preparedByLabel: "",
           }
         );
       });
       setRows(normalized);
+      setTotalCount(Number(pageData.totalCount) || 0);
+      setStatusBuckets(Array.isArray(pageData.statusBuckets) ? pageData.statusBuckets : []);
+      setListTotals(pageData.totals || { total: 0, taxCollected: 0, count: 0 });
       setCustomers(customersList);
       setEmployees(Array.isArray(emps) ? emps : []);
     } catch {
       setRows([]);
+      setTotalCount(0);
+      setStatusBuckets([]);
+      setListTotals({ total: 0, taxCollected: 0, count: 0 });
     } finally {
       setReady(true);
     }
-  }, [mergedSettings]);
+  }, [
+    mergedSettings,
+    page,
+    pageSize,
+    searchQuery,
+    tableSort,
+    isInvoices,
+    statusFilter,
+    dateFrom,
+    dateTo,
+  ]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [dateFrom, dateTo]);
 
   const employeeLabel = useCallback(
     (id) => buildEmployeeSelectOptions(employees, id).find((o) => o.value === id)?.label || id || "",
@@ -327,15 +360,28 @@ export default function ServiceProposalsPanel({
   };
 
   const handleDeepLinkOpen = useCallback(
-    (openId) => {
-      const row = rows.find((r) => String(r.id) === openId);
+    async (openId) => {
+      let row = rows.find((r) => String(r.id) === openId);
+      if (!row) {
+        try {
+          const doc = await fetchSimpleServiceProposal(openId);
+          if (doc) {
+            row = toSimpleServiceProposalListRow({
+              ...doc,
+              status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
+            });
+          }
+        } catch {
+          return true;
+        }
+      }
       if (!row) return true;
       const rowIsInvoice = isSimpleInvoiceRecord(row, invoiceStatusValues, quoteStatusValues);
       if (isInvoices !== rowIsInvoice) return true;
       openEdit(row);
       return true;
     },
-    [rows, isInvoices, invoiceStatusValues, quoteStatusValues]
+    [rows, isInvoices, invoiceStatusValues, quoteStatusValues, mergedSettings]
   );
 
   useSimpleOpenParam({
@@ -471,52 +517,21 @@ export default function ServiceProposalsPanel({
     [handleRowFieldChange]
   );
 
-  const scopedRows = useMemo(
-    () =>
-      rows.filter((row) => {
-        const isInv = isSimpleInvoiceRecord(row, invoiceStatusValues, quoteStatusValues);
-        return isInvoices ? isInv : !isInv;
-      }),
-    [rows, isInvoices, invoiceStatusValues, quoteStatusValues]
-  );
-
-  const rowsForDate = useMemo(
-    () =>
-      scopedRows.filter((row) =>
-        recordInAllJobsDateRange(
-          { date: row.date || row.dateCreated || "" },
-          dateFrom,
-          dateTo
-        )
-      ),
-    [scopedRows, dateFrom, dateTo]
-  );
-
-  const statusMatchesFilter = useCallback(
-    (rowStatus, filterKey) => {
-      if (!isInvoices) {
-        return quoteStatusMatchesFilter(rowStatus, filterKey, mergedSettings);
-      }
-      const s = String(rowStatus || "")
-        .trim()
-        .toLowerCase();
-      const f = String(filterKey || "")
-        .trim()
-        .toLowerCase();
-      if (!f) return true;
-      if (s === f) return true;
-      const sBare = s.replace(/^invoice:/, "");
-      const fBare = f.replace(/^invoice:/, "");
-      if (f.startsWith("invoice:") || s.startsWith("invoice:")) {
-        return sBare === fBare;
-      }
-      return false;
-    },
-    [isInvoices, mergedSettings]
-  );
+  const bucketByStatus = useMemo(() => {
+    const map = new Map();
+    for (const b of statusBuckets) {
+      const key = statusBareKey(b.status);
+      const prev = map.get(key) || { count: 0, amount: 0, taxCollected: 0 };
+      map.set(key, {
+        count: prev.count + (Number(b.count) || 0),
+        amount: prev.amount + (Number(b.amount) || 0),
+        taxCollected: prev.taxCollected + (Number(b.taxCollected) || 0),
+      });
+    }
+    return map;
+  }, [statusBuckets]);
 
   const statusSummaryCards = useMemo(() => {
-    const pool = rowsForDate;
     const tileAppearanceForKey = (statusKey, fallbackIndex) => {
       if (statusKey === "") return resolveStatusTileProps("", 0);
       const bare = statusBareKey(statusKey);
@@ -538,13 +553,27 @@ export default function ServiceProposalsPanel({
       return resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
     };
 
+    const sumMembers = (memberValues) => {
+      let count = 0;
+      let amount = 0;
+      let taxCollected = 0;
+      for (const m of memberValues || []) {
+        const hit = bucketByStatus.get(statusBareKey(m));
+        if (!hit) continue;
+        count += hit.count;
+        amount += hit.amount;
+        taxCollected += hit.taxCollected;
+      }
+      return { count, amount, taxCollected };
+    };
+
     /** @type {Array<{ key: string, label: string, count: number, amount: number, tileAppearance: ReturnType<typeof resolveStatusTileProps>, icon: typeof FiLayers }>} */
     let buttons;
 
     if (!isInvoices) {
       const specs = buildQuoteStatusFilterCardSpecs(mergedSettings);
       buttons = specs.map((spec, optIdx) => {
-        const matched = pool.filter((r) => statusMatchesFilter(r.status, spec.key));
+        const totals = sumMembers(spec.memberValues);
         const fallback = quoteStatusTileColorForValue(
           mergedSettings,
           spec.tileValue,
@@ -552,13 +581,12 @@ export default function ServiceProposalsPanel({
         );
         const tileBgColor = spec.filterGroupBgColor || fallback.tileBgColor || "";
         const tileTextColor = spec.filterGroupTextColor || fallback.tileTextColor || "";
-        const tileColor =
-          tileBgColor || tileTextColor ? "" : fallback.tileColor || "";
+        const tileColor = tileBgColor || tileTextColor ? "" : fallback.tileColor || "";
         return {
           key: spec.key,
           label: spec.label,
-          count: matched.length,
-          amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          count: totals.count,
+          amount: totals.amount,
           tileAppearance: resolveStatusTileProps(tileColor, fallback.index, {
             tileBgColor,
             tileTextColor,
@@ -570,52 +598,69 @@ export default function ServiceProposalsPanel({
     } else {
       buttons = statusOptionsForCards.map((opt, optIdx) => {
         const key = opt.value;
-        const matched = pool.filter((r) => statusMatchesFilter(r.status, key));
+        const totals = sumMembers([statusBareKey(key)]);
         return {
           key,
           label: opt.label,
-          count: matched.length,
-          amount: matched.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          count: totals.count,
+          amount: totals.amount,
           tileAppearance: tileAppearanceForKey(key, optIdx),
           icon: statusCardIcon(opt.label),
         };
       });
     }
 
+    const allCount = [...bucketByStatus.values()].reduce((s, b) => s + b.count, 0);
+    const allAmount = [...bucketByStatus.values()].reduce((s, b) => s + b.amount, 0);
     buttons.unshift({
       key: "",
       label: "All",
-      count: pool.length,
-      amount: pool.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+      count: allCount,
+      amount: allAmount,
       tileAppearance: tileAppearanceForKey("", 0),
       icon: statusCardIcon("All"),
     });
 
     if (isInvoices) {
-      const paid = pool.filter((r) => isFullyPaidInvoiceStatus(r.status));
-      const unpaid = pool.filter((r) => !isFullyPaidInvoiceStatus(r.status));
+      let paidCount = 0;
+      let paidAmount = 0;
+      let paidTax = 0;
+      let unpaidCount = 0;
+      let unpaidAmount = 0;
+      let unpaidTax = 0;
+      for (const [status, b] of bucketByStatus.entries()) {
+        if (isFullyPaidInvoiceStatus(status)) {
+          paidCount += b.count;
+          paidAmount += b.amount;
+          paidTax += b.taxCollected;
+        } else {
+          unpaidCount += b.count;
+          unpaidAmount += b.amount;
+          unpaidTax += b.taxCollected;
+        }
+      }
       buttons.push(
         {
           key: FILTER_AMOUNT_RECEIVABLE,
           label: "Amount Receivable",
-          count: unpaid.length,
-          amount: unpaid.reduce((sum, r) => sum + (Number(r.total) || 0), 0),
+          count: unpaidCount,
+          amount: unpaidAmount,
           tileAppearance: resolveStatusTileProps("", 3),
           icon: statusCardIcon("Amount Receivable"),
         },
         {
           key: FILTER_TAX_COLLECTED,
           label: "Tax Collected",
-          count: paid.length,
-          amount: paid.reduce((sum, r) => sum + (Number(r.taxCollected) || 0), 0),
+          count: paidCount,
+          amount: paidTax,
           tileAppearance: resolveStatusTileProps("", 2),
           icon: statusCardIcon("Tax Collected"),
         },
         {
           key: FILTER_TAX_TO_COLLECT,
           label: "Tax to be collected",
-          count: unpaid.length,
-          amount: unpaid.reduce((sum, r) => sum + (Number(r.taxCollected) || 0), 0),
+          count: unpaidCount,
+          amount: unpaidTax,
           tileAppearance: resolveStatusTileProps("", 4),
           icon: statusCardIcon("Tax to be collected"),
         }
@@ -624,81 +669,23 @@ export default function ServiceProposalsPanel({
 
     return buttons;
   }, [
-    rowsForDate,
+    bucketByStatus,
     statusOptionsForCards,
     mergedSettings,
     quoteOpts,
     invoiceOpts,
     isInvoices,
-    statusMatchesFilter,
   ]);
 
-  const statusFilteredRows = useMemo(() => {
-    if (!statusFilter) return rowsForDate;
-    if (statusFilter === FILTER_AMOUNT_RECEIVABLE) {
-      return rowsForDate.filter((r) => !isFullyPaidInvoiceStatus(r.status));
-    }
-    if (statusFilter === FILTER_TAX_COLLECTED) {
-      return rowsForDate.filter((r) => isFullyPaidInvoiceStatus(r.status));
-    }
-    if (statusFilter === FILTER_TAX_TO_COLLECT) {
-      return rowsForDate.filter((r) => !isFullyPaidInvoiceStatus(r.status));
-    }
-    return rowsForDate.filter((r) => statusMatchesFilter(r.status, statusFilter));
-  }, [rowsForDate, statusFilter, statusMatchesFilter]);
+  const displayRows = rows;
 
-  const getProposalSortValue = useCallback(
-    (row, key) => {
-      if (key === "status" && !isInvoices) {
-        return quoteStatusSortOrderForValue(mergedSettings, row?.status);
-      }
-      return row?.[key];
-    },
-    [isInvoices, mergedSettings]
+  const currencySubtotals = useMemo(
+    () => ({
+      total: Number(listTotals.total) || 0,
+      taxCollected: Number(listTotals.taxCollected) || 0,
+    }),
+    [listTotals]
   );
-
-  const displayRows = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    const filtered = !q
-      ? statusFilteredRows
-      : statusFilteredRows.filter((row) => {
-          const haystack = [
-            row.quote,
-            row.documentNumber,
-            row.companyName,
-            row.phone,
-            row.email,
-            row.quotedBy,
-            row.quoteType,
-            row.notes,
-            row.status,
-            row.jobStatus,
-            row.date,
-            row.dateCreated,
-            row.dueDate,
-            row.submitDate,
-            row.acceptDate,
-            row.total != null ? String(row.total) : "",
-            row.taxCollected != null ? String(row.taxCollected) : "",
-            formatSimpleMoney(Number(row.total) || 0),
-            formatSimpleMoney(Number(row.taxCollected) || 0),
-          ]
-            .map((v) => String(v ?? "").toLowerCase())
-            .join(" ");
-          return haystack.includes(q);
-        });
-    return sortRowsClient(filtered, tableSort, getProposalSortValue);
-  }, [statusFilteredRows, searchQuery, tableSort, getProposalSortValue]);
-
-  const currencySubtotals = useMemo(() => {
-    let total = 0;
-    let taxCollected = 0;
-    for (const row of displayRows) {
-      total += Number(row.total) || 0;
-      taxCollected += Number(row.taxCollected) || 0;
-    }
-    return { total, taxCollected };
-  }, [displayRows]);
 
   const currencyHeader = useCallback((title, amount) => {
     return (
@@ -979,7 +966,10 @@ export default function ServiceProposalsPanel({
       key={card.key || "__all__"}
       card={card}
       active={(statusFilter || "") === (card.key || "")}
-      onClick={() => setStatusFilter(card.key || "")}
+      onClick={() => {
+        setPage(1);
+        setStatusFilter(card.key || "");
+      }}
       formatAmount={(n) =>
         `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
           maximumFractionDigits: 0,
@@ -1006,10 +996,16 @@ export default function ServiceProposalsPanel({
           rowKey="id"
           loading={!ready}
           searchable
-          onSearch={setSearchQuery}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
           searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
           sortState={tableSort}
-          onSort={(key, direction) => setTableSort({ key, direction })}
+          onSort={(key, direction) => {
+            setPage(1);
+            setTableSort({ key, direction });
+          }}
           onRefresh={reload}
           toolbarBeforeSearch={
             isInvoices ? null : (
@@ -1020,26 +1016,32 @@ export default function ServiceProposalsPanel({
             )
           }
           emptyMessage={
-            scopedRows.length === 0
-              ? isInvoices
-                ? "No invoices yet. Convert a proposal to an invoice status to see it here."
-                : "No service proposals yet. Click Add New to create one."
-              : (dateFrom || dateTo) && rowsForDate.length === 0
-                ? isInvoices
-                  ? "No invoices in this date range."
-                  : "No service proposals in this date range."
-                : statusFilter && statusFilteredRows.length === 0
+            totalCount === 0
+              ? searchQuery.trim()
+                ? "No records match your search."
+                : statusFilter
                   ? "No records with this status."
-                  : searchQuery.trim()
-                    ? "No records match your search."
+                  : dateFrom || dateTo
+                    ? isInvoices
+                      ? "No invoices in this date range."
+                      : "No service proposals in this date range."
                     : isInvoices
-                      ? "No invoices yet."
+                      ? "No invoices yet. Convert a proposal to an invoice status to see it here."
                       : "No service proposals yet. Click Add New to create one."
+              : isInvoices
+                ? "No invoices yet."
+                : "No service proposals yet. Click Add New to create one."
           }
           fillHeight
           responsive
           dense
           textSize="xs"
+          paginateClientSide={false}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
         />
       </div>
 

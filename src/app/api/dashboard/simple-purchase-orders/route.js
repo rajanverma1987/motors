@@ -6,6 +6,7 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
+import { mongoCalendarDateRange } from "@/lib/format-date";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 export async function GET(request) {
@@ -21,6 +22,10 @@ export async function GET(request) {
       searchParams.has("page") ||
       searchParams.has("pageSize") ||
       searchParams.has("q") ||
+      searchParams.has("sortBy") ||
+      searchParams.has("from") ||
+      searchParams.has("to") ||
+      searchParams.has("paymentStatus") ||
       searchParams.has("serviceProposalId") ||
       searchParams.has("jobNumber");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
@@ -29,37 +34,108 @@ export async function GET(request) {
     const qText = String(searchParams.get("q") || "").trim();
     const serviceProposalId = String(searchParams.get("serviceProposalId") || "").trim();
     const jobNumber = String(searchParams.get("jobNumber") || "").trim();
+    const paymentStatus = String(searchParams.get("paymentStatus") || "").trim();
+    const from = String(searchParams.get("from") || "").trim().slice(0, 10);
+    const to = String(searchParams.get("to") || "").trim().slice(0, 10);
+    const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
+    const sortFieldMap = {
+      poNumber: "poNumber",
+      jobNumber: "jobNumber",
+      vendorName: "vendorName",
+      poType: "poType",
+      paymentStatus: "paymentStatus",
+      poCutDate: "poCutDate",
+      dueDate: "dueDate",
+      poInvoiceReceiveDate: "poInvoiceReceiveDate",
+      poItemReceiveDate: "poItemReceiveDate",
+      poPaidDate: "poPaidDate",
+      total: "total",
+      updatedAt: "updatedAt",
+      createdAt: "createdAt",
+    };
+    const sortField = sortFieldMap[sortBy] || "updatedAt";
+    const sort = { [sortField]: sortDir === "asc" ? 1 : -1, updatedAt: -1 };
 
     const q = { createdByEmail: email };
+    const andParts = [];
     if (serviceProposalId || jobNumber) {
       const ors = [];
       if (serviceProposalId) ors.push({ serviceProposalId });
       if (jobNumber) ors.push({ jobNumber });
-      q.$or = ors;
+      andParts.push({ $or: ors });
+    }
+    if (paymentStatus) andParts.push({ paymentStatus });
+    if (from || to) {
+      const range = mongoCalendarDateRange(from, to);
+      if (range) {
+        andParts.push({
+          $or: [{ poCutDate: range }, { dueDate: range }, { date: range }],
+        });
+      }
     }
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      const textOr = [
-        { poNumber: rx },
-        { jobNumber: rx },
-        { vendorName: rx },
-        { paymentStatus: rx },
-      ];
-      if (q.$or) {
-        q.$and = [{ $or: q.$or }, { $or: textOr }];
-        delete q.$or;
-      } else {
-        q.$or = textOr;
+      andParts.push({
+        $or: [
+          { poNumber: rx },
+          { jobNumber: rx },
+          { vendorName: rx },
+          { paymentStatus: rx },
+        ],
+      });
+    }
+    if (andParts.length === 1) Object.assign(q, andParts[0]);
+    else if (andParts.length > 1) q.$and = andParts;
+
+    const baseForCards = { createdByEmail: email };
+    const cardAnd = [];
+    if (from || to) {
+      const range = mongoCalendarDateRange(from, to);
+      if (range) {
+        cardAnd.push({
+          $or: [{ poCutDate: range }, { dueDate: range }, { date: range }],
+        });
       }
     }
+    if (qText) {
+      const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      cardAnd.push({
+        $or: [{ poNumber: rx }, { jobNumber: rx }, { vendorName: rx }, { paymentStatus: rx }],
+      });
+    }
+    if (cardAnd.length === 1) Object.assign(baseForCards, cardAnd[0]);
+    else if (cardAnd.length > 1) baseForCards.$and = cardAnd;
 
-    const [totalCount, list] = await Promise.all([
+    const [totalCount, list, paymentBuckets] = await Promise.all([
       SimplePurchaseOrder.countDocuments(q),
-      SimplePurchaseOrder.find(q).sort({ updatedAt: -1 }).skip(skip).limit(pageSize).lean(),
+      SimplePurchaseOrder.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      SimplePurchaseOrder.aggregate([
+        { $match: baseForCards },
+        {
+          $group: {
+            _id: { $ifNull: ["$paymentStatus", "Unpaid"] },
+            count: { $sum: 1 },
+            amount: {
+              $sum: { $convert: { input: "$grandTotal", to: "double", onError: 0, onNull: 0 } },
+            },
+          },
+        },
+      ]),
     ]);
     const items = list.map((doc) => serializeSimplePortalDoc(doc));
     if (!includePagination) return NextResponse.json(items);
-    return NextResponse.json({ items, page, pageSize, totalCount });
+    return NextResponse.json({
+      items,
+      page,
+      pageSize,
+      totalCount,
+      paymentBuckets: (paymentBuckets || []).map((r) => ({
+        paymentStatus: String(r._id || "Unpaid"),
+        count: Number(r.count) || 0,
+        amount: Number(r.amount) || 0,
+      })),
+    });
   } catch (err) {
     console.error("Dashboard list simple purchase orders error:", err);
     return NextResponse.json({ error: "Failed to list purchase orders" }, { status: 500 });
@@ -86,8 +162,8 @@ export async function POST(request) {
       vendorId: String(payload.vendorId || "").trim(),
       vendorName: String(payload.vendorName || "").trim(),
       paymentStatus: String(payload.paymentStatus || "Unpaid").trim() || "Unpaid",
-      poCutDate: String(payload.poCutDate || "").trim(),
-      dueDate: String(payload.dueDate || "").trim(),
+      poCutDate: payload.poCutDate ?? null,
+      dueDate: payload.dueDate ?? null,
     });
     const item = serializeSimplePortalDoc(doc);
     void emitCrmResourceEvent({

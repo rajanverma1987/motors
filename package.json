@@ -13,7 +13,8 @@
     "git": "node scripts/git-push.js",
     "backfill:listing-scores": "node scripts/backfill-listing-directory-scores.js",
     "backfill:quote-write-up": "node scripts/backfill-quote-draft-to-write-up.js",
-    "backfill:job-po-numbers": "node scripts/backfill-job-po-numbers.js"
+    "backfill:job-po-numbers": "node scripts/backfill-job-po-numbers.js",
+    "backfill:simple-portal-dates": "node scripts/backfill-simple-portal-dates.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
