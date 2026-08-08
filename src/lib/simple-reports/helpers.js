@@ -28,11 +28,11 @@ export function toYmd(value) {
 /**
  * @param {unknown} dayValue
  * @param {string} fromYmd
- * @param {string} toYmd
+ * @param {string} toYmdRange
  */
-export function dayInRange(dayValue, fromYmd, toYmd) {
+export function dayInRange(dayValue, fromYmd, toYmdRange) {
   const from = normalizeYmd(fromYmd);
-  const to = normalizeYmd(toYmd);
+  const to = normalizeYmd(toYmdRange);
   if (!from && !to) return true;
   if (from && to && from > to) return true;
   const day = toYmd(dayValue);
