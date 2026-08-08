@@ -415,6 +415,7 @@ export default function InventoryPanel() {
         fillHeight
         responsive
         dense
+        textSize="xs"
         paginateClientSide={false}
         pagination={{ page, pageSize, totalCount }}
         onPageChange={(nextPage, nextPageSize) => {

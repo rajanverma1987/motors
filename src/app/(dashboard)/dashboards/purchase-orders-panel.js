@@ -541,6 +541,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           fillHeight
           responsive
           dense
+          textSize="xs"
           paginateClientSide={false}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
