@@ -11,6 +11,13 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveConfiguredStatusSlug } from "@/lib/dropdown-catalog";
 import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
 import {
+  computePoFormTotals,
+  computePoPaymentSummary,
+  normalizeReceivingStatus,
+  suggestReceivingStatus,
+  SIMPLE_PO_RECEIVING_STATUS_ORDERED,
+} from "@/lib/simple-purchase-order-form";
+import {
   AC_DATASHEET_FIELD_COLUMNS,
   DC_ARMATURE_FIELD_COLUMNS,
   DC_FIELD_FRAME_FIELD_COLUMNS,
@@ -135,6 +142,18 @@ async function refreshServiceProposalListTotals(doc) {
   doc.set("proposalTotal", totals.proposalTotal);
   doc.set("taxCollected", totals.taxCollected);
   doc.set("total", totals.total);
+  await doc.save();
+}
+
+async function refreshPurchaseOrderListTotals(doc) {
+  if (!doc) return;
+  const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
+  const totals = computePoFormTotals(plain.lineItems);
+  const paySummary = computePoPaymentSummary(plain.payments, totals.grandTotal);
+  doc.set("total", totals.total);
+  doc.set("totalTax", totals.totalTax);
+  doc.set("grandTotal", totals.grandTotal);
+  doc.set("paymentStatus", paySummary.paymentStatus);
   await doc.save();
 }
 
@@ -1115,7 +1134,6 @@ const IMPORT_COLLECTIONS = {
       "paid_by",
       "payment_status",
       "comments",
-      "line_items_json",
       "payments_json",
       "vendor_documents_json",
     ],
@@ -1139,8 +1157,6 @@ const IMPORT_COLLECTIONS = {
       paid_by: "",
       payment_status: "Unpaid",
       comments: "Need by Friday",
-      line_items_json:
-        '[{"itemName":"6205 Bearing","uom":"ea","quantity":"2","price":"45","taxPercent":"0","receivedQty":"0","receivingStatus":"Ordered","receivedDate":"","inventory_item_external_ref":"INVITEM-501","inventory_item_source_system":"manual_csv"}]',
       payments_json: '[{"date":"2026-08-10","amount":"90","method":"ACH","paidBy":"AP","notes":""}]',
       vendor_documents_json: "[]",
     },
@@ -1152,13 +1168,6 @@ const IMPORT_COLLECTIONS = {
       if (!s(r.vendor_external_ref)) errs.push("vendor_external_ref is required");
       if (poType === "job" && !s(r.service_proposal_external_ref)) {
         errs.push("service_proposal_external_ref is required when po_type is job");
-      }
-      if (s(r.line_items_json)) {
-        try {
-          parseJsonArrayField(r.line_items_json, "line_items_json");
-        } catch (err) {
-          errs.push(err.message || "line_items_json must be valid JSON array");
-        }
       }
       if (s(r.payments_json)) {
         try {
@@ -1182,19 +1191,6 @@ const IMPORT_COLLECTIONS = {
             const d = s(p?.date);
             if (d && !normalizeCsvCalendarDate(d)) {
               errs.push(`payments_json[${idx}].date must be a valid date (use YYYY-MM-DD)`);
-            }
-          });
-        } catch {
-          /* already reported */
-        }
-      }
-      if (s(r.line_items_json)) {
-        try {
-          const lines = parseJsonArrayField(r.line_items_json, "line_items_json");
-          lines.forEach((it, idx) => {
-            const d = s(it?.receivedDate ?? it?.received_date);
-            if (d && !normalizeCsvCalendarDate(d)) {
-              errs.push(`line_items_json[${idx}].receivedDate must be a valid date (use YYYY-MM-DD)`);
             }
           });
         } catch {
@@ -1234,38 +1230,6 @@ const IMPORT_COLLECTIONS = {
         if (!serviceProposalId) throw new Error("service_proposal_external_ref not found");
       }
 
-      const lineRaw = s(r.line_items_json)
-        ? parseJsonArrayField(r.line_items_json, "line_items_json")
-        : [];
-      const lineItems = lineRaw.map((it) => {
-        let inventoryItemId = s(it?.inventoryItemId ?? it?.inventory_item_id);
-        const invExt = s(it?.inventory_item_external_ref ?? it?.inventoryItemExternalRef);
-        if (!inventoryItemId && invExt) {
-          inventoryItemId = ctx.resolveRef(
-            "inventoryItems",
-            s(it?.inventory_item_source_system ?? it?.inventoryItemSourceSystem ?? "manual_csv"),
-            invExt,
-          );
-          if (!inventoryItemId) {
-            throw new Error(
-              `inventory_item_external_ref "${invExt}" not found — import Inventory Items first`
-            );
-          }
-        }
-        return {
-          id: s(it?.id) || newLineId("pol"),
-          itemName: s(it?.itemName ?? it?.description),
-          uom: s(it?.uom),
-          quantity: s(it?.quantity ?? it?.qty ?? "0") || "0",
-          price: s(it?.price ?? it?.unitPrice ?? "0.00") || "0.00",
-          taxPercent: s(it?.taxPercent ?? it?.tax_percent ?? "0") || "0",
-          receivedQty: s(it?.receivedQty ?? it?.received_qty ?? "0") || "0",
-          receivingStatus: s(it?.receivingStatus ?? it?.receiving_status ?? "Ordered") || "Ordered",
-          receivedDate: csvCalendarDateToMongo(it?.receivedDate ?? it?.received_date),
-          inventoryItemId,
-        };
-      });
-
       const payRaw = s(r.payments_json) ? parseJsonArrayField(r.payments_json, "payments_json") : [];
       const payments = payRaw.map((p) => ({
         id: s(p?.id) || newLineId("pop"),
@@ -1287,6 +1251,7 @@ const IMPORT_COLLECTIONS = {
           .filter((d) => d.name || d.url);
       }
 
+      // Header-only upsert — line items import via simplePurchaseOrderLineItems child CSV.
       return {
         createdByEmail: ctx.ownerEmail,
         sourceSystem: s(r.source_system || "manual_csv"),
@@ -1307,13 +1272,129 @@ const IMPORT_COLLECTIONS = {
         paidBy: s(r.paid_by),
         paymentStatus: s(r.payment_status || "Unpaid") || "Unpaid",
         comments: s(r.comments),
-        lineItems,
         payments,
         vendorDocuments,
         importBatchId: ctx.batchId,
         importedAt: new Date(),
         importStatus: "imported",
       };
+    },
+  },
+  /** Child of Purchase Orders — one CSV row per PO line item (no JSON). */
+  simplePurchaseOrderLineItems: {
+    label: "Purchase Order — Line Items",
+    model: SimplePurchaseOrder,
+    skipModelValidation: true,
+    parentCollection: "simplePurchaseOrders",
+    requiredHeaders: [...BASE_HEADERS, "purchase_order_external_ref", "item_name"],
+    headers: [
+      ...BASE_HEADERS,
+      "purchase_order_external_ref",
+      "purchase_order_source_system",
+      "item_name",
+      "uom",
+      "quantity",
+      "price",
+      "tax_percent",
+      "received_qty",
+      "receiving_status",
+      "received_date",
+      "inventory_item_external_ref",
+      "inventory_item_source_system",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SPO-2026-01-LINE-1",
+      purchase_order_external_ref: "SPO-2026-01",
+      purchase_order_source_system: "manual_csv",
+      item_name: "6205 Bearing",
+      uom: "ea",
+      quantity: "2",
+      price: "45",
+      tax_percent: "0",
+      received_qty: "0",
+      receiving_status: "Ordered",
+      received_date: "",
+      inventory_item_external_ref: "INVITEM-501",
+      inventory_item_source_system: "manual_csv",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.purchase_order_external_ref)) {
+        errs.push("purchase_order_external_ref is required");
+      }
+      if (!s(r.item_name)) errs.push("item_name is required");
+      const status = s(r.receiving_status);
+      if (
+        status &&
+        !["Ordered", "Partially Received", "Received"].includes(status)
+      ) {
+        errs.push('receiving_status must be "Ordered", "Partially Received", or "Received"');
+      }
+      errs.push(...validateCsvDateColumns(r, ["received_date"]));
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const purchaseOrderId = ctx.resolveRef(
+        "simplePurchaseOrders",
+        s(r.purchase_order_source_system || "manual_csv"),
+        s(r.purchase_order_external_ref),
+      );
+      if (!purchaseOrderId) {
+        throw new Error("purchase_order_external_ref not found — import Purchase Orders first");
+      }
+      let inventoryItemId = "";
+      if (s(r.inventory_item_external_ref)) {
+        inventoryItemId = ctx.resolveRef(
+          "inventoryItems",
+          s(r.inventory_item_source_system || "manual_csv"),
+          s(r.inventory_item_external_ref),
+        );
+        if (!inventoryItemId) {
+          throw new Error("inventory_item_external_ref not found — import Inventory Items first");
+        }
+      }
+      const lineRef = s(r.external_ref);
+      const quantity = s(r.quantity || "0") || "0";
+      const receivedQty = s(r.received_qty || "0") || "0";
+      const receivingStatus = normalizeReceivingStatus(
+        s(r.receiving_status) || suggestReceivingStatus(quantity, receivedQty) || SIMPLE_PO_RECEIVING_STATUS_ORDERED,
+      );
+      return {
+        purchaseOrderId,
+        line: {
+          id: lineRef,
+          externalRef: lineRef,
+          sourceSystem: s(r.source_system || "manual_csv"),
+          itemName: s(r.item_name),
+          uom: s(r.uom),
+          quantity,
+          price: s(r.price || "0.00") || "0.00",
+          taxPercent: s(r.tax_percent || "0") || "0",
+          receivedQty,
+          receivingStatus,
+          receivedDate: csvCalendarDateToMongo(r.received_date),
+          inventoryItemId,
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimplePurchaseOrder.findOne({
+        _id: payload.purchaseOrderId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Purchase order not found");
+      const list = Array.isArray(doc.lineItems)
+        ? doc.lineItems.map((x) => ({ ...(x.toObject?.() || x) }))
+        : [];
+      const lineId = s(payload.line.id);
+      const idx = list.findIndex((x) => s(x?.id) === lineId || s(x?.externalRef) === lineId);
+      if (idx >= 0) list[idx] = { ...list[idx], ...payload.line };
+      else list.push(payload.line);
+      doc.set("lineItems", list);
+      doc.markModified("lineItems");
+      await refreshPurchaseOrderListTotals(doc);
     },
   },
 };
@@ -1345,27 +1426,37 @@ function rowsToObjects(csvText) {
 }
 
 async function fetchRefMaps(ownerEmail) {
-  const [customers, vendors, inventoryItems, employees, salesPersons, simpleServiceProposals] =
-    await Promise.all([
-      Customer.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-      Vendor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-      InventoryItem.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-      Employee.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-      SalesPerson.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-      SimpleServiceProposal.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
-        .select("_id sourceSystem externalRef")
-        .lean(),
-    ]);
+  const [
+    customers,
+    vendors,
+    inventoryItems,
+    employees,
+    salesPersons,
+    simpleServiceProposals,
+    simplePurchaseOrders,
+  ] = await Promise.all([
+    Customer.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    Vendor.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    InventoryItem.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    Employee.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    SalesPerson.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    SimpleServiceProposal.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+    SimplePurchaseOrder.find({ createdByEmail: ownerEmail, externalRef: { $gt: "" } })
+      .select("_id sourceSystem externalRef")
+      .lean(),
+  ]);
 
   const toMap = (items) => {
     const m = new Map();
@@ -1382,6 +1473,7 @@ async function fetchRefMaps(ownerEmail) {
     employees: toMap(employees),
     salesPersons: toMap(salesPersons),
     simpleServiceProposals: toMap(simpleServiceProposals),
+    simplePurchaseOrders: toMap(simplePurchaseOrders),
   };
 }
 

@@ -211,7 +211,7 @@ export function computeNextSimplePoNumber(jobNumber, existingPos = []) {
   return `${job}-${max + 1}`;
 }
 
-function normalizeReceivingStatus(raw) {
+export function normalizeReceivingStatus(raw) {
   const s = String(raw || "").trim().toLowerCase();
   if (s === "received") return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
   if (s.includes("partial")) return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;

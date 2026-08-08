@@ -40,6 +40,12 @@ const IMPORT_COLLECTIONS = [
     hint: "One row per proposal DC datasheet. Import Service Proposals first. Columns use ff_* (Field Frame) and arm_* (Armature).",
   },
   { collection: "simplePurchaseOrders", label: "Purchase Orders" },
+  {
+    collection: "simplePurchaseOrderLineItems",
+    label: "PO Line Items",
+    childOf: "Purchase Orders",
+    hint: "One row per PO line. Import Purchase Orders first. Link with purchase_order_external_ref. Optional inventory_item_external_ref.",
+  },
 ];
 
 export default function SimpleDataUploadPanel() {
@@ -313,7 +319,7 @@ export default function SimpleDataUploadPanel() {
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
           Recommended sequence: Customers → Vendors → Inventory / Employees / Sales Persons → Service Proposals →
-          Scope Details → Other Items → AC Datasheet → DC Datasheet → Purchase Orders.
+          Scope Details → Other Items → AC Datasheet → DC Datasheet → Purchase Orders → PO Line Items.
         </div>
         <div className="mb-4 rounded-md border border-border bg-form-bg/70 p-3 text-xs text-secondary">
           Date columns must use <span className="font-medium text-title">YYYY-MM-DD</span> (example:{" "}
