@@ -16,6 +16,10 @@ import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
 import { appendAdminSortParams } from "@/lib/admin-table-sort";
+import {
+  adminListingJsonSchemaExample,
+  parseAdminListingJsonPrefill,
+} from "@/lib/admin-listing-json-prefill";
 
 const STATUS_OPTIONS = [
   { value: "", label: "All" },
@@ -115,6 +119,10 @@ export default function AdminListingsPage() {
   const [onboardSubmitting, setOnboardSubmitting] = useState(false);
   const [newListingSearchOpen, setNewListingSearchOpen] = useState(false);
   const [newListingCreateOpen, setNewListingCreateOpen] = useState(false);
+  const [newListingMode, setNewListingMode] = useState("search"); // "search" | "json"
+  const [jsonPaste, setJsonPaste] = useState("");
+  const [jsonParseError, setJsonParseError] = useState("");
+  const [createPrefill, setCreatePrefill] = useState(null);
   const [searchEmail, setSearchEmail] = useState("");
   const [searchPhone, setSearchPhone] = useState("");
   const [searching, setSearching] = useState(false);
@@ -521,8 +529,85 @@ export default function AdminListingsPage() {
     setEmailVerifyError("");
     setEmailVerified(false);
     setEmailVerifyBypass(false);
+    setNewListingMode("search");
+    setJsonPaste("");
+    setJsonParseError("");
+    setCreatePrefill(null);
     setNewListingSearchOpen(true);
   }, []);
+
+  const openCreateWithPrefill = useCallback((prefill) => {
+    setCreatePrefill(prefill && typeof prefill === "object" ? prefill : null);
+    if (prefill?.email) setSearchEmail(String(prefill.email));
+    if (prefill?.phone) setSearchPhone(String(prefill.phone));
+    setNewListingSearchOpen(false);
+    setNewListingCreateOpen(true);
+  }, []);
+
+  const runJsonListingCheck = useCallback(async () => {
+    setJsonParseError("");
+    const parsed = parseAdminListingJsonPrefill(jsonPaste);
+    if (!parsed.ok) {
+      setJsonParseError(parsed.error);
+      return;
+    }
+    const data = parsed.data;
+    const e = String(data.email || "").trim();
+    const p = String(data.phone || "").trim();
+    setSearchEmail(e);
+    setSearchPhone(p);
+    setSearching(true);
+    setSearchResults([]);
+    setSearchAllowsMultiple(false);
+    setEmailVerifyError("");
+    setEmailVerified(false);
+    setEmailVerifyBypass(false);
+    setSearchAttempted(false);
+    try {
+      const qs = new URLSearchParams();
+      if (e) qs.set("email", e);
+      if (p) qs.set("phone", p);
+      const res = await fetch(`/api/admin/listings/search?${qs}`, { credentials: "include" });
+      const apiData = await res.json();
+      if (!res.ok) throw new Error(apiData.error || "Search failed");
+      const listings = Array.isArray(apiData.listings)
+        ? apiData.listings
+        : apiData.listing
+          ? [apiData.listing]
+          : [];
+      setSearchResults(listings);
+      setSearchAllowsMultiple(!!apiData.allowsMultiple);
+      setSearchAttempted(true);
+
+      if (listings.length > 0 && !apiData.allowsMultiple) {
+        setCreatePrefill(null);
+        toast.warning("A listing already exists for this email/phone. Open it below, or use a different contact.");
+        return;
+      }
+
+      if (listings.length > 0 && apiData.allowsMultiple) {
+        setCreatePrefill(data);
+        toast.info("Shared email already has listing(s). Review below, then create another.");
+        return;
+      }
+
+      if (e && apiData.emailVerification && !apiData.emailVerification.valid) {
+        setEmailVerifyError(apiData.emailVerification.message || "This email address is invalid.");
+        setCreatePrefill(data);
+        return;
+      }
+
+      if (e && apiData.emailVerification?.valid) {
+        setEmailVerified(true);
+      }
+
+      openCreateWithPrefill(data);
+    } catch (err) {
+      toast.error(err.message || "Could not check listing");
+    } finally {
+      setSearching(false);
+    }
+  }, [jsonPaste, openCreateWithPrefill, toast]);
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
@@ -705,7 +790,7 @@ export default function AdminListingsPage() {
         open={newListingSearchOpen}
         onClose={() => setNewListingSearchOpen(false)}
         title="Find existing listing"
-        size="md"
+        size="lg"
         actions={
           <Button type="button" variant="outline" size="sm" onClick={() => setNewListingSearchOpen(false)}>
             Close
@@ -713,58 +798,163 @@ export default function AdminListingsPage() {
         }
       >
         <p className="text-sm text-secondary">
-          Search by email or phone before creating a duplicate. If you already have a listing, open it to edit.
+          Search by email or phone, or paste listing JSON. We check for an existing listing before opening the create
+          form.
         </p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div>
-            <Input
-              label="Email"
-              type="email"
-              value={searchEmail}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={newListingMode === "search" ? "primary" : "outline"}
+            onClick={() => {
+              setNewListingMode("search");
+              setJsonParseError("");
+            }}
+          >
+            Search
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={newListingMode === "json" ? "primary" : "outline"}
+            onClick={() => {
+              setNewListingMode("json");
+              setSearchAttempted(false);
+              setSearchResults([]);
+              setEmailVerifyError("");
+              setEmailVerified(false);
+              setEmailVerifyBypass(false);
+            }}
+          >
+            Paste JSON
+          </Button>
+        </div>
+
+        {newListingMode === "search" ? (
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div>
+                <Input
+                  label="Email"
+                  type="email"
+                  value={searchEmail}
+                  onChange={(e) => {
+                    setSearchEmail(e.target.value);
+                    setEmailVerifyError("");
+                    setEmailVerified(false);
+                    setEmailVerifyBypass(false);
+                    setSearchAttempted(false);
+                    setSearchResults([]);
+                    setCreatePrefill(null);
+                  }}
+                  placeholder="shop@example.com"
+                  inputClassName={emailVerifyError ? "border-danger focus:ring-danger focus:border-danger" : ""}
+                />
+                {emailVerifyError ? (
+                  <div className="mt-1 space-y-2">
+                    <p className="text-sm text-danger" role="alert">
+                      {emailVerifyError}
+                    </p>
+                    {searchAttempted && searchResults.length === 0 && !emailVerifyBypass ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEmailVerifyBypass(true)}
+                      >
+                        Continue anyway
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                {emailVerifyBypass && searchEmail.trim() ? (
+                  <p className="mt-1 text-sm text-warning">
+                    Email verification skipped — you can create the listing, but delivery to this address is not
+                    guaranteed.
+                  </p>
+                ) : null}
+                {emailVerified && searchEmail.trim() && !emailVerifyBypass ? (
+                  <p className="mt-1 text-sm text-success">Email verified — you can create a new listing.</p>
+                ) : null}
+              </div>
+              <Input
+                label="Phone"
+                value={searchPhone}
+                onChange={(e) => setSearchPhone(e.target.value)}
+                placeholder="Digits only"
+              />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" variant="primary" size="sm" onClick={runListingSearch} disabled={searching}>
+                {searching ? "Searching…" : "Search"}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <Textarea
+              label="Complete listing JSON"
+              value={jsonPaste}
               onChange={(e) => {
-                setSearchEmail(e.target.value);
+                setJsonPaste(e.target.value);
+                setJsonParseError("");
+                setSearchAttempted(false);
+                setSearchResults([]);
                 setEmailVerifyError("");
                 setEmailVerified(false);
                 setEmailVerifyBypass(false);
-                setSearchAttempted(false);
-                setSearchResults([]);
               }}
-              placeholder="shop@example.com"
-              inputClassName={emailVerifyError ? "border-danger focus:ring-danger focus:border-danger" : ""}
+              rows={16}
+              placeholder="Paste the full listing JSON object…"
+              textareaClassName="font-mono text-xs"
             />
-            {emailVerifyError ? (
-              <div className="mt-1 space-y-2">
+            {jsonParseError ? (
+              <p className="text-sm text-danger" role="alert">
+                {jsonParseError}
+              </p>
+            ) : null}
+            <p className="text-xs text-secondary">
+              Required: <span className="font-medium text-title">companyName</span>,{" "}
+              <span className="font-medium text-title">email</span>. Full schema:{" "}
+              <code className="text-title">documents/admin-listing-json-prefill-schema.md</code>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="primary" size="sm" onClick={runJsonListingCheck} disabled={searching}>
+                {searching ? "Checking…" : "Check & continue"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setJsonPaste(JSON.stringify(adminListingJsonSchemaExample(), null, 2));
+                  setJsonParseError("");
+                }}
+              >
+                Insert full sample JSON
+              </Button>
+            </div>
+            {emailVerifyError && createPrefill ? (
+              <div className="space-y-2 rounded-md border border-danger/30 bg-danger/5 p-3">
                 <p className="text-sm text-danger" role="alert">
                   {emailVerifyError}
                 </p>
-                {searchAttempted && searchResults.length === 0 && !emailVerifyBypass ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEmailVerifyBypass(true)}
-                  >
-                    Continue anyway
-                  </Button>
-                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEmailVerifyBypass(true);
+                    openCreateWithPrefill(createPrefill);
+                  }}
+                >
+                  Continue anyway with JSON prefill
+                </Button>
               </div>
             ) : null}
-            {emailVerifyBypass && searchEmail.trim() ? (
-              <p className="mt-1 text-sm text-warning">
-                Email verification skipped — you can create the listing, but delivery to this address is not guaranteed.
-              </p>
-            ) : null}
-            {emailVerified && searchEmail.trim() && !emailVerifyBypass ? (
-              <p className="mt-1 text-sm text-success">Email verified — you can create a new listing.</p>
-            ) : null}
           </div>
-          <Input label="Phone" value={searchPhone} onChange={(e) => setSearchPhone(e.target.value)} placeholder="Digits only" />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button type="button" variant="primary" size="sm" onClick={runListingSearch} disabled={searching}>
-            {searching ? "Searching…" : "Search"}
-          </Button>
-        </div>
+        )}
+
         {searchResults.length > 0 ? (
           <div className="mt-4 space-y-3">
             {searchAllowsMultiple ? (
@@ -792,8 +982,12 @@ export default function AdminListingsPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => {
-                  setNewListingSearchOpen(false);
-                  setNewListingCreateOpen(true);
+                  if (createPrefill) openCreateWithPrefill(createPrefill);
+                  else {
+                    setCreatePrefill(null);
+                    setNewListingSearchOpen(false);
+                    setNewListingCreateOpen(true);
+                  }
                 }}
               >
                 Create another listing
@@ -801,7 +995,11 @@ export default function AdminListingsPage() {
             ) : null}
           </div>
         ) : null}
-        {searchAttempted && !searching && searchResults.length === 0 && (!searchEmail.trim() || emailVerified || emailVerifyBypass) ? (
+        {newListingMode === "search" &&
+        searchAttempted &&
+        !searching &&
+        searchResults.length === 0 &&
+        (!searchEmail.trim() || emailVerified || emailVerifyBypass) ? (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-sm text-secondary">No listing found for this search.</p>
             <Button
@@ -810,6 +1008,7 @@ export default function AdminListingsPage() {
               size="sm"
               className="mt-2"
               onClick={() => {
+                setCreatePrefill(null);
                 setNewListingSearchOpen(false);
                 setNewListingCreateOpen(true);
               }}
@@ -822,12 +1021,17 @@ export default function AdminListingsPage() {
 
       <AdminFeaturedListingCreateModal
         open={newListingCreateOpen}
-        onClose={() => setNewListingCreateOpen(false)}
+        onClose={() => {
+          setNewListingCreateOpen(false);
+          setCreatePrefill(null);
+        }}
         generatePassword={generateTempPassword}
         prefillEmail={searchEmail}
         prefillPhone={searchPhone}
+        prefill={createPrefill}
         skipEmailVerification={emailVerifyBypass}
         onCreated={() => {
+          setCreatePrefill(null);
           fetchListings();
         }}
       />
