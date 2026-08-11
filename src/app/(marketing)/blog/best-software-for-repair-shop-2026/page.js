@@ -1,318 +1,321 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
-import ListYourShopCta from "@/components/marketing/ListYourShopCta";
-import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
+import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
+import SoftwareSeoFaqJsonLd from "@/components/marketing/SoftwareSeoFaqJsonLd";
+import SoftwareClusterLinks from "@/components/marketing/SoftwareClusterLinks";
+import {
+  SEO_SOFTWARE_COMPARISON_PATH,
+  SEO_SOFTWARE_PILLAR_PATH,
+  SEO_SOFTWARE_CRM_PATH,
+  SEO_SOFTWARE_WORK_ORDER_PATH,
+  SEO_SOFTWARE_INVENTORY_PATH,
+  SEO_SOFTWARE_INVOICING_PATH,
+} from "@/lib/seo-software-paths";
 
-const path = "/blog/best-software-for-repair-shop-2026";
+const path = SEO_SOFTWARE_COMPARISON_PATH;
+
+const TITLE = "Best Software for Electric Motor Repair Shops (2026 Comparison) | IQMotorBase";
+const DESCRIPTION =
+  "An honest comparison of IQMotorBase, Spring Point, Aptean, and general auto-shop tools for electric motor and rewind shops.";
 
 export const metadata = {
-  title: "Best Software for a Repair Shop in 2026 (Motor & Rewind Focus)",
-  description:
-    "Evaluation checklist for motor repair and rewinding shops: quotes, WIP, parts, invoicing, integrations, and lead capture—skip the bloat.",
-  keywords: ["best repair shop software 2026", "motor repair CRM", "rewinding shop software"],
+  title: TITLE,
+  description: DESCRIPTION,
+  keywords: [
+    "best motor repair software",
+    "motor repair shop software comparison",
+    "IQMotorBase vs Spring Point",
+  ],
   openGraph: {
-    title: "Best Software for a Repair Shop in 2026 | IQMotorBase.com",
-    description: "What to demand from job shop software this year.",
+    title: TITLE,
+    description: DESCRIPTION,
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
     locale: "en_US",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
 };
 
+const faqItems = [
+  {
+    q: "What is the best software for an electric motor repair shop in 2026?",
+    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second CRM. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition—both publicly positioned for electro-mechanical / apparatus repair shops.",
+  },
+  {
+    q: "How is IQMotorBase different from auto repair shop software?",
+    a: "Auto-shop tools are built for vehicle repair orders. IQMotorBase is built for electric motor and rewind work: motor and customer registries with serial numbers, specs, service history, and test results; work orders from the job’s primary final quote; Tag QR mobile floor updates; and parts reservation when a quote is approved.",
+  },
+  {
+    q: "Does IQMotorBase generate leads for the shop?",
+    a: "Yes. Leads come from the IQMotorBase public directory and local SEO pages. Shops can choose shared leads (sent to multiple shops) or exclusive leads (one shop). Credits deduct when a lead is delivered. A won lead converts into a customer and Job Write-Up without retyping into a separate CRM.",
+  },
+];
+
 export default function BlogBestSoftware2026Page() {
   return (
-    <BlogPageLayout
-      title="Best software for a repair shop in 2026"
-      description="The best system is the one your team actually uses—tied to how motor shops quote, execute, and bill. Use this checklist before you sign a multi-year contract for generic field service software."
-      breadcrumbLink={{ href: "/blog", label: "Blog" }}
-      canonicalPath={path}
-      sidebarTitle="Try IQMotorBase.com"
-      sidebarDescription="Built around motor repair workflows + directory visibility."
-      sidebarCta={<ListYourShopCta />}
-    >
-      <article className="prose prose-neutral dark:prose-invert max-w-none">
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-2">1. Quote → job → invoice continuity</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            If you retype scope three times, you’ll leak margin. Look for shared line items, labor codes, and attachments that carry from quote to work order to invoice. Our guides on{" "}
-            <Link href="/motor-repair-shop-management-software" className="text-primary font-medium hover:underline">
-              motor repair shop management software
-            </Link>{" "}
-            and{" "}
-            <Link href="/job-card-system-for-repair-shop" className="text-primary font-medium hover:underline">
-              job card systems
-            </Link>{" "}
-            expand on this.
-          </p>
-        </section>
+    <>
+      <SoftwareSeoFaqJsonLd items={faqItems} />
+      <BlogPageLayout
+        title="Best software for electric motor repair shops (2026 comparison)"
+        description="Most “motor repair software” results are built for auto shops. Here is an honest look at the small set of options electric motor and rewind shops actually weigh—including when IQMotorBase is the right fit and when another tool might be."
+        breadcrumbLink={{ href: "/blog", label: "Blog" }}
+        canonicalPath={path}
+        sidebarTitle="Book a demo"
+        sidebarDescription="Custom pricing for your shop’s workflow. No self-serve price list."
+        sidebarCta={<SeoLeadMiniForm sourcePage={path} submitLabel="Book a demo" />}
+      >
+        <article className="prose prose-neutral dark:prose-invert max-w-none">
+          <section>
+            <p className="mt-2 text-secondary leading-relaxed">
+              If you search for motor repair software in 2026, a large share of the results are still auto repair
+              platforms—built for cars, consumer ROs, and tire packages. Electric motor and rewind shops are a smaller
+              market. The real shortlist is usually a motor-focused shop system, a broader industrial/service ERP
+              edition, or “make do” with spreadsheets plus a generic tool. This page compares IQMotorBase against that
+              landscape without pretending every cell in a competitor column is verified.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Spring Point cells are based on public pages at springpt.com. Aptean Service Repair (Traverse Edition)
+              cells are based on Aptean’s own Service Repair industry pages (electro-mechanical and electrical
+              apparatus repair), which describe shop management from estimate through invoice—not on third-party
+              pricing blogs.
+            </p>
+          </section>
 
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">2. Realistic inventory (even if lean)</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            You don’t need a big-box ERP— you need enough visibility to stop promising dates you can’t hit. Even basic min/max on common bearings and insulation helps sales quote with confidence.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">3. Lead capture that isn’t a dead end</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            In 2026, buyers still compare vendors online first. Pair software with presence: start at the{" "}
-            <Link href={SEO_USA_HUB_PATH} className="text-primary font-medium hover:underline">
-              USA motor repair business listing
-            </Link>{" "}
-            hub and connect inquiries to your CRM so nothing sits in an unmonitored inbox.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">4. Mobile-friendly, not mobile-forced</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Bench techs may not live on phones, but field techs do. The interface should work on a tablet in portrait mode without endless pinch-zoom—test before you buy.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">5. Data ownership and export</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Ask how you export customers, jobs, and invoices if you leave. Shops get acquired, split, or merge—don’t trap your history in a walled garden without an escape hatch.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">6. Evaluate software against your actual workflow map</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Before demos, document your current lifecycle: intake, quote, approval, parts, bench execution, testing, delivery,
-            invoicing, and follow-up. Then score each platform against these real steps instead of generic feature checkboxes.
-            Most implementation failures happen because a tool demos well but does not match daily operational reality.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Include exception flows in your evaluation: scope change after teardown, customer delay on approvals, rush jobs,
-            warranty rework, and split billing. If software only handles ideal jobs, your team will return to spreadsheets and
-            text messages in the first busy month.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">7. Permission controls matter more than people expect</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            In growing shops, role-based access prevents expensive mistakes. Estimators may need quote visibility but not payroll.
-            Technicians need job instructions but not pricing edits. Accounting needs invoice controls but not production schedule
-            overrides. Good permission design improves both security and process discipline.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            During trials, test common risk scenarios: accidental price edits, deleting records, or approving jobs without
-            required fields. If the system cannot enforce guardrails, your internal controls will always depend on memory.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">8. Integration depth: avoid shallow connectors</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            “Integrates with accounting” is not enough. Ask what syncs, in which direction, and at what frequency. For example:
-            customer records only, or invoices + payment status + tax treatment? One-way export may be acceptable for small shops;
-            larger operations often need bidirectional reconciliation.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Also confirm failure handling. If sync fails, where does the error appear and who resolves it? Strong integration
-            behavior prevents month-end surprises and keeps finance trust high.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">9. Implementation and training plan (first 60 days)</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Software value depends on adoption speed. Create a phased rollout: week 1 setup and data cleanup, week 2 quote-to-job
-            flow training, week 3 invoicing standards, week 4 reporting and KPI review. Keep a pilot team for the first month,
-            then scale after real feedback.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Do not migrate every historical record at once unless required. Move active customers and in-progress jobs first.
-            Archive legacy data for reference, then import additional history in controlled batches.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">10. Total cost of ownership beyond subscription price</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Monthly license cost is only one component. Include onboarding time, data migration effort, internal training,
-            workflow redesign, and integration maintenance. A cheaper platform with heavy manual work can cost more than a
-            higher-fee system that eliminates re-entry and billing delays.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            A simple way to compare options: estimate hours saved per week across sales, production admin, and accounting. Convert
-            that into annual labor value and compare against total annual software + implementation cost.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">11. Red flags before you sign</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Be cautious if the vendor avoids discussing export formats, hides API limitations, provides only scripted demos, or
-            cannot show roadmap clarity for your industry use cases. Another red flag is requiring long contracts before proving
-            core workflow fit with your own data.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Ask for a real pilot with measurable success criteria: quote turnaround, cycle-time reduction, and invoice lag
-            improvement. If those metrics do not move during trial, the software is likely not the right operational fit.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">12. Vendor evaluation scorecard (simple and practical)</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Use a weighted scorecard to avoid emotional decision-making after polished demos. Recommended categories: workflow fit,
-            usability for non-technical staff, reporting depth, integration reliability, migration effort, support quality, and
-            total cost of ownership. Keep scoring criteria written and objective.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Run the scorecard with at least three roles: operations lead, estimator, and accounting owner. If one role strongly
-            rejects the system, adoption will likely stall regardless of contract value.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">13. Pilot with real data, not sample scenarios</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            A meaningful pilot includes active quotes, real customers, and live shop constraints. Simulated data hides the exact
-            edge cases that break adoption later: partial approvals, multi-line revisions, split invoicing, and delayed parts.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Define pilot success metrics upfront: reduced quote turnaround, fewer status calls, better on-time invoicing, and
-            lower stage aging. If the pilot cannot demonstrate measurable progress in these areas, postpone full rollout.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">14. Adoption strategy: train by role, not by feature menu</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Most teams forget software training after go-live. Build role-based playbooks: what estimators do daily, what service
-            coordinators update, what technicians need on the floor, and what accounting closes weekly. Role-focused training
-            improves retention and reduces resistance.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Pair each role with a short checklist and expected outcomes. For example, an estimator checklist may include intake
-            completeness, quote turnaround target, and change-order handoff quality.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">15. Governance after launch keeps ROI alive</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Set a monthly governance review for six months after launch. Review user adoption, data quality, process exceptions,
-            and support ticket themes. Assign owners for fixes and track closure. Without governance, teams drift into old habits
-            and software ROI fades quickly.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Strong governance turns software from a one-time purchase into an operating system for continuous improvement.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">16. What “best software” really means in 2026</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            In 2026, the best platform is not the one with the longest feature sheet. It is the one that reduces decision lag,
-            prevents re-entry, and keeps sales, production, and billing aligned in real time. If a system cannot improve these
-            fundamentals, it will become another administrative layer your team works around.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            A strong final test before signing is this: can a new job move from intake to invoice with minimal context switching,
-            full traceability, and clear accountability at each step? If yes, the platform likely fits your operation. If not,
-            implementation effort will be high and adoption fragile.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Software should amplify disciplined operations, not compensate for missing process foundations. Shops that pair
-            practical tooling with clear workflows usually win on both speed and margin.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Choose the platform your team can run confidently under real workload pressure. Reliability in day-to-day execution
-            creates more value than advanced features that remain unused after onboarding.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Decision summary for owners</h2>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Select software that improves speed, accuracy, and accountability in your core workflow. Validate with a real pilot,
-            role-based training, and measurable performance targets. If the platform can consistently shorten quote-to-cash cycle
-            time while maintaining data quality, it is likely the right fit for your shop.
-          </p>
-          <p className="mt-4 text-secondary leading-relaxed">
-            Keep the decision practical: the best system is the one your team uses every day to run work profitably and
-            predictably.
-          </p>
-        </section>
-
-        <section className="border-t border-border pt-10 mt-10">
-          <h2 className="text-xl font-bold text-title sm:text-2xl">FAQ</h2>
-          <dl className="mt-6 space-y-6">
-            <div>
-              <dt className="font-semibold text-title">
-                What is the most important feature for a motor repair shop?
-              </dt>
-              <dd className="mt-2 text-secondary leading-relaxed">
-                Continuity from quote to work order to invoice is usually the biggest win. When scope, labor, and
-                parts data flow through without re-entry, you reduce errors and protect margin.
-              </dd>
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Comparison table</h2>
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-sm text-secondary">
+                <thead>
+                  <tr className="border-b border-border text-title">
+                    <th className="py-2 pr-3 font-semibold">Capability</th>
+                    <th className="py-2 pr-3 font-semibold">IQMotorBase</th>
+                    <th className="py-2 pr-3 font-semibold">Spring Point</th>
+                    <th className="py-2 pr-3 font-semibold">Aptean Service Repair (Traverse)</th>
+                    <th className="py-2 font-semibold">Generic auto-shop tools</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Built for electric motor repair</td>
+                    <td className="py-3 pr-3">Yes — Job Write-Up, motor registry, quote-backed work orders</td>
+                    <td className="py-3 pr-3">
+                      Yes — MotorBase / Spring Point Suite for industrial apparatus repair, sales, and service
+                    </td>
+                    <td className="py-3 pr-3">
+                      Yes — Service Repair Traverse Edition for electric motor (AC/DC/servo), generator, turbine, and
+                      electrical apparatus repair (rewinding, armatures/stators, etc.)
+                    </td>
+                    <td className="py-3">
+                      <span className="font-bold text-danger">No</span> — vehicle RO workflows
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Lead generation included</td>
+                    <td className="py-3 pr-3">
+                      Yes — directory + local SEO pages; shared/exclusive credits; convert to customer + Job Write-Up
+                    </td>
+                    <td className="py-3 pr-3">
+                      <span className="font-bold text-danger">No</span> — CRM tracks opportunities/prospects; no public
+                      claim of originating inbound repair leads for the shop
+                    </td>
+                    <td className="py-3 pr-3">
+                      <span className="font-bold text-danger">No</span> — no public claim of originating inbound repair
+                      leads; sales/reporting inside the ERP, not a lead marketplace
+                    </td>
+                    <td className="py-3">
+                      <span className="font-bold text-danger">Typically no</span>
+                    </td>
+                  </tr>
+                  <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Mobile technician workflow</td>
+                    <td className="py-3 pr-3">Tag QR from Job Write-Up; scan opens work order; status + test notes</td>
+                    <td className="py-3 pr-3">
+                      Yes — Mobile Paperwork, QM Wizard (tablets/mobile), Time Clock, field-service mobile access
+                    </td>
+                    <td className="py-3 pr-3">
+                      Yes — mobile connectivity for jobs, inspections, photos, inventory; mobile QA checklists; mobile
+                      time clock (not Tag QR job-number scan)
+                    </td>
+                    <td className="py-3">Often mobile, but for auto RO contexts</td>
+                  </tr>
+                  <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Inventory reservation</td>
+                    <td className="py-3 pr-3">
+                      Yes — reserve on quote approval; ATP = on-hand − reserved; consume when work order ships
+                    </td>
+                    <td className="py-3 pr-3">
+                      Inventory control; available vs sold/allocated distinction (quote-approval “reserve” wording not
+                      stated publicly)
+                    </td>
+                    <td className="py-3 pr-3">
+                      Real-time inventory; safety stock / min qty; POs and materials tied to a job estimate; pick for
+                      jobs (exact “reserve on quote approval” wording not stated)
+                    </td>
+                    <td className="py-3">Varies; often parts for vehicles, not motor-job reservation</td>
+                  </tr>
+                  <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Pricing model</td>
+                    <td className="py-3 pr-3">Custom — monthly, yearly, or one-time; book a demo</td>
+                    <td className="py-3 pr-3">
+                      Monthly by concurrent user licenses + one-time setup/implementation fee (demo for numbers)
+                    </td>
+                    <td className="py-3 pr-3">
+                      Request pricing / demo (custom; no public Service Repair price list on Aptean pages reviewed)
+                    </td>
+                    <td className="py-3">Usually published SaaS tiers</td>
+                  </tr>
+                  <tr className="align-top">
+                    <td className="py-3 pr-3 font-medium text-title">Best for</td>
+                    <td className="py-3 pr-3">
+                      Independent and regional electric motor/rewind shops that want ops + leads in one product
+                    </td>
+                    <td className="py-3 pr-3">
+                      Apparatus sales &amp; service centers wanting a full ERP suite (jobs, QM, accounting, CRM,
+                      portal)—ops-first, not lead-marketplace
+                    </td>
+                    <td className="py-3 pr-3">
+                      Electro-mechanical / apparatus repair shops wanting enterprise ERP (finance, HR, QA, inventory,
+                      scheduling) from estimate to invoice; EASA documentation support called out on Aptean pages
+                    </td>
+                    <td className="py-3">Automotive repair businesses, not rewind shops</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
-            <div>
-              <dt className="font-semibold text-title">
-                Do small repair shops need full ERP software?
-              </dt>
-              <dd className="mt-2 text-secondary leading-relaxed">
-                Not always. Most small and mid-size shops need practical job tracking, invoicing, and enough inventory
-                visibility to quote accurately, not enterprise-level complexity.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-title">
-                Should software include lead generation too?
-              </dt>
-              <dd className="mt-2 text-secondary leading-relaxed">
-                Ideally yes. A system that combines online visibility with operational workflow helps you capture new
-                demand and convert it faster, instead of managing leads in disconnected tools.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-title">
-                How do we avoid getting locked into the wrong system?
-              </dt>
-              <dd className="mt-2 text-secondary leading-relaxed">
-                Verify export options before signing: customers, jobs, and invoices should be portable. Ask for a
-                real trial with your own workflow data, not a generic demo.
-              </dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-title">
-                What should we ask about data privacy before buying?
-              </dt>
-              <dd className="mt-2 text-secondary leading-relaxed">
-                Ask how customer, quote, and operational data is stored, who can access it, and how permissions are
-                managed for your team. Confirm export options and privacy commitments in writing so you can maintain
-                control over sensitive business information.
-              </dd>
-            </div>
-          </dl>
-        </section>
-
-        <section className="border-t border-border pt-10 mt-10">
-          <h2 className="text-xl font-bold text-title sm:text-2xl">Keep reading</h2>
-          <ul className="mt-4 space-y-2 text-secondary">
-            <li>
-              <Link href="/blog/how-to-manage-repair-jobs-efficiently" className="text-primary font-medium hover:underline">
-                How to manage repair jobs efficiently
+            <p className="mt-4 text-secondary leading-relaxed">
+              IQMotorBase columns above are limited to product facts from our own ground truth: Job Write-Up, quotes
+              linked to the job, work orders from the primary final quote, job board, Tag QR mobile updates, customer
+              and motor registry, parts catalog with reservation and ship-time consumption, vendor POs, invoicing and
+              AR, API sync for customers/work orders/quotes, data import at onboarding, and directory-driven leads. For
+              deeper product pages see{" "}
+              <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
+                motor repair shop management software
               </Link>
-            </li>
-            <li>
+              ,{" "}
+              <Link href={SEO_SOFTWARE_CRM_PATH} className="text-primary font-medium hover:underline">
+                CRM and leads
+              </Link>
+              ,{" "}
+              <Link href={SEO_SOFTWARE_WORK_ORDER_PATH} className="text-primary font-medium hover:underline">
+                work orders
+              </Link>
+              ,{" "}
+              <Link href={SEO_SOFTWARE_INVENTORY_PATH} className="text-primary font-medium hover:underline">
+                inventory
+              </Link>
+              , and{" "}
+              <Link href={SEO_SOFTWARE_INVOICING_PATH} className="text-primary font-medium hover:underline">
+                invoicing and quoting
+              </Link>
+              .
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">How to read this comparison without getting sold</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Start from your shop’s actual Tuesday, not from a feature checklist. Write down how a motor enters the
+              building, who writes the first notes, where the quote lives, who reserves parts, how the floor learns
+              the job number, where test values are recorded, and who creates the invoice. Then ask each vendor—including
+              us—to walk that path on screen. If a demo skips reservation, Tag QR (or their equivalent floor open), or
+              quote-to-invoice continuity, mark it as a gap. Do not accept “we have notes fields” as a substitute for
+              motor history and test data on the work order.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Competitor cells above stick to what those vendors state publicly (springpt.com; Aptean Service Repair
+              Traverse Edition industry pages). IQMotorBase cells are limited to what the product does: Job Write-Up,
+              quotes linked to the job, work orders from the primary final quote, configurable job board columns, Tag
+              QR mobile updates, customer and motor registry, on-hand/reserved inventory with ship-time consumption,
+              vendor POs, invoicing and aging, API sync for customers/work orders/quotes, import at onboarding, and
+              directory/local SEO leads with shared or exclusive credits.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Generic auto-shop tools (grouped in the last column) show up in “motor repair software” searches because
+              search engines do not always distinguish electric motor rewind from automotive repair. Those products can
+              be excellent for car shops and still be the wrong record structure for coil data, insulation tests, and
+              repeat industrial customers. Score them honestly: if the form is a vehicle RO, it is not motor-shop
+              software even if the salesperson says “you can customize it.”
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">When IQMotorBase is the right fit</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              IQMotorBase is a strong fit when the shop’s pain is fragmented tools: a WIP spreadsheet, a separate
+              quoting habit, inventory that is not reserved against approved quotes, invoices that re-key from a PDF,
+              and leads sitting in email. If you want one job number from intake through work order and invoice, motor
+              history that returns with the serial number, Tag QR updates from the floor, and leads from the same
+              company’s directory converting into a Job Write-Up without a second CRM, this product matches that map.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              It is also the right conversation when lead generation matters. Most shop-management tools stop at
+              operations. IQMotorBase’s differentiator is originating shared and exclusive leads with a credit balance
+              that deducts on delivery—not promising a free unlimited inbox of work.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">When a different tool might fit better</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Honesty matters here. A shop that is part of a larger multi-service auto or industrial group may already
+              be standardized on a broader ERP or corporate system. In that case, forcing a second shop platform can
+              create more sync work than it removes—even if the motor-specific screens look better in a demo. Verify
+              Aptean (or whatever corporate standard you already run) against your winding and test data needs before
+              you assume a rip-and-replace.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              A shop that does not want directory leads or credit-based lead delivery may prefer a pure operations
+              ERP such as Spring Point or Aptean Service Repair Traverse Edition. Re-check inventory, mobile, and
+              pricing on those vendors’ sites (and in a live demo) before you lock an internal recommendation.
+              Spreadsheets remain “cheaper” only until a missed reservation or lost test sheet costs a job; they are
+              still the fallback for shops that refuse any SaaS, not a long-term WIP system.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Also be honest about change capacity. If the shop cannot staff onboarding or will not import customers
+              and motors from the current spreadsheet, any system—including IQMotorBase—will underperform. Migration
+              support from spreadsheets or other systems is offered at onboarding; use it. A comparison that ignores
+              data move-in is incomplete.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Frequently asked questions</h2>
+            <dl className="mt-6 space-y-6">
+              {faqItems.map((item) => (
+                <div key={item.q}>
+                  <dt className="font-semibold text-title">{item.q}</dt>
+                  <dd className="mt-2 text-secondary leading-relaxed">{item.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              IQMotorBase pricing is custom—monthly, yearly, or one-time—matched to the shop’s workflow. Use the form
+              to book a demo, or see{" "}
               <Link href="/pricing" className="text-primary font-medium hover:underline">
-                IQMotorBase.com pricing
+                pricing
               </Link>
-            </li>
-          </ul>
-        </section>
-      </article>
-    </BlogPageLayout>
+              . Bring your real intake → quote → floor → invoice path to the call; that is the only fair comparison.
+            </p>
+          </section>
+
+          <SoftwareClusterLinks
+            excludeHref={path}
+            title="Software guides in this cluster"
+            extraLinks={[{ href: "/pricing", label: "Pricing" }]}
+          />
+        </article>
+      </BlogPageLayout>
+    </>
   );
 }

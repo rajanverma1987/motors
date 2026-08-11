@@ -65,6 +65,31 @@ const SHOP_LINKS = [
     hint: "Work orders, job board, inventory",
   },
   {
+    href: "/motor-repair-crm-software",
+    label: "Motor repair CRM & leads",
+    hint: "Customer/motor registry + directory leads",
+  },
+  {
+    href: "/work-order-software-for-motor-repair-shops",
+    label: "Work order software",
+    hint: "Job-linked WOs, board, Tag QR",
+  },
+  {
+    href: "/motor-repair-inventory-software",
+    label: "Inventory software",
+    hint: "On-hand, reserved, ship consumption",
+  },
+  {
+    href: "/motor-repair-invoicing-and-quoting-software",
+    label: "Invoicing & quoting",
+    hint: "RFQs to invoices and AR",
+  },
+  {
+    href: "/blog/best-software-for-repair-shop-2026",
+    label: "Best software comparison (2026)",
+    hint: "IQMotorBase vs other options",
+  },
+  {
     href: "/track-motor-repair-jobs",
     label: "Track repair jobs",
     hint: "Visibility from quote to delivery",

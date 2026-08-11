@@ -58,16 +58,27 @@ import {
   fetchSimpleServiceProposalsPage,
   saveSimpleServiceProposal,
 } from "@/lib/simple-portal-api";
+import {
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+} from "@/lib/invoice-tax-collected";
 import { computeNextJobNumber } from "@/lib/job-document-number-format";
+
+const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
+const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
+const FILTER_TAX_TO_COLLECT = INVOICE_FILTER_TAX_TO_BE_COLLECTED;
 
 export const SIMPLE_LIST_VARIANT_PROPOSALS = "proposals";
 export const SIMPLE_LIST_VARIANT_INVOICES = "invoices";
 
 const NOTES_EDIT_FORM_ID = "simple-proposal-notes-edit-form";
 
-const FILTER_TAX_COLLECTED = "__tax_collected__";
-const FILTER_TAX_TO_COLLECT = "__tax_to_collect__";
-const FILTER_AMOUNT_RECEIVABLE = "__amount_receivable__";
+const EMPTY_INVOICE_FINANCE = {
+  amountReceivable: { count: 0, amount: 0 },
+  taxCollected: { count: 0, amount: 0 },
+  taxToCollect: { count: 0, amount: 0 },
+};
 
 function statusBareKey(status) {
   return String(status || "")
@@ -88,12 +99,6 @@ function toInvoiceStatusSelectValue(status, quoteStatusValues) {
     )
   );
   return quoteValues.has(bare) ? `invoice:${bare}` : bare;
-}
-
-/** True when invoice status is Fully Paid (settings slug or labeled). */
-function isFullyPaidInvoiceStatus(status) {
-  const bare = statusBareKey(status).replace(/[\s-]+/g, "_");
-  return bare === "fully_paid" || bare.endsWith("_fully_paid");
 }
 
 function statusCardIcon(label) {
@@ -185,6 +190,7 @@ export default function ServiceProposalsPanel({
   const [totalCount, setTotalCount] = useState(0);
   const [statusBuckets, setStatusBuckets] = useState([]);
   const [listTotals, setListTotals] = useState({ total: 0, taxCollected: 0, count: 0 });
+  const [invoiceFinance, setInvoiceFinance] = useState(EMPTY_INVOICE_FINANCE);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
 
@@ -295,6 +301,7 @@ export default function ServiceProposalsPanel({
       setTotalCount(Number(pageData.totalCount) || 0);
       setStatusBuckets(Array.isArray(pageData.statusBuckets) ? pageData.statusBuckets : []);
       setListTotals(pageData.totals || { total: 0, taxCollected: 0, count: 0 });
+      setInvoiceFinance(pageData.invoiceFinance || EMPTY_INVOICE_FINANCE);
       setCustomers(customersList);
       setEmployees(Array.isArray(emps) ? emps : []);
     } catch {
@@ -302,6 +309,7 @@ export default function ServiceProposalsPanel({
       setTotalCount(0);
       setStatusBuckets([]);
       setListTotals({ total: 0, taxCollected: 0, count: 0 });
+      setInvoiceFinance(EMPTY_INVOICE_FINANCE);
     } finally {
       setReady(true);
     }
@@ -611,45 +619,31 @@ export default function ServiceProposalsPanel({
     });
 
     if (isInvoices) {
-      let paidCount = 0;
-      let paidAmount = 0;
-      let paidTax = 0;
-      let unpaidCount = 0;
-      let unpaidAmount = 0;
-      let unpaidTax = 0;
-      for (const [status, b] of bucketByStatus.entries()) {
-        if (isFullyPaidInvoiceStatus(status)) {
-          paidCount += b.count;
-          paidAmount += b.amount;
-          paidTax += b.taxCollected;
-        } else {
-          unpaidCount += b.count;
-          unpaidAmount += b.amount;
-          unpaidTax += b.taxCollected;
-        }
-      }
+      const ar = invoiceFinance?.amountReceivable || { count: 0, amount: 0 };
+      const taxPaid = invoiceFinance?.taxCollected || { count: 0, amount: 0 };
+      const taxDue = invoiceFinance?.taxToCollect || { count: 0, amount: 0 };
       buttons.push(
         {
           key: FILTER_AMOUNT_RECEIVABLE,
           label: "Amount Receivable",
-          count: unpaidCount,
-          amount: unpaidAmount,
+          count: ar.count,
+          amount: ar.amount,
           tileAppearance: resolveStatusTileProps("", 3),
           icon: statusCardIcon("Amount Receivable"),
         },
         {
           key: FILTER_TAX_COLLECTED,
           label: "Tax Collected",
-          count: paidCount,
-          amount: paidTax,
+          count: taxPaid.count,
+          amount: taxPaid.amount,
           tileAppearance: resolveStatusTileProps("", 2),
           icon: statusCardIcon("Tax Collected"),
         },
         {
           key: FILTER_TAX_TO_COLLECT,
           label: "Tax to be collected",
-          count: unpaidCount,
-          amount: unpaidTax,
+          count: taxDue.count,
+          amount: taxDue.amount,
           tileAppearance: resolveStatusTileProps("", 4),
           icon: statusCardIcon("Tax to be collected"),
         }
@@ -664,6 +658,7 @@ export default function ServiceProposalsPanel({
     quoteOpts,
     invoiceOpts,
     isInvoices,
+    invoiceFinance,
   ]);
 
   const displayRows = rows;
@@ -1067,15 +1062,21 @@ export default function ServiceProposalsPanel({
             totalCount === 0
               ? searchQuery.trim()
                 ? "No records match your search."
-                : statusFilter
-                  ? "No records with this status."
-                  : dateFrom || dateTo
-                    ? isInvoices
-                      ? "No invoices in this date range."
-                      : "No service proposals in this date range."
-                    : isInvoices
-                      ? "No invoices yet. Convert a proposal to an invoice status to see it here."
-                      : "No service proposals yet. Click Add New to create one."
+                : statusFilter === FILTER_TAX_COLLECTED
+                  ? "No fully paid invoices with tax collected."
+                  : statusFilter === FILTER_TAX_TO_COLLECT
+                    ? "No open invoices with tax still to collect."
+                    : statusFilter === FILTER_AMOUNT_RECEIVABLE
+                      ? "No open invoices with an amount receivable."
+                      : statusFilter
+                        ? "No records with this status."
+                        : dateFrom || dateTo
+                          ? isInvoices
+                            ? "No invoices in this date range."
+                            : "No service proposals in this date range."
+                          : isInvoices
+                            ? "No invoices yet. Convert a proposal to an invoice status to see it here."
+                            : "No service proposals yet. Click Add New to create one."
               : isInvoices
                 ? "No invoices yet."
                 : "No service proposals yet. Click Add New to create one."

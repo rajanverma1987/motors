@@ -13,6 +13,12 @@ import {
 } from "@/lib/dropdown-catalog";
 import { mongoCalendarDateRange } from "@/lib/format-date";
 import { RECORD_TYPE_INVOICE } from "@/lib/simple-service-proposal-form";
+import {
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY,
+} from "@/lib/invoice-tax-collected";
 
 const SORT_FIELD_MAP = {
   quote: "documentNumber",
@@ -97,11 +103,19 @@ export function mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoic
   const f = String(statusFilter || "").trim();
   if (!f) return null;
 
-  if (f === "__amount_receivable__" || f === "__tax_to_collect__") {
+  if (f === INVOICE_FILTER_AMOUNT_RECEIVABLE) {
     return mongoNotFullyPaidClause(mergedSettings);
   }
-  if (f === "__tax_collected__") {
-    return mongoFullyPaidClause(mergedSettings);
+  if (
+    f === INVOICE_FILTER_TAX_TO_BE_COLLECTED ||
+    f === INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY
+  ) {
+    // Unpaid / not fully paid invoices that still have sales tax to collect.
+    return andMongoClauses(mongoNotFullyPaidClause(mergedSettings), mongoPositiveTaxClause());
+  }
+  if (f === INVOICE_FILTER_TAX_COLLECTED) {
+    // Fully paid invoices where sales tax was collected.
+    return andMongoClauses(mongoFullyPaidClause(mergedSettings), mongoPositiveTaxClause());
   }
 
   if (!isInvoices && isQuoteStatusFilterGroupKey(f)) {
@@ -111,8 +125,10 @@ export function mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoic
     const members = spec.memberValues.map((v) => String(v).toLowerCase());
     return {
       $or: [
-        { status: { $in: members } },
-        ...members.map((m) => ({ status: new RegExp(`^invoice:${escapeRx(m)}$`, "i") })),
+        ...members.map((m) => ({ status: { $regex: `^${escapeRx(m)}$`, $options: "i" } })),
+        ...members.map((m) => ({
+          status: { $regex: `^invoice:${escapeRx(m)}$`, $options: "i" },
+        })),
       ],
     };
   }
@@ -121,9 +137,8 @@ export function mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoic
   if (!bare) return null;
   return {
     $or: [
-      { status: bare },
-      { status: f },
-      { status: new RegExp(`^invoice:${escapeRx(bare)}$`, "i") },
+      { status: { $regex: `^${escapeRx(bare)}$`, $options: "i" } },
+      { status: { $regex: `^invoice:${escapeRx(bare)}$`, $options: "i" } },
     ],
   };
 }
@@ -135,28 +150,78 @@ function escapeRx(s) {
 function fullyPaidBareSlugs(mergedSettings) {
   const slugs = invoiceStatusAllowedSlugs(mergedSettings);
   return slugs.filter((s) => {
-    const bare = s.replace(/[\s-]+/g, "_");
+    const bare = String(s || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
     return bare === "fully_paid" || bare.endsWith("_fully_paid");
   });
 }
 
+/** taxCollected may be number or numeric string on older rows. */
+export function mongoPositiveTaxClause() {
+  return {
+    $expr: {
+      $gt: [
+        {
+          $convert: {
+            input: "$taxCollected",
+            to: "double",
+            onError: 0,
+            onNull: 0,
+          },
+        },
+        0.005,
+      ],
+    },
+  };
+}
+
 export function mongoFullyPaidClause(mergedSettings) {
   const paid = fullyPaidBareSlugs(mergedSettings);
-  if (!paid.length) {
-    return {
-      status: { $regex: /fully[_ ]?paid/i },
-    };
-  }
+  const slugs = paid.length ? paid : ["fully_paid"];
   return {
-    $or: [
-      { status: { $in: paid } },
-      ...paid.map((m) => ({ status: new RegExp(`^invoice:${escapeRx(m)}$`, "i") })),
-    ],
+    $or: slugs.flatMap((m) => {
+      const bare = String(m)
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_");
+      // Match bare slug, spaced label, and invoice:-prefixed forms (any case).
+      const flexible = escapeRx(bare).replace(/_/g, "[_\\s-]+");
+      return [
+        { status: { $regex: `^${flexible}$`, $options: "i" } },
+        { status: { $regex: `^invoice:${flexible}$`, $options: "i" } },
+      ];
+    }),
   };
 }
 
 export function mongoNotFullyPaidClause(mergedSettings) {
   return { $nor: [mongoFullyPaidClause(mergedSettings)] };
+}
+
+/**
+ * Aggregation stages: numeric tax/total + fully-paid flag for invoice finance cards.
+ */
+export function invoiceFinanceAddFieldsStages() {
+  return [
+    {
+      $addFields: {
+        _spTax: {
+          $convert: { input: "$taxCollected", to: "double", onError: 0, onNull: 0 },
+        },
+        _spTotal: {
+          $convert: { input: "$total", to: "double", onError: 0, onNull: 0 },
+        },
+        _spFullyPaid: {
+          $regexMatch: {
+            input: { $toLower: { $ifNull: ["$status", ""] } },
+            regex: "(^invoice:)?(.*[_\\s-])?fully[_\\s-]?paid$",
+          },
+        },
+      },
+    },
+  ];
 }
 
 /**

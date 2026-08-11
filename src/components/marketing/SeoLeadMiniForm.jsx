@@ -8,7 +8,13 @@ import Input from "@/components/ui/input";
 /**
  * Compact lead capture for SEO landings → /api/contact-demo (extended with business/city/source).
  */
-export default function SeoLeadMiniForm({ sourcePage = "", defaultCity = "", defaultState = "" }) {
+export default function SeoLeadMiniForm({
+  sourcePage = "",
+  defaultCity = "",
+  defaultState = "",
+  /** Button label — software SEO pages use "Book a demo" per Seo.md. */
+  submitLabel = "Request info & CRM access",
+}) {
   const router = useRouter();
   const [form, setForm] = useState({
     name: "",
@@ -153,7 +159,7 @@ export default function SeoLeadMiniForm({ sourcePage = "", defaultCity = "", def
       )}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
       <Button type="submit" variant="primary" className="w-full" disabled={submitting}>
-        {submitting ? "Sending…" : "Request info & CRM access"}
+        {submitting ? "Sending…" : submitLabel}
       </Button>
       <p className="text-xs text-secondary">
         We&apos;ll follow up to help you get listed and onboarded. Prefer email?{" "}

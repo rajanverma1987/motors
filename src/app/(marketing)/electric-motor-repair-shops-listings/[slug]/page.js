@@ -13,6 +13,7 @@ import {
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 import ListingDetailFaqSection from "./listing-detail-faq-section";
+import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
 import ListingGalleryLightbox from "./listing-gallery-lightbox";
 import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
 import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
@@ -503,6 +504,7 @@ export default async function ListingDetailPage({ params }) {
             )}
           </div>
         </div>
+        <OwnAShopLikeThisModule className="mt-10" />
         <ListingDetailFaqSection items={faqs} />
           </div>
           <div className="lg:sticky lg:top-8">

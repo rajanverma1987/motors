@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
+import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
 import { FiMessageCircle } from "react-icons/fi";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
@@ -201,6 +202,8 @@ export default function SeoLeadLandingPage({
                 .
               </p>
             </section>
+
+            <OwnAShopLikeThisModule className="mt-10" />
 
             {linkSections?.length > 0 && (
               <section className="border-t border-border pt-10">

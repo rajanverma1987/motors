@@ -11,6 +11,7 @@ import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
 import {
   andMongoClauses,
+  invoiceFinanceAddFieldsStages,
   loadMergedSettingsForEmail,
   mongoInvoiceKindClause,
   mongoProposalKindClause,
@@ -19,6 +20,72 @@ import {
   simpleSpSortField,
   statusSortRankExpression,
 } from "@/lib/simple-service-proposal-list-query";
+
+function emptyInvoiceFinance() {
+  return {
+    amountReceivable: { count: 0, amount: 0 },
+    taxCollected: { count: 0, amount: 0 },
+    taxToCollect: { count: 0, amount: 0 },
+  };
+}
+
+function round2(n) {
+  return Math.round((Number(n) + Number.EPSILON) * 100) / 100 || 0;
+}
+
+async function loadInvoiceFinanceSummary(baseMatch) {
+  const rows = await SimpleServiceProposal.aggregate([
+    { $match: baseMatch },
+    ...invoiceFinanceAddFieldsStages(),
+    {
+      $facet: {
+        amountReceivable: [
+          { $match: { _spFullyPaid: false } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              amount: { $sum: "$_spTotal" },
+            },
+          },
+        ],
+        taxCollected: [
+          { $match: { _spFullyPaid: true, _spTax: { $gt: 0.005 } } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              amount: { $sum: "$_spTax" },
+            },
+          },
+        ],
+        taxToCollect: [
+          { $match: { _spFullyPaid: false, _spTax: { $gt: 0.005 } } },
+          {
+            $group: {
+              _id: null,
+              count: { $sum: 1 },
+              amount: { $sum: "$_spTax" },
+            },
+          },
+        ],
+      },
+    },
+  ]);
+  const facet = rows?.[0] || {};
+  const pick = (key) => {
+    const row = facet?.[key]?.[0] || {};
+    return {
+      count: Number(row.count) || 0,
+      amount: round2(row.amount),
+    };
+  };
+  return {
+    amountReceivable: pick("amountReceivable"),
+    taxCollected: pick("taxCollected"),
+    taxToCollect: pick("taxToCollect"),
+  };
+}
 
 export async function GET(request) {
   try {
@@ -119,11 +186,15 @@ export async function GET(request) {
       },
     ]);
 
+    const invoiceFinancePromise = isInvoices
+      ? loadInvoiceFinanceSummary(baseMatch)
+      : Promise.resolve(emptyInvoiceFinance());
+
     let items = [];
     let totalCount = 0;
 
     if (useStatusRank) {
-      const [agg, summaryRows, totalsRows] = await Promise.all([
+      const [agg, summaryRows, totalsRows, invoiceFinance] = await Promise.all([
         SimpleServiceProposal.aggregate([
           { $match: listMatch },
           { $addFields: { __statusRank: statusSortRankExpression(mergedSettings) } },
@@ -137,6 +208,7 @@ export async function GET(request) {
         ]),
         summaryPromise,
         totalsPromise,
+        invoiceFinancePromise,
       ]);
       totalCount = Number(agg?.[0]?.total?.[0]?.n) || 0;
       items = (agg?.[0]?.page || []).map((doc) => serializeSimplePortalDoc(doc));
@@ -158,15 +230,17 @@ export async function GET(request) {
           amount: Number(r.amount) || 0,
           taxCollected: Number(r.taxCollected) || 0,
         })),
+        invoiceFinance,
       });
     }
 
     const sort = { [sortField]: sortMul, updatedAt: -1 };
-    const [count, list, summaryRows, totalsRows] = await Promise.all([
+    const [count, list, summaryRows, totalsRows, invoiceFinance] = await Promise.all([
       SimpleServiceProposal.countDocuments(listMatch),
       SimpleServiceProposal.find(listMatch).sort(sort).skip(skip).limit(pageSize).lean(),
       summaryPromise,
       totalsPromise,
+      invoiceFinancePromise,
     ]);
     totalCount = count;
     items = list.map((doc) => serializeSimplePortalDoc(doc));
@@ -188,6 +262,7 @@ export async function GET(request) {
         amount: Number(r.amount) || 0,
         taxCollected: Number(r.taxCollected) || 0,
       })),
+      invoiceFinance,
     });
   } catch (err) {
     console.error("Dashboard list simple service proposals error:", err);

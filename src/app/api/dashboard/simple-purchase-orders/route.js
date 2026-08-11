@@ -65,7 +65,12 @@ export async function GET(request) {
       if (jobNumber) ors.push({ jobNumber });
       andParts.push({ $or: ors });
     }
-    if (paymentStatus) andParts.push({ paymentStatus });
+    if (paymentStatus) {
+      const escaped = paymentStatus.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      andParts.push({
+        paymentStatus: { $regex: `^${escaped}$`, $options: "i" },
+      });
+    }
     if (from || to) {
       const range = mongoCalendarDateRange(from, to);
       if (range) {

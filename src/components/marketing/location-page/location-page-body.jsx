@@ -1,4 +1,5 @@
 import Link from "next/link";
+import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
 
 /**
  * @param {{
@@ -139,6 +140,8 @@ export default function LocationPageBody({
           ))}
         </ul>
       </section>
+
+      <OwnAShopLikeThisModule className="mt-12" />
 
       {relatedPages.length > 0 ? (
         <section className="mt-12" aria-labelledby="related-locations-heading">

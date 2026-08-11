@@ -1,5 +1,6 @@
 import Link from "next/link";
 import ListingDetailFaqSection from "./[slug]/listing-detail-faq-section";
+import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
 import { LISTINGS_DIRECTORY_FAQ_ITEMS } from "./listings-directory-seo-data";
 
 /**
@@ -150,6 +151,8 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
           for additional visibility.
         </p>
       </section>
+
+      <OwnAShopLikeThisModule className="mt-10" />
 
       <ListingDetailFaqSection
         items={LISTINGS_DIRECTORY_FAQ_ITEMS}

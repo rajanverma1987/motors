@@ -67,6 +67,11 @@ export async function fetchSimpleServiceProposalsPage(query = {}) {
   if (query.from) params.set("from", String(query.from).slice(0, 10));
   if (query.to) params.set("to", String(query.to).slice(0, 10));
   const data = await api(`${SP_API}?${params.toString()}`);
+  const finance = data?.invoiceFinance || {};
+  const financeBucket = (key) => ({
+    count: Number(finance?.[key]?.count) || 0,
+    amount: Number(finance?.[key]?.amount) || 0,
+  });
   return {
     items: Array.isArray(data?.items) ? data.items : [],
     page: Number(data?.page) || 1,
@@ -74,6 +79,11 @@ export async function fetchSimpleServiceProposalsPage(query = {}) {
     totalCount: Number(data?.totalCount) || 0,
     totals: data?.totals || { total: 0, taxCollected: 0, count: 0 },
     statusBuckets: Array.isArray(data?.statusBuckets) ? data.statusBuckets : [],
+    invoiceFinance: {
+      amountReceivable: financeBucket("amountReceivable"),
+      taxCollected: financeBucket("taxCollected"),
+      taxToCollect: financeBucket("taxToCollect"),
+    },
   };
 }
 
