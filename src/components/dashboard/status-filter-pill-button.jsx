@@ -397,13 +397,13 @@ function BodySoft(props) {
   const amountStyle = tileText ? { color: tileText } : undefined;
   return (
     <span
-      className={`flex h-full w-full min-w-0 flex-col gap-1.5 px-2.5 py-2 ${
+      className={`flex h-full min-h-[3.75rem] w-full min-w-0 flex-col justify-between gap-1.5 px-2.5 py-2 ${
         fillStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       }`}
       style={fillStyle}
     >
       <span
-        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold uppercase leading-snug tracking-wide ${
+        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold uppercase leading-none tracking-wide ${
           labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
         }`}
         style={labelStyle}
@@ -411,7 +411,7 @@ function BodySoft(props) {
       >
         {card.label}
       </span>
-      <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
+      <span className="flex min-h-[1.75rem] min-w-0 items-center gap-2 whitespace-nowrap">
         {active ? (
           <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
         ) : null}

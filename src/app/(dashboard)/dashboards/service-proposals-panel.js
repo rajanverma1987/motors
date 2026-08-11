@@ -1016,9 +1016,9 @@ export default function ServiceProposalsPanel({
 
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
-      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0 items-start justify-between`}>
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0 items-stretch justify-between`}>
         <div
-          className="grid min-w-0 w-full flex-1 gap-2"
+          className="grid min-w-0 w-full flex-1 items-stretch gap-2 self-stretch"
           style={{
             gridTemplateColumns: `repeat(${Math.max(mainStatusCards.length, 1)}, minmax(0, 1fr))`,
           }}
@@ -1027,7 +1027,7 @@ export default function ServiceProposalsPanel({
         </div>
         {invoiceSummaryCards.length > 0 ? (
           <div
-            className="ml-auto grid min-w-0 shrink-0 gap-2"
+            className="ml-6 grid min-w-0 shrink-0 items-stretch gap-2 self-stretch sm:ml-8"
             style={{
               gridTemplateColumns: `repeat(${Math.max(invoiceSummaryCards.length, 1)}, minmax(0, 1fr))`,
             }}
