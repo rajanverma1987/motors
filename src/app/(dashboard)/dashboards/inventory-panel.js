@@ -10,6 +10,7 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
 
@@ -52,7 +53,7 @@ export default function InventoryPanel() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
 
   const [itemModalOpen, setItemModalOpen] = useState(false);

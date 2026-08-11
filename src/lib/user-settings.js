@@ -113,6 +113,22 @@ const ACCOUNTS_PAYMENT_TERMS = new Set([
 
 const TABLE_PAGE_SIZES = new Set([10, 25, 50, 100]);
 
+/** Allowed dashboard table page sizes (Settings → Display → Rows per page). */
+export const TABLE_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
+
+/**
+ * Resolve a valid table page size from settings or a raw number.
+ * @param {unknown} settingsOrValue
+ */
+export function resolveTablePageSize(settingsOrValue) {
+  const n = Number(
+    settingsOrValue && typeof settingsOrValue === "object"
+      ? settingsOrValue.tablePageSize
+      : settingsOrValue
+  );
+  return TABLE_PAGE_SIZES.has(n) ? n : USER_SETTINGS_DEFAULTS.tablePageSize;
+}
+
 /** @param {unknown} raw */
 export function normalizeInventoryLocations(raw) {
   const arr = Array.isArray(raw) ? raw : [];

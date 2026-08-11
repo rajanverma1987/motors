@@ -12,6 +12,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
 import { useAlert } from "@/components/confirm-provider";
+import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { SIMPLE_MASTER_TABS } from "@/lib/simple-settings-nav";
 import {
   buildVendorPayload,
@@ -95,7 +96,7 @@ function EmployeesTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [modalOpen, setModalOpen] = useState(false);
@@ -417,7 +418,7 @@ function VendorsTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [editVendorId, setEditVendorId] = useState(null);
@@ -613,7 +614,7 @@ function SalesPersonsTab() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
   const [modalOpen, setModalOpen] = useState(false);

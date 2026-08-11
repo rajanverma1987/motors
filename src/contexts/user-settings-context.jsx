@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { USER_SETTINGS_DEFAULTS, mergeUserSettings } from "@/lib/user-settings";
+import { USER_SETTINGS_DEFAULTS, mergeUserSettings, resolveTablePageSize } from "@/lib/user-settings";
 import { formatMoney } from "@/lib/format-currency";
 import { formatDateForCurrency } from "@/lib/format-date";
 
@@ -79,6 +79,23 @@ export function UserSettingsValueProvider({ settings, children }) {
 export function useCompactTables() {
   const { settings } = useUserSettings();
   return !!settings?.compactTables;
+}
+
+/**
+ * Page size state seeded from Settings → Display → Rows per page.
+ * Stays in sync when the preference changes; still overridable via setPageSize (table footer).
+ * @returns {[number, (n: number) => void]}
+ */
+export function usePreferredTablePageSize() {
+  const { settings } = useUserSettings();
+  const preferred = resolveTablePageSize(settings);
+  const [pageSize, setPageSize] = useState(preferred);
+
+  useEffect(() => {
+    setPageSize((prev) => (prev === preferred ? prev : preferred));
+  }, [preferred]);
+
+  return [pageSize, setPageSize];
 }
 
 /** Format money using the signed-in user’s Settings → Currency (default USD). */

@@ -28,7 +28,7 @@ import {
 } from "@/lib/simple-screen-ui";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
-import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
 import {
   invoiceStatusSelectOptionsFromMerged,
   invoiceStatusTileColorForValue,
@@ -181,7 +181,7 @@ export default function ServiceProposalsPanel({
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "date", direction: "desc" });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [statusBuckets, setStatusBuckets] = useState([]);
   const [listTotals, setListTotals] = useState({ total: 0, taxCollected: 0, count: 0 });

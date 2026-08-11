@@ -8,6 +8,7 @@ import Checkbox from "./checkbox";
 import Modal from "./modal";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { formatDateMdy } from "@/lib/format-date";
+import { resolveTablePageSize } from "@/lib/user-settings";
 
 /** Column keys that hold calendar dates (not timestamps) when no custom render is set. */
 const TABLE_DATE_COLUMN_KEYS = new Set([
@@ -219,7 +220,7 @@ export default function Table({
   const isMountedRef = useRef(true);
   const lastEmittedSearchRef = useRef(null);
   const { settings: dashboardUserSettings } = useUserSettings();
-  const preferredPageSize = dashboardUserSettings?.tablePageSize;
+  const preferredPageSize = resolveTablePageSize(dashboardUserSettings);
   const compactFromSettings = !!dashboardUserSettings?.compactTables;
   const isCompact = dense || compactFromSettings;
 
@@ -240,9 +241,7 @@ export default function Table({
   }
 
   const [internalPage, setInternalPage] = useState(1);
-  const [internalPageSize, setInternalPageSize] = useState(() =>
-    [10, 25, 50, 100].includes(Number(preferredPageSize)) ? Number(preferredPageSize) : 25
-  );
+  const [internalPageSize, setInternalPageSize] = useState(() => resolveTablePageSize(preferredPageSize));
   const [cellHover, setCellHover] = useState({ row: null, col: null });
 
   const clearCellHover = () => setCellHover({ row: null, col: null });
@@ -261,8 +260,8 @@ export default function Table({
 
   useEffect(() => {
     if (!enableClientPagination) return;
-    const n = Number(preferredPageSize);
-    if ([10, 25, 50, 100].includes(n) && n !== internalPageSize) {
+    const n = resolveTablePageSize(preferredPageSize);
+    if (n !== internalPageSize) {
       setInternalPageSize(n);
       setInternalPage(1);
     }

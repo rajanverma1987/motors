@@ -11,6 +11,7 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert } from "@/components/confirm-provider";
+import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import {
   buildCustomerPayload,
   INITIAL_CUSTOMER_FORM,
@@ -90,7 +91,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const [typeFilter, setTypeFilter] = useState(FILTER_ALL);
   const [tableSort, setTableSort] = useState({ key: "companyName", direction: "asc" });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [customerTotalCount, setCustomerTotalCount] = useState(0);
   const [leadTotalCount, setLeadTotalCount] = useState(0);

@@ -287,10 +287,19 @@ export default function SimpleSelect({
         }}
         onKeyDown={onKeyDown}
       >
-        <span className={`min-w-0 flex-1 truncate ${isPlaceholder ? "text-secondary" : ""}`}>
+        <span
+          className={`min-w-0 flex-1 truncate ${
+            isPlaceholder ? "text-secondary" : variant === "pill" ? "text-current" : ""
+          }`}
+        >
           {display}
         </span>
-        <FiChevronDown className="h-3.5 w-3.5 shrink-0 text-secondary" aria-hidden />
+        <FiChevronDown
+          className={`h-3.5 w-3.5 shrink-0 ${
+            variant === "pill" ? "text-current opacity-100" : "text-secondary"
+          }`}
+          aria-hidden
+        />
       </button>
 
       {open && rect && typeof document !== "undefined"
