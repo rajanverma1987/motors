@@ -17,13 +17,12 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
-import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
-import { formatDateMdy } from "@/lib/format-date";
 import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
@@ -86,6 +85,7 @@ function paymentFilterIcon(label) {
 export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const formatDate = useFormatDate();
   const searchParams = useSearchParams();
   const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
 
@@ -388,13 +388,19 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         key: "poCutDate",
         label: "PO Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "—";
+        },
       },
       {
         key: "dueDate",
         label: "Due Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "—";
+        },
       },
       {
         key: "poStatus",
@@ -455,7 +461,10 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         key: "lastPaymentDate",
         label: "Last Payment Date",
         sortable: true,
-        render: (v) => formatDateMdy(v) || "—",
+        render: (v) => {
+          const text = formatDate(v);
+          return text && text !== "-" ? text : "—";
+        },
       },
       {
         key: "actions",
@@ -478,7 +487,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ),
       },
     ],
-    [handleDelete]
+    [formatDate, handleDelete]
   );
 
   const isCreate = modalMode === "create";

@@ -345,13 +345,13 @@ function SoftSelectedMark({ accentColor }) {
   const accent = accentColor || "hsl(var(--primary))";
   return (
     <span
-      className="inline-flex h-7 w-7 shrink-0 items-center justify-center"
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center sm:h-6 sm:w-6"
       title="Selected"
       aria-hidden
     >
       <svg
         viewBox="0 0 24 24"
-        className="h-7 w-7 drop-shadow-[0_1px_3px_rgba(0,0,0,0.22)]"
+        className="h-5 w-5 drop-shadow-[0_1px_3px_rgba(0,0,0,0.22)] sm:h-6 sm:w-6"
         aria-hidden
       >
         <circle cx="12" cy="12" r="11" fill={accent} />
@@ -384,7 +384,6 @@ function BodySoft(props) {
     displayValue,
     showCount,
     count,
-    countBadgeStyle,
     tileClassName,
     tileBg,
     tileText,
@@ -397,13 +396,13 @@ function BodySoft(props) {
   const amountStyle = tileText ? { color: tileText } : undefined;
   return (
     <span
-      className={`flex h-full min-h-[3.75rem] w-full min-w-0 flex-col justify-between gap-1.5 px-2.5 py-2 ${
+      className={`flex h-full w-full min-w-0 flex-col justify-center gap-2 px-2.5 py-1.5 ${
         fillStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       }`}
       style={fillStyle}
     >
       <span
-        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold uppercase leading-none tracking-wide ${
+        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold uppercase leading-none tracking-wide sm:text-sm ${
           labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
         }`}
         style={labelStyle}
@@ -411,12 +410,12 @@ function BodySoft(props) {
       >
         {card.label}
       </span>
-      <span className="flex min-h-[1.75rem] min-w-0 items-center gap-2 whitespace-nowrap">
+      <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
         {active ? (
           <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
         ) : null}
         <span
-          className={`min-w-0 truncate text-base font-bold leading-none tabular-nums ${
+          className={`min-w-0 truncate text-sm font-bold leading-none tabular-nums sm:text-base ${
             amountStyle || fillStyle ? "" : "text-title"
           }`}
           style={amountStyle}
@@ -426,18 +425,17 @@ function BodySoft(props) {
         </span>
         {showCount ? (
           <span
-            className={`ml-auto shrink-0 text-base font-extrabold leading-none tabular-nums ${
-              fillStyle ? "" : tileTextClassName || "text-title"
-            }`}
-            style={
-              fillStyle
-                ? {
-                    backgroundColor: "#ffffff",
-                    color: tileBg || tileText || "#111827",
-                    padding: "0.15rem 0.45rem",
-                  }
-                : countBadgeStyle
-            }
+            className="ml-auto shrink-0 text-sm font-extrabold leading-none tabular-nums sm:text-base"
+            style={{
+              backgroundColor: "#ffffff",
+              color:
+                tileBg && !isLightCssColor(tileBg)
+                  ? tileBg
+                  : tileText && !isLightCssColor(tileText)
+                    ? tileText
+                    : "#111827",
+              padding: "0.1rem 0.35rem",
+            }}
             title={`Count: ${count}`}
           >
             {count}
@@ -574,7 +572,8 @@ export default function StatusFilterPillButton({
     labelOnly
       ? "min-w-0 items-center"
       : isSoft
-        ? "h-full min-w-0 w-full flex-1 basis-0 flex-col"
+        ? // Match Simple hub tab strip height (`DASHBOARDS_TAB_BUTTON_CLASS`).
+          "h-[4.75rem] sm:h-[5.25rem] min-w-0 w-full flex-1 basis-0 flex-col"
         : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
     variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
     readOnly ? "" : "cursor-pointer",

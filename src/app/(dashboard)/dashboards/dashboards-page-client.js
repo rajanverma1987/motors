@@ -157,7 +157,7 @@ export default function DashboardsPageClient() {
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         listClassName={DASHBOARDS_TAB_LIST_CLASS}
         tabButtonClassName={DASHBOARDS_TAB_BUTTON_CLASS}
-        panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-3"
+        panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-0"
         value={activeTab}
         onChange={handleTabChange}
         tabs={tabs}

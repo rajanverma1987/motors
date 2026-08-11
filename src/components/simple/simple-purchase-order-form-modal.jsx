@@ -13,7 +13,7 @@ import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-field
 import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -143,6 +143,7 @@ export default function SimplePurchaseOrderFormModal({
   const confirm = useConfirm();
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const isViewMode = mode === "view";
 
@@ -152,6 +153,7 @@ export default function SimplePurchaseOrderFormModal({
   const [vendors, setVendors] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
+  const [loadingForm, setLoadingForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [addVendorOpen, setAddVendorOpen] = useState(false);
   const [vendorForm, setVendorForm] = useState(INITIAL_VENDOR_FORM);
@@ -270,42 +272,51 @@ export default function SimplePurchaseOrderFormModal({
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLoadingForm(false);
+      return;
+    }
     let cancelled = false;
     setAddVendorOpen(false);
     setVendorForm(INITIAL_VENDOR_FORM);
     setActiveTab(TAB_PO);
     setPaymentDraft(emptyPoPayment());
     setAttachmentsOpen(false);
+    setLoadingForm(true);
+    setForm(createEmptySimplePurchaseOrderForm());
     (async () => {
-      await loadJobOptionsFromApi();
-      if (cancelled) return;
-      if (isViewMode) {
-        const sid = String(serviceProposalId || "").trim();
-        const job = String(jobNumber || "").trim();
-        let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
+      try {
+        await loadJobOptionsFromApi();
         if (cancelled) return;
-        const preferred = String(initialPoId || "").trim();
-        if (preferred) {
-          const all = await fetchSimplePurchaseOrders();
+        if (isViewMode) {
+          const sid = String(serviceProposalId || "").trim();
+          const job = String(jobNumber || "").trim();
+          let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
           if (cancelled) return;
-          const hit = (Array.isArray(all) ? all : []).find((p) => String(p.id) === preferred);
-          if (hit) {
-            scoped = await listSimplePurchaseOrdersForJobApi(hit.serviceProposalId, hit.jobNumber);
-            if (!scoped.length) scoped = [hit];
+          const preferred = String(initialPoId || "").trim();
+          if (preferred) {
+            const all = await fetchSimplePurchaseOrders();
+            if (cancelled) return;
+            const hit = (Array.isArray(all) ? all : []).find((p) => String(p.id) === preferred);
+            if (hit) {
+              scoped = await listSimplePurchaseOrdersForJobApi(hit.serviceProposalId, hit.jobNumber);
+              if (!scoped.length) scoped = [hit];
+            }
           }
-        }
-        if (cancelled) return;
-        setJobPos(scoped);
-        if (scoped.length) {
-          const pick =
-            (preferred && scoped.find((p) => String(p.id) === preferred)) || scoped[0];
-          loadPoById(pick.id, scoped);
+          if (cancelled) return;
+          setJobPos(scoped);
+          if (scoped.length) {
+            const pick =
+              (preferred && scoped.find((p) => String(p.id) === preferred)) || scoped[0];
+            loadPoById(pick.id, scoped);
+          } else {
+            setForm(createEmptySimplePurchaseOrderForm());
+          }
         } else {
-          setForm(createEmptySimplePurchaseOrderForm());
+          await startCreate();
         }
-      } else {
-        await startCreate();
+      } finally {
+        if (!cancelled) setLoadingForm(false);
       }
     })();
     return () => {
@@ -679,7 +690,7 @@ export default function SimplePurchaseOrderFormModal({
         size="6xl"
         width="min(1200px, 98vw)"
         height={PO_MODAL_HEIGHT}
-        showClose={!saving}
+        showClose={!saving && !loadingForm}
         actions={
           <>
             <Button
@@ -687,7 +698,7 @@ export default function SimplePurchaseOrderFormModal({
               variant="outline"
               size="sm"
               className="inline-flex items-center gap-1.5"
-              disabled={saving || loadingMeta || !String(form.id || "").trim()}
+              disabled={saving || loadingForm || loadingMeta || !String(form.id || "").trim()}
               title={
                 String(form.id || "").trim()
                   ? "Add vendor invoices and documents"
@@ -708,7 +719,7 @@ export default function SimplePurchaseOrderFormModal({
               variant="outline"
               size="sm"
               className="inline-flex items-center gap-1.5"
-              disabled={saving || loadingMeta || !form.id}
+              disabled={saving || loadingForm || loadingMeta || !form.id}
               title={!form.id ? "Save the purchase order first" : undefined}
               onClick={openPrintPreview}
             >
@@ -720,7 +731,7 @@ export default function SimplePurchaseOrderFormModal({
               variant="outline"
               size="sm"
               className="inline-flex items-center gap-1.5"
-              disabled={saving || loadingMeta || !form.id}
+              disabled={saving || loadingForm || loadingMeta || !form.id}
               title={!form.id ? "Save the purchase order first" : undefined}
               onClick={openPrintPreview}
             >
@@ -732,17 +743,32 @@ export default function SimplePurchaseOrderFormModal({
               form={FORM_ID}
               variant="primary"
               size="sm"
-              disabled={saving || loadingMeta || (isViewMode && !form.id)}
+              disabled={saving || loadingForm || loadingMeta || (isViewMode && !form.id)}
             >
               {saving ? "Saving…" : "Save"}
             </Button>
           </>
         }
       >
+        <div className="relative min-h-[calc(min(84.6vh,828px)-4.75rem)]">
+          {loadingForm ? (
+            <div
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-card/80 backdrop-blur-[1px]"
+              aria-busy="true"
+              aria-live="polite"
+            >
+              <span
+                className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+                aria-hidden
+              />
+              <span className="text-sm font-medium text-title">Loading…</span>
+            </div>
+          ) : null}
         <Form
           id={FORM_ID}
           onSubmit={handleSubmit}
           className="flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          aria-hidden={loadingForm || undefined}
         >
           <div className="flex w-full shrink-0 flex-nowrap items-end gap-3 overflow-x-auto pb-0.5">
             {showTypeSelect ? (
@@ -1282,7 +1308,9 @@ export default function SimplePurchaseOrderFormModal({
                                 paidByOptions.find((o) => o.value === p.paidBy)?.label || p.paidBy || "—";
                               return (
                                 <tr key={p.id} className="border-t border-border bg-card">
-                                  <td className="border-r border-border px-1 py-1 text-title">{p.date || "—"}</td>
+                                  <td className="border-r border-border px-1 py-1 text-title">
+                                    {p.date ? formatDate(p.date) : "—"}
+                                  </td>
                                   <td className="border-r border-border px-1 py-1 text-right font-semibold tabular-nums text-title">
                                     {formatMoney(parsePoMoney(p.amount))}
                                   </td>
@@ -1404,6 +1432,7 @@ export default function SimplePurchaseOrderFormModal({
             ]}
           />
         </Form>
+        </div>
       </Modal>
 
       <SimplePurchaseOrderAttachmentsModal

@@ -38,6 +38,11 @@ export function parsePoMoney(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Round to cents so UI totals and payment status stay in sync. */
+export function roundPoMoney(value) {
+  return Math.round((parsePoMoney(value) + Number.EPSILON) * 100) / 100;
+}
+
 function newId(prefix) {
   return typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
@@ -107,10 +112,10 @@ export function suggestReceivingStatus(orderedQty, receivedQty) {
 }
 
 export function resolvePoPaymentStatus(amountPaid, grandTotal) {
-  const paid = parsePoMoney(amountPaid);
-  const total = parsePoMoney(grandTotal);
+  const paid = roundPoMoney(amountPaid);
+  const total = roundPoMoney(grandTotal);
   if (paid <= 0) return "Unpaid";
-  if (total > 0 && paid + 0.0001 >= total) return "Paid";
+  if (total > 0 && paid >= total) return "Paid";
   if (paid > 0) return "Partial Paid";
   return "Unpaid";
 }
@@ -124,12 +129,12 @@ export function computePoPaymentSummary(payments, grandTotal) {
   let amountPaid = 0;
   let latestDate = "";
   for (const p of list) {
-    amountPaid += parsePoMoney(p?.amount);
+    amountPaid = roundPoMoney(amountPaid + parsePoMoney(p?.amount));
     const d = String(p?.date || "").trim().slice(0, 10);
     if (d && (!latestDate || d > latestDate)) latestDate = d;
   }
-  const total = parsePoMoney(grandTotal);
-  const balance = Math.max(0, total - amountPaid);
+  const total = roundPoMoney(grandTotal);
+  const balance = roundPoMoney(Math.max(0, total - amountPaid));
   const paymentStatus = resolvePoPaymentStatus(amountPaid, total);
   return { amountPaid, balance, grandTotal: total, paymentStatus, latestPaymentDate: latestDate };
 }
@@ -172,9 +177,9 @@ export function computePoLineTotals(line) {
   const qty = parsePoMoney(line?.quantity);
   const price = parsePoMoney(line?.price);
   const taxPct = parsePoMoney(line?.taxPercent);
-  const total = qty * price;
-  const taxAmount = (total * taxPct) / 100;
-  const grandTotal = total + taxAmount;
+  const total = roundPoMoney(qty * price);
+  const taxAmount = roundPoMoney((total * taxPct) / 100);
+  const grandTotal = roundPoMoney(total + taxAmount);
   return { total, taxAmount, grandTotal };
 }
 
@@ -184,9 +189,9 @@ export function computePoFormTotals(lineItems) {
   let grandTotal = 0;
   for (const line of Array.isArray(lineItems) ? lineItems : []) {
     const t = computePoLineTotals(line);
-    total += t.total;
-    totalTax += t.taxAmount;
-    grandTotal += t.grandTotal;
+    total = roundPoMoney(total + t.total);
+    totalTax = roundPoMoney(totalTax + t.taxAmount);
+    grandTotal = roundPoMoney(grandTotal + t.grandTotal);
   }
   return { total, totalTax, grandTotal };
 }

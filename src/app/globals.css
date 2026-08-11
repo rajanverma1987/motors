@@ -314,8 +314,9 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-  margin-top: 0.75rem;
-  margin-bottom: 0.75rem;
+  /* Tight gap under hub tab strip (panel padding is 0). */
+  margin-top: 5px;
+  margin-bottom: 0.5rem;
 }
 
 /* Soft cards share the full filter row width equally; labels stay single-line. */

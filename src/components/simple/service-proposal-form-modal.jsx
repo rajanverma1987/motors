@@ -273,6 +273,7 @@ export default function ServiceProposalFormModal({
   const [loadingEmployees, setLoadingEmployees] = useState(false);
   const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
+  const [loadingRecord, setLoadingRecord] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
@@ -355,7 +356,10 @@ export default function ServiceProposalFormModal({
   }, [alert]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setLoadingRecord(false);
+      return;
+    }
     let cancelled = false;
     setAttachmentsOpen(false);
     setCommissionOpen(false);
@@ -373,6 +377,8 @@ export default function ServiceProposalFormModal({
     (async () => {
       const id = String(initialForm?.id || "").trim();
       if (id) {
+        setLoadingRecord(true);
+        setForm(createEmptyServiceProposalForm());
         try {
           const item = await fetchSimpleServiceProposal(id);
           if (!cancelled && item) {
@@ -381,9 +387,16 @@ export default function ServiceProposalFormModal({
           }
         } catch {
           /* fall back to list row */
+        } finally {
+          if (!cancelled) setLoadingRecord(false);
         }
+        if (!cancelled) applyDoc(initialForm || {});
+        return;
       }
-      if (!cancelled) applyDoc(initialForm || {});
+      if (!cancelled) {
+        setLoadingRecord(false);
+        applyDoc(initialForm || {});
+      }
     })();
 
     return () => {
@@ -738,7 +751,13 @@ export default function ServiceProposalFormModal({
   };
 
   const headerActions = (
-    <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving || copying}>
+    <Button
+      type="submit"
+      form={FORM_ID}
+      variant="primary"
+      size="sm"
+      disabled={saving || copying || loadingRecord}
+    >
       {saving ? "Saving…" : "Save"}
     </Button>
   );
@@ -752,13 +771,13 @@ export default function ServiceProposalFormModal({
         size="7xl"
         width="min(1260px, 98vw)"
         height="min(94vh, 920px)"
-        showClose={!saving && !copying}
+        showClose={!saving && !copying && !loadingRecord}
         closeOnOutsideClick={false}
         headerClassName="[&_h2]:max-w-none [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-none"
         actions={headerActions}
       >
         <div className="relative min-h-[12rem]">
-          {copying ? (
+          {loadingRecord || copying ? (
             <div
               className="absolute inset-0 z-20 bg-card/80 backdrop-blur-[1px]"
               aria-busy="true"
@@ -769,7 +788,9 @@ export default function ServiceProposalFormModal({
                   className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
                   aria-hidden
                 />
-                <span className="text-sm font-medium text-title">Copying…</span>
+                <span className="text-sm font-medium text-title">
+                  {copying ? "Copying…" : "Loading…"}
+                </span>
               </div>
             </div>
           ) : null}
@@ -777,7 +798,7 @@ export default function ServiceProposalFormModal({
             id={FORM_ID}
             onSubmit={handleSubmit}
             className="!space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
-            aria-hidden={copying || undefined}
+            aria-hidden={loadingRecord || copying || undefined}
           >
           {/* Toolbar (title lives in modal header) */}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
