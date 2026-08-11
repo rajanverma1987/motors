@@ -60,7 +60,7 @@ function useTileTokens(card) {
 function CountBadge({ count, countBadgeStyle, tileClassName, className = "" }) {
   return (
     <span
-      className={`inline-flex h-5 min-w-[1.35rem] shrink-0 items-center justify-center px-1.5 text-[11px] font-bold tabular-nums leading-none ${
+      className={`inline-flex h-5 min-w-[1.35rem] shrink-0 items-center justify-center px-1.5 text-[11px] font-extrabold tabular-nums leading-none ${
         countBadgeStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       } ${className}`}
       style={countBadgeStyle}
@@ -425,19 +425,23 @@ function BodySoft(props) {
           {displayValue}
         </span>
         {showCount ? (
-          <CountBadge
-            count={count}
-            countBadgeStyle={
+          <span
+            className={`ml-auto shrink-0 text-base font-extrabold leading-none tabular-nums ${
+              fillStyle ? "" : tileTextClassName || "text-title"
+            }`}
+            style={
               fillStyle
                 ? {
-                    backgroundColor: "rgba(255,255,255,0.55)",
-                    color: tileText || "#111827",
+                    backgroundColor: "#ffffff",
+                    color: tileBg || tileText || "#111827",
+                    padding: "0.15rem 0.45rem",
                   }
                 : countBadgeStyle
             }
-            tileClassName={tileClassName}
-            className="border border-black/10 dark:border-white/15"
-          />
+            title={`Count: ${count}`}
+          >
+            {count}
+          </span>
         ) : null}
       </span>
     </span>
