@@ -9,6 +9,7 @@ import Tabs from "@/components/ui/tabs";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
+import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
 import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
@@ -19,6 +20,7 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
 import { buildSimplePurchaseOrderPrintPayload } from "@/lib/simple-purchase-order-print";
+import { buildVendorPayload, INITIAL_VENDOR_FORM } from "@/lib/vendor-record-form";
 import {
   computeNextSimplePoNumber,
   computePoFormTotals,
@@ -67,13 +69,6 @@ const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold tex
 const CELL_INPUT =
   "h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-xs text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
 const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
-
-const INITIAL_VENDOR_FORM = {
-  name: "",
-  contactName: "",
-  phone: "",
-  email: "",
-};
 
 function FieldRow({
   label,
@@ -506,6 +501,11 @@ export default function SimplePurchaseOrderFormModal({
     }));
   };
 
+  const selectedVendor = useMemo(
+    () => vendors.find((v) => String(v.id) === String(form.vendorId || "")) || null,
+    [vendors, form.vendorId]
+  );
+
   const handleAddVendor = async (e) => {
     e.preventDefault();
     if (!String(vendorForm.name || "").trim()) {
@@ -518,12 +518,7 @@ export default function SimplePurchaseOrderFormModal({
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: vendorForm.name,
-          contactName: vendorForm.contactName,
-          phone: vendorForm.phone,
-          email: vendorForm.email,
-        }),
+        body: JSON.stringify(buildVendorPayload(vendorForm)),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -687,6 +682,27 @@ export default function SimplePurchaseOrderFormModal({
         showClose={!saving}
         actions={
           <>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex items-center gap-1.5"
+              disabled={saving || loadingMeta || !String(form.id || "").trim()}
+              title={
+                String(form.id || "").trim()
+                  ? "Add vendor invoices and documents"
+                  : "Save the purchase order before adding attachments"
+              }
+              onClick={() => setAttachmentsOpen(true)}
+            >
+              <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
+              Attachments
+              {(form.vendorDocuments || []).length > 0 ? (
+                <Badge variant="primary" className="rounded-full px-1.5 py-0 text-[10px]">
+                  {(form.vendorDocuments || []).length}
+                </Badge>
+              ) : null}
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -1009,31 +1025,68 @@ export default function SimplePurchaseOrderFormModal({
                     </div>
 
                     <div className="mt-auto flex shrink-0 flex-col gap-3 border-t border-border pt-3">
-                      <div className="grid grid-cols-1 gap-2 sm:max-w-sm sm:ml-auto">
-                        <FieldRow label="Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                          <input
-                            type="text"
-                            readOnly
-                            value={formatMoney(totals.total)}
-                            className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
-                          />
-                        </FieldRow>
-                        <FieldRow label="Total Tax Amount" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                          <input
-                            type="text"
-                            readOnly
-                            value={formatMoney(totals.totalTax)}
-                            className={`${FIELD_INPUT} !bg-muted text-right tabular-nums`}
-                          />
-                        </FieldRow>
-                        <FieldRow label="Grand Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                          <input
-                            type="text"
-                            readOnly
-                            value={formatMoney(totals.grandTotal)}
-                            className={`${FIELD_INPUT} !bg-muted text-right font-bold tabular-nums`}
-                          />
-                        </FieldRow>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+                        <div className="min-w-0 flex-1 rounded-none border border-border bg-primary/[0.04] px-3 py-2 dark:bg-primary/10">
+                          <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary">
+                            Vendor
+                          </p>
+                          {selectedVendor ? (
+                            <div className="grid grid-cols-1 gap-1 text-sm sm:grid-cols-2">
+                              <p className="min-w-0">
+                                <span className="text-secondary">Term: </span>
+                                <span className="font-semibold text-title">
+                                  {selectedVendor.paymentTerms || "-"}
+                                </span>
+                              </p>
+                              <p className="min-w-0">
+                                <span className="text-secondary">Contact: </span>
+                                <span className="font-semibold text-title">
+                                  {selectedVendor.contactName || "-"}
+                                </span>
+                              </p>
+                              <p className="min-w-0">
+                                <span className="text-secondary">Phone: </span>
+                                <span className="font-semibold text-title">
+                                  {selectedVendor.phone || "-"}
+                                </span>
+                              </p>
+                              <p className="min-w-0">
+                                <span className="text-secondary">Email: </span>
+                                <span className="font-semibold text-title">
+                                  {selectedVendor.email || "-"}
+                                </span>
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-secondary">Select a vendor to view details.</p>
+                          )}
+                        </div>
+                        <div className="grid w-full grid-cols-1 gap-2 sm:max-w-sm sm:shrink-0">
+                          <FieldRow label="Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              readOnly
+                              value={formatMoney(totals.total)}
+                              className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
+                            />
+                          </FieldRow>
+                          <FieldRow label="Total Tax Amount" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              readOnly
+                              value={formatMoney(totals.totalTax)}
+                              className={`${FIELD_INPUT} !bg-muted text-right tabular-nums`}
+                            />
+                          </FieldRow>
+                          <FieldRow label="Grand Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              readOnly
+                              value={formatMoney(totals.grandTotal)}
+                              className={`${FIELD_INPUT} !bg-muted text-right font-bold tabular-nums`}
+                            />
+                          </FieldRow>
+                        </div>
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">
                         <span className="text-xs font-bold text-title">Comments</span>
@@ -1364,9 +1417,12 @@ export default function SimplePurchaseOrderFormModal({
       <Modal
         open={addVendorOpen}
         onClose={() => !savingVendor && setAddVendorOpen(false)}
-        title="Add new vendor"
-        size="md"
+        title="Add Vendor"
+        size="4xl"
+        width="min(900px, 96vw)"
+        height="min(84vh, 820px)"
         showClose={!savingVendor}
+        closeOnOutsideClick={false}
         actions={
           <Button type="submit" form={ADD_VENDOR_FORM_ID} variant="primary" size="sm" disabled={savingVendor}>
             {savingVendor ? "Saving…" : "Save"}
@@ -1378,43 +1434,7 @@ export default function SimplePurchaseOrderFormModal({
           onSubmit={handleAddVendor}
           className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
         >
-          <FieldRow label="Name" labelWidth="6rem" controlClassName="min-w-0 flex-1">
-            <input
-              type="text"
-              value={vendorForm.name}
-              onChange={(e) => setVendorForm((f) => ({ ...f, name: e.target.value }))}
-              className={FIELD_INPUT}
-              required
-              disabled={savingVendor}
-            />
-          </FieldRow>
-          <FieldRow label="Contact" labelWidth="6rem" controlClassName="min-w-0 flex-1">
-            <input
-              type="text"
-              value={vendorForm.contactName}
-              onChange={(e) => setVendorForm((f) => ({ ...f, contactName: e.target.value }))}
-              className={FIELD_INPUT}
-              disabled={savingVendor}
-            />
-          </FieldRow>
-          <FieldRow label="Phone" labelWidth="6rem" controlClassName="min-w-0 flex-1">
-            <input
-              type="tel"
-              value={vendorForm.phone}
-              onChange={(e) => setVendorForm((f) => ({ ...f, phone: e.target.value }))}
-              className={FIELD_INPUT}
-              disabled={savingVendor}
-            />
-          </FieldRow>
-          <FieldRow label="Email" labelWidth="6rem" controlClassName="min-w-0 flex-1">
-            <input
-              type="email"
-              value={vendorForm.email}
-              onChange={(e) => setVendorForm((f) => ({ ...f, email: e.target.value }))}
-              className={FIELD_INPUT}
-              disabled={savingVendor}
-            />
-          </FieldRow>
+          <SimpleVendorFormFields form={vendorForm} setForm={setVendorForm} disabled={savingVendor} />
         </Form>
       </Modal>
 

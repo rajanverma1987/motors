@@ -73,6 +73,7 @@ export function buildSimplePurchaseOrderPrintPayload({
           zipCode: vendor.zipCode || vendor.zip || "",
           phone: vendor.phone || "",
           email: vendor.email || "",
+          paymentTerms: vendor.paymentTerms || "",
         }
       : null,
     documentLabel: String(form?.poNumber || "").trim()

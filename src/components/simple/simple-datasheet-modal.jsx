@@ -213,10 +213,12 @@ export default function SimpleDatasheetModal({
       (o) => String(o.value || "").trim().toLowerCase() === jobStatusValue.toLowerCase()
     );
     return {
-      customerName: String(ctx.customerName || "").trim(),
+      customerName: String(ctx.customerName || ctx.companyName || form.company || "").trim(),
+      contactName: String(ctx.contactName || "").trim(),
       companyName: String(ctx.companyName || form.company || ctx.customerName || "").trim(),
       customerPhone: String(ctx.customerPhone || "").trim(),
       customerEmail: String(ctx.customerEmail || "").trim(),
+      customerPo: String(ctx.customerPo || "").trim(),
       documentNumber: String(ctx.documentNumber || form.jobNumber || "").trim(),
       documentLabel: String(ctx.documentLabel || "RFQ#").trim() || "RFQ#",
       jobStatus: jobStatusValue,

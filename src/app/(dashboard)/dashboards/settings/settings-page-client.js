@@ -898,9 +898,9 @@ export default function SettingsPageClient() {
       <div className={`${SIMPLE_PORTAL_ROOT_CLASS} w-full min-w-0 py-8`}>
         <Link
           href={SIMPLE_PORTAL_PATH}
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-secondary transition-colors hover:text-primary"
+          className="mb-4 inline-flex items-center gap-2 text-base font-semibold text-secondary transition-colors hover:text-primary sm:text-lg"
         >
-          <FiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          <FiArrowLeft className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
           Back to dashboard
         </Link>
         <p className="text-secondary">Loading settings…</p>
@@ -913,9 +913,9 @@ export default function SettingsPageClient() {
       <div className="simple-settings-header">
         <Link
           href={SIMPLE_PORTAL_PATH}
-          className="mb-3 inline-flex items-center gap-1.5 text-sm text-secondary transition-colors hover:text-primary"
+          className="mb-3 inline-flex items-center gap-2 text-base font-semibold text-secondary transition-colors hover:text-primary sm:text-lg"
         >
-          <FiArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+          <FiArrowLeft className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
           Back to dashboard
         </Link>
         <h1 className="text-xl font-semibold tracking-tight text-title">Settings</h1>

@@ -376,10 +376,9 @@ function SoftSelectedMark({ accentColor }) {
   );
 }
 
-/** Soft — filled with status colors from dropdown settings (full strength). */
+/** Soft — filled with status colors; title only on line 1; selected mark + amount + count on line 2. */
 function BodySoft(props) {
   const {
-    Icon,
     card,
     active,
     displayValue,
@@ -390,7 +389,6 @@ function BodySoft(props) {
     tileBg,
     tileText,
     tileTextClassName,
-    iconStyle,
   } = props;
   const fillStyle = tileBg
     ? { backgroundColor: tileBg, color: tileText || undefined }
@@ -399,30 +397,32 @@ function BodySoft(props) {
   const amountStyle = tileText ? { color: tileText } : undefined;
   return (
     <span
-      className={`flex w-max max-w-none flex-col gap-1.5 px-2.5 py-2 ${
+      className={`flex h-full w-full min-w-0 flex-col gap-1.5 px-2.5 py-2 ${
         fillStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       }`}
       style={fillStyle}
     >
-      <span className="flex items-center gap-2">
+      <span
+        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm font-bold uppercase leading-snug tracking-wide ${
+          labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
+        }`}
+        style={labelStyle}
+        title={card.label}
+      >
+        {card.label}
+      </span>
+      <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
         {active ? (
           <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
-        ) : Icon ? (
-          <Icon
-            className={`h-5 w-5 shrink-0 ${
-              fillStyle || iconStyle ? "" : tileTextClassName || "text-primary"
-            }`}
-            style={fillStyle ? (tileText ? { color: tileText } : undefined) : iconStyle}
-            aria-hidden
-          />
         ) : null}
         <span
-          className={`whitespace-nowrap text-sm font-bold leading-snug ${
-            labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
+          className={`min-w-0 truncate text-base font-bold leading-none tabular-nums ${
+            amountStyle || fillStyle ? "" : "text-title"
           }`}
-          style={labelStyle}
+          style={amountStyle}
+          title={displayValue}
         >
-          {card.label}
+          {displayValue}
         </span>
         {showCount ? (
           <CountBadge
@@ -436,18 +436,9 @@ function BodySoft(props) {
                 : countBadgeStyle
             }
             tileClassName={tileClassName}
-            className="mt-0.5 border border-black/10 dark:border-white/15"
+            className="border border-black/10 dark:border-white/15"
           />
         ) : null}
-      </span>
-      <span
-        className={`block truncate text-base font-bold leading-none tabular-nums ${
-          amountStyle || fillStyle ? "" : "text-title"
-        }`}
-        style={amountStyle}
-        title={displayValue}
-      >
-        {displayValue}
       </span>
     </span>
   );
@@ -567,8 +558,8 @@ export default function StatusFilterPillButton({
     : "";
 
   const shellClass = [
-    "status-filter-pill group relative inline-flex border text-left transition-[border-color,background-color,box-shadow,transform] duration-150 ease-out",
-    isSoft ? "" : "overflow-hidden",
+    "status-filter-pill group relative border text-left transition-[border-color,background-color,box-shadow,transform] duration-150 ease-out",
+    isSoft ? "flex" : "inline-flex overflow-hidden",
     "rounded-none bg-card",
     `status-filter-pill--${variant}`,
     isSoft
@@ -579,7 +570,7 @@ export default function StatusFilterPillButton({
     labelOnly
       ? "min-w-0 items-center"
       : isSoft
-        ? "w-max min-w-[7.5rem] max-w-none flex-col"
+        ? "h-full min-w-0 w-full flex-1 basis-0 flex-col"
         : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
     variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
     readOnly ? "" : "cursor-pointer",

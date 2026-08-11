@@ -318,6 +318,12 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   margin-bottom: 0.75rem;
 }
 
+/* Soft cards share the full filter row width equally; labels stay single-line. */
+.simple-portal .simple-screen-filters > .status-filter-pill--soft {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .simple-portal .simple-screen-filters .status-filter-pill {
   box-shadow: none !important;
   border-radius: 0 !important;

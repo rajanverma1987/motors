@@ -142,6 +142,7 @@ export default function InvoicePrintPreview({
         <MotorSummaryBlock
           identityLine={q.motorIdentityLine}
           specsLine={q.motorSpecsLine}
+          detailsLine={q.motorDetailsLine}
           motorType={q.motorType}
           fallback={motorLabel || q.motorLabel || q.motorId || "—"}
           titleClassName="mb-1 text-sm font-semibold text-neutral-900"

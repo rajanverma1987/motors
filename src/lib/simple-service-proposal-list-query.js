@@ -28,6 +28,8 @@ const SORT_FIELD_MAP = {
   taxCollected: "taxCollected",
   submitDate: "proposalSubmitDate",
   acceptDate: "proposalAcceptedDate",
+  invoiceSubmitDate: "invoiceSubmitDate",
+  invoicePaidDate: "invoicePaidDate",
   status: "status",
   jobStatus: "jobStatus",
   notes: "internalNotes",

@@ -129,6 +129,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         <MotorSummaryBlock
           identityLine={q.motorIdentityLine}
           specsLine={q.motorSpecsLine}
+          detailsLine={q.motorDetailsLine}
           motorType={q.motorType}
           fallback={q.motorLabel || q.motorId || "—"}
           titleClassName="mb-1 text-sm font-semibold text-neutral-900"

@@ -12,14 +12,14 @@ import {
 
 function cellValue(v) {
   const s = String(v ?? "").trim();
-  return s || "—";
+  return s || "-";
 }
 
 function PrintMetaRow({ label, value }) {
   return (
     <div className="flex min-w-0 items-baseline gap-1.5 leading-relaxed">
-      <span className="shrink-0 text-xs font-normal text-black">{label}:</span>
-      <span className="min-w-0 break-words text-sm font-bold text-black">{cellValue(value)}</span>
+      <span className="shrink-0 text-sm font-normal text-black">{label}:</span>
+      <span className="min-w-0 break-words text-base font-bold text-black">{cellValue(value)}</span>
     </div>
   );
 }
@@ -27,13 +27,15 @@ function PrintMetaRow({ label, value }) {
 function PrintFieldGrid({ columns, values }) {
   if (!Array.isArray(columns) || columns.length === 0) return null;
   return (
-    <div className="grid grid-cols-3 gap-x-6 gap-y-2">
+    <div className="grid grid-cols-3 gap-x-6 gap-y-2.5">
       {columns.map((col, colIdx) => (
-        <div key={colIdx} className="flex min-w-0 flex-col gap-1.5">
+        <div key={colIdx} className="flex min-w-0 flex-col gap-2">
           {col.map((field) => (
             <div key={field.key} className="flex min-w-0 items-baseline gap-2 leading-relaxed">
-              <span className="w-[8.5rem] shrink-0 text-right text-xs font-normal text-black">{field.label}</span>
-              <span className="min-w-0 flex-1 border-b border-black/35 px-1 pb-0.5 text-sm font-bold text-black">
+              <span className="w-[8.75rem] shrink-0 text-right text-sm font-normal text-black">
+                {field.label}
+              </span>
+              <span className="min-w-0 flex-1 border-b border-black/35 px-1 pb-0.5 text-base font-bold text-black">
                 {cellValue(values?.[field.key])}
               </span>
             </div>
@@ -47,9 +49,9 @@ function PrintFieldGrid({ columns, values }) {
 function PrintNotes({ label = "Notes:", notes }) {
   return (
     <div className="mt-5">
-      <div className="mb-1.5 text-xs font-normal text-black">{label}</div>
-      <div className="min-h-[5rem] whitespace-pre-wrap border border-black/40 p-3 text-sm font-bold leading-relaxed text-black">
-        {cellValue(notes) === "—" ? "" : String(notes || "")}
+      <div className="mb-1.5 text-sm font-normal text-black">{label}</div>
+      <div className="min-h-[5rem] whitespace-pre-wrap border border-black/40 p-3 text-base font-bold leading-relaxed text-black">
+        {cellValue(notes) === "-" ? "" : String(notes || "")}
       </div>
     </div>
   );
@@ -81,8 +83,8 @@ function PrintTabPage({ headerProps, title, pageBreakBefore = false, children })
 function PrintHeaderMetaRow({ label, value }) {
   return (
     <div className="flex min-w-0 flex-col gap-0.5">
-      <span className="text-[11px] font-normal uppercase tracking-[0.08em] text-black/70">{label}</span>
-      <span className="min-w-0 break-words text-base font-bold leading-snug text-black">
+      <span className="text-xs font-normal uppercase tracking-[0.08em] text-black/70">{label}</span>
+      <span className="min-w-0 break-words text-lg font-bold leading-snug text-black">
         {cellValue(value)}
       </span>
     </div>
@@ -97,25 +99,30 @@ function PrintDocumentHeader({
   documentNumber,
   date,
   technician,
-  company,
+  contactName = "",
   customerPhone = "",
   customerEmail = "",
+  customerPo = "",
 }) {
   return (
     <div className="mb-7 border-b-[3px] border-black pb-5">
       <div className="mb-4 flex items-center gap-4">
-        <PrintShopLogo logoUrl={logoUrl} alt="" />
+        <PrintShopLogo
+          logoUrl={logoUrl}
+          alt=""
+          className="!h-[4.25rem] !max-h-[4.25rem] !max-w-[16rem]"
+        />
         <h1 className="min-w-0 flex-1 text-center text-2xl font-bold tracking-wide">{title}</h1>
       </div>
       <div className="mt-1 grid grid-cols-2 gap-x-8 gap-y-3.5 border border-black/25 bg-black/[0.03] px-4 py-3.5 sm:grid-cols-3">
         <PrintHeaderMetaRow label="Customer" value={customerName} />
         <PrintHeaderMetaRow label={documentLabel || "RFQ#"} value={documentNumber} />
-        <PrintHeaderMetaRow label="Company" value={company || customerName} />
+        <PrintHeaderMetaRow label="Contact" value={contactName} />
         <PrintHeaderMetaRow label="Phone" value={customerPhone} />
         <PrintHeaderMetaRow label="Email" value={customerEmail} />
         <PrintHeaderMetaRow label="Date" value={date} />
         <PrintHeaderMetaRow label="Technician" value={technician} />
-        <PrintHeaderMetaRow label="Job#" value={documentNumber} />
+        <PrintHeaderMetaRow label="Customer PO#" value={customerPo} />
       </div>
     </div>
   );
@@ -123,7 +130,7 @@ function PrintDocumentHeader({
 
 function boolYes(v) {
   const s = String(v ?? "").trim().toLowerCase();
-  return s === "true" || s === "1" || s === "yes" || s === "on" ? "Yes" : "—";
+  return s === "true" || s === "1" || s === "yes" || s === "on" ? "Yes" : "-";
 }
 
 function PrintTestBlock({ title, children }) {
@@ -268,28 +275,32 @@ export default function SimpleDatasheetPrintSheet({
   const formatDate = useFormatDate();
   const logoUrl = String(printContext.logoUrl || settings?.logoUrl || "").trim();
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
-  const customerName = String(printContext.customerName || "").trim();
+  const customerName = String(
+    printContext.customerName || printContext.companyName || datasheet?.company || ""
+  ).trim();
+  const contactName = String(printContext.contactName || "").trim();
   const documentNumber = String(
     printContext.documentNumber || datasheet?.jobNumber || ""
   ).trim();
   const documentLabel = String(printContext.documentLabel || "RFQ#").trim() || "RFQ#";
-  const company = String(printContext.companyName || datasheet?.company || customerName).trim();
   const customerPhone = String(printContext.customerPhone || "").trim();
   const customerEmail = String(printContext.customerEmail || "").trim();
+  const customerPo = String(printContext.customerPo || "").trim();
   const dateRaw = String(datasheet?.date || "").trim();
-  const date = dateRaw ? formatDate(dateRaw) : "—";
+  const date = dateRaw ? formatDate(dateRaw) : "-";
   const technician = String(technicianLabel || datasheet?.technician || "").trim();
 
   const headerProps = {
     logoUrl,
     customerName,
+    contactName,
     documentLabel,
     documentNumber,
     date,
     technician,
-    company,
     customerPhone,
     customerEmail,
+    customerPo,
   };
 
   if (!isDc) {

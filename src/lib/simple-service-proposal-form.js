@@ -303,6 +303,8 @@ export function toSimpleServiceProposalListRow(doc, meta = null) {
     taxCollected: totals.taxCollected,
     submitDate: String(form.submitDate || form.proposalSubmitDate || "").trim(),
     acceptDate: String(form.acceptDate || form.proposalAcceptedDate || "").trim(),
+    invoiceSubmitDate: String(form.invoiceSubmitDate || "").trim(),
+    invoicePaidDate: String(form.invoicePaidDate || "").trim(),
     status: String(form.status || "").trim(),
     jobStatus: String(form.jobStatus || "").trim(),
     dueDate: String(form.dueDate || "").trim(),

@@ -567,7 +567,9 @@ export default function Table({
     : "w-full border-collapse";
   const thClass = (col) => {
     const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
-    return `${cellPx(col)} ${headerPy} ${headerText} font-semibold leading-snug text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}`;
+    const wrap = col.headerWrap ? "whitespace-normal" : "whitespace-nowrap";
+    const headerExtra = col.headerClassName ? ` ${col.headerClassName}` : "";
+    return `${cellPx(col)} ${headerPy} ${headerText} font-semibold leading-snug text-title outline-none ${wrap} ${align} ${cellBorderClass}${headerExtra}`;
   };
   const thStickyStyle = effectiveStickyHeader
     ? {

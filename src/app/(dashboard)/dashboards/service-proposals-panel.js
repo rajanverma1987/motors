@@ -49,8 +49,6 @@ import {
   formToServiceProposalListRow,
   toSimpleServiceProposalListRow,
   isSimpleInvoiceRecord,
-  RECORD_TYPE_INVOICE,
-  RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
   resolveRecordTypeOnSave,
 } from "@/lib/simple-service-proposal-form";
@@ -140,16 +138,7 @@ function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
   };
 }
 
-function rowShowsJobStatus(row, isInvoices = false) {
-  if (isInvoices) return true;
-  const t = String(row?.recordType || "").toUpperCase();
-  return t === RECORD_TYPE_JOB || t === RECORD_TYPE_INVOICE;
-}
-
-function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors, isInvoices = false) {
-  if (!rowShowsJobStatus(row, isInvoices)) {
-    return { style: null, className: "!p-0" };
-  }
+function jobStatusCellChrome(row, jobStatusOptions, workOrderStatusTileColors) {
   const current = String(row?.jobStatus || "").trim();
   if (!current) return { style: null, className: "!p-0" };
   const idx = (jobStatusOptions || []).findIndex(
@@ -750,7 +739,7 @@ export default function ServiceProposalsPanel({
           );
         },
       },
-      { key: "phone", label: "Phone", sortable: true },
+      ...(!isInvoices ? [{ key: "phone", label: "Phone", sortable: true }] : []),
       { key: "email", label: "Email", sortable: true },
       { key: "quotedBy", label: "Quoted By", sortable: true },
       { key: "quoteType", label: "Quote Type", sortable: true },
@@ -772,9 +761,12 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "submitDate",
-        label: "Submit date",
+        label: isInvoices ? "Proposal Submit Date" : "Submit date",
         sortable: true,
         align: "right",
+        headerWrap: isInvoices,
+        minWidth: isInvoices ? 88 : undefined,
+        className: isInvoices ? "max-w-[6.5rem]" : undefined,
         getCellStyle: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
         getCellClassName: (_, row) =>
@@ -793,9 +785,12 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "acceptDate",
-        label: "Accept Date",
+        label: isInvoices ? "Proposal Accept Date" : "Accept Date",
         sortable: true,
         align: "right",
+        headerWrap: isInvoices,
+        minWidth: isInvoices ? 88 : undefined,
+        className: isInvoices ? "max-w-[6.5rem]" : undefined,
         getCellStyle: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
         getCellClassName: (_, row) =>
@@ -812,6 +807,58 @@ export default function ServiceProposalsPanel({
           );
         },
       },
+      ...(isInvoices
+        ? [
+            {
+              key: "invoiceSubmitDate",
+              label: "Invoice Sent Date",
+              sortable: true,
+              align: "right",
+              headerWrap: true,
+              minWidth: 88,
+              className: "max-w-[6.5rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (v) => {
+                const text = formatDate(v);
+                const shown = text && text !== "-" ? text : "";
+                return (
+                  <span
+                    className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
+                  >
+                    {shown || "-"}
+                  </span>
+                );
+              },
+            },
+            {
+              key: "invoicePaidDate",
+              label: "Invoice Paid Date",
+              sortable: true,
+              align: "right",
+              headerWrap: true,
+              minWidth: 88,
+              className: "max-w-[6.5rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (v) => {
+                const text = formatDate(v);
+                const shown = text && text !== "-" ? text : "";
+                return (
+                  <span
+                    className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
+                  >
+                    {shown || "-"}
+                  </span>
+                );
+              },
+            },
+          ]
+        : []),
       {
         key: "status",
         label: isInvoices ? "Invoice Status" : "Proposal Status",
@@ -845,27 +892,16 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "jobStatus",
-        label: "Job Status",
+        label: "Status",
         sortable: true,
         className: "min-w-[9rem]",
         getCellStyle: (_, row) =>
-          jobStatusCellChrome(
-            row,
-            jobStatusOptions,
-            mergedSettings.workOrderStatusTileColors,
-            isInvoices
-          ).style,
+          jobStatusCellChrome(row, jobStatusOptions, mergedSettings.workOrderStatusTileColors)
+            .style,
         getCellClassName: (_, row) =>
-          jobStatusCellChrome(
-            row,
-            jobStatusOptions,
-            mergedSettings.workOrderStatusTileColors,
-            isInvoices
-          ).className,
+          jobStatusCellChrome(row, jobStatusOptions, mergedSettings.workOrderStatusTileColors)
+            .className,
         render: (v, row) => {
-          if (!rowShowsJobStatus(row, isInvoices)) {
-            return "";
-          }
           const current = String(v || "").trim();
           return (
             <div className="min-w-[7rem] max-w-[12rem]" onClick={(e) => e.stopPropagation()}>
@@ -878,7 +914,7 @@ export default function ServiceProposalsPanel({
                 triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
                 placeholder="Select…"
                 searchable
-                aria-label="Job Status"
+                aria-label="Status"
               />
             </div>
           );
@@ -981,9 +1017,21 @@ export default function ServiceProposalsPanel({
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0 items-start justify-between`}>
-        <div className="flex min-w-0 flex-wrap gap-2">{mainStatusCards.map(renderStatusCard)}</div>
+        <div
+          className="grid min-w-0 w-full flex-1 gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${Math.max(mainStatusCards.length, 1)}, minmax(0, 1fr))`,
+          }}
+        >
+          {mainStatusCards.map(renderStatusCard)}
+        </div>
         {invoiceSummaryCards.length > 0 ? (
-          <div className="ml-auto flex min-w-0 flex-wrap justify-end gap-2">
+          <div
+            className="ml-auto grid min-w-0 shrink-0 gap-2"
+            style={{
+              gridTemplateColumns: `repeat(${Math.max(invoiceSummaryCards.length, 1)}, minmax(0, 1fr))`,
+            }}
+          >
             {invoiceSummaryCards.map(renderStatusCard)}
           </div>
         ) : null}

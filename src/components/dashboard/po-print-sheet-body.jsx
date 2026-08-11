@@ -38,8 +38,8 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
   const fromShopContact = String(po.fromShopContact || "").trim();
   const billing = String(po.fromAccountsBillingAddress || settings?.accountsBillingAddress || "").trim();
   const shipping = String(po.fromAccountsShippingAddress || settings?.accountsShippingAddress || "").trim();
-  const paymentTerms = String(po.fromPaymentTermsLabel || "").trim();
   const showShipTo = shipping && shipping !== billing;
+  const vendorNetTerm = String(v.paymentTerms || po.vendorPaymentTerms || "").trim();
 
   const vendorToLines = [v.name || po.vendorName || "", v.contactName || "", addrLine, contactLine]
     .map((s) => String(s || "").trim())
@@ -82,21 +82,25 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
               <p className="mt-0.5 whitespace-pre-wrap text-xs text-neutral-800">{shipping}</p>
             </div>
           ) : null}
-          <p className="mt-1.5 text-xs text-neutral-800">
-            <span className="text-neutral-600">Payment terms: </span>
-            <span className="font-medium">{paymentTerms || "—"}</span>
-          </p>
         </div>
         <div className="min-w-0 sm:text-right print:text-right">
           <p className={sectionLabel + " sm:text-right"}>Vendor</p>
-          {vendorToLines.length ? (
+          {vendorToLines.length || vendorNetTerm ? (
             <div className="space-y-1 sm:ml-auto sm:text-right">
-              <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900">{vendorToLines[0]}</p>
-              {vendorToLines.slice(1).map((line, i) => (
-                <p key={i} className="whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
-                  {line}
-                </p>
-              ))}
+              {vendorToLines.length ? (
+                <>
+                  <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900">{vendorToLines[0]}</p>
+                  {vendorToLines.slice(1).map((line, i) => (
+                    <p key={i} className="whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
+                      {line}
+                    </p>
+                  ))}
+                </>
+              ) : null}
+              <p className="whitespace-pre-wrap text-xs text-neutral-800 sm:ml-auto sm:text-right">
+                <span className="text-neutral-600">NET Term: </span>
+                <span className="font-medium">{vendorNetTerm || "NOT-SPECIFIED"}</span>
+              </p>
             </div>
           ) : (
             <p className="text-xs text-neutral-500">—</p>

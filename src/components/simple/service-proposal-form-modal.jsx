@@ -94,10 +94,10 @@ const MOTOR_FIELDS = [
   { key: "volts", label: "Volts" },
   { key: "amps", label: "AMPS" },
   { key: "rpm", label: "RPM" },
-  { key: "sl", label: "SL" },
-  { key: "cl", label: "CL" },
-  { key: "cd", label: "CD" },
-  { key: "bars", label: "BARS" },
+  { key: "sl", label: "Slots" },
+  { key: "cl", label: "Core Length" },
+  { key: "cd", label: "Core Diameter" },
+  { key: "bars", label: "Bars" },
   { key: "motorPaint", label: "Motor Paint" },
 ];
 
@@ -925,11 +925,11 @@ export default function ServiceProposalFormModal({
             </div>
           </div>
 
-          {/* Three equal columns: customer/motor | notes | meta + status */}
+          {/* Three equal columns: customer/motor | meta + status | notes */}
           <div className="mb-2 grid grid-cols-1 gap-4 pt-3 lg:grid-cols-3">
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
-              <FieldRow label="Customer" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Customer" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <div className="min-w-0 flex-1">
                     <SimpleSelect
@@ -953,7 +953,7 @@ export default function ServiceProposalFormModal({
                   </button>
                 </div>
               </FieldRow>
-              <FieldRow label="Email" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Email" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="email"
                   value={form.customerEmail}
@@ -961,7 +961,7 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
-              <FieldRow label="Phone" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Phone" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="tel"
                   value={form.customerPhone}
@@ -969,7 +969,7 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
-              <FieldRow label="Motor Type" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Motor Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Motor type">
                   {["AC", "DC"].map((opt) => (
                     <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
@@ -986,21 +986,19 @@ export default function ServiceProposalFormModal({
                   ))}
                 </div>
               </FieldRow>
-              <FieldRow label="Datasheet" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN} !px-3`}
-                    title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
-                    onClick={openDatasheet}
-                  >
-                    View Datasheet
-                  </Button>
-                </div>
+              <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className={`${TOOLBAR_BTN} w-full justify-center !px-3`}
+                  title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
+                  onClick={openDatasheet}
+                >
+                  View Datasheet
+                </Button>
               </FieldRow>
-              <FieldRow label="Mfg Name Plate" labelWidth="6.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
                   {["Original", "EOM"].map((opt) => (
                     <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
@@ -1021,7 +1019,7 @@ export default function ServiceProposalFormModal({
                 <FieldRow
                   key={field.key}
                   label={field.label}
-                  labelWidth="6.75rem"
+                  labelWidth="7.75rem"
                   controlClassName="min-w-0 flex-1"
                 >
                   <input
@@ -1034,57 +1032,8 @@ export default function ServiceProposalFormModal({
               ))}
             </div>
 
-            {/* Column 2 */}
-            <div className="flex min-h-0 min-w-0 flex-col gap-3">
-              <div className="flex min-h-0 flex-1 flex-col gap-1">
-                <span className="text-xs font-bold text-title">Notes</span>
-                <textarea
-                  rows={10}
-                  value={form.internalNotes}
-                  onChange={(e) => patch("internalNotes", e.target.value)}
-                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
-                />
-              </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-1">
-                <span className="text-xs font-bold text-title">Customer Notes</span>
-                <textarea
-                  rows={10}
-                  value={form.customerNotes}
-                  onChange={(e) => patch("customerNotes", e.target.value)}
-                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
-                />
-              </div>
-            </div>
-
-            {/* Column 3 — meta + status */}
+            {/* Column 2 — meta + status */}
             <div className="flex min-w-0 flex-col gap-2">
-              <FieldRow label="Customer PO#" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <input
-                  type="text"
-                  value={form.customerPo}
-                  onChange={(e) => patch("customerPo", e.target.value)}
-                  className={FIELD_INPUT}
-                />
-              </FieldRow>
-              <FieldRow label="Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <input
-                  type="date"
-                  value={form.dateCreated}
-                  onChange={(e) => patch("dateCreated", e.target.value)}
-                  className={FIELD_INPUT}
-                />
-              </FieldRow>
-              <FieldRow label="Prepared By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <SimpleSelect
-                  options={preparedByOptions}
-                  value={form.preparedBy}
-                  onChange={(e) => patch("preparedBy", e.target.value)}
-                  placeholder={loadingEmployees ? "Loading…" : "Select…"}
-                  disabled={loadingEmployees}
-                  searchable
-                  aria-label="Prepared By"
-                />
-              </FieldRow>
               <div className="flex flex-wrap justify-end gap-1">
                 <Button
                   type="button"
@@ -1112,8 +1061,35 @@ export default function ServiceProposalFormModal({
                   type="text"
                   value={form.documentNumber}
                   onChange={(e) => patch("documentNumber", e.target.value)}
-                  className={FIELD_INPUT}
+                  className={`${FIELD_INPUT} border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
                   placeholder="Assigned on save"
+                />
+              </FieldRow>
+              <FieldRow label="Customer PO#" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="text"
+                  value={form.customerPo}
+                  onChange={(e) => patch("customerPo", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="date"
+                  value={form.dateCreated}
+                  onChange={(e) => patch("dateCreated", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Prepared By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <SimpleSelect
+                  options={preparedByOptions}
+                  value={form.preparedBy}
+                  onChange={(e) => patch("preparedBy", e.target.value)}
+                  placeholder={loadingEmployees ? "Loading…" : "Select…"}
+                  disabled={loadingEmployees}
+                  searchable
+                  aria-label="Prepared By"
                 />
               </FieldRow>
               <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -1179,7 +1155,11 @@ export default function ServiceProposalFormModal({
                 </>
               ) : null}
               <FieldRow
-                label={form.recordType === RECORD_TYPE_JOB ? "Proposal Status" : "Status"}
+                label={
+                  form.recordType === RECORD_TYPE_INVOICE
+                    ? "Invoice Status"
+                    : "Proposal Status"
+                }
                 labelWidth="9.5rem"
                 controlClassName="min-w-0 flex-1"
               >
@@ -1200,21 +1180,45 @@ export default function ServiceProposalFormModal({
                   }}
                   placeholder="Select…"
                   searchable
-                  aria-label={form.recordType === RECORD_TYPE_JOB ? "Proposal Status" : "Status"}
+                  aria-label={
+                    form.recordType === RECORD_TYPE_INVOICE
+                      ? "Invoice Status"
+                      : "Proposal Status"
+                  }
                 />
               </FieldRow>
-              {form.recordType === RECORD_TYPE_JOB ? (
-                <FieldRow label="Status" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                  <SimpleSelect
-                    options={jobStatusOptions}
-                    value={form.jobStatus}
-                    onChange={(e) => patch("jobStatus", e.target.value)}
-                    placeholder="Select…"
-                    searchable
-                    aria-label="Status"
-                  />
-                </FieldRow>
-              ) : null}
+              <FieldRow label="Status" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <SimpleSelect
+                  options={jobStatusOptions}
+                  value={form.jobStatus}
+                  onChange={(e) => patch("jobStatus", e.target.value)}
+                  placeholder="Select…"
+                  searchable
+                  aria-label="Status"
+                />
+              </FieldRow>
+            </div>
+
+            {/* Column 3 — notes */}
+            <div className="flex min-h-0 min-w-0 flex-col gap-3">
+              <div className="flex min-h-0 flex-1 flex-col gap-1">
+                <span className="text-xs font-bold text-title">Notes</span>
+                <textarea
+                  rows={10}
+                  value={form.internalNotes}
+                  onChange={(e) => patch("internalNotes", e.target.value)}
+                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
+                />
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col gap-1">
+                <span className="text-xs font-bold text-title">Customer Notes</span>
+                <textarea
+                  rows={10}
+                  value={form.customerNotes}
+                  onChange={(e) => patch("customerNotes", e.target.value)}
+                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
+                />
+              </div>
             </div>
           </div>
 
@@ -1399,14 +1403,18 @@ export default function ServiceProposalFormModal({
         printContext={{
           customerName:
             selectedCustomer?.companyName ||
+            form.companyName ||
+            "",
+          contactName:
             selectedCustomer?.primaryContactName ||
             "",
           companyName:
             selectedCustomer?.companyName ||
-            selectedCustomer?.primaryContactName ||
+            form.companyName ||
             "",
           customerPhone: String(form.customerPhone || selectedCustomer?.phone || "").trim(),
           customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
+          customerPo: String(form.customerPo || "").trim(),
           documentNumber: String(form.documentNumber || "").trim(),
           documentLabel: docLabel,
           jobStatus: form.jobStatus,

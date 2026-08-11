@@ -34,10 +34,19 @@ function motorLinesFromForm(form) {
   ]
     .filter(Boolean)
     .join(" · ");
+  const detailsLine = [
+    form?.sl ? `Slots: ${String(form.sl).trim()}` : "",
+    form?.cl ? `Core Length: ${String(form.cl).trim()}` : "",
+    form?.cd ? `Core Diameter: ${String(form.cd).trim()}` : "",
+    form?.bars ? `Bars: ${String(form.bars).trim()}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const motorType = String(form?.motorPower || "").trim();
   return {
     identityLine,
     specsLine,
+    detailsLine,
     motorType,
     motorLabel: identityLine || motorType || "",
   };
@@ -122,6 +131,7 @@ export function buildSimpleServiceProposalPrintBundle({
     printNotesMode,
     motorIdentityLine: motor.identityLine,
     motorSpecsLine: motor.specsLine,
+    motorDetailsLine: motor.detailsLine,
     motorType: motor.motorType,
     motorLabel: motor.motorLabel,
     customerToName,
