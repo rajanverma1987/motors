@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import Employee from "@/models/Employee";
+import ShopSubscription from "@/models/ShopSubscription";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { deleteAllDataForRegisteredClient } from "@/lib/deleteRegisteredClientData";
+import { hashPassword } from "@/lib/auth-portal";
+import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 
 export async function DELETE(request, context) {
   try {
@@ -52,13 +55,36 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
     const body = await request.json();
-    const { canLogin, listingOnlyAccount } = body;
+    const { canLogin, listingOnlyAccount, shopName, contactName, email, password } = body;
     const set = {};
     if (typeof canLogin === "boolean") set.canLogin = canLogin;
     if (typeof listingOnlyAccount === "boolean") set.listingOnlyAccount = listingOnlyAccount;
+    if (typeof shopName === "string") set.shopName = clampString(shopName, LIMITS.name.max);
+    if (typeof contactName === "string") set.contactName = clampString(contactName, LIMITS.name.max);
+    if (typeof email === "string" && email.trim()) {
+      const nextEmail = email.trim().toLowerCase();
+      if (!isValidEmail(nextEmail)) {
+        return NextResponse.json({ error: "Invalid email address." }, { status: 400 });
+      }
+      set.email = nextEmail;
+    }
+    if (typeof password === "string" && password.length > 0) {
+      if (password.length < LIMITS.password.min || password.length > LIMITS.password.max) {
+        return NextResponse.json(
+          {
+            error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.`,
+          },
+          { status: 400 }
+        );
+      }
+      set.passwordHash = await hashPassword(password);
+    }
     if (Object.keys(set).length === 0) {
       return NextResponse.json(
-        { error: "Provide canLogin and/or listingOnlyAccount (boolean)." },
+        {
+          error:
+            "Provide canLogin, listingOnlyAccount, shopName, contactName, email, and/or password.",
+        },
         { status: 400 }
       );
     }
@@ -68,11 +94,20 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const user = await User.findByIdAndUpdate(
-      id,
-      { $set: set },
-      { new: true }
-    ).select("_id email shopName contactName canLogin listingOnlyAccount");
+    if (set.email && set.email !== existing.email) {
+      const taken = await User.findOne({ email: set.email, _id: { $ne: id } }).select("_id").lean();
+      if (taken) {
+        return NextResponse.json({ error: "Another account already uses that email." }, { status: 409 });
+      }
+      await ShopSubscription.updateMany(
+        { ownerEmail: existing.email },
+        { $set: { ownerEmail: set.email } }
+      );
+    }
+
+    const user = await User.findByIdAndUpdate(id, { $set: set }, { new: true }).select(
+      "_id email shopName contactName canLogin listingOnlyAccount"
+    );
 
     if (set.canLogin === false && existing.email) {
       await Employee.updateMany(

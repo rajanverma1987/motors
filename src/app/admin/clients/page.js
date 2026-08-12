@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { FiEye, FiLock, FiUnlock, FiCreditCard, FiTrash2 } from "react-icons/fi";
+import { FiEye, FiEdit2, FiLock, FiUnlock, FiCreditCard, FiTrash2, FiPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -12,6 +12,7 @@ import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
 import { appendAdminSortParams } from "@/lib/admin-table-sort";
+import AdminClientEditModal from "@/components/admin/AdminClientEditModal";
 
 function DeleteClientModal({ client, open, onClose, onDeleted }) {
   const toast = useToast();
@@ -438,6 +439,21 @@ const BASE_COLUMNS = [
     ),
   },
   {
+    key: "edit",
+    label: "",
+    render: (_, row) => (
+      <button
+        type="button"
+        onClick={() => row._onEdit?.()}
+        className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+        aria-label="Edit client"
+        title="Edit client"
+      >
+        <FiEdit2 className="h-4 w-4" />
+      </button>
+    ),
+  },
+  {
     key: "subManage",
     label: "",
     render: (_, row) => (
@@ -557,6 +573,9 @@ export default function AdminClientsPage() {
   const [subClient, setSubClient] = useState(null);
   const [subModalOpen, setSubModalOpen] = useState(false);
   const [deleteClient, setDeleteClient] = useState(null);
+  const [editClient, setEditClient] = useState(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editMode, setEditMode] = useState("edit");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -590,6 +609,24 @@ export default function AdminClientsPage() {
     setSubClient(null);
   }, []);
 
+  const openEditModal = useCallback((client) => {
+    setEditMode("edit");
+    setEditClient(client);
+    setEditModalOpen(true);
+  }, []);
+
+  const openCreateModal = useCallback(() => {
+    setEditMode("create");
+    setEditClient(null);
+    setEditModalOpen(true);
+  }, []);
+
+  const closeEditModal = useCallback(() => {
+    setEditModalOpen(false);
+    setEditClient(null);
+    setEditMode("edit");
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -606,6 +643,7 @@ export default function AdminClientsPage() {
         ...u,
         _onUpdate: () => fetchUsers(),
         _onView: () => openViewModal(u),
+        _onEdit: () => openEditModal(u),
         _onManageSub: () => openSubModal(u),
         _onDelete: () => setDeleteClient(u),
       }));
@@ -631,7 +669,7 @@ export default function AdminClientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast, openViewModal, openSubModal, page, pageSize, searchQuery, tableSort]);
+  }, [toast, openViewModal, openEditModal, openSubModal, page, pageSize, searchQuery, tableSort]);
 
   useEffect(() => {
     fetchUsers();
@@ -640,11 +678,25 @@ export default function AdminClientsPage() {
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">Registered clients</h1>
-        <p className="text-sm text-secondary">
-          Portal users, login access, and subscriptions. Use the card icon to assign PayPal plans or revoke comped
-          access.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-title">Registered clients</h1>
+            <p className="text-sm text-secondary">
+              Portal users, login access, and subscriptions. Use Edit to update details, set a password, assign a
+              package, and email demo credentials. Use the card icon for full subscription tools.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={openCreateModal}
+            className="inline-flex shrink-0 items-center gap-1.5"
+          >
+            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+            Add client
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col">
@@ -673,6 +725,14 @@ export default function AdminClientsPage() {
       </div>
 
       <ClientDetailModal client={viewClient} open={viewModalOpen} onClose={closeViewModal} />
+
+      <AdminClientEditModal
+        client={editClient}
+        open={editModalOpen}
+        mode={editMode}
+        onClose={closeEditModal}
+        onSaved={fetchUsers}
+      />
 
       <SubscriptionManageModal
         client={subClient}

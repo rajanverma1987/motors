@@ -7,6 +7,15 @@ import {
   buildInvoiceToCustomerEmailContent,
   buildPoToVendorEmailContent,
 } from "@/lib/customer-facing-email-content";
+import {
+  buildCrmWelcomeEmailContent,
+  buildDemoAccountCredentialsEmailContent,
+} from "@/lib/demo-account-credentials-email";
+
+export {
+  buildCrmWelcomeEmailContent,
+  buildDemoAccountCredentialsEmailContent,
+} from "@/lib/demo-account-credentials-email";
 
 const fromEmail = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
 const marketingFrom = process.env.EMAIL_MARKETING_FROM || fromEmail;
@@ -376,39 +385,55 @@ export async function sendVerificationCodeEmail(to, code) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
-/**
- * Welcome email after admin onboards a listing to CRM (includes temp password; instruct to change in Settings).
- */
+/** Full HTML as sent (platform logo header + body). */
+export function wrapAdminPlatformEmailHtml(bodyHtml) {
+  return wrapPlatformBrandedHtml(bodyHtml);
+}
+
 export async function sendCrmWelcomeEmail({
   to,
   shopName,
   contactName,
   userId,
   plainPassword,
+  planLabel = "",
+  subject: subjectOverride,
+  bodyHtml: bodyOverride,
 }) {
-  const site = getPublicSiteUrl();
-  const loginUrl = `${site}/login`;
-  const settingsUrl = `${site}/dashboards/settings`;
-  const esc = (v) =>
-    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const greet = contactName ? ` ${esc(contactName)}` : "";
-  const subject = "Your IQMotorBase.com CRM account is ready";
-  const html = `
-    <p>Hi${greet},</p>
-    <p>Your shop portal account has been created for <strong>${esc(shopName || "your shop")}</strong>.</p>
-    <table style="border-collapse:collapse;margin:16px 0;">
-      <tbody>
-        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Login email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(to)}</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Account ID</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;font-size:12px;">${esc(userId)}</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Password</td><td style="padding:8px 12px;border:1px solid #ddd;font-family:monospace;">${esc(plainPassword)}</td></tr>
-      </tbody>
-    </table>
-    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
-    <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
-    <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
-    <p>— IQMotorBase.com</p>
-  `;
-  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+  const built = buildCrmWelcomeEmailContent({
+    to,
+    shopName,
+    contactName,
+    userId,
+    plainPassword,
+    planLabel,
+  });
+  const subject = subjectOverride?.trim() || built.subject;
+  const bodyHtml = bodyOverride?.trim() || built.bodyHtml;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(bodyHtml));
+}
+
+export async function sendDemoAccountCredentialsEmail({
+  to,
+  shopName,
+  contactName,
+  userId,
+  plainPassword,
+  planLabel = "",
+  subject: subjectOverride,
+  bodyHtml: bodyOverride,
+}) {
+  const built = buildDemoAccountCredentialsEmailContent({
+    to,
+    shopName,
+    contactName,
+    userId,
+    plainPassword,
+    planLabel,
+  });
+  const subject = subjectOverride?.trim() || built.subject;
+  const bodyHtml = bodyOverride?.trim() || built.bodyHtml;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(bodyHtml));
 }
 
 /**
