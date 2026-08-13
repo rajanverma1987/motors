@@ -7,7 +7,7 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
 import { useAlert } from "@/components/confirm-provider";
-import { formatDateMdy } from "@/lib/format-date";
+import { useFormatDate } from "@/contexts/user-settings-context";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
   buildVendorPayload,
@@ -46,6 +46,7 @@ export default function SimpleVendorFormModal({
   zIndex = 120,
 }) {
   const alert = useAlert();
+  const formatDate = useFormatDate();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_VENDOR_FORM);
@@ -196,7 +197,7 @@ export default function SimpleVendorFormModal({
                               po.poNumber || "—"
                             )}
                           </td>
-                          <td className={TD_CLASS}>{formatDateMdy(po.poCutDate) || "—"}</td>
+                          <td className={TD_CLASS}>{formatDate(po.poCutDate) || "—"}</td>
                           <td className={TD_CLASS}>
                             {status ? (
                               <Badge

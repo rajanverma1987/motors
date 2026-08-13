@@ -8,6 +8,7 @@ import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
 import { useToast } from "@/components/toast-provider";
+import { useFormatDateTime } from "@/contexts/user-settings-context";
 import "./cm-best-match-print.css";
 
 const MAX_SELECT = 10;
@@ -57,14 +58,14 @@ function VarCell({ label, value }) {
 }
 
 /** Printable + on-screen results: variables + table (id required for print CSS) */
-function CmBestMatchResultsBody({ results, resultContext }) {
+function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
   if (!resultContext || !results?.length) return null;
 
   return (
     <div id="cm-best-match-print-area" className="text-title">
       <h1 className="cm-print-title mb-1 text-lg font-bold text-title lg:text-xl">CM Best Match</h1>
       <p className="cm-print-meta mb-4 text-xs text-secondary">
-        Generated {new Date().toLocaleString()} · Print uses landscape (use Print preview in your browser).
+        Generated {generatedLabel || "—"} · Print uses landscape (use Print preview in your browser).
       </p>
 
       <div className="cm-print-vars mb-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-3 dark:bg-muted/5">
@@ -137,6 +138,7 @@ function CmBestMatchResultsBody({ results, resultContext }) {
 
 export default function CmBestMatchCalculator() {
   const toast = useToast();
+  const formatDateTime = useFormatDateTime();
   const [wireRows, setWireRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(() => new Set());
@@ -576,7 +578,11 @@ export default function CmBestMatchCalculator() {
             </Button>
           }
         >
-          <CmBestMatchResultsBody results={results} resultContext={resultContext} />
+          <CmBestMatchResultsBody
+            results={results}
+            resultContext={resultContext}
+            generatedLabel={formatDateTime(new Date())}
+          />
         </Modal>
       ) : null}
     </div>

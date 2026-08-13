@@ -17,6 +17,7 @@ export const PAGES = [
   { id: "purchase-orders", label: "Purchase / Payable" },
   { id: "inventory", label: "Inventory" },
   { id: "reports", label: "Reports" },
+  { id: "master-data-search", label: "Master Data Search" },
   { id: "calculators", label: "Calculators" },
   { id: "settings", label: "Settings" },
   { id: "job-board", label: "Shop floor job board" },

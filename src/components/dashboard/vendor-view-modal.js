@@ -6,7 +6,7 @@ import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatMoney } from "@/contexts/user-settings-context";
 
 const PO_STATUS_VARIANT = {
   Open: "default",
@@ -76,6 +76,7 @@ export default function VendorViewModal({
   const toast = useToast();
   const router = useRouter();
   const fmt = useFormatMoney();
+  const formatDate = useFormatDate();
   const [loadingVendor, setLoadingVendor] = useState(false);
   const [loadingActivity, setLoadingActivity] = useState(false);
   const [vendor, setVendor] = useState(null);
@@ -328,7 +329,7 @@ export default function VendorViewModal({
                           </button>
                         </td>
                         <td className="px-3 py-2">{inv.invoiceNumber || "—"}</td>
-                        <td className="px-3 py-2">{inv.date || "—"}</td>
+                        <td className="px-3 py-2">{formatDate(inv.date) || "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(inv.amount)}</td>
                       </tr>
                     ))}
@@ -366,7 +367,7 @@ export default function VendorViewModal({
                             {pay.poNumber || "—"}
                           </button>
                         </td>
-                        <td className="px-3 py-2">{pay.date || "—"}</td>
+                        <td className="px-3 py-2">{formatDate(pay.date) || "—"}</td>
                         <td className="px-3 py-2">{pay.method || "—"}</td>
                         <td className="px-3 py-2">{pay.reference || "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{fmt(pay.amount)}</td>

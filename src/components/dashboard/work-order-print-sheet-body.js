@@ -1,7 +1,7 @@
 "use client";
 
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
-import { useFormatDate } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatDateTime } from "@/contexts/user-settings-context";
 import { JOB_TYPE_OPTIONS } from "@/lib/work-order-fields";
 import {
   motorSpecSectionsForPrint,
@@ -38,6 +38,7 @@ function SpecSection({ title, rows }) {
  */
 export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [] }) {
   const formatDate = useFormatDate();
+  const formatDateTime = useFormatDateTime();
   if (!wo) return null;
 
   const shopName = String(wo.fromShopName || "Motor shop").trim();
@@ -142,7 +143,7 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [
       <WorkOrderPrintInspections inspections={inspections} />
 
       <footer className="mt-6 border-t border-neutral-200 pt-2 text-center text-[10px] text-neutral-500">
-        Generated {new Date().toLocaleString()}
+        Generated {formatDateTime(new Date())}
       </footer>
     </div>
   );

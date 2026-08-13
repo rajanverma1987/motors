@@ -10,8 +10,7 @@ import Textarea from "@/components/ui/textarea";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
-import { formatDateMdy } from "@/lib/format-date";
+import { useFormatDate, useFormatMoney } from "@/contexts/user-settings-context";
 
 const COMMISSION_INITIAL = {
   salesPersonId: "",
@@ -36,6 +35,7 @@ const SALES_PERSON_INITIAL = {
 export default function SalesCommissionModal({ open, onClose, repairFlowJobId, jobNumber }) {
   const toast = useToast();
   const fmt = useFormatMoney();
+  const formatDate = useFormatDate();
 
   const [salesPersons, setSalesPersons] = useState([]);
   const [commissionForm, setCommissionForm] = useState(COMMISSION_INITIAL);
@@ -334,10 +334,10 @@ export default function SalesCommissionModal({ open, onClose, repairFlowJobId, j
                             </Badge>
                           </td>
                           <td className="px-3 py-2 text-title">
-                            {formatDateMdy(row.paidAt)}
+                            {formatDate(row.paidAt)}
                           </td>
                           <td className="px-3 py-2 text-secondary">
-                            {formatDateMdy(row.createdAt)}
+                            {formatDate(row.createdAt)}
                           </td>
                         </tr>
                       );

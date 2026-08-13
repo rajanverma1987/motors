@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
+import { useFormatDate } from "@/contexts/user-settings-context";
 import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX, SEND_DOCUMENT_CC_MAX_LENGTH } from "@/lib/send-document-custom-message";
 
 function DetailRow({ label, value }) {
@@ -34,6 +35,7 @@ export default function SimpleMotorShippingSendModal({
   onSent,
 }) {
   const toast = useToast();
+  const formatDate = useFormatDate();
   const [sending, setSending] = useState(false);
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
   const [emailCc, setEmailCc] = useState("");
@@ -172,7 +174,7 @@ export default function SimpleMotorShippingSendModal({
             <div className="flex flex-col gap-1.5">
               <DetailRow label="Invoice #" value={entry?.invoiceNumber} />
               <DetailRow label="PO Number" value={entry?.shippingPo} />
-              <DetailRow label="Date" value={entry?.date} />
+              <DetailRow label="Date" value={entry?.date ? formatDate(entry.date) : ""} />
               <DetailRow label="Transport" value={entry?.mannerOfTransport} />
               <DetailRow label="Freight" value={entry?.freight} />
               <DetailRow label="Picked by" value={entry?.pickedBy} />

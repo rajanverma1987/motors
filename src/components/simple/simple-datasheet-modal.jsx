@@ -10,6 +10,9 @@ import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-prin
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
 import SimpleAcAssemblyFields from "@/components/simple/simple-ac-assembly-fields";
+import DatasheetFieldGrid, {
+  DATASHEET_FIELD_INPUT,
+} from "@/components/simple/simple-datasheet-field-grid";
 import { useAlert } from "@/components/confirm-provider";
 import {
   AC_DATASHEET_FIELD_COLUMNS,
@@ -29,8 +32,7 @@ import {
 } from "@/lib/simple-datasheet-form";
 
 const FORM_ID = "simple-datasheet-form";
-const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const FIELD_INPUT = DATASHEET_FIELD_INPUT;
 const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
@@ -45,28 +47,6 @@ function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
         {label}
       </label>
       <div className="min-w-0 flex-1">{children}</div>
-    </div>
-  );
-}
-
-function DatasheetFieldGrid({ columns, values, onFieldChange, labelWidth = "7.25rem" }) {
-  return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      {columns.map((col, colIdx) => (
-        <div key={colIdx} className="flex min-w-0 flex-col gap-1.5">
-          {col.map((field) => (
-            <FieldRow key={field.key} label={field.label} labelWidth={labelWidth}>
-              <input
-                type="text"
-                value={values?.[field.key] ?? ""}
-                onChange={(e) => onFieldChange(field.key, e.target.value)}
-                className={FIELD_INPUT}
-                aria-label={field.label}
-              />
-            </FieldRow>
-          ))}
-        </div>
-      ))}
     </div>
   );
 }

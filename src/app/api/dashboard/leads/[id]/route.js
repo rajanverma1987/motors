@@ -184,3 +184,36 @@ export async function PATCH(request, context) {
     return NextResponse.json({ error: "Failed to update lead" }, { status: 500 });
   }
 }
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const doc = await Lead.findById(id).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const listingIds = await getListingIdsForUser(user.email);
+    if (!leadBelongsToShop(doc, listingIds, user.email)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const listWithId = [buildLeadRow(doc, user.email, listingIds)];
+    const { scoped } = await enrichLeadsForDashboard(user.email, listingIds, listWithId);
+    if (!scoped.find((l) => l.id === id)) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    await Lead.findByIdAndDelete(id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Dashboard delete lead error:", err);
+    return NextResponse.json({ error: "Failed to delete lead" }, { status: 500 });
+  }
+}

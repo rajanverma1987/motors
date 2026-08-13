@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { FiCopy, FiLayers, FiPlus, FiUser, FiUserPlus } from "react-icons/fi";
+import { FiCopy, FiLayers, FiPlus, FiUser, FiUserPlus, FiX } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -10,7 +10,7 @@ import Modal from "@/components/ui/modal";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import {
   buildCustomerPayload,
@@ -84,6 +84,7 @@ function customerToTableRow(customer) {
 
 export default function CustomersPanel({ createNonce = 0 }) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const [customerRows, setCustomerRows] = useState([]);
   const [leadRows, setLeadRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -280,6 +281,56 @@ export default function CustomersPanel({ createNonce = 0 }) {
     [alert, copyingPortalId]
   );
 
+  const handleDelete = useCallback(
+    async (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      const isLead = row?.recordType === TYPE_LEAD;
+      const label = String(row?.companyName || row?.customerNumber || (isLead ? "this lead" : "this customer")).trim();
+      const ok = await confirm({
+        title: isLead ? "Delete lead" : "Delete customer",
+        message: `Delete ${label}? This cannot be undone.`,
+        confirmLabel: "Delete",
+        variant: "danger",
+      });
+      if (!ok) return;
+      try {
+        const endpoint = isLead
+          ? `/api/dashboard/leads/${encodeURIComponent(id)}`
+          : `/api/dashboard/customers/${encodeURIComponent(id)}`;
+        const res = await fetch(endpoint, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data.error || (isLead ? "Failed to delete lead" : "Failed to delete customer"));
+        }
+        if (isLead) {
+          setLeadRows((prev) => prev.filter((r) => String(r.id) !== id));
+          setLeadTotalCount((n) => Math.max(0, Number(n) - 1));
+          if (String(leadDetail?.id || "") === id) setLeadDetail(null);
+        } else {
+          setCustomerRows((prev) => prev.filter((r) => String(r.id) !== id));
+          setCustomerTotalCount((n) => Math.max(0, Number(n) - 1));
+          if (String(viewCustomerId || "") === id) setViewCustomerId(null);
+        }
+        setTotalCount((n) => Math.max(0, Number(n) - 1));
+        await alert({
+          title: "Deleted",
+          message: isLead ? "Lead deleted." : "Customer deleted.",
+        });
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || (isLead ? "Failed to delete lead." : "Failed to delete customer."),
+          variant: "danger",
+        });
+      }
+    },
+    [confirm, alert, viewCustomerId, leadDetail]
+  );
+
   const handleDeepLinkOpen = useCallback(
     (rawOpen) => {
       const { kind, id } = parseSimpleOpenParam(rawOpen);
@@ -417,7 +468,22 @@ export default function CustomersPanel({ createNonce = 0 }) {
         sortable: false,
         className: "w-14",
         render: (_, row) => {
-          if (row.recordType === TYPE_LEAD) return null;
+          if (row.recordType === TYPE_LEAD) {
+            return (
+              <button
+                type="button"
+                className="rounded p-0.5 text-danger hover:bg-danger/10"
+                title="Delete lead"
+                aria-label="Delete lead"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void handleDelete(row);
+                }}
+              >
+                <FiX className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            );
+          }
           const busy = copyingPortalId === row.id;
           return (
             <div className="flex items-center gap-0.5">
@@ -550,8 +616,31 @@ export default function CustomersPanel({ createNonce = 0 }) {
         sortable: true,
         render: (v) => v || "—",
       },
+      {
+        key: "delete",
+        label: "",
+        sortable: false,
+        className: "w-12",
+        render: (_, row) => {
+          if (row.recordType === TYPE_LEAD) return null;
+          return (
+            <button
+              type="button"
+              className="rounded p-0.5 text-danger hover:bg-danger/10"
+              title="Delete"
+              aria-label="Delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleDelete(row);
+              }}
+            >
+              <FiX className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          );
+        },
+      },
     ],
-    [copyingPortalId, handleCopyPortalLink, openRow]
+    [copyingPortalId, handleCopyPortalLink, handleDelete, openRow]
   );
 
   const emptyMessage = (() => {

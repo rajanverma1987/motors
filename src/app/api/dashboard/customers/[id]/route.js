@@ -246,3 +246,30 @@ export async function PATCH(request, context) {
     return NextResponse.json({ error: "Failed to update customer" }, { status: 500 });
   }
 }
+
+export async function DELETE(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const doc = await Customer.findOneAndDelete({
+      _id: id,
+      createdByEmail: email,
+    }).lean();
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true, id: String(doc._id) });
+  } catch (err) {
+    console.error("Dashboard delete customer error:", err);
+    return NextResponse.json({ error: "Failed to delete customer" }, { status: 500 });
+  }
+}

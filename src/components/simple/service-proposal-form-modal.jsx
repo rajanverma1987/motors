@@ -12,6 +12,7 @@ import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-se
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
 import SimpleMotorLogisticsModal, {
   KIND_RECEIVING,
   KIND_SHIPPING,
@@ -51,6 +52,7 @@ import {
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
   cloneServiceProposalAsNewRfq,
+  computeInvoicePaymentSummary,
   recordTypeDisplayTitle,
   recordTypeDocumentLabel,
   resolveRecordTypeOnSave,
@@ -78,12 +80,12 @@ const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold tex
 const TOOLBAR_BTN = "h-9 shrink-0 rounded-none px-2.5 py-2 text-xs font-semibold";
 /** Line-item cells: square corners, flush packing (matches PO form tables). */
 const CELL_INPUT =
-  "h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-xs text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
+  "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-[16px] font-bold text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
 /** Full cell grid — keep as complete class strings for Tailwind detection. */
 const LINE_CELL =
   "border border-solid border-[hsl(var(--title)/0.35)] bg-card p-0 dark:border-[hsl(var(--title)/0.4)]";
 const LINE_HEAD =
-  "border border-solid border-[hsl(var(--title)/0.35)] bg-primary/[0.04] px-1 py-1 font-semibold dark:border-[hsl(var(--title)/0.4)]";
+  "border border-solid border-[hsl(var(--title)/0.35)] bg-primary/[0.04] px-1 py-1.5 text-[16px] font-bold dark:border-[hsl(var(--title)/0.4)]";
 const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
 
 const MOTOR_FIELDS = [
@@ -108,10 +110,17 @@ const QUOTE_TYPE_OPTIONS = [
   { value: "Other", label: "Other" },
 ]; // keep in sync with QUOTE_TYPE_VALUES in simple-service-proposal-form.js
 
-function FieldRow({ label, labelWidth = "7.5rem", children, className = "", controlClassName = "" }) {
+function FieldRow({
+  label,
+  labelWidth = "7.5rem",
+  children,
+  className = "",
+  controlClassName = "",
+  labelClassName = "",
+}) {
   return (
     <div className={`flex min-w-0 items-center gap-2.5 ${className}`}>
-      <label className={`${FIELD_LABEL}`} style={{ width: labelWidth }}>
+      <label className={`${FIELD_LABEL} ${labelClassName}`} style={{ width: labelWidth }}>
         {label}
       </label>
       <div className={`min-w-0 ${controlClassName || "flex-1"}`}>{children}</div>
@@ -171,13 +180,15 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
   return (
     <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col bg-card">
       <div className="mt-[10px] flex items-center justify-between gap-2 bg-transparent px-2 py-1">
-        <h4 className="min-w-0 text-xs font-bold uppercase tracking-wide text-black dark:text-title">{title}</h4>
+        <h4 className="min-w-0 text-base font-bold uppercase tracking-wide text-black dark:text-title">
+          {title}
+        </h4>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse border-spacing-0 text-xs text-title">
+        <table className="w-full border-collapse border-spacing-0 text-[16px] font-bold text-title">
           <thead>
-            <tr className="text-left text-xs text-title">
+            <tr className="text-left text-[16px] font-bold text-title">
               <th className={LINE_HEAD}>Description</th>
               {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
               <th className={`w-36 ${LINE_HEAD}`}>Price</th>
@@ -220,7 +231,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                       {!isBlankTrail ? (
                         <button
                           type="button"
-                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                          className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
                           title="Remove line"
                           aria-label="Remove line"
                           onClick={() => removeLine(line.id)}
@@ -228,7 +239,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                           <FiX className="h-4 w-4 shrink-0" aria-hidden />
                         </button>
                       ) : (
-                        <span className="inline-block h-7 w-7 shrink-0" aria-hidden />
+                        <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
                       )}
                     </div>
                   </td>
@@ -238,12 +249,12 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-xs dark:border-[hsl(var(--title)/0.4)]">
+      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-[16px] font-bold dark:border-[hsl(var(--title)/0.4)]">
         <span className="font-bold text-title">{totalLabel}</span>
         <input
           readOnly
           value={formatMoney(total)}
-          className={`${CELL_INPUT_MUTED} !h-7 !w-32 text-right font-semibold tabular-nums`}
+          className={`${CELL_INPUT_MUTED} !h-8 !w-32 text-right font-semibold tabular-nums`}
         />
       </div>
     </div>
@@ -287,6 +298,7 @@ export default function ServiceProposalFormModal({
   const [newCustomerForm, setNewCustomerForm] = useState(INITIAL_CUSTOMER_FORM);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [datasheetOpen, setDatasheetOpen] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   const formatMoney = useCallback((n) => {
     const value = Number.isFinite(n) ? n : 0;
@@ -364,6 +376,7 @@ export default function ServiceProposalFormModal({
     setAttachmentsOpen(false);
     setCommissionOpen(false);
     setDatasheetOpen(false);
+    setPaymentModalOpen(false);
     loadCustomers();
     loadEmployees();
 
@@ -732,6 +745,10 @@ export default function ServiceProposalFormModal({
     : 0;
   const taxAmount = showTax && Number.isFinite(taxPct) ? (scopeTotal * taxPct) / 100 : 0;
   const billingTotal = totalAmount + taxAmount;
+  const invoicePaymentSummary = useMemo(
+    () => computeInvoicePaymentSummary(form.payments, billingTotal),
+    [form.payments, billingTotal]
+  );
   const displayTitle = recordTypeDisplayTitle(form.recordType);
   const docLabel = recordTypeDocumentLabel(form.recordType);
 
@@ -1094,6 +1111,18 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
+              {form.recordType === RECORD_TYPE_INVOICE ? (
+                <FieldRow label="Terms" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                  <input
+                    type="text"
+                    readOnly
+                    value={String(selectedCustomer?.paymentTerms || "").trim() || "—"}
+                    className={`${FIELD_INPUT} !bg-muted/40`}
+                    aria-label="Customer payment terms"
+                    title="From customer record"
+                  />
+                </FieldRow>
+              ) : null}
               <FieldRow label="Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="date"
@@ -1218,6 +1247,25 @@ export default function ServiceProposalFormModal({
                   aria-label="Status"
                 />
               </FieldRow>
+              {form.recordType === RECORD_TYPE_INVOICE ? (
+                <div className="mt-5 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    onClick={() => setPaymentModalOpen(true)}
+                    disabled={saving || copying}
+                  >
+                    Add/Edit Payment Record
+                    {invoicePaymentSummary.amountPaid > 0 ? (
+                      <span className="ml-1 tabular-nums opacity-90">
+                        ({invoicePaymentSummary.paymentStatus})
+                      </span>
+                    ) : null}
+                  </Button>
+                </div>
+              ) : null}
             </div>
 
             {/* Column 3 — notes */}
@@ -1273,30 +1321,54 @@ export default function ServiceProposalFormModal({
                 }
               />
               <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
-                <FieldRow label="Total Amount" labelWidth="8rem">
-                  <input readOnly value={formatMoney(totalAmount)} className={`${FIELD_INPUT} text-right font-semibold tabular-nums`} />
+                <FieldRow
+                  label="Total Amount"
+                  labelWidth="9rem"
+                  labelClassName="!text-[16px] !font-bold"
+                >
+                  <input
+                    readOnly
+                    value={formatMoney(totalAmount)}
+                    className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
+                  />
                 </FieldRow>
                 {showTax ? (
                   <>
-                    <FieldRow label="Tax%" labelWidth="8rem">
+                    <FieldRow
+                      label="Tax%"
+                      labelWidth="9rem"
+                      labelClassName="!text-[16px] !font-bold"
+                    >
                       <input
                         type="text"
                         inputMode="decimal"
                         value={form.taxPercent}
                         onChange={(e) => patch("taxPercent", e.target.value)}
-                        className={`${FIELD_INPUT} text-right tabular-nums`}
+                        className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
                       />
                     </FieldRow>
-                    <FieldRow label="Tax Amount" labelWidth="8rem">
-                      <input readOnly value={formatMoney(taxAmount)} className={`${FIELD_INPUT} text-right tabular-nums`} />
+                    <FieldRow
+                      label="Tax Amount"
+                      labelWidth="9rem"
+                      labelClassName="!text-[16px] !font-bold"
+                    >
+                      <input
+                        readOnly
+                        value={formatMoney(taxAmount)}
+                        className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
+                      />
                     </FieldRow>
                   </>
                 ) : null}
-                <FieldRow label="Total For Billing" labelWidth="8rem">
+                <FieldRow
+                  label="Total For Billing"
+                  labelWidth="9rem"
+                  labelClassName="!text-[16px] !font-bold"
+                >
                   <input
                     readOnly
                     value={formatMoney(billingTotal)}
-                    className={`${FIELD_INPUT} !bg-muted text-right font-bold tabular-nums dark:!bg-card`}
+                    className={`${FIELD_INPUT} !h-8 !bg-muted text-right !text-[16px] font-bold tabular-nums dark:!bg-card`}
                   />
                 </FieldRow>
               </div>
@@ -1439,6 +1511,22 @@ export default function ServiceProposalFormModal({
           documentNumber: String(form.documentNumber || "").trim(),
           documentLabel: docLabel,
           jobStatus: form.jobStatus,
+        }}
+      />
+
+      <SimpleInvoicePaymentModal
+        open={paymentModalOpen && form.recordType === RECORD_TYPE_INVOICE}
+        onClose={() => setPaymentModalOpen(false)}
+        payments={form.payments}
+        grandTotal={billingTotal}
+        customer={selectedCustomer}
+        invoiceNumber={String(form.documentNumber || "").trim()}
+        onChange={(applied) => {
+          setForm((f) => ({
+            ...f,
+            payments: applied.payments,
+            invoicePaidDate: applied.invoicePaidDate,
+          }));
         }}
       />
     </>

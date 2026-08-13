@@ -8,6 +8,11 @@ export const SIMPLE_REPORT_IDS = [
   "inventory-stock",
   "customers",
   "sales-commissions",
+  "sales-tax",
+  "purchase-tax",
+  "ar-aging",
+  "ap-aging",
+  "cash-receipts",
 ];
 
 /** @typedef {{ key: string, label: string, options: { value: string, label: string }[] }} SimpleReportFilterDef */
@@ -131,11 +136,65 @@ export const SIMPLE_REPORT_FILTERS = {
       ],
     },
   ],
+  "sales-tax": [
+    {
+      key: "collection",
+      label: "Tax status",
+      options: [
+        { value: "", label: "All taxable invoices" },
+        { value: "collected", label: "Tax collected (paid)" },
+        { value: "outstanding", label: "Tax to be collected" },
+      ],
+    },
+  ],
+  "purchase-tax": [
+    {
+      key: "poType",
+      label: "PO type",
+      options: [
+        { value: "", label: "All types" },
+        { value: "job", label: "Job PO" },
+        { value: "shop", label: "Shop PO" },
+      ],
+    },
+  ],
+  "ar-aging": [
+    {
+      key: "bucket",
+      label: "Aging bucket",
+      options: [
+        { value: "", label: "All unpaid" },
+        { value: "current", label: "Current (not past due)" },
+        { value: "1-30", label: "1–30 days" },
+        { value: "31-60", label: "31–60 days" },
+        { value: "61-90", label: "61–90 days" },
+        { value: "90+", label: "90+ days" },
+        { value: "no-due", label: "No due date" },
+      ],
+    },
+  ],
+  "ap-aging": [
+    {
+      key: "bucket",
+      label: "Aging bucket",
+      options: [
+        { value: "", label: "All unpaid" },
+        { value: "current", label: "Current (not past due)" },
+        { value: "1-30", label: "1–30 days" },
+        { value: "31-60", label: "31–60 days" },
+        { value: "61-90", label: "61–90 days" },
+        { value: "90+", label: "90+ days" },
+        { value: "no-due", label: "No due date" },
+      ],
+    },
+  ],
+  "cash-receipts": [],
 };
 
 export const SIMPLE_REPORT_CATALOG = [
   {
     id: "jobs-pipeline",
+    category: "Operations",
     title: "Jobs pipeline",
     description: "RFQ and JOB service proposals with status, customer, and totals.",
     usesDateRange: true,
@@ -143,6 +202,7 @@ export const SIMPLE_REPORT_CATALOG = [
   },
   {
     id: "invoices-ar",
+    category: "Accounting",
     title: "Invoices / AR",
     description: "Invoice records with billed totals, paid dates, and unpaid balance.",
     usesDateRange: true,
@@ -150,6 +210,7 @@ export const SIMPLE_REPORT_CATALOG = [
   },
   {
     id: "purchase-ap",
+    category: "Accounting",
     title: "Purchase / AP",
     description: "Purchase orders with vendor, payment status, and balances.",
     usesDateRange: true,
@@ -157,13 +218,56 @@ export const SIMPLE_REPORT_CATALOG = [
   },
   {
     id: "vendor-spend",
+    category: "Accounting",
     title: "Vendor spend",
     description: "Spend rolled up by vendor from purchase orders in the date range.",
     usesDateRange: true,
     filters: SIMPLE_REPORT_FILTERS["vendor-spend"],
   },
   {
+    id: "sales-tax",
+    category: "Accounting",
+    title: "Sales tax",
+    description:
+      "Sales tax on invoices — rate, tax amount, and whether tax is collected (paid) or still outstanding.",
+    usesDateRange: true,
+    filters: SIMPLE_REPORT_FILTERS["sales-tax"],
+  },
+  {
+    id: "purchase-tax",
+    category: "Accounting",
+    title: "Purchase tax",
+    description: "Tax charged on purchase order lines (taxable vendor purchases).",
+    usesDateRange: true,
+    filters: SIMPLE_REPORT_FILTERS["purchase-tax"],
+  },
+  {
+    id: "ar-aging",
+    category: "Accounting",
+    title: "AR aging",
+    description: "Unpaid invoices by days past due (current, 1–30, 31–60, 61–90, 90+).",
+    usesDateRange: false,
+    filters: SIMPLE_REPORT_FILTERS["ar-aging"],
+  },
+  {
+    id: "ap-aging",
+    category: "Accounting",
+    title: "AP aging",
+    description: "Unpaid purchase order balances by days past due.",
+    usesDateRange: false,
+    filters: SIMPLE_REPORT_FILTERS["ap-aging"],
+  },
+  {
+    id: "cash-receipts",
+    category: "Accounting",
+    title: "Cash receipts",
+    description: "Paid invoices in the date range (cash / payment received).",
+    usesDateRange: true,
+    filters: SIMPLE_REPORT_FILTERS["cash-receipts"],
+  },
+  {
     id: "inventory-stock",
+    category: "Operations",
     title: "Inventory stock",
     description: "Current on-hand, reserved, available, and low-stock parts (snapshot).",
     usesDateRange: false,
@@ -171,6 +275,7 @@ export const SIMPLE_REPORT_CATALOG = [
   },
   {
     id: "customers",
+    category: "Operations",
     title: "Customers",
     description: "Customer master list with contact, credit, and tax settings (snapshot).",
     usesDateRange: false,
@@ -178,6 +283,7 @@ export const SIMPLE_REPORT_CATALOG = [
   },
   {
     id: "sales-commissions",
+    category: "Sales",
     title: "Sales commissions",
     description: "Commission amounts by sales person, job, and paid status.",
     usesDateRange: true,

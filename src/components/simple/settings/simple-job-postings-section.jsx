@@ -10,6 +10,7 @@ import { Form, FormContainer, FormSectionTitle } from "@/components/ui/form-layo
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { STATUS_LABELS, EMPLOYMENT_LABELS, EXPERIENCE_LABELS } from "@/lib/job-posting-labels";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { useFormatDateTime } from "@/contexts/user-settings-context";
 import JobPostingFormFields from "@/components/job-postings/job-posting-form-fields";
 
 const EMPTY_FORM = {
@@ -53,6 +54,7 @@ function statusVariant(status) {
 
 export default function SimpleJobPostingsSection() {
   const alert = useAlert();
+  const formatDateTime = useFormatDateTime();
   const confirm = useConfirm();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -374,7 +376,7 @@ export default function SimpleJobPostingsSection() {
         key: "updatedAt",
         label: "Updated",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => (v ? formatDateTime(v) : "—"),
       },
       {
         key: "actions",
@@ -391,7 +393,7 @@ export default function SimpleJobPostingsSection() {
         ),
       },
     ],
-    [openEditModal, handleDeleteRow, openApplicants]
+    [openEditModal, handleDeleteRow, openApplicants, formatDateTime]
   );
 
   async function handleCreate(e) {
@@ -466,10 +468,10 @@ export default function SimpleJobPostingsSection() {
         key: "createdAt",
         label: "Applied",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => (v ? formatDateTime(v) : "—"),
       },
     ],
-    []
+    [formatDateTime]
   );
 
   if (applicantsJobId) {

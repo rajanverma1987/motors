@@ -182,6 +182,79 @@ function blankFieldMap(columns) {
   return out;
 }
 
+/** Flatten `{key,label}[][]` to a single list (order preserved). */
+export function flattenDatasheetFieldColumns(columns) {
+  const out = [];
+  for (const col of Array.isArray(columns) ? columns : []) {
+    for (const f of Array.isArray(col) ? col : []) {
+      if (f?.key) out.push({ key: String(f.key), label: String(f.label || f.key) });
+    }
+  }
+  return out;
+}
+
+/** Empty criteria map for a datasheet column config (no notes). */
+export function createEmptyDatasheetCriteria(columns) {
+  return blankFieldMap(columns);
+}
+
+/**
+ * Master Data Search form definitions — always driven by the same column arrays
+ * as the Datasheet modal so field adds/renames stay in sync.
+ *
+ * @type {Record<string, {
+ *   id: string,
+ *   label: string,
+ *   blocks: { id: string, label: string, mongoPrefix: string, columns: { key: string, label: string }[][] }[]
+ * }>}
+ */
+export const MASTER_DATA_SEARCH_FORMS = {
+  ac: {
+    id: "ac",
+    label: "AC",
+    blocks: [
+      {
+        id: "dataSheet",
+        label: "Complete Motor",
+        mongoPrefix: "acDatasheet.dataSheet",
+        columns: AC_DATASHEET_FIELD_COLUMNS,
+      },
+    ],
+  },
+  dc: {
+    id: "dc",
+    label: "DC",
+    blocks: [
+      {
+        id: "fieldFrame",
+        label: "Field Frame",
+        mongoPrefix: "dcDatasheet.fieldFrame",
+        columns: DC_FIELD_FRAME_FIELD_COLUMNS,
+      },
+      {
+        id: "armature",
+        label: "Armature",
+        mongoPrefix: "dcDatasheet.armature",
+        columns: DC_ARMATURE_FIELD_COLUMNS,
+      },
+    ],
+  },
+  armature: {
+    id: "armature",
+    label: "Armature",
+    blocks: [
+      {
+        id: "armature",
+        label: "Armature",
+        mongoPrefix: "dcDatasheet.armature",
+        columns: DC_ARMATURE_FIELD_COLUMNS,
+      },
+    ],
+  },
+};
+
+export const MASTER_DATA_SEARCH_FORM_IDS = Object.keys(MASTER_DATA_SEARCH_FORMS);
+
 function emptyFieldFrameBlock(overrides = {}) {
   return {
     ...blankFieldMap(DC_FIELD_FRAME_FIELD_COLUMNS),

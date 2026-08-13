@@ -8,6 +8,8 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveSimplePoType } from "@/lib/simple-purchase-order-form";
 import {
+  agingBucketLabel,
+  agingFromDueDate,
   boolLabel,
   computePoMoney,
   computeSpMoney,
@@ -15,6 +17,7 @@ import {
   formatReportDate,
   isInvoiceSp,
   isPipelineSp,
+  isSpInvoicePaid,
   matchPipelineStatusBucket,
   moneyCell,
   resolveDocDay,
@@ -22,6 +25,7 @@ import {
 } from "@/lib/simple-reports/helpers";
 import { buildSimpleReportWorkbook } from "@/lib/simple-reports/workbook";
 import { isValidSimpleReportId } from "@/lib/simple-reports/catalog";
+import { parseMoneyInput } from "@/lib/simple-service-proposal-form";
 
 const FETCH_LIMIT = 20000;
 
@@ -62,6 +66,16 @@ export async function buildSimpleReportExport(opts) {
       return buildCustomers(ownerEmail, filters);
     case "sales-commissions":
       return buildSalesCommissions(ownerEmail, from, to, currency, filters);
+    case "sales-tax":
+      return buildSalesTax(ownerEmail, from, to, currency, filters);
+    case "purchase-tax":
+      return buildPurchaseTax(ownerEmail, from, to, currency, filters);
+    case "ar-aging":
+      return buildArAging(ownerEmail, currency, filters);
+    case "ap-aging":
+      return buildApAging(ownerEmail, currency, filters);
+    case "cash-receipts":
+      return buildCashReceipts(ownerEmail, from, to, currency);
     default:
       throw new Error("Unknown report");
   }
@@ -162,7 +176,7 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
     if (!dayInRange(day, from, to)) continue;
     const money = computeSpMoney(doc);
     const paidDate = toYmd(doc.invoicePaidDate);
-    const isPaid = Boolean(paidDate) || /paid/i.test(String(doc.status || ""));
+    const isPaid = isSpInvoicePaid(doc);
     if (paymentFilter === "paid" && !isPaid) continue;
     if (paymentFilter === "unpaid" && isPaid) continue;
     const paid = isPaid ? money.grandTotal : 0;
@@ -386,6 +400,218 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
   }
   const buffer = await buildSimpleReportWorkbook("Sales commissions", headers, rows);
   return { buffer, filename: `sales-commissions-${fileStamp()}.xlsx`, rowCount: rows.length };
+}
+
+async function buildSalesTax(ownerEmail, from, to, currency, filters) {
+  const docs = await loadServiceProposals(ownerEmail);
+  const collectionFilter = String(filters.collection || "").toLowerCase();
+  const headers = [
+    "Invoice #",
+    "Customer",
+    "Status",
+    "Invoice date",
+    "Paid date",
+    "Taxable base",
+    "Tax %",
+    "Tax amount",
+    "Grand total",
+    "Tax status",
+  ];
+  const rows = [];
+  for (const doc of docs) {
+    if (!isInvoiceSp(doc)) continue;
+    if (doc.customerTaxExempt !== false) continue;
+    const money = computeSpMoney(doc);
+    if (money.taxAmount <= 0) continue;
+    const day = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
+    if (!dayInRange(day, from, to)) continue;
+    const isPaid = isSpInvoicePaid(doc);
+    const taxStatus = isPaid ? "Collected" : "Outstanding";
+    if (collectionFilter === "collected" && !isPaid) continue;
+    if (collectionFilter === "outstanding" && isPaid) continue;
+    const taxPct = parseMoneyInput(doc.taxPercent);
+    rows.push([
+      String(doc.documentNumber || doc.quote || "").trim(),
+      String(doc.companyName || "").trim(),
+      String(doc.status || "").trim(),
+      formatReportDate(day, currency),
+      formatReportDate(doc.invoicePaidDate, currency),
+      moneyCell(money.scopeTotal),
+      moneyCell(taxPct),
+      moneyCell(money.taxAmount),
+      moneyCell(money.grandTotal),
+      taxStatus,
+    ]);
+  }
+  const buffer = await buildSimpleReportWorkbook("Sales tax", headers, rows);
+  return { buffer, filename: `sales-tax-${fileStamp()}.xlsx`, rowCount: rows.length };
+}
+
+async function buildPurchaseTax(ownerEmail, from, to, currency, filters) {
+  const docs = await loadPurchaseOrders(ownerEmail);
+  const poTypeFilter = String(filters.poType || "").toLowerCase();
+  const headers = [
+    "PO #",
+    "Type",
+    "Vendor",
+    "Job #",
+    "PO date",
+    "Line total",
+    "Tax",
+    "Grand total",
+    "Payment status",
+  ];
+  const rows = [];
+  for (const doc of docs) {
+    const day = resolveDocDay(doc, ["poCutDate", "createdAt"]);
+    if (!dayInRange(day, from, to)) continue;
+    if (poTypeFilter && resolveSimplePoType(doc) !== poTypeFilter) continue;
+    const money = computePoMoney(doc);
+    if (money.taxAmount <= 0) continue;
+    rows.push([
+      String(doc.poNumber || "").trim(),
+      money.poTypeLabel,
+      String(doc.vendorName || "").trim(),
+      String(doc.jobNumber || "").trim(),
+      formatReportDate(day, currency),
+      moneyCell(money.lineTotal),
+      moneyCell(money.taxAmount),
+      moneyCell(money.grandTotal),
+      money.paymentStatus,
+    ]);
+  }
+  const buffer = await buildSimpleReportWorkbook("Purchase tax", headers, rows);
+  return { buffer, filename: `purchase-tax-${fileStamp()}.xlsx`, rowCount: rows.length };
+}
+
+async function buildArAging(ownerEmail, currency, filters) {
+  const docs = await loadServiceProposals(ownerEmail);
+  const bucketFilter = String(filters.bucket || "").trim();
+  const headers = [
+    "Invoice #",
+    "Customer",
+    "Status",
+    "Invoice date",
+    "Due date",
+    "Days past due",
+    "Aging bucket",
+    "Grand total",
+    "Unpaid",
+    "Tax",
+  ];
+  const rows = [];
+  for (const doc of docs) {
+    if (!isInvoiceSp(doc)) continue;
+    if (isSpInvoicePaid(doc)) continue;
+    const money = computeSpMoney(doc);
+    const unpaid = money.grandTotal;
+    if (unpaid <= 0) continue;
+    const aging = agingFromDueDate(doc.dueDate);
+    if (bucketFilter && aging.bucket !== bucketFilter) continue;
+    const day = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
+    rows.push([
+      String(doc.documentNumber || doc.quote || "").trim(),
+      String(doc.companyName || "").trim(),
+      String(doc.status || "").trim(),
+      formatReportDate(day, currency),
+      formatReportDate(doc.dueDate, currency),
+      aging.daysPastDue == null ? "" : aging.daysPastDue,
+      agingBucketLabel(aging.bucket),
+      moneyCell(money.grandTotal),
+      moneyCell(unpaid),
+      moneyCell(money.taxAmount),
+    ]);
+  }
+  rows.sort((a, b) => {
+    const da = typeof a[5] === "number" ? a[5] : -99999;
+    const db = typeof b[5] === "number" ? b[5] : -99999;
+    return db - da;
+  });
+  const buffer = await buildSimpleReportWorkbook("AR aging", headers, rows);
+  return { buffer, filename: `ar-aging-${fileStamp()}.xlsx`, rowCount: rows.length };
+}
+
+async function buildApAging(ownerEmail, currency, filters) {
+  const docs = await loadPurchaseOrders(ownerEmail);
+  const bucketFilter = String(filters.bucket || "").trim();
+  const headers = [
+    "PO #",
+    "Type",
+    "Vendor",
+    "Job #",
+    "PO date",
+    "Due date",
+    "Days past due",
+    "Aging bucket",
+    "Grand total",
+    "Unpaid",
+    "Payment status",
+  ];
+  const rows = [];
+  for (const doc of docs) {
+    const money = computePoMoney(doc);
+    if (money.unpaid <= 0) continue;
+    const aging = agingFromDueDate(doc.dueDate);
+    if (bucketFilter && aging.bucket !== bucketFilter) continue;
+    const day = resolveDocDay(doc, ["poCutDate", "createdAt"]);
+    rows.push([
+      String(doc.poNumber || "").trim(),
+      money.poTypeLabel,
+      String(doc.vendorName || "").trim(),
+      String(doc.jobNumber || "").trim(),
+      formatReportDate(day, currency),
+      formatReportDate(doc.dueDate, currency),
+      aging.daysPastDue == null ? "" : aging.daysPastDue,
+      agingBucketLabel(aging.bucket),
+      moneyCell(money.grandTotal),
+      moneyCell(money.unpaid),
+      money.paymentStatus,
+    ]);
+  }
+  rows.sort((a, b) => {
+    const da = typeof a[6] === "number" ? a[6] : -99999;
+    const db = typeof b[6] === "number" ? b[6] : -99999;
+    return db - da;
+  });
+  const buffer = await buildSimpleReportWorkbook("AP aging", headers, rows);
+  return { buffer, filename: `ap-aging-${fileStamp()}.xlsx`, rowCount: rows.length };
+}
+
+async function buildCashReceipts(ownerEmail, from, to, currency) {
+  const docs = await loadServiceProposals(ownerEmail);
+  const headers = [
+    "Invoice #",
+    "Customer",
+    "Paid date",
+    "Invoice date",
+    "Scope total",
+    "Other items",
+    "Tax",
+    "Amount received",
+  ];
+  const rows = [];
+  for (const doc of docs) {
+    if (!isInvoiceSp(doc)) continue;
+    if (!isSpInvoicePaid(doc)) continue;
+    const paidDay = toYmd(doc.invoicePaidDate) || resolveDocDay(doc, ["invoicePaidDate", "updatedAt"]);
+    if (!dayInRange(paidDay, from, to)) continue;
+    const money = computeSpMoney(doc);
+    rows.push([
+      String(doc.documentNumber || doc.quote || "").trim(),
+      String(doc.companyName || "").trim(),
+      formatReportDate(paidDay, currency),
+      formatReportDate(
+        resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]),
+        currency
+      ),
+      moneyCell(money.scopeTotal),
+      moneyCell(money.otherTotal),
+      moneyCell(money.taxAmount),
+      moneyCell(money.grandTotal),
+    ]);
+  }
+  const buffer = await buildSimpleReportWorkbook("Cash receipts", headers, rows);
+  return { buffer, filename: `cash-receipts-${fileStamp()}.xlsx`, rowCount: rows.length };
 }
 
 function fileStamp() {

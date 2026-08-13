@@ -10,7 +10,7 @@ import {
 } from "react";
 import { USER_SETTINGS_DEFAULTS, mergeUserSettings, resolveTablePageSize } from "@/lib/user-settings";
 import { formatMoney } from "@/lib/format-currency";
-import { formatDateForCurrency } from "@/lib/format-date";
+import { formatDateForCurrency, formatDateTimeForCurrency } from "@/lib/format-date";
 
 const UserSettingsContext = createContext({
   settings: USER_SETTINGS_DEFAULTS,
@@ -116,4 +116,14 @@ export function useFormatDate() {
       ? settings.currency.toUpperCase().trim()
       : "USD";
   return useCallback((value) => formatDateForCurrency(value, code || "USD"), [code]);
+}
+
+/** Format date+time using the country style for Settings → Currency. */
+export function useFormatDateTime() {
+  const { settings } = useUserSettings();
+  const code =
+    typeof settings?.currency === "string"
+      ? settings.currency.toUpperCase().trim()
+      : "USD";
+  return useCallback((value) => formatDateTimeForCurrency(value, code || "USD"), [code]);
 }

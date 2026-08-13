@@ -10,7 +10,7 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { usePreferredTablePageSize, useFormatDateTime } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
 
@@ -47,6 +47,7 @@ function usageStatusLabel(status) {
 export default function InventoryPanel() {
   const alert = useAlert();
   const confirm = useConfirm();
+  const formatDateTime = useFormatDateTime();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -542,10 +543,10 @@ export default function InventoryPanel() {
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-secondary">
-                        {r.reservedAt ? new Date(r.reservedAt).toLocaleString() : "—"}
+                        {r.reservedAt ? formatDateTime(r.reservedAt) : "—"}
                       </td>
                       <td className="px-3 py-2 text-secondary">
-                        {r.usedAt ? new Date(r.usedAt).toLocaleString() : "—"}
+                        {r.usedAt ? formatDateTime(r.usedAt) : "—"}
                       </td>
                     </tr>
                   );

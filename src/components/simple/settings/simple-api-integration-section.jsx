@@ -8,6 +8,7 @@ import Checkbox from "@/components/ui/checkbox";
 import Table from "@/components/ui/table";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { useFormatDateTime } from "@/contexts/user-settings-context";
 import {
   INTEGRATION_COLLECTION_NAMES,
   INTEGRATION_WEBHOOK_EVENT_NAMES,
@@ -18,6 +19,7 @@ const EVENT_TEMPLATES = INTEGRATION_WEBHOOK_EVENT_NAMES;
 export default function SimpleApiIntegrationSection() {
   const alert = useAlert();
   const confirm = useConfirm();
+  const formatDateTime = useFormatDateTime();
   const [loading, setLoading] = useState(true);
   const [keys, setKeys] = useState([]);
   const [webhooks, setWebhooks] = useState([]);
@@ -247,13 +249,13 @@ export default function SimpleApiIntegrationSection() {
         key: "createdAt",
         label: "Created",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => (v ? formatDateTime(v) : "—"),
       },
       {
         key: "lastUsedAt",
         label: "Last used",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "Never"),
+        render: (v) => (v ? formatDateTime(v) : "Never"),
       },
       {
         key: "id",
@@ -265,7 +267,7 @@ export default function SimpleApiIntegrationSection() {
         ),
       },
     ],
-    []
+    [formatDateTime, toggleKey, removeKey]
   );
 
   const webhookColumns = useMemo(
@@ -311,10 +313,10 @@ export default function SimpleApiIntegrationSection() {
         key: "createdAt",
         label: "Time",
         sortable: true,
-        render: (v) => (v ? new Date(v).toLocaleString() : "—"),
+        render: (v) => (v ? formatDateTime(v) : "—"),
       },
     ],
-    []
+    [formatDateTime]
   );
 
   return (

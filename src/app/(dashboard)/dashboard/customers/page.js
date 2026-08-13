@@ -18,7 +18,7 @@ import CustomerEditFormFields from "@/components/dashboard/customer-edit-form-fi
 import { customerApiToForm } from "@/lib/customer-record-form";
 import { useAuth } from "@/contexts/auth-context";
 import { useTrialUpgrade } from "@/contexts/trial-upgrade-context";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { LISTING_ONLY_UPGRADE_MESSAGE, LISTING_ONLY_MAX_CUSTOMERS } from "@/lib/listing-account-messages";
 import { TRIAL_MAX_CUSTOMERS, isTrialCustomerCapResponse } from "@/lib/trial-subscription-messages";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -217,6 +217,7 @@ export default function DashboardCustomersPage() {
   const { showTrialUpgradeModal } = useTrialUpgrade();
   const toast = useToast();
   const formatMoney = useFormatMoney();
+  const formatDate = useFormatDate();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const router = useRouter();
@@ -1165,7 +1166,7 @@ export default function DashboardCustomersPage() {
                                 inv.invoiceNumber || "—"
                               )}
                             </td>
-                            <td className="px-3 py-2">{inv.date || "—"}</td>
+                            <td className="px-3 py-2">{formatDate(inv.date) || "—"}</td>
                             <td className="px-3 py-2">
                               <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
                             </td>
@@ -1224,7 +1225,7 @@ export default function DashboardCustomersPage() {
                                 q.rfqNumber || "—"
                               )}
                             </td>
-                            <td className="px-3 py-2">{q.date || "—"}</td>
+                            <td className="px-3 py-2">{formatDate(q.date) || "—"}</td>
                             <td className="px-3 py-2">
                               <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
                             </td>
@@ -1297,7 +1298,7 @@ export default function DashboardCustomersPage() {
                                 wo.quoteRfqNumber || "—"
                               )}
                             </td>
-                            <td className="px-3 py-2">{wo.date || "—"}</td>
+                            <td className="px-3 py-2">{formatDate(wo.date) || "—"}</td>
                             <td className="px-3 py-2">
                               <WorkOrderStatusPill status={wo.status} mergedSettings={mergedSettings} />
                             </td>

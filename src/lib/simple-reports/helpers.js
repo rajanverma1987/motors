@@ -69,6 +69,8 @@ export function computePoMoney(doc) {
   const totals = computePoFormTotals(doc?.lineItems);
   const pay = computePoPaymentSummary(doc?.payments, totals.grandTotal);
   return {
+    lineTotal: totals.total,
+    taxAmount: totals.totalTax,
     grandTotal: totals.grandTotal,
     amountPaid: pay.amountPaid,
     unpaid: pay.balance,
@@ -121,4 +123,51 @@ export function matchPipelineStatusBucket(status, bucket) {
   if (key === "closed") return closed;
   if (key === "open") return !closed;
   return true;
+}
+
+/**
+ * Days past due relative to today (local calendar). Negative / zero → current.
+ * @param {unknown} dueValue
+ * @returns {{ daysPastDue: number|null, bucket: string }}
+ */
+export function agingFromDueDate(dueValue) {
+  const due = toYmd(dueValue);
+  if (!due) return { daysPastDue: null, bucket: "no-due" };
+  const today = toYmd(new Date());
+  if (!today) return { daysPastDue: null, bucket: "no-due" };
+  const dueMs = Date.parse(`${due}T12:00:00`);
+  const todayMs = Date.parse(`${today}T12:00:00`);
+  if (!Number.isFinite(dueMs) || !Number.isFinite(todayMs)) {
+    return { daysPastDue: null, bucket: "no-due" };
+  }
+  const daysPastDue = Math.floor((todayMs - dueMs) / 86400000);
+  if (daysPastDue <= 0) return { daysPastDue, bucket: "current" };
+  if (daysPastDue <= 30) return { daysPastDue, bucket: "1-30" };
+  if (daysPastDue <= 60) return { daysPastDue, bucket: "31-60" };
+  if (daysPastDue <= 90) return { daysPastDue, bucket: "61-90" };
+  return { daysPastDue, bucket: "90+" };
+}
+
+export function agingBucketLabel(bucket) {
+  switch (String(bucket || "")) {
+    case "current":
+      return "Current";
+    case "1-30":
+      return "1–30 days";
+    case "31-60":
+      return "31–60 days";
+    case "61-90":
+      return "61–90 days";
+    case "90+":
+      return "90+ days";
+    case "no-due":
+      return "No due date";
+    default:
+      return String(bucket || "");
+  }
+}
+
+export function isSpInvoicePaid(doc) {
+  const paidDate = toYmd(doc?.invoicePaidDate);
+  return Boolean(paidDate) || /paid/i.test(String(doc?.status || ""));
 }

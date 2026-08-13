@@ -7,12 +7,13 @@ import Button from "./button";
 import Checkbox from "./checkbox";
 import Modal from "./modal";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import { formatDateMdy } from "@/lib/format-date";
+import { formatDateForCurrency } from "@/lib/format-date";
 import { resolveTablePageSize } from "@/lib/user-settings";
 
 /** Column keys that hold calendar dates (not timestamps) when no custom render is set. */
 const TABLE_DATE_COLUMN_KEYS = new Set([
   "date",
+  "datecreated",
   "paidat",
   "paiddate",
   "paymentdate",
@@ -20,6 +21,8 @@ const TABLE_DATE_COLUMN_KEYS = new Set([
   "duedate",
   "shipdate",
   "orderdate",
+  "pocutdate",
+  "estimatedcompletion",
 ]);
 
 function isTableDateColumn(col) {
@@ -27,11 +30,16 @@ function isTableDateColumn(col) {
   const key = String(col.key || "").trim().toLowerCase();
   if (TABLE_DATE_COLUMN_KEYS.has(key)) return true;
   const label = String(col.label || "").trim().toLowerCase();
-  return label === "date" || label === "paid date" || label === "payment date";
+  return (
+    label === "date" ||
+    label === "paid date" ||
+    label === "payment date" ||
+    label === "date created"
+  );
 }
 
-function defaultTableCellContent(col, value) {
-  if (isTableDateColumn(col)) return formatDateMdy(value);
+function defaultTableCellContent(col, value, currencyCode) {
+  if (isTableDateColumn(col)) return formatDateForCurrency(value, currencyCode || "USD");
   return value;
 }
 
@@ -223,6 +231,10 @@ export default function Table({
   const preferredPageSize = resolveTablePageSize(dashboardUserSettings);
   const compactFromSettings = !!dashboardUserSettings?.compactTables;
   const isCompact = dense || compactFromSettings;
+  const dateCurrency =
+    typeof dashboardUserSettings?.currency === "string"
+      ? dashboardUserSettings.currency.toUpperCase().trim() || "USD"
+      : "USD";
 
   const cellPy = isCompact ? "py-1" : "py-1.5";
   /** Header stays roomier than body cells so column titles remain scannable. */
@@ -394,7 +406,7 @@ export default function Table({
     const placeholder = col.emptyCell ?? emptyCell;
     if (placeholder == null || placeholder === false) return false;
     const content =
-      typeof col.render === "function" ? col.render(value, row, i) : defaultTableCellContent(col, value);
+      typeof col.render === "function" ? col.render(value, row, i) : defaultTableCellContent(col, value, dateCurrency);
     return content == null || content === "";
   };
 
@@ -505,7 +517,7 @@ export default function Table({
     let content =
       typeof col.render === "function"
         ? col.render(value, row, i)
-        : defaultTableCellContent(col, value);
+        : defaultTableCellContent(col, value, dateCurrency);
     if ((content == null || content === "") && placeholder != null && placeholder !== false) {
       content = placeholder;
     }
@@ -544,7 +556,7 @@ export default function Table({
       columns.map((c) => {
         const val = row[c.key];
         if (typeof c.exportValue === "function") return c.exportValue(val, row);
-        if (isTableDateColumn(c)) return formatDateMdy(val);
+        if (isTableDateColumn(c)) return formatDateForCurrency(val, dateCurrency);
         return val;
       })
     );

@@ -41,6 +41,109 @@ export function todayISODate() {
   return new Date().toISOString().slice(0, 10);
 }
 
+export function parseSpMoney(value) {
+  const n = Number.parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function roundSpMoney(value) {
+  return Math.round((parseSpMoney(value) + Number.EPSILON) * 100) / 100;
+}
+
+function newPaymentId() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `invp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Empty invoice payment draft / row. */
+export function emptyInvoicePayment(overrides = {}) {
+  return {
+    id: newPaymentId(),
+    date: todayISODate(),
+    amount: "",
+    method: "",
+    reference: "",
+    notes: "",
+    ...overrides,
+  };
+}
+
+/**
+ * Normalize stored invoice payments.
+ * @param {unknown} payments
+ */
+export function normalizeInvoicePayments(payments) {
+  if (!Array.isArray(payments)) return [];
+  return payments.map((p) => ({
+    ...emptyInvoicePayment(),
+    ...(p && typeof p === "object" ? p : {}),
+    id: String(p?.id || "").trim() || newPaymentId(),
+    date: toInputDateValue(p?.date) || "",
+    amount: String(p?.amount ?? "").trim(),
+    method: String(p?.method || "").trim(),
+    reference: String(p?.reference || p?.referenceNumber || "").trim(),
+    notes: String(p?.notes || "").trim(),
+  }));
+}
+
+/**
+ * @param {Array<{ amount?: string|number, date?: string }>} payments
+ * @param {number} grandTotal
+ */
+export function computeInvoicePaymentSummary(payments, grandTotal) {
+  const list = Array.isArray(payments) ? payments : [];
+  let amountPaid = 0;
+  let latestDate = "";
+  for (const p of list) {
+    amountPaid = roundSpMoney(amountPaid + parseSpMoney(p?.amount));
+    const day = toInputDateValue(p?.date);
+    if (day && (!latestDate || day > latestDate)) latestDate = day;
+  }
+  const total = roundSpMoney(grandTotal);
+  const paid = roundSpMoney(amountPaid);
+  const balance = roundSpMoney(Math.max(0, total - paid));
+  let paymentStatus = "Unpaid";
+  if (paid <= 0) paymentStatus = "Unpaid";
+  else if (total > 0 && paid >= total) paymentStatus = "Paid";
+  else if (paid > 0) paymentStatus = "Partial Paid";
+  return {
+    amountPaid: paid,
+    balance,
+    grandTotal: total,
+    paymentStatus,
+    latestPaymentDate: latestDate,
+  };
+}
+
+/**
+ * Apply payments onto form fields (keeps invoicePaidDate in sync with latest payment).
+ * @param {Record<string, unknown>} formLike
+ * @param {ReturnType<typeof normalizeInvoicePayments>} payments
+ * @param {number} grandTotal
+ */
+export function applyInvoicePaymentFields(formLike, payments, grandTotal) {
+  const list = normalizeInvoicePayments(payments);
+  const summary = computeInvoicePaymentSummary(list, grandTotal);
+  return {
+    payments: list,
+    invoicePaidDate:
+      summary.amountPaid > 0
+        ? summary.latestPaymentDate || String(formLike?.invoicePaidDate || "").slice(0, 10)
+        : "",
+  };
+}
+
+/** Shared payment method options (same set as PO). */
+export const SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS = [
+  { value: "Check", label: "Check" },
+  { value: "ACH", label: "ACH" },
+  { value: "Card", label: "Card" },
+  { value: "Cash", label: "Cash" },
+  { value: "Wire", label: "Wire" },
+  { value: "Other", label: "Other" },
+];
+
 export function createEmptyServiceProposalForm(overrides = {}) {
   return {
     customerId: "",
@@ -79,6 +182,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     proposalAcceptedDate: "",
     invoiceSubmitDate: "",
     invoicePaidDate: "",
+    /** Invoice payment records: { id, date, amount, method, notes }[] */
+    payments: [],
     jobStatus: "",
     status: "",
     taxPercent: "",
@@ -123,6 +228,11 @@ export function cloneServiceProposalAsNewRfq(form) {
     documentNumber: "",
     quote: "",
     recordType: RECORD_TYPE_RFQ,
+    status: "",
+    jobStatus: "",
+    invoiceSubmitDate: "",
+    invoicePaidDate: "",
+    payments: [],
     attachments: [],
     acDatasheet: source.acDatasheet && typeof source.acDatasheet === "object" ? { ...source.acDatasheet } : null,
     dcDatasheet: source.dcDatasheet && typeof source.dcDatasheet === "object" ? { ...source.dcDatasheet } : null,
@@ -410,6 +520,7 @@ export function simpleServiceProposalDocToForm(doc) {
       : [emptyOtherLine()];
 
   next.attachments = Array.isArray(d.attachments) ? d.attachments : [];
+  next.payments = normalizeInvoicePayments(d.payments);
   next.acDatasheet = d.acDatasheet && typeof d.acDatasheet === "object" ? d.acDatasheet : null;
   next.dcDatasheet = d.dcDatasheet && typeof d.dcDatasheet === "object" ? d.dcDatasheet : null;
 

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   FiBarChart2,
   FiClipboard,
+  FiDatabase,
   FiFileText,
   FiPackage,
   FiShoppingCart,
@@ -21,6 +22,7 @@ import PurchaseOrdersPanel from "./purchase-orders-panel";
 import InventoryPanel from "./inventory-panel";
 import CustomersPanel from "./customers-panel";
 import ReportsPanel from "./reports-panel";
+import MasterDataSearchPanel from "./master-data-search-panel";
 import CalculatorsPanel from "./calculators-panel";
 import {
   SIMPLE_PORTAL_PATH,
@@ -29,6 +31,7 @@ import {
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_INVOICES,
+  SIMPLE_TAB_MASTER_DATA_SEARCH,
   SIMPLE_TAB_PURCHASE_ORDERS,
   SIMPLE_TAB_REPORTS,
   SIMPLE_TAB_SERVICE_PROPOSALS,
@@ -139,6 +142,11 @@ export default function DashboardsPageClient() {
         id: SIMPLE_TAB_REPORTS,
         label: <TabLabel icon={FiBarChart2}>Reports</TabLabel>,
         children: <ReportsPanel />,
+      },
+      {
+        id: SIMPLE_TAB_MASTER_DATA_SEARCH,
+        label: <TabLabel icon={FiDatabase}>Master Data Search</TabLabel>,
+        children: <MasterDataSearchPanel />,
       },
       {
         id: SIMPLE_TAB_CALCULATORS,

@@ -7,7 +7,7 @@ import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { sortRowsClient } from "@/lib/client-table-sort";
-import { formatDateMdy } from "@/lib/format-date";
+import { useFormatDate, useFormatDateTime } from "@/contexts/user-settings-context";
 import { TRIAL_PLAN_SLUG } from "@/lib/trial-subscription-messages";
 import { LISTING_ONLY_PLAN_SLUG } from "@/lib/listing-account-messages";
 import { simpleSettingsHref } from "@/lib/simple-settings-nav";
@@ -23,6 +23,8 @@ const STATE_BADGE = {
 };
 
 export default function SimpleSubscriptionSection() {
+  const formatDate = useFormatDate();
+  const formatDateTime = useFormatDateTime();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
@@ -71,7 +73,7 @@ export default function SimpleSubscriptionSection() {
         key: "createdAt",
         label: "Date",
         sortable: true,
-        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+        render: (v) => <span className="tabular-nums">{formatDate(v)}</span>,
       },
       { key: "type", label: "Type", sortable: true },
       { key: "status", label: "Status", sortable: true },
@@ -83,7 +85,7 @@ export default function SimpleSubscriptionSection() {
       },
       { key: "description", label: "Note", sortable: true },
     ],
-    []
+    [formatDate]
   );
 
   return (
@@ -152,13 +154,13 @@ export default function SimpleSubscriptionSection() {
               {sub?.nextBillingTime ? (
                 <div>
                   <dt className="text-secondary">Next billing</dt>
-                  <dd className="text-title">{new Date(sub.nextBillingTime).toLocaleDateString()}</dd>
+                  <dd className="text-title">{formatDate(sub.nextBillingTime)}</dd>
                 </div>
               ) : null}
               {sub?.gracePeriodEndsAt ? (
                 <div>
                   <dt className="text-secondary">Grace period ends</dt>
-                  <dd className="text-title">{new Date(sub.gracePeriodEndsAt).toLocaleString()}</dd>
+                  <dd className="text-title">{formatDateTime(sub.gracePeriodEndsAt)}</dd>
                 </div>
               ) : null}
             </dl>

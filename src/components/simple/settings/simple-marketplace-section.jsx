@@ -12,7 +12,7 @@ import Select from "@/components/ui/select";
 import { Form, FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
-import { formatDateMdy } from "@/lib/format-date";
+import { useFormatDate } from "@/contexts/user-settings-context";
 
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft (not public)" },
@@ -77,6 +77,7 @@ const EMPTY_ITEM = {
 export default function SimpleMarketplaceSection() {
   const alert = useAlert();
   const confirm = useConfirm();
+  const formatDate = useFormatDate();
   const [tab, setTab] = useState("items");
   const [items, setItems] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -382,10 +383,10 @@ export default function SimpleMarketplaceSection() {
         key: "createdAt",
         label: "Date",
         sortable: true,
-        render: (v) => <span className="tabular-nums">{formatDateMdy(v)}</span>,
+        render: (v) => <span className="tabular-nums">{formatDate(v)}</span>,
       },
     ],
-    []
+    [formatDate]
   );
 
   const tabBtn = (id, label) => (

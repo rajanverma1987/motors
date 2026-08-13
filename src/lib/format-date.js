@@ -288,3 +288,28 @@ export function formatDateLocale(value, locale) {
 export function formatDateForCurrency(value, currencyCode) {
   return formatDateLocale(value, dateLocaleFromCurrency(currencyCode));
 }
+
+const DATETIME_FORMAT_OPTS = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+};
+
+/**
+ * Format a date+time using the shop currency’s typical country locale.
+ * @param {unknown} value
+ * @param {string} [currencyCode]
+ */
+export function formatDateTimeForCurrency(value, currencyCode) {
+  if (value == null || value === "") return "-";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  const locale = dateLocaleFromCurrency(currencyCode);
+  try {
+    return new Intl.DateTimeFormat(locale || undefined, DATETIME_FORMAT_OPTS).format(d);
+  } catch {
+    return formatDateForCurrency(value, currencyCode);
+  }
+}

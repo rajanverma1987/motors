@@ -10,6 +10,7 @@ import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import { useAlert } from "@/components/confirm-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
+import { useFormatDateTime } from "@/contexts/user-settings-context";
 
 const CATEGORIES = [
   { value: "bug", label: "Bug / something broken" },
@@ -53,17 +54,9 @@ function SupportStatusTag({ status }) {
   );
 }
 
-function fmtDate(d) {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleString();
-  } catch {
-    return "—";
-  }
-}
-
 export default function SimpleSupportSection() {
   const alert = useAlert();
+  const formatDateTime = useFormatDateTime();
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -277,10 +270,10 @@ export default function SimpleSupportSection() {
         label: "Updated",
         clickable: true,
         sortable: true,
-        render: (v) => fmtDate(v),
+        render: (v) => (v ? formatDateTime(v) : "—"),
       },
     ],
-    []
+    [formatDateTime]
   );
 
   return (
@@ -416,7 +409,7 @@ export default function SimpleSupportSection() {
             <div className="rounded-lg border border-border bg-card p-3">
               <p className="text-xs font-medium text-secondary">Your message</p>
               <p className="mt-1 whitespace-pre-wrap text-sm text-text">{detail.description}</p>
-              <p className="mt-2 text-xs text-secondary">{fmtDate(detail.createdAt)}</p>
+              <p className="mt-2 text-xs text-secondary">{detail.createdAt ? formatDateTime(detail.createdAt) : "—"}</p>
               {detail.attachments?.length ? (
                 <div className="mt-3 border-t border-border pt-3">
                   <p className="text-xs font-medium text-secondary">Photos you attached</p>
@@ -449,7 +442,7 @@ export default function SimpleSupportSection() {
                       {r.from === "admin" ? "Support team" : "You"} · {r.authorEmail}
                     </p>
                     <p className="mt-1 whitespace-pre-wrap text-text">{r.body}</p>
-                    <p className="mt-1 text-xs text-secondary">{fmtDate(r.createdAt)}</p>
+                    <p className="mt-1 text-xs text-secondary">{r.createdAt ? formatDateTime(r.createdAt) : "—"}</p>
                   </div>
                 ))
               ) : (

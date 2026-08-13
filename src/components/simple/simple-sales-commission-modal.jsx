@@ -9,8 +9,7 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import { useAlert } from "@/components/confirm-provider";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
-import { formatDateMdy } from "@/lib/format-date";
+import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
 
@@ -68,6 +67,7 @@ export default function SimpleSalesCommissionModal({
 }) {
   const alert = useAlert();
   const fmt = useFormatMoney();
+  const formatDate = useFormatDate();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const statusDisplay = useMemo(() => {
@@ -475,7 +475,7 @@ export default function SimpleSalesCommissionModal({
                                 {isPaid ? "Paid" : "Unpaid"}
                               </Badge>
                             </td>
-                            <td className={TD_CLASS}>{formatDateMdy(row.paidAt)}</td>
+                            <td className={TD_CLASS}>{formatDate(row.paidAt)}</td>
                             <td className={`${TD_CLASS} tabular-nums text-secondary`}>
                               {Number(row.attachmentCount) > 0 ? row.attachmentCount : "—"}
                             </td>

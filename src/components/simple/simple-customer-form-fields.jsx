@@ -68,9 +68,9 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const isStacked = layout === "stacked";
   const columnsClass = isStacked ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3";
-  /** Customer details (stacked) uses slightly shorter labels so pairs fit cleanly. */
-  const labelW = isStacked ? "6.5rem" : "7.25rem";
-  const pairLabelW = isStacked ? "5.75rem" : "6.5rem";
+  /** One label width for the whole form so input left edges stay on one vertical line. */
+  const labelW = isStacked ? "7.5rem" : "7.25rem";
+  const pairLabelW = labelW;
   const resolvedCustomerId = String(customerId || "").trim();
   const docsBusy = uploading || Boolean(deletingKey);
 
@@ -524,7 +524,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
 
         <div className="flex min-w-0 flex-col gap-2">
           <p className={SECTION_TITLE}>Billing address</p>
-          <FieldRow label="Street" labelWidth="5.5rem">
+          <FieldRow label="Street" labelWidth={labelW}>
             <input
               type="text"
               value={form.address}
@@ -532,8 +532,8 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               className={FIELD_INPUT}
             />
           </FieldRow>
-          <div className="flex min-w-0 items-center gap-2">
-            <label className={FIELD_LABEL} style={{ width: "5.5rem" }}>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <label className={FIELD_LABEL} style={{ width: labelW }}>
               City
             </label>
             <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1.6fr)_auto_minmax(0,1.1fr)_auto_minmax(0,5rem)] items-center gap-x-1.5">
@@ -562,7 +562,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               />
             </div>
           </div>
-          <FieldRow label="Country" labelWidth="5.5rem">
+          <FieldRow label="Country" labelWidth={labelW}>
             <input
               type="text"
               value={form.country}
@@ -583,7 +583,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               Copy billing
             </Button>
           </div>
-          <FieldRow label="Street" labelWidth="5.5rem">
+          <FieldRow label="Street" labelWidth={labelW}>
             <input
               type="text"
               value={form.shippingAddress}
@@ -591,8 +591,8 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               className={FIELD_INPUT}
             />
           </FieldRow>
-          <div className="flex min-w-0 items-center gap-2">
-            <label className={FIELD_LABEL} style={{ width: "5.5rem" }}>
+          <div className="flex min-w-0 items-center gap-2.5">
+            <label className={FIELD_LABEL} style={{ width: labelW }}>
               City
             </label>
             <div className="grid min-w-0 flex-1 grid-cols-[minmax(0,1.6fr)_auto_minmax(0,1.1fr)_auto_minmax(0,5rem)] items-center gap-x-1.5">
@@ -621,7 +621,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               />
             </div>
           </div>
-          <FieldRow label="Country" labelWidth="5.5rem">
+          <FieldRow label="Country" labelWidth={labelW}>
             <input
               type="text"
               value={form.shippingCountry}

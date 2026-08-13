@@ -8,10 +8,9 @@ import Input from "@/components/ui/input";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
-import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import SalesCommissionSalesPersonField from "@/components/dashboard/sales-commission-sales-person-field";
-import { formatDateMdy } from "@/lib/format-date";
 import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
 
@@ -41,6 +40,7 @@ export default function SalesCommissionCreateModal({
 }) {
   const toast = useToast();
   const fmt = useFormatMoney();
+  const formatDate = useFormatDate();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const statusDisplay = useMemo(() => {
@@ -361,7 +361,7 @@ export default function SalesCommissionCreateModal({
                                 {isPaid ? "Paid" : "Unpaid"}
                               </Badge>
                             </td>
-                            <td className="px-3 py-2 text-title">{formatDateMdy(row.paidAt)}</td>
+                            <td className="px-3 py-2 text-title">{formatDate(row.paidAt)}</td>
                             <td className="px-3 py-2 tabular-nums text-secondary">
                               {Number(row.attachmentCount) > 0 ? row.attachmentCount : "—"}
                             </td>
