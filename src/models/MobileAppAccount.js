@@ -23,6 +23,17 @@ const mobileAppAccountSchema = new mongoose.Schema(
     lastPaymentFailedAt: { type: Date, default: null },
     graceEndsAt: { type: Date, default: null },
     lastLoginAt: { type: Date, default: null },
+    customWires: {
+      type: [
+        {
+          _id: false,
+          id: { type: String, required: true },
+          size: { type: String, required: true, trim: true },
+          circularMills: { type: Number, required: true },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

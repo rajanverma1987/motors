@@ -52,6 +52,7 @@ module.exports = {
       ],
       "expo-secure-store",
       "expo-updates",
+      "expo-web-browser",
     ],
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL || "http://127.0.0.1:3000",

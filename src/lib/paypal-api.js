@@ -118,6 +118,46 @@ export async function createPaypalProductAndPlan(planDoc) {
 }
 
 /**
+ * Update regular-cycle price on an existing PayPal billing plan.
+ * New and existing subscribers on this plan get the new price from the next billing cycle
+ * (PayPal emails current subscribers; if renewal is within 10 days the new price starts the cycle after).
+ */
+export async function updatePaypalPlanPricing(paypalPlanId, { price, currency }) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) throw new Error("PayPal plan ID is required to update pricing.");
+  const value = Number(price);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error("Enter a valid price to update PayPal.");
+  }
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}/update-pricing-schemes`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      pricing_schemes: [
+        {
+          billing_cycle_sequence: 1,
+          pricing_scheme: {
+            fixed_price: {
+              value: value.toFixed(2),
+              currency_code: String(currency || "USD").toUpperCase(),
+            },
+          },
+        },
+      ],
+    }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || err.name || "PayPal plan price update failed");
+  }
+}
+
+/**
  * Create a subscription (returns approval link for subscriber).
  */
 export async function createPaypalSubscription({

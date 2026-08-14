@@ -4,14 +4,12 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "../theme";
 import { useMobileAuth } from "../AuthContext";
-import { appFetch, getApiBase } from "../api";
-import PaypalCheckoutModal from "./PaypalCheckoutModal";
+import { startPaypalCheckout } from "../lib/paypal-checkout";
 
 export default function PaywallOverlay() {
   const insets = useSafeAreaInsets();
   const { account, token, refreshAccount, logout } = useMobileAuth();
   const [busy, setBusy] = useState(false);
-  const [approvalUrl, setApprovalUrl] = useState("");
 
   if (!account || account.unlocked) return null;
 
@@ -25,28 +23,13 @@ export default function PaywallOverlay() {
   const startCheckout = async () => {
     setBusy(true);
     try {
-      const data = await appFetch("/api/mobile-app/checkout/subscribe", {
-        token,
-        method: "POST",
-        body: { returnBase: getApiBase() },
-      });
-      if (!data.approvalUrl) throw new Error("PayPal did not return a checkout link.");
-      setApprovalUrl(data.approvalUrl);
+      await startPaypalCheckout(token);
+      await refreshAccount().catch(() => {});
     } catch (e) {
       Alert.alert("Checkout unavailable", e.message || "Try again later.");
     } finally {
       setBusy(false);
     }
-  };
-
-  const onPaypalSuccess = async () => {
-    setApprovalUrl("");
-    try {
-      await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
-    } catch {
-      /* webhook may still activate */
-    }
-    await refreshAccount().catch(() => {});
   };
 
   return (
@@ -74,12 +57,6 @@ export default function PaywallOverlay() {
           <Text style={styles.signOut}>Sign out</Text>
         </Pressable>
       </View>
-      <PaypalCheckoutModal
-        visible={!!approvalUrl}
-        approvalUrl={approvalUrl}
-        onClose={() => setApprovalUrl("")}
-        onSuccess={onPaypalSuccess}
-      />
     </View>
   );
 }

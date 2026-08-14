@@ -460,8 +460,10 @@ export default function AdminSubscriptionPlansPage() {
               ) : null}
               {editPlan.slug === MOBILE_APP_PLAN_SLUG ? (
                 <span className="mt-1 block text-amber-700 dark:text-amber-400">
-                  Powers the IQWireCalculator app. Changing price or billing creates a new PayPal plan for
-                  new subscribers. Existing PayPal subscribers stay on their current PayPal plan until they resubscribe.
+                  Powers the IQWireCalculator app. A price change updates the PayPal plan in place. Existing
+                  subscribers are billed the new amount on their next monthly cycle (PayPal emails them; if renewal is
+                  within 10 days, the new price starts the cycle after). Changing billing cycle still creates a new
+                  PayPal plan.
                 </span>
               ) : null}
             </p>
@@ -518,8 +520,8 @@ export default function AdminSubscriptionPlansPage() {
                   />
                 ) : null}
                 <p className="text-xs text-secondary">
-                  Changing price or billing creates a new PayPal billing plan ID (PayPal does not allow in-place price
-                  edits).
+                  Price changes update the existing PayPal plan so current subscribers pay the new amount from their
+                  next billing cycle. Changing billing cycle creates a new PayPal plan ID.
                 </p>
               </>
             ) : null}

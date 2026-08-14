@@ -4,7 +4,7 @@ import SubscriptionPlan from "@/models/SubscriptionPlan";
 import ShopSubscription from "@/models/ShopSubscription";
 import MobileAppAccount from "@/models/MobileAppAccount";
 import { getAdminFromRequest } from "@/lib/auth-admin";
-import { createPaypalProductAndPlan, paypalConfigured } from "@/lib/paypal-api";
+import { createPaypalProductAndPlan, updatePaypalPlanPricing, paypalConfigured } from "@/lib/paypal-api";
 
 const PROTECTED_SLUGS = new Set(["free-ultimate", "trial", "mobile-app"]);
 
@@ -52,6 +52,11 @@ export async function PATCH(request, context) {
     if ((plan.slug === "free-ultimate" || plan.slug === "trial") && active === false) {
       return NextResponse.json({ error: "Cannot deactivate protected internal plan." }, { status: 400 });
     }
+    const prevPrice = Number(plan.customPrice);
+    const prevCurrency = String(plan.currency || "USD").toUpperCase();
+    const prevCycle = plan.billingCycle;
+    const prevInterval = Number(plan.billingIntervalCount) || 1;
+
     if (typeof active === "boolean") {
       plan.active = active;
     }
@@ -80,23 +85,31 @@ export async function PATCH(request, context) {
       if (!Number.isFinite(nextPrice) || nextPrice < 0) {
         return NextResponse.json({ error: "Enter a valid price." }, { status: 400 });
       }
-      priceChanged = Number(plan.customPrice) !== nextPrice;
+      priceChanged = prevPrice !== nextPrice;
       plan.customPrice = nextPrice;
     }
 
+    const currencyChanged = prevCurrency !== String(plan.currency || "USD").toUpperCase();
     const billingChanged =
-      billingCycle !== undefined ||
-      (billingIntervalCount !== undefined && billingIntervalCount !== null && billingIntervalCount !== "");
+      prevCycle !== plan.billingCycle || prevInterval !== (Number(plan.billingIntervalCount) || 1);
 
     if (
-      (priceChanged || billingChanged) &&
+      (priceChanged || currencyChanged || billingChanged) &&
       plan.planType === "paypal" &&
       paypalConfigured() &&
       Number(plan.customPrice) > 0
     ) {
-      const { paypalProductId, paypalPlanId } = await createPaypalProductAndPlan(plan);
-      plan.paypalProductId = paypalProductId;
-      plan.paypalPlanId = paypalPlanId;
+      const existingPlanId = String(plan.paypalPlanId || "").trim();
+      if ((priceChanged || currencyChanged) && !billingChanged && existingPlanId) {
+        await updatePaypalPlanPricing(existingPlanId, {
+          price: plan.customPrice,
+          currency: plan.currency,
+        });
+      } else {
+        const { paypalProductId, paypalPlanId } = await createPaypalProductAndPlan(plan);
+        plan.paypalProductId = paypalProductId;
+        plan.paypalPlanId = paypalPlanId;
+      }
     }
 
     await plan.save();

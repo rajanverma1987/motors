@@ -12,8 +12,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing, formFieldLabel } from "../theme";
 import { useMobileAuth } from "../AuthContext";
-import { appFetch, getApiBase } from "../api";
-import PaypalCheckoutModal from "../components/PaypalCheckoutModal";
+import { appFetch } from "../api";
+import { startPaypalCheckout } from "../lib/paypal-checkout";
 
 function statusCopy(account) {
   if (!account) return "";
@@ -38,8 +38,8 @@ export default function ProfileScreen() {
   const { account, token, updateProfile, logout, refreshAccount } = useMobileAuth();
   const [name, setName] = useState(account?.name || "");
   const [phone, setPhone] = useState(account?.phone || "");
-  const [busy, setBusy] = useState(false);
-  const [approvalUrl, setApprovalUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   const price = account?.plan?.monthlyUsd;
   const currency = account?.plan?.currency || "USD";
@@ -49,42 +49,27 @@ export default function ProfileScreen() {
       : "Monthly subscription";
 
   const save = async () => {
-    setBusy(true);
+    setSaving(true);
     try {
       await updateProfile({ name, phone });
       Alert.alert("Saved", "Your profile was updated.");
     } catch (e) {
       Alert.alert("Could not save", e.message || "Try again.");
     } finally {
-      setBusy(false);
+      setSaving(false);
     }
   };
 
   const startCheckout = async () => {
-    setBusy(true);
+    setCheckingOut(true);
     try {
-      const data = await appFetch("/api/mobile-app/checkout/subscribe", {
-        token,
-        method: "POST",
-        body: { returnBase: getApiBase() },
-      });
-      if (!data.approvalUrl) throw new Error("PayPal did not return a checkout link.");
-      setApprovalUrl(data.approvalUrl);
+      await startPaypalCheckout(token);
+      await refreshAccount().catch(() => {});
     } catch (e) {
       Alert.alert("Checkout unavailable", e.message || "Try again later.");
     } finally {
-      setBusy(false);
+      setCheckingOut(false);
     }
-  };
-
-  const onPaypalSuccess = async () => {
-    setApprovalUrl("");
-    try {
-      await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
-    } catch {
-      /* ignore */
-    }
-    await refreshAccount().catch(() => {});
   };
 
   const cancelSub = () => {
@@ -122,10 +107,10 @@ export default function ProfileScreen() {
 
       <Pressable
         onPress={save}
-        disabled={busy}
-        style={({ pressed }) => [styles.btn, pressed && styles.pressed, busy && styles.disabled]}
+        disabled={saving}
+        style={({ pressed }) => [styles.btn, pressed && styles.pressed, saving && styles.disabled]}
       >
-        {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save profile</Text>}
+        {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Save profile</Text>}
       </Pressable>
 
       <View style={styles.panel}>
@@ -137,8 +122,16 @@ export default function ProfileScreen() {
             <Text style={styles.outlineText}>Cancel subscription</Text>
           </Pressable>
         ) : (
-          <Pressable onPress={startCheckout} style={styles.btn}>
-            <Text style={styles.btnText}>Subscribe with PayPal</Text>
+          <Pressable
+            onPress={startCheckout}
+            disabled={checkingOut}
+            style={({ pressed }) => [styles.btn, pressed && styles.pressed, checkingOut && styles.disabled]}
+          >
+            {checkingOut ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.btnText}>Subscribe with PayPal</Text>
+            )}
           </Pressable>
         )}
       </View>
@@ -146,13 +139,6 @@ export default function ProfileScreen() {
       <Pressable onPress={logout} style={styles.signOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
-
-      <PaypalCheckoutModal
-        visible={!!approvalUrl}
-        approvalUrl={approvalUrl}
-        onClose={() => setApprovalUrl("")}
-        onSuccess={onPaypalSuccess}
-      />
     </ScrollView>
   );
 }
