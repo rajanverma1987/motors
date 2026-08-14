@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import MobileAppAccount from "@/models/MobileAppAccount";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
-import { createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
+import { ensurePaypalBillingPlanActive, paypalCheckoutOrigin, paypalConfigured } from "@/lib/paypal-api";
 import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
@@ -56,22 +56,14 @@ export async function GET(request) {
       return NextResponse.json({ error: "PayPal plan is not linked." }, { status: 503 });
     }
 
-    const base = getPublicSiteUrl(request);
-    const { subscriptionId, approvalUrl } = await createPaypalSubscription({
-      paypalPlanId: calcPlan.paypalPlanId,
-      returnUrl: `${base}/mobile-app/paypal-complete?status=success&token=${encodeURIComponent(token)}`,
-      cancelUrl: `${base}/mobile-app/paypal-complete?status=cancel`,
-      subscriberEmail: account.email,
-      brandName: "IQWireCalculator",
-    });
+    await ensurePaypalBillingPlanActive(calcPlan.paypalPlanId);
 
-    account.paypalSubscriptionId = subscriptionId;
     account.paypalPlanId = calcPlan.paypalPlanId;
     await account.save();
 
-    if (!/^https:\/\/www\.(sandbox\.)?paypal\.com\//i.test(approvalUrl)) {
-      throw new Error("PayPal did not return a valid checkout link.");
-    }
+    // Plan subscribe link — not /webapps/billing/subscriptions?ba_token=
+    // That PayPal page fails with billing/error (createCart 400 / early_flush).
+    const approvalUrl = `${paypalCheckoutOrigin()}/webapps/billing/plans/subscribe?plan_id=${encodeURIComponent(calcPlan.paypalPlanId)}`;
 
     return new NextResponse(paypalBounceHtml(approvalUrl), {
       status: 200,

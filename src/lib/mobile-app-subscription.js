@@ -142,6 +142,21 @@ export function describeMobileAppAccess(account) {
   return { unlocked: false, accessMode: "locked", lockedReason, trialMsLeft, periodMsLeft };
 }
 
+export async function findMobileAppAccountForPaypalEvent({ paypalSubscriptionId, subscriberEmail }) {
+  const subId = String(paypalSubscriptionId || "").trim();
+  const email = String(subscriberEmail || "").trim().toLowerCase();
+  await connectDB();
+  if (subId) {
+    const bySub = await MobileAppAccount.findOne({ paypalSubscriptionId: subId });
+    if (bySub) return bySub;
+  }
+  if (email) {
+    const byEmail = await MobileAppAccount.findOne({ email });
+    if (byEmail) return byEmail;
+  }
+  return null;
+}
+
 export function mobileAppAccountToJson(account, access, planPayload) {
   const trialEnds = account?.trialEndsAt ? new Date(account.trialEndsAt).toISOString() : null;
   const periodEnds = account?.currentPeriodEndsAt

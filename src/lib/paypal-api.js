@@ -165,7 +165,7 @@ export async function ensurePaypalBillingPlanActive(paypalPlanId) {
   throw new Error(`PayPal billing plan is ${status || "not usable"}. Set the price again in Admin → Subscription plans.`);
 }
 
-function paypalCheckoutOrigin() {
+export function paypalCheckoutOrigin() {
   const mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase();
   return mode === "live" ? "https://www.paypal.com" : "https://www.sandbox.paypal.com";
 }

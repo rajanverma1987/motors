@@ -13,17 +13,17 @@ import {
   applyCalculatorSubscriptionCancelled,
 } from "@/lib/calculator-access";
 import CalculatorEntitlement from "@/models/CalculatorEntitlement";
-import MobileAppAccount from "@/models/MobileAppAccount";
 import {
   applyMobileAppSubscriptionActivated,
   applyMobileAppSubscriptionCancelled,
   applyMobileAppPaymentDenied,
+  findMobileAppAccountForPaypalEvent,
 } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
 
-function getHeader(request, name) {
-  return request.headers.get(name) || request.headers.get(name.toLowerCase()) || "";
+function subscriberEmailFromEvent(event) {
+  return String(event?.resource?.subscriber?.email_address || "").trim().toLowerCase();
 }
 
 /**
@@ -95,9 +95,17 @@ export async function POST(request) {
           .select("_id")
           .lean());
         if (!isCalculatorSub) {
-          isMobileAppSub = !!(await MobileAppAccount.findOne({ paypalSubscriptionId: subId })
-            .select("_id")
-            .lean());
+          const mobileAccount = await findMobileAppAccountForPaypalEvent({
+            paypalSubscriptionId: subId,
+            subscriberEmail: subscriberEmailFromEvent(event),
+          });
+          if (mobileAccount) {
+            isMobileAppSub = true;
+            if (subId && mobileAccount.paypalSubscriptionId !== subId) {
+              mobileAccount.paypalSubscriptionId = subId;
+              await mobileAccount.save();
+            }
+          }
         }
       }
 
