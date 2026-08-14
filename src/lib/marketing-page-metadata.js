@@ -11,6 +11,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
  * @param {boolean} [opts.index=true]
  * @param {string[]} [opts.keywords]
  * @param {string} [opts.ogTitle]
+ * @param {string} [opts.ogDescription]
  * @returns {import("next").Metadata}
  */
 export function marketingPageMetadata({
@@ -20,11 +21,13 @@ export function marketingPageMetadata({
   index = true,
   keywords,
   ogTitle,
+  ogDescription,
 }) {
   const base = getPublicSiteUrl().replace(/\/$/, "");
   const normalized = path === "/" || path === "" ? "/" : path.startsWith("/") ? path : `/${path}`;
   const canonical = normalized === "/" ? base : `${base}${normalized}`;
   const socialTitle = ogTitle || title;
+  const socialDescription = ogDescription || description;
 
   return {
     title,
@@ -34,15 +37,16 @@ export function marketingPageMetadata({
     robots: { index, follow: true },
     openGraph: {
       title: socialTitle,
-      description,
+      description: socialDescription,
       url: canonical,
       siteName: "IQMotorBase.com",
       type: "website",
+      locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: socialTitle,
-      description,
+      description: socialDescription,
     },
   };
 }
