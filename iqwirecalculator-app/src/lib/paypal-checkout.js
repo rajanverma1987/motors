@@ -1,9 +1,25 @@
-import * as WebBrowser from "expo-web-browser";
+import { AppState, Linking } from "react-native";
 import { appFetch } from "../api";
 
+function waitForReturnToApp() {
+  return new Promise((resolve) => {
+    let leftApp = AppState.currentState !== "active";
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next !== "active") {
+        leftApp = true;
+        return;
+      }
+      if (leftApp) {
+        sub.remove();
+        resolve();
+      }
+    });
+  });
+}
+
 /**
- * PayPal blocks checkout inside WKWebView. Use Safari / Chrome Custom Tabs instead.
- * Access is granted only after PayPal reports the subscription ACTIVE.
+ * Open PayPal in the device browser (Safari / Chrome). In-app browsers hit PayPal’s
+ * “Things don’t appear to be working” page even when the billing plan is ON.
  */
 export async function startPaypalCheckout(token) {
   const data = await appFetch("/api/mobile-app/checkout/subscribe", {
@@ -13,10 +29,12 @@ export async function startPaypalCheckout(token) {
   });
   if (!data.approvalUrl) throw new Error("PayPal did not return a checkout link.");
 
-  await WebBrowser.openBrowserAsync(data.approvalUrl, {
-    enableBarCollapsing: true,
-    showInRecents: true,
-  });
+  const canOpen = await Linking.canOpenURL(data.approvalUrl);
+  if (!canOpen) throw new Error("Cannot open PayPal on this device.");
+
+  const returned = waitForReturnToApp();
+  await Linking.openURL(data.approvalUrl);
+  await returned;
 
   const result = await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
   if (!result?.activated) {

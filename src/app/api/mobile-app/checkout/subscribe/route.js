@@ -38,7 +38,6 @@ export async function POST(request) {
       paypalPlanId: calcPlan.paypalPlanId,
       returnUrl,
       cancelUrl,
-      subscriberEmail: account.email,
       brandName: "IQWireCalculator",
     });
 

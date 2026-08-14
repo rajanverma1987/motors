@@ -111,10 +111,68 @@ export async function createPaypalProductAndPlan(planDoc) {
     throw new Error(planJson.message || planJson.name || "PayPal billing plan create failed");
   }
 
+  const paypalPlanId = planJson.id;
+  await activatePaypalBillingPlan(paypalPlanId, token);
+
   return {
     paypalProductId: productId,
-    paypalPlanId: planJson.id,
+    paypalPlanId,
   };
+}
+
+export async function activatePaypalBillingPlan(paypalPlanId, accessToken) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) return;
+  const token = accessToken || (await getPaypalAccessToken());
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}/activate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    const msg = String(err.message || err.name || "");
+    if (/already|active/i.test(msg)) return;
+    throw new Error(msg || "PayPal billing plan activate failed");
+  }
+}
+
+export async function ensurePaypalBillingPlanActive(paypalPlanId) {
+  const id = String(paypalPlanId || "").trim();
+  if (!id) throw new Error("PayPal billing plan is missing.");
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/plans/${encodeURIComponent(id)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "PayPal billing plan lookup failed");
+  }
+  const status = String(data.status || "").toUpperCase();
+  if (status === "ACTIVE") return data;
+  if (status === "CREATED" || status === "INACTIVE") {
+    await activatePaypalBillingPlan(id, token);
+    return data;
+  }
+  throw new Error(`PayPal billing plan is ${status || "not usable"}. Set the price again in Admin → Subscription plans.`);
+}
+
+function paypalApproveUrl(links) {
+  const list = Array.isArray(links) ? links : [];
+  const byRel = (rel) => list.find((l) => l && l.rel === rel && l.href);
+  const approve = byRel("approve");
+  const payerAction = byRel("payer-action");
+  const href = approve?.href || payerAction?.href || "";
+  if (href && /paypal\.com\/?$/i.test(href.replace(/\/$/, ""))) return "";
+  return href;
 }
 
 /**
@@ -167,6 +225,7 @@ export async function createPaypalSubscription({
   subscriberEmail,
   brandName = "IQMotorBase",
 }) {
+  await ensurePaypalBillingPlanActive(paypalPlanId);
   const token = await getPaypalAccessToken();
   const base = paypalBaseUrl();
   const body = {
@@ -177,7 +236,7 @@ export async function createPaypalSubscription({
         }
       : undefined,
     application_context: {
-      brand_name: brandName,
+      brand_name: String(brandName || "IQMotorBase").slice(0, 127),
       locale: "en-US",
       shipping_preference: "NO_SHIPPING",
       user_action: "SUBSCRIBE_NOW",
@@ -198,10 +257,13 @@ export async function createPaypalSubscription({
   if (!res.ok) {
     throw new Error(data.message || data.name || "PayPal subscription create failed");
   }
-  const approve = (data.links || []).find((l) => l.rel === "approve");
+  const approvalUrl = paypalApproveUrl(data.links);
+  if (!approvalUrl) {
+    throw new Error("PayPal did not return a checkout link. Activate the billing plan in PayPal and try again.");
+  }
   return {
     subscriptionId: data.id,
-    approvalUrl: approve?.href || "",
+    approvalUrl,
     status: data.status,
   };
 }

@@ -330,6 +330,7 @@ export default function CmBestMatchScreen() {
               value={originalWireSize}
               onChangeText={setOriginalWireSize}
               placeholder="19"
+              keyboardType="decimal-pad"
             />
           </View>
           <View style={styles.row}>
