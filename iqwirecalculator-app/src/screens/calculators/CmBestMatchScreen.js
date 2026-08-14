@@ -34,9 +34,16 @@ function slotSize(row, i) {
   return s != null && s !== "" ? String(s) : "0";
 }
 
-function slotQty(row, i) {
-  const q = row[`wires${i}`];
-  return q > 0 ? String(q) : "0";
+function wireCombinationLabel(row) {
+  const parts = [];
+  for (let i = 1; i <= 3; i++) {
+    const qty = Number(row[`wires${i}`]) || 0;
+    if (qty <= 0) continue;
+    const size = slotSize(row, i);
+    if (!size || size === "0") continue;
+    parts.push(`${qty}#${size}`);
+  }
+  return parts.join("  |  ");
 }
 
 function resultCardStyle(pct) {
@@ -357,7 +364,7 @@ export default function CmBestMatchScreen() {
             <LabeledInput
               compact
               style={styles.col}
-              label="Min wires"
+              label="Min. wires to be used"
               value={minWires}
               onChangeText={setMinWires}
               keyboardType="number-pad"
@@ -365,7 +372,7 @@ export default function CmBestMatchScreen() {
             <LabeledInput
               compact
               style={styles.col}
-              label="Max wires"
+              label="Max wires to be used"
               value={maxWires}
               onChangeText={setMaxWires}
               keyboardType="number-pad"
@@ -520,7 +527,7 @@ export default function CmBestMatchScreen() {
             </View>
           ) : null}
           <Text style={styles.legend}>
-            Green ≈ within 2% of target; yellow within 10%. Unused slots show 0.
+            Green ≈ within 2% of target; yellow within 10%.
           </Text>
           {results.map((row, idx) => (
             <View key={idx} style={[styles.card, resultCardStyle(row.percentDifference)]}>
@@ -528,10 +535,7 @@ export default function CmBestMatchScreen() {
                 Total CM {fmt(row.totalCM, 0)} · {row.percentDifference > 0 ? "+" : ""}
                 {row.percentDifference}% · {fmt(row.cmDifference, 0)} CM Δ
               </Text>
-              <Text style={styles.cardLine}>
-                Slots: {slotSize(row, 1)} × {slotQty(row, 1)} | {slotSize(row, 2)} × {slotQty(row, 2)} |{" "}
-                {slotSize(row, 3)} × {slotQty(row, 3)}
-              </Text>
+              <Text style={styles.cardLine}>Wires Combination : {wireCombinationLabel(row)}</Text>
               <Text style={styles.cardSmall}>
                 Wires in hand: {row.wiresInHand} · No. of wires (display): {row.noOfWires}
               </Text>
@@ -568,7 +572,7 @@ const styles = StyleSheet.create({
   },
   selectedSummary: { fontSize: 16, color: colors.title, lineHeight: 22, marginBottom: spacing.md },
   row: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
-  rowLast: { flexDirection: "row", gap: spacing.sm },
+  rowLast: { gap: spacing.sm },
   col: { flex: 1, minWidth: 0 },
   addRow: { flexDirection: "row", alignItems: "flex-end", gap: spacing.sm, marginBottom: 6 },
   addSize: { flex: 1, minWidth: 0 },
@@ -654,7 +658,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  cardHead: { fontSize: 14, fontWeight: "700", color: colors.title, marginBottom: 6 },
-  cardLine: { fontSize: 13, color: colors.text, marginBottom: 4 },
-  cardSmall: { fontSize: 12, color: colors.secondary },
+  cardHead: { fontSize: 18, fontWeight: "700", color: colors.title, marginBottom: 8, lineHeight: 24 },
+  cardLine: { fontSize: 17, color: colors.text, marginBottom: 6, lineHeight: 24 },
+  cardSmall: { fontSize: 16, color: colors.secondary, lineHeight: 22 },
 });

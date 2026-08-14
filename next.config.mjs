@@ -60,7 +60,9 @@ const nextConfig = {
       `img-src 'self' data: blob: https://www.clarity.ms https://*.clarity.ms https://c.bing.com https://www.googletagmanager.com https://www.google-analytics.com https://www.paypalobjects.com https://www.paypal.com ${contextualAi}`,
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com",
+      "frame-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://www.paypalobjects.com https://*.paypalobjects.com",
+      "child-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://www.paypalobjects.com",
+      "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com",
       "media-src 'self' blob:",
     ].join("; ");
 

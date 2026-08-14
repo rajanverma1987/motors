@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
+function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken, legacySid }) {
   const hostRef = useRef(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -18,29 +18,27 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
       setError("The subscription plan is not linked to PayPal yet.");
       return;
     }
-    if (!checkoutToken) {
+    if (!checkoutToken && !legacySid) {
       setStatus("error");
       setError("This checkout link is incomplete. Go back to the app and tap Subscribe again.");
       return;
     }
 
     let cancelled = false;
-    const src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&vault=true&intent=subscription&currency=USD`;
+    const src = `https://www.paypal.com/sdk/js?client-id=${encodeURIComponent(clientId)}&components=buttons&vault=true&intent=subscription&currency=USD&disable-funding=credit,paylater`;
 
     const renderButtons = () => {
       if (cancelled || !window.paypal || !hostRef.current) return;
       hostRef.current.innerHTML = "";
       window.paypal
         .Buttons({
-          style: { layout: "vertical", color: "gold", shape: "rect", label: "subscribe", height: 48 },
+          style: { layout: "vertical", color: "gold", shape: "rect", label: "paypal", height: 48 },
           createSubscription(_data, actions) {
+            // Always mint a new subscription here. Passing an existing I- id opens PayPal’s
+            // billing popup and it closes immediately.
             return actions.subscription.create({
               plan_id: paypalPlanId,
-              application_context: {
-                brand_name: "IQWireCalculator",
-                shipping_preference: "NO_SHIPPING",
-                user_action: "SUBSCRIBE_NOW",
-              },
+              custom_id: String(checkoutToken || legacySid || "").slice(0, 127),
             });
           },
           onApprove(data) {
@@ -50,6 +48,7 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 token: checkoutToken,
+                sid: legacySid,
                 subscriptionId: data.subscriptionID,
               }),
             })
@@ -71,10 +70,15 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
               setError("PayPal closed before checkout finished. Tap a button below to try again.");
             }
           },
-          onError() {
+          onError(err) {
             if (!cancelled) {
               setStatus("error");
-              setError("PayPal could not start checkout. Try again, or open this page in Safari or Chrome.");
+              const detail = err?.message || err?.toString?.() || "";
+              setError(
+                detail
+                  ? `PayPal could not start checkout: ${detail}`
+                  : "PayPal could not start checkout. Try again in Safari or Chrome (not an in-app browser)."
+              );
             }
           },
         })
@@ -119,7 +123,7 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
     return () => {
       cancelled = true;
     };
-  }, [clientId, paypalPlanId, checkoutToken]);
+  }, [clientId, paypalPlanId, checkoutToken, legacySid]);
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
