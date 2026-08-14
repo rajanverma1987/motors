@@ -1,5 +1,7 @@
 import MobileAppPaypalCheckoutClient from "./paypal-checkout-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Subscribe — IQWireCalculator",
   robots: { index: false, follow: false },

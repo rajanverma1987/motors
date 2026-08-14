@@ -1,7 +1,14 @@
 import path from "path";
 import { mkdirSync, writeFileSync } from "fs";
 
-export const PUBLIC_UPLOADS_ROOT = path.join(process.cwd(), "public", "uploads");
+/** Split so Turbopack does not glob every file under public/uploads during `next build`. */
+function getPublicUploadsRoot() {
+  const fromEnv = String(process.env.UPLOADS_DIR || "").trim();
+  if (fromEnv) return path.resolve(fromEnv);
+  return path.join(process.cwd(), "pub" + "lic", "up" + "loads");
+}
+
+export const PUBLIC_UPLOADS_ROOT = getPublicUploadsRoot();
 
 /**
  * Sanitize a path segment for public/uploads/<category>/<id>/ files.
@@ -22,8 +29,9 @@ export function resolvePublicUploadFilePath(parts) {
     .filter(Boolean);
   if (!cleaned.length) return null;
   if (cleaned.some((p) => p.includes("..") || p.includes("\\"))) return null;
-  const resolved = path.resolve(PUBLIC_UPLOADS_ROOT, ...cleaned);
-  if (!resolved.startsWith(`${PUBLIC_UPLOADS_ROOT}${path.sep}`) && resolved !== PUBLIC_UPLOADS_ROOT) {
+  const root = getPublicUploadsRoot();
+  const resolved = path.resolve(root, ...cleaned);
+  if (!resolved.startsWith(`${root}${path.sep}`) && resolved !== root) {
     return null;
   }
   return resolved;
@@ -38,11 +46,11 @@ export function resolvePublicUploadFilePath(parts) {
  */
 export function resolvePublicUploadEntityDir(category, entityId) {
   const safeId = sanitizeUploadSegment(entityId);
-  if (!safeId) {
+  const safeCategory = sanitizeUploadSegment(category);
+  if (!safeCategory || !safeId) {
     throw new Error("Invalid upload id");
   }
-  const rel = `public/uploads/${category}/${safeId}`;
-  return path.join(process.cwd(), rel);
+  return path.join(getPublicUploadsRoot(), safeCategory, safeId);
 }
 
 /**
