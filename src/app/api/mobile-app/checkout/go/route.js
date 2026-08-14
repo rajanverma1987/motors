@@ -19,7 +19,25 @@ async function accountFromCheckoutToken(token) {
   return account;
 }
 
-/** Full-page PayPal redirect — Smart Buttons use an iframe modal that PayPal closes immediately. */
+function paypalBounceHtml(dest) {
+  const href = String(dest || "");
+  const safeAttr = href.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "").replace(/>/g, "");
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="refresh" content="0;url=${safeAttr}" />
+  <title>Continuing to PayPal</title>
+</head>
+<body>
+  <p>Continuing to PayPal…</p>
+  <p><a href="${safeAttr}">Continue to PayPal</a></p>
+  <script>window.location.replace(${JSON.stringify(href)});</script>
+</body>
+</html>`;
+}
+
+/** HTML bounce to PayPal. HTTP Location redirects get rewritten onto iqmotorbase.com by IIS/ARR. */
 export async function GET(request) {
   try {
     const url = new URL(request.url);
@@ -51,7 +69,17 @@ export async function GET(request) {
     account.paypalPlanId = calcPlan.paypalPlanId;
     await account.save();
 
-    return NextResponse.redirect(approvalUrl, 302);
+    if (!/^https:\/\/www\.(sandbox\.)?paypal\.com\//i.test(approvalUrl)) {
+      throw new Error("PayPal did not return a valid checkout link.");
+    }
+
+    return new NextResponse(paypalBounceHtml(approvalUrl), {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    });
   } catch (err) {
     console.error("mobile-app checkout go:", err);
     return NextResponse.json({ error: err.message || "Checkout failed" }, { status: 500 });

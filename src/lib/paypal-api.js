@@ -165,14 +165,39 @@ export async function ensurePaypalBillingPlanActive(paypalPlanId) {
   throw new Error(`PayPal billing plan is ${status || "not usable"}. Set the price again in Admin → Subscription plans.`);
 }
 
+function paypalCheckoutOrigin() {
+  const mode = (process.env.PAYPAL_MODE || "sandbox").toLowerCase();
+  return mode === "live" ? "https://www.paypal.com" : "https://www.sandbox.paypal.com";
+}
+
+/** PayPal sometimes returns a path-only approve href; Next would then send the user to our domain. */
+export function absolutePaypalCheckoutUrl(href) {
+  let raw = String(href || "").trim();
+  if (!raw) return "";
+  const origin = paypalCheckoutOrigin();
+  if (raw.startsWith("//")) raw = `https:${raw}`;
+  if (raw.startsWith("/")) raw = `${origin}${raw}`;
+  if (!/^https?:\/\//i.test(raw)) {
+    raw = `https://${raw.replace(/^\/+/, "")}`;
+  }
+  try {
+    const parsed = new URL(raw);
+    const host = parsed.hostname.toLowerCase();
+    if (!host.endsWith("paypal.com")) return "";
+    if (!parsed.pathname || parsed.pathname === "/") return "";
+    parsed.protocol = "https:";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
 function paypalApproveUrl(links) {
   const list = Array.isArray(links) ? links : [];
   const byRel = (rel) => list.find((l) => l && l.rel === rel && l.href);
   const approve = byRel("approve");
   const payerAction = byRel("payer-action");
-  const href = approve?.href || payerAction?.href || "";
-  if (href && /paypal\.com\/?$/i.test(href.replace(/\/$/, ""))) return "";
-  return href;
+  return absolutePaypalCheckoutUrl(approve?.href || payerAction?.href || "");
 }
 
 /**

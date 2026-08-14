@@ -41,6 +41,11 @@ const nextConfig = {
       { source: "/emergency-motor-repair", destination: "/emergency-motor-repair-what-to-do", permanent: true },
       { source: "/dashboard/quotes", destination: "/dashboard/rfq", permanent: true },
       { source: "/dashboard/quotes/:path*", destination: "/dashboard/rfq/:path*", permanent: true },
+      {
+        source: "/webapps/billing/:path*",
+        destination: `${(process.env.PAYPAL_MODE || "sandbox").toLowerCase() === "live" ? "https://www.paypal.com" : "https://www.sandbox.paypal.com"}/webapps/billing/:path*`,
+        permanent: false,
+      },
     ];
   },
   images: {

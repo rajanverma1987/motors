@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
@@ -30,12 +29,12 @@ export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
       <p className="mt-3 text-sm text-secondary">
         {priceLabel}. You will continue on PayPal’s website to approve billing. After you finish, return to the app.
       </p>
-      <Link
+      <a
         href={`/api/mobile-app/checkout/go?token=${encodeURIComponent(checkoutToken)}`}
         className="mt-8 inline-flex min-w-0 max-w-full items-center justify-center whitespace-nowrap rounded-md bg-primary px-6 py-3 text-base font-semibold text-white hover:opacity-90"
       >
         Continue to PayPal
-      </Link>
+      </a>
     </main>
   );
 }
