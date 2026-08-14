@@ -34,7 +34,7 @@ export async function POST(request) {
     const returnUrl = `${base}/mobile-app/paypal-complete?status=success`;
     const cancelUrl = `${base}/mobile-app/paypal-complete?status=cancel`;
 
-    const { subscriptionId, approvalUrl } = await createPaypalSubscription({
+    const { subscriptionId } = await createPaypalSubscription({
       paypalPlanId: calcPlan.paypalPlanId,
       returnUrl,
       cancelUrl,
@@ -45,7 +45,10 @@ export async function POST(request) {
     account.paypalPlanId = calcPlan.paypalPlanId;
     await account.save();
 
-    return NextResponse.json({ approvalUrl, subscriptionId });
+    // Hosted PayPal JS checkout — do not send users to /webapps/billing/subscriptions.
+    // That PayPal page redirects to /webapps/billing/error for this live plan.
+    const checkoutUrl = `${base}/mobile-app/paypal-checkout?sid=${encodeURIComponent(subscriptionId)}`;
+    return NextResponse.json({ approvalUrl: checkoutUrl, checkoutUrl, subscriptionId });
   } catch (err) {
     console.error("mobile-app checkout subscribe:", err);
     return NextResponse.json({ error: err.message || "Checkout failed" }, { status: 500 });
