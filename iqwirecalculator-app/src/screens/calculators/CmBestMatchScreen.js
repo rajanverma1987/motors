@@ -83,7 +83,13 @@ export default function CmBestMatchScreen() {
   const [maxWires, setMaxWires] = useState("10");
   const [results, setResults] = useState([]);
   const [resultContext, setResultContext] = useState(null);
+  const [liveResults, setLiveResults] = useState([]);
+  const [liveContext, setLiveContext] = useState(null);
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [resultsTitle, setResultsTitle] = useState("CM Best Match");
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [savedItems, setSavedItems] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
 
   const wireRows = useMemo(() => mergeCatalog(customWires), [customWires]);
@@ -275,15 +281,47 @@ export default function CmBestMatchScreen() {
       selectedCatalogSummary: selectedList.map((w) => `${w.size} (${w.circularMills} CM)`).join("; "),
     };
     setResultContext(ctx);
+    setLiveContext(ctx);
 
     const out = calculateCMBestMatch(wiresForCalc, t, minW, maxW);
     setResults(out);
+    setLiveResults(out);
+    setResultsTitle("CM Best Match");
     if (out.length === 0) {
       setResultsOpen(false);
       Alert.alert("No matches", "No combinations within ±10% of target with the current limits.");
     } else {
       setResultsOpen(true);
     }
+  };
+
+  const loadSaved = useCallback(async () => {
+    if (!token) return;
+    setSavedLoading(true);
+    try {
+      const data = await appFetch("/api/mobile-app/saved", { token });
+      const items = Array.isArray(data.items) ? data.items : [];
+      setSavedItems(items.filter((item) => item.calculatorType === "cm_best_match"));
+    } catch {
+      setSavedItems([]);
+    } finally {
+      setSavedLoading(false);
+    }
+  }, [token]);
+
+  const openSavedList = () => {
+    setSavedOpen(true);
+    loadSaved();
+  };
+
+  const openSavedItem = (item) => {
+    const payload = item?.results && typeof item.results === "object" ? item.results : {};
+    const rows = Array.isArray(payload.rows) ? payload.rows : Array.isArray(payload.top) ? payload.top : [];
+    setResults(rows);
+    setResultContext(payload.context || null);
+    setResultsTitle(item.title || "Saved result");
+    setSavedOpen(false);
+    setResultsOpen(true);
   };
 
   const renderWire = ({ item: w }) => (
@@ -400,22 +438,16 @@ export default function CmBestMatchScreen() {
           <Text style={styles.calcBtnText}>Calculate Best Match</Text>
         </Pressable>
 
-        {results.length > 0 ? (
-          <Pressable
-            style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
-            onPress={() => setResultsOpen(true)}
-          >
-            <Text style={styles.outlineBtnText}>View results ({results.length})</Text>
-          </Pressable>
-        ) : null}
+        <Pressable style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]} onPress={openSavedList}>
+          <Text style={styles.outlineBtnText}>View Result</Text>
+        </Pressable>
 
         <SaveCalculationButton
           calculatorType="cm_best_match"
           title="CM Best Match"
+          disabled={liveResults.length === 0}
+          onSaved={loadSaved}
           getPayload={() => ({
-            title: resultContext
-              ? `CM target ${resultContext.targetedCM} (${results.length} matches)`
-              : "CM Best Match",
             inputs: {
               originalWiredInHand,
               originalWireSize,
@@ -425,7 +457,7 @@ export default function CmBestMatchScreen() {
               maxWires,
               selectedIds: [...selected],
             },
-            results: { count: results.length, context: resultContext, top: results.slice(0, 12) },
+            results: { count: liveResults.length, context: liveContext, rows: liveResults },
           })}
         />
         <Note>
@@ -501,9 +533,44 @@ export default function CmBestMatchScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      <Modal visible={savedOpen} animationType="slide" onRequestClose={() => setSavedOpen(false)}>
+        <View style={[styles.modalHeader, { paddingTop: modalPadTop }]}>
+          <Text style={styles.modalTitle}>Saved results</Text>
+          <Pressable onPress={() => setSavedOpen(false)} hitSlop={12}>
+            <Text style={styles.modalClose}>Done</Text>
+          </Pressable>
+        </View>
+        {savedLoading ? (
+          <View style={styles.savedLoading}>
+            <ActivityIndicator color={colors.primary} />
+          </View>
+        ) : (
+          <FlatList
+            style={styles.modalScroll}
+            data={savedItems}
+            keyExtractor={(item) => String(item.id)}
+            contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + 24 }}
+            ListEmptyComponent={<Text style={styles.empty}>No saved calculations yet.</Text>}
+            renderItem={({ item }) => (
+              <Pressable
+                style={({ pressed }) => [styles.savedRow, pressed && styles.pressed]}
+                onPress={() => openSavedItem(item)}
+              >
+                <Text style={styles.savedName}>{item.title}</Text>
+                <Text style={styles.savedMeta}>
+                  {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
+                </Text>
+              </Pressable>
+            )}
+          />
+        )}
+      </Modal>
+
       <Modal visible={resultsOpen} animationType="slide" onRequestClose={() => setResultsOpen(false)}>
         <View style={[styles.modalHeader, { paddingTop: modalPadTop }]}>
-          <Text style={styles.modalTitle}>CM Best Match</Text>
+          <Text style={styles.modalTitle} numberOfLines={1}>
+            {resultsTitle}
+          </Text>
           <Pressable onPress={() => setResultsOpen(false)} hitSlop={12}>
             <Text style={styles.modalClose}>Done</Text>
           </Pressable>
@@ -607,6 +674,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   outlineBtnText: { color: colors.primary, fontWeight: "700", fontSize: 14 },
+  savedLoading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
+  savedRow: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 10,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  savedName: { fontSize: 18, fontWeight: "700", color: colors.title },
+  savedMeta: { fontSize: 13, color: colors.secondary, marginTop: 4 },
   calcBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.7 },

@@ -1,25 +1,11 @@
-import { AppState, Linking } from "react-native";
+import * as WebBrowser from "expo-web-browser";
 import { appFetch } from "../api";
 
-function waitForReturnToApp() {
-  return new Promise((resolve) => {
-    let leftApp = AppState.currentState !== "active";
-    const sub = AppState.addEventListener("change", (next) => {
-      if (next !== "active") {
-        leftApp = true;
-        return;
-      }
-      if (leftApp) {
-        sub.remove();
-        resolve();
-      }
-    });
-  });
-}
+const RETURN_URL = "https://iqmotorbase.com/mobile-app/paypal-complete";
 
 /**
- * Open PayPal in the device browser (Safari / Chrome). In-app browsers hit PayPal’s
- * “Things don’t appear to be working” page even when the billing plan is ON.
+ * Open PayPal in an in-app browser sheet (Safari View / Chrome Custom Tabs).
+ * Does not switch to the standalone Safari or Chrome app.
  */
 export async function startPaypalCheckout(token) {
   const data = await appFetch("/api/mobile-app/checkout/subscribe", {
@@ -29,12 +15,10 @@ export async function startPaypalCheckout(token) {
   });
   if (!data.approvalUrl) throw new Error("PayPal did not return a checkout link.");
 
-  const canOpen = await Linking.canOpenURL(data.approvalUrl);
-  if (!canOpen) throw new Error("Cannot open PayPal on this device.");
-
-  const returned = waitForReturnToApp();
-  await Linking.openURL(data.approvalUrl);
-  await returned;
+  await WebBrowser.openAuthSessionAsync(data.approvalUrl, RETURN_URL, {
+    preferEphemeralSession: false,
+    showInRecents: false,
+  });
 
   const result = await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
   if (!result?.activated) {

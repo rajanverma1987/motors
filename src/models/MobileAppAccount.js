@@ -11,6 +11,8 @@ const mobileAppAccountSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true },
     name: { type: String, default: "", trim: true },
     phone: { type: String, default: "", trim: true },
+    country: { type: String, default: "", trim: true },
+    countryCode: { type: String, default: "", trim: true, uppercase: true },
     canLogin: { type: Boolean, default: true },
     trialStartedAt: { type: Date, default: Date.now },
     trialEndsAt: { type: Date, required: true },

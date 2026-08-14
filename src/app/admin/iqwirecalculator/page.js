@@ -34,6 +34,7 @@ function AccountDetailModal({ account, open, onClose }) {
     { label: "Name", value: account.name || "—" },
     { label: "Email", value: account.email },
     { label: "Phone", value: account.phone || "—" },
+    { label: "Country", value: account.country || "—" },
     { label: "Subscription", value: account.subscriptionType },
     { label: "Last paid", value: formatDate(account.lastPaidAt) },
     { label: "Next due", value: formatDate(account.nextDueAt) },
@@ -244,6 +245,7 @@ export default function AdminIqWireCalculatorPage() {
     { key: "name", label: "Name", sortable: true },
     { key: "email", label: "Email", sortable: true },
     { key: "phone", label: "Phone" },
+    { key: "country", label: "Country", sortable: true },
     {
       key: "subscriptionType",
       label: "Subscription",
@@ -297,7 +299,7 @@ export default function AdminIqWireCalculatorPage() {
               setPage(1);
               setSearchQuery(e.target.value);
             }}
-            placeholder="Name, email, or phone"
+            placeholder="Name, email, phone, or country"
           />
         </div>
       </div>

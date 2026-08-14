@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { trialEndsAtFrom } from "@/lib/mobile-app-subscription";
 import { mobileAppSessionPayload } from "@/lib/mobile-app-auth";
+import { countryNameFromCode, isValidCountryCode } from "@/lib/countries";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function POST(request) {
     const password = String(body?.password || "");
     const name = clampString(body?.name, LIMITS.name.max);
     const phone = clampString(body?.phone, 40);
+    const countryCode = String(body?.country || body?.countryCode || "").trim().toUpperCase();
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
@@ -36,6 +38,9 @@ export async function POST(request) {
     if (!name) {
       return NextResponse.json({ error: "Name is required." }, { status: 400 });
     }
+    if (!isValidCountryCode(countryCode)) {
+      return NextResponse.json({ error: "Please select a valid country." }, { status: 400 });
+    }
 
     await connectDB();
     const existing = await MobileAppAccount.findOne({ email }).select("_id").lean();
@@ -49,6 +54,8 @@ export async function POST(request) {
       passwordHash: await hashPassword(password),
       name,
       phone,
+      countryCode,
+      country: countryNameFromCode(countryCode),
       trialStartedAt: now,
       trialEndsAt: trialEndsAtFrom(now),
       subscriptionStatus: "trial",

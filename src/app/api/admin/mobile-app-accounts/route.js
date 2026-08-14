@@ -11,6 +11,7 @@ const SORT_KEYS = [
   "name",
   "email",
   "phone",
+  "country",
   "subscriptionStatus",
   "lastPaymentAt",
   "currentPeriodEndsAt",
@@ -40,7 +41,7 @@ export async function GET(request) {
     const q = {};
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [{ email: rx }, { name: rx }, { phone: rx }];
+      q.$or = [{ email: rx }, { name: rx }, { phone: rx }, { country: rx }, { countryCode: rx }];
     }
     const { sortBy, sortDir } = parseAdminSortParams(searchParams, {
       allowedKeys: [...SORT_KEYS, "lastPaidAt", "nextDueAt", "subscriptionType"],

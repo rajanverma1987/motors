@@ -108,10 +108,10 @@ export function MobileAuthProvider({ children }) {
   );
 
   const register = useCallback(
-    async ({ name, phone, email, password }) => {
+    async ({ name, phone, email, password, country }) => {
       const data = await appFetch("/api/mobile-app/auth/register", {
         method: "POST",
-        body: { name, phone, email, password },
+        body: { name, phone, email, password, country },
       });
       await applyAuthResponse(data);
     },

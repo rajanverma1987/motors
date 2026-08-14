@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMobileAuth } from "../AuthContext";
 import { colors, spacing } from "../theme";
+import CountryPickerField from "../components/CountryPickerField";
 
 export default function RegisterScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -23,14 +24,25 @@ export default function RegisterScreen({ navigation }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [country, setCountry] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const onSubmit = async () => {
     setError("");
+    if (!country) {
+      setError("Please select your country.");
+      return;
+    }
     setBusy(true);
     try {
-      await register({ name: name.trim(), phone: phone.trim(), email: email.trim(), password });
+      await register({
+        name: name.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        password,
+        country,
+      });
     } catch (e) {
       setError(e.message || "Could not create account");
     } finally {
@@ -56,6 +68,7 @@ export default function RegisterScreen({ navigation }) {
           <View style={styles.card}>
             <Field icon="person-outline" label="Name" value={name} onChangeText={setName} autoCapitalize="words" />
             <Field icon="call-outline" label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
+            <CountryPickerField value={country} onChange={setCountry} />
             <Field
               icon="mail-outline"
               label="Email"
