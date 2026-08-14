@@ -17,6 +17,7 @@ import {
   FiChevronRight,
   FiUserCheck,
   FiBarChart2,
+  FiSmartphone,
 } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/admin/clients", label: "Clients", icon: FiUsers },
   { href: "/admin/active-clients", label: "Active clients", icon: FiUserCheck },
   { href: "/admin/subscription-plans", label: "Subscriptions", icon: FiCreditCard },
+  { href: "/admin/iqwirecalculator", label: "IQWireCalculator", icon: FiSmartphone },
   { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },
   { href: "/admin/marketing", label: "Marketing", icon: FiMail },

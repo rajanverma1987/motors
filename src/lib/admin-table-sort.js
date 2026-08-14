@@ -62,7 +62,11 @@ export function adminRowSortValue(row, key) {
     key === "submittedAt" ||
     key === "updatedAt" ||
     key === "firstEmailSentAt" ||
-    key === "lastEmailSentAt"
+    key === "lastEmailSentAt" ||
+    key === "lastPaidAt" ||
+    key === "nextDueAt" ||
+    key === "trialEndsAt" ||
+    key === "currentPeriodEndsAt"
   ) {
     return Number(new Date(row[key] || 0).getTime()) || 0;
   }

@@ -2,391 +2,481 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://iqmotorbase.com</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/pricing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/contact</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/about</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/privacy</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/terms</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/marketplace</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/motor-repair-marketplace</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/industrial-motor-repair</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/emergency-motor-repair-what-to-do</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/cost-of-motor-repair-and-rewinding</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-rewinding-cost-calculator</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/calculators-subscription</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-near-me</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.92</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/blog</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.82</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/motor-repair-shop-management-software</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.84</priority>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/work-order-software-for-motor-repair-shops</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.86</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-inventory-software</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.86</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-crm-software</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-invoicing-and-quoting-software</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.86</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/job-card-system-for-repair-shop</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.84</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/track-motor-repair-jobs</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.84</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/technician-mobile-app-shop-floor-first</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.84</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/list-your-electric-motor-services</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.85</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/why-list-your-motor-repair-shop</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.84</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/how-motor-repair-shops-get-more-customers</loc>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.84</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/blog/how-to-get-more-customers-for-motor-repair-shop</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/blog/motor-rewinding-business-marketing-usa</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/blog/best-software-for-repair-shop-2026</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.86</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/blog/how-to-manage-repair-jobs-efficiently</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/careers</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>https://iqmotorbase.com/types-of-electric-motor-repair-services</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/how-to-choose-electric-motor-repair-shop</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/benefits-of-motor-repair-directory</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/when-to-repair-or-replace-electric-motor</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/blog/electric-motor-calculators-fla-torque-speed-power</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/blog/motor-rewinding-cm-best-match-calculator-guide</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/developers/api</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://iqmotorbase.com/usa/texas/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/california/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/ohio/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/illinois/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/pennsylvania/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/michigan/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/florida/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/new-york/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/indiana/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/north-carolina/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.88</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/texas/houston/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/texas/dallas/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/texas/austin/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/texas/san-antonio/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/california/los-angeles/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/california/san-diego/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/california/san-jose/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/california/fresno/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/ohio/cleveland/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/ohio/columbus/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/ohio/cincinnati/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/illinois/chicago/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/illinois/aurora/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/pennsylvania/philadelphia/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/pennsylvania/pittsburgh/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/michigan/detroit/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/michigan/grand-rapids/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/florida/miami/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/florida/tampa/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/florida/orlando/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/florida/jacksonville/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/new-york/new-york-city/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/new-york/buffalo/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/new-york/rochester/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/indiana/indianapolis/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/indiana/fort-wayne/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/north-carolina/charlotte/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/north-carolina/raleigh/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://iqmotorbase.com/usa/north-carolina/greensboro/motor-repair-business-listing</loc>
-    <lastmod>2026-08-07</lastmod>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
@@ -8137,8 +8227,272 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/amarillo-texas</loc>
+    <lastmod>2026-08-09</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/plymouth-minnesota</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/bradenton-florida</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/vidor-texas</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/paris-texas</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/buena-park-california</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/rimouski-quebec</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/ville-saint-laurent-quebec</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/pasadena-texas</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/pampa-texas</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/kingsport-tennessee</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/lennox-south-dakota</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/farnham-quebec</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/fort-worth-texas</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/fort-pierre-south-dakota</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/laval-quebec</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/montr-al-quebec</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/val-d-or-quebec</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/milford-utah</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/fort-myers-florida</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/deer-park-washington</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/logan-utah</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/st-george-utah</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/bang-sao-thong-samut-prakan</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/baku</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/newtownabbey-county-antrim-northern-ireland</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/eaglescliffe-county-durham</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/grangemouth-scotland</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/sampran-nakhon-pathom</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/rai-khing-sam-phran-nakhon-pathom</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/apapa-lagos</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/stonehouse-gloucestershire</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/ruwi</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/oldbury-west-midlands</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/dudley-west-midlands</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/south-tangerang-banten</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/burslem-stoke-on-trent-staffordshire</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/elvington-york-north-yorkshire</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/heanor-derbyshire</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/washington-tyne-and-wear-england</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/nizwa-ad-dakhiliyah</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/havant-hampshire</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/thurmaston-leicester-leicestershire</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/motor-repair-shop/glennville-georgia</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/clearwater-electric-motor-repair-llc</loc>
-    <lastmod>2026-04-08</lastmod>
+    <lastmod>2026-08-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.72</priority>
   </url>
@@ -11227,12 +11581,6 @@
     <priority>0.72</priority>
   </url>
   <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/cec-motor-utility-services-llc</loc>
-    <lastmod>2026-05-04</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/butler-electric-motor-services</loc>
     <lastmod>2026-05-04</lastmod>
     <changefreq>weekly</changefreq>
@@ -12691,12 +13039,6 @@
     <priority>0.72</priority>
   </url>
   <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/electric-motors-lift-station-service-inc-em-florida</loc>
-    <lastmod>2026-05-18</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/reme-rotating-electrical-and-mechanical-engineering</loc>
     <lastmod>2026-05-18</lastmod>
     <changefreq>weekly</changefreq>
@@ -13837,12 +14179,6 @@
     <priority>0.72</priority>
   </url>
   <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/mader-electric-motors</loc>
-    <lastmod>2026-06-01</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/tripp-electric-motors-inc</loc>
     <lastmod>2026-06-01</lastmod>
     <changefreq>weekly</changefreq>
@@ -13880,12 +14216,6 @@
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/star-delta-motors-inc</loc>
-    <lastmod>2026-06-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/genesis-electric-motors-inc</loc>
     <lastmod>2026-06-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.72</priority>
@@ -13995,12 +14325,6 @@
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/jr-electric-motor-sales-and-repair</loc>
     <lastmod>2026-06-03</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/southern-winding-service-inc</loc>
-    <lastmod>2026-06-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.72</priority>
   </url>
@@ -16592,7 +16916,7 @@
   </url>
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/controls-motors-technology-inc</loc>
-    <lastmod>2026-07-08</lastmod>
+    <lastmod>2026-08-11</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.72</priority>
   </url>
@@ -17479,12 +17803,6 @@
     <priority>0.72</priority>
   </url>
   <url>
-    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/integrated-power-services-ips</loc>
-    <lastmod>2026-07-31</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.72</priority>
-  </url>
-  <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/lineage-mechanical</loc>
     <lastmod>2026-07-31</lastmod>
     <changefreq>weekly</changefreq>
@@ -17745,6 +18063,348 @@
   <url>
     <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/ainsworth-inc</loc>
     <lastmod>2026-08-07</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/amerimex-motor-controls-llc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/baldwin-supply-company</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/beeco-motors-controls-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/bj-electrical-service-llc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/buna-electric-motor-service-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/cajun-electric-llc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/city-electric-motor-service</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/coiltec</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/control-concepts-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/dickner-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/franklin-empire-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/grayson-armature-works-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/b-g-electric</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/balance-vibration-technologies-inc</loc>
+    <lastmod>2026-08-10</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/centre-du-moteur-lectrique-de-granby-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/kingsport-armature-electric-co</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/lone-star-enterprises-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/massengale-armature-works-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/mec-precision-inc-jr6wlf</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/meunier-lectrique-fils-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/mmi-electric-motors-pumps-a3tto5</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/morris-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/motair-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/moteurs-orl-ans-1993-lt-e</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/zuritt-corporation-lt-e</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/a-f-electric-motor-rewinding-corp</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/american-babbitt-bearing</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/d-d-machine-hydraulics-inc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/industrial-support-service-llc</loc>
+    <lastmod>2026-08-11</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/mountain-valley-motor-pump-service-inc</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/southwest-sales-service-pumps-inc</loc>
+    <lastmod>2026-08-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/well-engineering-service-co</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/rapid-solutions-azerbaijan</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/ges-group-mallusk</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/m-b-services-ne-limited</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/saras-m-e-services-llc</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/p-m-facility-services-pumps-motors-uk-ltd</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/reactive-e-m-services-limited</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/intersel-dowding-mills-fzco</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/marc-thailand-co</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/chupun-industrial-services-co</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/global-marine-services-limited</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/avonmouth-engineering-services-gloucester</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/universal-engineering-services-llc-ues</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/rubix-industrial-services-limited</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/hayley-247-engineering-services-limited</loc>
+    <lastmod>2026-08-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/john-mcnicol-co</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/pt-xab-industrial-service</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/e-bennett-electrical-limited</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/eclipse-electrical-engineers-limited</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/iberica-electrical-pty-ltd</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/bowers-electricals-ltd</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/adc-electrical-limited</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/turbo-machinery-maintenance-services-llc-tmms</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/mid-kent-engineering-company-ltd-havant-service-centre</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/rotamec-group-holdings-covelec-leicester-service-centre</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.72</priority>
+  </url>
+  <url>
+    <loc>https://iqmotorbase.com/electric-motor-repair-shops-listings/glennville-electric-motors-inc</loc>
+    <lastmod>2026-08-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.72</priority>
   </url>

@@ -4,6 +4,7 @@ import SubscriptionPlan from "@/models/SubscriptionPlan";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { createPaypalBackedPlan } from "@/lib/subscription-service";
 import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
+import { ensureMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 
 const SUBSCRIPTION_PLAN_SORT_KEYS = ["name", "slug", "planType", "customPrice", "negotiatedBy", "active", "createdAt"];
 
@@ -14,6 +15,7 @@ export async function GET(request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     await connectDB();
+    await ensureMobileAppSubscriptionPlan();
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));

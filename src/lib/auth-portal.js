@@ -162,3 +162,45 @@ export async function getTechnicianFromRequest(request) {
   if (!allowed) return null;
   return tech;
 }
+
+const MOBILE_APP_JWT_TYP = "motors_mobile_app";
+
+/**
+ * JWT for IQWireCalculator mobile app (Bearer). Not interchangeable with portal or technician tokens.
+ */
+export async function createMobileAppToken({ accountId, email, name }) {
+  return new SignJWT({
+    typ: MOBILE_APP_JWT_TYP,
+    accountId: String(accountId || ""),
+    email: String(email || "").toLowerCase().trim(),
+    name: String(name || ""),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyMobileAppToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== MOBILE_APP_JWT_TYP) return null;
+    const accountId = String(payload.accountId || "").trim();
+    const email = String(payload.email || "")
+      .trim()
+      .toLowerCase();
+    if (!accountId || !email) return null;
+    return {
+      accountId,
+      email,
+      name: String(payload.name || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function getBearerTokenFromRequest(request) {
+  const auth = request.headers.get("authorization") || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
+}

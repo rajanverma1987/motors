@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SubscriptionPlan from "@/models/SubscriptionPlan";
 import ShopSubscription from "@/models/ShopSubscription";
+import MobileAppAccount from "@/models/MobileAppAccount";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { createPaypalProductAndPlan, paypalConfigured } from "@/lib/paypal-api";
 
-const PROTECTED_SLUGS = new Set(["free-ultimate", "trial"]);
+const PROTECTED_SLUGS = new Set(["free-ultimate", "trial", "mobile-app"]);
 
 async function getPlanId(context) {
   const params = typeof context.params?.then === "function" ? await context.params : context.params;
@@ -134,6 +135,19 @@ export async function DELETE(request, context) {
         },
         { status: 400 }
       );
+    }
+    if (plan.slug === "mobile-app") {
+      const mobileInUse = await MobileAppAccount.countDocuments({
+        paypalSubscriptionId: { $ne: "" },
+      });
+      if (mobileInUse > 0) {
+        return NextResponse.json(
+          {
+            error: `Cannot delete: ${mobileInUse} IQWireCalculator account(s) still have a PayPal subscription. Deactivate the plan instead.`,
+          },
+          { status: 400 }
+        );
+      }
     }
     await SubscriptionPlan.deleteOne({ _id: plan._id });
     return NextResponse.json({ ok: true, deletedId: String(plan._id) });
