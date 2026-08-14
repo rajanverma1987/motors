@@ -206,6 +206,47 @@ export async function createPaypalSubscription({
   };
 }
 
+export async function getPaypalSubscription(paypalSubscriptionId) {
+  const id = String(paypalSubscriptionId || "").trim();
+  if (!id) return null;
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/subscriptions/${encodeURIComponent(id)}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    throw new Error(data.message || data.name || "PayPal subscription lookup failed");
+  }
+  return data;
+}
+
+export async function activatePaypalSubscription(paypalSubscriptionId) {
+  const id = String(paypalSubscriptionId || "").trim();
+  if (!id) return;
+  const token = await getPaypalAccessToken();
+  const base = paypalBaseUrl();
+  const res = await fetch(`${base}/v1/billing/subscriptions/${encodeURIComponent(id)}/activate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason: "Buyer returned from PayPal checkout" }),
+  });
+  if (!res.ok && res.status !== 204) {
+    const err = await res.json().catch(() => ({}));
+    const msg = String(err.message || err.name || "");
+    if (/already|active/i.test(msg)) return;
+    throw new Error(msg || "PayPal subscription activate failed");
+  }
+}
+
 /**
  * Cancel PayPal subscription at end of cycle or immediately.
  */

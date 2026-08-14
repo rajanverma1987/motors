@@ -76,7 +76,8 @@ export default function CmBestMatchScreen() {
   const [maxWires, setMaxWires] = useState("10");
   const [results, setResults] = useState([]);
   const [resultContext, setResultContext] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [catalogOpen, setCatalogOpen] = useState(false);
 
   const wireRows = useMemo(() => mergeCatalog(customWires), [customWires]);
 
@@ -271,10 +272,10 @@ export default function CmBestMatchScreen() {
     const out = calculateCMBestMatch(wiresForCalc, t, minW, maxW);
     setResults(out);
     if (out.length === 0) {
-      setModalOpen(false);
+      setResultsOpen(false);
       Alert.alert("No matches", "No combinations within ±10% of target with the current limits.");
     } else {
-      setModalOpen(true);
+      setResultsOpen(true);
     }
   };
 
@@ -297,177 +298,205 @@ export default function CmBestMatchScreen() {
     </Pressable>
   );
 
+  const selectedSummary =
+    selectedList.length === 0 ? "No sizes selected" : selectedList.map((w) => w.size).join(", ");
+
+  const modalPadTop = Math.max(insets.top, 12) + (Platform.OS === "ios" ? 0 : 8);
+
   return (
     <View style={styles.root}>
-      <KeyboardAvoidingView
+      <ScrollView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
+        contentContainerStyle={[styles.mainContent, { paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.sticky}>
-          <Text style={styles.intro}>Select AWG sizes, enter targets, then calculate (±10% of targeted CM).</Text>
+        <Text style={styles.intro}>Select AWG sizes, enter targets, then calculate (±10% of targeted CM).</Text>
 
-          <CalcPanel title="Job inputs" style={styles.compactPanel}>
-            <View style={styles.row}>
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Orig. wires in hand"
-                value={originalWiredInHand}
-                onChangeText={setOriginalWiredInHand}
-                placeholder="10"
-                keyboardType="numeric"
-              />
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Orig. wire size"
-                value={originalWireSize}
-                onChangeText={setOriginalWireSize}
-                placeholder="19"
-              />
-            </View>
-            <View style={styles.row}>
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Original CM"
-                value={originalCM}
-                onChangeText={setOriginalCM}
-                placeholder="12360"
-                keyboardType="decimal-pad"
-              />
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Targeted CM"
-                value={targetedCM}
-                onChangeText={setTargetedCM}
-                placeholder="12360"
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={styles.rowLast}>
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Min wires"
-                value={minWires}
-                onChangeText={setMinWires}
-                keyboardType="number-pad"
-              />
-              <LabeledInput
-                compact
-                style={styles.col}
-                label="Max wires"
-                value={maxWires}
-                onChangeText={setMaxWires}
-                keyboardType="number-pad"
-              />
-            </View>
-          </CalcPanel>
-
-          <Pressable style={({ pressed }) => [styles.calcBtn, pressed && styles.pressed]} onPress={runCalculate}>
-            <Text style={styles.calcBtnText}>Calculate Best Match</Text>
-          </Pressable>
-
-          {results.length > 0 ? (
-            <Pressable style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]} onPress={() => setModalOpen(true)}>
-              <Text style={styles.outlineBtnText}>View results ({results.length})</Text>
-            </Pressable>
-          ) : null}
-        </View>
-
-        <CalcPanel title="Wire catalog" style={styles.catalogPanel}>
-          <View style={styles.addRow}>
+        <CalcPanel title="Job inputs" style={styles.compactPanel}>
+          <View style={styles.row}>
             <LabeledInput
               compact
-              style={styles.addSize}
-              label="Size"
-              value={newSize}
-              onChangeText={setNewSize}
+              style={styles.col}
+              label="Orig. wires in hand"
+              value={originalWiredInHand}
+              onChangeText={setOriginalWiredInHand}
+              placeholder="10"
+              keyboardType="numeric"
+            />
+            <LabeledInput
+              compact
+              style={styles.col}
+              label="Orig. wire size"
+              value={originalWireSize}
+              onChangeText={setOriginalWireSize}
               placeholder="19"
             />
+          </View>
+          <View style={styles.row}>
             <LabeledInput
               compact
-              style={styles.addCm}
-              label="CM"
-              value={newCm}
-              onChangeText={setNewCm}
-              placeholder="12990"
+              style={styles.col}
+              label="Original CM"
+              value={originalCM}
+              onChangeText={setOriginalCM}
+              placeholder="12360"
               keyboardType="decimal-pad"
             />
-            <Pressable
-              onPress={addWire}
-              disabled={savingWire}
-              style={({ pressed }) => [styles.addBtn, pressed && styles.pressed, savingWire && styles.disabled]}
-            >
-              {savingWire ? <ActivityIndicator color="#fff" /> : <Text style={styles.addBtnText}>Add</Text>}
+            <LabeledInput
+              compact
+              style={styles.col}
+              label="Targeted CM"
+              value={targetedCM}
+              onChangeText={setTargetedCM}
+              placeholder="12360"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={styles.rowLast}>
+            <LabeledInput
+              compact
+              style={styles.col}
+              label="Min wires"
+              value={minWires}
+              onChangeText={setMinWires}
+              keyboardType="number-pad"
+            />
+            <LabeledInput
+              compact
+              style={styles.col}
+              label="Max wires"
+              value={maxWires}
+              onChangeText={setMaxWires}
+              keyboardType="number-pad"
+            />
+          </View>
+        </CalcPanel>
+
+        <CalcPanel title="Wire catalog" style={styles.catalogSummaryPanel}>
+          <Text style={styles.countHint}>
+            {selected.size} of {wireRows.length} selected
+          </Text>
+          <Text style={styles.selectedSummary} numberOfLines={3}>
+            {selectedSummary}
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.catalogOpenBtn, pressed && styles.pressed]}
+            onPress={() => setCatalogOpen(true)}
+          >
+            <Ionicons name="list-outline" size={22} color="#fff" />
+            <Text style={styles.calcBtnText}>Select catalog</Text>
+          </Pressable>
+        </CalcPanel>
+
+        <Pressable style={({ pressed }) => [styles.calcBtn, pressed && styles.pressed]} onPress={runCalculate}>
+          <Text style={styles.calcBtnText}>Calculate Best Match</Text>
+        </Pressable>
+
+        {results.length > 0 ? (
+          <Pressable
+            style={({ pressed }) => [styles.outlineBtn, pressed && styles.pressed]}
+            onPress={() => setResultsOpen(true)}
+          >
+            <Text style={styles.outlineBtnText}>View results ({results.length})</Text>
+          </Pressable>
+        ) : null}
+
+        <SaveCalculationButton
+          calculatorType="cm_best_match"
+          title="CM Best Match"
+          getPayload={() => ({
+            title: resultContext
+              ? `CM target ${resultContext.targetedCM} (${results.length} matches)`
+              : "CM Best Match",
+            inputs: {
+              originalWiredInHand,
+              originalWireSize,
+              originalCM,
+              targetedCM,
+              minWires,
+              maxWires,
+              selectedIds: [...selected],
+            },
+            results: { count: results.length, context: resultContext, top: results.slice(0, 12) },
+          })}
+        />
+        <Note>
+          Original fields are notes on the results. Targeted CM is the search goal. Min/max limit total conductors (up
+          to three sizes).
+        </Note>
+      </ScrollView>
+
+      <Modal visible={catalogOpen} animationType="slide" onRequestClose={() => setCatalogOpen(false)}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+          <View style={[styles.modalHeader, { paddingTop: modalPadTop }]}>
+            <Text style={styles.modalTitle}>Wire catalog</Text>
+            <Pressable onPress={() => setCatalogOpen(false)} hitSlop={12}>
+              <Text style={styles.modalClose}>Done</Text>
             </Pressable>
           </View>
-          <Text style={styles.addHint}>Default AWG sizes stay. Add extra sizes you stock.</Text>
-
-          {loading ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
-          ) : (
-            <>
-              <Pressable style={styles.selectAllRow} onPress={toggleSelectAll}>
-                <Ionicons
-                  name={allCatalogSelected ? "checkbox" : "square-outline"}
-                  size={32}
-                  color={colors.primary}
-                />
-                <Text style={styles.selectAllText}>Select all (up to {MAX_SELECT})</Text>
-              </Pressable>
-              <Text style={styles.countHint}>
-                {selected.size} of {wireRows.length} selected
-              </Text>
-              <FlatList
-                style={styles.catalogList}
-                data={wireRows}
-                keyExtractor={(w) => String(w.id || w.size)}
-                renderItem={renderWire}
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                contentContainerStyle={{ paddingBottom: insets.bottom + 8 }}
-                ListEmptyComponent={<Text style={styles.empty}>No wire sizes in the catalog.</Text>}
-                ListFooterComponent={
-                  <View style={{ paddingTop: spacing.md }}>
-                    <SaveCalculationButton
-                      calculatorType="cm_best_match"
-                      title="CM Best Match"
-                      getPayload={() => ({
-                        title: resultContext
-                          ? `CM target ${resultContext.targetedCM} (${results.length} matches)`
-                          : "CM Best Match",
-                        inputs: {
-                          originalWiredInHand,
-                          originalWireSize,
-                          originalCM,
-                          targetedCM,
-                          minWires,
-                          maxWires,
-                          selectedIds: [...selected],
-                        },
-                        results: { count: results.length, context: resultContext, top: results.slice(0, 12) },
-                      })}
-                    />
-                    <Note>
-                      Original fields are notes on the results. Targeted CM is the search goal. Min/max limit total
-                      conductors (up to three sizes).
-                    </Note>
-                  </View>
-                }
+          <View style={styles.catalogModalBody}>
+            <View style={styles.addRow}>
+              <LabeledInput
+                compact
+                style={styles.addSize}
+                label="Size"
+                value={newSize}
+                onChangeText={setNewSize}
+                placeholder="19"
               />
-            </>
-          )}
-        </CalcPanel>
-      </KeyboardAvoidingView>
+              <LabeledInput
+                compact
+                style={styles.addCm}
+                label="CM"
+                value={newCm}
+                onChangeText={setNewCm}
+                placeholder="12990"
+                keyboardType="decimal-pad"
+              />
+              <Pressable
+                onPress={addWire}
+                disabled={savingWire}
+                style={({ pressed }) => [styles.addBtn, pressed && styles.pressed, savingWire && styles.disabled]}
+              >
+                {savingWire ? <ActivityIndicator color="#fff" /> : <Text style={styles.addBtnText}>Add</Text>}
+              </Pressable>
+            </View>
+            <Text style={styles.addHint}>Default AWG sizes stay. Add extra sizes you stock.</Text>
+            {loading ? (
+              <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
+            ) : (
+              <>
+                <Pressable style={styles.selectAllRow} onPress={toggleSelectAll}>
+                  <Ionicons
+                    name={allCatalogSelected ? "checkbox" : "square-outline"}
+                    size={32}
+                    color={colors.primary}
+                  />
+                  <Text style={styles.selectAllText}>Select all (up to {MAX_SELECT})</Text>
+                </Pressable>
+                <Text style={styles.countHint}>
+                  {selected.size} of {wireRows.length} selected
+                </Text>
+                <FlatList
+                  style={styles.catalogList}
+                  data={wireRows}
+                  keyExtractor={(w) => String(w.id || w.size)}
+                  renderItem={renderWire}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+                  ListEmptyComponent={<Text style={styles.empty}>No wire sizes in the catalog.</Text>}
+                />
+              </>
+            )}
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
-      <Modal visible={modalOpen} animationType="slide" onRequestClose={() => setModalOpen(false)}>
-        <View style={[styles.modalHeader, { paddingTop: Math.max(insets.top, 12) + (Platform.OS === "ios" ? 0 : 8) }]}>
+      <Modal visible={resultsOpen} animationType="slide" onRequestClose={() => setResultsOpen(false)}>
+        <View style={[styles.modalHeader, { paddingTop: modalPadTop }]}>
           <Text style={styles.modalTitle}>CM Best Match</Text>
-          <Pressable onPress={() => setModalOpen(false)} hitSlop={12}>
+          <Pressable onPress={() => setResultsOpen(false)} hitSlop={12}>
             <Text style={styles.modalClose}>Done</Text>
           </Pressable>
         </View>
@@ -516,10 +545,27 @@ export default function CmBestMatchScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  sticky: { paddingHorizontal: spacing.md, paddingTop: spacing.md, backgroundColor: colors.bg },
+  mainContent: { padding: spacing.md },
   intro: { fontSize: 12, color: colors.secondary, lineHeight: 17, marginBottom: spacing.sm },
-  compactPanel: { padding: spacing.md, marginBottom: spacing.sm },
-  catalogPanel: { flex: 1, marginHorizontal: spacing.md, marginBottom: spacing.sm, minHeight: 0 },
+  compactPanel: { padding: spacing.md, marginBottom: spacing.md },
+  catalogSummaryPanel: { padding: spacing.md, marginBottom: spacing.md },
+  catalogModalBody: {
+    flex: 1,
+    backgroundColor: colors.bg,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+  },
+  catalogOpenBtn: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    minHeight: 52,
+  },
+  selectedSummary: { fontSize: 16, color: colors.title, lineHeight: 22, marginBottom: spacing.md },
   row: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
   rowLast: { flexDirection: "row", gap: spacing.sm },
   col: { flex: 1, minWidth: 0 },
@@ -540,10 +586,12 @@ const styles = StyleSheet.create({
   catalogList: { flex: 1 },
   calcBtn: {
     backgroundColor: colors.primary,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: spacing.sm,
+    minHeight: 52,
   },
   outlineBtn: {
     borderWidth: 1,
@@ -551,7 +599,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     alignItems: "center",
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   outlineBtnText: { color: colors.primary, fontWeight: "700", fontSize: 14 },
   calcBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },

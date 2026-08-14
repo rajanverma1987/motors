@@ -1,7 +1,7 @@
 import { connectDB } from "@/lib/db";
 import SubscriptionPlan from "@/models/SubscriptionPlan";
 import MobileAppAccount from "@/models/MobileAppAccount";
-import { createPaypalProductAndPlan, paypalConfigured, cancelPaypalSubscription } from "@/lib/paypal-api";
+import { createPaypalProductAndPlan, paypalConfigured, cancelPaypalSubscription, getPaypalSubscription, activatePaypalSubscription } from "@/lib/paypal-api";
 
 /** Admin → Subscription plans slug for IQWireCalculator (price editable any time). */
 export const MOBILE_APP_SUBSCRIPTION_PLAN_SLUG = "mobile-app";
@@ -181,6 +181,14 @@ export async function applyMobileAppSubscriptionActivated({ paypalSubscriptionId
   await connectDB();
   const account = await MobileAppAccount.findOne({ paypalSubscriptionId: subId });
   if (!account) return;
+  const lastPaid = account.lastPaymentAt ? new Date(account.lastPaymentAt).getTime() : 0;
+  if (
+    account.subscriptionStatus === "active" &&
+    lastPaid &&
+    Date.now() - lastPaid < 15 * 60 * 1000
+  ) {
+    return;
+  }
   const plan = await ensureMobileAppSubscriptionPlan();
   const base =
     account.currentPeriodEndsAt && new Date(account.currentPeriodEndsAt).getTime() > Date.now()
@@ -196,6 +204,69 @@ export async function applyMobileAppSubscriptionActivated({ paypalSubscriptionId
     account.paypalPlanId = account.paypalPlanId || String(plan.paypalPlanId || "");
   }
   await account.save();
+}
+
+async function revertUnpaidMobileCheckout(account) {
+  const trialEnds = account.trialEndsAt ? new Date(account.trialEndsAt).getTime() : 0;
+  account.subscriptionStatus = trialEnds > Date.now() ? "trial" : "expired";
+  account.cancelAtPeriodEnd = false;
+  account.currentPeriodEndsAt = null;
+  account.lastPaymentAt = null;
+  account.graceEndsAt = null;
+  await account.save();
+  return account;
+}
+
+/**
+ * Ask PayPal if this checkout actually billed. Never mark paid from “user closed the browser.”
+ * @returns {{ account: object, activated: boolean, paypalStatus: string }}
+ */
+export async function syncMobileAppPaypalSubscription(account) {
+  const subId = String(account?.paypalSubscriptionId || "").trim();
+  if (!subId) {
+    return { account, activated: false, paypalStatus: "" };
+  }
+  try {
+    let paypalSub = await getPaypalSubscription(subId);
+    let paypalStatus = String(paypalSub?.status || "").toUpperCase();
+
+    if (paypalStatus === "APPROVED") {
+      try {
+        await activatePaypalSubscription(subId);
+        paypalSub = await getPaypalSubscription(subId);
+        paypalStatus = String(paypalSub?.status || "").toUpperCase();
+      } catch (err) {
+        console.warn("mobile-app paypal activate:", err.message);
+      }
+    }
+
+    if (paypalStatus === "ACTIVE") {
+      await applyMobileAppSubscriptionActivated({ paypalSubscriptionId: subId, eventId: "paypal-verify" });
+      const fresh = await MobileAppAccount.findById(account._id);
+      return { account: fresh || account, activated: true, paypalStatus };
+    }
+
+    if (paypalStatus === "CANCELLED" && account.lastPaymentAt) {
+      await applyMobileAppSubscriptionCancelled({ paypalSubscriptionId: subId });
+      const fresh = await MobileAppAccount.findById(account._id);
+      return { account: fresh || account, activated: false, paypalStatus };
+    }
+
+    if (["EXPIRED", "SUSPENDED"].includes(paypalStatus) || paypalSub == null) {
+      const fresh = await revertUnpaidMobileCheckout(account);
+      return { account: fresh, activated: false, paypalStatus: paypalStatus || "MISSING" };
+    }
+
+    if (account.subscriptionStatus === "active") {
+      const fresh = await revertUnpaidMobileCheckout(account);
+      return { account: fresh, activated: false, paypalStatus };
+    }
+
+    return { account, activated: false, paypalStatus };
+  } catch (err) {
+    console.warn("mobile-app paypal sync:", err.message);
+    return { account, activated: account.subscriptionStatus === "active", paypalStatus: "UNKNOWN" };
+  }
 }
 
 export async function applyMobileAppSubscriptionCancelled({ paypalSubscriptionId }) {

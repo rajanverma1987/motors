@@ -3,6 +3,7 @@ import { appFetch } from "../api";
 
 /**
  * PayPal blocks checkout inside WKWebView. Use Safari / Chrome Custom Tabs instead.
+ * Access is granted only after PayPal reports the subscription ACTIVE.
  */
 export async function startPaypalCheckout(token) {
   const data = await appFetch("/api/mobile-app/checkout/subscribe", {
@@ -17,9 +18,9 @@ export async function startPaypalCheckout(token) {
     showInRecents: true,
   });
 
-  try {
-    await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
-  } catch {
-    /* webhook may still activate */
+  const result = await appFetch("/api/mobile-app/checkout/activate-return", { token, method: "POST" });
+  if (!result?.activated) {
+    throw new Error("PayPal checkout was not completed. You were not charged.");
   }
+  return result;
 }
