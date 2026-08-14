@@ -17,6 +17,7 @@ import * as SecureStore from "expo-secure-store";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { calculateCMBestMatch } from "../../lib/cm-calculator";
 import { DEFAULT_WIRE_CATALOG } from "../../lib/default-wire-catalog";
+import { emailCmResults, printCmResults, wireCombinationLabel } from "../../lib/cm-result-share";
 import { SaveCalculationButton } from "./SaveCalculationButton";
 import { colors, spacing } from "../../theme";
 import { num, fmt, CalcPanel, LabeledInput, Note } from "./shared";
@@ -26,25 +27,6 @@ import { appFetch } from "../../api";
 const MAX_SELECT = 10;
 const MAX_WIRES_CAP = 200;
 const CUSTOM_WIRES_KEY = "motop_calcs_custom_wires";
-
-function slotSize(row, i) {
-  const q = row[`wires${i}`];
-  if (!q || q <= 0) return "0";
-  const s = row[`wireSize${i}`];
-  return s != null && s !== "" ? String(s) : "0";
-}
-
-function wireCombinationLabel(row) {
-  const parts = [];
-  for (let i = 1; i <= 3; i++) {
-    const qty = Number(row[`wires${i}`]) || 0;
-    if (qty <= 0) continue;
-    const size = slotSize(row, i);
-    if (!size || size === "0") continue;
-    parts.push(`${qty}#${size}`);
-  }
-  return parts.join("  |  ");
-}
 
 function resultCardStyle(pct) {
   const a = Math.abs(Number(pct) || 0);
@@ -91,6 +73,7 @@ export default function CmBestMatchScreen() {
   const [savedItems, setSavedItems] = useState([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  const [sharing, setSharing] = useState("");
 
   const wireRows = useMemo(() => mergeCatalog(customWires), [customWires]);
 
@@ -312,6 +295,36 @@ export default function CmBestMatchScreen() {
   const openSavedList = () => {
     setSavedOpen(true);
     loadSaved();
+  };
+
+  const shareArgs = () => ({
+    title: resultsTitle,
+    results,
+    resultContext,
+  });
+
+  const onPrintResults = async () => {
+    if (sharing) return;
+    setSharing("print");
+    try {
+      await printCmResults(shareArgs());
+    } catch (e) {
+      Alert.alert("Could not print", e.message || "Try again.");
+    } finally {
+      setSharing("");
+    }
+  };
+
+  const onEmailResults = async () => {
+    if (sharing) return;
+    setSharing("email");
+    try {
+      await emailCmResults(shareArgs());
+    } catch (e) {
+      Alert.alert("Could not email", e.message || "Try again.");
+    } finally {
+      setSharing("");
+    }
   };
 
   const openSavedItem = (item) => {
@@ -575,6 +588,32 @@ export default function CmBestMatchScreen() {
             <Text style={styles.modalClose}>Done</Text>
           </Pressable>
         </View>
+        <View style={styles.modalActions}>
+          <Pressable
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed, sharing && styles.disabled]}
+            onPress={onPrintResults}
+            disabled={!!sharing}
+          >
+            {sharing === "print" ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Ionicons name="print-outline" size={20} color={colors.primary} />
+            )}
+            <Text style={styles.actionBtnText}>Print</Text>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed, sharing && styles.disabled]}
+            onPress={onEmailResults}
+            disabled={!!sharing}
+          >
+            {sharing === "email" ? (
+              <ActivityIndicator color={colors.primary} />
+            ) : (
+              <Ionicons name="mail-outline" size={20} color={colors.primary} />
+            )}
+            <Text style={styles.actionBtnText}>Email</Text>
+          </Pressable>
+        </View>
         <ScrollView
           style={styles.modalScroll}
           contentContainerStyle={{ padding: spacing.lg, paddingBottom: insets.bottom + 24 }}
@@ -715,8 +754,30 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     backgroundColor: colors.card,
   },
-  modalTitle: { fontSize: 18, fontWeight: "800", color: colors.title },
+  modalTitle: { fontSize: 18, fontWeight: "800", color: colors.title, flex: 1, marginRight: 12 },
   modalClose: { fontSize: 16, fontWeight: "700", color: colors.primary },
+  modalActions: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.card,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    backgroundColor: colors.card,
+  },
+  actionBtnText: { color: colors.primary, fontWeight: "700", fontSize: 15 },
   modalScroll: { flex: 1, backgroundColor: colors.bg },
   varsBox: {
     backgroundColor: colors.formBg,
