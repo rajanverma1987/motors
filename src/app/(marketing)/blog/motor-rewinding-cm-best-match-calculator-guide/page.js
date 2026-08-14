@@ -305,6 +305,11 @@ export default function BlogCmBestMatchGuidePage() {
             <h2 className="text-xl font-bold text-title sm:text-2xl">Related reading &amp; listings</h2>
             <ul className="mt-4 space-y-2 text-secondary">
               <li>
+                <Link href="/iqwirecalculator" className="font-medium text-primary hover:underline">
+                  IQWireCalculator — circular mils &amp; wire substitution app
+                </Link>
+              </li>
+              <li>
                 <Link href="/blog/electric-motor-calculators-fla-torque-speed-power" className="font-medium text-primary hover:underline">
                   Electric motor calculators: FLA, torque, speed &amp; bench electrical
                 </Link>

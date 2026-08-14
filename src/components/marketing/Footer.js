@@ -8,6 +8,7 @@ const footerLinks = {
     { href: "/usa/motor-repair-business-listing", label: "USA — list + CRM (SEO hub)" },
     { href: "/careers", label: "Careers — hire technicians (public job posts)" },
     { href: "/blog", label: "Blog — shop guides & calculators" },
+    { href: "/iqwirecalculator", label: "IQWireCalculator — CM Best Match app" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-crm-software", label: "Motor repair CRM" },
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },

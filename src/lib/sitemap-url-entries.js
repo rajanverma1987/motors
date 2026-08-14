@@ -62,6 +62,12 @@ export async function getSitemapEntries() {
       changeFrequency: "monthly",
       priority: 0.85,
     },
+    {
+      url: `${baseUrl}/iqwirecalculator`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
     { url: `${baseUrl}/electric-motor-repair-shops-listings`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}/electric-motor-repair-near-me`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
     { url: `${baseUrl}${SEO_USA_HUB_PATH}`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.92 },

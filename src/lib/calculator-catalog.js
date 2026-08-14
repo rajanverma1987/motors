@@ -12,8 +12,8 @@ export const CALCULATOR_CATALOG = [
     id: "cm_best_match",
     name: "CM Best Match",
     description:
-      "Circular mils and wire-size matching for rewinding—compare target CM to catalog wire and see fit percentages.",
-    href: "/blog/motor-rewinding-cm-best-match-calculator-guide",
+      "Circular mils and wire-size matching for rewinding. Phone app: IQWireCalculator. Shop CRM: dashboard CM Best Match.",
+    href: "/iqwirecalculator",
     dashboardPath: "/dashboards?tab=calculators",
   },
   {
