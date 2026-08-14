@@ -1,11 +1,8 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
-function PaypalCheckoutInner({ clientId }) {
-  const searchParams = useSearchParams();
-  const sid = String(searchParams.get("sid") || "").trim();
+function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken }) {
   const hostRef = useRef(null);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
@@ -16,9 +13,14 @@ function PaypalCheckoutInner({ clientId }) {
       setError("PayPal is not configured on the server.");
       return;
     }
-    if (!sid) {
+    if (!paypalPlanId) {
       setStatus("error");
-      setError("Missing checkout session. Go back to the app and tap Subscribe again.");
+      setError("The subscription plan is not linked to PayPal yet.");
+      return;
+    }
+    if (!checkoutToken) {
+      setStatus("error");
+      setError("This checkout link is incomplete. Go back to the app and tap Subscribe again.");
       return;
     }
 
@@ -31,19 +33,48 @@ function PaypalCheckoutInner({ clientId }) {
       window.paypal
         .Buttons({
           style: { layout: "vertical", color: "gold", shape: "rect", label: "subscribe", height: 48 },
-          createSubscription() {
-            return sid;
+          createSubscription(_data, actions) {
+            return actions.subscription.create({
+              plan_id: paypalPlanId,
+              application_context: {
+                brand_name: "IQWireCalculator",
+                shipping_preference: "NO_SHIPPING",
+                user_action: "SUBSCRIBE_NOW",
+              },
+            });
           },
-          onApprove() {
-            window.location.assign("/mobile-app/paypal-complete?status=success");
+          onApprove(data) {
+            setStatus("saving");
+            return fetch("/api/mobile-app/checkout/complete", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                token: checkoutToken,
+                subscriptionId: data.subscriptionID,
+              }),
+            })
+              .then(async (res) => {
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || "Could not save subscription.");
+                window.location.assign("/mobile-app/paypal-complete?status=success");
+              })
+              .catch((err) => {
+                if (!cancelled) {
+                  setStatus("error");
+                  setError(err.message || "PayPal succeeded but we could not save it. Contact support.");
+                }
+              });
           },
           onCancel() {
-            window.location.assign("/mobile-app/paypal-complete?status=cancel");
+            if (!cancelled) {
+              setStatus("ready");
+              setError("PayPal closed before checkout finished. Tap a button below to try again.");
+            }
           },
           onError() {
             if (!cancelled) {
               setStatus("error");
-              setError("PayPal could not start checkout. Try again from the app.");
+              setError("PayPal could not start checkout. Try again, or open this page in Safari or Chrome.");
             }
           },
         })
@@ -88,7 +119,7 @@ function PaypalCheckoutInner({ clientId }) {
     return () => {
       cancelled = true;
     };
-  }, [clientId, sid]);
+  }, [clientId, paypalPlanId, checkoutToken]);
 
   return (
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
@@ -97,22 +128,13 @@ function PaypalCheckoutInner({ clientId }) {
         Pay with PayPal. You can close this window after you finish and return to the app.
       </p>
       {status === "loading" ? <p className="mt-6 text-sm text-secondary">Loading PayPal…</p> : null}
+      {status === "saving" ? <p className="mt-6 text-sm text-secondary">Saving your subscription…</p> : null}
       {error ? <p className="mt-6 text-sm text-red-700">{error}</p> : null}
       <div ref={hostRef} className="mt-8 w-full max-w-sm" />
     </main>
   );
 }
 
-export default function MobileAppPaypalCheckoutClient({ clientId }) {
-  return (
-    <Suspense
-      fallback={
-        <main className="mx-auto flex min-h-[70vh] max-w-lg items-center justify-center px-6 py-16 text-sm text-secondary">
-          Loading PayPal…
-        </main>
-      }
-    >
-      <PaypalCheckoutInner clientId={clientId} />
-    </Suspense>
-  );
+export default function MobileAppPaypalCheckoutClient(props) {
+  return <PaypalCheckoutInner {...props} />;
 }

@@ -1,7 +1,8 @@
+import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getMobileAppAccountFromRequest, mobileAppUnauthorized } from "@/lib/mobile-app-auth";
-import { createPaypalSubscription, paypalConfigured } from "@/lib/paypal-api";
+import { ensurePaypalBillingPlanActive, paypalConfigured } from "@/lib/paypal-api";
 import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
@@ -30,25 +31,17 @@ export async function POST(request) {
       );
     }
 
-    const base = getPublicSiteUrl(request);
-    const returnUrl = `${base}/mobile-app/paypal-complete?status=success`;
-    const cancelUrl = `${base}/mobile-app/paypal-complete?status=cancel`;
+    await ensurePaypalBillingPlanActive(calcPlan.paypalPlanId);
 
-    const { subscriptionId } = await createPaypalSubscription({
-      paypalPlanId: calcPlan.paypalPlanId,
-      returnUrl,
-      cancelUrl,
-      brandName: "IQWireCalculator",
-    });
-
-    account.paypalSubscriptionId = subscriptionId;
+    const checkoutToken = randomBytes(24).toString("hex");
+    account.paypalCheckoutToken = checkoutToken;
+    account.paypalCheckoutTokenExpiresAt = new Date(Date.now() + 45 * 60 * 1000);
     account.paypalPlanId = calcPlan.paypalPlanId;
     await account.save();
 
-    // Hosted PayPal JS checkout — do not send users to /webapps/billing/subscriptions.
-    // That PayPal page redirects to /webapps/billing/error for this live plan.
-    const checkoutUrl = `${base}/mobile-app/paypal-checkout?sid=${encodeURIComponent(subscriptionId)}`;
-    return NextResponse.json({ approvalUrl: checkoutUrl, checkoutUrl, subscriptionId });
+    const base = getPublicSiteUrl(request);
+    const checkoutUrl = `${base}/mobile-app/paypal-checkout?token=${encodeURIComponent(checkoutToken)}`;
+    return NextResponse.json({ approvalUrl: checkoutUrl, checkoutUrl });
   } catch (err) {
     console.error("mobile-app checkout subscribe:", err);
     return NextResponse.json({ error: err.message || "Checkout failed" }, { status: 500 });

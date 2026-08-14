@@ -17,6 +17,8 @@ const mobileAppAccountSchema = new mongoose.Schema(
     subscriptionStatus: { type: String, enum: SUB_STATUSES, default: "trial" },
     paypalSubscriptionId: { type: String, default: "", index: true },
     paypalPlanId: { type: String, default: "" },
+    paypalCheckoutToken: { type: String, default: "", index: true },
+    paypalCheckoutTokenExpiresAt: { type: Date, default: null },
     currentPeriodEndsAt: { type: Date, default: null },
     cancelAtPeriodEnd: { type: Boolean, default: false },
     lastPaymentAt: { type: Date, default: null },
