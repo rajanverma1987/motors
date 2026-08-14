@@ -37,6 +37,7 @@ import {
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
+import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
 
 /** Square UI — only used on Simple `/dashboards`. */
 const DASHBOARDS_SQUARE_UI_CLASS = [
@@ -158,6 +159,7 @@ export default function DashboardsPageClient() {
   }, [calcOnly]);
 
   return (
+    <SimpleJobViewProvider>
     <div
       className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS}`}
     >
@@ -174,5 +176,6 @@ export default function DashboardsPageClient() {
         animatePanel={false}
       />
     </div>
+    </SimpleJobViewProvider>
   );
 }

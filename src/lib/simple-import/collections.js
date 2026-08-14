@@ -148,10 +148,11 @@ async function refreshServiceProposalListTotals(doc) {
 async function refreshPurchaseOrderListTotals(doc) {
   if (!doc) return;
   const plain = typeof doc.toObject === "function" ? doc.toObject() : doc;
-  const totals = computePoFormTotals(plain.lineItems);
+  const totals = computePoFormTotals(plain.lineItems, plain.shippingCharge);
   const paySummary = computePoPaymentSummary(plain.payments, totals.grandTotal);
   doc.set("total", totals.total);
   doc.set("totalTax", totals.totalTax);
+  doc.set("shippingCharge", totals.shipping);
   doc.set("grandTotal", totals.grandTotal);
   doc.set("paymentStatus", paySummary.paymentStatus);
   await doc.save();

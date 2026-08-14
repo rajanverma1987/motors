@@ -66,7 +66,7 @@ export function computeSpMoney(doc) {
 }
 
 export function computePoMoney(doc) {
-  const totals = computePoFormTotals(doc?.lineItems);
+  const totals = computePoFormTotals(doc?.lineItems, doc?.shippingCharge);
   const pay = computePoPaymentSummary(doc?.payments, totals.grandTotal);
   return {
     lineTotal: totals.total,

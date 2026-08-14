@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiDownload, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -33,6 +33,7 @@ import {
   parsePoMoney,
   poLineHasContent,
   resolveSimplePoType,
+  sanitizePoNumericInput,
   suggestReceivingStatus,
   SIMPLE_PO_PAYMENT_METHOD_OPTIONS,
   SIMPLE_PO_RECEIVING_STATUS_OPTIONS,
@@ -41,12 +42,15 @@ import {
   SIMPLE_PO_TYPE_SHOP,
   storedPoToForm,
 } from "@/lib/simple-purchase-order-form";
+import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
 import {
   fetchSimplePurchaseOrders,
+  fetchSimpleServiceProposal,
   fetchSimpleServiceProposals,
   listSimplePurchaseOrdersForJobApi,
   saveSimplePurchaseOrder,
 } from "@/lib/simple-portal-api";
+import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 
 const TAB_PO = "purchase-order";
 const TAB_RECEIVING = "receiving";
@@ -54,6 +58,7 @@ const TAB_PAYMENT = "payment";
 
 const FORM_ID = "simple-purchase-order-form";
 const ADD_VENDOR_FORM_ID = "simple-po-add-vendor-form";
+const EDIT_PAYMENT_FORM_ID = "simple-po-edit-payment-form";
 
 /** ~90% of Service Proposal modal height (`min(94vh, 920px)`). */
 const PO_MODAL_HEIGHT = "min(84.6vh, 828px)";
@@ -105,7 +110,7 @@ function paymentStatusBadgeVariant(status) {
 }
 
 function applyPaymentFields(formLike, payments) {
-  const totals = computePoFormTotals(formLike.lineItems);
+  const totals = computePoFormTotals(formLike.lineItems, formLike.shippingCharge);
   const summary = computePoPaymentSummary(payments, totals.grandTotal);
   return {
     payments,
@@ -146,6 +151,7 @@ export default function SimplePurchaseOrderFormModal({
   const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const isViewMode = mode === "view";
+  const jobView = useSimpleJobView();
 
   const [form, setForm] = useState(() => createEmptySimplePurchaseOrderForm());
   const [jobPos, setJobPos] = useState([]);
@@ -164,7 +170,9 @@ export default function SimplePurchaseOrderFormModal({
   const [printSendMeta, setPrintSendMeta] = useState(null);
   const [activeTab, setActiveTab] = useState(TAB_PO);
   const [paymentDraft, setPaymentDraft] = useState(() => emptyPoPayment());
+  const [editPayment, setEditPayment] = useState(null);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [jobContext, setJobContext] = useState(null);
 
   const poType = resolveSimplePoType(form);
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
@@ -194,7 +202,44 @@ export default function SimplePurchaseOrderFormModal({
     [employees, form.paidBy]
   );
 
-  const totals = useMemo(() => computePoFormTotals(form.lineItems), [form.lineItems]);
+  const totals = useMemo(
+    () => computePoFormTotals(form.lineItems, form.shippingCharge),
+    [form.lineItems, form.shippingCharge]
+  );
+
+  const linkedJobId = String(form.serviceProposalId || serviceProposalId || "").trim();
+  const showJobContextRow = Boolean(linkedJobId || form.jobNumber || jobNumber) && !isShopPo;
+
+  useEffect(() => {
+    if (!open) {
+      setJobContext(null);
+      return;
+    }
+    const id = String(form.serviceProposalId || serviceProposalId || "").trim();
+    if (!id) {
+      setJobContext(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const doc = await fetchSimpleServiceProposal(id);
+        if (cancelled || !doc) return;
+        const money = computeSimpleServiceProposalTotals(doc);
+        const stored = Number(doc.total);
+        setJobContext({
+          id: String(doc.id || id),
+          companyName: String(doc.companyName || "").trim(),
+          amount: Number.isFinite(stored) && stored !== 0 ? stored : money.total,
+        });
+      } catch {
+        if (!cancelled) setJobContext(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, form.serviceProposalId, serviceProposalId]);
 
   const modalTitle = isViewMode
     ? isShopPo
@@ -281,6 +326,7 @@ export default function SimplePurchaseOrderFormModal({
     setVendorForm(INITIAL_VENDOR_FORM);
     setActiveTab(TAB_PO);
     setPaymentDraft(emptyPoPayment());
+    setEditPayment(null);
     setAttachmentsOpen(false);
     setLoadingForm(true);
     setForm(createEmptySimplePurchaseOrderForm());
@@ -386,9 +432,15 @@ export default function SimplePurchaseOrderFormModal({
   };
 
   const handleSelectPo = (poId) => {
-    setActiveTab(TAB_PO);
     setPaymentDraft(emptyPoPayment());
+    setEditPayment(null);
     loadPoById(poId, jobPos);
+  };
+
+  const handleViewJob = () => {
+    const id = String(jobContext?.id || form.serviceProposalId || serviceProposalId || "").trim();
+    if (!id) return;
+    jobView?.openJob?.(id);
   };
 
   const contentLines = useMemo(
@@ -416,6 +468,52 @@ export default function SimplePurchaseOrderFormModal({
       return { ...f, ...applyPaymentFields(f, payments) };
     });
     setPaymentDraft(emptyPoPayment());
+  };
+
+  const openEditPayment = (payment) => {
+    if (!payment?.id) return;
+    setEditPayment({
+      ...emptyPoPayment(),
+      ...payment,
+      id: payment.id,
+      date: String(payment.date || "").slice(0, 10),
+      amount: String(payment.amount ?? ""),
+      method: String(payment.method || ""),
+      paidBy: String(payment.paidBy || ""),
+      notes: String(payment.notes || ""),
+    });
+  };
+
+  const handleSaveEditedPayment = async (e) => {
+    e.preventDefault();
+    if (!editPayment?.id) return;
+    const amount = parsePoMoney(editPayment.amount);
+    if (amount <= 0) {
+      await alert({ title: "Amount required", message: "Enter a payment amount greater than zero.", variant: "danger" });
+      return;
+    }
+    if (!String(editPayment.date || "").trim()) {
+      await alert({ title: "Date required", message: "Enter the payment date.", variant: "danger" });
+      return;
+    }
+    setForm((f) => {
+      const payments = (Array.isArray(f.payments) ? f.payments : []).map((p) =>
+        p.id === editPayment.id
+          ? {
+              ...p,
+              ...editPayment,
+              id: p.id,
+              amount: String(editPayment.amount),
+              date: String(editPayment.date || "").trim(),
+              method: String(editPayment.method || "").trim(),
+              paidBy: String(editPayment.paidBy || "").trim(),
+              notes: String(editPayment.notes || "").trim(),
+            }
+          : p
+      );
+      return { ...f, ...applyPaymentFields(f, payments) };
+    });
+    setEditPayment(null);
   };
 
   const handleDeletePayment = async (paymentId) => {
@@ -770,6 +868,35 @@ export default function SimplePurchaseOrderFormModal({
           className="flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
           aria-hidden={loadingForm || undefined}
         >
+          {showJobContextRow ? (
+            <div className="flex w-full shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
+              <p className="min-w-0 text-sm text-secondary">
+                Customer Name:{" "}
+                <span className="font-semibold text-title" title={jobContext?.companyName || ""}>
+                  {jobContext?.companyName || "—"}
+                </span>
+              </p>
+              <p className="text-sm text-secondary">
+                Proposal Amount:{" "}
+                <span className="font-semibold tabular-nums text-title">
+                  {jobContext && Number.isFinite(jobContext.amount)
+                    ? formatMoney(jobContext.amount)
+                    : "—"}
+                </span>
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="h-7 shrink-0"
+                disabled={!linkedJobId || saving}
+                onClick={handleViewJob}
+              >
+                <FiEye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                View Job
+              </Button>
+            </div>
+          ) : null}
           <div className="flex w-full shrink-0 flex-nowrap items-end gap-3 overflow-x-auto pb-0.5">
             {showTypeSelect ? (
               <FieldRow
@@ -1104,6 +1231,18 @@ export default function SimplePurchaseOrderFormModal({
                               className={`${FIELD_INPUT} !bg-muted text-right tabular-nums`}
                             />
                           </FieldRow>
+                          <FieldRow label="Shipping Charge" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={form.shippingCharge}
+                              onChange={(e) => patch("shippingCharge", sanitizePoNumericInput(e.target.value))}
+                              className={`${FIELD_INPUT} text-right tabular-nums`}
+                              placeholder="0.00"
+                              disabled={saving}
+                              aria-label="Shipping Charge"
+                            />
+                          </FieldRow>
                           <FieldRow label="Grand Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
                             <input
                               type="text"
@@ -1284,9 +1423,10 @@ export default function SimplePurchaseOrderFormModal({
                     </div>
 
                     <div className={`overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                      <table className="w-full min-w-[40rem] border-collapse text-xs">
+                      <table className="w-full min-w-[44rem] border-collapse text-xs">
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
+                            <th className="w-12 border-r border-border px-1 py-1 text-left font-semibold">Actions</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Date</th>
                             <th className="border-r border-border px-1 py-1 text-right font-semibold">Amount</th>
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Method</th>
@@ -1298,7 +1438,7 @@ export default function SimplePurchaseOrderFormModal({
                         <tbody>
                           {(form.payments || []).length === 0 ? (
                             <tr>
-                              <td colSpan={6} className="px-2 py-4 text-center text-secondary">
+                              <td colSpan={7} className="px-2 py-4 text-center text-secondary">
                                 No payments recorded yet.
                               </td>
                             </tr>
@@ -1308,6 +1448,18 @@ export default function SimplePurchaseOrderFormModal({
                                 paidByOptions.find((o) => o.value === p.paidBy)?.label || p.paidBy || "—";
                               return (
                                 <tr key={p.id} className="border-t border-border bg-card">
+                                  <td className="border-r border-border px-1 py-0.5 text-center">
+                                    <button
+                                      type="button"
+                                      className="rounded p-0.5 text-primary hover:bg-primary/10"
+                                      title="Edit payment"
+                                      aria-label="Edit payment"
+                                      onClick={() => openEditPayment(p)}
+                                      disabled={saving}
+                                    >
+                                      <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                  </td>
                                   <td className="border-r border-border px-1 py-1 text-title">
                                     {p.date ? formatDate(p.date) : "—"}
                                   </td>
@@ -1465,6 +1617,79 @@ export default function SimplePurchaseOrderFormModal({
         >
           <SimpleVendorFormFields form={vendorForm} setForm={setVendorForm} disabled={savingVendor} />
         </Form>
+      </Modal>
+
+      <Modal
+        open={Boolean(editPayment)}
+        onClose={() => setEditPayment(null)}
+        title="Edit payment record"
+        size="md"
+        width="min(32rem, 96vw)"
+        closeOnOutsideClick={false}
+        actions={
+          <>
+            <Button type="button" variant="secondary" size="sm" onClick={() => setEditPayment(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" form={EDIT_PAYMENT_FORM_ID} variant="primary" size="sm">
+              Save
+            </Button>
+          </>
+        }
+      >
+        {editPayment ? (
+          <Form
+            id={EDIT_PAYMENT_FORM_ID}
+            onSubmit={handleSaveEditedPayment}
+            className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          >
+            <FieldRow label="Date" labelWidth="6.5rem">
+              <input
+                type="date"
+                value={editPayment.date}
+                onChange={(e) => setEditPayment((d) => ({ ...d, date: e.target.value }))}
+                className={FIELD_INPUT}
+              />
+            </FieldRow>
+            <FieldRow label="Amount" labelWidth="6.5rem">
+              <input
+                type="text"
+                inputMode="decimal"
+                value={editPayment.amount}
+                onChange={(e) => setEditPayment((d) => ({ ...d, amount: e.target.value }))}
+                className={`${FIELD_INPUT} text-right tabular-nums`}
+              />
+            </FieldRow>
+            <FieldRow label="Method" labelWidth="6.5rem">
+              <SimpleSelect
+                options={SIMPLE_PO_PAYMENT_METHOD_OPTIONS}
+                value={editPayment.method}
+                onChange={(e) => setEditPayment((d) => ({ ...d, method: e.target.value }))}
+                placeholder="Select…"
+                aria-label="Payment method"
+              />
+            </FieldRow>
+            <FieldRow label="Paid By" labelWidth="6.5rem">
+              <SimpleSelect
+                options={paidByOptions}
+                value={editPayment.paidBy}
+                onChange={(e) => setEditPayment((d) => ({ ...d, paidBy: e.target.value }))}
+                placeholder={loadingMeta ? "Loading…" : "Select…"}
+                disabled={loadingMeta}
+                searchable
+                aria-label="Paid by"
+              />
+            </FieldRow>
+            <FieldRow label="Notes" labelWidth="6.5rem">
+              <input
+                type="text"
+                value={editPayment.notes}
+                onChange={(e) => setEditPayment((d) => ({ ...d, notes: e.target.value }))}
+                className={FIELD_INPUT}
+              />
+            </FieldRow>
+          </Form>
+        ) : null}
       </Modal>
 
       <SimplePurchaseOrderPrintPreviewModal

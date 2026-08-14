@@ -38,6 +38,16 @@ export function parsePoMoney(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Keep digits and a single decimal point (no letters/symbols). */
+export function sanitizePoNumericInput(raw) {
+  let s = String(raw ?? "").replace(/[^0-9.]/g, "");
+  const firstDot = s.indexOf(".");
+  if (firstDot >= 0) {
+    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+  }
+  return s;
+}
+
 /** Round to cents so UI totals and payment status stay in sync. */
 export function roundPoMoney(value) {
   return Math.round((parsePoMoney(value) + Number.EPSILON) * 100) / 100;
@@ -166,6 +176,7 @@ export function createEmptySimplePurchaseOrderForm(overrides = {}) {
     paidBy: "",
     paymentStatus: "Unpaid",
     comments: "",
+    shippingCharge: "",
     lineItems: [emptyPoLine()],
     payments: [],
     vendorDocuments: [],
@@ -183,7 +194,7 @@ export function computePoLineTotals(line) {
   return { total, taxAmount, grandTotal };
 }
 
-export function computePoFormTotals(lineItems) {
+export function computePoFormTotals(lineItems, shippingCharge = 0) {
   let total = 0;
   let totalTax = 0;
   let grandTotal = 0;
@@ -193,7 +204,9 @@ export function computePoFormTotals(lineItems) {
     totalTax = roundPoMoney(totalTax + t.taxAmount);
     grandTotal = roundPoMoney(grandTotal + t.grandTotal);
   }
-  return { total, totalTax, grandTotal };
+  const shipping = roundPoMoney(shippingCharge);
+  grandTotal = roundPoMoney(grandTotal + shipping);
+  return { total, totalTax, shipping, grandTotal };
 }
 
 /**
@@ -285,13 +298,17 @@ export function storedPoToForm(row) {
         .filter((d) => d.url)
     : [];
 
-  const totals = computePoFormTotals(withTrailing);
+  const totals = computePoFormTotals(withTrailing, row.shippingCharge);
   const paySummary = computePoPaymentSummary(payments, totals.grandTotal);
 
   return {
     ...base,
     ...row,
     poType: resolveSimplePoType(row),
+    shippingCharge:
+      row.shippingCharge != null && String(row.shippingCharge).trim() !== ""
+        ? String(row.shippingCharge)
+        : "",
     lineItems: withTrailing,
     payments,
     vendorDocuments,
@@ -323,7 +340,8 @@ export function poLineHasContent(line) {
  * @param {{ vendorName?: string, vendorPhone?: string, id?: string }} [meta]
  */
 export function formToSimplePurchaseOrderRow(form, meta = {}) {
-  const totals = computePoFormTotals(form.lineItems);
+  const shippingCharge = roundPoMoney(form.shippingCharge);
+  const totals = computePoFormTotals(form.lineItems, shippingCharge);
   const id =
     String(meta.id || form.id || "").trim() ||
     (typeof crypto !== "undefined" && crypto.randomUUID
@@ -401,6 +419,7 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
     paymentStatus: paySummary.paymentStatus,
     poPaidDate: paySummary.paymentStatus === "Unpaid" ? "" : paySummary.latestPaymentDate || "",
     poItemReceiveDate,
+    shippingCharge,
     total: totals.total,
     totalTax: totals.totalTax,
     grandTotal: totals.grandTotal,
