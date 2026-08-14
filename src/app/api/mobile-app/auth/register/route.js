@@ -6,7 +6,6 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { trialEndsAtFrom } from "@/lib/mobile-app-subscription";
 import { mobileAppSessionPayload } from "@/lib/mobile-app-auth";
-import { countryNameFromCode, isValidCountryCode } from "@/lib/countries";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +21,7 @@ export async function POST(request) {
     const name = clampString(body?.name, LIMITS.name.max);
     const phone = clampString(body?.phone, 40);
     const countryCode = String(body?.country || body?.countryCode || "").trim().toUpperCase();
+    const country = clampString(body?.countryName || body?.countryLabel, 80);
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required." }, { status: 400 });
@@ -38,7 +38,7 @@ export async function POST(request) {
     if (!name) {
       return NextResponse.json({ error: "Name is required." }, { status: 400 });
     }
-    if (!isValidCountryCode(countryCode)) {
+    if (!/^[A-Z]{2}$/.test(countryCode) || !country) {
       return NextResponse.json({ error: "Please select a valid country." }, { status: 400 });
     }
 
@@ -55,7 +55,7 @@ export async function POST(request) {
       name,
       phone,
       countryCode,
-      country: countryNameFromCode(countryCode),
+      country,
       trialStartedAt: now,
       trialEndsAt: trialEndsAtFrom(now),
       subscriptionStatus: "trial",

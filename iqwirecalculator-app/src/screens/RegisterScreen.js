@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMobileAuth } from "../AuthContext";
 import { colors, spacing } from "../theme";
 import CountryPickerField from "../components/CountryPickerField";
+import { countryNameFromCode } from "../lib/countries";
 
 export default function RegisterScreen({ navigation }) {
   const insets = useSafeAreaInsets();
@@ -42,6 +43,7 @@ export default function RegisterScreen({ navigation }) {
         email: email.trim(),
         password,
         country,
+        countryName: countryNameFromCode(country),
       });
     } catch (e) {
       setError(e.message || "Could not create account");
