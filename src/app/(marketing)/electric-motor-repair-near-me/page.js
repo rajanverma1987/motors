@@ -2,17 +2,6 @@ import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import NearMeContent from "./near-me-content";
 
-export const metadata = {
-  title: "Electric Motor Repair Shops Near Me | Find Repair Centers by Location",
-  description:
-    "Find electric motor repair and rewinding shops near you. Use your location to see approved repair centers in your city, state, or zip code. Browse the directory of motor repair shops.",
-  openGraph: {
-    title: "Electric Motor Repair Shops Near Me | IQMotorBase.com",
-    description:
-      "Find motor repair centers near you. Use your location to see approved electric motor repair and rewinding shops in your area.",
-  },
-};
-
 export default function NearMePage() {
   return (
     <>

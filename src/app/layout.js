@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/toast-provider";
 import { ConfirmProvider } from "@/components/confirm-provider";
 import { ModalStackProvider } from "@/components/modal-provider";
 import { AuthProvider } from "@/contexts/auth-context";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,13 +23,13 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com";
+const siteUrl = getPublicSiteUrl();
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
-    template: "%s | IQMotorBase.com",
+    default: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
+    template: "%s | IQMotorBase",
   },
   description:
     "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
@@ -45,9 +46,8 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: siteUrl,
     siteName: "IQMotorBase.com",
-    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
+    title: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
     description:
       "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
     images: [
@@ -61,7 +61,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
+    title: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
     description:
       "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
   },
@@ -72,9 +72,6 @@ export const metadata = {
       index: true,
       follow: true,
     },
-  },
-  alternates: {
-    canonical: siteUrl,
   },
 };
 

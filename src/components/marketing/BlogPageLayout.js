@@ -2,8 +2,10 @@ import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import Breadcrumbs from "@/components/seo/breadcrumbs";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
+const siteUrl = getPublicSiteUrl();
 
 /**
  * Blog/SEO content page layout: hero + two-column (content + optional sticky sidebar CTA).
@@ -70,14 +72,24 @@ export default function BlogPageLayout({
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
-          {breadcrumbLink?.href && (
+          {canonicalPath ? (
+            <Breadcrumbs
+              items={[
+                { name: "Home", url: "/" },
+                ...(breadcrumbLink?.href
+                  ? [{ name: breadcrumbLink.label || "Back", url: breadcrumbLink.href }]
+                  : []),
+                { name: title, url: canonicalPath },
+              ]}
+            />
+          ) : breadcrumbLink?.href ? (
             <Link
               href={breadcrumbLink.href}
               className="inline-flex items-center text-sm text-secondary hover:text-primary"
             >
               ← {breadcrumbLink.label}
             </Link>
-          )}
+          ) : null}
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
             {title}
           </h1>

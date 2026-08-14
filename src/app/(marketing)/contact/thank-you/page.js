@@ -1,11 +1,14 @@
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
-export const metadata = {
+export const metadata = marketingPageMetadata({
+  path: "/contact/thank-you",
   title: "Thank you",
   description: "We received your demo request.",
-};
+  index: false,
+});
 
 export default function ContactThankYouPage() {
   return (

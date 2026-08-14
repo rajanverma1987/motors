@@ -4,19 +4,21 @@ import { HomePageJsonLd } from "@/components/seo/JsonLd";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import HomeFAQ from "@/components/marketing/home-faq";
 
+const HOME_TITLE = "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase";
+const HOME_DESCRIPTION =
+  "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.";
+
 export const metadata = {
-  title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
-  description:
-    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+  title: { absolute: HOME_TITLE },
+  description: HOME_DESCRIPTION,
   openGraph: {
-    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
-    description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    url: "/",
   },
   twitter: {
-    title: "Electric Motor Repair Shop Software & Lead Generation | IQMotorBase",
-    description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
   },
   alternates: {
     canonical: "/",

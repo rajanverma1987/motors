@@ -6,7 +6,7 @@ export const metadata = {
   description:
     "How IQMotorBase.com collects, uses, and protects personal information for visitors, repair shops, and buyers using our website and CRM.",
   alternates: { canonical: "/privacy" },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Privacy Policy | IQMotorBase.com",
     description: "Privacy practices for IQMotorBase.com visitors and customers.",

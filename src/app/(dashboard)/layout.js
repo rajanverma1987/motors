@@ -6,6 +6,10 @@ import StopClarityOnApp from "@/components/stop-clarity-on-app";
 import { UserSettingsProvider } from "@/contexts/user-settings-context";
 import { TrialUpgradeProvider } from "@/contexts/trial-upgrade-context";
 
+export const metadata = {
+  robots: { index: false, follow: false },
+};
+
 export default function DashboardLayout({ children }) {
   return (
     <DashboardGuard>

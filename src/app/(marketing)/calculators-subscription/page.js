@@ -8,6 +8,7 @@ export const metadata = {
   description:
     "Subscribe to IQMotorBase calculators: rewind cost ballpark, CM Best Match, FLA, torque, speed, and bench electrical tools for motor repair shops.",
   alternates: { canonical: path },
+  openGraph: { url: path, siteName: "IQMotorBase.com", type: "website" },
   robots: { index: true, follow: true },
 };
 

@@ -1,10 +1,13 @@
 import { redirect } from "next/navigation";
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
-export const metadata = {
-  title: "Features – IQMotorBase.com",
+export const metadata = marketingPageMetadata({
+  path: "/",
+  title: "Features",
   description:
-    "Motor repair workflow, shop parts inventory (on-hand, reserved, locations, low-stock), quotes and vendor POs, center management, lead generation, and public marketplace listings—all in one platform for repair centers.",
-};
+    "Motor repair workflow, shop parts inventory, quotes and vendor POs, lead generation, and public marketplace listings in one platform.",
+  index: false,
+});
 
 export default function FeaturesPage() {
   redirect("/#features");

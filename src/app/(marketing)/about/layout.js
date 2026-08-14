@@ -1,13 +1,11 @@
-export const metadata = {
-  title: "About IQMotorBase — Motor Repair Shop Software",
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
+
+export const metadata = marketingPageMetadata({
+  path: "/about",
+  title: "About IQMotorBase | Motor Repair Shop Software",
   description:
-    "Learn about IQMotorBase — who we are, why we built it, and how we help electric motor repair shops manage jobs, leads, and operations in one platform.",
-  openGraph: {
-    title: "About IQMotorBase — Motor Repair Shop Software",
-    description:
-      "Learn about IQMotorBase — who we are, why we built it, and how we help electric motor repair shops manage jobs, leads, and operations in one platform.",
-  },
-};
+    "About IQMotorBase — built for electric motor repair shops to manage jobs, leads, inventory, and billing in one place.",
+});
 
 export default function AboutLayout({ children }) {
   return children;

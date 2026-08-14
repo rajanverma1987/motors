@@ -1,9 +1,11 @@
 import { INTEGRATION_COLLECTION_NAMES } from "@/lib/integration-collection-names";
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
-export const metadata = {
+export const metadata = marketingPageMetadata({
+  path: "/developers/api",
   title: "Public API Documentation",
   description: "Integrate external systems with Motors Simple portal using account API keys and webhook events.",
-};
+});
 
 export default function PublicApiDocsPage() {
   const collections = INTEGRATION_COLLECTION_NAMES;

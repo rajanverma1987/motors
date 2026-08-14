@@ -1,14 +1,12 @@
 import PricingInquiryForm from "@/components/marketing/PricingInquiryForm";
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
-export const metadata = {
-  title: "Request pricing",
+export const metadata = marketingPageMetadata({
+  path: "/pricing",
+  title: "Pricing — Motor Repair Shop Software",
   description:
-    "Request IQMotorBase CRM pricing for your motor repair shop. Tell us about your team and workflow and we will send a proposal.",
-  openGraph: {
-    title: "Request pricing | IQMotorBase.com",
-    description: "Request custom pricing for motor repair shop management software.",
-  },
-};
+    "Custom pricing for motor repair shop software. Monthly, yearly, or one-time options. Book a demo to get a quote tailored to your workflow.",
+});
 
 export default function PricingPage() {
   return (

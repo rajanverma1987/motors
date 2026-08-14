@@ -2,9 +2,8 @@ import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
 import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
+import Breadcrumbs from "@/components/seo/breadcrumbs";
 import { FiMessageCircle } from "react-icons/fi";
-
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://IQMotorBase.com";
 
 function waHref() {
   const raw = process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "";
@@ -64,11 +63,7 @@ export default function SeoLeadLandingPage({
   formSourcePath,
   defaultCity = "",
   defaultState = "",
-  localityLabel = "United States",
 }) {
-  const path = canonicalPath.startsWith("/") ? canonicalPath : `/${canonicalPath}`;
-  const absoluteUrl = `${siteUrl.replace(/\/$/, "")}${path}`;
-
   const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -79,47 +74,19 @@ export default function SeoLeadLandingPage({
     })),
   };
 
-  const orgJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    name: "IQMotorBase.com",
-    url: siteUrl.replace(/\/$/, ""),
-    description:
-      "Job management, lead generation, and workshop tools for electric motor repair and rewinding businesses in the USA.",
-    areaServed: { "@type": "Country", name: "United States" },
-  };
-
-  const localBizJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    name: "IQMotorBase.com — Motor repair shop software & leads",
-    url: absoluteUrl,
-    description: `Get more repair jobs and manage your workshop with IQMotorBase.com. Focus: ${localityLabel}.`,
-    priceRange: "Free tier available",
-    address: { "@type": "PostalAddress", addressCountry: "US" },
-  };
-
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBizJsonLd) }} />
 
       <section className="relative overflow-hidden border-b border-border bg-card py-10 sm:py-14">
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
-          <nav aria-label="Breadcrumb" className="text-sm text-secondary">
-            <ol className="flex flex-wrap items-center gap-2">
-              {breadcrumbs.map((b, i) => (
-                <li key={b.href} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-border">/</span>}
-                  <Link href={b.href} className="hover:text-primary">
-                    {b.label}
-                  </Link>
-                </li>
-              ))}
-            </ol>
-          </nav>
+          <Breadcrumbs
+            items={(breadcrumbs || []).map((b) => ({
+              name: b.label,
+              url: b.href,
+            }))}
+          />
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{h1}</h1>
         </div>
       </section>

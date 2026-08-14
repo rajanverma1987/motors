@@ -1,3 +1,4 @@
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
@@ -5,13 +6,12 @@ import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 
 const path = "/blog";
 
-export const metadata = {
-  title: "Motor Repair Shop Marketing & Operations Blog",
+export const metadata = marketingPageMetadata({
+  path,
+  title: "Motor Repair Shop Blog — Guides & Calculators",
   description:
-    "Guides for electric motor repair and rewinding shop owners: more customers, better job tracking, and software that fits the workshop.",
-  alternates: { canonical: path },
-  robots: { index: true, follow: true },
-};
+    "Guides, tools, and calculators for electric motor repair shop owners. Job management, lead generation, and business growth for repair shops.",
+});
 
 const POSTS = [
   {

@@ -122,6 +122,48 @@ export async function getSitemapEntries() {
     { url: `${baseUrl}/blog/best-software-for-repair-shop-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.86 },
     { url: `${baseUrl}/blog/how-to-manage-repair-jobs-efficiently`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/careers`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.75 },
+    {
+      url: `${baseUrl}/types-of-electric-motor-repair-services`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/how-to-choose-electric-motor-repair-shop`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/benefits-of-motor-repair-directory`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/when-to-repair-or-replace-electric-motor`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/blog/electric-motor-calculators-fla-torque-speed-power`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    {
+      url: `${baseUrl}/blog/motor-rewinding-cm-best-match-calculator-guide`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.75,
+    },
+    {
+      url: `${baseUrl}/developers/api`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
   ];
 
   const seoUsaStatePages = SEO_USA_STATES.map((s) => ({

@@ -1,4 +1,6 @@
-const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://motors.example.com";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+
+const baseUrl = getPublicSiteUrl();
 
 /** @type {import('next').MetadataRoute.Robots} */
 export default function robots() {
@@ -7,12 +9,17 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/dashboard", "/api/"],
-      },
-      {
-        userAgent: "Googlebot",
-        allow: "/",
-        disallow: ["/dashboard", "/api/"],
+        disallow: [
+          "/api/",
+          "/dashboard",
+          "/dashboards",
+          "/admin",
+          "/portal/",
+          "/invoice/",
+          "/quote/",
+          "/po/",
+          "/job-board",
+        ],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,

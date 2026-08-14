@@ -2,22 +2,16 @@ import Link from "next/link";
 import { getPublicJobPostings } from "@/lib/job-postings-public";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { EMPLOYMENT_LABELS, EXPERIENCE_LABELS } from "@/lib/job-posting-labels";
+import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
 export const revalidate = 300;
 
-export const metadata = {
-  title: "Careers — Motor repair & rewinding jobs",
+export const metadata = marketingPageMetadata({
+  path: "/careers",
+  title: "Motor Repair Shop Jobs — Technicians & Winders",
   description:
-    "Open roles posted by motor repair shops on IQMotorBase.com. Shops publish jobs from the CRM; apply online. Technicians, winders, and shop staff.",
-  alternates: { canonical: "/careers" },
-  openGraph: {
-    title: "Careers | IQMotorBase.com",
-    description:
-      "Technician, winder, and shop roles posted by motor repair centers. Shops publish jobs from the CRM; apply online.",
-    url: "/careers",
-    type: "website",
-  },
-};
+    "Browse open roles at motor repair shops. Technician, winder, and field service jobs posted by shops on IQMotorBase.",
+});
 
 export default async function CareersPage() {
   const jobs = await getPublicJobPostings();

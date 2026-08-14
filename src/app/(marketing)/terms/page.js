@@ -6,7 +6,7 @@ export const metadata = {
   description:
     "Terms governing use of IQMotorBase.com, including accounts, software, directory listings, marketplace features, and limitations of liability.",
   alternates: { canonical: "/terms" },
-  robots: { index: true, follow: true },
+  robots: { index: false, follow: true },
   openGraph: {
     title: "Terms of Service | IQMotorBase.com",
     description: "Terms of use for IQMotorBase.com software and website.",

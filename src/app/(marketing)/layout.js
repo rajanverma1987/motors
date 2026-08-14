@@ -3,6 +3,7 @@ import Navbar from "@/components/marketing/Navbar";
 import Footer from "@/components/marketing/Footer";
 import ContextualAiWidget from "@/components/contextual-ai-widget";
 import WebsiteClarity from "@/components/marketing/website-clarity";
+import { SoftwareAppSchema } from "@/components/seo/schema-markup";
 
 const GA_MEASUREMENT_ID = "G-RTSF7V6T7M";
 
@@ -25,6 +26,7 @@ gtag('config', '${GA_MEASUREMENT_ID}');
           `.trim(),
         }}
       />
+      <SoftwareAppSchema />
       <WebsiteClarity />
       <Navbar />
       <main className="flex-1">{children}</main>
