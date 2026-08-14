@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { AppState } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import { appFetch } from "./api";
+import { appFetch, isAuthRejected } from "./api";
 
 const TOKEN_KEY = "motop_calcs_jwt";
 const ACCOUNT_KEY = "motop_calcs_account";
@@ -11,6 +12,7 @@ export function MobileAuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
+  const readyRef = useRef(false);
 
   const persist = useCallback(async (tok, acc) => {
     if (tok) await SecureStore.setItemAsync(TOKEN_KEY, tok);
@@ -31,20 +33,35 @@ export function MobileAuthProvider({ children }) {
     [persist]
   );
 
-  const refreshAccount = useCallback(async () => {
+  const verifyAccess = useCallback(async () => {
     const t = await SecureStore.getItemAsync(TOKEN_KEY);
-    if (!t) return null;
-    const data = await appFetch("/api/mobile-app/auth/me", { token: t });
-    const acc = data.account || null;
-    await persist(t, acc);
-    return acc;
+    if (!t) {
+      await persist(null, null);
+      return null;
+    }
+    try {
+      const data = await appFetch("/api/mobile-app/auth/me", { token: t });
+      const acc = data.account || null;
+      await persist(t, acc);
+      return acc;
+    } catch (e) {
+      if (isAuthRejected(e)) {
+        await persist(null, null);
+        return null;
+      }
+      return null;
+    }
   }, [persist]);
 
+  const refreshAccount = useCallback(async () => verifyAccess(), [verifyAccess]);
+
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const t = await SecureStore.getItemAsync(TOKEN_KEY);
         const aJson = await SecureStore.getItemAsync(ACCOUNT_KEY);
+        if (cancelled) return;
         if (t) setToken(t);
         if (aJson) {
           try {
@@ -54,24 +71,30 @@ export function MobileAuthProvider({ children }) {
           }
         }
         if (t) {
-          try {
-            const data = await appFetch("/api/mobile-app/auth/me", { token: t });
-            if (data.account) {
-              setAccount(data.account);
-              await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(data.account));
-            }
-          } catch {
-            await SecureStore.deleteItemAsync(TOKEN_KEY);
-            await SecureStore.deleteItemAsync(ACCOUNT_KEY);
-            setToken(null);
-            setAccount(null);
-          }
+          await verifyAccess();
         }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          readyRef.current = true;
+          setLoading(false);
+        }
       }
     })();
+    return () => {
+      cancelled = true;
+    };
+    // Restore once on launch; later checks use AppState.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active" && readyRef.current) {
+        verifyAccess().catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [verifyAccess]);
 
   const login = useCallback(
     async (email, password) => {

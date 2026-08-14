@@ -1,8 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-export default function MobileAppPaypalCompletePage() {
+function PaypalCompleteContent() {
   const searchParams = useSearchParams();
   const status = String(searchParams.get("status") || "success");
   const ok = status !== "cancel";
@@ -16,5 +17,19 @@ export default function MobileAppPaypalCompletePage() {
       </p>
       <p className="mt-6 text-xs text-secondary">You can close this window and go back to the app.</p>
     </main>
+  );
+}
+
+export default function MobileAppPaypalCompletePage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
+          <p className="text-sm text-secondary">Loading…</p>
+        </main>
+      }
+    >
+      <PaypalCompleteContent />
+    </Suspense>
   );
 }

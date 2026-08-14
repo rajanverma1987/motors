@@ -8,6 +8,23 @@ const PROD_API = "https://iqmotorbase.com";
 /** Inlined at bundle time (`eas update` / Metro). Prefer this over Constants in Expo Go. */
 const BUNDLED_API_URL = String(process.env.EXPO_PUBLIC_API_URL || "").trim();
 
+export class ApiError extends Error {
+  constructor(message, { status = 0, code = "" } = {}) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/** Backend rejected this session (banned, revoked, or invalid/expired token). */
+export function isAuthRejected(err) {
+  const status = Number(err?.status) || 0;
+  const code = String(err?.code || "");
+  if (status === 401 || status === 403) return true;
+  return code === "AUTH_REQUIRED" || code === "LOGIN_REVOKED";
+}
+
 function isHtmlBody(text) {
   const t = String(text || "").trim();
   return t.startsWith("<!") || /^<html/i.test(t) || /<!DOCTYPE/i.test(t);
@@ -76,10 +93,10 @@ export async function appFetch(path, opts = {}) {
     const name = e?.name;
     const msg = e?.message || "";
     if (name === "AbortError") {
-      throw new Error(`Request timed out. Server: ${base}`);
+      throw new ApiError(`Request timed out. Server: ${base}`, { status: 0, code: "TIMEOUT" });
     }
     if (/network request failed|failed to fetch|load failed/i.test(msg) || name === "TypeError") {
-      throw new Error(`Cannot reach IQWireCalculator API at ${base}`);
+      throw new ApiError(`Cannot reach IQWireCalculator API at ${base}`, { status: 0, code: "NETWORK" });
     }
     throw e;
   } finally {
@@ -89,11 +106,15 @@ export async function appFetch(path, opts = {}) {
   const text = await res.text();
   if (isHtmlBody(text)) {
     if (res.status === 404) {
-      throw new Error(
-        `API not on this server yet (${path}). Deploy the latest IQMotorBase website, then try again.\n${base}`
+      throw new ApiError(
+        `API not on this server yet (${path}). Deploy the latest IQMotorBase website, then try again.\n${base}`,
+        { status: 404, code: "NOT_FOUND" }
       );
     }
-    throw new Error(`Server returned a web page instead of JSON (${res.status}).\n${url}`);
+    throw new ApiError(`Server returned a web page instead of JSON (${res.status}).\n${url}`, {
+      status: res.status,
+      code: "HTML",
+    });
   }
 
   let data = null;
@@ -103,7 +124,10 @@ export async function appFetch(path, opts = {}) {
     data = { error: "Invalid response from server" };
   }
   if (!res.ok) {
-    throw new Error((data && data.error) || res.statusText || "Request failed");
+    throw new ApiError((data && data.error) || res.statusText || "Request failed", {
+      status: res.status,
+      code: (data && data.code) || "",
+    });
   }
   return data;
 }

@@ -6,7 +6,6 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { colors } from "../theme";
 import CalcsHomeScreen from "../screens/CalcsHomeScreen";
 import SavedDetailScreen from "../screens/SavedDetailScreen";
-import VideosScreen from "../screens/VideosScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import CmBestMatchScreen from "../screens/calculators/CmBestMatchScreen";
 import PowerCurrentScreen from "../screens/calculators/PowerCurrentScreen";
@@ -40,10 +39,10 @@ function tabBarStyleForRoute(route, homeScreenName) {
 
 function CalcsStack() {
   return (
-    <Stack.Navigator screenOptions={stackScreenOptions}>
+    <Stack.Navigator initialRouteName="CmBestMatch" screenOptions={stackScreenOptions}>
+      <Stack.Screen name="CmBestMatch" component={CmBestMatchScreen} options={{ title: "CM Best Match" }} />
       <Stack.Screen name="CalcsHome" component={CalcsHomeScreen} options={{ title: "Calcs" }} />
       <Stack.Screen name="SavedDetail" component={SavedDetailScreen} options={{ title: "Saved" }} />
-      <Stack.Screen name="CmBestMatch" component={CmBestMatchScreen} options={{ title: "CM Best Match" }} />
       <Stack.Screen name="PowerCurrent" component={PowerCurrentScreen} options={{ title: "Power & current" }} />
       <Stack.Screen name="SpeedDrives" component={SpeedDrivesScreen} options={{ title: "Speed & drives" }} />
       <Stack.Screen name="Torque" component={TorqueScreen} options={{ title: "Torque" }} />
@@ -71,22 +70,8 @@ export default function MainTabs() {
           tabBarIcon: ({ color, size, focused }) => (
             <Ionicons name={focused ? "calculator" : "calculator-outline"} size={size ?? 24} color={color} />
           ),
-          tabBarStyle: tabBarStyleForRoute(route, "CalcsHome"),
+          tabBarStyle: tabBarStyleForRoute(route, "CmBestMatch"),
         })}
-      />
-      <Tab.Screen
-        name="Videos"
-        component={VideosScreen}
-        options={{
-          headerShown: true,
-          title: "Video lessons",
-          headerStyle: { backgroundColor: colors.card },
-          headerTitleStyle: { color: colors.title, fontWeight: "700" },
-          tabBarLabel: "Videos",
-          tabBarIcon: ({ color, size, focused }) => (
-            <Ionicons name={focused ? "play-circle" : "play-circle-outline"} size={size ?? 24} color={color} />
-          ),
-        }}
       />
       <Tab.Screen
         name="Profile"

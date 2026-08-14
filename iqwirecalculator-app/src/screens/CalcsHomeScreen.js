@@ -6,13 +6,18 @@ import { colors, spacing } from "../theme";
 import { useMobileAuth } from "../AuthContext";
 import { appFetch } from "../api";
 
-const ITEMS = [
-  { key: "CmBestMatch", title: "CM Best Match", subtitle: "Circular mil winding combinations", icon: "git-compare-outline" },
-  { key: "PowerCurrent", title: "Power & current", subtitle: "HP ↔ kW, estimated FLA", icon: "flash-outline" },
-  { key: "SpeedDrives", title: "Speed & drives", subtitle: "Synchronous RPM, belt / pulley", icon: "speedometer-outline" },
-  { key: "Torque", title: "Torque", subtitle: "From power and speed", icon: "analytics-outline" },
-  { key: "BenchElectrical", title: "Bench electrical", subtitle: "Ohm’s law, Δ ↔ Y resistors", icon: "hardware-chip-outline" },
+const ALL_ITEMS = [
+  { key: "CmBestMatch", title: "CM Best Match", subtitle: "Circular mil winding combinations", icon: "git-compare-outline", calculatorType: "cm_best_match" },
+  { key: "PowerCurrent", title: "Power & current", subtitle: "HP ↔ kW, estimated FLA", icon: "flash-outline", calculatorType: "power" },
+  { key: "SpeedDrives", title: "Speed & drives", subtitle: "Synchronous RPM, belt / pulley", icon: "speedometer-outline", calculatorType: "speed" },
+  { key: "Torque", title: "Torque", subtitle: "From power and speed", icon: "analytics-outline", calculatorType: "torque" },
+  { key: "BenchElectrical", title: "Bench electrical", subtitle: "Ohm’s law, Δ ↔ Y resistors", icon: "hardware-chip-outline", calculatorType: "electrical" },
 ];
+
+/** Re-enable calculators here as they ship. */
+const ENABLED_KEYS = ["CmBestMatch"];
+const ITEMS = ALL_ITEMS.filter((item) => ENABLED_KEYS.includes(item.key));
+const ENABLED_TYPES = new Set(ITEMS.map((item) => item.calculatorType));
 
 function trialLabel(account) {
   if (!account?.trialEndsAt || account.accessMode !== "trial") return "";
@@ -33,7 +38,8 @@ export default function CalcsHomeScreen({ navigation }) {
     if (!token) return;
     try {
       const data = await appFetch("/api/mobile-app/saved", { token });
-      setSaved(Array.isArray(data.items) ? data.items : []);
+      const items = Array.isArray(data.items) ? data.items : [];
+      setSaved(items.filter((item) => ENABLED_TYPES.has(item.calculatorType)));
     } catch {
       setSaved([]);
     }
