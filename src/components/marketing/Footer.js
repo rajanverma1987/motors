@@ -43,6 +43,8 @@ const footerLinks = {
   ],
   Legal: [
     { href: "/support", label: "IQWireCalculator Support" },
+    { href: "/iqwirecalculator/privacy", label: "IQWireCalculator Privacy" },
+    { href: "/iqwirecalculator/privacy-choices", label: "IQWireCalculator Privacy Choices" },
     { href: "/privacy", label: "Privacy Policy" },
     { href: "/terms", label: "Terms of Service" },
   ],

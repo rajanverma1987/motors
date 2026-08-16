@@ -1,6 +1,8 @@
 /** Keep in sync with `MOBILE_APP_TRIAL_DAYS` / `MOBILE_APP_DEFAULT_MONTHLY_USD` in mobile-app-subscription.js */
 export const IQWIRECALCULATOR_PATH = "/iqwirecalculator";
 export const IQWIRECALCULATOR_SUPPORT_PATH = "/support";
+export const IQWIRECALCULATOR_PRIVACY_PATH = "/iqwirecalculator/privacy";
+export const IQWIRECALCULATOR_PRIVACY_CHOICES_PATH = "/iqwirecalculator/privacy-choices";
 export const IQWIRECALCULATOR_SUPPORT_EMAIL = "contact@IQMotorBase.com";
 export const IQWIRECALCULATOR_MONTHLY_USD = 9.99;
 export const IQWIRECALCULATOR_TRIAL_DAYS = 3;

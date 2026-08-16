@@ -5,6 +5,8 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 import {
   IQWIRECALCULATOR_MONTHLY_USD,
   IQWIRECALCULATOR_PATH,
+  IQWIRECALCULATOR_PRIVACY_CHOICES_PATH,
+  IQWIRECALCULATOR_PRIVACY_PATH,
   IQWIRECALCULATOR_SUPPORT_EMAIL,
   IQWIRECALCULATOR_SUPPORT_PATH,
   IQWIRECALCULATOR_TRIAL_DAYS,
@@ -146,8 +148,16 @@ export default function SupportPage() {
               <h2 className="text-lg font-semibold text-title">Legal</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 <li>
-                  <Link href="/privacy" className="font-medium text-primary hover:underline">
+                  <Link href={IQWIRECALCULATOR_PRIVACY_PATH} className="font-medium text-primary hover:underline">
                     Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={IQWIRECALCULATOR_PRIVACY_CHOICES_PATH}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    User Privacy Choices
                   </Link>
                 </li>
                 <li>
