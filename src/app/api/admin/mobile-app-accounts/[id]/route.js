@@ -5,6 +5,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import {
   mobileAppAccountToAdminJson,
   revokeMobileAppAccess,
+  extendMobileAppTrial,
 } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
@@ -38,10 +39,18 @@ export async function PATCH(request, context) {
       account.canLogin = body.canLogin;
       if (body.canLogin === false && body.revokeAccess !== true) {
         await revokeMobileAppAccess(account);
-      } else {
-        await account.save();
       }
     }
+    if (typeof body.name === "string") {
+      account.name = body.name.trim();
+    }
+    if (typeof body.phone === "string") {
+      account.phone = body.phone.trim();
+    }
+    if (body.extendTrialDays != null && body.extendTrialDays !== "") {
+      extendMobileAppTrial(account, body.extendTrialDays);
+    }
+    await account.save();
 
     const fresh = await MobileAppAccount.findById(id).select("-passwordHash").lean();
     return NextResponse.json({ account: mobileAppAccountToAdminJson(fresh) });

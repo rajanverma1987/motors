@@ -108,18 +108,12 @@ function push(results, seen, d) {
   const wiresInHand = wires.reduce((s, w) => s + w.qty, 0);
   const percentDifference = ((d.total - d.targetedCM) / d.targetedCM) * 100;
 
-  let noOfWires = 1;
-  wires.forEach(() => {
-    noOfWires += 2;
-  });
-
   const row = {
     totalCM: d.total,
     targetedCM: d.targetedCM,
     wiresInHand,
     percentDifference: Number(percentDifference.toFixed(2)),
     cmDifference: Math.abs(d.total - d.targetedCM),
-    noOfWires,
   };
 
   wires.forEach((w, idx) => {

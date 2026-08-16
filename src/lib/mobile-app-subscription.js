@@ -335,6 +335,26 @@ export function nextDueAt(account) {
   return account.currentPeriodEndsAt || null;
 }
 
+export function extendMobileAppTrial(account, days) {
+  const n = Math.floor(Number(days));
+  if (!Number.isFinite(n) || n < 1 || n > 365) {
+    throw new Error("Trial extension must be between 1 and 365 days");
+  }
+  const now = Date.now();
+  const currentEnd = account.trialEndsAt ? new Date(account.trialEndsAt).getTime() : 0;
+  const from = Math.max(now, currentEnd);
+  const next = new Date(from);
+  next.setDate(next.getDate() + n);
+  account.trialEndsAt = next;
+  const status = String(account.subscriptionStatus || "trial");
+  if (status !== "active") {
+    account.subscriptionStatus = "trial";
+    account.cancelAtPeriodEnd = false;
+    account.graceEndsAt = null;
+  }
+  return account;
+}
+
 export function mobileAppAccountToAdminJson(account) {
   const access = describeMobileAppAccess(account);
   return {

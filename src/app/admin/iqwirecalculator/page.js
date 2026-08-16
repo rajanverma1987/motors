@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FiEye, FiLock, FiSlash, FiUnlock } from "react-icons/fi";
+import { FiEdit2, FiEye, FiLock, FiPlus, FiSlash, FiUnlock } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
+import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
+import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
@@ -28,6 +30,15 @@ function typeVariant(type, banned) {
   return "default";
 }
 
+function generateTempPassword() {
+  const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$%";
+  let s = "";
+  for (let i = 0; i < 14; i += 1) {
+    s += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return s;
+}
+
 function AccountDetailModal({ account, open, onClose }) {
   if (!account) return null;
   const fields = [
@@ -38,6 +49,7 @@ function AccountDetailModal({ account, open, onClose }) {
     { label: "Subscription", value: account.subscriptionType },
     { label: "Last paid", value: formatDate(account.lastPaidAt) },
     { label: "Next due", value: formatDate(account.nextDueAt) },
+    { label: "Trial ends", value: formatDate(account.trialEndsAt) },
     { label: "Last login", value: formatDate(account.lastLoginAt) },
     { label: "Registered", value: formatDate(account.createdAt) },
     { label: "Login", value: account.banned ? "Banned" : "Allowed" },
@@ -64,6 +76,21 @@ export default function AdminIqWireCalculatorPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [viewAccount, setViewAccount] = useState(null);
+  const [editAccount, setEditAccount] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [extendDays, setExtendDays] = useState("");
+  const [editSaving, setEditSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    country: "",
+    password: "",
+    trialDays: "3",
+  });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -113,6 +140,92 @@ export default function AdminIqWireCalculatorPage() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Update failed");
     return data.account;
+  };
+
+  const openEdit = (row) => {
+    setEditAccount(row);
+    setEditName(row.name || "");
+    setEditPhone(row.phone || "");
+    setExtendDays("");
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editAccount?.id) return;
+    const daysRaw = String(extendDays || "").trim();
+    const days = daysRaw === "" ? 0 : Number(daysRaw);
+    if (daysRaw !== "" && (!Number.isFinite(days) || days < 1 || days > 365 || !Number.isInteger(days))) {
+      toast.error("Enter a whole number of days from 1 to 365, or leave it blank.");
+      return;
+    }
+    setEditSaving(true);
+    try {
+      const body = { name: editName, phone: editPhone };
+      if (days >= 1) body.extendTrialDays = days;
+      await patchAccount(editAccount.id, body);
+      toast.success(days >= 1 ? `Saved. Trial extended by ${days} day${days === 1 ? "" : "s"}.` : "Saved.");
+      setEditAccount(null);
+      load();
+    } catch (err) {
+      toast.error(err.message || "Failed to save");
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const openCreate = () => {
+    setCreateForm({
+      name: "",
+      email: "",
+      phone: "",
+      country: "",
+      password: generateTempPassword(),
+      trialDays: "3",
+    });
+    setCreateOpen(true);
+  };
+
+  const saveCreate = async (e) => {
+    e.preventDefault();
+    const name = String(createForm.name || "").trim();
+    const email = String(createForm.email || "").trim();
+    const password = String(createForm.password || "");
+    if (!name || !email || !password) {
+      toast.error("Name, email, and password are required.");
+      return;
+    }
+    const daysRaw = String(createForm.trialDays || "").trim();
+    const days = daysRaw === "" ? 0 : Number(daysRaw);
+    if (daysRaw !== "" && (!Number.isFinite(days) || days < 1 || days > 365 || !Number.isInteger(days))) {
+      toast.error("Trial days must be a whole number from 1 to 365.");
+      return;
+    }
+    setCreateSaving(true);
+    try {
+      const res = await fetch("/api/admin/mobile-app-accounts", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          phone: createForm.phone,
+          country: createForm.country,
+          trialDays: days >= 1 ? days : undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Create failed");
+      toast.success(`Account created for ${email}. Share the password with them to sign in.`);
+      setCreateOpen(false);
+      setPage(1);
+      load();
+    } catch (err) {
+      toast.error(err.message || "Failed to create account");
+    } finally {
+      setCreateSaving(false);
+    }
   };
 
   const removeAccess = async (row) => {
@@ -186,6 +299,21 @@ export default function AdminIqWireCalculatorPage() {
   };
 
   const columns = [
+    {
+      key: "edit",
+      label: "",
+      render: (_, row) => (
+        <button
+          type="button"
+          onClick={() => openEdit(row)}
+          className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+          aria-label={`Edit ${row.email}`}
+          title="Edit"
+        >
+          <FiEdit2 className="h-4 w-4" />
+        </button>
+      ),
+    },
     {
       key: "view",
       label: "",
@@ -286,10 +414,24 @@ export default function AdminIqWireCalculatorPage() {
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-auto">
       <div className="shrink-0 border-b border-border pb-4">
-        <h1 className="text-2xl font-bold text-title">IQWireCalculator clients</h1>
-        <p className="mt-1 text-sm text-secondary">
-          Mobile app accounts (not shop CRM). Remove access locks the app; ban blocks sign-in.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold text-title">IQWireCalculator clients</h1>
+            <p className="mt-1 text-sm text-secondary">
+              Mobile app accounts (not shop CRM). Remove access locks the app; ban blocks sign-in.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={openCreate}
+            className="inline-flex shrink-0 items-center gap-1.5"
+          >
+            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+            Add account
+          </Button>
+        </div>
         <div className="mt-4 max-w-sm">
           <Input
             label="Search"
@@ -322,6 +464,133 @@ export default function AdminIqWireCalculatorPage() {
         />
       </div>
       <AccountDetailModal account={viewAccount} open={!!viewAccount} onClose={() => setViewAccount(null)} />
+      <Modal
+        open={!!editAccount}
+        onClose={() => {
+          if (!editSaving) setEditAccount(null);
+        }}
+        title={editAccount ? `Edit ${editAccount.email}` : "Edit client"}
+        size="md"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditAccount(null)} disabled={editSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="iqwire-account-edit-form" variant="primary" size="sm" disabled={editSaving}>
+              {editSaving ? "Saving…" : "Save"}
+            </Button>
+          </>
+        }
+      >
+        {editAccount ? (
+          <Form id="iqwire-account-edit-form" onSubmit={saveEdit} className="flex flex-col gap-4 !space-y-0">
+            <Input label="Name" name="name" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <Input label="Phone" name="phone" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+            <p className="text-sm text-secondary">
+              Current trial ends:{" "}
+              <span className="font-medium text-title">{formatDate(editAccount.trialEndsAt)}</span>
+            </p>
+            <Input
+              label="Extend trial by (days)"
+              name="extendTrialDays"
+              type="number"
+              min={1}
+              max={365}
+              step={1}
+              value={extendDays}
+              onChange={(e) => setExtendDays(e.target.value)}
+              placeholder="e.g. 7"
+            />
+            <p className="text-xs text-secondary">
+              Adds days onto the later of now or the current trial end. Leave blank to save name/phone only. Expired
+              trials become active trial access again.
+            </p>
+          </Form>
+        ) : null}
+      </Modal>
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (!createSaving) setCreateOpen(false);
+        }}
+        title="Add IQWireCalculator account"
+        size="md"
+        actions={
+          <>
+            <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(false)} disabled={createSaving}>
+              Cancel
+            </Button>
+            <Button type="submit" form="iqwire-account-create-form" variant="primary" size="sm" disabled={createSaving}>
+              {createSaving ? "Creating…" : "Create"}
+            </Button>
+          </>
+        }
+      >
+        <Form id="iqwire-account-create-form" onSubmit={saveCreate} className="flex flex-col gap-4 !space-y-0">
+          <Input
+            label="Name"
+            name="name"
+            value={createForm.name}
+            onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
+            required
+          />
+          <Input
+            label="Email"
+            name="email"
+            type="email"
+            value={createForm.email}
+            onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+            required
+          />
+          <Input
+            label="Phone"
+            name="phone"
+            value={createForm.phone}
+            onChange={(e) => setCreateForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+          <Input
+            label="Country"
+            name="country"
+            value={createForm.country}
+            onChange={(e) => setCreateForm((f) => ({ ...f, country: e.target.value }))}
+            placeholder="Optional"
+          />
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="min-w-0 flex-1">
+              <Input
+                label="Password"
+                name="password"
+                value={createForm.password}
+                onChange={(e) => setCreateForm((f) => ({ ...f, password: e.target.value }))}
+                required
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateForm((f) => ({ ...f, password: generateTempPassword() }))}
+              disabled={createSaving}
+            >
+              Generate
+            </Button>
+          </div>
+          <Input
+            label="Trial days"
+            name="trialDays"
+            type="number"
+            min={1}
+            max={365}
+            step={1}
+            value={createForm.trialDays}
+            onChange={(e) => setCreateForm((f) => ({ ...f, trialDays: e.target.value }))}
+          />
+          <p className="text-xs text-secondary">
+            They sign in to the IQWireCalculator app with this email and password. Copy the password before you close
+            this dialog.
+          </p>
+        </Form>
+      </Modal>
     </div>
   );
 }

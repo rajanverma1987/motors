@@ -69,7 +69,6 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
         <td>${escapeHtml(row.wiresInHand)}</td>
         <td>${escapeHtml(pctLabel)}</td>
         <td>${escapeHtml(fmt(row.cmDifference, 0))}</td>
-        <td>${escapeHtml(row.noOfWires)}</td>
       </tr>`;
     })
     .join("");
@@ -99,7 +98,7 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
   <p class="meta">IQWireCalculator · Generated ${escapeHtml(generated)}</p>
   <table class="vars">
     <tr>
-      <td><span class="label">Original wires in hand</span><span class="value">${escapeHtml(ctx.originalWiredInHand || "—")}</span></td>
+      <td><span class="label">Original Wires in hand</span><span class="value">${escapeHtml(ctx.originalWiredInHand || "—")}</span></td>
       <td><span class="label">Original wire size</span><span class="value">${escapeHtml(ctx.originalWireSize || "—")}</span></td>
       <td><span class="label">Original CM</span><span class="value">${escapeHtml(ctx.originalCMDisplay || "—")}</span></td>
     </tr>
@@ -121,8 +120,8 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
         <th>Wire Size 2</th><th># Wires 2</th>
         <th>Wire Size 3</th><th># Wires 3</th>
         <th>Total CM</th><th>Targeted CM</th>
-        <th>Wires In Hand</th><th>% Difference</th>
-        <th>CM Difference</th><th>No of Wires</th>
+        <th>New wires in hand</th><th>% Difference</th>
+        <th>CM Difference</th>
       </tr>
     </thead>
     <tbody>${tableRows}</tbody>

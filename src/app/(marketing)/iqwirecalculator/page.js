@@ -333,7 +333,11 @@ export default function IqwireCalculatorMarketingPage() {
             ))}
           </dl>
           <p className="mt-8 text-center text-sm text-secondary">
-            Longer rewind write-up:{" "}
+            App help:{" "}
+            <Link href="/support" className="font-medium text-primary hover:underline">
+              IQWireCalculator support
+            </Link>
+            . Longer rewind write-up:{" "}
             <Link
               href="/blog/motor-rewinding-cm-best-match-calculator-guide"
               className="font-medium text-primary hover:underline"

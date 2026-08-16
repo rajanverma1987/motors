@@ -12,11 +12,12 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useMobileAuth } from "../../AuthContext";
 import { appFetch } from "../../api";
 import { colors, spacing } from "../../theme";
 
-export function SaveCalculationButton({ calculatorType, title, getPayload, onSaved, disabled }) {
+export function SaveCalculationButton({ calculatorType, title, getPayload, onSaved, disabled, variant }) {
   const insets = useSafeAreaInsets();
   const { token, unlocked } = useMobileAuth();
   const [busy, setBusy] = useState(false);
@@ -65,14 +66,29 @@ export function SaveCalculationButton({ calculatorType, title, getPayload, onSav
     }
   };
 
+  const isAction = variant === "action";
+
   return (
     <>
       <Pressable
         onPress={openNamePrompt}
         disabled={busy}
-        style={({ pressed }) => [styles.btn, pressed && styles.pressed, busy && styles.disabled]}
+        style={({ pressed }) => [
+          isAction ? styles.actionBtn : styles.btn,
+          pressed && styles.pressed,
+          busy && styles.disabled,
+        ]}
       >
-        {busy ? <ActivityIndicator color={colors.primary} /> : <Text style={styles.text}>Save this calculation</Text>}
+        {busy ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : isAction ? (
+          <>
+            <Ionicons name="bookmark-outline" size={20} color={colors.primary} />
+            <Text style={styles.actionText}>Save</Text>
+          </>
+        ) : (
+          <Text style={styles.text}>Save this calculation</Text>
+        )}
       </Pressable>
 
       <Modal visible={nameOpen} animationType="slide" onRequestClose={() => setNameOpen(false)}>
@@ -120,6 +136,19 @@ const styles = StyleSheet.create({
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.7 },
   text: { color: colors.primary, fontWeight: "700", fontSize: 15 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    borderRadius: 10,
+    backgroundColor: colors.card,
+  },
+  actionText: { color: colors.primary, fontWeight: "700", fontSize: 15 },
   modalRoot: { flex: 1, backgroundColor: colors.bg },
   modalHeader: {
     flexDirection: "row",

@@ -42,6 +42,7 @@ const footerLinks = {
     { href: "/about", label: "About" },
   ],
   Legal: [
+    { href: "/support", label: "IQWireCalculator Support" },
     { href: "/privacy", label: "Privacy Policy" },
     { href: "/terms", label: "Terms of Service" },
   ],

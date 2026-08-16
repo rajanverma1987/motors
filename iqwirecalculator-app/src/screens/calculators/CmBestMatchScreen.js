@@ -65,8 +65,6 @@ export default function CmBestMatchScreen() {
   const [maxWires, setMaxWires] = useState("10");
   const [results, setResults] = useState([]);
   const [resultContext, setResultContext] = useState(null);
-  const [liveResults, setLiveResults] = useState([]);
-  const [liveContext, setLiveContext] = useState(null);
   const [resultsOpen, setResultsOpen] = useState(false);
   const [resultsTitle, setResultsTitle] = useState("CM Best Match");
   const [savedOpen, setSavedOpen] = useState(false);
@@ -264,11 +262,9 @@ export default function CmBestMatchScreen() {
       selectedCatalogSummary: selectedList.map((w) => `${w.size} (${w.circularMills} CM)`).join("; "),
     };
     setResultContext(ctx);
-    setLiveContext(ctx);
 
     const out = calculateCMBestMatch(wiresForCalc, t, minW, maxW);
     setResults(out);
-    setLiveResults(out);
     setResultsTitle("CM Best Match");
     if (out.length === 0) {
       setResultsOpen(false);
@@ -295,6 +291,24 @@ export default function CmBestMatchScreen() {
   const openSavedList = () => {
     setSavedOpen(true);
     loadSaved();
+  };
+
+  const deleteSaved = (item) => {
+    Alert.alert("Delete saved calculation", `Remove “${item.title}”?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await appFetch(`/api/mobile-app/saved/${item.id}`, { token, method: "DELETE" });
+            setSavedItems((prev) => prev.filter((x) => x.id !== item.id));
+          } catch (e) {
+            Alert.alert("Could not delete", e.message || "Try again.");
+          }
+        },
+      },
+    ]);
   };
 
   const shareArgs = () => ({
@@ -455,24 +469,6 @@ export default function CmBestMatchScreen() {
           <Text style={styles.outlineBtnText}>View Result</Text>
         </Pressable>
 
-        <SaveCalculationButton
-          calculatorType="cm_best_match"
-          title="CM Best Match"
-          disabled={liveResults.length === 0}
-          onSaved={loadSaved}
-          getPayload={() => ({
-            inputs: {
-              originalWiredInHand,
-              originalWireSize,
-              originalCM,
-              targetedCM,
-              minWires,
-              maxWires,
-              selectedIds: [...selected],
-            },
-            results: { count: liveResults.length, context: liveContext, rows: liveResults },
-          })}
-        />
         <Note>
           Original fields are notes on the results. Targeted CM is the search goal. Min/max limit total conductors (up
           to three sizes).
@@ -569,10 +565,15 @@ export default function CmBestMatchScreen() {
                 style={({ pressed }) => [styles.savedRow, pressed && styles.pressed]}
                 onPress={() => openSavedItem(item)}
               >
-                <Text style={styles.savedName}>{item.title}</Text>
-                <Text style={styles.savedMeta}>
-                  {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
-                </Text>
+                <View style={styles.savedRowText}>
+                  <Text style={styles.savedName}>{item.title}</Text>
+                  <Text style={styles.savedMeta}>
+                    {item.createdAt ? new Date(item.createdAt).toLocaleString() : ""}
+                  </Text>
+                </View>
+                <Pressable onPress={() => deleteSaved(item)} hitSlop={10} style={styles.trash}>
+                  <Ionicons name="trash-outline" size={22} color={colors.danger} />
+                </Pressable>
               </Pressable>
             )}
           />
@@ -613,6 +614,25 @@ export default function CmBestMatchScreen() {
             )}
             <Text style={styles.actionBtnText}>Email</Text>
           </Pressable>
+          <SaveCalculationButton
+            variant="action"
+            calculatorType="cm_best_match"
+            title="CM Best Match"
+            disabled={results.length === 0}
+            onSaved={loadSaved}
+            getPayload={() => ({
+              inputs: {
+                originalWiredInHand,
+                originalWireSize,
+                originalCM,
+                targetedCM,
+                minWires,
+                maxWires,
+                selectedIds: [...selected],
+              },
+              results: { count: results.length, context: resultContext, rows: results },
+            })}
+          />
         </View>
         <ScrollView
           style={styles.modalScroll}
@@ -620,7 +640,7 @@ export default function CmBestMatchScreen() {
         >
           {resultContext ? (
             <View style={styles.varsBox}>
-              <Text style={styles.varsLine}>Original wires: {resultContext.originalWiredInHand}</Text>
+              <Text style={styles.varsLine}>Original Wires in hand: {resultContext.originalWiredInHand}</Text>
               <Text style={styles.varsLine}>Original size: {resultContext.originalWireSize}</Text>
               <Text style={styles.varsLine}>Original CM: {resultContext.originalCMDisplay}</Text>
               <Text style={styles.varsLine}>Target: {resultContext.targetedCM} CM</Text>
@@ -642,9 +662,7 @@ export default function CmBestMatchScreen() {
                 {row.percentDifference}% · {fmt(row.cmDifference, 0)} CM Δ
               </Text>
               <Text style={styles.cardLine}>Wires Combination : {wireCombinationLabel(row)}</Text>
-              <Text style={styles.cardSmall}>
-                Wires in hand: {row.wiresInHand} · No. of wires (display): {row.noOfWires}
-              </Text>
+              <Text style={styles.cardSmall}>New wires in hand: {row.wiresInHand}</Text>
             </View>
           ))}
         </ScrollView>
@@ -715,6 +733,8 @@ const styles = StyleSheet.create({
   outlineBtnText: { color: colors.primary, fontWeight: "700", fontSize: 14 },
   savedLoading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.bg },
   savedRow: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -722,8 +742,10 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.sm,
   },
+  savedRowText: { flex: 1, minWidth: 0, paddingRight: spacing.sm },
   savedName: { fontSize: 18, fontWeight: "700", color: colors.title },
   savedMeta: { fontSize: 13, color: colors.secondary, marginTop: 4 },
+  trash: { padding: 6 },
   calcBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   pressed: { opacity: 0.88 },
   disabled: { opacity: 0.7 },
