@@ -131,11 +131,11 @@ export default function SimpleMotorShippingSendModal({
             >
               <p>{sendMeta.smtp.message}</p>
               <Link
-                href="/dashboards/settings"
+                href="/dashboards/settings?section=smtp"
                 className="mt-2 inline-block font-medium underline underline-offset-2"
                 onClick={() => onClose?.()}
               >
-                Open SMTP settings
+                Open Email Settings
               </Link>
             </div>
           ) : null}

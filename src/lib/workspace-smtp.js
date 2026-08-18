@@ -48,7 +48,7 @@ export function resolveCustomerMailDelivery(mergedSettings, shopCompanyName = ""
         from: null,
         usedWorkspaceSmtp: false,
         error:
-          "Workspace SMTP is enabled but incomplete. Open Settings → SMTP and save host, username, password, and from email.",
+          "Workspace SMTP is enabled but incomplete. Open Settings → Email Settings and save host, username, password, and from email.",
       };
     }
     const transport = createWorkspaceSmtpTransport(smtp);

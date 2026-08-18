@@ -41,23 +41,41 @@ export function normalizeWorkspaceSmtpFields(raw) {
   const portNum = Number(s.smtpPort);
   const port = Number.isFinite(portNum) && portNum > 0 && portNum <= 65535 ? Math.round(portNum) : 587;
   const smtpSecure = resolveWorkspaceSmtpSecure(port, s.smtpSecure === true);
+  const smtpPassword = String(s.smtpPassword ?? "");
   return {
     smtpEnabled: s.smtpEnabled === true,
     smtpHost: String(s.smtpHost ?? "").trim().slice(0, 255),
     smtpPort: port,
     smtpSecure,
     smtpUser: String(s.smtpUser ?? "").trim().slice(0, 255),
-    smtpPassword: String(s.smtpPassword ?? ""),
+    smtpPassword,
     smtpFromEmail: String(s.smtpFromEmail ?? "").trim().slice(0, 255).toLowerCase(),
     smtpFromName: String(s.smtpFromName ?? "").trim().slice(0, 120),
+    smtpPasswordConfigured:
+      Boolean(String(smtpPassword || "").trim()) || s.smtpPasswordConfigured === true,
   };
 }
 
-/** @param {ReturnType<typeof normalizeWorkspaceSmtpFields>} cfg */
+function workspaceSmtpHasPassword(cfg) {
+  return Boolean(String(cfg?.smtpPassword || "").trim()) || cfg?.smtpPasswordConfigured === true;
+}
+
+/** True when transport can be created (needs the actual password secret). */
 export function workspaceSmtpIsComplete(cfg) {
   if (!cfg?.smtpEnabled) return false;
-  if (!cfg.smtpHost || !cfg.smtpUser || !cfg.smtpPassword || !cfg.smtpFromEmail) return false;
+  if (!cfg.smtpHost || !cfg.smtpUser || !cfg.smtpFromEmail) return false;
+  if (!String(cfg.smtpPassword || "").trim()) return false;
   return true;
+}
+
+/**
+ * True when send UI can treat SMTP as ready. Client settings strip smtpPassword
+ * and only expose smtpPasswordConfigured.
+ */
+export function workspaceSmtpIsReadyForSendUi(cfg) {
+  if (!cfg?.smtpEnabled) return false;
+  if (!cfg.smtpHost || !cfg.smtpUser || !cfg.smtpFromEmail) return false;
+  return workspaceSmtpHasPassword(cfg);
 }
 
 /**
@@ -67,21 +85,21 @@ export function workspaceSmtpIsComplete(cfg) {
  */
 export function getWorkspaceSmtpDeliveryNotice(mergedSettings) {
   const smtp = normalizeWorkspaceSmtpFields(mergedSettings);
-  if (workspaceSmtpIsComplete(smtp)) {
+  if (workspaceSmtpIsReadyForSendUi(smtp)) {
     return { status: "ready", message: null, canSend: true };
   }
   if (smtp.smtpEnabled) {
     return {
       status: "incomplete",
       message:
-        "Workspace SMTP is enabled but incomplete. Open Settings → SMTP and save host, username, password, and from email before sending.",
+        "Workspace SMTP is enabled but incomplete. Open Settings → Email Settings and save host, username, password, and from email before sending.",
       canSend: false,
     };
   }
   return {
     status: "not_configured",
     message:
-      "Workspace SMTP is not set up. This email will be sent from IQMotorBase. Go to Settings → SMTP to send from your shop address.",
+      "Workspace SMTP is not set up. This email will be sent from IQMotorBase. Go to Settings → Email Settings to send from your shop address.",
     canSend: true,
   };
 }
@@ -99,10 +117,12 @@ export function mergeWorkspaceSmtpPatch(body, stored) {
     passwordIncoming === undefined ||
     passwordIncoming === null ||
     String(passwordIncoming).trim() === "";
+  const smtpPassword = keepPassword ? base.smtpPassword : String(passwordIncoming);
   return {
     ...base,
     ...patch,
-    smtpPassword: keepPassword ? base.smtpPassword : String(passwordIncoming),
+    smtpPassword,
+    smtpPasswordConfigured: Boolean(String(smtpPassword || "").trim()),
   };
 }
 
