@@ -10,6 +10,12 @@ import { parseCcEmailList } from "@/lib/send-document-custom-message";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
 import { getTransporter } from "@/lib/email-transport";
+import {
+  buildQuoteInvoicePdfBuffer,
+  mergeMailAttachments,
+  pdfFileAttachment,
+  safePdfFilename,
+} from "@/lib/simple-send-document-pdf";
 
 function esc(v) {
   return v == null
@@ -104,10 +110,11 @@ export async function POST(request) {
     const noteHtml = customMessage
       ? `<p style="white-space:pre-wrap;margin:12px 0">${esc(customMessage)}</p>`
       : "";
-    const kind = documentType === "invoice" ? "invoice" : "service proposal";
+    const kind = documentType === "invoice" ? "invoice" : "quote";
+    const kindLabel = kind === "invoice" ? "invoice" : "service proposal";
     const html = `
       <p>Hello${toName ? ` ${esc(toName)}` : ""},</p>
-      <p>Please review your ${esc(kind)} <strong>${esc(documentLabel)}</strong>.</p>
+      <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>
       ${noteHtml}
       <p>If you have questions, reply to this email or contact us.</p>
       <p>— ${esc(shopCompanyName || "Our shop")}</p>
@@ -120,12 +127,46 @@ export async function POST(request) {
     }
     const transport = mail.transport || getTransporter();
     const from = mail.from || process.env.EMAIL_FROM || process.env.SMTP_USER;
+
+    const invoicePayload = body?.invoicePayload && typeof body.invoicePayload === "object" ? body.invoicePayload : null;
+    const quoteDoc = body?.quote && typeof body.quote === "object" ? body.quote : null;
+    const sourceDoc = kind === "invoice" ? invoicePayload?.invoice || invoicePayload : quoteDoc;
+    if (!sourceDoc || typeof sourceDoc !== "object") {
+      return NextResponse.json({ error: "Document details are required to attach the PDF." }, { status: 400 });
+    }
+    let pdfAttachment = null;
+    try {
+        const pdfBuffer = await buildQuoteInvoicePdfBuffer({
+          kind,
+          doc: sourceDoc,
+          extras: kind === "invoice" ? invoicePayload || {} : quoteDoc || {},
+          shopName: shopCompanyName,
+          ownerEmail: email,
+          settings: uSettings,
+        });
+        const numberLabel =
+          kind === "invoice"
+            ? sourceDoc.invoiceNumber || sourceDoc.rfqNumber || documentLabel
+            : sourceDoc.rfqNumber || sourceDoc.invoiceNumber || documentLabel;
+        pdfAttachment = pdfFileAttachment(
+          safePdfFilename(kind === "invoice" ? "Invoice" : "Service-Proposal", numberLabel),
+          pdfBuffer
+        );
+    } catch (pdfErr) {
+      console.error("Simple SP PDF attach error:", pdfErr);
+      return NextResponse.json({ error: "Could not generate the PDF attachment." }, { status: 500 });
+    }
+    if (!pdfAttachment) {
+      return NextResponse.json({ error: "Could not generate the PDF attachment." }, { status: 500 });
+    }
+
     await transport.sendMail({
       from,
       to: toEmail,
       subject,
       html,
       ...(ccEmails.length ? { cc: ccEmails } : {}),
+      ...(pdfAttachment ? { attachments: mergeMailAttachments(pdfAttachment) } : {}),
     });
 
     return NextResponse.json({ ok: true, message: "Email sent." });

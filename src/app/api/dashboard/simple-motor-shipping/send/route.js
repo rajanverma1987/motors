@@ -13,6 +13,12 @@ import { getTransporter } from "@/lib/email-transport";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
+import {
+  buildMotorShippingPdfBuffer,
+  mergeMailAttachments,
+  pdfFileAttachment,
+  safePdfFilename,
+} from "@/lib/simple-send-document-pdf";
 
 function esc(v) {
   return v == null
@@ -141,7 +147,7 @@ export async function POST(request) {
     `;
     const html = `
       <p>Hi${toName ? ` ${esc(toName)}` : ""},</p>
-      <p>Please find motor shipping details${invoiceNumber ? ` for ${esc(invoiceNumber)}` : ""} from ${esc(shopCompanyName || "our shop")}.</p>
+      <p>Please find motor shipping details${invoiceNumber ? ` for ${esc(invoiceNumber)}` : ""} from ${esc(shopCompanyName || "our shop")}. The shipping document is attached as a PDF.</p>
       ${noteHtml}
       ${detailsHtml}
       <p>If you have questions, reply to this email or contact us.</p>
@@ -156,14 +162,38 @@ export async function POST(request) {
     }
     const transport = mail.transport || getTransporter();
     const from = mail.from || process.env.EMAIL_FROM || process.env.SMTP_USER;
+    let pdfAttachment = null;
+    try {
+      const pdfBuffer = await buildMotorShippingPdfBuffer({
+        entry,
+        customerName: toName,
+        companyName: String(body?.companyName || "").trim() || shopCompanyName,
+        customerEmail: toEmail,
+        customerPhone: String(body?.customerPhone || "").trim(),
+        paidByLabel: String(entry.paidByLabel || entry.paidBy || "").trim(),
+        ownerEmail: email,
+        settings: uSettings,
+      });
+      pdfAttachment = pdfFileAttachment(
+        safePdfFilename("Motor-Shipping", invoiceNumber || documentLabel),
+        pdfBuffer
+      );
+    } catch (pdfErr) {
+      console.error("Simple motor shipping PDF attach error:", pdfErr);
+      return NextResponse.json({ error: "Could not generate the PDF attachment." }, { status: 500 });
+    }
+    if (!pdfAttachment) {
+      return NextResponse.json({ error: "Could not generate the PDF attachment." }, { status: 500 });
+    }
+
     await transport.sendMail({
       from,
       to: toEmail,
       subject,
       html,
       ...(ccEmails.length ? { cc: ccEmails } : {}),
-      ...(Array.isArray(shopLogo?.attachments) && shopLogo.attachments.length
-        ? { attachments: shopLogo.attachments }
+      ...(mergeMailAttachments(shopLogo?.attachments, pdfAttachment).length
+        ? { attachments: mergeMailAttachments(shopLogo?.attachments, pdfAttachment) }
         : {}),
     });
 

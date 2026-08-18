@@ -132,16 +132,7 @@ export default function SimpleMotorLogisticsModal({
   const title = isReceiving ? "Motor receiving" : "Motor shipping";
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
-  const openSendTo = async () => {
-    const toEmail = String(customerEmail || "").trim();
-    if (!toEmail) {
-      await alert({
-        title: "Email required",
-        message: "Customer has no email address. Add an email on the service proposal first.",
-        variant: "danger",
-      });
-      return;
-    }
+  const openSendTo = () => {
     setSendOpen(true);
   };
 
@@ -152,6 +143,8 @@ export default function SimpleMotorLogisticsModal({
     documentLabel: form.invoiceNumber
       ? `Motor shipping ${form.invoiceNumber}`
       : "Motor shipping",
+    customerPhone: String(customerPhone || "").trim(),
+    companyName: String(companyName || user?.shopName || "").trim(),
     smtp: getWorkspaceSmtpDeliveryNotice(settings),
   };
 

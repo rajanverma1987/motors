@@ -61,7 +61,7 @@ export default function SimplePurchaseOrderPrintPreviewModal({
               type="button"
               variant="primary"
               size="sm"
-              disabled={!documentReady || !sendMeta?.toEmail}
+                  disabled={!documentReady}
               className="inline-flex items-center gap-1.5"
               onClick={() => setSendOpen(true)}
             >
@@ -118,6 +118,8 @@ export default function SimplePurchaseOrderPrintPreviewModal({
           poNumber: po?.poNumber || "",
           toEmail: sendMeta?.toEmail || "",
           toName: sendMeta?.toName || "",
+          po,
+          vendor,
         }}
         onSent={() => {
           setSendOpen(false);

@@ -166,6 +166,8 @@ export default function SimpleServiceProposalPrintPreviewModal({
           documentLabel: customerBundle?.documentLabel || "",
           toEmail: sendMeta?.toEmail || "",
           toName: sendMeta?.toName || "",
+          quote: customerBundle?.quote || null,
+          invoicePayload: customerBundle?.invoicePayload || null,
         }}
         onSent={() => {
           setSendOpen(false);

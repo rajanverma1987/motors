@@ -15,7 +15,12 @@ import {
   fetchPoPreviewPayload,
   fetchQuotePreviewPayload,
 } from "@/lib/document-preview-payload";
-import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX, SEND_DOCUMENT_CC_MAX_LENGTH } from "@/lib/send-document-custom-message";
+import {
+  SEND_DOCUMENT_CUSTOM_MESSAGE_MAX,
+  SEND_DOCUMENT_CC_MAX_LENGTH,
+  SEND_DOCUMENT_TO_EMAIL_MAX,
+  isSendToEmail,
+} from "@/lib/send-document-custom-message";
 
 function sendMetaUrl(documentType, documentId) {
   if (!documentId) return null;
@@ -59,6 +64,7 @@ export default function SendDocumentPreviewModal({
   const [vendor, setVendor] = useState(null);
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
   const [emailCc, setEmailCc] = useState("");
+  const [toEmail, setToEmail] = useState("");
 
   const useLocalDocument = Boolean(localQuote || localInvoicePayload || localPo);
 
@@ -74,6 +80,7 @@ export default function SendDocumentPreviewModal({
       setVendor(null);
       setEmailCustomMessage("");
       setEmailCc("");
+      setToEmail("");
       return;
     }
 
@@ -88,13 +95,7 @@ export default function SendDocumentPreviewModal({
       setVendor(localVendor || null);
       setEmailCustomMessage("");
       setEmailCc("");
-      if (localSendMeta && !localSendMeta.toEmail) {
-        setLoadError(
-          documentType === "po"
-            ? "Vendor has no email address. Add an email to the vendor record."
-            : "Customer has no email address. Add an email to the customer record."
-        );
-      }
+      setToEmail(String(localSendMeta?.toEmail || "").trim());
       return;
     }
 
@@ -109,6 +110,7 @@ export default function SendDocumentPreviewModal({
       setVendor(null);
       setEmailCustomMessage("");
       setEmailCc("");
+      setToEmail("");
       return;
     }
 
@@ -116,6 +118,7 @@ export default function SendDocumentPreviewModal({
     setLoading(true);
     setLoadError("");
     setSendMeta(null);
+    setToEmail("");
     setQuote(null);
     setInvoicePayload(null);
     setPo(null);
@@ -146,6 +149,7 @@ export default function SendDocumentPreviewModal({
 
         const meta = results[0];
         setSendMeta(meta);
+        setToEmail(String(meta?.toEmail || "").trim());
 
         if (documentType === "quote") {
           setQuote(results[1]);
@@ -186,6 +190,11 @@ export default function SendDocumentPreviewModal({
 
   const handleSend = async () => {
     if (!sendUrl) return;
+    const nextTo = toEmail.trim();
+    if (!isSendToEmail(nextTo)) {
+      toast.error("Enter a valid To email address.");
+      return;
+    }
     setSending(true);
     try {
       const res = await fetch(sendUrl, {
@@ -196,6 +205,7 @@ export default function SendDocumentPreviewModal({
           customMessage: emailCustomMessage.trim(),
           cc: emailCc.trim(),
           ...(sendBodyExtra && typeof sendBodyExtra === "object" ? sendBodyExtra : {}),
+          toEmail: nextTo,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -212,6 +222,7 @@ export default function SendDocumentPreviewModal({
 
   const busy = loading || sending;
   const smtpBlocked = sendMeta?.smtp?.canSend === false;
+  const toEmailValid = isSendToEmail(toEmail);
   const documentReady =
     (documentType === "quote" && quote) ||
     (documentType === "invoice" && invoicePayload) ||
@@ -233,7 +244,7 @@ export default function SendDocumentPreviewModal({
             type="button"
             variant="primary"
             size="sm"
-            disabled={busy || !documentReady || !!loadError || smtpBlocked || !sendMeta?.toEmail}
+            disabled={busy || !documentReady || !!loadError || smtpBlocked || !toEmailValid}
             className="inline-flex items-center gap-1.5"
             onClick={handleSend}
           >
@@ -279,12 +290,18 @@ export default function SendDocumentPreviewModal({
             </div>
           ) : null}
 
-          {sendMeta?.toEmail ? (
-            <p className="text-sm text-secondary">
-              <span className="font-medium text-foreground">Email to: </span>
-              {sendMeta.toName ? `${sendMeta.toName} <${sendMeta.toEmail}>` : sendMeta.toEmail}
-            </p>
-          ) : null}
+          <Input
+            id="send-document-to"
+            label="To"
+            type="email"
+            value={toEmail}
+            onChange={(e) => setToEmail(e.target.value)}
+            placeholder="email@example.com"
+            maxLength={SEND_DOCUMENT_TO_EMAIL_MAX}
+            autoComplete="email"
+            disabled={busy}
+            required
+          />
 
           <Input
             id="send-document-cc"
@@ -325,10 +342,10 @@ export default function SendDocumentPreviewModal({
               ? "Complete workspace SMTP settings before sending."
               : documentType === "po"
                 ? useLocalDocument
-                  ? "Review the purchase order above. The vendor will receive an email about this PO."
+                  ? "Review the purchase order above. The vendor will receive an email with the PO attached as a PDF."
                   : "Review the purchase order above. The vendor will receive an email with a link to view and update delivery status."
                 : useLocalDocument
-                  ? "Review the document above. The customer will receive an email about this document."
+                  ? "Review the document above. The customer will receive an email with this document attached as a PDF."
                   : "Review the document above. The customer will receive an email with a link to view it."}
           </p>
         </div>

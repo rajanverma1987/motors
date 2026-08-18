@@ -118,6 +118,8 @@ export function buildSimpleServiceProposalPrintBundle({
     invoiceNumber: documentNumber,
     customerPo: String(form?.customerPo || "").trim(),
     date: String(form?.dateCreated || "").trim(),
+    proposalSubmitDate: String(form?.proposalSubmitDate || "").trim(),
+    invoiceSubmitDate: String(form?.invoiceSubmitDate || "").trim(),
     preparedBy: String(form?.preparedBy || "").trim(),
     preparedByDisplay,
     estimatedCompletion: String(form?.dueDate || "").trim(),

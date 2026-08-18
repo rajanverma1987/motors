@@ -3,7 +3,13 @@ import { clampString } from "@/lib/validation";
 const CUSTOM_MESSAGE_MAX = 2000;
 const CC_MAX_LENGTH = 500;
 const CC_MAX_ADDRESSES = 10;
+const TO_EMAIL_MAX = 320;
 const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+
+export function isSendToEmail(value) {
+  const t = String(value || "").trim();
+  return t.length > 0 && t.length <= TO_EMAIL_MAX && EMAIL_RX.test(t);
+}
 
 /**
  * Parse comma- or semicolon-separated Cc addresses.
@@ -53,3 +59,4 @@ export async function parseSendDocumentCustomMessage(request) {
 
 export const SEND_DOCUMENT_CUSTOM_MESSAGE_MAX = CUSTOM_MESSAGE_MAX;
 export const SEND_DOCUMENT_CC_MAX_LENGTH = CC_MAX_LENGTH;
+export const SEND_DOCUMENT_TO_EMAIL_MAX = TO_EMAIL_MAX;

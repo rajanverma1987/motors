@@ -115,7 +115,7 @@ export default function InvoicePrintPreview({
 
       <section className="mb-2">
         <h2 className={sectionLabel}>Invoice info</h2>
-        <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-5">
+        <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt className={infoFieldLabel}>Invoice#</dt>
             <dd className="font-medium text-neutral-900">{q.invoiceNumber || "—"}</dd>
@@ -129,8 +129,12 @@ export default function InvoicePrintPreview({
             <dd className="text-neutral-900">{q.customerPo || "—"}</dd>
           </div>
           <div>
-            <dt className={infoFieldLabel}>Date</dt>
-            <dd className="text-neutral-900">{formatDate(q.date)}</dd>
+            <dt className={infoFieldLabel}>Proposal Sent Date</dt>
+            <dd className="text-neutral-900">{formatDate(q.proposalSubmitDate || q.date)}</dd>
+          </div>
+          <div>
+            <dt className={infoFieldLabel}>Invoice Date</dt>
+            <dd className="text-neutral-900">{formatDate(q.invoiceSubmitDate)}</dd>
           </div>
           <div>
             <dt className={infoFieldLabel}>Prepared by</dt>

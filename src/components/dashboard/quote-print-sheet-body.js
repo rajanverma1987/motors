@@ -10,6 +10,7 @@ import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
+const infoFieldLabel = "font-semibold text-neutral-900";
 const addressTitleLabel = "mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-900";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
 const thRow = "bg-neutral-900 text-left text-[10px] font-semibold uppercase tracking-wide text-white";
@@ -103,23 +104,23 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         <h2 className={sectionLabel}>Service proposal info</h2>
         <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <dt className="text-neutral-600">RFQ#</dt>
+            <dt className={infoFieldLabel}>RFQ#</dt>
             <dd className="font-medium text-neutral-900">{q.rfqNumber || "—"}</dd>
           </div>
           <div>
-            <dt className="text-neutral-600">Customer PO#</dt>
+            <dt className={infoFieldLabel}>Customer PO#</dt>
             <dd className="text-neutral-900">{q.customerPo || "—"}</dd>
           </div>
           <div>
-            <dt className="text-neutral-600">Date</dt>
+            <dt className={infoFieldLabel}>Proposal Date</dt>
             <dd className="text-neutral-900">{formatDate(q.date)}</dd>
           </div>
           <div>
-            <dt className="text-neutral-600">Prepared by</dt>
+            <dt className={infoFieldLabel}>Prepared by</dt>
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
           </div>
           <div>
-            <dt className="text-neutral-600">Est. completion</dt>
+            <dt className={infoFieldLabel}>Est. completion</dt>
             <dd className="text-neutral-900">{formatDate(q.estimatedCompletion)}</dd>
           </div>
         </dl>

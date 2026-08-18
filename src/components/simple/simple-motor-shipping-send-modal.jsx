@@ -9,7 +9,7 @@ import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
 import { useFormatDate } from "@/contexts/user-settings-context";
-import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX, SEND_DOCUMENT_CC_MAX_LENGTH } from "@/lib/send-document-custom-message";
+import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX, SEND_DOCUMENT_CC_MAX_LENGTH, SEND_DOCUMENT_TO_EMAIL_MAX, isSendToEmail } from "@/lib/send-document-custom-message";
 
 function DetailRow({ label, value }) {
   const v = String(value ?? "").trim();
@@ -39,20 +39,30 @@ export default function SimpleMotorShippingSendModal({
   const [sending, setSending] = useState(false);
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
   const [emailCc, setEmailCc] = useState("");
+  const [toEmail, setToEmail] = useState("");
 
   useEffect(() => {
     if (!open) {
       setSending(false);
       setEmailCustomMessage("");
       setEmailCc("");
+      setToEmail("");
+      return;
     }
-  }, [open]);
+    setToEmail(String(sendMeta?.toEmail || "").trim());
+  }, [open, sendMeta?.toEmail]);
 
   const smtpBlocked = sendMeta?.smtp?.canSend === false;
-  const canSend = Boolean(entry && sendMeta?.toEmail && !smtpBlocked);
+  const toEmailValid = isSendToEmail(toEmail);
+  const canSend = Boolean(entry && toEmailValid && !smtpBlocked);
 
   const handleSend = async () => {
     if (!canSend || sending) return;
+    const nextTo = toEmail.trim();
+    if (!isSendToEmail(nextTo)) {
+      toast.error("Enter a valid To email address.");
+      return;
+    }
     setSending(true);
     try {
       const res = await fetch("/api/dashboard/simple-motor-shipping/send", {
@@ -60,11 +70,13 @@ export default function SimpleMotorShippingSendModal({
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          toEmail: sendMeta.toEmail,
-          toName: sendMeta.toName || "",
-          documentLabel: sendMeta.documentLabel || "Motor shipping",
+          toEmail: nextTo,
+          toName: sendMeta?.toName || "",
+          documentLabel: sendMeta?.documentLabel || "Motor shipping",
           customMessage: emailCustomMessage,
           cc: emailCc,
+          customerPhone: sendMeta?.customerPhone || "",
+          companyName: sendMeta?.companyName || "",
           entry: {
             ...entry,
             paidByLabel: paidByLabel || entry?.paidBy || "",
@@ -114,10 +126,8 @@ export default function SimpleMotorShippingSendModal({
         </Button>
       }
     >
-      {!sendMeta?.toEmail ? (
-        <p className="py-6 text-center text-sm text-danger">
-          Customer has no email address. Add an email on the service proposal or customer record.
-        </p>
+      {!entry ? (
+        <p className="py-6 text-center text-sm text-danger">Shipping details are missing.</p>
       ) : (
         <div className="flex flex-col gap-4">
           {sendMeta?.smtp?.message ? (
@@ -140,10 +150,18 @@ export default function SimpleMotorShippingSendModal({
             </div>
           ) : null}
 
-          <p className="text-sm text-secondary">
-            <span className="font-medium text-foreground">Email to: </span>
-            {sendMeta.toName ? `${sendMeta.toName} <${sendMeta.toEmail}>` : sendMeta.toEmail}
-          </p>
+          <Input
+            id="motor-shipping-send-to"
+            label="To"
+            type="email"
+            value={toEmail}
+            onChange={(e) => setToEmail(e.target.value)}
+            placeholder="email@example.com"
+            maxLength={SEND_DOCUMENT_TO_EMAIL_MAX}
+            autoComplete="email"
+            disabled={sending}
+            required
+          />
 
           <Input
             id="motor-shipping-send-cc"
@@ -183,6 +201,9 @@ export default function SimpleMotorShippingSendModal({
               <DetailRow label="Notes" value={entry?.notes} />
             </div>
           </div>
+          <p className="text-xs text-secondary">
+            A PDF of this shipping document will be attached to the email.
+          </p>
         </div>
       )}
     </Modal>
