@@ -13,6 +13,7 @@ import { getTransporter } from "@/lib/email-transport";
 import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 
 function esc(v) {
   return v == null
@@ -118,8 +119,9 @@ export async function POST(request) {
     const noteHtml = customMessage
       ? `<p style="white-space:pre-wrap;margin:12px 0">${esc(customMessage)}</p>`
       : "";
+    const logoStyle = shopEmailLogoInlineStyle(uSettings.logoDocumentScale);
     const logoHtml = shopLogo?.logoSrc
-      ? `<p style="margin-top:16px"><img src="${esc(shopLogo.logoSrc)}" alt="" style="max-height:48px" /></p>`
+      ? `<p style="margin-top:16px"><img src="${esc(shopLogo.logoSrc)}" alt="" height="${logoStyle.heightPx}" style="${logoStyle.style}" /></p>`
       : "";
     const html = `
       <p>Hi${toName ? ` ${esc(toName)}` : ""},</p>

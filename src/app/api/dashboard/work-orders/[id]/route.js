@@ -117,6 +117,7 @@ export async function GET(request, context) {
       technicianName: technician?.name || "",
       fromShopName,
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
+      logoDocumentScale: u.logoDocumentScale,
       quoteScopeForTech,
       quoteOtherCostForTech,
     });

@@ -16,6 +16,8 @@ export const USER_SETTINGS_DEFAULTS = {
   zoomLevel: DISPLAY_ZOOM_DEFAULT,
   /** Public path to uploaded shop logo (set via POST /api/dashboard/settings/logo only) */
   logoUrl: "",
+  /** Logo size on printed documents and customer/vendor emails (50–300, step 10). 100 = current default. */
+  logoDocumentScale: LOGO_DOCUMENT_SCALE_DEFAULT,
   /** Status dropdown options for work orders (order = list order) */
   workOrderStatuses: [...DEFAULT_WORK_ORDER_STATUSES],
   /**
@@ -60,6 +62,7 @@ export const USER_SETTINGS_DEFAULTS = {
 };
 
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
+import { LOGO_DOCUMENT_SCALE_DEFAULT, normalizeLogoDocumentScale } from "@/lib/logo-document-scale";
 import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
 import { isAllowedCurrency } from "@/lib/format-currency";
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
@@ -80,6 +83,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "weekStartsOn",
   "currency",
   "zoomLevel",
+  "logoDocumentScale",
   "workOrderStatuses",
   "shopFloorBoardOrder",
   "accountsBillingAddress",
@@ -220,6 +224,7 @@ export function mergeUserSettings(stored) {
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
   merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
+  merged.logoDocumentScale = normalizeLogoDocumentScale(merged.logoDocumentScale);
   merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
     merged.workOrderStatusTileColors,
     merged.workOrderStatuses
@@ -255,6 +260,10 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "zoomLevel") {
       out.zoomLevel = normalizeZoomLevel(body[key]);
+      continue;
+    }
+    if (key === "logoDocumentScale") {
+      out.logoDocumentScale = normalizeLogoDocumentScale(body[key]);
       continue;
     }
     if (key === "workOrderStatuses") {

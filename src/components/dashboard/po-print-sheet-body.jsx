@@ -60,7 +60,11 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-2 border-b border-neutral-300 pb-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <PrintShopLogo logoUrl={logoUrl} alt="" />
+          <PrintShopLogo
+            logoUrl={logoUrl}
+            scale={po.logoDocumentScale ?? settings?.logoDocumentScale}
+            alt=""
+          />
           <div className="shrink-0 text-right">
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Purchase order</h1>
             {po.poNumber ? <p className="mt-0.5 text-xs text-neutral-600">PO # {po.poNumber}</p> : null}

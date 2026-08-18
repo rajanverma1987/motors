@@ -63,6 +63,7 @@ export async function POST(request, context) {
       paymentTermsLabel: accountsPaymentTermsLabel(uSettings.accountsPaymentTerms),
     });
     const emailExtras = {
+      userSettings: uSettings,
       ...(shopLogo.logoSrc ? { logoSrc: shopLogo.logoSrc } : {}),
       ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
       ...(accountsEmailBlock.trim() ? { accountsEmailBlock } : {}),

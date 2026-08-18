@@ -78,6 +78,7 @@ export async function GET(request, context) {
     const fromShopName = owner?.shopName?.trim() || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
     const fromShopContact = shopContact || process.env.MOTOR_SHOP_CONTACT?.trim() || "";
     const fromShopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
+    const logoDocumentScale = u.logoDocumentScale;
     const fromAccountsBillingAddress = (u.accountsBillingAddress || "").trim();
     const fromAccountsShippingAddress = (u.accountsShippingAddress || "").trim();
     const fromPaymentTermsLabel = accountsPaymentTermsLabel(u.accountsPaymentTerms);
@@ -124,6 +125,7 @@ export async function GET(request, context) {
       fromShopName,
       fromShopContact,
       fromShopLogoUrl,
+      logoDocumentScale,
       fromAccountsBillingAddress,
       fromAccountsShippingAddress,
       fromPaymentTermsLabel,

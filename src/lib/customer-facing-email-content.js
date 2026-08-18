@@ -1,5 +1,6 @@
 import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER } from "@/lib/quote-document-labels";
+import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 
 const platformFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || "IQMotorBase";
 
@@ -22,13 +23,14 @@ export function resolveOutboundFromPreview(mergedSettings, shopCompanyName = "")
   return platformFrom;
 }
 
-function logoBlock(logoSrc, signature) {
+function logoBlock(logoSrc, signature, scale) {
   const src = typeof logoSrc === "string" ? logoSrc.trim() : "";
   const isHttp = src.startsWith("http://") || src.startsWith("https://");
   const isData = src.startsWith("data:image/");
   const isCid = src.startsWith("cid:");
   if (!isHttp && !isData && !isCid) return "";
-  return `<p style="margin-top:20px;margin-bottom:8px"><img src="${escapeEmailHtml(src)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`;
+  const { heightPx, maxWidthPx, style } = shopEmailLogoInlineStyle(scale);
+  return `<p style="margin-top:20px;margin-bottom:8px"><img src="${escapeEmailHtml(src)}" alt="${signature}" height="${heightPx}" width="${maxWidthPx}" style="${style}" /></p>`;
 }
 
 /** Optional note from shop — plain text, newlines preserved. */
@@ -59,7 +61,7 @@ export function buildQuoteToCustomerEmailContent(opts) {
     <p><a href="${escapeEmailHtml(opts.respondUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} &amp; respond</a></p>
     <p>You can also print or save the ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} as PDF from that page.</p>
     ${typeof opts.accountsEmailBlock === "string" && opts.accountsEmailBlock.trim() ? opts.accountsEmailBlock : ""}
-    ${logoBlock(opts.logoSrc, signature)}
+    ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
     <p style="margin-top:16px">— ${signature}</p>
   `;
   return { subject, html, shopName };
@@ -86,7 +88,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
     <p>You can print or save the invoice as PDF from that page.</p>
     ${accountsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
-    ${logoBlock(opts.logoSrc, signature)}
+    ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
     <p style="margin-top:16px">— ${signature}</p>
   `;
     return { subject, html, shopName };
@@ -106,7 +108,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
     ${notesBlock}
     ${accountsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
-    ${logoBlock(opts.logoSrc, signature)}
+    ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
     <p style="margin-top:16px">— ${signature}</p>
   `;
   return { subject, html, shopName };
@@ -127,7 +129,7 @@ export function buildPoToVendorEmailContent(opts) {
     <p><a href="${escapeEmailHtml(opts.viewUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">View purchase order</a></p>
     <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
     ${typeof opts.poVendorAddressesHtml === "string" && opts.poVendorAddressesHtml.trim() ? opts.poVendorAddressesHtml : ""}
-    ${logoBlock(opts.logoSrc, signature)}
+    ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
     <p style="margin-top:16px">— ${signature}</p>
   `;
   return { subject, html, shopName };

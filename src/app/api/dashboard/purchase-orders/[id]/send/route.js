@@ -98,6 +98,7 @@ export async function POST(request, context) {
       viewUrl,
       shopCompanyName,
       {
+        userSettings: uSettings,
         ...(shopLogo.logoSrc ? { logoSrc: shopLogo.logoSrc } : {}),
         ...(shopLogo.attachments.length ? { attachments: shopLogo.attachments } : {}),
         ...(poVendorAddressesHtml.trim() ? { poVendorAddressesHtml } : {}),

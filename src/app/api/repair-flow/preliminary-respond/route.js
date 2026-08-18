@@ -34,6 +34,7 @@ export async function GET(request) {
     ]);
     const u = mergeUserSettings(settingsDoc?.settings);
     const shopLogoUrl = typeof u.logoUrl === "string" ? u.logoUrl.trim() : "";
+    const logoDocumentScale = u.logoDocumentScale;
     const shopName =
       (owner?.shopName && String(owner.shopName).trim()) ||
       process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
@@ -45,6 +46,7 @@ export async function GET(request) {
         jobNumber: job.jobNumber || "",
         shopName,
         shopLogoUrl,
+        logoDocumentScale,
         phase: job.phase,
         message:
           job.phase === "teardown_approved" || job.phase === "disassembly_detailed"
@@ -78,6 +80,7 @@ export async function GET(request) {
       jobNumber: job.jobNumber || "",
       shopName,
       shopLogoUrl,
+      logoDocumentScale,
       quoteNotes: quote.quoteNotes || "",
       subtotal: money(subtotal),
       lineItems: lineItems.map((row) => ({

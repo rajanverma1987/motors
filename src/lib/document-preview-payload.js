@@ -16,6 +16,7 @@ export function normalizeInvoicePreviewPayload(inv, accountSettings) {
     fromShopName: inv.fromShopName || "",
     fromShopContact: inv.fromShopContact || "",
     fromShopLogoUrl: (inv.fromShopLogoUrl || accountSettings?.logoUrl || "").trim(),
+    logoDocumentScale: inv.logoDocumentScale ?? accountSettings?.logoDocumentScale,
     fromBillingAddress: String(inv.fromBillingAddress || accountSettings?.accountsBillingAddress || "").trim(),
     fromShippingAddress: String(inv.fromShippingAddress || accountSettings?.accountsShippingAddress || "").trim(),
     fromPaymentTermsLabel:

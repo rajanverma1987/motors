@@ -65,7 +65,7 @@ export default function WorkOrderPrintSheetBody({ workOrder: wo, inspections = [
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-4 border-b-2 border-neutral-800 pb-3 print:border-black">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <PrintShopLogo logoUrl={wo.fromShopLogoUrl} alt="" />
+          <PrintShopLogo logoUrl={wo.fromShopLogoUrl} scale={wo.logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
             <h1 className="text-2xl font-extrabold tracking-tight text-neutral-900 print:text-[26pt] print:font-black">
               Work order

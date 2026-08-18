@@ -45,6 +45,7 @@ export default function PortalViewPage() {
     return {
       currency: shop.currency || "USD",
       logoUrl: shop.logoUrl || "",
+      logoDocumentScale: shop.logoDocumentScale,
       accountsBillingAddress: shop.accountsBillingAddress || "",
       accountsShippingAddress: shop.accountsShippingAddress || "",
       accountsPaymentTerms: shop.accountsPaymentTerms || "net30",

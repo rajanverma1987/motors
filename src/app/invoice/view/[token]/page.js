@@ -97,6 +97,7 @@ export default function InvoiceCustomerViewPage() {
           fromShopName={inv.fromShopName}
           fromShopContact={inv.fromShopContact}
           fromShopLogoUrl={inv.fromShopLogoUrl}
+          logoDocumentScale={inv.logoDocumentScale}
           fromBillingAddress={inv.fromBillingAddress}
           fromShippingAddress={inv.fromShippingAddress}
           fromPaymentTermsLabel={inv.fromPaymentTermsLabel}

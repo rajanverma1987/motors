@@ -99,6 +99,7 @@ export async function GET(request) {
       fromShopName: owner?.shopName?.trim() || "",
       fromShopContact: shopContact,
       fromShopLogoUrl: typeof u.logoUrl === "string" ? u.logoUrl.trim() : "",
+      logoDocumentScale: u.logoDocumentScale,
       fromBillingAddress: (u.accountsBillingAddress || "").trim(),
       fromShippingAddress: (u.accountsShippingAddress || "").trim(),
       fromPaymentTermsLabel: accountsPaymentTermsLabel(u.accountsPaymentTerms),

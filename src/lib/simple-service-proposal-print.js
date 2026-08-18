@@ -102,6 +102,7 @@ export function buildSimpleServiceProposalPrintBundle({
   const fromShopName = String(user?.shopName || "").trim();
   const fromShopContact = [user?.contactName, user?.email].filter(Boolean).join(" · ") || "";
   const fromShopLogoUrl = String(accountSettings?.logoUrl || "").trim();
+  const logoDocumentScale = accountSettings?.logoDocumentScale;
   const fromBillingAddress = String(accountSettings?.accountsBillingAddress || "").trim();
   const fromShippingAddress = String(accountSettings?.accountsShippingAddress || "").trim();
   const fromPaymentTermsLabel = accountsPaymentTermsLabel(accountSettings?.accountsPaymentTerms);
@@ -139,6 +140,7 @@ export function buildSimpleServiceProposalPrintBundle({
     fromShopName,
     fromShopContact,
     fromShopLogoUrl,
+    logoDocumentScale,
     fromBillingAddress,
     fromShippingAddress,
     fromPaymentTermsLabel,
@@ -158,6 +160,7 @@ export function buildSimpleServiceProposalPrintBundle({
         fromShopName,
         fromShopContact,
         fromShopLogoUrl,
+        logoDocumentScale,
         fromBillingAddress,
         fromShippingAddress,
         fromPaymentTermsLabel,

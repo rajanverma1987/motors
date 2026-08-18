@@ -169,6 +169,7 @@ export default function DocumentPrintPreviewModal({
             fromShopName={invoicePayload.fromShopName}
             fromShopContact={invoicePayload.fromShopContact}
             fromShopLogoUrl={invoicePayload.fromShopLogoUrl}
+            logoDocumentScale={invoicePayload.logoDocumentScale}
             fromBillingAddress={invoicePayload.fromBillingAddress}
             fromShippingAddress={invoicePayload.fromShippingAddress}
             fromPaymentTermsLabel={invoicePayload.fromPaymentTermsLabel}

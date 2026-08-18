@@ -55,6 +55,7 @@ export function buildSimplePurchaseOrderPrintPayload({
       fromShopName: shopName,
       fromShopContact,
       fromShopLogoUrl: String(accountSettings?.logoUrl || "").trim(),
+      logoDocumentScale: accountSettings?.logoDocumentScale,
       fromAccountsBillingAddress: String(accountSettings?.accountsBillingAddress || "").trim(),
       fromAccountsShippingAddress: String(accountSettings?.accountsShippingAddress || "").trim(),
       fromPaymentTermsLabel: accountSettings?.accountsPaymentTerms

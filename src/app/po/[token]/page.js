@@ -88,6 +88,7 @@ export default function PoVendorViewPage() {
     if (!po) return {};
     return {
       logoUrl: po.fromShopLogoUrl,
+      logoDocumentScale: po.logoDocumentScale,
       accountsBillingAddress: po.fromAccountsBillingAddress,
       accountsShippingAddress: po.fromAccountsShippingAddress,
       invoiceThankYouNote: po.invoiceThankYouNote,

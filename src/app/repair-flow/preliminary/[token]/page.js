@@ -124,7 +124,7 @@ export default function RepairFlowPreliminaryRespondPage() {
         <div className="p-6 print:p-4 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-gray-200 pb-4 print:border-gray-300">
             <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
-              <PrintShopLogo logoUrl={data.shopLogoUrl} alt="" />
+              <PrintShopLogo logoUrl={data.shopLogoUrl} scale={data.logoDocumentScale} alt="" />
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">From</p>
                 <p className="text-sm font-semibold text-gray-900">{data.shopName || "—"}</p>

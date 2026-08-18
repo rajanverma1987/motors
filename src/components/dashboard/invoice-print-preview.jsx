@@ -26,6 +26,7 @@ export default function InvoicePrintPreview({
   fromShopName = "",
   fromShopContact = "",
   fromShopLogoUrl = "",
+  logoDocumentScale,
   fromBillingAddress = "",
   fromShippingAddress = "",
   fromPaymentTermsLabel = "",
@@ -64,7 +65,7 @@ export default function InvoicePrintPreview({
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-2 border-b border-neutral-300 pb-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <PrintShopLogo logoUrl={fromShopLogoUrl} alt="" />
+          <PrintShopLogo logoUrl={fromShopLogoUrl} scale={logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Invoice</h1>
           </div>

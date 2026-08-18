@@ -110,7 +110,7 @@ function PrintDocumentHeader({
         <PrintShopLogo
           logoUrl={logoUrl}
           alt=""
-          className="!h-[4.25rem] !max-h-[4.25rem] !max-w-[16rem]"
+          variant="lg"
         />
         <h1 className="min-w-0 flex-1 text-center text-2xl font-bold tracking-wide">{title}</h1>
       </div>

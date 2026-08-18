@@ -7,6 +7,7 @@ import {
   buildInvoiceToCustomerEmailContent,
   buildPoToVendorEmailContent,
 } from "@/lib/customer-facing-email-content";
+import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 import {
   buildCrmWelcomeEmailContent,
   buildDemoAccountCredentialsEmailContent,
@@ -696,6 +697,7 @@ export async function sendQuoteToCustomer(
     respondUrl,
     shopCompanyName,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
     accountsEmailBlock: options.accountsEmailBlock,
     customMessage: options.customMessage,
   });
@@ -722,9 +724,12 @@ export async function sendRepairFlowPreliminaryToCustomer(
   const logoIsHttp = logoSrc.startsWith("http://") || logoSrc.startsWith("https://");
   const logoIsData = logoSrc.startsWith("data:image/");
   const logoIsCid = logoSrc.startsWith("cid:");
+  const { heightPx, maxWidthPx, style } = shopEmailLogoInlineStyle(
+    options.logoDocumentScale ?? options.userSettings?.logoDocumentScale
+  );
   const logoBlock =
     logoIsHttp || logoIsData || logoIsCid
-      ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoSrc)}" alt="${signature}" width="160" style="max-width:160px;height:auto;display:block;border:0" /></p>`
+      ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoSrc)}" alt="${signature}" height="${heightPx}" width="${maxWidthPx}" style="${style}" /></p>`
       : "";
   const html = `
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
@@ -759,6 +764,7 @@ export async function sendInvoiceToCustomer(
     totalFormatted: options.totalFormatted,
     summaryHtml: options.summaryHtml,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
     accountsEmailBlock: options.accountsEmailBlock,
     customMessage: options.customMessage,
   });
@@ -774,6 +780,7 @@ export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, sho
     viewUrl,
     shopCompanyName,
     logoSrc: options.logoSrc || options.logoAbsoluteUrl,
+    logoDocumentScale: options.logoDocumentScale ?? options.userSettings?.logoDocumentScale,
     poVendorAddressesHtml: options.poVendorAddressesHtml,
     customMessage: options.customMessage,
   });

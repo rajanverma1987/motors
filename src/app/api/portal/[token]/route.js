@@ -77,6 +77,7 @@ export async function GET(request, context) {
       shop: {
         currency,
         logoUrl,
+        logoDocumentScale: merged.logoDocumentScale,
         accountsBillingAddress: String(merged?.accountsBillingAddress || "").trim(),
         accountsShippingAddress: String(merged?.accountsShippingAddress || "").trim(),
         accountsPaymentTerms: String(merged?.accountsPaymentTerms || "").trim(),

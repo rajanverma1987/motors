@@ -60,7 +60,7 @@ export default function RepairFlowFlowQuotePrintContent({ job, quotes, fmt, acco
   return (
     <>
       <div className="mb-4 flex flex-col items-start gap-1.5 border-b border-border pb-3">
-        <PrintShopLogo logoUrl={accountSettings?.logoUrl} alt="" />
+        <PrintShopLogo logoUrl={accountSettings?.logoUrl} scale={accountSettings?.logoDocumentScale} alt="" />
         <div className="min-w-0 w-full">
           <CompanyAccountsPrint
             billingAddress={accountSettings?.accountsBillingAddress}

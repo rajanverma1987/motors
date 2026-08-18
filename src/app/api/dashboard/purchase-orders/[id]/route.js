@@ -165,6 +165,7 @@ export async function GET(request, context) {
     out.fromShopName = fromShopName;
     out.fromShopContact = fromShopContact;
     out.fromShopLogoUrl = String(merged.logoUrl || "").trim();
+    out.logoDocumentScale = merged.logoDocumentScale;
     out.fromAccountsBillingAddress = String(merged.accountsBillingAddress || "").trim();
     out.fromAccountsShippingAddress = String(merged.accountsShippingAddress || "").trim();
     out.fromPaymentTermsLabel = merged.accountsPaymentTerms

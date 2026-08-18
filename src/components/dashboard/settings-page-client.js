@@ -25,7 +25,15 @@ import {
   DISPLAY_ZOOM_STEP,
   normalizeZoomLevel,
 } from "@/lib/display-zoom";
+import {
+  LOGO_DOCUMENT_SCALE_DEFAULT,
+  LOGO_DOCUMENT_SCALE_MAX,
+  LOGO_DOCUMENT_SCALE_MIN,
+  LOGO_DOCUMENT_SCALE_STEP,
+  normalizeLogoDocumentScale,
+} from "@/lib/logo-document-scale";
 import Slider from "@/components/ui/slider";
+import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { DISPLAY_CURRENCIES } from "@/lib/format-currency";
 
 const PAGE_SIZE_OPTIONS = [
@@ -410,16 +418,16 @@ export default function SettingsPageClient() {
             <FormContainer>
               <FormSectionTitle as="h2">Company logo</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
-                Shown in the dashboard header. Included above your shop name in emails when you send a quote to a customer or a purchase order to a vendor (PNG, JPEG, GIF, or WebP, max 2MB).
+                Shown in the dashboard header. Included on printed quotes, invoices, purchase orders, and in emails
+                when you send a document (PNG, JPEG, GIF, or WebP, max 2MB).
               </p>
               <div className="flex flex-wrap items-start gap-6">
-                <div className="flex h-20 min-w-[120px] items-center justify-center rounded-lg border border-border bg-form-bg px-4">
+                <div className="flex min-h-[5rem] min-w-[120px] items-center justify-center rounded-lg border border-border bg-form-bg px-4 py-3">
                   {draft.logoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={draft.logoUrl}
+                    <PrintShopLogo
+                      logoUrl={draft.logoUrl}
                       alt="Your logo"
-                      className="max-h-16 max-w-[200px] object-contain"
+                      scale={normalizeLogoDocumentScale(draft.logoDocumentScale)}
                     />
                   ) : (
                     <span className="text-sm text-secondary">No logo</span>
@@ -455,6 +463,29 @@ export default function SettingsPageClient() {
                     </Button>
                   )}
                 </div>
+              </div>
+              <div className="mt-6 max-w-md">
+                <Slider
+                  id="settings-branding-logo-size"
+                  label="Logo size on documents"
+                  help="Applies to printed quotes, invoices, purchase orders, datasheets, and logos in customer or vendor emails. Dashboard header logo is unchanged."
+                  min={LOGO_DOCUMENT_SCALE_MIN}
+                  max={LOGO_DOCUMENT_SCALE_MAX}
+                  step={LOGO_DOCUMENT_SCALE_STEP}
+                  value={normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}
+                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${
+                    normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
+                    LOGO_DOCUMENT_SCALE_DEFAULT
+                      ? " (default)"
+                      : ""
+                  }`}
+                  onChange={(e) =>
+                    updateDraft({ logoDocumentScale: normalizeLogoDocumentScale(e.target.value) })
+                  }
+                />
+                <p className="mt-2 text-xs text-secondary">
+                  Preview above matches printed documents. Drag the slider, then click Save changes.
+                </p>
               </div>
             </FormContainer>
           </div>
@@ -763,6 +794,7 @@ export default function SettingsPageClient() {
       draft.zoomLevel,
       draft.leadEmailAlerts,
       draft.logoUrl,
+      draft.logoDocumentScale,
       draft.marketingTips,
       draft.tablePageSize,
       draft.weekStartsOn,

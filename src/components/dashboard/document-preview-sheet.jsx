@@ -43,6 +43,7 @@ export default function DocumentPreviewSheet({
             fromShopName={invoiceForSheet.fromShopName}
             fromShopContact={invoiceForSheet.fromShopContact}
             fromShopLogoUrl={invoiceForSheet.fromShopLogoUrl}
+            logoDocumentScale={invoiceForSheet.logoDocumentScale}
             fromBillingAddress={invoiceForSheet.fromBillingAddress}
             fromShippingAddress={invoiceForSheet.fromShippingAddress}
             fromPaymentTermsLabel={invoiceForSheet.fromPaymentTermsLabel}

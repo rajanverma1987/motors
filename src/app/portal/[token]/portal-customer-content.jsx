@@ -497,6 +497,7 @@ export default function PortalCustomerContent({ data }) {
             fromShopName={printBundle.invoicePayload.fromShopName}
             fromShopContact={printBundle.invoicePayload.fromShopContact}
             fromShopLogoUrl={printBundle.invoicePayload.fromShopLogoUrl}
+            logoDocumentScale={printBundle.invoicePayload.logoDocumentScale}
             fromBillingAddress={printBundle.invoicePayload.fromBillingAddress}
             fromShippingAddress={printBundle.invoicePayload.fromShippingAddress}
             fromPaymentTermsLabel={printBundle.invoicePayload.fromPaymentTermsLabel}
