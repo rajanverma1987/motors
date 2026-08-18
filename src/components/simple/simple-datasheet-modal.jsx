@@ -335,11 +335,19 @@ export default function SimpleDatasheetModal({
             <SimpleSelect
               options={techOptions}
               value={form.technician}
+              onChange={(e) => {
+                const next = e.target.value;
+                setForm((f) => {
+                  const updated = { ...f, technician: next };
+                  if (!isDc && f.assembly && typeof f.assembly === "object") {
+                    updated.assembly = { ...f.assembly, technicianName: next };
+                  }
+                  return updated;
+                });
+              }}
               placeholder="Select…"
               searchable
               aria-label="Technician"
-              disabled
-              triggerClassName="!border-0 !bg-transparent !px-0 !font-semibold"
             />
           </div>
           <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
