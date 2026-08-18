@@ -249,12 +249,19 @@ export async function createPaypalSubscription({
   cancelUrl,
   subscriberEmail,
   brandName = "IQMotorBase",
+  customId,
+  landingPage,
 }) {
   await ensurePaypalBillingPlanActive(paypalPlanId);
   const token = await getPaypalAccessToken();
   const base = paypalBaseUrl();
+  const landing =
+    landingPage === "BILLING" || landingPage === "LOGIN" || landingPage === "NO_PREFERENCE"
+      ? landingPage
+      : "";
   const body = {
     plan_id: paypalPlanId,
+    custom_id: customId ? String(customId).slice(0, 127) : undefined,
     subscriber: subscriberEmail
       ? {
           email_address: subscriberEmail,
@@ -265,6 +272,7 @@ export async function createPaypalSubscription({
       locale: "en-US",
       shipping_preference: "NO_SHIPPING",
       user_action: "SUBSCRIBE_NOW",
+      ...(landing ? { landing_page: landing } : {}),
       return_url: returnUrl,
       cancel_url: cancelUrl,
     },

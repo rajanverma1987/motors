@@ -17,7 +17,6 @@ const stackScreenOptions = {
   headerTitleStyle: { color: colors.title, fontWeight: "700" },
   headerShadowVisible: true,
   contentStyle: { backgroundColor: colors.bg },
-  headerBackTitleVisible: false,
   headerBackButtonDisplayMode: "minimal",
 };
 

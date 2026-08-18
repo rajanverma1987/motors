@@ -1,11 +1,14 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
-import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getMobileAppAccountFromRequest, mobileAppUnauthorized } from "@/lib/mobile-app-auth";
-import { ensurePaypalBillingPlanActive, paypalConfigured } from "@/lib/paypal-api";
+import { ensurePaypalBillingPlanActive, paypalCheckoutOrigin, paypalConfigured } from "@/lib/paypal-api";
 import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
+
+function paypalPlanSubscribeUrl(paypalPlanId) {
+  return `${paypalCheckoutOrigin()}/webapps/billing/plans/subscribe?plan_id=${encodeURIComponent(paypalPlanId)}`;
+}
 
 export async function POST(request) {
   try {
@@ -39,9 +42,8 @@ export async function POST(request) {
     account.paypalPlanId = calcPlan.paypalPlanId;
     await account.save();
 
-    const base = getPublicSiteUrl(request);
-    const checkoutUrl = `${base}/mobile-app/paypal-checkout?token=${encodeURIComponent(checkoutToken)}`;
-    return NextResponse.json({ approvalUrl: checkoutUrl, checkoutUrl });
+    const approvalUrl = paypalPlanSubscribeUrl(calcPlan.paypalPlanId);
+    return NextResponse.json({ approvalUrl, checkoutUrl: approvalUrl });
   } catch (err) {
     console.error("mobile-app checkout subscribe:", err);
     return NextResponse.json({ error: err.message || "Checkout failed" }, { status: 500 });

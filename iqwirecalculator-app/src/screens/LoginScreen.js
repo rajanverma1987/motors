@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMobileAuth } from "../AuthContext";
 import { colors, spacing } from "../theme";
 import { useCenterFieldInScroll } from "../useCenterFieldInScroll";
-import { appFetch } from "../api";
 
 const APP_VERSION = Constants.expoConfig?.version || "1.0.0";
 
@@ -28,14 +27,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [pricing, setPricing] = useState(null);
   const { scrollRef, onScroll, scrollFieldToCenter } = useCenterFieldInScroll(insets.top);
-
-  useEffect(() => {
-    appFetch("/api/mobile-app/pricing")
-      .then(setPricing)
-      .catch(() => {});
-  }, []);
 
   const onSubmit = async () => {
     setError("");
@@ -49,10 +41,7 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
-  const priceLine =
-    pricing && Number(pricing.monthlyUsd) > 0
-      ? `${pricing.trialDays}-day free trial, then ${pricing.currency} ${Number(pricing.monthlyUsd).toFixed(2)}/mo`
-      : "3-day free trial, then a monthly subscription";
+  const priceLine = "3-day free trial, then a monthly subscription through the App Store or Google Play";
 
   return (
     <View style={styles.outer}>

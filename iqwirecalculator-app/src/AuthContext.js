@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { AppState } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { appFetch, isAuthRejected } from "./api";
+import { initSubscriptionStore, endSubscriptionStore } from "./lib/subscription";
 
 const TOKEN_KEY = "motop_calcs_jwt";
 const ACCOUNT_KEY = "motop_calcs_account";
@@ -15,10 +16,18 @@ export function MobileAuthProvider({ children }) {
   const readyRef = useRef(false);
 
   const persist = useCallback(async (tok, acc) => {
-    if (tok) await SecureStore.setItemAsync(TOKEN_KEY, tok);
-    else await SecureStore.deleteItemAsync(TOKEN_KEY);
-    if (acc) await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(acc));
-    else await SecureStore.deleteItemAsync(ACCOUNT_KEY);
+    try {
+      if (tok) await SecureStore.setItemAsync(TOKEN_KEY, tok);
+      else await SecureStore.deleteItemAsync(TOKEN_KEY);
+    } catch {
+      /* Keychain can fail on first TestFlight launch; keep memory state. */
+    }
+    try {
+      if (acc) await SecureStore.setItemAsync(ACCOUNT_KEY, JSON.stringify(acc));
+      else await SecureStore.deleteItemAsync(ACCOUNT_KEY);
+    } catch {
+      /* ignore */
+    }
     setToken(tok);
     setAccount(acc);
   }, []);
@@ -34,7 +43,12 @@ export function MobileAuthProvider({ children }) {
   );
 
   const verifyAccess = useCallback(async () => {
-    const t = await SecureStore.getItemAsync(TOKEN_KEY);
+    let t = null;
+    try {
+      t = await SecureStore.getItemAsync(TOKEN_KEY);
+    } catch {
+      t = null;
+    }
     if (!t) {
       await persist(null, null);
       return null;
@@ -59,8 +73,15 @@ export function MobileAuthProvider({ children }) {
     let cancelled = false;
     (async () => {
       try {
-        const t = await SecureStore.getItemAsync(TOKEN_KEY);
-        const aJson = await SecureStore.getItemAsync(ACCOUNT_KEY);
+        let t = null;
+        let aJson = null;
+        try {
+          t = await SecureStore.getItemAsync(TOKEN_KEY);
+          aJson = await SecureStore.getItemAsync(ACCOUNT_KEY);
+        } catch {
+          t = null;
+          aJson = null;
+        }
         if (cancelled) return;
         if (t) setToken(t);
         if (aJson) {
@@ -72,6 +93,7 @@ export function MobileAuthProvider({ children }) {
         }
         if (t) {
           await verifyAccess();
+          initSubscriptionStore().catch(() => {});
         }
       } finally {
         if (!cancelled) {
@@ -103,6 +125,7 @@ export function MobileAuthProvider({ children }) {
         body: { email, password },
       });
       await applyAuthResponse(data);
+      initSubscriptionStore().catch(() => {});
     },
     [applyAuthResponse]
   );
@@ -114,12 +137,14 @@ export function MobileAuthProvider({ children }) {
         body: { name, phone, email, password, country, countryName },
       });
       await applyAuthResponse(data);
+      initSubscriptionStore().catch(() => {});
     },
     [applyAuthResponse]
   );
 
   const logout = useCallback(async () => {
     await persist(null, null);
+    endSubscriptionStore().catch(() => {});
   }, [persist]);
 
   const updateProfile = useCallback(

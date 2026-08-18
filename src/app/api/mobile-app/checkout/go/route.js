@@ -65,6 +65,11 @@ export async function GET(request) {
     // That PayPal page fails with billing/error (createCart 400 / early_flush).
     const approvalUrl = `${paypalCheckoutOrigin()}/webapps/billing/plans/subscribe?plan_id=${encodeURIComponent(calcPlan.paypalPlanId)}`;
 
+    const wantsJson = String(request.headers.get("accept") || "").includes("application/json");
+    if (wantsJson) {
+      return NextResponse.json({ approvalUrl });
+    }
+
     return new NextResponse(paypalBounceHtml(approvalUrl), {
       status: 200,
       headers: {

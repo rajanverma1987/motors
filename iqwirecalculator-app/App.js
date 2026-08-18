@@ -12,6 +12,7 @@ import LoginScreen from "./src/screens/LoginScreen";
 import RegisterScreen from "./src/screens/RegisterScreen";
 import AppSplashScreen from "./src/components/AppSplashScreen";
 import PaywallOverlay from "./src/components/PaywallOverlay";
+import ErrorBoundary from "./src/components/ErrorBoundary";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -72,10 +73,12 @@ function LoggedInShell() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <MobileAuthProvider>
-        <StatusBar style="dark" />
-        <NavigationRoot />
-      </MobileAuthProvider>
+      <ErrorBoundary>
+        <MobileAuthProvider>
+          <StatusBar style="dark" />
+          <NavigationRoot />
+        </MobileAuthProvider>
+      </ErrorBoundary>
     </SafeAreaProvider>
   );
 }

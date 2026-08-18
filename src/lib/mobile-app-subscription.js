@@ -6,6 +6,9 @@ import { createPaypalProductAndPlan, paypalConfigured, cancelPaypalSubscription,
 /** Admin → Subscription plans slug for IQWireCalculator (price editable any time). */
 export const MOBILE_APP_SUBSCRIPTION_PLAN_SLUG = "mobile-app";
 
+export const MOBILE_APP_IAP_PRODUCT_ID = "IQWireMonthly";
+export const MOBILE_APP_IAP_ANDROID_PACKAGE = "com.iqmotorbase.iqwirecalculator";
+export const MOBILE_APP_IAP_IOS_BUNDLE = "com.iqmotorbase.iqwirecalculator";
 export const MOBILE_APP_TRIAL_DAYS = 3;
 export const MOBILE_APP_GRACE_DAYS = 3;
 export const MOBILE_APP_DEFAULT_MONTHLY_USD = 9.99;
@@ -112,11 +115,15 @@ export function describeMobileAppAccess(account) {
   const now = Date.now();
   const trialEnds = account?.trialEndsAt ? new Date(account.trialEndsAt).getTime() : 0;
   const periodEnds = account?.currentPeriodEndsAt ? new Date(account.currentPeriodEndsAt).getTime() : 0;
+  const iapEnds = account?.iapExpiresAt ? new Date(account.iapExpiresAt).getTime() : 0;
   const graceEnds = account?.graceEndsAt ? new Date(account.graceEndsAt).getTime() : 0;
   const status = String(account?.subscriptionStatus || "trial");
   const trialMsLeft = Math.max(0, trialEnds - now);
-  const periodMsLeft = Math.max(0, periodEnds - now);
+  const periodMsLeft = Math.max(0, Math.max(periodEnds, iapEnds) - now);
 
+  if (iapEnds > now) {
+    return { unlocked: true, accessMode: "subscription", lockedReason: "" };
+  }
   if (status === "active" && (periodEnds > now || graceEnds > now)) {
     return {
       unlocked: true,
@@ -142,13 +149,22 @@ export function describeMobileAppAccess(account) {
   return { unlocked: false, accessMode: "locked", lockedReason, trialMsLeft, periodMsLeft };
 }
 
-export async function findMobileAppAccountForPaypalEvent({ paypalSubscriptionId, subscriberEmail }) {
+export async function findMobileAppAccountForPaypalEvent({
+  paypalSubscriptionId,
+  subscriberEmail,
+  customId,
+}) {
   const subId = String(paypalSubscriptionId || "").trim();
   const email = String(subscriberEmail || "").trim().toLowerCase();
+  const token = String(customId || "").trim();
   await connectDB();
   if (subId) {
     const bySub = await MobileAppAccount.findOne({ paypalSubscriptionId: subId });
     if (bySub) return bySub;
+  }
+  if (token) {
+    const byToken = await MobileAppAccount.findOne({ paypalCheckoutToken: token });
+    if (byToken) return byToken;
   }
   if (email) {
     const byEmail = await MobileAppAccount.findOne({ email });
@@ -223,7 +239,27 @@ export async function applyMobileAppSubscriptionActivated({ paypalSubscriptionId
   await account.save();
 }
 
+export async function applyMobileAppIapEntitlement(account, payload) {
+  const expiresAt = payload.expiresAt instanceof Date ? payload.expiresAt : new Date(payload.expiresAt);
+  account.iapPlatform = String(payload.platform || "").toLowerCase();
+  account.iapProductId = String(payload.productId || MOBILE_APP_IAP_PRODUCT_ID);
+  account.iapTransactionId = String(payload.transactionId || "").trim();
+  account.iapOriginalTransactionId = String(payload.originalTransactionId || "").trim();
+  account.iapPurchaseToken = String(payload.purchaseToken || "").trim();
+  account.iapExpiresAt = expiresAt;
+  account.subscriptionStatus = "active";
+  account.cancelAtPeriodEnd = false;
+  account.currentPeriodEndsAt = expiresAt;
+  account.lastPaymentAt = new Date();
+  account.lastPaymentFailedAt = null;
+  account.graceEndsAt = null;
+  await account.save();
+  return account;
+}
+
 async function revertUnpaidMobileCheckout(account) {
+  const iapEnds = account.iapExpiresAt ? new Date(account.iapExpiresAt).getTime() : 0;
+  if (iapEnds > Date.now()) return account;
   const trialEnds = account.trialEndsAt ? new Date(account.trialEndsAt).getTime() : 0;
   account.subscriptionStatus = trialEnds > Date.now() ? "trial" : "expired";
   account.cancelAtPeriodEnd = false;
@@ -239,6 +275,10 @@ async function revertUnpaidMobileCheckout(account) {
  * @returns {{ account: object, activated: boolean, paypalStatus: string }}
  */
 export async function syncMobileAppPaypalSubscription(account) {
+  const iapEnds = account?.iapExpiresAt ? new Date(account.iapExpiresAt).getTime() : 0;
+  if (iapEnds > Date.now()) {
+    return { account, activated: true, paypalStatus: "IAP" };
+  }
   const subId = String(account?.paypalSubscriptionId || "").trim();
   if (!subId) {
     return { account, activated: false, paypalStatus: "" };
@@ -292,6 +332,8 @@ export async function applyMobileAppSubscriptionCancelled({ paypalSubscriptionId
   await connectDB();
   const account = await MobileAppAccount.findOne({ paypalSubscriptionId: subId });
   if (!account) return;
+  const iapEnds = account.iapExpiresAt ? new Date(account.iapExpiresAt).getTime() : 0;
+  if (iapEnds > Date.now()) return;
   const periodEnds = account.currentPeriodEndsAt ? new Date(account.currentPeriodEndsAt).getTime() : 0;
   account.subscriptionStatus = periodEnds > Date.now() ? "cancelled" : "expired";
   account.cancelAtPeriodEnd = true;
@@ -304,6 +346,8 @@ export async function applyMobileAppPaymentDenied({ paypalSubscriptionId }) {
   await connectDB();
   const account = await MobileAppAccount.findOne({ paypalSubscriptionId: subId });
   if (!account) return;
+  const iapEnds = account.iapExpiresAt ? new Date(account.iapExpiresAt).getTime() : 0;
+  if (iapEnds > Date.now()) return;
   const grace = new Date();
   grace.setDate(grace.getDate() + MOBILE_APP_GRACE_DAYS);
   account.subscriptionStatus = "past_due";

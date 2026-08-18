@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing, formFieldLabel } from "../theme";
 import { useMobileAuth } from "../AuthContext";
-import { appFetch } from "../api";
-import { startPaypalCheckout } from "../lib/paypal-checkout";
+import {
+  loadMonthlyProduct,
+  purchaseMonthlySubscription,
+  restoreMonthlySubscription,
+  openSubscriptionManagement,
+  friendlyIapError,
+} from "../lib/subscription";
 
 function statusCopy(account) {
   if (!account) return "";
@@ -39,14 +44,21 @@ export default function ProfileScreen() {
   const [name, setName] = useState(account?.name || "");
   const [phone, setPhone] = useState(account?.phone || "");
   const [saving, setSaving] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [storePrice, setStorePrice] = useState("");
+  const [hasIntroOffer, setHasIntroOffer] = useState(true);
 
-  const price = account?.plan?.monthlyUsd;
-  const currency = account?.plan?.currency || "USD";
-  const priceLabel =
-    Number.isFinite(Number(price)) && Number(price) > 0
-      ? `${currency} ${Number(price).toFixed(2)} / month`
-      : "Monthly subscription";
+  useEffect(() => {
+    refreshAccount().catch(() => {});
+    loadMonthlyProduct()
+      .then((info) => {
+        setStorePrice(info.displayPrice);
+        setHasIntroOffer(!!info.hasIntroOffer);
+      })
+      .catch(() => {
+        setStorePrice("$11.99 / month");
+      });
+  }, [refreshAccount]);
 
   const save = async () => {
     setSaving(true);
@@ -60,40 +72,54 @@ export default function ProfileScreen() {
     }
   };
 
-  const startCheckout = async () => {
-    setCheckingOut(true);
+  const startPurchase = async () => {
+    if (busy) return;
+    setBusy("purchase");
     try {
-      await startPaypalCheckout(token);
+      const result = await purchaseMonthlySubscription(token);
+      if (result?.cancelled) return;
+      if (result?.pending) {
+        Alert.alert("Purchase pending", "Your purchase is pending.");
+        return;
+      }
       await refreshAccount().catch(() => {});
     } catch (e) {
-      Alert.alert("Checkout unavailable", e.message || "Try again later.");
+      const msg = friendlyIapError(e);
+      if (msg) Alert.alert("Subscription", msg);
     } finally {
-      setCheckingOut(false);
+      setBusy("");
     }
   };
 
-  const cancelSub = () => {
-    Alert.alert(
-      "Cancel subscription",
-      "You will keep access until the end of the current billing period. This cannot be undone from here.",
-      [
-        { text: "Keep subscription", style: "cancel" },
-        {
-          text: "Cancel subscription",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await appFetch("/api/mobile-app/subscription", { token, method: "DELETE" });
-              await refreshAccount();
-              Alert.alert("Cancelled", "Access continues until the period end date.");
-            } catch (e) {
-              Alert.alert("Could not cancel", e.message || "Try again.");
-            }
-          },
-        },
-      ]
-    );
+  const restore = async () => {
+    if (busy) return;
+    setBusy("restore");
+    try {
+      const result = await restoreMonthlySubscription(token);
+      await refreshAccount().catch(() => {});
+      if (result?.restored) {
+        Alert.alert("Restored", "Your subscription access was restored.");
+      } else {
+        Alert.alert("No purchases found", "We could not find an active subscription for this store account.");
+      }
+    } catch (e) {
+      const msg = friendlyIapError(e);
+      if (msg) Alert.alert("Restore purchases", msg);
+    } finally {
+      setBusy("");
+    }
   };
+
+  const manage = async () => {
+    try {
+      await openSubscriptionManagement();
+    } catch {
+      Alert.alert("Manage subscription", "Open the App Store or Google Play subscription settings to cancel or change your plan.");
+    }
+  };
+
+  const subscribed = account?.unlocked && (account?.accessMode === "subscription" || account?.accessMode === "cancelled_until_period_end");
+  const ctaLabel = hasIntroOffer ? "Start 3-Day Free Trial" : "Subscribe";
 
   return (
     <ScrollView style={styles.scroll} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}>
@@ -116,24 +142,28 @@ export default function ProfileScreen() {
       <View style={styles.panel}>
         <Text style={styles.panelTitle}>Subscription</Text>
         <Text style={styles.status}>{statusCopy(account)}</Text>
-        <Text style={styles.price}>{priceLabel}</Text>
-        {account?.unlocked && account?.accessMode === "subscription" ? (
-          <Pressable onPress={cancelSub} style={styles.outline}>
-            <Text style={styles.outlineText}>Cancel subscription</Text>
+        <Text style={styles.trialNote}>3-day free trial</Text>
+        <Text style={styles.price}>{storePrice || "$11.99 / month"}</Text>
+        {subscribed ? (
+          <Pressable onPress={manage} style={styles.outline}>
+            <Text style={styles.outlineText}>Manage subscription</Text>
           </Pressable>
         ) : (
           <Pressable
-            onPress={startCheckout}
-            disabled={checkingOut}
-            style={({ pressed }) => [styles.btn, pressed && styles.pressed, checkingOut && styles.disabled]}
+            onPress={startPurchase}
+            disabled={!!busy}
+            style={({ pressed }) => [styles.btn, pressed && styles.pressed, busy && styles.disabled]}
           >
-            {checkingOut ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.btnText}>Subscribe with PayPal</Text>
-            )}
+            {busy === "purchase" ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{ctaLabel}</Text>}
           </Pressable>
         )}
+        <Pressable onPress={restore} disabled={!!busy} style={styles.linkBtn}>
+          {busy === "restore" ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={styles.link}>Restore Purchases</Text>
+          )}
+        </Pressable>
       </View>
 
       <Pressable onPress={logout} style={styles.signOut}>
@@ -184,6 +214,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: { fontSize: 12, fontWeight: "700", letterSpacing: 0.6, textTransform: "uppercase", color: colors.title },
   status: { fontSize: 15, color: colors.text, marginTop: spacing.sm, lineHeight: 22 },
+  trialNote: { fontSize: 14, color: colors.secondary, marginTop: spacing.sm },
   price: { fontSize: 16, fontWeight: "800", color: colors.primary, marginVertical: spacing.md },
   outline: {
     borderWidth: 1,
@@ -193,6 +224,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   outlineText: { color: colors.danger, fontWeight: "700" },
+  linkBtn: { marginTop: spacing.md, alignItems: "center", minHeight: 24 },
+  link: { color: colors.primary, fontWeight: "700", fontSize: 14 },
   signOut: { alignItems: "center", paddingVertical: spacing.md },
   signOutText: { color: colors.secondary, fontWeight: "700", fontSize: 15 },
 });

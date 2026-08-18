@@ -1,36 +1,72 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, Alert } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, spacing } from "../theme";
 import { useMobileAuth } from "../AuthContext";
-import { startPaypalCheckout } from "../lib/paypal-checkout";
+import {
+  loadMonthlyProduct,
+  purchaseMonthlySubscription,
+  restoreMonthlySubscription,
+  friendlyIapError,
+} from "../lib/subscription";
 
 export default function PaywallOverlay() {
   const insets = useSafeAreaInsets();
   const { account, token, refreshAccount, logout } = useMobileAuth();
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState("");
+  const [storePrice, setStorePrice] = useState("$11.99 / month");
+  const [hasIntroOffer, setHasIntroOffer] = useState(true);
+
+  useEffect(() => {
+    if (!account || account.unlocked) return;
+    loadMonthlyProduct()
+      .then((info) => {
+        setStorePrice(info.displayPrice);
+        setHasIntroOffer(!!info.hasIntroOffer);
+      })
+      .catch(() => {});
+  }, [account]);
 
   if (!account || account.unlocked) return null;
 
-  const price = account.plan?.monthlyUsd;
-  const currency = account.plan?.currency || "USD";
-  const priceLabel =
-    Number.isFinite(Number(price)) && Number(price) > 0
-      ? `${currency} ${Number(price).toFixed(2)} / month`
-      : "Monthly subscription";
-
-  const startCheckout = async () => {
-    setBusy(true);
+  const startPurchase = async () => {
+    if (busy) return;
+    setBusy("purchase");
     try {
-      await startPaypalCheckout(token);
+      const result = await purchaseMonthlySubscription(token);
+      if (result?.cancelled) return;
+      if (result?.pending) {
+        Alert.alert("Purchase pending", "Your purchase is pending.");
+        return;
+      }
       await refreshAccount().catch(() => {});
     } catch (e) {
-      Alert.alert("Checkout unavailable", e.message || "Try again later.");
+      const msg = friendlyIapError(e);
+      if (msg) Alert.alert("Subscription", msg);
     } finally {
-      setBusy(false);
+      setBusy("");
     }
   };
+
+  const restore = async () => {
+    if (busy) return;
+    setBusy("restore");
+    try {
+      const result = await restoreMonthlySubscription(token);
+      await refreshAccount().catch(() => {});
+      if (!result?.restored) {
+        Alert.alert("No purchases found", "We could not find an active subscription for this store account.");
+      }
+    } catch (e) {
+      const msg = friendlyIapError(e);
+      if (msg) Alert.alert("Restore purchases", msg);
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const ctaLabel = hasIntroOffer ? "Start 3-Day Free Trial" : "Subscribe";
 
   return (
     <View style={[styles.overlay, { paddingTop: insets.top + spacing.xl, paddingBottom: insets.bottom + spacing.lg }]}>
@@ -40,15 +76,22 @@ export default function PaywallOverlay() {
         </View>
         <Text style={styles.title}>Your free trial ended</Text>
         <Text style={styles.body}>
-          Subscribe to keep using calculators, saved work, and upcoming video lessons. Cancel anytime from Profile.
+          Start a 3-day free trial, then {storePrice}. Cancel anytime from Profile.
         </Text>
-        <Text style={styles.price}>{priceLabel}</Text>
+        <Text style={styles.price}>{storePrice}</Text>
         <Pressable
-          onPress={startCheckout}
-          disabled={busy}
+          onPress={startPurchase}
+          disabled={!!busy}
           style={({ pressed }) => [styles.btn, pressed && styles.pressed, busy && styles.disabled]}
         >
-          {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Subscribe with PayPal</Text>}
+          {busy === "purchase" ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>{ctaLabel}</Text>}
+        </Pressable>
+        <Pressable onPress={restore} disabled={!!busy} style={styles.linkBtn}>
+          {busy === "restore" ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={styles.link}>Restore Purchases</Text>
+          )}
         </Pressable>
         <Pressable onPress={() => refreshAccount().catch(() => {})} style={styles.linkBtn}>
           <Text style={styles.link}>Already paid? Refresh access</Text>

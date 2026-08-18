@@ -98,6 +98,7 @@ export async function POST(request) {
           const mobileAccount = await findMobileAppAccountForPaypalEvent({
             paypalSubscriptionId: subId,
             subscriberEmail: subscriberEmailFromEvent(event),
+            customId: event?.resource?.custom_id,
           });
           if (mobileAccount) {
             isMobileAppSub = true;
