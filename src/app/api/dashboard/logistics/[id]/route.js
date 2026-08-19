@@ -3,8 +3,10 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import LogisticsEntry from "@/models/LogisticsEntry";
 import PurchaseOrder from "@/models/PurchaseOrder";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString } from "@/lib/validation";
+import { isValidSimplePortalId } from "@/lib/simple-portal-mongo";
 import {
   applyPoLineReceiptStatuses,
   revertPoOnLogisticsDelete,
@@ -143,6 +145,16 @@ export async function PATCH(request, context) {
 
     Object.assign(existing, patch);
     await existing.save();
+
+    if (existing.kind === "motor_shipping") {
+      const spId = String(body?.serviceProposalId || "").trim();
+      if (isValidSimplePortalId(spId) && body.shippingPo !== undefined) {
+        await SimpleServiceProposal.updateOne(
+          { _id: spId, createdByEmail: email },
+          { $set: { shippingPo: existing.shippingPo || "" } }
+        );
+      }
+    }
 
     if (existing.kind === "vendor_po_receiving") {
       await LogisticsEntry.updateOne(

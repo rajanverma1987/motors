@@ -8,6 +8,7 @@ import PrintSheetContinuedNotes from "@/components/dashboard/print-sheet-continu
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
+import { printPartsLineQty, printPartsLineTotal } from "@/lib/simple-service-proposal-print";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
 const infoFieldLabel = "font-semibold text-neutral-900";
@@ -191,14 +192,12 @@ export default function InvoicePrintPreview({
             </thead>
             <tbody>
               {q.partsLines.map((row, i) => {
-                const qty = parseFloat(row?.qty ?? "1");
-                const price = parseFloat(row?.price ?? "0");
-                const lineTotalNum =
-                  Number.isFinite(qty) && Number.isFinite(price) ? qty * price : null;
+                const lineTotalNum = printPartsLineTotal(row);
+                const qtyDisplay = printPartsLineQty(row);
                 return (
                   <tr key={i}>
                     <td className={tdCell}>{row.item || "—"}</td>
-                    <td className={tdCell + " text-right tabular-nums"}>{row.qty ?? "1"}</td>
+                    <td className={tdCell + " text-right tabular-nums"}>{qtyDisplay || "—"}</td>
                     <td className={tdCell}>{row.uom || "—"}</td>
                     <td className={tdCell + " text-right tabular-nums"}>{row.price ? fmt(row.price) : "—"}</td>
                     <td className={tdCell + " text-right tabular-nums"}>

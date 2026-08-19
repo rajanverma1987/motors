@@ -85,12 +85,21 @@ export async function GET(request) {
     }
     const email = user.email.trim().toLowerCase();
     const kind = request.nextUrl.searchParams.get("kind");
+    const jobNumber = String(request.nextUrl.searchParams.get("jobNumber") || "").trim();
+    const invoiceNumber = String(request.nextUrl.searchParams.get("invoiceNumber") || "").trim();
     await connectDB();
     const q = { createdByEmail: email };
     if (kind && ["motor_receiving", "motor_shipping", "vendor_po_receiving"].includes(kind)) {
       q.kind = kind;
     }
-    const list = await LogisticsEntry.find(q).sort({ date: -1, createdAt: -1 }).limit(500).lean();
+    if (jobNumber) {
+      q.jobNumber = jobNumber;
+    }
+    if (invoiceNumber) {
+      q.invoiceNumber = invoiceNumber;
+    }
+    const limit = jobNumber || invoiceNumber ? 1 : 500;
+    const list = await LogisticsEntry.find(q).sort({ date: -1, createdAt: -1 }).limit(limit).lean();
     return NextResponse.json(list.map(toRow));
   } catch (err) {
     console.error("Logistics GET:", err);

@@ -11,7 +11,9 @@ import Select from "@/components/ui/select";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { useFormatMoney } from "@/contexts/user-settings-context";
+import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { productDropdownSelectOptions, mannerOfTransportDropdownKey } from "@/lib/product-dropdown-catalog";
 import { useAuth } from "@/contexts/auth-context";
 import { sortRowsClient } from "@/lib/client-table-sort";
 
@@ -34,18 +36,6 @@ const TABS = [
     sub: "Parts & materials from PO",
     kind: "vendor_po_receiving",
   },
-];
-
-const TRANSPORT_OPTIONS = [
-  { value: "", label: "Select manner of transport" },
-  { value: "Customer drop-off", label: "Customer drop-off" },
-  { value: "UPS", label: "UPS" },
-  { value: "FedEx", label: "FedEx" },
-  { value: "Freight line / LTL", label: "Freight line / LTL" },
-  { value: "Courier", label: "Courier" },
-  { value: "Shop pickup", label: "Shop pickup" },
-  { value: "Internal / dock", label: "Internal / dock" },
-  { value: "Other", label: "Other" },
 ];
 
 function todayISODate() {
@@ -80,6 +70,8 @@ export default function LogisticsPageClient() {
   const confirm = useConfirm();
   const fmt = useFormatMoney();
   const { user } = useAuth();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const companyName = String(user?.shopName || "").trim() || "Company";
 
   const [tab, setTab] = useState("motor_receiving");
@@ -101,6 +93,11 @@ export default function LogisticsPageClient() {
   const [poLineReceipts, setPoLineReceipts] = useState([]);
 
   const activeKind = TABS.find((t) => t.id === tab)?.kind || "motor_receiving";
+
+  const transportOptions = useMemo(
+    () => productDropdownSelectOptions(mergedSettings, mannerOfTransportDropdownKey(activeKind)),
+    [mergedSettings, activeKind]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -823,7 +820,7 @@ export default function LogisticsPageClient() {
             />
             <Select
               label="Manner of transport"
-              options={TRANSPORT_OPTIONS}
+              options={transportOptions}
               value={form.mannerOfTransport}
               onChange={(e) => setForm((f) => ({ ...f, mannerOfTransport: e.target.value ?? "" }))}
               searchable={false}

@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FiSearch } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
 import Table from "@/components/ui/table";
 import Tabs from "@/components/ui/tabs";
 import DatasheetFieldGrid from "@/components/simple/simple-datasheet-field-grid";
@@ -22,6 +23,9 @@ import {
 
 function emptyCriteriaForForm(formId) {
   const form = MASTER_DATA_SEARCH_FORMS[formId];
+  if (form?.searchType === "customer") {
+    return { companyName: "", primaryContactName: "" };
+  }
   /** @type {Record<string, Record<string, string>>} */
   const out = {};
   if (!form) return out;
@@ -41,6 +45,7 @@ export default function MasterDataSearchPanel() {
     ac: emptyCriteriaForForm("ac"),
     dc: emptyCriteriaForForm("dc"),
     armature: emptyCriteriaForForm("armature"),
+    customer: emptyCriteriaForForm("customer"),
   }));
   const [searching, setSearching] = useState(false);
   const [resultMeta, setResultMeta] = useState(null);
@@ -59,6 +64,16 @@ export default function MasterDataSearchPanel() {
           ...((prev[activeFormId] || {})[blockId] || {}),
           [key]: value,
         },
+      },
+    }));
+  }, []);
+
+  const patchCustomerField = useCallback((key, value) => {
+    setCriteriaByForm((prev) => ({
+      ...prev,
+      customer: {
+        ...(prev.customer || {}),
+        [key]: value,
       },
     }));
   }, []);
@@ -84,7 +99,10 @@ export default function MasterDataSearchPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           formId,
-          criteria: criteriaByForm[formId] || {},
+          criteria:
+            MASTER_DATA_SEARCH_FORMS[formId]?.searchType === "customer"
+              ? criteriaByForm.customer || {}
+              : criteriaByForm[formId] || {},
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -94,6 +112,7 @@ export default function MasterDataSearchPanel() {
         searchedFields: Array.isArray(data.searchedFields) ? data.searchedFields : [],
         truncated: Boolean(data.truncated),
         limit: Number(data.limit) || 200,
+        searchType: String(data.searchType || "").trim(),
       });
     } catch (err) {
       setRows([]);
@@ -164,6 +183,7 @@ export default function MasterDataSearchPanel() {
 
   const columns = useMemo(() => {
     const searched = resultMeta?.searchedFields || [];
+    const isCustomerSearch = resultMeta?.searchType === "customer";
     const base = [
       {
         key: "jobNumber",
@@ -208,6 +228,15 @@ export default function MasterDataSearchPanel() {
         },
       },
     ];
+    if (isCustomerSearch) {
+      base.push({
+        key: "contactName",
+        label: "Contact Name",
+        sortable: true,
+        render: (v) => String(v || "").trim() || "—",
+      });
+      return base;
+    }
     const fieldCols = searched.map((f) => ({
       key: `field:${f.key}`,
       label: f.label,
@@ -225,27 +254,64 @@ export default function MasterDataSearchPanel() {
       Object.values(MASTER_DATA_SEARCH_FORMS).map((f) => ({
         id: f.id,
         label: f.label,
-        children: (
-          <div className="flex min-w-0 flex-col gap-4 pt-3">
-            {(f.blocks || []).map((block) => (
-              <div key={block.id} className="min-w-0">
-                {f.blocks.length > 1 ? (
-                  <p className="mb-2 border-b border-primary/25 pb-1 text-sm font-bold uppercase tracking-wide text-primary">
-                    {block.label}
-                  </p>
-                ) : null}
-                <DatasheetFieldGrid
-                  columns={block.columns}
-                  values={criteriaByForm[f.id]?.[block.id] || {}}
-                  onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
-                  highlightFilled={highlightFilledFields && f.id === formId}
-                />
-              </div>
-            ))}
-          </div>
-        ),
+        children:
+          f.searchType === "customer" ? (
+            <div className="flex min-w-0 max-w-md flex-col gap-4 pt-3">
+              <Input
+                label="Customer Name"
+                value={criteriaByForm.customer?.companyName ?? ""}
+                onChange={(e) => patchCustomerField("companyName", e.target.value)}
+                placeholder="e.g. *Acme* or exact name"
+                inputClassName={
+                  highlightFilledFields && String(criteriaByForm.customer?.companyName || "").trim()
+                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                    : ""
+                }
+              />
+              <Input
+                label="Contact Name"
+                value={criteriaByForm.customer?.primaryContactName ?? ""}
+                onChange={(e) => patchCustomerField("primaryContactName", e.target.value)}
+                placeholder="e.g. *Smith* or exact name"
+                inputClassName={
+                  highlightFilledFields && String(criteriaByForm.customer?.primaryContactName || "").trim()
+                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                    : ""
+                }
+              />
+              <p className="text-xs text-secondary">
+                Use <span className="font-medium text-title">*</span> wildcards — e.g.{" "}
+                <span className="font-mono text-title">*abb*</span> or{" "}
+                <span className="font-mono text-title">Smith*</span>. Both fields are combined with AND.
+              </p>
+            </div>
+          ) : (
+            <div className="flex min-w-0 flex-col gap-4 pt-3">
+              {(f.blocks || []).map((block) => (
+                <div key={block.id} className="min-w-0">
+                  {f.blocks.length > 1 ? (
+                    <p className="mb-2 border-b border-primary/25 pb-1 text-sm font-bold uppercase tracking-wide text-primary">
+                      {block.label}
+                    </p>
+                  ) : null}
+                  <DatasheetFieldGrid
+                    columns={block.columns}
+                    values={criteriaByForm[f.id]?.[block.id] || {}}
+                    onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
+                    highlightFilled={highlightFilledFields && f.id === formId}
+                  />
+                </div>
+              ))}
+            </div>
+          ),
       })),
-    [criteriaByForm, formId, highlightFilledFields, patchField]
+    [
+      criteriaByForm,
+      formId,
+      highlightFilledFields,
+      patchCustomerField,
+      patchField,
+    ]
   );
 
   const editingProposal = useMemo(
@@ -328,7 +394,11 @@ export default function MasterDataSearchPanel() {
                 columns={columns}
                 data={rows}
                 rowKey="id"
-                emptyMessage="No jobs matched these datasheet criteria."
+                emptyMessage={
+                  resultMeta?.searchType === "customer"
+                    ? "No jobs matched these customer criteria."
+                    : "No jobs matched these datasheet criteria."
+                }
                 responsive
                 searchable={false}
                 dense

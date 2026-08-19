@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
@@ -14,6 +14,15 @@ import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { productDropdownSelectOptions, mannerOfTransportDropdownKey } from "@/lib/product-dropdown-catalog";
+import {
+  KIND_RECEIVING,
+  KIND_SHIPPING,
+  emptyMotorLogisticsRecord,
+  motorLogisticsRecordHasData,
+  normalizeMotorLogisticsRecord,
+} from "@/lib/simple-motor-logistics";
 
 const FORM_ID = "simple-motor-logistics-form";
 
@@ -23,25 +32,6 @@ const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
 const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
-
-const TRANSPORT_OPTIONS = [
-  { value: "", label: "Select manner of transport" },
-  { value: "Customer drop-off", label: "Customer drop-off" },
-  { value: "UPS", label: "UPS" },
-  { value: "FedEx", label: "FedEx" },
-  { value: "Freight line / LTL", label: "Freight line / LTL" },
-  { value: "Courier", label: "Courier" },
-  { value: "Shop pickup", label: "Shop pickup" },
-  { value: "Internal / dock", label: "Internal / dock" },
-  { value: "Other", label: "Other" },
-];
-
-const KIND_RECEIVING = "motor_receiving";
-const KIND_SHIPPING = "motor_shipping";
-
-function todayISODate() {
-  return new Date().toISOString().slice(0, 10);
-}
 
 function FieldRow({ label, labelWidth = "7.5rem", children }) {
   return (
@@ -54,24 +44,8 @@ function FieldRow({ label, labelWidth = "7.5rem", children }) {
   );
 }
 
-function emptyForm(kind, defaults = {}) {
-  return {
-    date: todayISODate(),
-    jobNumber: kind === KIND_RECEIVING ? String(defaults.jobNumber || "").trim() : "",
-    invoiceNumber: kind === KIND_SHIPPING ? String(defaults.invoiceNumber || "").trim() : "",
-    shippingPo: kind === KIND_SHIPPING ? String(defaults.shippingPo || "").trim() : "",
-    mannerOfTransport: "",
-    freight: "",
-    droppedBy: "",
-    pickedBy: "",
-    charges: "",
-    paidBy: "",
-    notes: "",
-  };
-}
-
 /**
- * Simple portal Motor Receiving / Motor Shipping — same API as classic Logistics.
+ * Simple portal Motor Receiving / Motor Shipping — one record per job on SimpleServiceProposal.
  */
 export default function SimpleMotorLogisticsModal({
   open,
@@ -80,8 +54,8 @@ export default function SimpleMotorLogisticsModal({
   defaultJobNumber = "",
   defaultInvoiceNumber = "",
   defaultShippingPo = "",
-  serviceProposalId = "",
-  onShippingPoSaved,
+  initialRecord = null,
+  onSave,
   customerName = "",
   companyName = "",
   customerEmail = "",
@@ -91,9 +65,14 @@ export default function SimpleMotorLogisticsModal({
   const alert = useAlert();
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const transportOptions = useMemo(
+    () => productDropdownSelectOptions(mergedSettings, mannerOfTransportDropdownKey(kind)),
+    [mergedSettings, kind]
+  );
   const isReceiving = kind === KIND_RECEIVING;
   const [form, setForm] = useState(() =>
-    emptyForm(kind, {
+    emptyMotorLogisticsRecord(kind, {
       jobNumber: defaultJobNumber,
       invoiceNumber: defaultInvoiceNumber,
       shippingPo: defaultShippingPo,
@@ -113,6 +92,8 @@ export default function SimpleMotorLogisticsModal({
   const paidByLabel =
     form.paidBy === "customer" ? customerLabel : form.paidBy === "company" ? companyLabel : "";
 
+  const hasSavedData = motorLogisticsRecordHasData(initialRecord);
+
   useEffect(() => {
     if (!open) {
       setSaving(false);
@@ -120,14 +101,14 @@ export default function SimpleMotorLogisticsModal({
       setSendOpen(false);
       return;
     }
-    setForm(
-      emptyForm(kind, {
-        jobNumber: defaultJobNumber,
-        invoiceNumber: defaultInvoiceNumber,
-        shippingPo: defaultShippingPo,
-      })
-    );
-  }, [open, kind, defaultJobNumber, defaultInvoiceNumber, defaultShippingPo]);
+
+    const defaults = {
+      jobNumber: defaultJobNumber,
+      invoiceNumber: defaultInvoiceNumber,
+      shippingPo: defaultShippingPo,
+    };
+    setForm(normalizeMotorLogisticsRecord(initialRecord, kind, defaults));
+  }, [open, kind, initialRecord, defaultJobNumber, defaultInvoiceNumber, defaultShippingPo]);
 
   const title = isReceiving ? "Motor receiving" : "Motor shipping";
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -154,44 +135,22 @@ export default function SimpleMotorLogisticsModal({
       await alert({ title: "Error", message: "Date is required.", variant: "danger" });
       return;
     }
+    if (!onSave) {
+      await alert({
+        title: "Error",
+        message: "Unable to save — service proposal is not ready.",
+        variant: "danger",
+      });
+      return;
+    }
     setSaving(true);
     try {
-      const shippingPo = isReceiving ? "" : String(form.shippingPo || "").trim();
-      const payload = {
-        kind: isReceiving ? KIND_RECEIVING : KIND_SHIPPING,
-        date: String(form.date || "").trim(),
-        jobNumber: isReceiving ? String(form.jobNumber || "").trim() : "",
-        invoiceNumber: isReceiving ? "" : String(form.invoiceNumber || "").trim(),
-        shippingPo,
-        mannerOfTransport: String(form.mannerOfTransport || "").trim(),
-        freight: String(form.freight || "").trim(),
-        droppedBy: isReceiving ? String(form.droppedBy || "").trim() : "",
-        pickedBy: isReceiving ? "" : String(form.pickedBy || "").trim(),
-        charges: String(form.charges || "").trim(),
-        paidBy: String(form.paidBy || "").trim(),
-        notes: String(form.notes || "").trim(),
-        serviceProposalId: isReceiving ? "" : String(serviceProposalId || "").trim(),
-      };
-      const res = await fetch("/api/dashboard/logistics", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to save logistics entry");
-      if (!isReceiving) {
-        onShippingPoSaved?.(shippingPo);
-      }
-      await alert({
-        title: "Success",
-        message: isReceiving ? "Motor receiving saved." : "Motor shipping saved.",
-      });
+      await onSave({ kind, form });
       onClose?.();
     } catch (err) {
       await alert({
         title: "Error",
-        message: err.message || "Failed to save",
+        message: err?.message || "Failed to save",
         variant: "danger",
       });
     } finally {
@@ -241,8 +200,14 @@ export default function SimpleMotorLogisticsModal({
               </Button>
             </>
           ) : null}
-          <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+          <Button
+            type="submit"
+            form={FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : hasSavedData ? "Update" : "Save"}
           </Button>
         </>
       }
@@ -306,7 +271,7 @@ export default function SimpleMotorLogisticsModal({
 
         <FieldRow label="Transport">
           <SimpleSelect
-            options={TRANSPORT_OPTIONS}
+            options={transportOptions}
             value={form.mannerOfTransport}
             onChange={(e) => patch("mannerOfTransport", e.target.value)}
             searchable={false}

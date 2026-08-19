@@ -65,6 +65,30 @@ export function collectFilledMasterDataCriteria(formId, criteriaByBlock) {
 }
 
 /**
+ * Customer tab criteria (company + contact name wildcards).
+ * @param {Record<string, string>} criteria
+ */
+export function collectCustomerSearchCriteria(criteria) {
+  const form = MASTER_DATA_SEARCH_FORMS.customer;
+  if (!form?.fields) return [];
+  const map = criteria && typeof criteria === "object" ? criteria : {};
+  const filled = [];
+  for (const field of form.fields) {
+    const pattern = String(map[field.key] ?? "").trim();
+    if (!pattern) continue;
+    const regexSource = wildcardPatternToRegexSource(pattern);
+    if (!regexSource) continue;
+    filled.push({
+      fieldKey: field.key,
+      label: field.label,
+      pattern,
+      regexSource,
+    });
+  }
+  return filled;
+}
+
+/**
  * Build Mongo filter clauses for filled criteria (AND).
  * @param {ReturnType<typeof collectFilledMasterDataCriteria>} filled
  */

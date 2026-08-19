@@ -2,6 +2,7 @@ import { formatDateForCurrency, toInputDateValue } from "@/lib/format-date";
 import {
   parseMoneyInput,
   sumLinePrices,
+  sumOtherLinePrices,
   RECORD_TYPE_INVOICE,
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
@@ -57,7 +58,7 @@ export function resolveDocDay(doc, fieldOrder = ["dateCreated", "date", "poCutDa
 
 export function computeSpMoney(doc) {
   const scopeTotal = sumLinePrices(doc?.scopeDetails);
-  const otherTotal = sumLinePrices(doc?.otherItems);
+  const otherTotal = sumOtherLinePrices(doc?.otherItems);
   const showTax = doc?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(doc?.taxPercent) : 0;
   const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;

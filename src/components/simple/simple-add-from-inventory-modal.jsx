@@ -75,7 +75,7 @@ export default function SimpleAddFromInventoryModal({
       const name = String(it.name || it.sku || "Part").trim() || "Part";
       lines.push({
         ...emptyOtherLine(),
-        description: q === 1 ? name : `${name} (Qty: ${q})`,
+        description: name,
         uom,
         price: "",
         qty: String(q),

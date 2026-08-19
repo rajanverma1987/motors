@@ -17,6 +17,7 @@ import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
 import { buildSimplePurchaseOrderPrintPayload } from "@/lib/simple-purchase-order-print";
@@ -150,6 +151,12 @@ export default function SimplePurchaseOrderFormModal({
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const paymentMethodOptions = useMemo(() => {
+    const fromSettings = productDropdownSelectOptions(mergedSettings, "payment_method", {
+      includeEmpty: false,
+    });
+    return fromSettings.length ? fromSettings : SIMPLE_PO_PAYMENT_METHOD_OPTIONS;
+  }, [mergedSettings]);
   const isViewMode = mode === "view";
   const jobView = useSimpleJobView();
 
@@ -1388,7 +1395,7 @@ export default function SimplePurchaseOrderFormModal({
                         </FieldRow>
                         <FieldRow label="Method" labelWidth="3.5rem" className="w-[11rem] shrink-0" controlClassName="min-w-0 flex-1">
                           <SimpleSelect
-                            options={SIMPLE_PO_PAYMENT_METHOD_OPTIONS}
+                            options={paymentMethodOptions}
                             value={paymentDraft.method}
                             onChange={(e) => setPaymentDraft((d) => ({ ...d, method: e.target.value }))}
                             placeholder="Select…"
@@ -1662,7 +1669,7 @@ export default function SimplePurchaseOrderFormModal({
             </FieldRow>
             <FieldRow label="Method" labelWidth="6.5rem">
               <SimpleSelect
-                options={SIMPLE_PO_PAYMENT_METHOD_OPTIONS}
+                options={paymentMethodOptions}
                 value={editPayment.method}
                 onChange={(e) => setEditPayment((d) => ({ ...d, method: e.target.value }))}
                 placeholder="Select…"

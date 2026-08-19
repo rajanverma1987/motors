@@ -4,6 +4,7 @@ import CompanyAccountsPrint from "@/components/dashboard/company-accounts-print"
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
+import { printPartsLineQty, printPartsLineTotal } from "@/lib/simple-service-proposal-print";
 
 export const STAGE_LABEL = {
   preliminary: "Pre-disassembly Quote",
@@ -137,11 +138,12 @@ export default function RepairFlowFlowQuotePrintContent({ job, quotes, fmt, acco
                       {(q.partsLines || [])
                         .filter((r) => String(r?.item || "").trim())
                         .map((row, i) => {
-                          const lt = lineTotal(row.qty, row.price);
+                          const lt = printPartsLineTotal(row);
+                          const qtyDisplay = printPartsLineQty(row);
                           return (
                             <tr key={i} className="border-t border-border">
                               <td className="px-3 py-2">{row.item || "—"}</td>
-                              <td className="px-3 py-2 text-right tabular-nums">{row.qty ?? "—"}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{qtyDisplay || "—"}</td>
                               <td className="px-3 py-2">{row.uom || "—"}</td>
                               <td className="px-3 py-2 text-right tabular-nums">
                                 {row.price != null && row.price !== "" ? fmt(parseMoneyNum(row.price)) : "—"}

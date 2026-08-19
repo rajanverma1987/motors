@@ -7,7 +7,9 @@ import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { useFormatDate } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import {
   applyInvoicePaymentFields,
   computeInvoicePaymentSummary,
@@ -62,6 +64,14 @@ export default function SimpleInvoicePaymentModal({
   const alert = useAlert();
   const confirm = useConfirm();
   const formatDate = useFormatDate();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const paymentMethodOptions = useMemo(() => {
+    const fromSettings = productDropdownSelectOptions(mergedSettings, "payment_method", {
+      includeEmpty: false,
+    });
+    return fromSettings.length ? fromSettings : SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS;
+  }, [mergedSettings]);
   const [draft, setDraft] = useState(() => emptyInvoicePayment());
 
   const paymentList = Array.isArray(payments) ? payments : [];
@@ -79,7 +89,7 @@ export default function SimpleInvoicePaymentModal({
   useEffect(() => {
     if (!open) return;
     const preferred = preferredMethod;
-    const methodHit = SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS.find(
+    const methodHit = paymentMethodOptions.find(
       (o) => o.value.toLowerCase() === preferred.toLowerCase()
     );
     setDraft(
@@ -87,7 +97,7 @@ export default function SimpleInvoicePaymentModal({
         method: methodHit?.value || "",
       })
     );
-  }, [open, preferredMethod]);
+  }, [open, preferredMethod, paymentMethodOptions]);
 
   const commitPayments = (nextPayments) => {
     const applied = applyInvoicePaymentFields({}, nextPayments, grandTotal);
@@ -129,7 +139,7 @@ export default function SimpleInvoicePaymentModal({
     ];
     commitPayments(next);
     const preferred = preferredMethod;
-    const methodHit = SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS.find(
+    const methodHit = paymentMethodOptions.find(
       (o) => o.value.toLowerCase() === preferred.toLowerCase()
     );
     setDraft(emptyInvoicePayment({ method: methodHit?.value || "" }));
@@ -225,7 +235,7 @@ export default function SimpleInvoicePaymentModal({
               </label>
               <SimpleSelect
                 id="inv-pay-method"
-                options={SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS}
+                options={paymentMethodOptions}
                 value={draft.method}
                 onChange={(e) => setDraft((d) => ({ ...d, method: e.target.value }))}
                 placeholder="Select…"
@@ -352,7 +362,7 @@ export default function SimpleInvoicePaymentModal({
             </table>
           </div>
           <p className="text-xs text-secondary">
-            Payments stay on this invoice until you click Save on the invoice form.
+            Payment status updates automatically. Invoice status is saved when you add or remove a payment.
           </p>
         </section>
       </div>

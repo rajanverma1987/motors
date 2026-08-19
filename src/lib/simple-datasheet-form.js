@@ -251,6 +251,15 @@ export const MASTER_DATA_SEARCH_FORMS = {
       },
     ],
   },
+  customer: {
+    id: "customer",
+    label: "Search By Customer",
+    searchType: "customer",
+    fields: [
+      { key: "companyName", label: "Customer Name" },
+      { key: "primaryContactName", label: "Contact Name" },
+    ],
+  },
 };
 
 export const MASTER_DATA_SEARCH_FORM_IDS = Object.keys(MASTER_DATA_SEARCH_FORMS);

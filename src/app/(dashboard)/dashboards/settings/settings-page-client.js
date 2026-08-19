@@ -24,6 +24,7 @@ import SimpleMarketplaceSection from "@/components/simple/settings/simple-market
 import SimpleJobPostingsSection from "@/components/simple/settings/simple-job-postings-section";
 import SimpleAccessControlSection from "@/components/simple/settings/simple-access-control-section";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
+import SettingsProductDropdownsPanel from "@/components/dashboard/settings-product-dropdowns-panel";
 import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
 import QuickBooksSetting from "@/components/dashboard/quickbooks-setting";
 import {
@@ -815,9 +816,14 @@ export default function SettingsPageClient() {
         ),
       },
       {
-        id: "dropdowns",
-        label: "Dropdowns",
+        id: "status",
+        label: "Status",
         children: <SettingsControlledDropdownsPanel draft={draft} setDraft={setDraft} />,
+      },
+      {
+        id: "product-dropdowns",
+        label: "Dropdowns",
+        children: <SettingsProductDropdownsPanel draft={draft} setDraft={setDraft} />,
       },
       {
         id: "inventory",
@@ -933,6 +939,7 @@ export default function SettingsPageClient() {
       smtpTesting,
       draft.workOrderStatusTileColors,
       draft.controlledDropdowns,
+      draft.productDropdowns,
       draft.inventoryLocations,
       logoUploading,
       user?.email,

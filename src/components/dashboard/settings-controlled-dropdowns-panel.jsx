@@ -197,9 +197,9 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   return (
     <div className="flex flex-col gap-8 pb-24">
       <FormContainer>
-        <FormSectionTitle as="h2">Controlled dropdowns</FormSectionTitle>
+        <FormSectionTitle as="h2">Status</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Define option lists for your shop. Add values below, delete with the trash icon or × on each chip, reorder rows,
+          Define status option lists for quotes, work orders, and invoices. Add values below, delete with the trash icon or × on each chip, reorder rows,
           set display labels (quotes and invoices), and pick tile background and text colors for badges and the shop floor.
           Save settings when finished.
         </p>

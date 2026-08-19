@@ -1,6 +1,7 @@
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
-import { RECORD_TYPE_INVOICE, parseMoneyInput, sumLinePrices } from "@/lib/simple-service-proposal-form";
+import { RECORD_TYPE_INVOICE, parseMoneyInput, sumLinePrices, sumOtherLinePrices } from "@/lib/simple-service-proposal-form";
+import { isLogisticsChargeOtherLine } from "@/lib/simple-motor-logistics";
 
 export const PRINT_NOTES_INTERNAL = "internal";
 export const PRINT_NOTES_CUSTOMER = "customer";
@@ -64,12 +65,34 @@ function scopeLinesFromForm(form) {
 function partsLinesFromForm(form) {
   return (Array.isArray(form?.otherItems) ? form.otherItems : [])
     .filter((line) => String(line?.description ?? "").trim() || String(line?.price ?? "").trim())
-    .map((line) => ({
-      item: String(line.description || "").trim(),
-      qty: "1",
-      uom: String(line.uom || "").trim(),
-      price: String(line.price ?? "").trim(),
-    }));
+    .map((line) => {
+      const hideQty = isLogisticsChargeOtherLine(line);
+      const qtyRaw = String(line.qty ?? "").trim();
+      return {
+        item: String(line.description || "").trim(),
+        qty: hideQty ? "" : qtyRaw || "1",
+        hideQty,
+        uom: String(line.uom || "").trim(),
+        price: String(line.price ?? "").trim(),
+      };
+    });
+}
+
+/** Qty cell for printed other-cost rows (blank for receiving/shipping charges). */
+export function printPartsLineQty(row) {
+  if (row?.hideQty) return "";
+  const q = String(row?.qty ?? "").trim();
+  return q || "1";
+}
+
+/** Line total for printed other-cost rows. */
+export function printPartsLineTotal(row) {
+  const price = parseMoneyInput(row?.price);
+  if (!Number.isFinite(price)) return null;
+  if (row?.hideQty) return price;
+  const qty = parseFloat(String(row?.qty ?? "").trim() || "1");
+  if (!Number.isFinite(qty)) return null;
+  return qty * price;
 }
 
 /**
@@ -97,7 +120,7 @@ export function buildSimpleServiceProposalPrintBundle({
   const scopeLines = scopeLinesFromForm(form);
   const partsLines = partsLinesFromForm(form);
   const laborTotal = sumLinePrices(form?.scopeDetails);
-  const partsTotal = sumLinePrices(form?.otherItems);
+  const partsTotal = sumOtherLinePrices(form?.otherItems);
   const preparedByDisplay = employeeDisplayName(employees, form?.preparedBy);
   const fromShopName = String(user?.shopName || "").trim();
   const fromShopContact = [user?.contactName, user?.email].filter(Boolean).join(" · ") || "";
@@ -186,5 +209,5 @@ export function buildSimpleServiceProposalPrintBundle({
 
 /** Cheap line total helper for email summary (unused numbers kept as Number). */
 export function simplePrintLineSubtotal(form) {
-  return sumLinePrices(form?.scopeDetails) + sumLinePrices(form?.otherItems) + (linePrice({ price: 0 }) && 0);
+  return sumLinePrices(form?.scopeDetails) + sumOtherLinePrices(form?.otherItems) + (linePrice({ price: 0 }) && 0);
 }

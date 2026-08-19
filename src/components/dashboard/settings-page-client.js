@@ -12,6 +12,7 @@ import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
+import SettingsProductDropdownsPanel from "@/components/dashboard/settings-product-dropdowns-panel";
 import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
 import {
   USER_SETTINGS_DEFAULTS,
@@ -751,9 +752,14 @@ export default function SettingsPageClient() {
         ),
       },
       {
-        id: "dropdowns",
-        label: "Dropdowns",
+        id: "status",
+        label: "Status",
         children: <SettingsControlledDropdownsPanel draft={draft} setDraft={setDraft} />,
+      },
+      {
+        id: "product-dropdowns",
+        label: "Dropdowns",
+        children: <SettingsProductDropdownsPanel draft={draft} setDraft={setDraft} />,
       },
       {
         id: "inventory",
@@ -828,6 +834,7 @@ export default function SettingsPageClient() {
       smtpTesting,
       draft.workOrderStatusTileColors,
       draft.controlledDropdowns,
+      draft.productDropdowns,
       draft.inventoryLocations,
       logoUploading,
       user?.email,

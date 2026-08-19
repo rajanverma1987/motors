@@ -7,7 +7,8 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "branding", label: "Branding" },
   { id: "display", label: "Display" },
   { id: "accounts", label: "Accounts" },
-  { id: "dropdowns", label: "Dropdowns" },
+  { id: "status", label: "Status" },
+  { id: "product-dropdowns", label: "Dropdowns" },
   { id: "inventory", label: "Inventory" },
   { id: "smtp", label: "Email Settings" },
   { id: "master", label: "Master" },
@@ -30,7 +31,8 @@ export const SIMPLE_SETTINGS_DRAFT_SECTION_IDS = new Set([
   "branding",
   "display",
   "accounts",
-  "dropdowns",
+  "status",
+  "product-dropdowns",
   "inventory",
   "smtp",
 ]);
@@ -47,7 +49,8 @@ export const SIMPLE_MASTER_TAB_IDS = SIMPLE_MASTER_TABS.map((t) => t.id);
  * @param {string | null | undefined} section
  */
 export function resolveSimpleSettingsSection(section) {
-  const id = String(section || "").trim();
+  const raw = String(section || "").trim();
+  const id = raw === "dropdowns" ? "status" : raw;
   return SIMPLE_SETTINGS_SECTION_IDS.includes(id) ? id : "account";
 }
 

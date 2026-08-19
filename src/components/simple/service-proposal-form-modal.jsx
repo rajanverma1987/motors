@@ -56,8 +56,10 @@ import {
   recordTypeDisplayTitle,
   recordTypeDocumentLabel,
   resolveRecordTypeOnSave,
+  resolveSimpleInvoiceStatusFromPayments,
   simpleServiceProposalDocToForm,
   sumLinePrices,
+  sumOtherLinePrices,
 } from "@/lib/simple-service-proposal-form";
 import {
   buildAcDatasheetFromProposal,
@@ -68,6 +70,11 @@ import {
   fetchSimpleServiceProposal,
   listSimplePurchaseOrdersForJobApi,
 } from "@/lib/simple-portal-api";
+import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
+import {
+  applyCustomerLogisticsChargeToOtherItems,
+  motorLogisticsFormToStored,
+} from "@/lib/simple-motor-logistics";
 
 const FORM_ID = "simple-service-proposal-form";
 const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
@@ -108,7 +115,7 @@ const QUOTE_TYPE_OPTIONS = [
   { value: "Email", label: "Email" },
   { value: "Walk-in", label: "Walk-in" },
   { value: "Other", label: "Other" },
-]; // keep in sync with QUOTE_TYPE_VALUES in simple-service-proposal-form.js
+]; // fallback; overridden from Settings → Dropdowns when available
 
 function FieldRow({
   label,
@@ -128,28 +135,30 @@ function FieldRow({
   );
 }
 
-function lineHasContent(line, { withUom = false } = {}) {
+function lineHasContent(line, { withUom = false, withQty = false } = {}) {
   return Boolean(
     String(line?.description ?? "").trim() ||
       String(line?.price ?? "").trim() ||
-      (withUom && String(line?.uom ?? "").trim())
+      (withUom && String(line?.uom ?? "").trim()) ||
+      (withQty && String(line?.qty ?? "").trim())
   );
 }
 
 function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, headerAction = null }) {
-  const total = sumLinePrices(lines);
   const isOther = title.toLowerCase().includes("other");
+  const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
   const [seedEmpty] = useState(() => newEmptyLine());
+  const lineContentOpts = { withUom: isOther, withQty: isOther };
 
   const ensureTrailingEmpty = (rows) => {
     const list = Array.isArray(rows) ? [...rows] : [];
     let lastFilled = -1;
     for (let i = 0; i < list.length; i++) {
-      if (lineHasContent(list[i], { withUom: isOther })) lastFilled = i;
+      if (lineHasContent(list[i], lineContentOpts)) lastFilled = i;
     }
     const kept = lastFilled >= 0 ? list.slice(0, lastFilled + 1) : [];
-    const trailing = list.slice(lastFilled + 1).filter((row) => !lineHasContent(row, { withUom: isOther }));
+    const trailing = list.slice(lastFilled + 1).filter((row) => !lineHasContent(row, lineContentOpts));
     const emptyRow = trailing[0] || seedEmpty;
     return [...kept, emptyRow];
   };
@@ -169,8 +178,8 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
     const target = displayLines.find((line) => line.id === id);
     if (
       target &&
-      !lineHasContent(target, { withUom: isOther }) &&
-      displayLines.filter((l) => !lineHasContent(l, { withUom: isOther })).length <= 1
+      !lineHasContent(target, lineContentOpts) &&
+      displayLines.filter((l) => !lineHasContent(l, lineContentOpts)).length <= 1
     ) {
       return;
     }
@@ -190,6 +199,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
           <thead>
             <tr className="text-left text-[16px] font-bold text-title">
               <th className={LINE_HEAD}>Description</th>
+              {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
               {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
               <th className={`w-36 ${LINE_HEAD}`}>Price</th>
             </tr>
@@ -197,7 +207,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
           <tbody>
             {displayLines.map((line, idx) => {
               const isBlankTrail =
-                !lineHasContent(line, { withUom: isOther }) && idx === displayLines.length - 1;
+                !lineHasContent(line, lineContentOpts) && idx === displayLines.length - 1;
               return (
                 <tr key={line.id}>
                   <td className={LINE_CELL}>
@@ -208,6 +218,18 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                       className={CELL_INPUT}
                     />
                   </td>
+                  {isOther ? (
+                    <td className={LINE_CELL}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={line.qty ?? ""}
+                        onChange={(e) => updateLine(line.id, { qty: e.target.value })}
+                        className={`${CELL_INPUT} text-right tabular-nums`}
+                        aria-label="Quantity"
+                      />
+                    </td>
+                  ) : null}
                   {isOther ? (
                     <td className={LINE_CELL}>
                       <input
@@ -276,6 +298,13 @@ export default function ServiceProposalFormModal({
   const { user } = useAuth();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+
+  const quoteTypeOptions = useMemo(() => {
+    const fromSettings = productDropdownSelectOptions(mergedSettings, "quote_type", {
+      includeEmpty: false,
+    });
+    return fromSettings.length ? fromSettings : QUOTE_TYPE_OPTIONS;
+  }, [mergedSettings]);
 
   const [form, setForm] = useState(() => createEmptyServiceProposalForm());
   const [customers, setCustomers] = useState([]);
@@ -595,7 +624,7 @@ export default function ServiceProposalFormModal({
     mergedSettings,
   ]);
 
-  const saveForm = async (nextForm, { successMessage } = {}) => {
+  const saveForm = async (nextForm, { successMessage, silent = false } = {}) => {
     const payload = nextForm || form;
     if (!payload.customerId) {
       await alert({ title: "Error", message: "Select a customer.", variant: "danger" });
@@ -634,7 +663,9 @@ export default function ServiceProposalFormModal({
       const message =
         successMessage ||
         (recordType === RECORD_TYPE_INVOICE ? "Invoice saved." : "Service proposal saved.");
-      await alert({ title: "Saved", message });
+      if (!silent) {
+        await alert({ title: "Saved", message });
+      }
       return merged;
     } catch (err) {
       await alert({ title: "Error", message: err?.message || "Failed to save service proposal", variant: "danger" });
@@ -737,7 +768,7 @@ export default function ServiceProposalFormModal({
   };
 
   const scopeTotal = sumLinePrices(form.scopeDetails);
-  const otherTotal = sumLinePrices(form.otherItems);
+  const otherTotal = sumOtherLinePrices(form.otherItems);
   const totalAmount = scopeTotal + otherTotal;
   const showTax = form.customerTaxExempt === false;
   const taxPct = showTax
@@ -765,6 +796,48 @@ export default function ServiceProposalFormModal({
       return;
     }
     setLogisticsKind(kind);
+  };
+
+  const handleLogisticsSave = async ({ kind, form: logisticsForm }) => {
+    const isReceiving = kind === KIND_RECEIVING;
+    const motorKey = isReceiving ? "motorReceiving" : "motorShipping";
+    const stored = motorLogisticsFormToStored(logisticsForm, kind);
+    const nextOtherItems = applyCustomerLogisticsChargeToOtherItems(form.otherItems, {
+      kind,
+      charges: stored.charges,
+      paidBy: stored.paidBy,
+    });
+    const nextForm = {
+      ...form,
+      [motorKey]: stored,
+      otherItems: nextOtherItems,
+      ...(isReceiving ? {} : { shippingPo: stored.shippingPo || form.shippingPo || "" }),
+    };
+    const saved = await saveForm(nextForm, {
+      successMessage: isReceiving ? "Motor receiving saved." : "Motor shipping saved.",
+    });
+    if (!saved) {
+      throw new Error("Failed to save service proposal");
+    }
+  };
+
+  const handleInvoicePaymentsChange = async (applied) => {
+    const nextStatus = resolveSimpleInvoiceStatusFromPayments({
+      payments: applied.payments,
+      grandTotal: billingTotal,
+      currentStatus: form.status,
+      mergedSettings,
+    });
+    const nextForm = {
+      ...form,
+      payments: applied.payments,
+      invoicePaidDate: applied.invoicePaidDate,
+      status: nextStatus,
+    };
+    setForm(nextForm);
+    if (String(form.id || "").trim() && form.customerId) {
+      await saveForm(nextForm, { silent: true });
+    }
   };
 
   const headerActions = (
@@ -1153,7 +1226,7 @@ export default function ServiceProposalFormModal({
               </FieldRow>
               <FieldRow label="Quote Type" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <SimpleSelect
-                  options={QUOTE_TYPE_OPTIONS}
+                  options={quoteTypeOptions}
                   value={form.quoteType}
                   onChange={(e) => patch("quoteType", e.target.value)}
                   placeholder="Select…"
@@ -1399,8 +1472,10 @@ export default function ServiceProposalFormModal({
         defaultJobNumber={docNumber}
         defaultInvoiceNumber={docNumber}
         defaultShippingPo={form.shippingPo || form.customerPo || ""}
-        serviceProposalId={recordId}
-        onShippingPoSaved={(shippingPo) => patch("shippingPo", shippingPo)}
+        initialRecord={
+          logisticsKind === KIND_SHIPPING ? form.motorShipping : form.motorReceiving
+        }
+        onSave={handleLogisticsSave}
         customerName={
           selectedCustomer?.companyName ||
           selectedCustomer?.primaryContactName ||
@@ -1419,7 +1494,7 @@ export default function ServiceProposalFormModal({
         onAddLines={(newLines) => {
           const existing = Array.isArray(form.otherItems) ? form.otherItems : [];
           const filled = existing.filter((line) =>
-            lineHasContent(line, { withUom: true })
+            lineHasContent(line, { withUom: true, withQty: true })
           );
           const next = [...filled, ...newLines, emptyOtherLine()];
           patch("otherItems", next);
@@ -1522,11 +1597,7 @@ export default function ServiceProposalFormModal({
         customer={selectedCustomer}
         invoiceNumber={String(form.documentNumber || "").trim()}
         onChange={(applied) => {
-          setForm((f) => ({
-            ...f,
-            payments: applied.payments,
-            invoicePaidDate: applied.invoicePaidDate,
-          }));
+          void handleInvoicePaymentsChange(applied);
         }}
       />
     </>

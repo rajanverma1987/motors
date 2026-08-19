@@ -1,6 +1,17 @@
 /** Empty / initial shape for Simple portal service proposal form. */
 
 import { toInputDateValue } from "@/lib/format-date";
+import {
+  invoiceStatusAllowedSlugs,
+  resolveConfiguredStatusSlug,
+} from "@/lib/dropdown-catalog";
+import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
+import {
+  KIND_RECEIVING,
+  KIND_SHIPPING,
+  normalizeMotorLogisticsRecord,
+  stripLogisticsChargeOtherItems,
+} from "@/lib/simple-motor-logistics";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -116,6 +127,64 @@ export function computeInvoicePaymentSummary(payments, grandTotal) {
   };
 }
 
+function findConfiguredPartialPaidSlug(mergedSettings) {
+  const allowed = invoiceStatusAllowedSlugs(mergedSettings);
+  return (
+    allowed.find((s) => s.includes("partial") && s.includes("paid")) ||
+    allowed.find((s) => s === "partial_paid") ||
+    null
+  );
+}
+
+function findConfiguredFullyPaidSlug(mergedSettings) {
+  const allowed = invoiceStatusAllowedSlugs(mergedSettings);
+  return (
+    allowed.find((s) => s.includes("fully") && s.includes("paid")) ||
+    allowed.find((s) => s === "fully_paid") ||
+    allowed.find((s) => s === "paid") ||
+    null
+  );
+}
+
+/**
+ * Pick invoice Status for the Simple form from payment totals when matching options exist in Settings → Status.
+ * @param {{ payments: unknown, grandTotal: number, currentStatus?: string, mergedSettings: Record<string, unknown> }} args
+ */
+export function resolveSimpleInvoiceStatusFromPayments({
+  payments,
+  grandTotal,
+  currentStatus = "",
+  mergedSettings,
+}) {
+  const summary = computeInvoicePaymentSummary(payments, grandTotal);
+  const current = String(currentStatus || "").trim();
+
+  if (summary.paymentStatus === "Paid") {
+    const slug = findConfiguredFullyPaidSlug(mergedSettings);
+    if (slug) return resolveConfiguredStatusSlug(slug, mergedSettings);
+    return current;
+  }
+
+  if (summary.paymentStatus === "Partial Paid") {
+    const slug = findConfiguredPartialPaidSlug(mergedSettings);
+    if (slug) return resolveConfiguredStatusSlug(slug, mergedSettings);
+    return current;
+  }
+
+  const normalizedCurrent = normalizeInvoiceStatusSlug(current, mergedSettings);
+  const wasPaymentStatus =
+    (normalizedCurrent.includes("partial") && normalizedCurrent.includes("paid")) ||
+    (normalizedCurrent.includes("fully") && normalizedCurrent.includes("paid")) ||
+    normalizedCurrent === "paid";
+
+  if (wasPaymentStatus && summary.paymentStatus === "Unpaid") {
+    const sent = invoiceStatusAllowedSlugs(mergedSettings).find((s) => s === "sent");
+    if (sent) return resolveConfiguredStatusSlug(sent, mergedSettings);
+  }
+
+  return current;
+}
+
 /**
  * Apply payments onto form fields (keeps invoicePaidDate in sync with latest payment).
  * @param {Record<string, unknown>} formLike
@@ -171,6 +240,10 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     customerPo: "",
     /** Motor shipping PO override (distinct from customerPo) */
     shippingPo: "",
+    /** One inbound motor receiving record per job (Simple portal only). */
+    motorReceiving: null,
+    /** One outbound motor shipping record per job (Simple portal only). */
+    motorShipping: null,
     dateCreated: todayISODate(),
     preparedBy: "",
     documentNumber: "",
@@ -210,9 +283,11 @@ export function cloneServiceProposalAsNewRfq(form) {
   const scopeDetails = Array.isArray(source.scopeDetails)
     ? source.scopeDetails.map((line) => ({ ...line, id: newLineId("scope") }))
     : [emptyScopeLine()];
-  const otherItems = Array.isArray(source.otherItems)
-    ? source.otherItems.map((line) => ({ ...line, id: newLineId("other") }))
-    : [emptyOtherLine()];
+  const otherItems = stripLogisticsChargeOtherItems(
+    Array.isArray(source.otherItems)
+      ? source.otherItems.map((line) => ({ ...line, id: newLineId("other") }))
+      : [emptyOtherLine()]
+  );
 
   const {
     id: _id,
@@ -234,6 +309,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     invoicePaidDate: "",
     payments: [],
     attachments: [],
+    motorReceiving: null,
+    motorShipping: null,
     acDatasheet: source.acDatasheet && typeof source.acDatasheet === "object" ? { ...source.acDatasheet } : null,
     dcDatasheet: source.dcDatasheet && typeof source.dcDatasheet === "object" ? { ...source.dcDatasheet } : null,
     scopeDetails,
@@ -247,6 +324,27 @@ export function sumLinePrices(lines) {
     const n = Number.parseFloat(String(line?.price ?? "").replace(/[^0-9.-]/g, ""));
     return sum + (Number.isFinite(n) ? n : 0);
   }, 0);
+}
+
+/** Parse qty for Other Items lines; defaults to 1 when empty or invalid. */
+export function parseSpQty(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return 1;
+  const n = Number.parseFloat(raw.replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) && n > 0 ? n : 1;
+}
+
+/** Extended line total (unit price × qty) for Other Items. */
+export function lineExtendedPrice(line) {
+  const price = parseSpMoney(line?.price);
+  const qty = parseSpQty(line?.qty);
+  return roundSpMoney(price * qty);
+}
+
+/** Sum Other Items using qty × unit price. */
+export function sumOtherLinePrices(lines) {
+  if (!Array.isArray(lines)) return 0;
+  return roundSpMoney(lines.reduce((sum, line) => sum + lineExtendedPrice(line), 0));
 }
 
 /** Display title for the form / modal heading. */
@@ -338,7 +436,7 @@ export function formatSimpleMoney(n) {
 /** Totals from scope / other lines (+ tax when customer is not tax-exempt). */
 export function computeSimpleServiceProposalTotals(form) {
   const scopeTotal = sumLinePrices(form?.scopeDetails);
-  const otherTotal = sumLinePrices(form?.otherItems);
+  const otherTotal = sumOtherLinePrices(form?.otherItems);
   const subtotal = scopeTotal + otherTotal;
   const showTax = form?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(form?.taxPercent) : 0;
@@ -523,6 +621,17 @@ export function simpleServiceProposalDocToForm(doc) {
   next.payments = normalizeInvoicePayments(d.payments);
   next.acDatasheet = d.acDatasheet && typeof d.acDatasheet === "object" ? d.acDatasheet : null;
   next.dcDatasheet = d.dcDatasheet && typeof d.dcDatasheet === "object" ? d.dcDatasheet : null;
+
+  const docNumber = next.documentNumber;
+  next.motorReceiving = d.motorReceiving
+    ? normalizeMotorLogisticsRecord(d.motorReceiving, KIND_RECEIVING, { jobNumber: docNumber })
+    : null;
+  next.motorShipping = d.motorShipping
+    ? normalizeMotorLogisticsRecord(d.motorShipping, KIND_SHIPPING, {
+        invoiceNumber: docNumber,
+        shippingPo: next.shippingPo || next.customerPo || "",
+      })
+    : null;
 
   return next;
 }

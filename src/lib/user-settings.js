@@ -44,6 +44,8 @@ export const USER_SETTINGS_DEFAULTS = {
   workOrderStatusTileColors: {},
   /** Controlled dropdown definitions (quote_status, work_order_status, invoice_status) — see dropdown-catalog.js */
   controlledDropdowns: {},
+  /** Product form dropdowns (transport, quote type, payment methods) — see product-dropdown-catalog.js */
+  productDropdowns: {},
   /** Optional prefix for new repair-flow job numbers (blank = RF-00001 style). */
   prefixRepairJob: "",
   /** Optional prefix prepended to quote RFQ# on new invoices. */
@@ -88,6 +90,7 @@ import {
 } from "@/lib/dropdown-catalog";
 import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
 import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-closed-status";
+import { normalizeProductDropdowns, sanitizeProductDropdownsPatch } from "@/lib/product-dropdown-catalog";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -109,6 +112,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "inventoryLocations",
   "workOrderStatusTileColors",
   "controlledDropdowns",
+  "productDropdowns",
   "prefixRepairJob",
   "prefixInvoice",
   "prefixWorkOrder",
@@ -240,6 +244,7 @@ export function mergeUserSettings(stored) {
   );
 
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
+  merged.productDropdowns = normalizeProductDropdowns(merged.productDropdowns);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
@@ -342,6 +347,10 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "inventoryLocations") {
       out.inventoryLocations = normalizeInventoryLocations(body[key]);
+      continue;
+    }
+    if (key === "productDropdowns") {
+      out.productDropdowns = sanitizeProductDropdownsPatch(body[key]);
       continue;
     }
     if (key === "workOrderStatusTileColors") {
