@@ -35,6 +35,7 @@ export default function QuickBooksSetting({ draft, updateDraft, disabled = false
   const [accountsLoading, setAccountsLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [connecting, setConnecting] = useState(false);
 
   const workOrderStatuses = useMemo(() => {
     const list = Array.isArray(draft?.workOrderStatuses) ? draft.workOrderStatuses : [];
@@ -128,6 +129,30 @@ export default function QuickBooksSetting({ draft, updateDraft, disabled = false
     const next = current.filter((s) => String(s).trim().toLowerCase() !== key);
     if (!closedSelected.has(key)) next.push(canonical);
     updateDraft({ quickBooksJobClosedStatuses: next });
+  };
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await fetch("/api/dashboard/integrations/quickbooks/connect?format=json", {
+        credentials: "include",
+        headers: { Accept: "application/json" },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not start QuickBooks connect");
+      const url = String(data.url || "").trim();
+      if (!/^https:\/\/appcenter\.intuit\.com\/connect\/oauth2/i.test(url)) {
+        throw new Error("Invalid QuickBooks authorize URL from server.");
+      }
+      window.location.assign(url);
+    } catch (e) {
+      await alert({
+        title: "QuickBooks connect",
+        message: e.message || "Could not start QuickBooks connect",
+        variant: "danger",
+      });
+      setConnecting(false);
+    }
   };
 
   const handleDisconnect = async () => {
@@ -268,12 +293,10 @@ export default function QuickBooksSetting({ draft, updateDraft, disabled = false
             type="button"
             variant="primary"
             size="sm"
-            disabled={disabled || !configured || statusLoading}
-            onClick={() => {
-              window.location.href = "/api/dashboard/integrations/quickbooks/connect";
-            }}
+            disabled={disabled || !configured || statusLoading || connecting}
+            onClick={() => void handleConnect()}
           >
-            Connect to QuickBooks
+            {connecting ? "Opening QuickBooks…" : "Connect to QuickBooks"}
           </Button>
         ) : (
           <>

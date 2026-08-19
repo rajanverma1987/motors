@@ -11,14 +11,28 @@ export async function GET(request) {
     }
     if (!intuitConfigured()) {
       return NextResponse.json(
-        { error: "QuickBooks is not configured on this server. Set INTUIT_CLIENT_ID, INTUIT_CLIENT_SECRET, and INTUIT_REDIRECT_URI." },
+        {
+          error:
+            "QuickBooks is not configured on this server. Set INTUIT_CLIENT_ID, INTUIT_CLIENT_SECRET, and INTUIT_REDIRECT_URI.",
+        },
         { status: 503 }
       );
     }
     const url = buildAuthorizeUrl(user.email);
-    return NextResponse.redirect(url);
+    const wantsJson =
+      request.nextUrl.searchParams.get("format") === "json" ||
+      String(request.headers.get("accept") || "").includes("application/json");
+
+    if (wantsJson) {
+      return NextResponse.json({ ok: true, url });
+    }
+
+    return NextResponse.redirect(new URL(url));
   } catch (err) {
     console.error("QuickBooks connect:", err);
-    return NextResponse.json({ error: err.message || "Failed to start QuickBooks connect" }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || "Failed to start QuickBooks connect" },
+      { status: 500 }
+    );
   }
 }

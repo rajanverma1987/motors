@@ -3,8 +3,14 @@ export const QBO_SOURCE_SYSTEM = "quickbooks_online";
 
 export const QBO_OAUTH_SCOPE = "com.intuit.quickbooks.accounting";
 
+/** Intuit OAuth authorize endpoint (must be absolute — never a site-relative path). */
+export const INTUIT_OAUTH_AUTHORIZE_URL = "https://appcenter.intuit.com/connect/oauth2";
+
 export function intuitAuthBaseUrl() {
-  return "https://appcenter.intuit.com/connect/oauth2";
+  const raw = String(process.env.INTUIT_OAUTH_AUTHORIZE_URL || INTUIT_OAUTH_AUTHORIZE_URL).trim();
+  if (!raw) return INTUIT_OAUTH_AUTHORIZE_URL;
+  if (/^https?:\/\//i.test(raw)) return raw.replace(/\/+$/, "");
+  return INTUIT_OAUTH_AUTHORIZE_URL;
 }
 
 export function intuitTokenUrl() {

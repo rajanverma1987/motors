@@ -71,7 +71,15 @@ export function buildAuthorizeUrl(ownerEmail) {
     scope: QBO_OAUTH_SCOPE,
     state,
   });
-  return `${intuitAuthBaseUrl()}?${params.toString()}`;
+  const base = intuitAuthBaseUrl();
+  if (!/^https:\/\/appcenter\.intuit\.com/i.test(base)) {
+    throw new Error(
+      `Invalid QuickBooks authorize URL "${base}". Expected https://appcenter.intuit.com/connect/oauth2`
+    );
+  }
+  const url = new URL(base);
+  url.search = params.toString();
+  return url.toString();
 }
 
 /**
