@@ -22,8 +22,13 @@ export const HOME_FAQS = [
       "Leads come from the IQMotorBase directory and local SEO pages. You can choose shared leads (sent to multiple shops) or exclusive leads (sent only to you). Credits are deducted when a lead is delivered.",
   },
   {
+    question: "Does IQMotorBase integrate with QuickBooks Online?",
+    answer:
+      "Yes. Enable QuickBooks Online under Settings → Accounts. When a job reaches your selected closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders to QBO so you do not re-key data between the shop floor and your books.",
+  },
+  {
     question: "Is there an API for integrating with other software?",
     answer:
-      "Yes. IQMotorBase provides an API to sync customers, work orders, and quotes with your existing CRM, accounting, or ERP tools.",
+      "Yes. Alongside built-in QuickBooks Online sync, IQMotorBase provides an API to sync customers, work orders, and quotes with your existing CRM, accounting, or ERP tools.",
   },
 ];

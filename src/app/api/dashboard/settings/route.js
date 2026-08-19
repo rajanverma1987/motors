@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, setPortalUiCookie } from "@/lib/auth-portal";
 import {
   mergeUserSettings,
   sanitizeUserSettingsPatch,
@@ -41,6 +42,24 @@ export async function PATCH(request) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+
+    if (patch.quickBooksEnabled === true) {
+      const existing = await UserSettings.findOne({ ownerEmail: email }).lean();
+      const mergedPreview = mergeUserSettings({
+        ...(existing?.settings || {}),
+        ...patch,
+      });
+      if (
+        !Array.isArray(mergedPreview.quickBooksJobClosedStatuses) ||
+        mergedPreview.quickBooksJobClosedStatuses.length === 0
+      ) {
+        return NextResponse.json(
+          { error: "Select at least one job closed status when QuickBooks sync is enabled." },
+          { status: 400 }
+        );
+      }
+    }
+
     const doc = await UserSettings.findOneAndUpdate(
       { ownerEmail: email },
       {
@@ -53,6 +72,10 @@ export async function PATCH(request) {
     ).lean();
 
     const settings = userSettingsForClient(mergeUserSettings(doc?.settings));
+    if (Object.prototype.hasOwnProperty.call(patch, "portalUi")) {
+      const cookieStore = await cookies();
+      setPortalUiCookie(cookieStore, settings.portalUi);
+    }
     return NextResponse.json({ ok: true, settings });
   } catch (err) {
     console.error("PATCH dashboard settings:", err);

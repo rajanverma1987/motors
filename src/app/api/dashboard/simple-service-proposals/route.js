@@ -9,6 +9,7 @@ import {
 import { applySimpleServiceProposalInventoryLifecycle } from "@/lib/inventory-service";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 import {
   andMongoClauses,
   invoiceFinanceAddFieldsStages,
@@ -313,6 +314,12 @@ export async function POST(request) {
       data: item,
     });
     void notifySimpleJobBoardFromSp(email, null, doc);
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "serviceProposal",
+      previous: null,
+      next: typeof doc.toObject === "function" ? doc.toObject() : doc,
+    });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {
     console.error("Dashboard create simple service proposal error:", err);

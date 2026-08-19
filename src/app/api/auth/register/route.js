@@ -101,6 +101,7 @@ export async function POST(request) {
     await setPortalSessionCookies(cookieStore, {
       token,
       calculatorOnlyPortal: calculatorOnlyAccount,
+      portalUi: "simple",
     });
 
     const trialAccount =
@@ -115,6 +116,7 @@ export async function POST(request) {
         listingOnlyAccount: listingOnly,
         trialAccount,
         calculatorOnlyAccount,
+        portalUi: "simple",
       },
     });
   } catch (err) {

@@ -16,6 +16,7 @@ import {
   notifySimpleJobBoardDeleted,
   notifySimpleJobBoardFromSp,
 } from "@/lib/job-board-emit";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -108,6 +109,12 @@ export async function PUT(request, context) {
       data: item,
     });
     void notifySimpleJobBoardFromSp(email, previous, doc);
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "serviceProposal",
+      previous,
+      next: doc,
+    });
     return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple service proposal error:", err);

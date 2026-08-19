@@ -59,10 +59,24 @@ export const USER_SETTINGS_DEFAULTS = {
   smtpPassword: "",
   smtpFromEmail: "",
   smtpFromName: "",
+  /**
+   * Shop dashboard UI: "simple" (Basic) or "classic".
+   * Stored per shop in UserSettings — not a global SaaS flag.
+   */
+  portalUi: "simple",
+  /** One-way QuickBooks Online sync (requires OAuth connection). */
+  quickBooksEnabled: false,
+  /** Work-order statuses that trigger QBO sync when a JOB enters them. */
+  quickBooksJobClosedStatuses: ["Completed"],
+  /** QBO Chart of Accounts Id used for invoice service lines. */
+  quickBooksDefaultIncomeAccountId: "",
+  /** QBO Chart of Accounts Id used for vendor bill expense lines. */
+  quickBooksDefaultExpenseAccountId: "",
 };
 
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
 import { LOGO_DOCUMENT_SCALE_DEFAULT, normalizeLogoDocumentScale } from "@/lib/logo-document-scale";
+import { normalizePortalUi } from "@/lib/portal-view";
 import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
 import { isAllowedCurrency } from "@/lib/format-currency";
 import { DEFAULT_WORK_ORDER_STATUSES } from "@/lib/work-order-fields";
@@ -73,6 +87,7 @@ import {
   deriveWorkOrderFieldsFromControlledEntries,
 } from "@/lib/dropdown-catalog";
 import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
+import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-closed-status";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -105,6 +120,11 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "smtpPassword",
   "smtpFromEmail",
   "smtpFromName",
+  "portalUi",
+  "quickBooksEnabled",
+  "quickBooksJobClosedStatuses",
+  "quickBooksDefaultIncomeAccountId",
+  "quickBooksDefaultExpenseAccountId",
 ]);
 
 const ACCOUNTS_PAYMENT_TERMS = new Set([
@@ -225,10 +245,26 @@ export function mergeUserSettings(stored) {
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
   merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
   merged.logoDocumentScale = normalizeLogoDocumentScale(merged.logoDocumentScale);
+  merged.portalUi = normalizePortalUi(merged.portalUi);
   merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
     merged.workOrderStatusTileColors,
     merged.workOrderStatuses
   );
+  merged.quickBooksEnabled = !!merged.quickBooksEnabled;
+  merged.quickBooksJobClosedStatuses = normalizeQuickBooksJobClosedStatuses(
+    merged.quickBooksJobClosedStatuses,
+    merged.workOrderStatuses
+  );
+  merged.quickBooksDefaultIncomeAccountId = String(
+    merged.quickBooksDefaultIncomeAccountId || ""
+  )
+    .trim()
+    .slice(0, 64);
+  merged.quickBooksDefaultExpenseAccountId = String(
+    merged.quickBooksDefaultExpenseAccountId || ""
+  )
+    .trim()
+    .slice(0, 64);
   const smtp = normalizeWorkspaceSmtpFields(merged);
   Object.assign(merged, smtp);
   return merged;
@@ -338,6 +374,28 @@ export function sanitizeUserSettingsPatch(body) {
     if (key === "smtpPassword") {
       const pw = String(body[key] ?? "").trim();
       if (pw) out[key] = pw;
+      continue;
+    }
+    if (key === "portalUi") {
+      out.portalUi = normalizePortalUi(body[key]);
+      continue;
+    }
+    if (key === "quickBooksEnabled") {
+      if (typeof body[key] === "boolean") out.quickBooksEnabled = body[key];
+      continue;
+    }
+    if (key === "quickBooksJobClosedStatuses") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      out.quickBooksJobClosedStatuses = arr
+        .map((s) => String(s ?? "").trim().slice(0, 80))
+        .filter(Boolean)
+        .slice(0, 25);
+      continue;
+    }
+    if (key === "quickBooksDefaultIncomeAccountId" || key === "quickBooksDefaultExpenseAccountId") {
+      out[key] = String(body[key] ?? "")
+        .trim()
+        .slice(0, 64);
       continue;
     }
     if (key === "controlledDropdowns") {

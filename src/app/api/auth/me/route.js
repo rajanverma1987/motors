@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { getPortalPayloadFromRequest, getPortalTierCookieName } from "@/lib/auth-portal";
+import { getPortalPayloadFromRequest, getPortalTierCookieName, setPortalUiCookie } from "@/lib/auth-portal";
 import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
+import { loadShopPortalUi } from "@/lib/shop-portal-ui";
+import { PORTAL_UI_SIMPLE } from "@/lib/portal-view";
 
 export async function GET(request) {
   const payload = await getPortalPayloadFromRequest(request);
@@ -18,6 +20,7 @@ export async function GET(request) {
   const listingOnly = await userIsListingOnlyAccount(email);
   const trialAccount = !listingOnly && (await userIsTrialAccount(email));
   const calculatorOnlyAccount = await userIsCalculatorOnlyPortalAccount(email);
+  const portalUi = calculatorOnlyAccount ? PORTAL_UI_SIMPLE : await loadShopPortalUi(email);
 
   const cookieStore = await cookies();
   const tierValue = calculatorOnlyAccount ? "calculator_only" : "full";
@@ -28,6 +31,7 @@ export async function GET(request) {
     maxAge: 60 * 60 * 24 * 7,
     path: "/",
   });
+  setPortalUiCookie(cookieStore, portalUi);
 
   return NextResponse.json({
     user: {
@@ -37,6 +41,7 @@ export async function GET(request) {
       listingOnlyAccount: listingOnly,
       trialAccount,
       calculatorOnlyAccount,
+      portalUi,
     },
   });
 }

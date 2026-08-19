@@ -11,6 +11,7 @@ import { TRIAL_CUSTOMER_CAP_CODE, TRIAL_MAX_CUSTOMERS, TRIAL_UPGRADE_BODY } from
 import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listing-account-restrictions";
 import { userIsTrialAccount, shopCustomerCount } from "@/lib/trial-account-restrictions";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 const MAX_DOCUMENTS = 50;
@@ -219,6 +220,11 @@ export async function POST(request) {
       taxExempt: normalizeTaxExempt(taxExempt),
       taxPercent: String(normalizeTaxPercent(taxPercent)),
       createdByEmail: user.email.trim().toLowerCase(),
+    });
+    enqueueQuickBooksSync({
+      ownerEmail: user.email.trim().toLowerCase(),
+      trigger: "customer",
+      customer: doc.toObject(),
     });
     return NextResponse.json({
       ok: true,

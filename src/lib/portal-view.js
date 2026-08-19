@@ -1,4 +1,4 @@
-/** Classic portal vs Simple dense portal. Classic UI is hidden; routes redirect to Simple. */
+/** Classic portal vs Simple (Basic) portal. Per-shop setting; default is Basic. */
 
 export const CLASSIC_PORTAL_PREFIX = "/dashboard";
 export const SIMPLE_PORTAL_PREFIX = "/dashboards";
@@ -6,8 +6,62 @@ export const SIMPLE_PORTAL_PREFIX = "/dashboards";
 export const PORTAL_VIEW_CLASSIC = "classic";
 export const PORTAL_VIEW_SIMPLE = "simple";
 
-/** When false, Classic/Simple switcher is hidden and Classic paths redirect to Simple. */
+export const PORTAL_UI_CLASSIC = "classic";
+export const PORTAL_UI_SIMPLE = "simple";
+export const PORTAL_UI_COOKIE = "motors_portal_ui";
+
+/** Nav Classic/Simple switcher stays off; shops pick UI in Settings → Account. */
 export const CLASSIC_PORTAL_UI_ENABLED = false;
+
+export function normalizePortalUi(raw) {
+  return String(raw || "")
+    .trim()
+    .toLowerCase() === PORTAL_UI_CLASSIC
+    ? PORTAL_UI_CLASSIC
+    : PORTAL_UI_SIMPLE;
+}
+
+export function isClassicPortalUiCookie(cookieHeader) {
+  const match = String(cookieHeader || "").match(/(?:^|;\s*)motors_portal_ui=([^;]*)/);
+  if (!match) return false;
+  try {
+    return decodeURIComponent(match[1]).trim().toLowerCase() === PORTAL_UI_CLASSIC;
+  } catch {
+    return false;
+  }
+}
+
+export function classicPortalHomePath() {
+  return `${CLASSIC_PORTAL_PREFIX}/all-jobs`;
+}
+
+export function settingsPathForPortalUi(portalUi) {
+  return normalizePortalUi(portalUi) === PORTAL_UI_CLASSIC
+    ? `${CLASSIC_PORTAL_PREFIX}/settings`
+    : `${SIMPLE_PORTAL_PREFIX}/settings?section=account`;
+}
+
+export function portalLandingPath({ calculatorOnlyAccount, portalUi } = {}) {
+  if (calculatorOnlyAccount) return `${SIMPLE_PORTAL_PREFIX}?tab=calculators`;
+  if (normalizePortalUi(portalUi) === PORTAL_UI_CLASSIC) return classicPortalHomePath();
+  return SIMPLE_PORTAL_PREFIX;
+}
+
+function queryString(search) {
+  if (!search) return "";
+  return search.startsWith("?") ? search : `?${search}`;
+}
+
+function searchParam(search, key) {
+  const q = queryString(search).replace(/^\?/, "");
+  return new URLSearchParams(q).get(key);
+}
+
+export function isSimpleCalculatorsPath(pathname, search = "") {
+  const pathOnly = String(pathname || "").split("?")[0];
+  if (pathOnly !== SIMPLE_PORTAL_PREFIX && pathOnly !== `${SIMPLE_PORTAL_PREFIX}/`) return false;
+  return searchParam(search, "tab") === "calculators";
+}
 
 export function isSimplePortalPath(pathname) {
   if (!pathname) return false;
@@ -92,6 +146,39 @@ export function classicPathToSimpleRedirect(pathname, search = "") {
   }
 
   return `${SIMPLE_PORTAL_PREFIX}${query}`;
+}
+
+/**
+ * Map a Simple `/dashboards…` path to Classic `/dashboard…` for shops that chose Classic UI.
+ * Calculators stay on Simple (`?tab=calculators`).
+ * @param {string} pathname
+ * @param {string} [search] including leading `?` or raw query
+ */
+export function simplePathToClassicRedirect(pathname, search = "") {
+  const pathOnly = String(pathname || "").split("?")[0] || SIMPLE_PORTAL_PREFIX;
+  const query = queryString(search);
+
+  if (isSimpleCalculatorsPath(pathOnly, query)) {
+    return `${SIMPLE_PORTAL_PREFIX}?tab=calculators`;
+  }
+
+  if (pathOnly === `${SIMPLE_PORTAL_PREFIX}/settings` || pathOnly.startsWith(`${SIMPLE_PORTAL_PREFIX}/settings/`)) {
+    return `${CLASSIC_PORTAL_PREFIX}/settings`;
+  }
+
+  const tab = searchParam(query, "tab");
+  /** @type {Record<string, string>} */
+  const classicByTab = {
+    customers: `${CLASSIC_PORTAL_PREFIX}/customers`,
+    inventory: `${CLASSIC_PORTAL_PREFIX}/inventory`,
+    reports: `${CLASSIC_PORTAL_PREFIX}/reports`,
+    invoices: `${CLASSIC_PORTAL_PREFIX}/invoices`,
+    "purchase-orders": `${CLASSIC_PORTAL_PREFIX}/purchase-orders`,
+    "service-proposals": `${CLASSIC_PORTAL_PREFIX}/rfq`,
+  };
+  if (tab && classicByTab[tab]) return classicByTab[tab];
+
+  return classicPortalHomePath();
 }
 
 /** @returns {typeof PORTAL_VIEW_CLASSIC | typeof PORTAL_VIEW_SIMPLE} */

@@ -24,6 +24,8 @@ import SimpleMarketplaceSection from "@/components/simple/settings/simple-market
 import SimpleJobPostingsSection from "@/components/simple/settings/simple-job-postings-section";
 import SimpleAccessControlSection from "@/components/simple/settings/simple-access-control-section";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
+import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
+import QuickBooksSetting from "@/components/dashboard/quickbooks-setting";
 import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
@@ -56,6 +58,7 @@ import {
 } from "@/lib/simple-settings-nav";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
+import { normalizePortalUi, settingsPathForPortalUi } from "@/lib/portal-view";
 
 const PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10 rows" },
@@ -182,6 +185,18 @@ export default function SettingsPageClient() {
   }
 
   async function handleSave() {
+    if (
+      draft.quickBooksEnabled &&
+      (!Array.isArray(draft.quickBooksJobClosedStatuses) ||
+        draft.quickBooksJobClosedStatuses.filter((s) => String(s || "").trim()).length === 0)
+    ) {
+      await alert({
+        title: "QuickBooks",
+        message: "Select at least one job closed status when QuickBooks sync is enabled.",
+        variant: "danger",
+      });
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...draft };
@@ -190,6 +205,7 @@ export default function SettingsPageClient() {
       if (smtpPasswordInput.trim()) {
         payload.smtpPassword = smtpPasswordInput.trim();
       }
+      const previousUi = normalizePortalUi(savedSettings?.portalUi);
       const r = await fetch("/api/dashboard/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -203,6 +219,11 @@ export default function SettingsPageClient() {
       setSmtpPasswordInput("");
       await refreshContext();
       applyDashboardZoom(merged.zoomLevel);
+      const nextUi = normalizePortalUi(merged.portalUi);
+      if (previousUi !== nextUi) {
+        window.location.assign(settingsPathForPortalUi(nextUi));
+        return;
+      }
       await alert({ title: "Saved", message: "Settings saved." });
     } catch (e) {
       await alert({
@@ -312,6 +333,13 @@ export default function SettingsPageClient() {
                 </p>
               )}
             </FormContainer>
+            {!user?.calculatorOnlyAccount ? (
+              <PortalUiSetting
+                value={draft.portalUi}
+                onChange={(portalUi) => updateDraft({ portalUi })}
+                disabled={saving}
+              />
+            ) : null}
             <FormContainer>
               <FormSectionTitle as="h2">Notifications</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -457,6 +485,7 @@ export default function SettingsPageClient() {
                 placeholder="Thank you for your business!"
               />
             </FormContainer>
+            <QuickBooksSetting draft={draft} updateDraft={updateDraft} disabled={saving} />
           </div>
         ),
       },
@@ -908,6 +937,8 @@ export default function SettingsPageClient() {
       logoUploading,
       user?.email,
       user?.shopName,
+      user?.calculatorOnlyAccount,
+      draft.portalUi,
       pwCurrent,
       pwNew,
       pwConfirm,

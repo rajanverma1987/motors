@@ -5,9 +5,12 @@ import {
   isCalculatorOnlyDashboardPath,
 } from "@/lib/calculator-portal-routes";
 import {
-  CLASSIC_PORTAL_UI_ENABLED,
   classicPathToSimpleRedirect,
   isClassicPortalPath,
+  isClassicPortalUiCookie,
+  isSimpleCalculatorsPath,
+  isSimplePortalPath,
+  simplePathToClassicRedirect,
 } from "@/lib/portal-view";
 
 /** Edge-safe: tier is set on login/register and refreshed by GET /api/auth/me */
@@ -38,9 +41,18 @@ export function middleware(request) {
     if (calcOnlyPortal && !isCalculatorOnlyDashboardPath(pathname)) {
       return NextResponse.redirect(new URL(CALCULATOR_ONLY_DASHBOARD_HREF, request.url));
     }
-    // Hide Classic UI: keep code, redirect all `/dashboard…` to Simple `/dashboards…`
-    if (!CLASSIC_PORTAL_UI_ENABLED && isClassicPortalPath(pathname)) {
-      const target = classicPathToSimpleRedirect(pathname, request.nextUrl.search || "");
+    const search = request.nextUrl.search || "";
+    const shopClassicUi = !calcOnlyPortal && isClassicPortalUiCookie(cookieHeader);
+    if (shopClassicUi) {
+      if (isSimplePortalPath(pathname) && !isSimpleCalculatorsPath(pathname, search)) {
+        const target = simplePathToClassicRedirect(pathname, search);
+        const current = `${pathname}${search}`;
+        if (target && target !== current) {
+          return NextResponse.redirect(new URL(target, request.url));
+        }
+      }
+    } else if (isClassicPortalPath(pathname)) {
+      const target = classicPathToSimpleRedirect(pathname, search);
       return NextResponse.redirect(new URL(target, request.url));
     }
   }

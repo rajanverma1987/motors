@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import { normalizePortalUi, PORTAL_UI_COOKIE, PORTAL_UI_SIMPLE } from "@/lib/portal-view";
 
 let _portalSecret = null;
 function getPortalJwtSecret() {
@@ -70,24 +71,39 @@ export function getPortalCookieName() {
   return COOKIE_NAME;
 }
 
-export async function setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal }) {
-  const common = {
+export function portalSessionCookieOptions() {
+  return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
+    maxAge: 60 * 60 * 24 * 7,
   };
-  cookieStore.set(getPortalCookieName(), token, { ...common, maxAge: 60 * 60 * 24 * 7 });
+}
+
+export function getPortalUiCookieName() {
+  return PORTAL_UI_COOKIE;
+}
+
+export function setPortalUiCookie(cookieStore, portalUi) {
+  cookieStore.set(PORTAL_UI_COOKIE, normalizePortalUi(portalUi), portalSessionCookieOptions());
+}
+
+export async function setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal, portalUi }) {
+  const common = portalSessionCookieOptions();
+  cookieStore.set(getPortalCookieName(), token, common);
   cookieStore.set(
     getPortalTierCookieName(),
     calculatorOnlyPortal ? PORTAL_TIER_CALCULATOR_ONLY : PORTAL_TIER_FULL,
-    { ...common, maxAge: 60 * 60 * 24 * 7 }
+    common
   );
+  setPortalUiCookie(cookieStore, calculatorOnlyPortal ? PORTAL_UI_SIMPLE : portalUi);
 }
 
 export function clearPortalSessionCookies(cookieStore) {
   cookieStore.delete(getPortalCookieName());
   cookieStore.delete(getPortalTierCookieName());
+  cookieStore.delete(PORTAL_UI_COOKIE);
 }
 
 export async function getPortalUserFromRequest(request) {

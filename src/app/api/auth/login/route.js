@@ -11,6 +11,7 @@ import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
 import { recordPortalLogin } from "@/lib/portal-login-audit";
+import { loadShopPortalUi } from "@/lib/shop-portal-ui";
 
 export async function POST(request) {
   const { allowed } = checkRateLimit(request, "portal-login", 10);
@@ -90,6 +91,7 @@ export async function POST(request) {
     const listingOnly = await userIsListingOnlyAccount(ownerEmail);
     const trialAccount = !listingOnly && (await userIsTrialAccount(ownerEmail));
     const calculatorOnlyAccount = await userIsCalculatorOnlyPortalAccount(ownerEmail);
+    const portalUi = calculatorOnlyAccount ? "simple" : await loadShopPortalUi(ownerEmail);
 
     try {
       await recordPortalLogin(ownerEmail);
@@ -107,7 +109,11 @@ export async function POST(request) {
       calculatorOnlyPortal: calculatorOnlyAccount,
     });
     const cookieStore = await cookies();
-    await setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal: calculatorOnlyAccount });
+    await setPortalSessionCookies(cookieStore, {
+      token,
+      calculatorOnlyPortal: calculatorOnlyAccount,
+      portalUi,
+    });
 
     return NextResponse.json({
       ok: true,
@@ -118,6 +124,7 @@ export async function POST(request) {
         listingOnlyAccount: listingOnly,
         trialAccount,
         calculatorOnlyAccount,
+        portalUi,
         isEmployeeSession: Boolean(actingEmployee),
         employee: actingEmployee,
       },

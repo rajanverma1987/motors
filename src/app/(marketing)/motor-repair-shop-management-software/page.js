@@ -16,7 +16,7 @@ const path = SEO_SOFTWARE_PILLAR_PATH;
 
 const TITLE = "Motor Repair Shop Management Software | IQMotorBase";
 const DESCRIPTION =
-  "Run job write-ups, work orders, inventory, invoicing, and repair leads in one system built specifically for electric motor repair shops. Book a demo.";
+  "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built specifically for electric motor repair shops. Book a demo.";
 
 export const metadata = {
   title: TITLE,
@@ -64,6 +64,10 @@ const faqItems = [
   {
     q: "Does the software also generate leads for my shop?",
     a: "Yes. Leads originate from the IQMotorBase public directory and local SEO pages. Shops can take shared leads (sent to multiple shops) or exclusive leads (one shop only). A credit balance deducts when a lead is delivered. A won lead converts directly into a customer and Job Write-Up—no re-entry into a separate CRM.",
+  },
+  {
+    q: "Does IQMotorBase integrate with QuickBooks Online?",
+    a: "Yes. Connect QuickBooks Online under Settings → Accounts. When a job reaches your selected closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders to QBO so you do not re-key the shop floor into your books.",
   },
 ];
 
@@ -177,10 +181,11 @@ export default function MotorRepairShopManagementSoftwarePage() {
               Receiving and shipping log motors and parts moving in and out—customer motors arriving, vendor
               deliveries against POs, shipments back to customers—each tied to the relevant work order or PO so you
               can answer “where is it right now?” Reports cover revenue, completed jobs, technician workload, and top
-              customers without exporting to a spreadsheet just to see the week. An API is available to sync
-              customers, work orders, and quotes with external CRM, accounting, or ERP tools when the shop already
-              relies on those apps—one source of truth for the repair job, not a mandate to rip out accounting
-              overnight.
+              customers without exporting to a spreadsheet just to see the week. Built-in QuickBooks Online sync pushes
+              customers, invoices, payments, and vendor purchase orders when a job reaches the closed status you
+              configure—so the shop floor does not become a retyping station for accounting. An API is also available to
+              sync customers, work orders, and quotes with other CRM or ERP tools when the shop already relies on those
+              apps—one source of truth for the repair job, not a mandate to rip out accounting overnight.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Low-stock alerts surface on the dashboard so purchasing is not waiting for someone to notice an empty
@@ -285,7 +290,9 @@ export default function MotorRepairShopManagementSoftwarePage() {
                   </tr>
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-4 font-medium text-title">API / integrations</td>
-                    <td className="py-3 pr-4">Yes — customers, work orders, quotes</td>
+                    <td className="py-3 pr-4">
+                      Yes — QuickBooks Online sync (customers, invoices, payments, vendor POs) plus API for CRM/ERP
+                    </td>
                     <td className="py-3 pr-4">N/A</td>
                     <td className="py-3 pr-4">Varies by product</td>
                     <td className="py-3">
@@ -319,12 +326,14 @@ export default function MotorRepairShopManagementSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               IQMotorBase consolidates that stack around the Job Write-Up: quotes and work orders on the same job
               number, reservations and POs from the quote path, board and mobile updates for the floor, invoices and
-              AR for the office, and directory-driven leads that become customers without a second CRM. Marketplace
-              listings for spare parts, surplus motors, and tools can publish from the dashboard with SEO-friendly
-              URLs when you have surplus to move—there is no on-platform checkout; the buyer sends a request and the
-              shop follows up. Careers postings for technicians and winders can go from the CRM to the public Careers
-              page with the shop’s name and location; candidates apply online and applications are reviewed in the
-              dashboard. None of that requires inventing a parallel process outside the shop system.
+              AR for the office, and directory-driven leads that become customers without a second CRM. Built-in
+              QuickBooks Online sync pushes customers, invoices, payments, and vendor POs when a job closes—so
+              accounting does not become another retyping station. Marketplace listings for spare parts, surplus
+              motors, and tools can publish from the dashboard with SEO-friendly URLs when you have surplus to
+              move—there is no on-platform checkout; the buyer sends a request and the shop follows up. Careers
+              postings for technicians and winders can go from the CRM to the public Careers page with the shop’s name
+              and location; candidates apply online and applications are reviewed in the dashboard. None of that
+              requires inventing a parallel process outside the shop system.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Onboarding assumes most prospects are still on spreadsheets. Existing customers, motors, and job history

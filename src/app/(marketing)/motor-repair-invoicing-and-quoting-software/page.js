@@ -14,7 +14,7 @@ const path = SEO_SOFTWARE_INVOICING_PATH;
 
 const TITLE = "Motor Repair Invoicing & Quoting Software | IQMotorBase";
 const DESCRIPTION =
-  "Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions in the same system as the job.";
+  "Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions—and sync customers, invoices, payments, and vendor POs to QuickBooks Online.";
 
 export const metadata = {
   title: TITLE,
@@ -55,6 +55,10 @@ const faqItems = [
     q: "How do payments and past-due accounts show up?",
     a: "Payment tracking includes online payment links and payment history. Aging reports surface past-due accounts for follow-up without exporting AR to a spreadsheet. Invoices stay on the same job path as the quote and work order.",
   },
+  {
+    q: "Does IQMotorBase sync invoices to QuickBooks Online?",
+    a: "Yes. Connect QuickBooks Online under Settings → Accounts. When a job reaches the closed status you choose, customers, invoices, payments, and vendor purchase orders sync to QBO so the office does not retype RFQ lines or payments into accounting.",
+  },
 ];
 
 export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
@@ -63,7 +67,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Motor repair invoicing and quoting software"
-        description="Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions on the same job record as the repair."
+        description="Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions on the same job record—and sync to QuickBooks Online when a job closes."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         sidebarTitle="Book a demo"
@@ -84,8 +88,10 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               IQMotorBase keeps quoting, invoicing, receivables, and job-level sales commission data on the same Job
               Write-Up path as intake and the work order. Formal RFQs start from that job, stay linked to the job
               number, and convert into invoices from completed work orders and approved quote lines—without re-keying
-              what was already agreed. This page walks that path for shops done babysitting disconnected estimate and
-              billing tools. For the full system, see{" "}
+              what was already agreed. When you enable QuickBooks Online, that same commercial path can sync customers,
+              invoices, payments, and vendor POs into QBO the moment a job hits your chosen closed status. This page
+              walks that path for shops done babysitting disconnected estimate and billing tools. For the full system,
+              see{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
                 motor repair shop management software
               </Link>
@@ -206,6 +212,34 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               page; reserved stock and shortfalls that break quote accuracy before you invoice are on{" "}
               <Link href={SEO_SOFTWARE_INVENTORY_PATH} className="text-primary font-medium hover:underline">
                 inventory software
+              </Link>
+              .
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">
+              QuickBooks Online: shop floor to books without re-keying
+            </h2>
+            <p className="mt-4 text-secondary leading-relaxed">
+              IQMotorBase includes a built-in QuickBooks Online (QBO) integration. Connect your company under Settings
+              → Accounts, choose which work-order status counts as “job closed,” and turn sync on. When a job reaches
+              that status—or when you save invoices, payments, customers, and vendor purchase orders—IQMotorBase can
+              push the matching records into QuickBooks Online.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              That is the opposite of the old habit: export a PDF, open QBO in another tab, and type customer names,
+              line items, and payment amounts again. Sync is one-way from IQMotorBase into QBO so the shop system stays
+              the operational source of truth while accounting still lives where your bookkeeper expects it.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              For inventory reservations that feed quote accuracy before you invoice, see{" "}
+              <Link href={SEO_SOFTWARE_INVENTORY_PATH} className="text-primary font-medium hover:underline">
+                motor repair inventory software
+              </Link>
+              . Floor status that drives “job closed” is covered on{" "}
+              <Link href={SEO_SOFTWARE_WORK_ORDER_PATH} className="text-primary font-medium hover:underline">
+                work order software for motor repair shops
               </Link>
               .
             </p>

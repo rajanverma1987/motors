@@ -9,6 +9,7 @@ import {
 } from "@/lib/simple-portal-mongo";
 import { applySimplePoInventoryReceipts } from "@/lib/simple-po-line-receipts";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -98,6 +99,12 @@ export async function PUT(request, context) {
       action: "updated",
       resourceId: item.id,
       data: item,
+    });
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "purchaseOrder",
+      previous,
+      next: doc,
     });
     return NextResponse.json({ ok: true, item });
   } catch (err) {

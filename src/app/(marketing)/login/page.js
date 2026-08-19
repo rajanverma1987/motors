@@ -8,7 +8,7 @@ import Input from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
-import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
+import { portalLandingPath } from "@/lib/portal-view";
 
 /** Open redirect safe: same-origin path only. */
 function safeNextPath(raw) {
@@ -26,6 +26,14 @@ function safeNextPath(raw) {
   return s;
 }
 
+function destForUser(nextUser, nextPath) {
+  if (nextPath) return nextPath;
+  return portalLandingPath({
+    calculatorOnlyAccount: nextUser?.calculatorOnlyAccount,
+    portalUi: nextUser?.portalUi,
+  });
+}
+
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,8 +42,6 @@ function LoginPageContent() {
     [searchParams]
   );
   const intent = searchParams.get("intent") || "";
-  const defaultAfterLogin = DEFAULT_PORTAL_LANDING_PATH;
-  const afterLoginPath = nextPath || defaultAfterLogin;
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
@@ -44,12 +50,9 @@ function LoginPageContent() {
   useEffect(() => {
     if (!mounted) return;
     if (user) {
-      const dest = user.calculatorOnlyAccount
-        ? nextPath || "/dashboards?tab=calculators"
-        : afterLoginPath;
-      router.replace(dest);
+      router.replace(destForUser(user, nextPath));
     }
-  }, [mounted, user, router, afterLoginPath, nextPath]);
+  }, [mounted, user, router, nextPath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,10 +67,7 @@ function LoginPageContent() {
     try {
       const result = await login(form.email, form.password);
       if (result.ok) {
-        const dest = result.user?.calculatorOnlyAccount
-          ? nextPath || "/dashboards?tab=calculators"
-          : afterLoginPath;
-        router.push(dest);
+        router.push(destForUser(result.user, nextPath));
         return;
       }
       setError(result.error || "Login failed.");

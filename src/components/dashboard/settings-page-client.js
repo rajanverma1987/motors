@@ -12,6 +12,7 @@ import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
+import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
 import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
@@ -35,6 +36,7 @@ import {
 import Slider from "@/components/ui/slider";
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import { DISPLAY_CURRENCIES } from "@/lib/format-currency";
+import { normalizePortalUi, settingsPathForPortalUi } from "@/lib/portal-view";
 
 const PAGE_SIZE_OPTIONS = [
   { value: "10", label: "10 rows" },
@@ -147,6 +149,7 @@ export default function SettingsPageClient() {
       if (smtpPasswordInput.trim()) {
         payload.smtpPassword = smtpPasswordInput.trim();
       }
+      const previousUi = normalizePortalUi(savedSettings?.portalUi);
       const r = await fetch("/api/dashboard/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -160,6 +163,11 @@ export default function SettingsPageClient() {
       setSmtpPasswordInput("");
       await refreshContext();
       applyDashboardZoom(merged.zoomLevel);
+      const nextUi = normalizePortalUi(merged.portalUi);
+      if (previousUi !== nextUi) {
+        window.location.assign(settingsPathForPortalUi(nextUi));
+        return;
+      }
       toast.success("Settings saved.");
     } catch (e) {
       toast.error(e.message || "Could not save settings.");
@@ -262,6 +270,13 @@ export default function SettingsPageClient() {
                 </p>
               )}
             </FormContainer>
+            {!user?.calculatorOnlyAccount ? (
+              <PortalUiSetting
+                value={draft.portalUi}
+                onChange={(portalUi) => updateDraft({ portalUi })}
+                disabled={saving}
+              />
+            ) : null}
             <FormContainer>
               <FormSectionTitle as="h2">Notifications</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -817,6 +832,8 @@ export default function SettingsPageClient() {
       logoUploading,
       user?.email,
       user?.shopName,
+      user?.calculatorOnlyAccount,
+      draft.portalUi,
       pwCurrent,
       pwNew,
       pwConfirm,

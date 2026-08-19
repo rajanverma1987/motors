@@ -5,6 +5,7 @@ import Motor from "@/models/Motor";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 const MAX_DOCUMENTS = 50;
@@ -233,6 +234,11 @@ export async function PATCH(request, context) {
     if (taxExempt !== undefined) doc.taxExempt = normalizeTaxExempt(taxExempt);
     if (taxPercent !== undefined) doc.taxPercent = String(normalizeTaxPercent(taxPercent));
     await doc.save();
+    enqueueQuickBooksSync({
+      ownerEmail: user.email.trim().toLowerCase(),
+      trigger: "customer",
+      customer: doc.toObject(),
+    });
     return NextResponse.json({
       ok: true,
       customer: {

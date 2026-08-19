@@ -6,7 +6,7 @@ import HomeFAQ from "@/components/marketing/home-faq";
 
 const HOME_TITLE = "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase";
 const HOME_DESCRIPTION =
-  "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.";
+  "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop — all in one platform. Book a free demo today.";
 
 export const metadata = {
   title: { absolute: HOME_TITLE },
@@ -91,8 +91,14 @@ const managementFeatures = [
     detail: "See revenue, completed jobs, technician workload, and top customers in one system. Use these views to run the business—spot bottlenecks, plan capacity, and understand which customers and job types drive the most value—without exporting to spreadsheets.",
   },
   {
+    title: "QuickBooks Online integration",
+    detail:
+      "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders into QBO—so the shop floor and your books stay aligned without re-keying line items.",
+  },
+  {
     title: "API and CRM integrations",
-    detail: "An API is available to integrate IQMotorBase.com with any other CRM or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—so you can keep one source of truth while using the apps your team already relies on.",
+    detail:
+      "An API is available to integrate IQMotorBase.com with any other CRM or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—alongside the built-in QuickBooks Online sync—so you can keep one source of truth while using the apps your team already relies on.",
   },
   {
     title: "Upload your existing data",
@@ -150,8 +156,9 @@ export default function HomePage() {
                 Motor Repair Shop Software — Work Orders, Leads & Inventory in One Place
               </h1>
               <p className="mt-6 max-w-[43.2rem] text-lg text-secondary sm:text-xl">
-                From first lead through cash collection, vendor buying, payables, and sales commissions—one connected
-                workflow instead of scattered spreadsheets and apps. Job Write-Up, job board, inventory, invoicing, repair leads,{" "}
+                From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
+                Online sync—one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
+                inventory, invoicing, repair leads,{" "}
                 <Link href="/careers" className="font-medium text-primary hover:underline">
                   hiring
                 </Link>
@@ -202,6 +209,10 @@ export default function HomePage() {
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
                   Shop inventory, reservations &amp; low-stock alerts
                 </li>
+                <li className="flex items-center gap-2">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                  QuickBooks Online sync
+                </li>
               </ul>
             </div>
             {/* Right: business pipeline (see documents/hero.md) */}
@@ -222,7 +233,7 @@ export default function HomePage() {
                     "Work orders & motor testing data",
                     "Accounts receivable",
                     "Vendor PO",
-                    "Accounts payable",
+                    "QuickBooks Online sync",
                     "Sales commissions",
                     "... and many more",
                   ].map((label, i) => (
@@ -398,7 +409,11 @@ export default function HomePage() {
               Job management tools
             </h3>
             <p className="mt-3 max-w-[50.4rem] text-secondary">
-              One system for customers, Job Write-Up, Quotes, invoicing, vendors, shop inventory, and logistics. Create invoices from completed work orders, track payments, manage parts on hand and reservations, and handle receiving and shipping—so you never switch tools for day-to-day operations. The items below cover how you keep financials, suppliers, stock, and physical flow in sync without leaving the platform.
+              One system for customers, Job Write-Up, Quotes, invoicing, vendors, shop inventory, logistics, and
+              QuickBooks Online. Create invoices from completed work orders, track payments, manage parts on hand and
+              reservations, and push customers, invoices, payments, and vendor POs to QBO when a job closes—so you never
+              re-key the shop floor into accounting. The items below cover how you keep financials, suppliers, stock,
+              and physical flow in sync without leaving the platform.
             </p>
             <ul className="mt-8 space-y-6">
               {managementFeatures.map((item) => (

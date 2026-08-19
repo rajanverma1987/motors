@@ -8,6 +8,7 @@ import {
 } from "@/lib/simple-portal-mongo";
 import { mongoCalendarDateRange } from "@/lib/format-date";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
+import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 
 export async function GET(request) {
   try {
@@ -177,6 +178,12 @@ export async function POST(request) {
       action: "created",
       resourceId: item.id,
       data: item,
+    });
+    enqueueQuickBooksSync({
+      ownerEmail: email,
+      trigger: "purchaseOrder",
+      previous: null,
+      next: typeof doc.toObject === "function" ? doc.toObject() : doc,
     });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {

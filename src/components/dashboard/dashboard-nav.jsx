@@ -8,7 +8,7 @@ import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
 import { useAuth } from "@/contexts/auth-context";
-import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath } from "@/lib/portal-view";
+import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath, portalLandingPath, settingsPathForPortalUi } from "@/lib/portal-view";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
 
@@ -20,8 +20,13 @@ export default function DashboardNav() {
   const calculatorOnly = !!user?.calculatorOnlyAccount;
   const simplePortal = isSimplePortalPath(pathname);
   const onSimpleHub = simplePortal && pathname === SIMPLE_PORTAL_PATH && !calculatorOnly;
-  const homeHref = calculatorOnly ? "/dashboards?tab=calculators" : SIMPLE_PORTAL_PATH;
-  const settingsHref = `${SIMPLE_PORTAL_PATH}/settings`;
+  const homeHref = portalLandingPath({
+    calculatorOnlyAccount: calculatorOnly,
+    portalUi: user?.portalUi,
+  });
+  const settingsHref = calculatorOnly
+    ? "/dashboards?tab=calculators"
+    : settingsPathForPortalUi(user?.portalUi);
   const companyName = String(user?.shopName || "").trim() || "Dashboard";
   const userDisplayName =
     String(user?.contactName || "").trim() || String(user?.email || "").trim() || "";
