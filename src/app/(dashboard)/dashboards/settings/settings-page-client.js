@@ -915,6 +915,11 @@ export default function SettingsPageClient() {
       draft.accountsPaymentTerms,
       draft.invoicePaymentOptions,
       draft.invoiceThankYouNote,
+      draft.quickBooksEnabled,
+      draft.quickBooksJobClosedStatuses,
+      draft.quickBooksDefaultIncomeAccountId,
+      draft.quickBooksDefaultExpenseAccountId,
+      draft.workOrderStatuses,
       draft.compactTables,
       draft.currency,
       draft.zoomLevel,
@@ -952,6 +957,7 @@ export default function SettingsPageClient() {
       pwSaving,
       masterTab,
       goSection,
+      saving,
     ]
   );
 

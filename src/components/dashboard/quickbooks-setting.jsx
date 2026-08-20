@@ -349,7 +349,7 @@ export default function QuickBooksSetting({ draft, updateDraft, disabled = false
                 key={label}
                 label={label}
                 checked={closedSelected.has(key)}
-                disabled={disabled || !connected}
+                disabled={disabled}
                 onChange={() => toggleClosedStatus(label)}
               />
             );

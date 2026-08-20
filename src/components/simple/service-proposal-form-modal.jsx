@@ -34,9 +34,16 @@ import {
   workOrderStatusSelectOptionsFromMerged,
   resolveQuoteInvoiceStatusDisplayLabel,
   resolveConfiguredStatusSlug,
+  quoteStatusTileColorForValue,
+  invoiceStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
 import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
+import {
+  resolveStatusTileProps,
+  resolveWorkOrderStatusTileProps,
+  presetIndexToHexColors,
+} from "@/lib/work-order-status-tiles";
 import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
 import {
@@ -355,6 +362,72 @@ export default function ServiceProposalFormModal({
       quoteStatusSelectOptionsFromMerged(mergedSettings).map((o) => String(o.value || "").trim().toLowerCase())
     );
   }, [mergedSettings]);
+
+  const quoteStatusOpts = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+  const invoiceStatusOpts = useMemo(
+    () => invoiceStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
+  const proposalStatusSelectChrome = useMemo(() => {
+    const raw = String(form.status || "").trim();
+    if (!raw) return { style: undefined, className: "" };
+    const bare = raw.toLowerCase().replace(/^invoice:/, "");
+    const isInvoiceOpt = raw.toLowerCase().startsWith("invoice:");
+    const quoteIdx = quoteStatusOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+    const invIdx = invoiceStatusOpts.findIndex((o) => String(o.value).toLowerCase() === bare);
+    const useInvoice = isInvoiceOpt || (invIdx >= 0 && quoteIdx < 0);
+    const fallbackIdx = useInvoice ? (invIdx >= 0 ? invIdx : 0) : quoteIdx >= 0 ? quoteIdx : 0;
+    const { tileColor, tileBgColor, tileTextColor, index } = useInvoice
+      ? invoiceStatusTileColorForValue(mergedSettings, bare, fallbackIdx)
+      : quoteStatusTileColorForValue(mergedSettings, bare, fallbackIdx);
+    const pill = resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+    if (pill.style?.backgroundColor || pill.style?.color) {
+      return {
+        style: {
+          backgroundColor: pill.style.backgroundColor,
+          color: pill.style.color,
+        },
+        className: pill.className || "",
+      };
+    }
+    const hex = presetIndexToHexColors(index);
+    return {
+      style: { backgroundColor: hex.bg, color: hex.text },
+      className: "ring-1 ring-inset border border-border/70 shadow-sm dark:ring-white/15",
+    };
+  }, [form.status, mergedSettings, quoteStatusOpts, invoiceStatusOpts]);
+
+  const jobStatusSelectChrome = useMemo(() => {
+    const current = String(form.jobStatus || "").trim();
+    if (!current) return { style: undefined, className: "" };
+    const idx = jobStatusOptions.findIndex(
+      (o) => String(o.value).toLowerCase() === current.toLowerCase()
+    );
+    const fallbackIdx = idx >= 0 ? idx : 0;
+    const pill = resolveWorkOrderStatusTileProps(
+      current,
+      fallbackIdx,
+      mergedSettings.workOrderStatusTileColors || {}
+    );
+    if (pill.style?.backgroundColor || pill.style?.color) {
+      return {
+        style: {
+          backgroundColor: pill.style.backgroundColor,
+          color: pill.style.color,
+        },
+        className: pill.className || "",
+      };
+    }
+    const hex = presetIndexToHexColors(fallbackIdx);
+    return {
+      style: { backgroundColor: hex.bg, color: hex.text },
+      className: "ring-1 ring-inset border border-border/70 shadow-sm dark:ring-white/15",
+    };
+  }, [form.jobStatus, jobStatusOptions, mergedSettings.workOrderStatusTileColors]);
 
   const customerOptions = useMemo(
     () =>
@@ -1286,39 +1359,55 @@ export default function ServiceProposalFormModal({
                 labelWidth="9.5rem"
                 controlClassName="min-w-0 flex-1"
               >
-                <SimpleSelect
-                  options={statusOptions}
-                  value={form.status}
-                  onChange={(e) => {
-                    const nextStatus = e.target.value;
-                    setForm((f) => {
-                      const nextType = resolveRecordTypeOnSave(
-                        f.recordType,
-                        nextStatus,
-                        invoiceStatusValues,
-                        quoteStatusValues
-                      );
-                      return { ...f, status: nextStatus, recordType: nextType };
-                    });
-                  }}
-                  placeholder="Select…"
-                  searchable
-                  aria-label={
-                    form.recordType === RECORD_TYPE_INVOICE
-                      ? "Invoice Status"
-                      : "Proposal Status"
-                  }
-                />
+                <div
+                  className={`min-w-0 rounded-none border border-border ${
+                    proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+                  }`.trim()}
+                  style={proposalStatusSelectChrome.style}
+                >
+                  <SimpleSelect
+                    options={statusOptions}
+                    value={form.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      setForm((f) => {
+                        const nextType = resolveRecordTypeOnSave(
+                          f.recordType,
+                          nextStatus,
+                          invoiceStatusValues,
+                          quoteStatusValues
+                        );
+                        return { ...f, status: nextStatus, recordType: nextType };
+                      });
+                    }}
+                    placeholder="Select…"
+                    searchable
+                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+                    aria-label={
+                      form.recordType === RECORD_TYPE_INVOICE
+                        ? "Invoice Status"
+                        : "Proposal Status"
+                    }
+                  />
+                </div>
               </FieldRow>
               <FieldRow label="Status" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <SimpleSelect
-                  options={jobStatusOptions}
-                  value={form.jobStatus}
-                  onChange={(e) => patch("jobStatus", e.target.value)}
-                  placeholder="Select…"
-                  searchable
-                  aria-label="Status"
-                />
+                <div
+                  className={`min-w-0 rounded-none border border-border ${
+                    jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+                  }`.trim()}
+                  style={jobStatusSelectChrome.style}
+                >
+                  <SimpleSelect
+                    options={jobStatusOptions}
+                    value={form.jobStatus}
+                    onChange={(e) => patch("jobStatus", e.target.value)}
+                    placeholder="Select…"
+                    searchable
+                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+                    aria-label="Status"
+                  />
+                </div>
               </FieldRow>
               {form.recordType === RECORD_TYPE_INVOICE ? (
                 <div className="mt-5 flex justify-end">
