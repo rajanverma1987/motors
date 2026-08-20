@@ -18,6 +18,7 @@ import SimpleMotorLogisticsModal, {
   KIND_SHIPPING,
 } from "@/components/simple/simple-motor-logistics-modal";
 import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
+import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -75,7 +76,6 @@ import {
 } from "@/lib/simple-datasheet-form";
 import {
   fetchSimpleServiceProposal,
-  listSimplePurchaseOrdersForJobApi,
 } from "@/lib/simple-portal-api";
 import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import {
@@ -325,7 +325,8 @@ export default function ServiceProposalFormModal({
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
-  const [logisticsKind, setLogisticsKind] = useState(null);
+  const [logisticsOpen, setLogisticsOpen] = useState(false);
+  const [logisticsTab, setLogisticsTab] = useState(KIND_RECEIVING);
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printBundle, setPrintBundle] = useState(null);
@@ -870,7 +871,7 @@ export default function ServiceProposalFormModal({
   const docNumber = String(form.documentNumber || "").trim();
   const canOpenLogistics = Boolean(form.id && docNumber);
 
-  const openLogistics = (kind) => {
+  const openLogistics = (tab = KIND_RECEIVING) => {
     if (!canOpenLogistics) {
       void alert({
         title: "Save required",
@@ -879,7 +880,8 @@ export default function ServiceProposalFormModal({
       });
       return;
     }
-    setLogisticsKind(kind);
+    setLogisticsTab(tab === KIND_SHIPPING ? KIND_SHIPPING : KIND_RECEIVING);
+    setLogisticsOpen(true);
   };
 
   const handleLogisticsSave = async ({ kind, form: logisticsForm }) => {
@@ -1051,27 +1053,12 @@ export default function ServiceProposalFormModal({
                 disabled={!canOpenLogistics || saving || copying}
                 title={
                   canOpenLogistics
-                    ? "Log motor receiving (same as Logistics → Motor receiving)"
-                    : "Save the record with a document number before receiving"
+                    ? "Motor receiving and shipping"
+                    : "Save the record with a document number before receiving / shipping"
                 }
                 onClick={() => openLogistics(KIND_RECEIVING)}
               >
-                Receiving
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canOpenLogistics || saving || copying}
-                title={
-                  canOpenLogistics
-                    ? "Log motor shipping (same as Logistics → Motor shipping)"
-                    : "Save the record with a document number before shipping"
-                }
-                onClick={() => openLogistics(KIND_SHIPPING)}
-              >
-                Shipping
+                Receiving / Shipping
               </Button>
               <Button
                 type="button"
@@ -1081,41 +1068,15 @@ export default function ServiceProposalFormModal({
                 disabled={!canCreatePurchaseOrder || saving || copying}
                 title={
                   canCreatePurchaseOrder
-                    ? "Create a new purchase order for this job"
-                    : "Save the record (with JOB# / RFQ#) before creating a purchase order"
+                    ? "Create or view purchase orders for this job"
+                    : "Save the record (with JOB# / RFQ#) before opening purchase orders"
                 }
                 onClick={() => {
                   setPurchaseOrderMode("create");
                   setPurchaseOrderOpen(true);
                 }}
               >
-                Create New PO
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canCreatePurchaseOrder || saving || copying}
-                title={
-                  canCreatePurchaseOrder
-                    ? "View and edit purchase orders for this job"
-                    : "Save the record (with JOB# / RFQ#) before viewing purchase orders"
-                }
-                onClick={async () => {
-                  const list = await listSimplePurchaseOrdersForJobApi(recordId, jobNumber);
-                  if (!list.length) {
-                    await alert({
-                      title: "No purchase orders",
-                      message: "No purchase orders yet for this job. Use Create New PO first.",
-                    });
-                    return;
-                  }
-                  setPurchaseOrderMode("view");
-                  setPurchaseOrderOpen(true);
-                }}
-              >
-                View POs
+                Create/View PO
               </Button>
             </div>
           </div>
@@ -1217,11 +1178,12 @@ export default function ServiceProposalFormModal({
                   labelWidth="7.75rem"
                   controlClassName="min-w-0 flex-1"
                 >
-                  <input
-                    type="text"
+                  <SimpleDoubleClickTextEditInput
+                    label={field.label}
                     value={form[field.key]}
-                    onChange={(e) => patch(field.key, e.target.value)}
+                    onChange={(next) => patch(field.key, next)}
                     className={FIELD_INPUT}
+                    zIndex={160}
                   />
                 </FieldRow>
               ))}
@@ -1563,18 +1525,18 @@ export default function ServiceProposalFormModal({
         serviceProposalId={recordId}
         jobNumber={jobNumber}
         mode={purchaseOrderMode}
+        enableCreateViewTabs
       />
 
       <SimpleMotorLogisticsModal
-        open={Boolean(logisticsKind)}
-        onClose={() => setLogisticsKind(null)}
-        kind={logisticsKind || KIND_RECEIVING}
+        open={logisticsOpen}
+        onClose={() => setLogisticsOpen(false)}
+        initialTab={logisticsTab}
         defaultJobNumber={docNumber}
         defaultInvoiceNumber={docNumber}
         defaultShippingPo={form.shippingPo || form.customerPo || ""}
-        initialRecord={
-          logisticsKind === KIND_SHIPPING ? form.motorShipping : form.motorReceiving
-        }
+        initialReceiving={form.motorReceiving}
+        initialShipping={form.motorShipping}
         onSave={handleLogisticsSave}
         customerName={
           selectedCustomer?.companyName ||

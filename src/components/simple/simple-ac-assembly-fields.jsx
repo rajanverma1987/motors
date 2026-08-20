@@ -1,6 +1,7 @@
 "use client";
 
 import SimpleAcElectricalTestsFields from "@/components/simple/simple-ac-electrical-tests-fields";
+import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -54,18 +55,18 @@ export default function SimpleAcAssemblyFields({ values = {}, onChange }) {
         <div className="flex flex-col gap-3 rounded-sm border border-border px-3 py-3">
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             <FieldRow label="Run Voltage Test" labelWidth="8rem">
-              <input
-                type="text"
+              <SimpleDoubleClickTextEditInput
+                label="Run Voltage Test"
                 value={v.voltageTest ?? ""}
-                onChange={(e) => patch("voltageTest", e.target.value)}
+                onChange={(next) => patch("voltageTest", next)}
                 className={FIELD_INPUT}
               />
             </FieldRow>
             <FieldRow label="RPM" labelWidth="8.5rem">
-              <input
-                type="text"
+              <SimpleDoubleClickTextEditInput
+                label="RPM"
                 value={v.rpm ?? ""}
-                onChange={(e) => patch("rpm", e.target.value)}
+                onChange={(next) => patch("rpm", next)}
                 className={FIELD_INPUT}
               />
             </FieldRow>
@@ -75,26 +76,26 @@ export default function SimpleAcAssemblyFields({ values = {}, onChange }) {
             <p className={SECTION_TITLE}>Amps:</p>
             <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
               <FieldRow label="Lead1 Amp" labelWidth="8rem">
-                <input
-                  type="text"
+                <SimpleDoubleClickTextEditInput
+                  label="Lead1 Amp"
                   value={v.lead1Amp ?? ""}
-                  onChange={(e) => patch("lead1Amp", e.target.value)}
+                  onChange={(next) => patch("lead1Amp", next)}
                   className={FIELD_INPUT}
                 />
               </FieldRow>
               <FieldRow label="Lead2 Amp" labelWidth="8.5rem">
-                <input
-                  type="text"
+                <SimpleDoubleClickTextEditInput
+                  label="Lead2 Amp"
                   value={v.lead2Amp ?? ""}
-                  onChange={(e) => patch("lead2Amp", e.target.value)}
+                  onChange={(next) => patch("lead2Amp", next)}
                   className={FIELD_INPUT}
                 />
               </FieldRow>
               <FieldRow label="Lead3 Amp" labelWidth="8rem">
-                <input
-                  type="text"
+                <SimpleDoubleClickTextEditInput
+                  label="Lead3 Amp"
                   value={v.lead3Amp ?? ""}
-                  onChange={(e) => patch("lead3Amp", e.target.value)}
+                  onChange={(next) => patch("lead3Amp", next)}
                   className={FIELD_INPUT}
                 />
               </FieldRow>
@@ -113,18 +114,18 @@ export default function SimpleAcAssemblyFields({ values = {}, onChange }) {
 
           <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
             <FieldRow label="Motor Incoming Paint" labelWidth="9.5rem">
-              <input
-                type="text"
+              <SimpleDoubleClickTextEditInput
+                label="Motor Incoming Paint"
                 value={v.motorIncomingPaint ?? ""}
-                onChange={(e) => patch("motorIncomingPaint", e.target.value)}
+                onChange={(next) => patch("motorIncomingPaint", next)}
                 className={FIELD_INPUT}
               />
             </FieldRow>
             <FieldRow label="Motor Outgoing Paint" labelWidth="9.5rem">
-              <input
-                type="text"
+              <SimpleDoubleClickTextEditInput
+                label="Motor Outgoing Paint"
                 value={v.motorOutgoingPaint ?? ""}
-                onChange={(e) => patch("motorOutgoingPaint", e.target.value)}
+                onChange={(next) => patch("motorOutgoingPaint", next)}
                 className={FIELD_INPUT}
               />
             </FieldRow>

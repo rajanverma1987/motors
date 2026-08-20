@@ -1,5 +1,7 @@
 "use client";
 
+import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
+
 /** Shared datasheet field grid — used by Datasheet modal and Master Data Search. */
 
 export const DATASHEET_FIELD_INPUT =
@@ -42,6 +44,7 @@ export function DatasheetFieldRow({
  * @param {(key: string, value: string) => void} onFieldChange
  * @param {boolean} [highlightFilled] — when true, non-empty inputs use a filled highlight style
  * @param {boolean} [dense] — tighter labels / wider inputs (Master Data Search side panel)
+ * @param {number} [editModalZIndex]
  */
 export default function DatasheetFieldGrid({
   columns,
@@ -53,6 +56,7 @@ export default function DatasheetFieldGrid({
   filledInputClassName = DATASHEET_FIELD_INPUT_FILLED,
   highlightFilled = false,
   dense = false,
+  editModalZIndex = 170,
 }) {
   const resolvedLabelWidth = labelWidth || (dense ? "6.5rem" : "7.5rem");
   const resolvedInputMin = inputMinWidth || (dense ? "5.5rem" : "4.5rem");
@@ -77,13 +81,14 @@ export default function DatasheetFieldGrid({
                 labelWidth={resolvedLabelWidth}
                 inputMinWidth={resolvedInputMin}
               >
-                <input
-                  type="text"
+                <SimpleDoubleClickTextEditInput
+                  label={field.label}
                   value={value}
-                  onChange={(e) => onFieldChange(field.key, e.target.value)}
+                  onChange={(next) => onFieldChange(field.key, next)}
                   className={isFilled ? filledInputClassName : inputClassName}
                   aria-label={field.label}
                   data-filled={isFilled ? "true" : undefined}
+                  zIndex={editModalZIndex}
                 />
               </DatasheetFieldRow>
             );

@@ -131,6 +131,7 @@ function applyPaymentFields(formLike, payments) {
  *   initialPoId?: string,
  *   defaultPoType?: "job" | "shop",
  *   allowPoTypeChange?: boolean,
+ *   enableCreateViewTabs?: boolean,
  *   onSaved?: (row: object) => void,
  * }} props
  */
@@ -143,6 +144,7 @@ export default function SimplePurchaseOrderFormModal({
   initialPoId = "",
   defaultPoType = SIMPLE_PO_TYPE_JOB,
   allowPoTypeChange = false,
+  enableCreateViewTabs = false,
   onSaved,
 }) {
   const alert = useAlert();
@@ -157,7 +159,8 @@ export default function SimplePurchaseOrderFormModal({
     });
     return fromSettings.length ? fromSettings : SIMPLE_PO_PAYMENT_METHOD_OPTIONS;
   }, [mergedSettings]);
-  const isViewMode = mode === "view";
+  const [workspaceTab, setWorkspaceTab] = useState(mode === "view" ? "view" : "create");
+  const isViewMode = enableCreateViewTabs ? workspaceTab === "view" : mode === "view";
   const jobView = useSimpleJobView();
 
   const [form, setForm] = useState(() => createEmptySimplePurchaseOrderForm());
@@ -185,6 +188,8 @@ export default function SimplePurchaseOrderFormModal({
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
   const showTypeSelect = allowPoTypeChange && !isViewMode;
   const poNumberEditable = !isViewMode && isShopPo;
+  const showViewEmptyState =
+    enableCreateViewTabs && isViewMode && !loadingForm && jobPos.length === 0;
 
   const vendorOptions = useMemo(
     () =>
@@ -248,19 +253,23 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [open, form.serviceProposalId, serviceProposalId]);
 
-  const modalTitle = isViewMode
-    ? isShopPo
-      ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
-      : `View Purchase Orders${
-          jobNumber || form.jobNumber ? ` for Job - ${jobNumber || form.jobNumber}` : ""
-        }`
-    : allowPoTypeChange
+  const modalTitle = enableCreateViewTabs
+    ? `Purchase Orders${
+        jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
+      }`
+    : isViewMode
       ? isShopPo
-        ? "New Shop Purchase Order"
-        : "New Job Purchase Order"
-      : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
-        ? "New Shop Purchase Order"
-        : `Purchase Order for Job - ${String(jobNumber || "").trim() || "—"}`;
+        ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
+        : `View Purchase Orders${
+            jobNumber || form.jobNumber ? ` for Job - ${jobNumber || form.jobNumber}` : ""
+          }`
+      : allowPoTypeChange
+        ? isShopPo
+          ? "New Shop Purchase Order"
+          : "New Job Purchase Order"
+        : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
+          ? "New Shop Purchase Order"
+          : `Purchase Order for Job - ${String(jobNumber || "").trim() || "—"}`;
 
   const loadJobOptionsFromApi = useCallback(async () => {
     try {
@@ -337,11 +346,14 @@ export default function SimplePurchaseOrderFormModal({
     setAttachmentsOpen(false);
     setLoadingForm(true);
     setForm(createEmptySimplePurchaseOrderForm());
+    const nextWorkspace = mode === "view" ? "view" : "create";
+    if (enableCreateViewTabs) setWorkspaceTab(nextWorkspace);
     (async () => {
       try {
         await loadJobOptionsFromApi();
         if (cancelled) return;
-        if (isViewMode) {
+        const viewMode = enableCreateViewTabs ? nextWorkspace === "view" : mode === "view";
+        if (viewMode) {
           const sid = String(serviceProposalId || "").trim();
           const job = String(jobNumber || "").trim();
           let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
@@ -377,7 +389,8 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [
     open,
-    isViewMode,
+    mode,
+    enableCreateViewTabs,
     initialPoId,
     serviceProposalId,
     jobNumber,
@@ -385,6 +398,46 @@ export default function SimplePurchaseOrderFormModal({
     loadPoById,
     loadJobOptionsFromApi,
   ]);
+
+  const switchWorkspaceTab = useCallback(
+    async (tab) => {
+      const next = tab === "view" ? "view" : "create";
+      if (next === workspaceTab) return;
+      if (saving) return;
+      setWorkspaceTab(next);
+      setActiveTab(TAB_PO);
+      setPaymentDraft(emptyPoPayment());
+      setEditPayment(null);
+      setLoadingForm(true);
+      try {
+        if (next === "create") {
+          await startCreate();
+        } else {
+          const sid = String(serviceProposalId || "").trim();
+          const job = String(jobNumber || "").trim();
+          const scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
+          setJobPos(scoped);
+          if (scoped.length) {
+            const keepId = String(form.id || "").trim();
+            const pick =
+              (keepId && scoped.find((p) => String(p.id) === keepId)) || scoped[0];
+            loadPoById(pick.id, scoped);
+          } else {
+            setForm(
+              createEmptySimplePurchaseOrderForm({
+                poType: SIMPLE_PO_TYPE_JOB,
+                serviceProposalId: sid,
+                jobNumber: job,
+              })
+            );
+          }
+        }
+      } finally {
+        setLoadingForm(false);
+      }
+    },
+    [workspaceTab, saving, startCreate, serviceProposalId, jobNumber, form.id, loadPoById]
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -740,7 +793,11 @@ export default function SimplePurchaseOrderFormModal({
         setJobPos(nextList);
       }
       await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
-      if (!isViewMode) {
+      if (enableCreateViewTabs && type === SIMPLE_PO_TYPE_JOB) {
+        setForm(storedPoToForm(saved));
+        setWorkspaceTab("view");
+        setActiveTab(TAB_PO);
+      } else if (!isViewMode) {
         onClose?.();
       } else {
         setForm(storedPoToForm(saved));
@@ -797,6 +854,7 @@ export default function SimplePurchaseOrderFormModal({
         height={PO_MODAL_HEIGHT}
         showClose={!saving && !loadingForm}
         actions={
+          showViewEmptyState ? null : (
           <>
             <Button
               type="button"
@@ -853,6 +911,7 @@ export default function SimplePurchaseOrderFormModal({
               {saving ? "Saving…" : "Save"}
             </Button>
           </>
+          )
         }
       >
         <div className="relative min-h-[calc(min(84.6vh,828px)-4.75rem)]">
@@ -875,6 +934,55 @@ export default function SimplePurchaseOrderFormModal({
           className="flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
           aria-hidden={loadingForm || undefined}
         >
+          {enableCreateViewTabs ? (
+            <div
+              role="tablist"
+              aria-label="Create or view purchase orders"
+              className="flex w-full max-w-full shrink-0 flex-wrap gap-1 rounded-lg border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
+            >
+              {[
+                { id: "create", label: "Create New PO" },
+                { id: "view", label: "View POs" },
+              ].map((tab) => {
+                const isActive = workspaceTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    disabled={saving || loadingForm}
+                    className={`relative shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-bold tracking-tight transition-[color,background-color,box-shadow] duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
+                      isActive
+                        ? "bg-primary text-white shadow-sm"
+                        : "bg-primary/10 text-primary hover:bg-primary/15"
+                    }`}
+                    onClick={() => switchWorkspaceTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {showViewEmptyState ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-16 text-center">
+              <p className="text-base font-semibold text-title">No PO created for this job yet</p>
+              <p className="max-w-sm text-sm text-secondary">
+                Use the Create New PO tab to add the first purchase order for this job.
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="h-8"
+                onClick={() => switchWorkspaceTab("create")}
+              >
+                Create New PO
+              </Button>
+            </div>
+          ) : (
+          <>
           {showJobContextRow ? (
             <div className="flex w-full shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
               <p className="min-w-0 text-sm text-secondary">
@@ -891,17 +999,19 @@ export default function SimplePurchaseOrderFormModal({
                     : "—"}
                 </span>
               </p>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className="h-7 shrink-0"
-                disabled={!linkedJobId || saving}
-                onClick={handleViewJob}
-              >
-                <FiEye className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                View Job
-              </Button>
+              {!enableCreateViewTabs ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="h-7 shrink-0"
+                  disabled={!linkedJobId || saving}
+                  onClick={handleViewJob}
+                >
+                  <FiEye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  View Job
+                </Button>
+              ) : null}
             </div>
           ) : null}
           <div className="flex w-full shrink-0 flex-nowrap items-end gap-3 overflow-x-auto pb-0.5">
@@ -1590,6 +1700,8 @@ export default function SimplePurchaseOrderFormModal({
               },
             ]}
           />
+          </>
+          )}
         </Form>
         </div>
       </Modal>

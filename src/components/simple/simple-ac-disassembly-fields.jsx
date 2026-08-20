@@ -2,6 +2,7 @@
 
 import { AC_DISASSEMBLY_VISUAL_STATUS_ROWS } from "@/lib/simple-datasheet-form";
 import SimpleAcElectricalTestsFields from "@/components/simple/simple-ac-electrical-tests-fields";
+import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
 
 const INPUT =
   "h-7 w-[12.5rem] max-w-full shrink-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-60 dark:bg-primary/10";
@@ -176,7 +177,12 @@ export default function SimpleAcDisassemblyFields({
           </div>
         </div>
         <TextField label="Junction Box Location">
-          <input type="text" value={v.junctionBoxLocation ?? ""} onChange={(e) => patch("junctionBoxLocation", e.target.value)} className={INPUT} />
+          <SimpleDoubleClickTextEditInput
+            label="Junction Box Location"
+            value={v.junctionBoxLocation ?? ""}
+            onChange={(next) => patch("junctionBoxLocation", next)}
+            className={INPUT}
+          />
         </TextField>
         <WideField label="Incoming Notes">
           <textarea rows={2} value={v.brokenPartsNotes ?? ""} onChange={(e) => patch("brokenPartsNotes", e.target.value)} className={TEXTAREA} />
@@ -191,51 +197,114 @@ export default function SimpleAcDisassemblyFields({
         </div>
         <DeOdeRow
           leftLabel="End Bell Fit DE"
-          leftControl={<input type="text" value={v.endBellFitDE ?? ""} onChange={(e) => patch("endBellFitDE", e.target.value)} className={INPUT} />}
+          leftControl={
+            <SimpleDoubleClickTextEditInput
+              label="End Bell Fit DE"
+              value={v.endBellFitDE ?? ""}
+              onChange={(next) => patch("endBellFitDE", next)}
+              className={INPUT}
+            />
+          }
           rightLabel="End Bell Fit ODE"
-          rightControl={<input type="text" value={v.endBellFitODE ?? ""} onChange={(e) => patch("endBellFitODE", e.target.value)} className={INPUT} />}
+          rightControl={
+            <SimpleDoubleClickTextEditInput
+              label="End Bell Fit ODE"
+              value={v.endBellFitODE ?? ""}
+              onChange={(next) => patch("endBellFitODE", next)}
+              className={INPUT}
+            />
+          }
         />
         <DeOdeRow
           leftLabel="Shaft Measurement DE"
-          leftControl={<input type="text" value={v.rotorFitDE ?? ""} onChange={(e) => patch("rotorFitDE", e.target.value)} className={INPUT} />}
+          leftControl={
+            <SimpleDoubleClickTextEditInput
+              label="Shaft Measurement DE"
+              value={v.rotorFitDE ?? ""}
+              onChange={(next) => patch("rotorFitDE", next)}
+              className={INPUT}
+            />
+          }
           rightLabel="Shaft Management ODE"
-          rightControl={<input type="text" value={v.rotorFitODE ?? ""} onChange={(e) => patch("rotorFitODE", e.target.value)} className={INPUT} />}
+          rightControl={
+            <SimpleDoubleClickTextEditInput
+              label="Shaft Management ODE"
+              value={v.rotorFitODE ?? ""}
+              onChange={(next) => patch("rotorFitODE", next)}
+              className={INPUT}
+            />
+          }
         />
         <DeOdeRow
           leftLabel="Shaft Runout"
-          leftControl={<input type="text" value={v.shaftRunout ?? ""} onChange={(e) => patch("shaftRunout", e.target.value)} className={INPUT} />}
+          leftControl={
+            <SimpleDoubleClickTextEditInput
+              label="Shaft Runout"
+              value={v.shaftRunout ?? ""}
+              onChange={(next) => patch("shaftRunout", next)}
+              className={INPUT}
+            />
+          }
         />
         <DeOdeRow
           leftLabel="Number Of Bearings DE"
           leftControl={
-            <input
-              type="text"
+            <SimpleDoubleClickTextEditInput
+              label="Number Of Bearings DE"
               value={v.numberOfBearingsDE ?? v.numberOfBearings ?? "0"}
-              onChange={(e) => patch("numberOfBearingsDE", e.target.value)}
+              onChange={(next) => patch("numberOfBearingsDE", next)}
               className={INPUT}
             />
           }
           rightLabel="Number Of Bearings ODE"
           rightControl={
-            <input
-              type="text"
+            <SimpleDoubleClickTextEditInput
+              label="Number Of Bearings ODE"
               value={v.numberOfBearingsODE ?? "0"}
-              onChange={(e) => patch("numberOfBearingsODE", e.target.value)}
+              onChange={(next) => patch("numberOfBearingsODE", next)}
               className={INPUT}
             />
           }
         />
         <DeOdeRow
           leftLabel="Bearing Size DE"
-          leftControl={<input type="text" value={v.bearingSizeDE ?? ""} onChange={(e) => patch("bearingSizeDE", e.target.value)} className={INPUT} />}
+          leftControl={
+            <SimpleDoubleClickTextEditInput
+              label="Bearing Size DE"
+              value={v.bearingSizeDE ?? ""}
+              onChange={(next) => patch("bearingSizeDE", next)}
+              className={INPUT}
+            />
+          }
           rightLabel="Bearing Size ODE"
-          rightControl={<input type="text" value={v.bearingSizeODE ?? ""} onChange={(e) => patch("bearingSizeODE", e.target.value)} className={INPUT} />}
+          rightControl={
+            <SimpleDoubleClickTextEditInput
+              label="Bearing Size ODE"
+              value={v.bearingSizeODE ?? ""}
+              onChange={(next) => patch("bearingSizeODE", next)}
+              className={INPUT}
+            />
+          }
         />
         <DeOdeRow
           leftLabel="Seal Size DE"
-          leftControl={<input type="text" value={v.sealSizeDE ?? ""} onChange={(e) => patch("sealSizeDE", e.target.value)} className={INPUT} />}
+          leftControl={
+            <SimpleDoubleClickTextEditInput
+              label="Seal Size DE"
+              value={v.sealSizeDE ?? ""}
+              onChange={(next) => patch("sealSizeDE", next)}
+              className={INPUT}
+            />
+          }
           rightLabel="Seal Size ODE"
-          rightControl={<input type="text" value={v.sealSizeODE ?? ""} onChange={(e) => patch("sealSizeODE", e.target.value)} className={INPUT} />}
+          rightControl={
+            <SimpleDoubleClickTextEditInput
+              label="Seal Size ODE"
+              value={v.sealSizeODE ?? ""}
+              onChange={(next) => patch("sealSizeODE", next)}
+              className={INPUT}
+            />
+          }
         />
       </div>
 
