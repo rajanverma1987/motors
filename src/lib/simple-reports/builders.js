@@ -12,6 +12,7 @@ import {
   agingFromDueDate,
   boolLabel,
   computePoMoney,
+  computeSpInvoiceMoney,
   computeSpMoney,
   dayInRange,
   formatReportDate,
@@ -25,7 +26,7 @@ import {
 } from "@/lib/simple-reports/helpers";
 import { buildSimpleReportWorkbook } from "@/lib/simple-reports/workbook";
 import { isValidSimpleReportId } from "@/lib/simple-reports/catalog";
-import { parseMoneyInput } from "@/lib/simple-service-proposal-form";
+import { normalizeInvoicePayments, parseMoneyInput } from "@/lib/simple-service-proposal-form";
 
 const FETCH_LIMIT = 20000;
 
@@ -158,6 +159,7 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
     "Invoice #",
     "Customer",
     "Status",
+    "Payment status",
     "Date created",
     "Invoice submit date",
     "Invoice paid date",
@@ -174,27 +176,24 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
     if (!isInvoiceSp(doc)) continue;
     const day = resolveDocDay(doc, ["dateCreated", "invoiceSubmitDate", "date", "createdAt"]);
     if (!dayInRange(day, from, to)) continue;
-    const money = computeSpMoney(doc);
-    const paidDate = toYmd(doc.invoicePaidDate);
-    const isPaid = isSpInvoicePaid(doc);
-    if (paymentFilter === "paid" && !isPaid) continue;
-    if (paymentFilter === "unpaid" && isPaid) continue;
-    const paid = isPaid ? money.grandTotal : 0;
-    const unpaid = Math.max(0, money.grandTotal - paid);
+    const money = computeSpInvoiceMoney(doc);
+    if (paymentFilter === "paid" && !money.isPaid) continue;
+    if (paymentFilter === "unpaid" && money.isPaid) continue;
     rows.push([
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
+      money.paymentStatus,
       formatReportDate(day, currency),
       formatReportDate(doc.invoiceSubmitDate, currency),
-      formatReportDate(paidDate, currency),
+      formatReportDate(money.latestPaymentDate || doc.invoicePaidDate, currency),
       formatReportDate(doc.dueDate, currency),
       moneyCell(money.scopeTotal),
       moneyCell(money.otherTotal),
       moneyCell(money.taxAmount),
       moneyCell(money.grandTotal),
-      moneyCell(paid),
-      moneyCell(unpaid),
+      moneyCell(money.amountPaid),
+      moneyCell(money.unpaid),
     ]);
   }
   const buffer = await buildSimpleReportWorkbook("Invoices AR", headers, rows);
@@ -370,18 +369,57 @@ async function buildCustomers(ownerEmail, filters) {
 }
 
 async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
-  const [commissions, salesPeople] = await Promise.all([
-    SalesCommission.find({ createdByEmail: ownerEmail }).sort({ createdAt: -1 }).limit(FETCH_LIMIT).lean(),
+  const [serviceProposals, salesPeople] = await Promise.all([
+    SimpleServiceProposal.find({ createdByEmail: ownerEmail })
+      .select("_id documentNumber quote companyName recordType status")
+      .lean(),
     SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),
   ]);
+
+  const spById = new Map();
+  for (const sp of serviceProposals) {
+    spById.set(String(sp._id), sp);
+  }
+  const simpleQuoteIds = Array.from(spById.keys());
+  if (simpleQuoteIds.length === 0) {
+    const buffer = await buildSimpleReportWorkbook(
+      "Sales commissions",
+      ["Job #", "Customer", "Sales person", "Amount", "Status", "Paid date", "Notes", "Created"],
+      []
+    );
+    return { buffer, filename: `sales-commissions-${fileStamp()}.xlsx`, rowCount: 0 };
+  }
+
+  const commissions = await SalesCommission.find({
+    createdByEmail: ownerEmail,
+    quoteId: { $in: simpleQuoteIds },
+  })
+    .sort({ createdAt: -1 })
+    .limit(FETCH_LIMIT)
+    .lean();
+
   const nameById = {};
   for (const sp of salesPeople) {
     nameById[String(sp._id)] = sp.name || sp.email || sp.phone || String(sp._id);
   }
+
   const statusFilter = String(filters.status || "").toLowerCase();
-  const headers = ["Job #", "Sales person", "Amount", "Status", "Paid date", "Created"];
+  const headers = [
+    "Job #",
+    "Customer",
+    "Sales person",
+    "Amount",
+    "Status",
+    "Paid date",
+    "Notes",
+    "Created",
+  ];
   const rows = [];
   for (const doc of commissions) {
+    const quoteId = String(doc.quoteId || "").trim();
+    const linkedSp = spById.get(quoteId);
+    if (!linkedSp) continue;
+
     const inCreated = dayInRange(doc.createdAt, from, to);
     const inPaid = dayInRange(doc.paidAt, from, to);
     if (!inCreated && !inPaid) continue;
@@ -389,12 +427,18 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
     if (statusFilter === "paid" && !isPaid) continue;
     if (statusFilter === "unpaid" && isPaid) continue;
 
+    const jobNumber =
+      String(linkedSp.documentNumber || linkedSp.quote || "").trim() ||
+      String(doc.jobNumber || doc.rfqNumber || "").trim();
+
     rows.push([
-      String(doc.jobNumber || doc.rfqNumber || "").trim(),
+      jobNumber,
+      String(linkedSp.companyName || "").trim(),
       nameById[String(doc.salesPersonId)] || "",
       moneyCell(Number(doc.amount) || 0),
       isPaid ? "Paid" : "Unpaid",
       formatReportDate(doc.paidAt, currency),
+      String(doc.notes || "").trim(),
       formatReportDate(doc.createdAt, currency),
     ]);
   }
@@ -421,21 +465,20 @@ async function buildSalesTax(ownerEmail, from, to, currency, filters) {
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     if (doc.customerTaxExempt !== false) continue;
-    const money = computeSpMoney(doc);
+    const money = computeSpInvoiceMoney(doc);
     if (money.taxAmount <= 0) continue;
     const day = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
     if (!dayInRange(day, from, to)) continue;
-    const isPaid = isSpInvoicePaid(doc);
-    const taxStatus = isPaid ? "Collected" : "Outstanding";
-    if (collectionFilter === "collected" && !isPaid) continue;
-    if (collectionFilter === "outstanding" && isPaid) continue;
+    const taxStatus = money.isPaid ? "Collected" : "Outstanding";
+    if (collectionFilter === "collected" && !money.isPaid) continue;
+    if (collectionFilter === "outstanding" && money.isPaid) continue;
     const taxPct = parseMoneyInput(doc.taxPercent);
     rows.push([
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
       formatReportDate(day, currency),
-      formatReportDate(doc.invoicePaidDate, currency),
+      formatReportDate(money.latestPaymentDate || doc.invoicePaidDate, currency),
       moneyCell(money.scopeTotal),
       moneyCell(taxPct),
       moneyCell(money.taxAmount),
@@ -491,6 +534,7 @@ async function buildArAging(ownerEmail, currency, filters) {
     "Invoice #",
     "Customer",
     "Status",
+    "Payment status",
     "Invoice date",
     "Due date",
     "Days past due",
@@ -502,10 +546,8 @@ async function buildArAging(ownerEmail, currency, filters) {
   const rows = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
-    if (isSpInvoicePaid(doc)) continue;
-    const money = computeSpMoney(doc);
-    const unpaid = money.grandTotal;
-    if (unpaid <= 0) continue;
+    const money = computeSpInvoiceMoney(doc);
+    if (money.unpaid <= 0) continue;
     const aging = agingFromDueDate(doc.dueDate);
     if (bucketFilter && aging.bucket !== bucketFilter) continue;
     const day = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
@@ -513,18 +555,19 @@ async function buildArAging(ownerEmail, currency, filters) {
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
+      money.paymentStatus,
       formatReportDate(day, currency),
       formatReportDate(doc.dueDate, currency),
       aging.daysPastDue == null ? "" : aging.daysPastDue,
       agingBucketLabel(aging.bucket),
       moneyCell(money.grandTotal),
-      moneyCell(unpaid),
+      moneyCell(money.unpaid),
       moneyCell(money.taxAmount),
     ]);
   }
   rows.sort((a, b) => {
-    const da = typeof a[5] === "number" ? a[5] : -99999;
-    const db = typeof b[5] === "number" ? b[5] : -99999;
+    const da = typeof a[6] === "number" ? a[6] : -99999;
+    const db = typeof b[6] === "number" ? b[6] : -99999;
     return db - da;
   });
   const buffer = await buildSimpleReportWorkbook("AR aging", headers, rows);
@@ -583,30 +626,53 @@ async function buildCashReceipts(ownerEmail, from, to, currency) {
     "Invoice #",
     "Customer",
     "Paid date",
+    "Method",
+    "Reference",
+    "Notes",
     "Invoice date",
-    "Scope total",
-    "Other items",
-    "Tax",
     "Amount received",
   ];
   const rows = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
+    const invoiceDay = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
+    const invoiceNo = String(doc.documentNumber || doc.quote || "").trim();
+    const customer = String(doc.companyName || "").trim();
+    const payments = normalizeInvoicePayments(doc.payments);
+    if (payments.length > 0) {
+      for (const payment of payments) {
+        const amount = parseMoneyInput(payment.amount);
+        if (amount <= 0) continue;
+        const paidDay = toYmd(payment.date);
+        if (!dayInRange(paidDay, from, to)) continue;
+        rows.push([
+          invoiceNo,
+          customer,
+          formatReportDate(paidDay, currency),
+          String(payment.method || "").trim(),
+          String(payment.reference || "").trim(),
+          String(payment.notes || "").trim(),
+          formatReportDate(invoiceDay, currency),
+          moneyCell(amount),
+        ]);
+      }
+      continue;
+    }
+
+    // Legacy invoices with only invoicePaidDate / paid status (no payments[] rows).
     if (!isSpInvoicePaid(doc)) continue;
+    const money = computeSpMoney(doc);
+    if (money.grandTotal <= 0) continue;
     const paidDay = toYmd(doc.invoicePaidDate) || resolveDocDay(doc, ["invoicePaidDate", "updatedAt"]);
     if (!dayInRange(paidDay, from, to)) continue;
-    const money = computeSpMoney(doc);
     rows.push([
-      String(doc.documentNumber || doc.quote || "").trim(),
-      String(doc.companyName || "").trim(),
+      invoiceNo,
+      customer,
       formatReportDate(paidDay, currency),
-      formatReportDate(
-        resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]),
-        currency
-      ),
-      moneyCell(money.scopeTotal),
-      moneyCell(money.otherTotal),
-      moneyCell(money.taxAmount),
+      "",
+      "",
+      "",
+      formatReportDate(invoiceDay, currency),
       moneyCell(money.grandTotal),
     ]);
   }

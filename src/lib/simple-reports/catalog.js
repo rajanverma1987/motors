@@ -285,7 +285,7 @@ export const SIMPLE_REPORT_CATALOG = [
     id: "sales-commissions",
     category: "Sales",
     title: "Sales commissions",
-    description: "Commission amounts by sales person, job, and paid status.",
+    description: "Commission amounts by sales person and Simple job (paid/unpaid). Excludes Classic repair-flow commissions.",
     usesDateRange: true,
     filters: SIMPLE_REPORT_FILTERS["sales-commissions"],
   },

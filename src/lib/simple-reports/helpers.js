@@ -6,6 +6,7 @@ import {
   RECORD_TYPE_INVOICE,
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
+  computeInvoicePaymentSummary,
 } from "@/lib/simple-service-proposal-form";
 import {
   computePoFormTotals,
@@ -79,6 +80,38 @@ export function computePoMoney(doc) {
     poStatus: resolvePoStatus(doc?.lineItems),
     poTypeLabel: simplePoTypeLabel(doc),
     latestPaymentDate: pay.latestPaymentDate || "",
+  };
+}
+
+/**
+ * Simple invoice money + payment summary from SP `payments[]` (falls back to paid-date / status).
+ * @param {Record<string, unknown>} doc
+ */
+export function computeSpInvoiceMoney(doc) {
+  const money = computeSpMoney(doc);
+  const pay = computeInvoicePaymentSummary(doc?.payments, money.grandTotal);
+  const legacyPaid = Boolean(toYmd(doc?.invoicePaidDate)) || /paid/i.test(String(doc?.status || ""));
+  const hasPaymentRows = Array.isArray(doc?.payments) && doc.payments.length > 0;
+  let amountPaid = pay.amountPaid;
+  let unpaid = pay.balance;
+  let paymentStatus = pay.paymentStatus;
+  let latestPaymentDate = pay.latestPaymentDate || toYmd(doc?.invoicePaidDate) || "";
+
+  if (!hasPaymentRows && legacyPaid && money.grandTotal > 0) {
+    amountPaid = money.grandTotal;
+    unpaid = 0;
+    paymentStatus = "Paid";
+  }
+
+  return {
+    ...money,
+    amountPaid,
+    unpaid,
+    paymentStatus,
+    latestPaymentDate,
+    isPaid: paymentStatus === "Paid" || (unpaid <= 0 && amountPaid > 0),
+    isUnpaid: amountPaid <= 0,
+    isPartial: paymentStatus === "Partial Paid",
   };
 }
 
@@ -169,6 +202,5 @@ export function agingBucketLabel(bucket) {
 }
 
 export function isSpInvoicePaid(doc) {
-  const paidDate = toYmd(doc?.invoicePaidDate);
-  return Boolean(paidDate) || /paid/i.test(String(doc?.status || ""));
+  return computeSpInvoiceMoney(doc).isPaid;
 }
