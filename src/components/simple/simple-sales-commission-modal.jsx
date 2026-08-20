@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiUserPlus } from "react-icons/fi";
+import { FiCheck, FiEye, FiUserPlus } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -89,9 +89,14 @@ export default function SimpleSalesCommissionModal({
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payingRow, setPayingRow] = useState(null);
   const [payPaidAt, setPayPaidAt] = useState(todayIsoDate());
+  const [payNotes, setPayNotes] = useState("");
   const [payPendingFiles, setPayPendingFiles] = useState([]);
   const [paySaving, setPaySaving] = useState(false);
   const [payUploading, setPayUploading] = useState(false);
+
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [viewingRow, setViewingRow] = useState(null);
+  const [viewLoading, setViewLoading] = useState(false);
 
   const quoteId = presetQuote?.quoteId ? String(presetQuote.quoteId).trim() : "";
 
@@ -261,6 +266,7 @@ export default function SimpleSalesCommissionModal({
   const openPayModal = (row) => {
     setPayingRow(row);
     setPayPaidAt(todayIsoDate());
+    setPayNotes("");
     setPayPendingFiles([]);
     setPayModalOpen(true);
   };
@@ -269,7 +275,41 @@ export default function SimpleSalesCommissionModal({
     if (paySaving || payUploading) return;
     setPayModalOpen(false);
     setPayingRow(null);
+    setPayNotes("");
     setPayPendingFiles([]);
+  };
+
+  const openViewModal = async (row) => {
+    const id = row?.id;
+    if (!id) return;
+    setViewModalOpen(true);
+    setViewingRow(row);
+    setViewLoading(true);
+    try {
+      const res = await fetch(`/api/dashboard/sales-commissions/${id}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load payment record");
+      setViewingRow(data);
+    } catch (err) {
+      setViewModalOpen(false);
+      setViewingRow(null);
+      await alert({
+        title: "Error",
+        message: err.message || "Failed to load payment record",
+        variant: "danger",
+      });
+    } finally {
+      setViewLoading(false);
+    }
+  };
+
+  const closeViewModal = () => {
+    setViewModalOpen(false);
+    setViewingRow(null);
+    setViewLoading(false);
   };
 
   const handlePaySubmit = async (e) => {
@@ -287,7 +327,11 @@ export default function SimpleSalesCommissionModal({
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ status: "paid", paidAt: payPaidAt.trim() }),
+        body: JSON.stringify({
+          status: "paid",
+          paidAt: payPaidAt.trim(),
+          notes: payNotes.trim(),
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to mark commission paid");
@@ -460,7 +504,15 @@ export default function SimpleSalesCommissionModal({
                                   <FiCheck className="h-4 w-4 shrink-0" aria-hidden />
                                 </button>
                               ) : (
-                                <span className="text-secondary">—</span>
+                                <button
+                                  type="button"
+                                  onClick={() => openViewModal(row)}
+                                  className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                                  aria-label="View payment"
+                                  title="View payment"
+                                >
+                                  <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+                                </button>
                               )}
                             </td>
                             <td className={TD_CLASS}>{row.salesPersonName || "—"}</td>
@@ -600,6 +652,16 @@ export default function SimpleSalesCommissionModal({
               className={FIELD_INPUT}
             />
           </FieldRow>
+          <FieldRow label="Notes" labelWidth="6.75rem" className="items-start">
+            <textarea
+              value={payNotes}
+              onChange={(e) => setPayNotes(e.target.value)}
+              placeholder="Optional payment memo or reference"
+              rows={3}
+              className={FIELD_TEXTAREA}
+              aria-label="Notes"
+            />
+          </FieldRow>
           <VendorAttachmentsPanel
             resourceLabel="sales commission"
             vendorId={null}
@@ -613,6 +675,55 @@ export default function SimpleSalesCommissionModal({
             Documents upload when you confirm payment. You can add proof of payment or receipts here.
           </p>
         </Form>
+      </Modal>
+
+      <Modal
+        open={viewModalOpen}
+        onClose={closeViewModal}
+        title="Payment record"
+        size="lg"
+        zIndex={zIndex + 10}
+        showClose
+        actions={
+          <Button type="button" variant="secondary" size="sm" className={TOOLBAR_BTN} onClick={closeViewModal}>
+            Close
+          </Button>
+        }
+      >
+        {viewLoading ? (
+          <div className="flex items-center justify-center py-12 text-sm text-secondary">Loading…</div>
+        ) : viewingRow ? (
+          <div className="flex flex-col gap-3">
+            <FieldRow label="Sales person" labelWidth="6.75rem">
+              <p className="text-sm text-title">{viewingRow.salesPersonName || "—"}</p>
+            </FieldRow>
+            <FieldRow label="Amount" labelWidth="6.75rem">
+              <p className="text-sm tabular-nums text-title">{fmt(viewingRow.amount || 0)}</p>
+            </FieldRow>
+            <FieldRow label="Status" labelWidth="6.75rem">
+              <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
+                Paid
+              </Badge>
+            </FieldRow>
+            <FieldRow label="Paid date" labelWidth="6.75rem">
+              <p className="text-sm text-title">{formatDate(viewingRow.paidAt) || "—"}</p>
+            </FieldRow>
+            <FieldRow label="Notes" labelWidth="6.75rem" className="items-start">
+              <p className="whitespace-pre-wrap text-sm text-title">
+                {String(viewingRow.notes || "").trim() || "—"}
+              </p>
+            </FieldRow>
+            <VendorAttachmentsPanel
+              resourceLabel="sales commission"
+              resourceId={viewingRow.id || null}
+              attachments={Array.isArray(viewingRow.attachments) ? viewingRow.attachments : []}
+              onAttachmentsChange={() => {}}
+              pendingFiles={[]}
+              onPendingFilesChange={() => {}}
+              readOnly
+            />
+          </div>
+        ) : null}
       </Modal>
     </>
   );

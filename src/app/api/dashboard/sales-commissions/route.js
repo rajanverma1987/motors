@@ -219,6 +219,17 @@ export async function POST(request) {
     });
   } catch (err) {
     console.error("Dashboard save sales commission error:", err);
-    return NextResponse.json({ error: err.message || "Failed to save sales commission" }, { status: 500 });
+    const isDup =
+      err?.code === 11000 ||
+      String(err?.message || "").includes("E11000") ||
+      String(err?.message || "").includes("duplicate key");
+    return NextResponse.json(
+      {
+        error: isDup
+          ? "Could not save commission due to a database index conflict. Refresh and try again; if it persists, contact support."
+          : err.message || "Failed to save sales commission",
+      },
+      { status: 500 }
+    );
   }
 }

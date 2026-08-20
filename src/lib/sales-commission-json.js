@@ -21,6 +21,7 @@ export function commissionToJson(doc, { includeAttachments = false } = {}) {
     amount: Number(row.amount || 0),
     status: row.status === "paid" ? "paid" : "unpaid",
     paidAt: row.paidAt ?? null,
+    notes: row.notes ?? "",
     attachmentCount,
     ...(includeAttachments ? { attachments } : {}),
     createdAt: row.createdAt,

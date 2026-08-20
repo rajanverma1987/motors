@@ -21,6 +21,8 @@ const salesCommissionSchema = new mongoose.Schema(
     },
     status: { type: String, enum: ["unpaid", "paid"], default: "unpaid" },
     paidAt: { type: Date, default: null },
+    /** Optional memo when marking commission paid (or general note). */
+    notes: { type: String, default: "", trim: true },
     createdByEmail: { type: String, required: true, trim: true },
     sourceSystem: { type: String, default: "manual_csv", trim: true },
     externalRef: { type: String, default: "", trim: true },
@@ -35,6 +37,7 @@ salesCommissionSchema.index({ createdByEmail: 1, quoteId: 1, createdAt: -1 });
 salesCommissionSchema.index({ createdByEmail: 1, rfqNumber: 1 });
 salesCommissionSchema.index({ createdByEmail: 1, repairFlowJobId: 1, createdAt: -1 });
 salesCommissionSchema.index({ createdByEmail: 1, jobNumber: 1 });
+/** Multiple commissions per job/quote are allowed; only import externalRef is unique when set. */
 salesCommissionSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   {

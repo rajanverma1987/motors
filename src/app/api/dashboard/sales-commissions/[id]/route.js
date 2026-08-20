@@ -59,7 +59,7 @@ export async function PATCH(request, context) {
     const bodyKeys = body && typeof body === "object" ? Object.keys(body) : [];
     const attachmentsOnlyPatch = bodyKeys.length === 1 && bodyKeys[0] === "attachments";
     const statusOnlyPatch =
-      bodyKeys.length > 0 && bodyKeys.every((k) => ["status", "paidAt"].includes(k));
+      bodyKeys.length > 0 && bodyKeys.every((k) => ["status", "paidAt", "notes"].includes(k));
 
     if (attachmentsOnlyPatch) {
       doc.attachments = normalizeSalesCommissionAttachmentsFromClient(body.attachments);
@@ -77,6 +77,9 @@ export async function PATCH(request, context) {
             ? paidAtDate
             : new Date()
           : null;
+      if (body?.notes !== undefined) {
+        doc.notes = clampString(body.notes, 2000);
+      }
       await doc.save();
     } else {
       const nextStatus = String(body?.status || "").trim().toLowerCase();
@@ -111,6 +114,9 @@ export async function PATCH(request, context) {
             ? paidAtDate
             : new Date()
           : null;
+      if (body?.notes !== undefined) {
+        doc.notes = clampString(body.notes, 2000);
+      }
 
       if (body?.attachments !== undefined) {
         doc.attachments = normalizeSalesCommissionAttachmentsFromClient(body.attachments);

@@ -23,6 +23,7 @@ import { FiTrash2, FiExternalLink, FiUpload } from "react-icons/fi";
  *   uploading?: boolean,
  *   onPickFilesForUpload?: (files: File[], resourceId: string | null) => void | Promise<void>,
  *   hideUpload?: boolean,
+ *   readOnly?: boolean,
  *   onRemoveSavedRow?: (index: number, row: VendorAttachment) => void | Promise<void>,
  * }} props
  */
@@ -38,14 +39,17 @@ export default function VendorAttachmentsPanel({
   uploading = false,
   onPickFilesForUpload,
   hideUpload = false,
+  readOnly = false,
   onRemoveSavedRow,
 }) {
   const fileInputId = useId();
   const savedResourceId = resourceId !== undefined ? resourceId : vendorId;
   const isCreate = !savedResourceId;
+  const canUpload = !hideUpload && !readOnly;
+  const canRemove = !readOnly;
 
   const handleFileChange = async (e) => {
-    if (hideUpload) return;
+    if (!canUpload) return;
     const list = e.target.files;
     if (!list?.length) return;
     const files = Array.from(list);
@@ -87,14 +91,16 @@ export default function VendorAttachmentsPanel({
         <div>
           <div className="text-xs font-medium text-secondary">{title}</div>
           <p className="mt-0.5 text-xs text-secondary">
-            {hideUpload
-              ? "View or remove documents. Removals save immediately."
-              : isCreate
-                ? `Select files before saving; they upload after the ${resourceLabel} is created.`
-                : `Upload files stored with this ${resourceLabel}. Save the form to persist removals.`}
+            {readOnly
+              ? "Payment proof and related documents."
+              : hideUpload
+                ? "View or remove documents. Removals save immediately."
+                : isCreate
+                  ? `Select files before saving; they upload after the ${resourceLabel} is created.`
+                  : `Upload files stored with this ${resourceLabel}. Save the form to persist removals.`}
           </p>
         </div>
-        {!hideUpload ? (
+        {canUpload ? (
           <div className="flex shrink-0 items-center gap-2">
             <input
               id={fileInputId}
@@ -149,39 +155,43 @@ export default function VendorAttachmentsPanel({
                       >
                         <FiExternalLink className="h-4 w-4" aria-hidden />
                       </button>
-                      <button
-                        type="button"
-                        disabled={uploading}
-                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
-                        aria-label="Remove from list"
-                        title="Remove"
-                        onClick={() => removeAttachment(i)}
-                      >
-                        <FiTrash2 className="h-4 w-4" aria-hidden />
-                      </button>
+                      {canRemove ? (
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
+                          aria-label="Remove from list"
+                          title="Remove"
+                          onClick={() => removeAttachment(i)}
+                        >
+                          <FiTrash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
               ))}
-              {pendingFiles.map((file, i) => (
-                <tr key={`pending-${file.name}-${i}`} className="border-b border-border last:border-b-0 bg-muted/10">
-                  <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={file.name}>
-                    {file.name}
-                    <span className="ml-2 text-xs text-amber-700">(pending upload)</span>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        disabled={uploading}
-                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
-                        aria-label="Remove file"
-                        onClick={() => removePending(i)}
-                      >
-                      <FiTrash2 className="h-4 w-4" aria-hidden />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {!readOnly
+                ? pendingFiles.map((file, i) => (
+                    <tr key={`pending-${file.name}-${i}`} className="border-b border-border last:border-b-0 bg-muted/10">
+                      <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={file.name}>
+                        {file.name}
+                        <span className="ml-2 text-xs text-amber-700">(pending upload)</span>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-40"
+                          aria-label="Remove file"
+                          onClick={() => removePending(i)}
+                        >
+                          <FiTrash2 className="h-4 w-4" aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                : null}
             </tbody>
           </table>
         </div>
