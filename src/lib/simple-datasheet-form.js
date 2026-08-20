@@ -528,6 +528,59 @@ function blockHasTechnicalData(block, columns) {
   return Boolean(String(block.notes ?? "").trim());
 }
 
+/** Copy source keys into target only where target is blank. */
+function fillBlankFields(target, source) {
+  const out = { ...(target && typeof target === "object" ? target : {}) };
+  if (!source || typeof source !== "object") return out;
+  for (const [key, value] of Object.entries(source)) {
+    const next = String(value ?? "").trim();
+    if (!next) continue;
+    if (String(out[key] ?? "").trim()) continue;
+    out[key] = next;
+  }
+  return out;
+}
+
+/**
+ * Default checkbox / zero fields on empty AC disassembly / assembly must not count as "has data".
+ * @param {string} key
+ * @param {unknown} value
+ */
+function isAcDefaultishValue(key, value) {
+  const v = String(value ?? "").trim();
+  if (!v) return true;
+  if (
+    key.startsWith("surgeFail") ||
+    key.endsWith("F1") ||
+    key.endsWith("F2") ||
+    key === "paintAndPreparedToShip"
+  ) {
+    return v.toLowerCase() !== "true";
+  }
+  if (
+    key === "numberOfBearings" ||
+    key === "numberOfBearingsDE" ||
+    key === "numberOfBearingsODE" ||
+    key === "maggerVoltage" ||
+    key === "maggerMicroAmps" ||
+    key === "highPotVoltage" ||
+    key === "highPotMicroAmps" ||
+    key === "surgeVoltage"
+  ) {
+    return v === "0";
+  }
+  return false;
+}
+
+function acNestedBlockHasMeaningfulData(block, emptyKeys) {
+  if (!block || typeof block !== "object") return false;
+  for (const k of emptyKeys) {
+    if (isAcDefaultishValue(k, block[k])) continue;
+    if (String(block[k] ?? "").trim()) return true;
+  }
+  return false;
+}
+
 /**
  * True when any technical / notes field has a value (header meta alone does not count).
  * @param {Record<string, unknown>|null|undefined} sheet
@@ -550,29 +603,12 @@ export function datasheetHasData(sheet, motorType) {
     return Boolean(String(sheet.notes ?? "").trim());
   }
   if (sheet.dataSheet || sheet.disassembly || sheet.assembly) {
-    const dis = sheet.disassembly || {};
-    const asm = sheet.assembly || {};
-    const disKeys = Object.keys(emptyAcDisassemblyBlock());
-    const asmKeys = Object.keys(emptyAcAssemblyBlock());
     if (blockHasTechnicalData(sheet.dataSheet, AC_DATASHEET_FIELD_COLUMNS)) return true;
-    for (const k of disKeys) {
-      if (k === "numberOfBearings" || k === "maggerVoltage" || k === "maggerMicroAmps" || k === "surgeVoltage") {
-        const v = String(dis[k] ?? "").trim();
-        if (v && v !== "0" && v !== "false") return true;
-        continue;
-      }
-      if (k.startsWith("surgeFail")) {
-        if (String(dis[k] ?? "").trim().toLowerCase() === "true") return true;
-        continue;
-      }
-      if (String(dis[k] ?? "").trim()) return true;
+    if (acNestedBlockHasMeaningfulData(sheet.disassembly, Object.keys(emptyAcDisassemblyBlock()))) {
+      return true;
     }
-    for (const k of asmKeys) {
-      if (k === "paintAndPreparedToShip") {
-        if (String(asm[k] ?? "").trim().toLowerCase() === "true") return true;
-        continue;
-      }
-      if (String(asm[k] ?? "").trim()) return true;
+    if (acNestedBlockHasMeaningfulData(sheet.assembly, Object.keys(emptyAcAssemblyBlock()))) {
+      return true;
     }
     return false;
   }
@@ -584,19 +620,10 @@ export function datasheetHasData(sheet, motorType) {
   return Boolean(String(sheet.notes ?? "").trim());
 }
 
-/**
- * Prefill datasheet from service proposal motor / header fields when opening empty sheet.
- * @param {Record<string, unknown>} proposalForm
- * @param {{ companyName?: string, technicianLabel?: string }} [meta]
- */
-export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
+/** Shared SP motor → datasheet field map (nameplate identity + core metrics). */
+function proposalMotorIdentityPrefill(proposalForm) {
   const f = proposalForm || {};
-  const existing = f.acDatasheet && typeof f.acDatasheet === "object" ? f.acDatasheet : null;
-  if (datasheetHasData(existing, "AC")) {
-    return normalizeAcDatasheet(existing);
-  }
-
-  const motorPrefill = {
+  return {
     hp: String(f.hpKw || "").trim(),
     make: String(f.manufacturer || "").trim(),
     model: String(f.modelNumber || "").trim(),
@@ -604,21 +631,41 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
     volts: String(f.volts || "").trim(),
     amps: String(f.amps || "").trim(),
     rpm: String(f.rpm || "").trim(),
+  };
+}
+
+/**
+ * Prefill datasheet from service proposal motor / header fields.
+ * Always fills blank datasheet fields from the proposal (does not overwrite values already on the sheet).
+ * @param {Record<string, unknown>} proposalForm
+ * @param {{ companyName?: string, technicianLabel?: string }} [meta]
+ */
+export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
+  const f = proposalForm || {};
+  const existing = f.acDatasheet && typeof f.acDatasheet === "object" ? f.acDatasheet : null;
+  const base = normalizeAcDatasheet(existing || {});
+
+  const motorPrefill = {
+    ...proposalMotorIdentityPrefill(f),
     slots: String(f.sl || "").trim(),
     core_length: String(f.cl || "").trim(),
     core_dia: String(f.cd || "").trim(),
   };
 
+  const dataSheet = fillBlankFields(base.dataSheet, motorPrefill);
+  const assembly = fillBlankFields(base.assembly, {
+    motorIncomingPaint: String(f.motorPaint || "").trim(),
+    rpm: String(f.rpm || "").trim(),
+  });
+
   return normalizeAcDatasheet({
-    ...(existing || {}),
-    date: String(existing?.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(existing?.technician || meta.technicianLabel || f.preparedBy || "").trim(),
-    jobNumber: String(existing?.jobNumber || f.documentNumber || "").trim(),
-    company: String(existing?.company || meta.companyName || "").trim(),
-    dataSheet: {
-      ...(existing?.dataSheet || {}),
-      ...motorPrefill,
-    },
+    ...base,
+    date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
+    technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
+    jobNumber: String(base.jobNumber || f.documentNumber || "").trim(),
+    company: String(base.company || meta.companyName || "").trim(),
+    dataSheet,
+    assembly,
   });
 }
 
@@ -629,39 +676,29 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
 export function buildDcDatasheetFromProposal(proposalForm, meta = {}) {
   const f = proposalForm || {};
   const existing = f.dcDatasheet && typeof f.dcDatasheet === "object" ? f.dcDatasheet : null;
-  if (datasheetHasData(existing, "DC")) {
-    return normalizeDcDatasheet(existing);
-  }
+  const base = normalizeDcDatasheet(existing || {});
+  const identity = proposalMotorIdentityPrefill(f);
 
-  const motorPrefill = {
-    hp: String(f.hpKw || "").trim(),
-    make: String(f.manufacturer || "").trim(),
-    model: String(f.modelNumber || "").trim(),
-    frame: String(f.frameType || "").trim(),
-    volts: String(f.volts || "").trim(),
-    amps: String(f.amps || "").trim(),
-    rpm: String(f.rpm || "").trim(),
-  };
+  const fieldFrame = fillBlankFields(base.fieldFrame, {
+    ...identity,
+    core_length: String(f.cl || "").trim(),
+    inside_diameter: String(f.cd || "").trim(),
+  });
+  const armature = fillBlankFields(base.armature, {
+    ...identity,
+    slots: String(f.sl || "").trim(),
+    bars: String(f.bars || "").trim(),
+    iron_l: String(f.cl || "").trim(),
+    iron_diam: String(f.cd || "").trim(),
+  });
 
   return normalizeDcDatasheet({
-    ...(existing || {}),
-    date: String(existing?.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(existing?.technician || meta.technicianLabel || f.preparedBy || "").trim(),
-    jobNumber: String(existing?.jobNumber || f.documentNumber || "").trim(),
-    company: String(existing?.company || meta.companyName || "").trim(),
-    fieldFrame: {
-      ...(existing?.fieldFrame || {}),
-      ...motorPrefill,
-      core_length: String(existing?.fieldFrame?.core_length || f.cl || "").trim(),
-      inside_diameter: String(existing?.fieldFrame?.inside_diameter || f.cd || "").trim(),
-    },
-    armature: {
-      ...(existing?.armature || {}),
-      ...motorPrefill,
-      slots: String(existing?.armature?.slots || f.sl || "").trim(),
-      bars: String(existing?.armature?.bars || f.bars || "").trim(),
-      iron_l: String(existing?.armature?.iron_l || f.cl || "").trim(),
-      iron_diam: String(existing?.armature?.iron_diam || f.cd || "").trim(),
-    },
+    ...base,
+    date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
+    technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
+    jobNumber: String(base.jobNumber || f.documentNumber || "").trim(),
+    company: String(base.company || meta.companyName || "").trim(),
+    fieldFrame,
+    armature,
   });
 }

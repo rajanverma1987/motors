@@ -564,6 +564,17 @@ export default function ServiceProposalFormModal({
   };
 
   const openDatasheet = () => {
+    const companyName =
+      selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
+    const meta = { companyName, technicianLabel: form.preparedBy || "" };
+    const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
+    const sheet = isDc
+      ? buildDcDatasheetFromProposal(form, meta)
+      : buildAcDatasheetFromProposal(form, meta);
+    setForm((f) => ({
+      ...f,
+      ...(isDc ? { dcDatasheet: sheet } : { acDatasheet: sheet }),
+    }));
     setDatasheetOpen(true);
   };
 
