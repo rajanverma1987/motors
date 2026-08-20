@@ -299,6 +299,7 @@ export default function MasterDataSearchPanel() {
                     values={criteriaByForm[f.id]?.[block.id] || {}}
                     onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
                     highlightFilled={highlightFilledFields && f.id === formId}
+                    dense
                   />
                 </div>
               ))}
