@@ -18,6 +18,8 @@ export default function NearMeContent() {
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySent, setNotifySent] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const [zipInput, setZipInput] = useState("");
+  const [zipSearching, setZipSearching] = useState(false);
 
   const fetchListingsNear = useCallback(async (city, state, zip) => {
     setLoadingListings(true);
@@ -68,39 +70,66 @@ export default function NearMeContent() {
     }
   }, []);
 
+  const searchByZip = useCallback(
+    async (rawZip) => {
+      const zip = String(rawZip || "").trim();
+      if (!zip) {
+        toast.error("Please enter a ZIP code.");
+        return;
+      }
+      setZipSearching(true);
+      setNotifySent(false);
+      try {
+        setUserLocation({ city: "", state: "", zip });
+        setLocationStatus("detected");
+        await fetchListingsNear("", "", zip);
+      } finally {
+        setZipSearching(false);
+      }
+    },
+    [fetchListingsNear, toast]
+  );
+
   const detectLocation = useCallback(() => {
     setLocationStatus("loading");
     if (!navigator.geolocation) {
-      setLocationStatus("error");
+      setLocationStatus("unresolved");
       return;
     }
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         const { latitude, longitude } = position.coords;
         const { city, state, zip } = await reverseGeocode(latitude, longitude);
+        const hasLocation = Boolean(city || state || zip);
+        if (!hasLocation) {
+          setUserLocation({ city: "", state: "", zip: "" });
+          setListings([]);
+          setLocationStatus("unresolved");
+          return;
+        }
         setUserLocation({ city, state, zip });
         setLocationStatus("detected");
         const count = await fetchListingsNear(city, state, zip);
         if (count === 0) {
-          const hasLocation = city || state || zip;
-          if (hasLocation) {
-            const key = [city, state, zip].filter(Boolean).join("|");
-            if (autoNotifiedRef.current !== key) {
-              autoNotifiedRef.current = key;
-              fetch("/api/notify-no-listings-near-me", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  city: city || undefined,
-                  state: state || undefined,
-                  zip: zip || undefined,
-                }),
-              }).catch((err) => console.error("Auto-notify no listings error:", err));
-            }
+          const key = [city, state, zip].filter(Boolean).join("|");
+          if (autoNotifiedRef.current !== key) {
+            autoNotifiedRef.current = key;
+            fetch("/api/notify-no-listings-near-me", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                city: city || undefined,
+                state: state || undefined,
+                zip: zip || undefined,
+              }),
+            }).catch((err) => console.error("Auto-notify no listings error:", err));
           }
         }
       },
-      () => setLocationStatus("denied"),
+      () => {
+        setListings([]);
+        setLocationStatus("unresolved");
+      },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
     );
   }, [fetchListingsNear, reverseGeocode]);
@@ -110,11 +139,13 @@ export default function NearMeContent() {
   }, [detectLocation]);
 
   const locationLabel = [userLocation.city, userLocation.state, userLocation.zip].filter(Boolean).join(", ") || "your area";
+  const needsZipFallback =
+    locationStatus === "unresolved" || locationStatus === "denied" || locationStatus === "error";
 
   return (
     <>
       <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        {(locationStatus === "denied" || locationStatus === "error") && (
+        {needsZipFallback && (
           <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto" onClick={detectLocation}>
             Find shops near me
           </Button>
@@ -128,46 +159,55 @@ export default function NearMeContent() {
       <ListingsHeroCta />
       <section className="py-10 sm:py-14">
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
-          {locationStatus === "denied" && (
-            <div className="mb-8 rounded-xl border border-border bg-card p-6 text-center">
-              <p className="font-medium text-title">Location access was denied</p>
-              <p className="mt-2 text-sm text-secondary">
-                To see shops near you, allow location in your browser and click &quot;Find shops near me&quot; above, or browse all listings.
+          {needsZipFallback && (
+            <div className="mb-8 rounded-xl border border-border bg-card px-6 py-10 text-center sm:px-10 sm:py-12">
+              <p className="text-2xl font-semibold leading-snug text-title sm:text-3xl">
+                We could not resolve your location
               </p>
-              <Link href="/electric-motor-repair-shops-listings" className="mt-4 block w-full max-w-xs min-w-0 mx-auto sm:inline-block sm:max-w-none sm:mx-0">
-                <Button variant="outline" className="w-full sm:w-auto">
-                  Browse all listings
+              <p className="mx-auto mt-3 max-w-xl text-base text-secondary sm:text-lg">
+                Please enter your ZIP code below to find repair shops near you.
+              </p>
+              <form
+                className="mx-auto mt-6 flex w-full max-w-md flex-col gap-3 sm:flex-row sm:items-stretch"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  searchByZip(zipInput);
+                }}
+              >
+                <Input
+                  type="text"
+                  name="nearMeZip"
+                  autoComplete="postal-code"
+                  placeholder="Enter ZIP code"
+                  value={zipInput}
+                  onChange={(e) => setZipInput(e.target.value)}
+                  className="min-w-0 flex-1"
+                  inputClassName="text-base"
+                  required
+                />
+                <Button type="submit" variant="primary" size="lg" disabled={zipSearching} className="w-full shrink-0 sm:w-auto">
+                  {zipSearching ? "Searching…" : "Find shops"}
                 </Button>
-              </Link>
-            </div>
-          )}
-
-          {locationStatus === "error" && (
-            <div className="mb-8 rounded-xl border border-border bg-card p-6 text-center">
-              <p className="font-medium text-title">We couldn&apos;t get your location</p>
-              <p className="mt-2 text-sm text-secondary">
-                Your browser may not support location, or there was a temporary error. Try again or browse all listings.
+              </form>
+              <p className="mt-4 text-sm text-secondary">
+                Or allow location access and try again, or{" "}
+                <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
+                  browse all listings
+                </Link>
+                .
               </p>
-              <Button variant="outline" className="mt-4 w-full max-w-xs min-w-0 mx-auto sm:mx-0 sm:max-w-none sm:w-auto" onClick={detectLocation}>
-                Try again
-              </Button>
             </div>
           )}
 
-          {(locationStatus === "detected" || locationStatus === "loading") && (
+          {locationStatus === "detected" && (
             <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-              {locationStatus === "detected" && (
-                <p className="text-sm text-secondary">
-                  Showing centers near <span className="font-medium text-title">{locationLabel}</span>
-                  {!userLocation.city && !userLocation.state && !userLocation.zip && (
-                    <span className="block mt-1 text-xs">We couldn&apos;t resolve your city/state from coordinates. Showing all listings below.</span>
-                  )}
-                  <button type="button" onClick={detectLocation} className="ml-2 text-sm text-primary hover:underline">
-                    Update location
-                  </button>
-                </p>
-              )}
-              {locationStatus === "detected" && !loadingListings && (
+              <p className="text-sm text-secondary">
+                Showing centers near <span className="font-medium text-title">{locationLabel}</span>
+                <button type="button" onClick={detectLocation} className="ml-2 text-sm text-primary hover:underline">
+                  Update location
+                </button>
+              </p>
+              {!loadingListings && (
                 <p className="text-sm text-secondary">
                   {listings.length} center{listings.length !== 1 ? "s" : ""} found
                 </p>
@@ -187,8 +227,28 @@ export default function NearMeContent() {
             <div className="rounded-xl border border-border bg-card py-16 px-6 text-center">
               <p className="text-title font-medium">No repair shops found near {locationLabel}</p>
               <p className="mt-2 text-sm text-secondary">
-                Try browsing all listings or search by another city or state.
+                Try another ZIP code, browse all listings, or search by another city or state.
               </p>
+              <form
+                className="mx-auto mt-6 flex w-full max-w-md flex-col gap-3 sm:flex-row"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  searchByZip(zipInput);
+                }}
+              >
+                <Input
+                  type="text"
+                  name="nearMeZipRetry"
+                  autoComplete="postal-code"
+                  placeholder="Enter ZIP code"
+                  value={zipInput}
+                  onChange={(e) => setZipInput(e.target.value)}
+                  className="min-w-0 flex-1"
+                />
+                <Button type="submit" variant="primary" disabled={zipSearching}>
+                  {zipSearching ? "Searching…" : "Search ZIP"}
+                </Button>
+              </form>
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
                 <Link href="/electric-motor-repair-shops-listings" className="w-full min-w-0 sm:w-auto">
                   <Button variant="outline" className="w-full sm:w-auto">
