@@ -13,7 +13,7 @@ export default function AboutPage() {
           aligned on the same job number.
         </p>
         <p className="mt-4 leading-relaxed text-secondary">
-          Our directory and local SEO pages help customers find qualified repair centers, while shops on the
+          Our directory and local SEO pages help customers find qualified repair shops, while shops on the
           platform can capture leads, list surplus parts on the marketplace, and hire technicians through
           public Careers postings. Whether you run a single bay or multiple locations, the goal is the same:
           less re-entry, clearer status, and a single source of truth from first call through payment.

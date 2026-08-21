@@ -45,7 +45,7 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "Does this directory list industrial electric motor repair shops?",
     answer:
-      "Yes. IQMotorBase.com lists industrial and commercial electric motor repair centers across the United States. Profiles describe services such as rewinding, pump motor repair, medium-voltage work, and field service where provided. Use search and location filters to narrow results to your area and application.",
+      "Yes. IQMotorBase.com lists industrial and commercial electric motor repair shops across the United States. Profiles describe services such as rewinding, pump motor repair, medium-voltage work, and field service where provided. Use search and location filters to narrow results to your area and application.",
   },
   {
     question: "How do I get a quote for electric motor repair?",

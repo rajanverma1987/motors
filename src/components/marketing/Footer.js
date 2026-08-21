@@ -25,7 +25,7 @@ const footerLinks = {
     { href: "/electric-motor-repair", label: "Electric motor repair hub" },
     { href: "/industrial-motor-repair", label: "Industrial motor repair" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
-    { href: "/electric-motor-repair-shops-listings", label: "Find repair centers" },
+    { href: "/electric-motor-repair-shops-listings", label: "Find repair shops" },
     { href: "/electric-motor-repair-near-me", label: "Repair shops near me" },
     { href: "/how-to-choose-electric-motor-repair-shop", label: "How to choose a shop" },
     { href: "/when-to-repair-or-replace-electric-motor", label: "Repair vs. replace" },

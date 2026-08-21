@@ -39,7 +39,7 @@ export function ListingsDirectoryStaticJsonLd() {
     url: pageUrl,
     name: "Electric motor repair shops directory",
     description:
-      "Find electric motor repair shops and rewinding centers. Browse listings by city, state, or ZIP code and request quotes from qualified repair centers.",
+      "Find electric motor repair shops and rewinding centers. Browse listings by city, state, or ZIP code and request quotes from qualified repair shops.",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
     primaryImageOfPage: { "@type": "ImageObject", url: `${site}/og-image.png` },
   };

@@ -25,7 +25,7 @@ export const NEAR_ME_FAQS = [
   {
     question: "How do I find an electric motor repair shop near me?",
     answer:
-      "Use the IQMotorBase directory to browse certified repair centers by state. Filter by motor type (AC, DC, servo, high-voltage) and service region. You can also submit a repair request and be matched with shops that serve your area.",
+      "Use the IQMotorBase directory to browse certified repair shops by state. Filter by motor type (AC, DC, servo, high-voltage) and service region. You can also submit a repair request and be matched with shops that serve your area.",
   },
   {
     question: "What information do I need before contacting a motor repair shop?",

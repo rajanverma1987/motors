@@ -21,7 +21,7 @@ export const metadata = {
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
     title: "Electric Motor Repair & Rewinding Hub | IQMotorBase.com",
-    description: "Buyer guides: costs, choosing a shop, repair vs. replace, emergencies, and find repair centers.",
+    description: "Buyer guides: costs, choosing a shop, repair vs. replace, emergencies, and find repair shops.",
     url: path,
     type: "website",
     siteName: "IQMotorBase.com",
@@ -168,7 +168,7 @@ export default function ElectricMotorRepairHubPage() {
             <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-title">Get a quote</h2>
               <p className="mt-2 text-sm text-secondary">
-                Submit motor details—we connect you with repair centers that can inspect and quote.
+                Submit motor details—we connect you with repair shops that can inspect and quote.
               </p>
               <div className="mt-4 flex flex-col gap-3">
                 <GetQuoteCta />

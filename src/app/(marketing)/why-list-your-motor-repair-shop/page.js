@@ -297,7 +297,7 @@ export default function WhyListYourMotorRepairShopPage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Visibility gets the conversation started; your process wins the job. IQMotorBase.com is built for motor
-              repair centers that want{" "}
+              repair shops that want{" "}
               <Link href="/features" className="font-medium text-primary hover:underline">
                 quotes, work orders, and customer history
               </Link>{" "}

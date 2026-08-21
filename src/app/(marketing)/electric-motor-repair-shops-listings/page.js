@@ -10,7 +10,7 @@ export const metadata = marketingPageMetadata({
   path: LISTINGS_DIRECTORY_PATH,
   title: "Find Electric Motor Repair Shops | IQMotorBase Directory",
   description:
-    "Browse approved electric motor repair centers by location. Submit your requirement and get matched with repair centers in your area.",
+    "Browse approved electric motor repair shops by location. Submit your requirement and get matched with repair shops in your area.",
   keywords: [
     "electric motor repair",
     "electric motor repair shops",

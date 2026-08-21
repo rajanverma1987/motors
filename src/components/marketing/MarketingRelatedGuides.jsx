@@ -38,7 +38,7 @@ const BUYER_LINKS = [
   },
   {
     href: "/electric-motor-repair-shops-listings",
-    label: "Find repair centers",
+    label: "Find repair shops",
     hint: "Directory by location",
   },
   {
@@ -127,7 +127,7 @@ const SHOP_LINKS = [
   {
     href: "/pricing",
     label: "Pricing",
-    hint: "Plans for repair centers",
+    hint: "Plans for repair shops",
   },
   {
     href: "/blog",

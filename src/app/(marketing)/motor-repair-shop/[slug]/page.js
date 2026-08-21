@@ -155,7 +155,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
 
           {insights.total === 0 ? (
             <div className="rounded-xl border border-border bg-card py-12 text-center">
-              <p className="text-secondary">No repair centers listed for this area yet.</p>
+              <p className="text-secondary">No repair shops listed for this area yet.</p>
               <Link
                 href="/electric-motor-repair-shops-listings"
                 prefetch

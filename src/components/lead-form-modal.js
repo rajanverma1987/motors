@@ -68,13 +68,13 @@ export default function LeadFormModal({
       }
       const calculatorContext =
         calculatorFormSnapshot &&
-        typeof calculatorFormSnapshot === "object" &&
-        calculatorSourcePage &&
-        !listingIdStr
+          typeof calculatorFormSnapshot === "object" &&
+          calculatorSourcePage &&
+          !listingIdStr
           ? {
-              form: { ...calculatorFormSnapshot },
-              sourcePage: String(calculatorSourcePage).slice(0, 240),
-            }
+            form: { ...calculatorFormSnapshot },
+            sourcePage: String(calculatorSourcePage).slice(0, 240),
+          }
           : undefined;
 
       const res = await fetch("/api/leads", {
@@ -120,7 +120,7 @@ export default function LeadFormModal({
     introTextOverride ||
     (listing
       ? `Submit your repair requirement. It will be sent to ${listing.companyName}.`
-      : "Submit your repair requirement. We'll match you with repair centers in your area.");
+      : "Submit your repair requirement. We'll match you with repair shops in your area.");
 
   return (
     <Modal
@@ -141,7 +141,7 @@ export default function LeadFormModal({
         <div className="py-4 text-center">
           <p className="text-title font-medium">Thank you for your request.</p>
           <p className="mt-2 text-sm text-secondary">
-            Your requirement has been submitted. {listing ? "The repair center will be in touch." : "We'll match you with repair centers and get back to you."}
+            Your requirement has been submitted. {listing ? "The repair center will be in touch." : "We'll match you with repair shops and get back to you."}
           </p>
         </div>
       ) : (

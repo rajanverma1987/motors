@@ -41,10 +41,10 @@ export default function EmergencyMotorRepairWhatToDoPage() {
     <BlogPageLayout
       title="Emergency motor repair: what to do when a motor fails"
       description="A motor failure can shut down a line or a facility. Knowing what to do next—and where to find rush or emergency repair—helps you get back online faster and avoid costly downtime."
-      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
       sidebarTitle="Need a quote or a shop now?"
-      sidebarDescription="Submit your motor details for a quote, or browse our directory to find repair centers—including those that offer emergency and rush service."
+      sidebarDescription="Submit your motor details for a quote, or browse our directory to find repair shops—including those that offer emergency and rush service."
       sidebarCta={<GetQuoteCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">

@@ -56,7 +56,7 @@ export default function NearMePage() {
             Electric motor repair near me
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
-            Find certified AC, DC, servo, and high-voltage motor repair centers in your area. Browse approved shops by
+            Find certified AC, DC, servo, and high-voltage motor repair shops in your area. Browse approved shops by
             state, compare capabilities, and submit a repair request in minutes.
           </p>
           <ul className="mt-6 flex list-none flex-wrap gap-2 p-0">

@@ -278,7 +278,7 @@ export default function HomePage() {
               No more paperwork, more time for your business
             </h2>
             <p className="mt-4 text-lg text-secondary">
-              Spreadsheets, sticky notes, and separate tools don&apos;t scale. Here&apos;s why repair centers run on a single system.
+              Spreadsheets, sticky notes, and separate tools don&apos;t scale. Here&apos;s why repair shops run on a single system.
             </p>
           </div>
           <div className="mt-14 grid gap-8 sm:grid-cols-2 lg:grid-cols-4">

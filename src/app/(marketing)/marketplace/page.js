@@ -55,7 +55,7 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
           </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-title sm:text-4xl">Marketplace</h1>
           <p className="mt-3 max-w-[50.4rem] text-secondary">
-            Parts, motors, tools, and surplus from repair centers and our team. Use search and filters to find what
+            Parts, motors, tools, and surplus from repair shops and our team. Use search and filters to find what
             you need. When you request an item, the seller contacts you—no checkout or payment on this site.
           </p>
 

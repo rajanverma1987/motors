@@ -74,8 +74,8 @@ export default async function ListingsDirectoryResults({ searchParams }) {
               {search
                 ? "No centers match your search."
                 : city || state
-                  ? "No repair centers listed for this area yet."
-                  : "No repair centers listed yet."}
+                  ? "No repair shops listed for this area yet."
+                  : "No repair shops listed yet."}
             </p>
             {search || city || state ? (
               <Link href="/electric-motor-repair-shops-listings" prefetch className="mt-3 inline-block text-sm text-primary hover:underline">

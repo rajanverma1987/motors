@@ -222,7 +222,7 @@ export default function DirectoryListingFormFields({
       <FormContainer>
         <FormSectionTitle as="h2">Where do you serve customers?</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Customers look for repair centers by location. Tell us where you’re based and which areas you cover so they can find your listing when they search.
+          Customers look for repair shops by location. Tell us where you’re based and which areas you cover so they can find your listing when they search.
         </p>
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">

@@ -90,7 +90,7 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   items.push({
     question: "Is this electric motor repair listing verified?",
     answer:
-      "Listings on IQMotorBase.com are submitted by repair centers and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
+      "Listings on IQMotorBase.com are submitted by repair shops and reviewed before publication. Always confirm credentials, insurance, and scope of work directly with the shop before awarding work.",
   });
 
   items.push({
@@ -128,13 +128,13 @@ export function buildListingDetailJsonLdGraph(opts) {
   const address =
     street || locality || region || postal
       ? {
-          "@type": "PostalAddress",
-          ...(street ? { streetAddress: street } : {}),
-          ...(locality ? { addressLocality: locality } : {}),
-          ...(region ? { addressRegion: region } : {}),
-          ...(postal ? { postalCode: postal } : {}),
-          addressCountry: country,
-        }
+        "@type": "PostalAddress",
+        ...(street ? { streetAddress: street } : {}),
+        ...(locality ? { addressLocality: locality } : {}),
+        ...(region ? { addressRegion: region } : {}),
+        ...(postal ? { postalCode: postal } : {}),
+        addressCountry: country,
+      }
       : undefined;
 
   const businessId = `${canonicalUrl}#localbusiness`;
@@ -143,12 +143,12 @@ export function buildListingDetailJsonLdGraph(opts) {
   const aggregateRating =
     reviewStats.count > 0
       ? {
-          "@type": "AggregateRating",
-          ratingValue: reviewStats.average,
-          reviewCount: reviewStats.count,
-          bestRating: 5,
-          worstRating: 1,
-        }
+        "@type": "AggregateRating",
+        ratingValue: reviewStats.average,
+        reviewCount: reviewStats.count,
+        bestRating: 5,
+        worstRating: 1,
+      }
       : undefined;
 
   const localBusiness = {

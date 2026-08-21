@@ -40,11 +40,11 @@ export default function HowToChooseElectricMotorRepairShopPage() {
   return (
     <BlogPageLayout
       title="How to choose an electric motor repair shop"
-      description="When a motor fails or needs a rewind, choosing the right shop affects cost, downtime, and long-term reliability. Here’s what to look for and how to compare repair centers."
-      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
+      description="When a motor fails or needs a rewind, choosing the right shop affects cost, downtime, and long-term reliability. Here’s what to look for and how to compare repair shops."
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
       sidebarTitle="Get a quote or find a shop"
-      sidebarDescription="Submit your motor details and we’ll connect you with repair centers that can quote your job. Or browse our directory by location."
+      sidebarDescription="Submit your motor details and we’ll connect you with repair shops that can quote your job. Or browse our directory by location."
       sidebarCta={<GetQuoteCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">

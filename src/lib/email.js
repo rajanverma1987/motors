@@ -206,7 +206,7 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
 /** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
   const to = "contact@IQMotorBase.com";
-  const subject = "IQMotorBase.com – No repair centers in this area (near-me page)";
+  const subject = "IQMotorBase.com – No repair shops in this area (near-me page)";
   const locationParts = [city, state, zip].filter(Boolean);
   const locationLine = locationParts.length ? locationParts.join(", ") : "Location not provided";
   const html = `
@@ -224,14 +224,14 @@ export async function sendNoListingsNearMeNotification(city, state, zip) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Notify a user who signed up for "notify me when there's a listing" that repair centers are now in their area. Links to our site only; no direct shop contact info in the email. */
+/** Notify a user who signed up for "notify me when there's a listing" that repair shops are now in their area. Links to our site only; no direct shop contact info in the email. */
 export async function sendAreaListedNotification(toEmail, locationLabel, shopListingsPageUrl) {
-  const subject = "Repair centers are now in your area – IQMotorBase.com";
+  const subject = "repair shops are now in your area – IQMotorBase.com";
   const html = `
     <p>Good news!</p>
-    <p>We've added repair centers near <strong>${locationLabel || "your area"}</strong> on IQMotorBase.com.</p>
+    <p>We've added repair shops near <strong>${locationLabel || "your area"}</strong> on IQMotorBase.com.</p>
     <p>You asked to be notified when new listings are available in your area. View the full list and details on our site:</p>
-    <p><a href="${shopListingsPageUrl}">View repair centers in your area</a></p>
+    <p><a href="${shopListingsPageUrl}">View repair shops in your area</a></p>
     <p>— IQMotorBase.com</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
@@ -534,10 +534,10 @@ export async function sendListingStatsOutreachEmail({
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const monthName = monthLabel
     ? new Date(`${monthLabel}-01T12:00:00Z`).toLocaleString("en-US", {
-        month: "long",
-        year: "numeric",
-        timeZone: "UTC",
-      })
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    })
     : "This month";
   const fullListingUrl = listingUrl?.startsWith("http") ? listingUrl : `${site}${listingUrl || ""}`;
   const softwareUrl = `${site}/motor-repair-shop-management-software`;

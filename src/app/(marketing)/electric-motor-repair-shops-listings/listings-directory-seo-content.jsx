@@ -136,7 +136,7 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
           List your electric motor repair shop
         </h3>
         <p className="mt-2 max-w-[57.6rem] text-sm leading-relaxed text-secondary">
-          Repair centers can{" "}
+          repair shops can{" "}
           <Link href="/list-your-electric-motor-services" className="font-medium text-primary hover:underline">
             list electric motor repair services
           </Link>{" "}

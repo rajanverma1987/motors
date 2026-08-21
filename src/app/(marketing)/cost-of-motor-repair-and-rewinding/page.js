@@ -86,12 +86,12 @@ const faqItems = [
   {
     question: "How can I get an accurate motor rewind cost estimate?",
     answer:
-      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use IQMotorBase.com to request quotes or browse repair centers by location and contact shops directly.",
+      "Send photos, nameplate data (HP/kW, voltage, frame, RPM), and failure symptoms, but expect the final price after physical inspection. Use IQMotorBase.com to request quotes or browse repair shops by location and contact shops directly.",
   },
   {
     question: "What happens to the information I submit in quote requests?",
     answer:
-      "Contact and motor details are used to route your request and support quote follow-up between you and relevant repair centers. Information is handled for service delivery and communication, not sold as a standalone contact database.",
+      "Contact and motor details are used to route your request and support quote follow-up between you and relevant repair shops. Information is handled for service delivery and communication, not sold as a standalone contact database.",
   },
   {
     question: "What is the difference between motor repair cost and motor rewinding cost?",
@@ -282,7 +282,7 @@ export default function CostOfMotorRepairPage() {
       <BlogPageLayout
         title="How much does electric motor repair & rewinding cost?"
         description="US ballpark ranges from ~$250 for small motors to $60k+ for large industrial rewinds. Use the free calculator, HP pricing tables, and FAQs below—then compare written quotes from shops. Updated June 2026."
-        breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
+        breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
         canonicalPath={path}
         sidebarBelowCta={calculatorSidebar}
         wideSidebar
@@ -649,7 +649,7 @@ export default function CostOfMotorRepairPage() {
             <ul className="mt-4 flex flex-col gap-2 text-sm font-medium">
               <li>
                 <Link href="/electric-motor-repair-shops-listings" className="text-primary hover:underline">
-                  → Browse repair centers by location
+                  → Browse repair shops by location
                 </Link>
               </li>
               <li>

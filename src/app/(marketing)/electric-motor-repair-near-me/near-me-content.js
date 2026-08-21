@@ -185,7 +185,7 @@ export default function NearMeContent() {
 
           {locationStatus === "detected" && !loadingListings && listings.length === 0 && (
             <div className="rounded-xl border border-border bg-card py-16 px-6 text-center">
-              <p className="text-title font-medium">No repair centers found near {locationLabel}</p>
+              <p className="text-title font-medium">No repair shops found near {locationLabel}</p>
               <p className="mt-2 text-sm text-secondary">
                 Try browsing all listings or search by another city or state.
               </p>
@@ -197,7 +197,7 @@ export default function NearMeContent() {
                 </Link>
               </div>
               <div className="mt-8 max-w-sm mx-auto">
-                <p className="text-sm font-medium text-title">Get notified when we add repair centers in your area</p>
+                <p className="text-sm font-medium text-title">Get notified when we add repair shops in your area</p>
                 <p className="mt-1 text-xs text-secondary">We&apos;ll email you when listings are available near {locationLabel}.</p>
                 {!notifySent ? (
                   <form
@@ -220,7 +220,7 @@ export default function NearMeContent() {
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.error || "Failed to sign up");
                         setNotifySent(true);
-                        toast.success("You're on the list. We'll email you when we add repair centers in your area.");
+                        toast.success("You're on the list. We'll email you when we add repair shops in your area.");
                       } catch (e) {
                         toast.error(e.message || "Could not sign up. Please try again.");
                       } finally {
@@ -241,7 +241,7 @@ export default function NearMeContent() {
                     </Button>
                   </form>
                 ) : (
-                  <p className="mt-4 text-sm text-success">You&apos;re on the list. We&apos;ll email you when we add repair centers here.</p>
+                  <p className="mt-4 text-sm text-success">You&apos;re on the list. We&apos;ll email you when we add repair shops here.</p>
                 )}
               </div>
             </div>

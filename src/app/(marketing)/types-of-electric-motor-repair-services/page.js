@@ -41,10 +41,10 @@ export default function TypesOfElectricMotorRepairServicesPage() {
     <BlogPageLayout
       title="Types of electric motor repair services"
       description="Electric motor repair covers a wide range of work—from bearing changes and cleaning to full rewinds and specialty testing. Knowing the main service types helps you describe your need and choose the right shop."
-      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair centers" }}
+      breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
       sidebarTitle="Get a quote or find a shop"
-      sidebarDescription="Tell us about your motor and we’ll connect you with repair centers that can quote your job. Or browse our directory."
+      sidebarDescription="Tell us about your motor and we’ll connect you with repair shops that can quote your job. Or browse our directory."
       sidebarCta={<GetQuoteCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">

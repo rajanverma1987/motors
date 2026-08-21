@@ -47,7 +47,7 @@ const faqItems = [
   },
   {
     q: "Who is this marketplace for?",
-    a: "Independent motor repair centers, rewind shops, and industrial service shops in the United States that want a professional channel to sell excess stock and specialty items without building a full e-commerce stack.",
+    a: "Independent motor repair shops, rewind shops, and industrial service shops in the United States that want a professional channel to sell excess stock and specialty items without building a full e-commerce stack.",
   },
   {
     q: "What can we list?",
@@ -139,7 +139,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
             IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}
-            designed for <strong className="font-semibold text-title">motor repair centers, rewind shops</strong>, and
+            designed for <strong className="font-semibold text-title">motor repair shops, rewind shops</strong>, and
             industrial service teams. Publish listings from the same platform you use for quotes and work—buyers submit a{" "}
             <strong className="font-semibold text-title">request</strong>, not a forced online checkout, so you keep
             control of pricing, credit, and fulfillment while still reaching new demand online.

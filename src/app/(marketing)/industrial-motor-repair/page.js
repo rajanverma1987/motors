@@ -224,7 +224,7 @@ export default function IndustrialMotorRepairPage() {
         breadcrumbLink={{ href: "/electric-motor-repair", label: "Electric motor repair hub" }}
         canonicalPath={path}
         sidebarTitle="Get industrial motor repair quotes"
-        sidebarDescription="Submit nameplate details and failure notes—we connect you with repair centers that quote your HP, voltage, and application. Or browse shops by location."
+        sidebarDescription="Submit nameplate details and failure notes—we connect you with repair shops that quote your HP, voltage, and application. Or browse shops by location."
         sidebarCta={<GetQuoteCta />}
         sidebarBelowCta={calculatorSidebar}
         wideSidebar
@@ -427,7 +427,7 @@ export default function IndustrialMotorRepairPage() {
               </li>
               <li>
                 <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
-                  Find repair centers
+                  Find repair shops
                 </Link>
                 <span className="text-secondary"> — directory by location and services</span>
               </li>
