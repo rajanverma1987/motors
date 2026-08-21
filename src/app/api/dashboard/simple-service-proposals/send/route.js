@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
-import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { resolveOutboundFromPreview, withDashboardOutboundEmailFooter } from "@/lib/customer-facing-email-content";
 import { clampString } from "@/lib/validation";
 import { parseCcEmailList } from "@/lib/send-document-custom-message";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -112,13 +112,13 @@ export async function POST(request) {
       : "";
     const kind = documentType === "invoice" ? "invoice" : "quote";
     const kindLabel = kind === "invoice" ? "invoice" : "service proposal";
-    const html = `
+    const html = withDashboardOutboundEmailFooter(`
       <p>Hello${toName ? ` ${esc(toName)}` : ""},</p>
       <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>
       ${noteHtml}
       <p>If you have questions, reply to this email or contact us.</p>
       <p>— ${esc(shopCompanyName || "Our shop")}</p>
-    `;
+    `);
     const subject = `${shopCompanyName || "Shop"}: ${documentLabel}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);

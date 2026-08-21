@@ -14,7 +14,7 @@ import AppSplashScreen from "./src/components/AppSplashScreen";
 import PaywallOverlay from "./src/components/PaywallOverlay";
 import ErrorBoundary from "./src/components/ErrorBoundary";
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+SplashScreen.preventAutoHideAsync().catch(() => { });
 
 const Stack = createNativeStackNavigator();
 
@@ -35,7 +35,7 @@ function NavigationRoot() {
   const { loading, isLoggedIn } = useMobileAuth();
 
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync().catch(() => {});
+    if (!loading) SplashScreen.hideAsync().catch(() => { });
   }, [loading]);
 
   if (loading) return <AppSplashScreen />;

@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
-import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { resolveOutboundFromPreview, withDashboardOutboundEmailFooter } from "@/lib/customer-facing-email-content";
 import { clampString } from "@/lib/validation";
 import { parseCcEmailList } from "@/lib/send-document-custom-message";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -129,7 +129,7 @@ export async function POST(request) {
     const logoHtml = shopLogo?.logoSrc
       ? `<p style="margin-top:16px"><img src="${esc(shopLogo.logoSrc)}" alt="" height="${logoStyle.heightPx}" style="${logoStyle.style}" /></p>`
       : "";
-    const html = `
+    const html = withDashboardOutboundEmailFooter(`
       <p>Hi${toName ? ` ${esc(toName)}` : ""},</p>
       <p>Please find your purchase order ${poNumber ? `(PO# ${esc(poNumber)})` : ""} from ${esc(shopCompanyName || "our shop")}. The purchase order is attached as a PDF.</p>
       ${noteHtml}
@@ -137,7 +137,7 @@ export async function POST(request) {
       ${addressesHtml || ""}
       ${logoHtml}
       <p style="margin-top:16px">— ${esc(shopCompanyName || "Our shop")}</p>
-    `;
+    `);
     const subject = `Purchase order ${poNumber || documentLabel} – ${shopCompanyName || "Motor Shop"}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);

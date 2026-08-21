@@ -6,6 +6,7 @@ import {
   buildQuoteToCustomerEmailContent,
   buildInvoiceToCustomerEmailContent,
   buildPoToVendorEmailContent,
+  withDashboardOutboundEmailFooter,
 } from "@/lib/customer-facing-email-content";
 import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 import {
@@ -731,7 +732,7 @@ export async function sendRepairFlowPreliminaryToCustomer(
     logoIsHttp || logoIsData || logoIsCid
       ? `<p style="margin-top:20px;margin-bottom:8px"><img src="${esc(logoSrc)}" alt="${signature}" height="${heightPx}" width="${maxWidthPx}" style="${style}" /></p>`
       : "";
-  const html = `
+  const html = withDashboardOutboundEmailFooter(`
     <p>Hi${customerName ? ` ${esc(customerName)}` : ""},</p>
     <p>Your <strong>preliminary (pre-disassembly) quote</strong> for job <strong>${jobRef}</strong> is ready.</p>
     <p>Open the link below to review the quote and tell us how you would like to proceed: approve disassembly and repair, decline and pick up as-is, or authorize scrap.</p>
@@ -740,7 +741,7 @@ export async function sendRepairFlowPreliminaryToCustomer(
     ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
     ${logoBlock}
     <p style="margin-top:16px">— ${signature}</p>
-  `;
+  `);
   const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
   return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
 }
@@ -808,13 +809,13 @@ export async function sendWorkOrderPdfToRecipient(
   const instructionsBlock = instructions
     ? `<p style="margin-top:12px;padding:12px;background:#f5f5f4;border-radius:8px;font-size:14px;line-height:1.5;color:#374151"><strong>Message:</strong><br/>${esc(instructions).replace(/\n/g, "<br/>")}</p>`
     : "";
-  const html = `
+  const html = withDashboardOutboundEmailFooter(`
     <p>Hello,</p>
     <p>Please find the attached work order <strong>${woNo}</strong> from ${esc(shopName)}.</p>
     ${instructionsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email.</p>
     <p style="margin-top:16px">— ${esc(shopName)}</p>
-  `;
+  `);
   const safeFile = String(workOrderNumber || "work-order")
     .replace(/[^\w.-]+/g, "-")
     .replace(/^-+|-+$/g, "")

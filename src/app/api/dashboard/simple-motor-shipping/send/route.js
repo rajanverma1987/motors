@@ -4,7 +4,7 @@ import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
-import { resolveOutboundFromPreview } from "@/lib/customer-facing-email-content";
+import { resolveOutboundFromPreview, withDashboardOutboundEmailFooter } from "@/lib/customer-facing-email-content";
 import { clampString } from "@/lib/validation";
 import { parseCcEmailList } from "@/lib/send-document-custom-message";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -145,7 +145,7 @@ export async function POST(request) {
         ${row("Notes", entry.notes)}
       </table>
     `;
-    const html = `
+    const html = withDashboardOutboundEmailFooter(`
       <p>Hi${toName ? ` ${esc(toName)}` : ""},</p>
       <p>Please find motor shipping details${invoiceNumber ? ` for ${esc(invoiceNumber)}` : ""} from ${esc(shopCompanyName || "our shop")}. The shipping document is attached as a PDF.</p>
       ${noteHtml}
@@ -153,7 +153,7 @@ export async function POST(request) {
       <p>If you have questions, reply to this email or contact us.</p>
       ${logoHtml}
       <p style="margin-top:16px">— ${esc(shopCompanyName || "Our shop")}</p>
-    `;
+    `);
     const subject = `${documentLabel} – ${shopCompanyName || "Motor Shop"}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);
