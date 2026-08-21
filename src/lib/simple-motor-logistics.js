@@ -1,15 +1,35 @@
 import { toInputDateValue } from "@/lib/format-date";
-import {
-  emptyOtherLine,
-  roundSpMoney,
-  todayISODate,
-} from "@/lib/simple-service-proposal-form";
 
 export const KIND_RECEIVING = "motor_receiving";
 export const KIND_SHIPPING = "motor_shipping";
 
 export const RECEIVING_CHARGE_DESCRIPTION = "Receiving Charge";
 export const SHIPPING_CHARGE_DESCRIPTION = "Shipping Charge";
+
+/** Local helpers — keep this module free of simple-service-proposal-form (avoids circular import). */
+function todayISODate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function parseMoney(value) {
+  const n = Number.parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function roundMoney(value) {
+  return Math.round((parseMoney(value) + Number.EPSILON) * 100) / 100;
+}
+
+function emptyOtherLine() {
+  return {
+    id: newLineId(),
+    description: "",
+    uom: "",
+    price: "",
+    qty: "",
+    inventoryItemId: "",
+  };
+}
 
 function newLineId() {
   return typeof crypto !== "undefined" && crypto.randomUUID
@@ -58,8 +78,20 @@ export function emptyMotorLogisticsRecord(kind, defaults = {}) {
     charges: "",
     paidBy: "",
     notes: "",
+    attachments: [],
     updatedAt: "",
   };
+}
+
+function normalizeLogisticsAttachments(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((a) => a && typeof a === "object" && String(a.url || "").trim())
+    .slice(0, 50)
+    .map((a) => ({
+      url: String(a.url || "").trim().slice(0, 500),
+      name: String(a.name || a.url || "").trim().slice(0, 300) || "Attachment",
+    }));
 }
 
 /** Normalize stored motor receiving / shipping from Mongo/API. */
@@ -86,6 +118,7 @@ export function normalizeMotorLogisticsRecord(raw, kind, defaults = {}) {
     charges: String(raw.charges ?? "").trim(),
     paidBy: String(raw.paidBy || "").trim(),
     notes: String(raw.notes || "").trim(),
+    attachments: normalizeLogisticsAttachments(raw.attachments),
     updatedAt: String(raw.updatedAt || "").trim(),
   };
 }
@@ -106,6 +139,7 @@ export function motorLogisticsFormToStored(form, kind) {
     charges: String(src.charges ?? "").trim(),
     paidBy: String(src.paidBy || "").trim(),
     notes: String(src.notes || "").trim(),
+    attachments: normalizeLogisticsAttachments(src.attachments),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -119,7 +153,8 @@ export function motorLogisticsRecordHasData(record) {
       String(record.pickedBy || "").trim() ||
       String(record.charges ?? "").trim() ||
       String(record.paidBy || "").trim() ||
-      String(record.notes || "").trim()
+      String(record.notes || "").trim() ||
+      (Array.isArray(record.attachments) && record.attachments.length > 0)
   );
 }
 
@@ -132,7 +167,7 @@ export function applyCustomerLogisticsChargeToOtherItems(otherItems, { kind, cha
   const items = Array.isArray(otherItems) ? otherItems : [];
   const chargeKind = logisticsChargeKindFromKind(kind);
   const description = logisticsChargeDescription(kind);
-  const amount = roundSpMoney(charges);
+  const amount = roundMoney(charges);
   const isCustomerPaid =
     String(paidBy || "").trim().toLowerCase() === "customer" && amount > 0;
 

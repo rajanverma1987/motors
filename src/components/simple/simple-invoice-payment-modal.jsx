@@ -168,11 +168,6 @@ export default function SimpleInvoicePaymentModal({
       size="5xl"
       width="min(920px, 96vw)"
       height="min(82vh, 760px)"
-      actions={
-        <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       <div className="flex min-h-0 flex-col gap-6">
         <section className="rounded-sm border border-border bg-primary/[0.03] px-4 py-3.5 dark:bg-primary/10">

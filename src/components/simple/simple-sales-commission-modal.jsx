@@ -684,11 +684,6 @@ export default function SimpleSalesCommissionModal({
         size="lg"
         zIndex={zIndex + 10}
         showClose
-        actions={
-          <Button type="button" variant="secondary" size="sm" className={TOOLBAR_BTN} onClick={closeViewModal}>
-            Close
-          </Button>
-        }
       >
         {viewLoading ? (
           <div className="flex items-center justify-center py-12 text-sm text-secondary">Loading…</div>

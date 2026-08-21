@@ -1532,12 +1532,23 @@ export default function ServiceProposalFormModal({
         open={logisticsOpen}
         onClose={() => setLogisticsOpen(false)}
         initialTab={logisticsTab}
+        serviceProposalId={recordId}
         defaultJobNumber={docNumber}
         defaultInvoiceNumber={docNumber}
         defaultShippingPo={form.shippingPo || form.customerPo || ""}
         initialReceiving={form.motorReceiving}
         initialShipping={form.motorShipping}
         onSave={handleLogisticsSave}
+        onAttachmentsChange={({ kind, attachments }) => {
+          const motorKey = kind === KIND_SHIPPING ? "motorShipping" : "motorReceiving";
+          setForm((prev) => {
+            const current = prev[motorKey] && typeof prev[motorKey] === "object" ? prev[motorKey] : {};
+            return {
+              ...prev,
+              [motorKey]: { ...current, attachments: Array.isArray(attachments) ? attachments : [] },
+            };
+          });
+        }}
         customerName={
           selectedCustomer?.companyName ||
           selectedCustomer?.primaryContactName ||
