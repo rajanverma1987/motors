@@ -14,6 +14,7 @@ export function isCalculatorOnlyDashboardPath(pathname) {
 /** Dashboard APIs still needed for in-dashboard calculator tools. */
 export const CALCULATOR_ONLY_ALLOWED_DASHBOARD_API_PREFIXES = [
   "/api/dashboard/wire-sizes",
+  "/api/dashboard/cir-mills",
   "/api/dashboard/settings",
 ];
 

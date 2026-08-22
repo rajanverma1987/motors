@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiPlus, FiX } from "react-icons/fi";
+import { FiChevronDown, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -38,7 +38,7 @@ import {
 } from "@/lib/simple-typography";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useUserSettings, useFormatDate } from "@/contexts/user-settings-context";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import {
   buildCustomerPayload,
@@ -55,7 +55,7 @@ import {
   quoteStatusTileColorForValue,
   invoiceStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
-import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
+import { buildEmployeeSelectOptions, resolveEmployeeSelectValue } from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
   resolveStatusTileProps,
@@ -80,6 +80,7 @@ import {
   computeInvoicePaymentSummary,
   recordTypeDisplayTitle,
   recordTypeDocumentLabel,
+  recordTypeJobNumberLabel,
   resolveRecordTypeOnSave,
   resolveSimpleInvoiceStatusFromPayments,
   simpleServiceProposalDocToForm,
@@ -152,52 +153,38 @@ function poReceivingBadgeVariant(status) {
   return "default";
 }
 
-/** Flatten job POs into line rows for the service proposal PO table. */
-function buildProposalPoTableRows(purchaseOrders) {
-  const rows = [];
+/** Group job POs into parent rows (PO header) + child line rows. */
+function buildProposalPoTableGroups(purchaseOrders) {
+  const groups = [];
   for (const po of Array.isArray(purchaseOrders) ? purchaseOrders : []) {
     const poId = String(po?.id || "").trim();
     const poNumber = String(po?.poNumber || "").trim() || "—";
+    const vendorName = String(po?.vendorName || "").trim() || "—";
     const poStatus = resolvePoStatus(po?.lineItems);
     const lines = (Array.isArray(po?.lineItems) ? po.lineItems : []).filter((line) =>
       poLineHasContent(line)
     );
-    if (lines.length === 0) {
-      if (poId) {
-        rows.push({
-          key: `${poId}-empty`,
-          poId,
-          poNumber,
-          itemName: "—",
-          qty: "—",
-          price: null,
-          itemStatus: "—",
-          poStatus,
-        });
-      }
-      continue;
-    }
-    lines.forEach((line, index) => {
+    const items = lines.map((line, index) => {
       const inactive = isPoLineInactive(line);
       const itemStatus = inactive
         ? getPoLineReceivingStatus(line)
         : normalizeReceivingStatus(
             line.receivingStatus || suggestReceivingStatus(line.quantity, line.receivedQty)
           );
-      rows.push({
+      return {
         key: `${poId}-${line.id || index}`,
-        poId,
-        poNumber,
         itemName: String(line.itemName || "").trim() || "—",
         qty: String(line.quantity ?? "0"),
         price: parsePoMoney(line.price),
         itemStatus,
-        poStatus,
         inactive,
-      });
+      };
     });
+    if (!poId) continue;
+    const poDateRaw = String(po?.poCutDate || po?.createdAt || "").trim();
+    groups.push({ poId, poNumber, vendorName, poStatus, poDateRaw, items });
   }
-  return rows;
+  return groups;
 }
 
 function FieldRow({
@@ -380,6 +367,7 @@ export default function ServiceProposalFormModal({
   const confirm = useConfirm();
   const { user } = useAuth();
   const { settings } = useUserSettings();
+  const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
 
   const quoteTypeOptions = useMemo(() => {
@@ -523,6 +511,19 @@ export default function ServiceProposalFormModal({
     [employees, form.preparedBy]
   );
 
+  const employeeDisplayLabel = useCallback(
+    (raw) => {
+      const id = String(raw || "").trim();
+      if (!id) return "";
+      const fromOpts = preparedByOptions.find((o) => o.value === id);
+      if (fromOpts?.label && fromOpts.label !== "—" && fromOpts.label !== "Unknown employee") {
+        return fromOpts.label;
+      }
+      return buildEmployeeSelectOptions(employees, id).find((o) => o.value === id)?.label || "";
+    },
+    [employees, preparedByOptions]
+  );
+
   const loadCustomers = useCallback(async () => {
     setLoadingCustomers(true);
     try {
@@ -602,18 +603,25 @@ export default function ServiceProposalFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key on open + record id
   }, [open, initialForm?.id]);
 
-  /** CSV / legacy rows may store Prepared By as a name — map to employee id when options load. */
+  /** Map Prepared By to employee ids; if Proposal Approved By was stored as an id, show the name. */
   useEffect(() => {
     if (!open || !employees.length) return;
     setForm((f) => {
-      const pb = String(f.preparedBy || "").trim();
-      if (!pb) return f;
-      if (employees.some((e) => String(e.id) === pb)) return f;
-      const byName = employees.find(
-        (e) => String(e.name || "").trim().toLowerCase() === pb.toLowerCase()
-      );
-      if (!byName?.id) return f;
-      return { ...f, preparedBy: String(byName.id) };
+      const preparedBy = resolveEmployeeSelectValue(employees, f.preparedBy);
+      const approvedRaw = String(f.proposalApprovedBy || "").trim();
+      let proposalApprovedBy = approvedRaw;
+      if (approvedRaw) {
+        const byId = employees.find(
+          (e) => String(e.id ?? e._id ?? "").trim() === approvedRaw
+        );
+        if (byId) {
+          const name =
+            String(byId.name || "").trim() || String(byId.email || "").trim();
+          if (name) proposalApprovedBy = name;
+        }
+      }
+      if (preparedBy === f.preparedBy && proposalApprovedBy === f.proposalApprovedBy) return f;
+      return { ...f, preparedBy, proposalApprovedBy };
     });
   }, [open, employees]);
 
@@ -646,7 +654,10 @@ export default function ServiceProposalFormModal({
   const openDatasheet = () => {
     const companyName =
       selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
-    const meta = { companyName, technicianLabel: form.preparedBy || "" };
+    const meta = {
+      companyName,
+      technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
+    };
     const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
     const sheet = isDc
       ? buildDcDatasheetFromProposal(form, meta)
@@ -775,10 +786,36 @@ export default function ServiceProposalFormModal({
     refreshJobPurchaseOrders();
   }, [open, refreshJobPurchaseOrders]);
 
-  const proposalPoTableRows = useMemo(
-    () => buildProposalPoTableRows(jobPurchaseOrders),
+  const proposalPoTableGroups = useMemo(
+    () => buildProposalPoTableGroups(jobPurchaseOrders),
     [jobPurchaseOrders]
   );
+
+  const [expandedPoIds, setExpandedPoIds] = useState(() => new Set());
+
+  useEffect(() => {
+    setExpandedPoIds((prev) => {
+      const next = new Set(prev);
+      for (const group of proposalPoTableGroups) {
+        if (!next.has(group.poId)) next.add(group.poId);
+      }
+      for (const id of [...next]) {
+        if (!proposalPoTableGroups.some((g) => g.poId === id)) next.delete(id);
+      }
+      return next;
+    });
+  }, [proposalPoTableGroups]);
+
+  const togglePoExpanded = useCallback((poId) => {
+    const id = String(poId || "").trim();
+    if (!id) return;
+    setExpandedPoIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
   const openPurchaseOrderCreate = () => {
     setPurchaseOrderInitialPoId("");
@@ -802,12 +839,15 @@ export default function ServiceProposalFormModal({
   const datasheetInitial = useMemo(() => {
     const companyName =
       selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
-    const meta = { companyName, technicianLabel: form.preparedBy || "" };
+    const meta = {
+      companyName,
+      technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
+    };
     if (String(form.motorPower || "AC").toUpperCase() === "DC") {
       return buildDcDatasheetFromProposal(form, meta);
     }
     return buildAcDatasheetFromProposal(form, meta);
-  }, [form, selectedCustomer]);
+  }, [form, selectedCustomer, employeeDisplayLabel]);
 
   const commissionPreset = useMemo(() => {
     if (!recordId) return null;
@@ -1188,7 +1228,7 @@ export default function ServiceProposalFormModal({
 
           {/* Three columns: customer/motor | meta + status | notes + PO lines (wider right) */}
           <div
-            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)]"
+            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)] lg:items-stretch lg:min-h-[min(28rem,42vh)]"
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
@@ -1374,6 +1414,7 @@ export default function ServiceProposalFormModal({
                   value={form.proposalApprovedBy}
                   onChange={(e) => patch("proposalApprovedBy", e.target.value)}
                   className={FIELD_INPUT}
+                  placeholder="Name…"
                   aria-label="Proposal Approved By"
                 />
               </FieldRow>
@@ -1516,7 +1557,7 @@ export default function ServiceProposalFormModal({
             </div>
 
             {/* Column 3 — notes + purchase orders */}
-            <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex min-h-0 min-w-0 flex-col gap-2">
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-xs font-bold text-title">Internal Notes</span>
                 <SimpleDoubleClickTextEditTextarea
@@ -1541,8 +1582,8 @@ export default function ServiceProposalFormModal({
                   zIndex={160}
                 />
               </div>
-              <div className="flex min-w-0 flex-col gap-1.5 border-t border-border pt-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 border-t border-border pt-2">
+                <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
                   <span className="text-xs font-bold uppercase tracking-wide text-secondary">
                     Purchase orders
                   </span>
@@ -1563,104 +1604,156 @@ export default function ServiceProposalFormModal({
                   </Button>
                 </div>
                 {loadingJobPurchaseOrders ? (
-                  <p className="py-3 text-center text-xs text-secondary">Loading purchase orders…</p>
-                ) : proposalPoTableRows.length === 0 ? (
-                  <p className="rounded-sm border border-dashed border-border px-3 py-4 text-center text-xs text-secondary">
+                  <p className="flex min-h-[8rem] flex-1 items-center justify-center py-3 text-center text-xs text-secondary">
+                    Loading purchase orders…
+                  </p>
+                ) : proposalPoTableGroups.length === 0 ? (
+                  <p className="flex min-h-[8rem] flex-1 items-center justify-center rounded-sm border border-dashed border-border px-3 py-4 text-center text-xs text-secondary">
                     {canCreatePurchaseOrder
                       ? "No purchase orders for this job yet."
                       : "Save the record with a document number to see purchase orders."}
                   </p>
                 ) : (
-                  <div className="max-h-52 overflow-y-auto overflow-x-hidden border border-border">
-                    <table className={`w-full table-fixed border-collapse ${SIMPLE_TABLE_TEXT}`}>
-                      <colgroup>
-                        <col className="w-[18%]" />
-                        <col className="w-[26%]" />
-                        <col className="w-[10%]" />
-                        <col className="w-[14%]" />
-                        <col className="w-[16%]" />
-                        <col className="w-[16%]" />
-                      </colgroup>
-                      <thead>
-                        <tr className="border-b border-border bg-primary/[0.06] dark:bg-primary/10">
-                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
-                            PO#
-                          </th>
-                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
-                            Item name
-                          </th>
-                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
-                            Qty
-                          </th>
-                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
-                            Price
-                          </th>
-                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
-                            Item Status
-                          </th>
-                          <th className={`whitespace-nowrap px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
-                            PO Status
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {proposalPoTableRows.map((row) => (
-                          <tr
-                            key={row.key}
-                            className={`border-b border-border last:border-b-0 ${
-                              row.inactive ? "bg-danger/10 line-through text-secondary" : ""
-                            }`}
+                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border border-border">
+                    <div
+                      className={`sticky top-0 z-[1] grid grid-cols-[1.75rem_minmax(5.5rem,1fr)_minmax(6rem,1.4fr)_minmax(4.5rem,0.9fr)_minmax(5.5rem,1fr)] gap-x-2 border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
+                    >
+                      <span aria-hidden />
+                      <span>PO#</span>
+                      <span>Vendor</span>
+                      <span>PO Date</span>
+                      <span>PO Status</span>
+                    </div>
+                    {proposalPoTableGroups.map((group) => {
+                      const poExpanded = expandedPoIds.has(group.poId);
+                      return (
+                      <div
+                        key={group.poId}
+                        className="border-b border-border last:border-b-0"
+                      >
+                        <div
+                          className={`grid grid-cols-[1.75rem_minmax(5.5rem,1fr)_minmax(6rem,1.4fr)_minmax(4.5rem,0.9fr)_minmax(5.5rem,1fr)] items-center gap-x-2 gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-none text-secondary hover:bg-primary/10 hover:text-title"
+                            onClick={() => togglePoExpanded(group.poId)}
+                            aria-expanded={poExpanded}
+                            aria-label={
+                              poExpanded
+                                ? `Collapse PO ${group.poNumber}`
+                                : `Expand PO ${group.poNumber}`
+                            }
                           >
-                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1">
-                              {row.poId ? (
-                                <button
-                                  type="button"
-                                  className="whitespace-nowrap font-medium text-primary hover:underline"
-                                  onClick={() => openPurchaseOrderView(row.poId)}
-                                  title="View purchase order"
-                                >
-                                  {row.poNumber}
-                                </button>
-                              ) : (
-                                row.poNumber
-                              )}
-                            </td>
-                            <td
-                              className="max-w-0 truncate border-r border-border px-1.5 py-1 text-title"
-                              title={row.itemName}
+                            {poExpanded ? (
+                              <FiChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                            ) : (
+                              <FiChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+                            )}
+                          </button>
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              className="block max-w-full truncate text-left font-semibold text-primary hover:underline"
+                              onClick={() => openPurchaseOrderView(group.poId)}
+                              title={`View PO ${group.poNumber}`}
                             >
-                              {row.itemName}
-                            </td>
-                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1 text-right tabular-nums text-title">
-                              {row.qty}
-                            </td>
-                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1 text-right tabular-nums text-title">
-                              {row.price == null ? "—" : formatMoney(row.price)}
-                            </td>
-                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1">
-                              {row.itemStatus === "—" ? (
-                                "—"
-                              ) : (
-                                <Badge
-                                  variant={poReceivingBadgeVariant(row.itemStatus)}
-                                  className={SIMPLE_BADGE_SM}
+                              {group.poNumber}
+                            </button>
+                          </div>
+                          <div
+                            className="min-w-0 truncate font-semibold text-title"
+                            title={group.vendorName}
+                          >
+                            {group.vendorName}
+                          </div>
+                          <div className="min-w-0 whitespace-nowrap tabular-nums text-title">
+                            {group.poDateRaw
+                              ? formatDate(group.poDateRaw)
+                              : "—"}
+                          </div>
+                          <div className="min-w-0">
+                            <Badge
+                              variant={poReceivingBadgeVariant(group.poStatus)}
+                              className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
+                              title={group.poStatus}
+                            >
+                              {group.poStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                        {poExpanded ? (
+                        group.items.length === 0 ? (
+                          <p className="py-2 pl-4 text-xs text-secondary">No line items</p>
+                        ) : (
+                          <div className="w-full min-w-0 border-l-2 border-border/50 pl-3 pr-1">
+                          <table className={`w-full table-fixed border-collapse ${SIMPLE_TABLE_TEXT}`}>
+                            <colgroup>
+                              <col className="w-auto" style={{ width: "52%" }} />
+                              <col style={{ width: "10%" }} />
+                              <col style={{ width: "16%" }} />
+                              <col style={{ width: "22%" }} />
+                            </colgroup>
+                            <thead>
+                              <tr className="border-b border-border bg-primary/[0.04] dark:bg-primary/10">
+                                <th className={`border-r border-border px-2 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                                  Item name
+                                </th>
+                                <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                                  Qty
+                                </th>
+                                <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                                  Price
+                                </th>
+                                <th className={`px-2 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                                  Item Status
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {group.items.map((row) => (
+                                <tr
+                                  key={row.key}
+                                  className={
+                                    row.inactive
+                                      ? "border-b border-border bg-danger/10 line-through text-secondary last:border-b-0"
+                                      : "border-b border-border bg-card last:border-b-0"
+                                  }
                                 >
-                                  {row.itemStatus}
-                                </Badge>
-                              )}
-                            </td>
-                            <td className="whitespace-nowrap px-1.5 py-1">
-                              <Badge
-                                variant={poReceivingBadgeVariant(row.poStatus)}
-                                className="rounded-full px-2 py-0.5 text-[10px]"
-                              >
-                                {row.poStatus}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                                  <td
+                                    className="max-w-0 truncate border-r border-border px-2 py-1 text-title"
+                                    title={row.itemName}
+                                  >
+                                    {row.itemName}
+                                  </td>
+                                  <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
+                                    {row.qty}
+                                  </td>
+                                  <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
+                                    {row.price == null ? "—" : formatMoney(row.price)}
+                                  </td>
+                                  <td className="whitespace-nowrap px-2 py-1">
+                                    {row.itemStatus === "—" ? (
+                                      "—"
+                                    ) : (
+                                      <Badge
+                                        variant={poReceivingBadgeVariant(row.itemStatus)}
+                                        className={SIMPLE_BADGE_SM}
+                                      >
+                                        {row.itemStatus}
+                                      </Badge>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          </div>
+                        )
+                        ) : null}
+                      </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -1884,6 +1977,7 @@ export default function ServiceProposalFormModal({
         initialDatasheet={datasheetInitial}
         technicianOptions={preparedByOptions}
         recordId={recordId || null}
+        recordType={form.recordType}
         attachments={Array.isArray(form.attachments) ? form.attachments : []}
         onAttached={handleAttached}
         jobStatusOptions={jobStatusOptions}
@@ -1905,7 +1999,7 @@ export default function ServiceProposalFormModal({
           customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
           customerPo: String(form.customerPo || "").trim(),
           documentNumber: String(form.documentNumber || "").trim(),
-          documentLabel: docLabel,
+          documentLabel: recordTypeJobNumberLabel(form.recordType),
           jobStatus: form.jobStatus,
         }}
       />

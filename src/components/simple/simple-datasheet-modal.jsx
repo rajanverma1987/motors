@@ -30,6 +30,7 @@ import {
   normalizeAcDatasheet,
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
+import { RECORD_TYPE_RFQ, recordTypeJobNumberLabel } from "@/lib/simple-service-proposal-form";
 
 const FORM_ID = "simple-datasheet-form";
 const FIELD_INPUT = DATASHEET_FIELD_INPUT;
@@ -84,6 +85,7 @@ export default function SimpleDatasheetModal({
   jobStatusOptions = [],
   jobStatus = "",
   onJobStatusChange,
+  recordType = RECORD_TYPE_RFQ,
 }) {
   const alert = useAlert();
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
@@ -94,6 +96,8 @@ export default function SimpleDatasheetModal({
   const [printing, setPrinting] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const wasOpenRef = useRef(false);
+
+  const jobNumberLabel = useMemo(() => recordTypeJobNumberLabel(recordType), [recordType]);
 
   const canAttach = Boolean(String(recordId || "").trim());
 
@@ -352,12 +356,12 @@ export default function SimpleDatasheetModal({
           </div>
           <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />
           <div className="min-w-0 flex-1 basis-[9rem]">
-            <div className="mb-1 text-sm font-bold text-title">Job#</div>
+            <div className="mb-1 text-sm font-bold text-title">{jobNumberLabel}</div>
             <input
               type="text"
               value={form.jobNumber}
               className={`${FIELD_INPUT} !border-0 !bg-transparent !px-0 !text-sm !font-semibold !text-title`}
-              aria-label="Job number"
+              aria-label={jobNumberLabel}
               disabled
               readOnly
             />

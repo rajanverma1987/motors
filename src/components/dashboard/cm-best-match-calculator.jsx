@@ -1,18 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiPrinter, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiPrinter } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
+import { formatOriginalWireSelection } from "@/lib/platform-cir-mills";
 import { useToast } from "@/components/toast-provider";
 import { useFormatDateTime } from "@/contexts/user-settings-context";
 import "./cm-best-match-print.css";
 
 const MAX_SELECT = 10;
 const MAX_WIRES_CAP = 200;
+const ORIGINAL_WIRES_FORM_ID = "cm-original-wires-form";
 
 function num(v) {
   const n = parseFloat(String(v).replace(/,/g, ""));
@@ -73,8 +75,8 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
         <VarCell label="Original Wire Size" value={resultContext.originalWireSize} />
         <VarCell label="Original CM" value={resultContext.originalCMDisplay} />
         <VarCell label="Targeted CM" value={resultContext.targetedCM} />
-        <VarCell label="Min Wires" value={resultContext.minWires} />
-        <VarCell label="Max Wires" value={resultContext.maxWires} />
+        <VarCell label="Desired Min Wires" value={resultContext.minWires} />
+        <VarCell label="Desired Max Wires" value={resultContext.maxWires} />
         {resultContext.selectedCatalogSummary ? (
           <div className="cm-print-selected sm:col-span-2 lg:col-span-3">
             <span className="cm-var-label text-xs font-medium text-secondary">Catalog sizes used in search</span>
@@ -136,11 +138,109 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
   );
 }
 
+/**
+ * Pick original winding sizes + qty from the shared Cir Mills catalog.
+ */
+function OriginalWiresSelectModal({
+  open,
+  onClose,
+  catalog = [],
+  loading = false,
+  initialQtys = {},
+  onApply,
+}) {
+  const [qtyById, setQtyById] = useState({});
+
+  useEffect(() => {
+    if (!open) return;
+    setQtyById({ ...(initialQtys || {}) });
+  }, [open, initialQtys]);
+
+  const setQty = (id, raw) => {
+    const cleaned = String(raw ?? "").replace(/[^0-9.]/g, "");
+    setQtyById((prev) => ({ ...prev, [id]: cleaned }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const selections = [];
+    for (const row of catalog) {
+      const id = String(row.id || "");
+      const qty = num(qtyById[id]);
+      if (!id || !Number.isFinite(qty) || qty <= 0) continue;
+      selections.push({
+        id,
+        size: row.size,
+        circularMills: Number(row.circularMills) || 0,
+        qty,
+      });
+    }
+    onApply?.(selections);
+  };
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Select original wires"
+      size="lg"
+      width="min(640px, 96vw)"
+      height="min(80vh, 720px)"
+      zIndex={80}
+      actions={
+        <Button type="submit" form={ORIGINAL_WIRES_FORM_ID} variant="primary" size="sm">
+          Apply selection
+        </Button>
+      }
+    >
+      <form id={ORIGINAL_WIRES_FORM_ID} onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-3">
+        <p className="text-sm text-secondary">
+          Enter quantity for each size in the winding. Total circular mils = Cir. Mills × qty for all selected sizes.
+        </p>
+        {loading ? (
+          <p className="text-sm text-secondary">Loading Cir Mills table…</p>
+        ) : catalog.length === 0 ? (
+          <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
+        ) : (
+          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
+            <table className="w-full border-collapse text-sm">
+              <thead className="sticky top-0 z-[1] border-b border-border bg-form-bg">
+                <tr>
+                  <th className="px-2 py-2 text-left text-xs font-bold text-title">Wire size</th>
+                  <th className="px-2 py-2 text-right text-xs font-bold text-title">Cir. Mills</th>
+                  <th className="w-28 px-2 py-2 text-right text-xs font-bold text-title">Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {catalog.map((row) => (
+                  <tr key={row.id} className="border-b border-border last:border-b-0">
+                    <td className="px-2 py-1.5 tabular-nums font-semibold text-title">{row.size}</td>
+                    <td className="px-2 py-1.5 text-right tabular-nums text-secondary">{row.circularMills}</td>
+                    <td className="px-2 py-1">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={qtyById[row.id] ?? ""}
+                        onChange={(e) => setQty(row.id, e.target.value)}
+                        className="h-7 w-full rounded-none border border-border bg-primary/[0.04] px-1.5 text-right text-sm tabular-nums text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10"
+                        aria-label={`Quantity for size ${row.size}`}
+                        placeholder="0"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </form>
+    </Modal>
+  );
+}
+
 export default function CmBestMatchCalculator() {
   const toast = useToast();
   const formatDateTime = useFormatDateTime();
-  const [wireRows, setWireRows] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(() => new Set());
   const [originalWiredInHand, setOriginalWiredInHand] = useState("");
   const [originalWireSize, setOriginalWireSize] = useState("");
@@ -151,18 +251,19 @@ export default function CmBestMatchCalculator() {
   const [results, setResults] = useState([]);
   const [resultContext, setResultContext] = useState(null);
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
-  const [newSize, setNewSize] = useState("");
-  const [newCm, setNewCm] = useState("");
-  const [savingWire, setSavingWire] = useState(false);
+  const [cirMillsCatalog, setCirMillsCatalog] = useState([]);
+  const [cirMillsLoading, setCirMillsLoading] = useState(false);
+  const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
+  const [originalWireQtys, setOriginalWireQtys] = useState({});
 
-  const loadWires = useCallback(async () => {
-    setLoading(true);
+  const loadCirMills = useCallback(async () => {
+    setCirMillsLoading(true);
     try {
-      const res = await fetch("/api/dashboard/wire-sizes", { credentials: "include", cache: "no-store" });
+      const res = await fetch("/api/dashboard/cir-mills", { credentials: "include", cache: "no-store" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load");
-      const list = Array.isArray(data) ? data : [];
-      setWireRows(list);
+      if (!res.ok) throw new Error(data.error || "Failed to load Cir Mills");
+      const list = Array.isArray(data.items) ? data.items : [];
+      setCirMillsCatalog(list);
       setSelected((prev) => {
         const next = new Set();
         for (const row of list) {
@@ -171,16 +272,16 @@ export default function CmBestMatchCalculator() {
         return next;
       });
     } catch (e) {
-      toast.error(e.message || "Could not load wire sizes");
-      setWireRows([]);
+      toast.error(e.message || "Could not load Cir Mills table");
+      setCirMillsCatalog([]);
     } finally {
-      setLoading(false);
+      setCirMillsLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    loadWires();
-  }, [loadWires]);
+    loadCirMills();
+  }, [loadCirMills]);
 
   /** Scope print layout fixes to CM results only (see cm-best-match-print.css) */
   useEffect(() => {
@@ -199,6 +300,8 @@ export default function CmBestMatchCalculator() {
       window.removeEventListener("afterprint", onAfterPrint);
     };
   }, []);
+
+  const wireRows = cirMillsCatalog;
 
   const firstNIds = useMemo(() => wireRows.map((w) => w.id).filter(Boolean).slice(0, MAX_SELECT), [wireRows]);
 
@@ -251,6 +354,24 @@ export default function CmBestMatchCalculator() {
     });
   }, []);
 
+  const applyOriginalWireSelection = (selections) => {
+    const { display, totalQty, totalCm } = formatOriginalWireSelection(selections);
+    if (!display) {
+      toast.warning("Enter a quantity greater than zero for at least one wire size.");
+      return;
+    }
+    const nextQtys = {};
+    for (const s of selections) {
+      if (s.id) nextQtys[s.id] = String(s.qty);
+    }
+    setOriginalWireQtys(nextQtys);
+    setOriginalWireSize(display);
+    setOriginalWiredInHand(String(totalQty));
+    setOriginalCM(String(totalCm));
+    setTargetedCM(String(totalCm));
+    setOriginalWiresModalOpen(false);
+  };
+
   const runCalculate = () => {
     const t = num(targetedCM);
     const minW = Math.floor(num(minWires));
@@ -261,15 +382,15 @@ export default function CmBestMatchCalculator() {
       return;
     }
     if (!Number.isFinite(minW) || !Number.isFinite(maxW)) {
-      toast.warning("Enter valid min and max wire counts.");
+      toast.warning("Enter valid desired min and max wire counts.");
       return;
     }
     if (minW < 1 || maxW < minW) {
-      toast.warning("Min wires must be ≥ 1 and max wires must be ≥ min.");
+      toast.warning("Desired min wires must be ≥ 1 and desired max wires must be ≥ min.");
       return;
     }
     if (maxW > MAX_WIRES_CAP) {
-      toast.warning(`Max wires is capped at ${MAX_WIRES_CAP} for performance.`);
+      toast.warning(`Desired max wires is capped at ${MAX_WIRES_CAP} for performance.`);
       return;
     }
     if (selectedList.length === 0) {
@@ -303,89 +424,16 @@ export default function CmBestMatchCalculator() {
     }
   };
 
-  const addWire = async () => {
-    const size = newSize.trim();
-    const cm = num(newCm);
-    if (!size) {
-      toast.warning("Enter a wire size label (e.g. 18 or 18 AWG).");
-      return;
-    }
-    if (!Number.isFinite(cm) || cm <= 0) {
-      toast.warning("Enter a positive circular mils value.");
-      return;
-    }
-    setSavingWire(true);
-    try {
-      const res = await fetch("/api/dashboard/wire-sizes", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ size, circularMills: cm }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
-      setNewSize("");
-      setNewCm("");
-      await loadWires();
-      toast.success("Wire size added.");
-    } catch (e) {
-      toast.error(e.message || "Could not add wire size");
-    } finally {
-      setSavingWire(false);
-    }
-  };
-
-  const removeWire = async (id) => {
-    try {
-      const res = await fetch(`/api/dashboard/wire-sizes?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Remove failed");
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      await loadWires();
-      toast.success("Wire size removed.");
-    } catch (e) {
-      toast.error(e.message || "Could not remove");
-    }
-  };
-
   return (
     <div className="flex w-full max-w-[1600px] flex-col gap-6">
       <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
-        {/* Left: Wire catalog */}
+        {/* Left: Wire catalog (shared Cir Mills) */}
         <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
           <p className="mb-4 text-xs text-secondary">
-            Use <strong className="text-title">Select all</strong> then pick sizes to include. Up to {MAX_SELECT} selections.
+            Shared Cir Mills table. Use <strong className="text-title">Select all</strong> or pick sizes to include in the
+            search. Up to {MAX_SELECT} selections.
           </p>
-
-          <div className="mb-4 flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">
-            <Input
-              label="New size"
-              className="min-w-0 flex-1 sm:min-w-[100px]"
-              value={newSize}
-              onChange={(e) => setNewSize(e.target.value)}
-              placeholder="e.g. 19 or 18.5"
-            />
-            <Input
-              label="Circular mils"
-              className="w-full sm:w-32"
-              type="text"
-              inputMode="decimal"
-              value={newCm}
-              onChange={(e) => setNewCm(e.target.value)}
-              placeholder="12360"
-            />
-            <Button type="button" variant="outline" size="sm" onClick={addWire} disabled={savingWire} className="shrink-0">
-              {savingWire ? "Adding…" : "Add"}
-            </Button>
-          </div>
 
           {wireRows.length > 0 ? (
             <div className="mb-2">
@@ -393,24 +441,23 @@ export default function CmBestMatchCalculator() {
                 label="Select all"
                 checked={allCatalogSelected && firstNIds.length > 0}
                 onChange={toggleSelectAllCheckbox}
-                disabled={loading || wireRows.length === 0}
+                disabled={cirMillsLoading || wireRows.length === 0}
               />
             </div>
           ) : null}
 
-          {loading ? (
-            <p className="text-sm text-secondary">Loading wire sizes…</p>
+          {cirMillsLoading ? (
+            <p className="text-sm text-secondary">Loading Cir Mills table…</p>
           ) : wireRows.length === 0 ? (
-            <p className="text-sm text-secondary">Add wire sizes above to build your list (gauge + circular mils).</p>
+            <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
           ) : (
             <div className="min-h-[220px] max-h-[min(420px,calc(100vh-340px))] flex-1 overflow-auto rounded-md border border-border bg-bg">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 z-[1] border-b border-border bg-card">
                   <tr>
                     <th className="w-10 px-2 py-2 text-left" aria-label="Select" />
-                    <th className="px-3 py-2 text-left font-medium text-title">Size</th>
-                    <th className="px-3 py-2 text-right font-medium text-title">CM</th>
-                    <th className="w-12 px-2 py-2" aria-label="Delete" />
+                    <th className="px-3 py-2 text-left font-medium text-title">Wire size</th>
+                    <th className="px-3 py-2 text-right font-medium text-title">Cir. Mills</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -427,16 +474,6 @@ export default function CmBestMatchCalculator() {
                       </td>
                       <td className="px-3 py-2 tabular-nums text-title">{w.size}</td>
                       <td className="px-3 py-2 text-right tabular-nums text-secondary">{w.circularMills}</td>
-                      <td className="px-2 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => w.id && removeWire(w.id)}
-                          className="rounded p-1.5 text-secondary hover:bg-danger/10 hover:text-danger"
-                          aria-label={`Remove ${w.size}`}
-                        >
-                          <FiTrash2 className="h-4 w-4" />
-                        </button>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -478,14 +515,28 @@ export default function CmBestMatchCalculator() {
               onChange={(e) => setOriginalWiredInHand(e.target.value)}
               placeholder="10"
             />
-            <Input
-              label="Original Wire Size"
-              type="text"
-              inputMode="decimal"
-              value={originalWireSize}
-              onChange={(e) => setOriginalWireSize(e.target.value)}
-              placeholder="19"
-            />
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-title">Original Wire Size</span>
+                <button
+                  type="button"
+                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90"
+                  title="Select wire sizes and quantities"
+                  aria-label="Select original wire sizes"
+                  onClick={() => setOriginalWiresModalOpen(true)}
+                >
+                  <FiPlus className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              </div>
+              <input
+                type="text"
+                value={originalWireSize}
+                onChange={(e) => setOriginalWireSize(e.target.value)}
+                placeholder="e.g. 12.5 #8, 13.5 #6"
+                className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                aria-label="Original Wire Size"
+              />
+            </div>
             <Input
               label="Original CM"
               type="text"
@@ -503,14 +554,14 @@ export default function CmBestMatchCalculator() {
               placeholder="12360"
             />
             <Input
-              label="Min Wires"
+              label="Desired Min Wires"
               type="text"
               inputMode="numeric"
               value={minWires}
               onChange={(e) => setMinWires(e.target.value)}
             />
             <Input
-              label="Max Wires"
+              label="Desired Max Wires"
               type="text"
               inputMode="numeric"
               value={maxWires}
@@ -527,32 +578,24 @@ export default function CmBestMatchCalculator() {
               <div>
                 <dt className="font-medium text-title">Original Wires in Hand</dt>
                 <dd className="mt-0.5 text-secondary">
-                  Number of parallel conductors in the existing winding you are matching (for reference on the results
-                  sheet).
+                  Total conductor count from your original winding (auto-filled when you pick sizes with +).
                 </dd>
               </div>
               <div>
                 <dt className="font-medium text-title">Original Wire Size</dt>
                 <dd className="mt-0.5 text-secondary">
-                  Wire gauge or size label from the job (reference only; circular mils drive the math).
+                  Use <strong className="text-title">+</strong> to pick sizes and qty from the Cir Mills table. Shown as{" "}
+                  <span className="tabular-nums text-title">12.5 #8, 13.5 #6</span> (size # quantity).
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-title">Original CM</dt>
+                <dt className="font-medium text-title">Original CM / Targeted CM</dt>
                 <dd className="mt-0.5 text-secondary">
-                  Circular mils of the original conductor (from your catalog or wire tables). Shown on printouts with the
-                  other originals.
+                  Filled from Cir. Mills × qty for all selected original sizes. Targeted CM is the search goal (±10%).
                 </dd>
               </div>
               <div>
-                <dt className="font-medium text-title">Targeted CM</dt>
-                <dd className="mt-0.5 text-secondary">
-                  Total circular mils you want the new combination to land on. The tool searches within ±10% of this
-                  value using only sizes you selected in the catalog.
-                </dd>
-              </div>
-              <div>
-                <dt className="font-medium text-title">Min Wires / Max Wires</dt>
+                <dt className="font-medium text-title">Desired Min Wires / Desired Max Wires</dt>
                 <dd className="mt-0.5 text-secondary">
                   Allowed total conductor count in a combination (all wires in parallel, up to three different sizes).
                   Results stay between these limits.
@@ -562,6 +605,15 @@ export default function CmBestMatchCalculator() {
           </div>
         </section>
       </div>
+
+      <OriginalWiresSelectModal
+        open={originalWiresModalOpen}
+        onClose={() => setOriginalWiresModalOpen(false)}
+        catalog={cirMillsCatalog}
+        loading={cirMillsLoading}
+        initialQtys={originalWireQtys}
+        onApply={applyOriginalWireSelection}
+      />
 
       {results.length > 0 && resultContext ? (
         <Modal

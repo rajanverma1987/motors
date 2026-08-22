@@ -362,6 +362,14 @@ export function recordTypeDocumentLabel(recordType) {
   return "RFQ#";
 }
 
+/** Datasheet / compact headers — same labels with friendly Job# casing. */
+export function recordTypeJobNumberLabel(recordType) {
+  const t = String(recordType || RECORD_TYPE_RFQ).toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return "Invoice#";
+  if (t === RECORD_TYPE_JOB) return "Job#";
+  return "RFQ#";
+}
+
 /**
  * Resolve record type from Status.
  * Invoice only when Status is explicitly an invoice option (`invoice:` prefix)
