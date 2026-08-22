@@ -523,11 +523,6 @@ export default function InventoryPageClient() {
         title={usageFor ? `Work order usage — ${usageFor.name}` : "Usage"}
         size="4xl"
         headerClassName="min-w-0"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={closeUsage}>
-            Close
-          </Button>
-        }
       >
         {usageLoading ? (
           <p className="text-sm text-secondary">Loading…</p>

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/components/ui/modal";
 import Badge from "@/components/ui/badge";
-import Button from "@/components/ui/button";
 import { useToast } from "@/components/toast-provider";
 import { useFormatMoney } from "@/contexts/user-settings-context";
 
@@ -66,11 +65,6 @@ export default function QuoteQuickViewModal({ open, quoteId, onClose, zIndex = 9
       title={quote?.rfqNumber ? `RFQ ${quote.rfqNumber}` : "RFQ"}
       width="min(980px, 96vw)"
       zIndex={zIndex}
-      actions={
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       {loading ? (
         <p className="py-6 text-center text-secondary">Loading…</p>

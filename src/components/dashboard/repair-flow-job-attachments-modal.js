@@ -110,11 +110,6 @@ export default function RepairFlowJobAttachmentsModal({ open, onClose, jobId, jo
       title={title}
       size="lg"
       zIndex={100}
-      actions={
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       <div className="flex flex-col gap-4">
         <p className="text-sm text-secondary">

@@ -492,11 +492,6 @@ export default function InventoryPanel() {
         size="4xl"
         zIndex={125}
         headerClassName="min-w-0"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={closeUsage}>
-            Close
-          </Button>
-        }
       >
         {usageLoading ? (
           <p className="text-sm text-secondary">Loading…</p>

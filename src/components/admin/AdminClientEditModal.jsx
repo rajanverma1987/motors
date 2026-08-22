@@ -252,9 +252,6 @@ export default function AdminClientEditModal({ client = null, open, onClose, onS
       size="3xl"
       actions={
         <>
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={saving}>
-            Cancel
-          </Button>
           <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => submit(false)}>
             {saving ? (isCreate ? "Creating…" : "Saving…") : isCreate ? "Create" : "Save"}
           </Button>

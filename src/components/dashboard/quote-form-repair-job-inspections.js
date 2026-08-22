@@ -139,11 +139,6 @@ export default function QuoteFormRepairJobInspections({
         onClose={() => setViewingInspection(null)}
         title={viewTitle}
         size="lg"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => setViewingInspection(null)}>
-            Close
-          </Button>
-        }
       >
         {viewingInspection ? (
           <dl className="space-y-3 text-sm">

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
 import SimpleSelect from "@/components/simple/simple-select";
 import { Form } from "@/components/ui/form-layout";
@@ -19,6 +20,22 @@ import SimpleMotorLogisticsModal, {
 } from "@/components/simple/simple-motor-logistics-modal";
 import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
 import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
+import SimpleDoubleClickTextEditTextarea from "@/components/simple/simple-double-click-text-edit-textarea";
+import {
+  SIMPLE_BADGE_SM,
+  SIMPLE_CELL_INPUT,
+  SIMPLE_CELL_INPUT_MUTED,
+  SIMPLE_FIELD_INPUT,
+  SIMPLE_FIELD_LABEL,
+  SIMPLE_FIELD_TEXTAREA,
+  SIMPLE_LINE_CELL,
+  SIMPLE_LINE_HEAD,
+  SIMPLE_TABLE_HEAD,
+  SIMPLE_TABLE_TEXT,
+  SIMPLE_TOOLBAR_BTN,
+  SIMPLE_TOTAL_LABEL,
+  SIMPLE_TOTAL_INPUT,
+} from "@/lib/simple-typography";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -76,8 +93,18 @@ import {
 } from "@/lib/simple-datasheet-form";
 import {
   fetchSimpleServiceProposal,
+  listSimplePurchaseOrdersForJobApi,
 } from "@/lib/simple-portal-api";
 import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
+import {
+  getPoLineReceivingStatus,
+  isPoLineInactive,
+  normalizeReceivingStatus,
+  parsePoMoney,
+  poLineHasContent,
+  resolvePoStatus,
+  suggestReceivingStatus,
+} from "@/lib/simple-purchase-order-form";
 import {
   applyCustomerLogisticsChargeToOtherItems,
   motorLogisticsFormToStored,
@@ -86,21 +113,14 @@ import {
 const FORM_ID = "simple-service-proposal-form";
 const ADD_CUSTOMER_FORM_ID = "simple-sp-add-customer-form";
 
-const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
-const FIELD_TEXTAREA =
-  "w-full min-w-0 flex-1 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
-const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-const TOOLBAR_BTN = "h-9 shrink-0 rounded-none px-2.5 py-2 text-xs font-semibold";
-/** Line-item cells: square corners, flush packing (matches PO form tables). */
-const CELL_INPUT =
-  "h-8 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-[16px] font-bold text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
-/** Full cell grid — keep as complete class strings for Tailwind detection. */
-const LINE_CELL =
-  "border border-solid border-[hsl(var(--title)/0.35)] bg-card p-0 dark:border-[hsl(var(--title)/0.4)]";
-const LINE_HEAD =
-  "border border-solid border-[hsl(var(--title)/0.35)] bg-primary/[0.04] px-1 py-1.5 text-[16px] font-bold dark:border-[hsl(var(--title)/0.4)]";
-const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
+const FIELD_INPUT = SIMPLE_FIELD_INPUT;
+const FIELD_TEXTAREA = SIMPLE_FIELD_TEXTAREA;
+const FIELD_LABEL = SIMPLE_FIELD_LABEL;
+const TOOLBAR_BTN = SIMPLE_TOOLBAR_BTN;
+const CELL_INPUT = SIMPLE_CELL_INPUT;
+const LINE_CELL = SIMPLE_LINE_CELL;
+const LINE_HEAD = SIMPLE_LINE_HEAD;
+const CELL_INPUT_MUTED = SIMPLE_CELL_INPUT_MUTED;
 
 const MOTOR_FIELDS = [
   { key: "manufacturer", label: "Manufacturer" },
@@ -123,6 +143,62 @@ const QUOTE_TYPE_OPTIONS = [
   { value: "Walk-in", label: "Walk-in" },
   { value: "Other", label: "Other" },
 ]; // fallback; overridden from Settings → Dropdowns when available
+
+function poReceivingBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "cancelled" || s === "returned") return "danger";
+  if (s === "received") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+/** Flatten job POs into line rows for the service proposal PO table. */
+function buildProposalPoTableRows(purchaseOrders) {
+  const rows = [];
+  for (const po of Array.isArray(purchaseOrders) ? purchaseOrders : []) {
+    const poId = String(po?.id || "").trim();
+    const poNumber = String(po?.poNumber || "").trim() || "—";
+    const poStatus = resolvePoStatus(po?.lineItems);
+    const lines = (Array.isArray(po?.lineItems) ? po.lineItems : []).filter((line) =>
+      poLineHasContent(line)
+    );
+    if (lines.length === 0) {
+      if (poId) {
+        rows.push({
+          key: `${poId}-empty`,
+          poId,
+          poNumber,
+          itemName: "—",
+          qty: "—",
+          price: null,
+          itemStatus: "—",
+          poStatus,
+        });
+      }
+      continue;
+    }
+    lines.forEach((line, index) => {
+      const inactive = isPoLineInactive(line);
+      const itemStatus = inactive
+        ? getPoLineReceivingStatus(line)
+        : normalizeReceivingStatus(
+            line.receivingStatus || suggestReceivingStatus(line.quantity, line.receivedQty)
+          );
+      rows.push({
+        key: `${poId}-${line.id || index}`,
+        poId,
+        poNumber,
+        itemName: String(line.itemName || "").trim() || "—",
+        qty: String(line.quantity ?? "0"),
+        price: parsePoMoney(line.price),
+        itemStatus,
+        poStatus,
+        inactive,
+      });
+    });
+  }
+  return rows;
+}
 
 function FieldRow({
   label,
@@ -196,15 +272,15 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
   return (
     <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col bg-card">
       <div className="mt-[10px] flex items-center justify-between gap-2 bg-transparent px-2 py-1">
-        <h4 className="min-w-0 text-base font-bold uppercase tracking-wide text-black dark:text-title">
+        <h4 className="min-w-0 text-sm font-bold uppercase tracking-wide text-black dark:text-title">
           {title}
         </h4>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        <table className="w-full border-collapse border-spacing-0 text-[16px] font-bold text-title">
+        <table className={`w-full border-collapse border-spacing-0 ${SIMPLE_TABLE_TEXT} font-semibold`}>
           <thead>
-            <tr className="text-left text-[16px] font-bold text-title">
+            <tr className={`text-left ${SIMPLE_TABLE_HEAD}`}>
               <th className={LINE_HEAD}>Description</th>
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
               {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
@@ -278,7 +354,7 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-[16px] font-bold dark:border-[hsl(var(--title)/0.4)]">
+      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-sm font-semibold dark:border-[hsl(var(--title)/0.4)]">
         <span className="font-bold text-title">{totalLabel}</span>
         <input
           readOnly
@@ -325,6 +401,9 @@ export default function ServiceProposalFormModal({
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
+  const [purchaseOrderInitialPoId, setPurchaseOrderInitialPoId] = useState("");
+  const [jobPurchaseOrders, setJobPurchaseOrders] = useState([]);
+  const [loadingJobPurchaseOrders, setLoadingJobPurchaseOrders] = useState(false);
   const [logisticsOpen, setLogisticsOpen] = useState(false);
   const [logisticsTab, setLogisticsTab] = useState(KIND_RECEIVING);
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
@@ -671,6 +750,50 @@ export default function ServiceProposalFormModal({
   const canAddCommission = Boolean(recordId);
   const canCreatePurchaseOrder = Boolean(recordId && jobNumber);
 
+  const refreshJobPurchaseOrders = useCallback(async () => {
+    if (!recordId && !jobNumber) {
+      setJobPurchaseOrders([]);
+      return;
+    }
+    setLoadingJobPurchaseOrders(true);
+    try {
+      const items = await listSimplePurchaseOrdersForJobApi(recordId, jobNumber);
+      setJobPurchaseOrders(Array.isArray(items) ? items : []);
+    } catch {
+      setJobPurchaseOrders([]);
+    } finally {
+      setLoadingJobPurchaseOrders(false);
+    }
+  }, [recordId, jobNumber]);
+
+  useEffect(() => {
+    if (!open) {
+      setJobPurchaseOrders([]);
+      setLoadingJobPurchaseOrders(false);
+      return;
+    }
+    refreshJobPurchaseOrders();
+  }, [open, refreshJobPurchaseOrders]);
+
+  const proposalPoTableRows = useMemo(
+    () => buildProposalPoTableRows(jobPurchaseOrders),
+    [jobPurchaseOrders]
+  );
+
+  const openPurchaseOrderCreate = () => {
+    setPurchaseOrderInitialPoId("");
+    setPurchaseOrderMode("create");
+    setPurchaseOrderOpen(true);
+  };
+
+  const openPurchaseOrderView = (poId) => {
+    const id = String(poId || "").trim();
+    if (!id) return;
+    setPurchaseOrderInitialPoId(id);
+    setPurchaseOrderMode("view");
+    setPurchaseOrderOpen(true);
+  };
+
   const selectedCustomer = useMemo(
     () => customers.find((c) => c.id === form.customerId) || null,
     [customers, form.customerId]
@@ -945,7 +1068,7 @@ export default function ServiceProposalFormModal({
         onClose={() => !saving && !copying && onClose?.()}
         title={displayTitle}
         size="7xl"
-        width="min(1260px, 98vw)"
+        width="95vw"
         height="min(94vh, 920px)"
         showClose={!saving && !copying && !loadingRecord}
         closeOnOutsideClick={false}
@@ -1060,29 +1183,13 @@ export default function ServiceProposalFormModal({
               >
                 Receiving / Shipping
               </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canCreatePurchaseOrder || saving || copying}
-                title={
-                  canCreatePurchaseOrder
-                    ? "Create or view purchase orders for this job"
-                    : "Save the record (with JOB# / RFQ#) before opening purchase orders"
-                }
-                onClick={() => {
-                  setPurchaseOrderMode("create");
-                  setPurchaseOrderOpen(true);
-                }}
-              >
-                Create/View PO
-              </Button>
             </div>
           </div>
 
-          {/* Three equal columns: customer/motor | meta + status | notes */}
-          <div className="mb-2 grid grid-cols-1 gap-4 pt-3 lg:grid-cols-3">
+          {/* Three columns: customer/motor | meta + status | notes + PO lines (wider right) */}
+          <div
+            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)]"
+          >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
               <FieldRow label="Customer" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
@@ -1383,12 +1490,17 @@ export default function ServiceProposalFormModal({
                 </div>
               </FieldRow>
               {form.recordType === RECORD_TYPE_INVOICE ? (
-                <div className="mt-5 flex justify-end">
+                <FieldRow
+                  label=""
+                  labelWidth="9.5rem"
+                  controlClassName="min-w-0 flex-1"
+                  className="mt-5"
+                >
                   <Button
                     type="button"
                     variant="primary"
                     size="sm"
-                    className={TOOLBAR_BTN}
+                    className={`${TOOLBAR_BTN} w-full justify-center`}
                     onClick={() => setPaymentModalOpen(true)}
                     disabled={saving || copying}
                   >
@@ -1399,29 +1511,158 @@ export default function ServiceProposalFormModal({
                       </span>
                     ) : null}
                   </Button>
-                </div>
+                </FieldRow>
               ) : null}
             </div>
 
-            {/* Column 3 — notes */}
-            <div className="flex min-h-0 min-w-0 flex-col gap-3">
-              <div className="flex min-h-0 flex-1 flex-col gap-1">
-                <span className="text-xs font-bold text-title">Notes</span>
-                <textarea
-                  rows={10}
+            {/* Column 3 — notes + purchase orders */}
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-bold text-title">Internal Notes</span>
+                <SimpleDoubleClickTextEditTextarea
+                  label="Internal Notes"
+                  rows={2}
                   value={form.internalNotes}
-                  onChange={(e) => patch("internalNotes", e.target.value)}
-                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
+                  onChange={(next) => patch("internalNotes", next)}
+                  className={`${FIELD_TEXTAREA} !min-h-[3.25rem] !resize-y`}
+                  aria-label="Internal notes"
+                  zIndex={160}
                 />
               </div>
-              <div className="flex min-h-0 flex-1 flex-col gap-1">
+              <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-xs font-bold text-title">Customer Notes</span>
-                <textarea
-                  rows={10}
+                <SimpleDoubleClickTextEditTextarea
+                  label="Customer Notes"
+                  rows={2}
                   value={form.customerNotes}
-                  onChange={(e) => patch("customerNotes", e.target.value)}
-                  className={`${FIELD_TEXTAREA} min-h-[10rem] flex-1`}
+                  onChange={(next) => patch("customerNotes", next)}
+                  className={`${FIELD_TEXTAREA} !min-h-[3.25rem] !resize-y`}
+                  aria-label="Customer notes"
+                  zIndex={160}
                 />
+              </div>
+              <div className="flex min-w-0 flex-col gap-1.5 border-t border-border pt-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+                    Purchase orders
+                  </span>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={!canCreatePurchaseOrder || saving || copying}
+                    title={
+                      canCreatePurchaseOrder
+                        ? "Create a new purchase order for this job"
+                        : "Save the record (with JOB# / RFQ#) before creating purchase orders"
+                    }
+                    onClick={openPurchaseOrderCreate}
+                  >
+                    Create New PO
+                  </Button>
+                </div>
+                {loadingJobPurchaseOrders ? (
+                  <p className="py-3 text-center text-xs text-secondary">Loading purchase orders…</p>
+                ) : proposalPoTableRows.length === 0 ? (
+                  <p className="rounded-sm border border-dashed border-border px-3 py-4 text-center text-xs text-secondary">
+                    {canCreatePurchaseOrder
+                      ? "No purchase orders for this job yet."
+                      : "Save the record with a document number to see purchase orders."}
+                  </p>
+                ) : (
+                  <div className="max-h-52 overflow-y-auto overflow-x-hidden border border-border">
+                    <table className={`w-full table-fixed border-collapse ${SIMPLE_TABLE_TEXT}`}>
+                      <colgroup>
+                        <col className="w-[18%]" />
+                        <col className="w-[26%]" />
+                        <col className="w-[10%]" />
+                        <col className="w-[14%]" />
+                        <col className="w-[16%]" />
+                        <col className="w-[16%]" />
+                      </colgroup>
+                      <thead>
+                        <tr className="border-b border-border bg-primary/[0.06] dark:bg-primary/10">
+                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                            PO#
+                          </th>
+                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                            Item name
+                          </th>
+                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                            Qty
+                          </th>
+                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                            Price
+                          </th>
+                          <th className={`whitespace-nowrap border-r border-border px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                            Item Status
+                          </th>
+                          <th className={`whitespace-nowrap px-1.5 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
+                            PO Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {proposalPoTableRows.map((row) => (
+                          <tr
+                            key={row.key}
+                            className={`border-b border-border last:border-b-0 ${
+                              row.inactive ? "bg-danger/10 line-through text-secondary" : ""
+                            }`}
+                          >
+                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1">
+                              {row.poId ? (
+                                <button
+                                  type="button"
+                                  className="whitespace-nowrap font-medium text-primary hover:underline"
+                                  onClick={() => openPurchaseOrderView(row.poId)}
+                                  title="View purchase order"
+                                >
+                                  {row.poNumber}
+                                </button>
+                              ) : (
+                                row.poNumber
+                              )}
+                            </td>
+                            <td
+                              className="max-w-0 truncate border-r border-border px-1.5 py-1 text-title"
+                              title={row.itemName}
+                            >
+                              {row.itemName}
+                            </td>
+                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1 text-right tabular-nums text-title">
+                              {row.qty}
+                            </td>
+                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1 text-right tabular-nums text-title">
+                              {row.price == null ? "—" : formatMoney(row.price)}
+                            </td>
+                            <td className="whitespace-nowrap border-r border-border px-1.5 py-1">
+                              {row.itemStatus === "—" ? (
+                                "—"
+                              ) : (
+                                <Badge
+                                  variant={poReceivingBadgeVariant(row.itemStatus)}
+                                  className={SIMPLE_BADGE_SM}
+                                >
+                                  {row.itemStatus}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-1.5 py-1">
+                              <Badge
+                                variant={poReceivingBadgeVariant(row.poStatus)}
+                                className="rounded-full px-2 py-0.5 text-[10px]"
+                              >
+                                {row.poStatus}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1459,12 +1700,12 @@ export default function ServiceProposalFormModal({
                 <FieldRow
                   label="Total Amount"
                   labelWidth="9rem"
-                  labelClassName="!text-[16px] !font-bold"
+                  labelClassName={SIMPLE_TOTAL_LABEL}
                 >
                   <input
                     readOnly
                     value={formatMoney(totalAmount)}
-                    className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
+                    className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
                   />
                 </FieldRow>
                 {showTax ? (
@@ -1472,25 +1713,25 @@ export default function ServiceProposalFormModal({
                     <FieldRow
                       label="Tax%"
                       labelWidth="9rem"
-                      labelClassName="!text-[16px] !font-bold"
+                      labelClassName={SIMPLE_TOTAL_LABEL}
                     >
                       <input
                         type="text"
                         inputMode="decimal"
                         value={form.taxPercent}
                         onChange={(e) => patch("taxPercent", e.target.value)}
-                        className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
+                        className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
                       />
                     </FieldRow>
                     <FieldRow
                       label="Tax Amount"
                       labelWidth="9rem"
-                      labelClassName="!text-[16px] !font-bold"
+                      labelClassName={SIMPLE_TOTAL_LABEL}
                     >
                       <input
                         readOnly
                         value={formatMoney(taxAmount)}
-                        className={`${FIELD_INPUT} !h-8 text-right !text-[16px] font-bold tabular-nums`}
+                        className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
                       />
                     </FieldRow>
                   </>
@@ -1498,12 +1739,12 @@ export default function ServiceProposalFormModal({
                 <FieldRow
                   label="Total For Billing"
                   labelWidth="9rem"
-                  labelClassName="!text-[16px] !font-bold"
+                  labelClassName={SIMPLE_TOTAL_LABEL}
                 >
                   <input
                     readOnly
                     value={formatMoney(billingTotal)}
-                    className={`${FIELD_INPUT} !h-8 !bg-muted text-right !text-[16px] font-bold tabular-nums dark:!bg-card`}
+                    className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
                   />
                 </FieldRow>
               </div>
@@ -1521,11 +1762,18 @@ export default function ServiceProposalFormModal({
 
       <SimplePurchaseOrderFormModal
         open={purchaseOrderOpen}
-        onClose={() => setPurchaseOrderOpen(false)}
+        onClose={() => {
+          setPurchaseOrderOpen(false);
+          setPurchaseOrderInitialPoId("");
+        }}
         serviceProposalId={recordId}
         jobNumber={jobNumber}
         mode={purchaseOrderMode}
-        enableCreateViewTabs
+        initialPoId={purchaseOrderInitialPoId}
+        hideViewJobButton
+        onSaved={() => {
+          refreshJobPurchaseOrders();
+        }}
       />
 
       <SimpleMotorLogisticsModal

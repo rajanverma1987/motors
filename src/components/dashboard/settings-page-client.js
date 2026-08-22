@@ -19,7 +19,7 @@ import {
   mergeUserSettings,
 } from "@/lib/user-settings";
 import { resolveWorkspaceSmtpSecure } from "@/lib/workspace-smtp-fields";
-import { applyDashboardZoom } from "@/lib/apply-dashboard-zoom";
+import { applyDashboardDisplay } from "@/lib/apply-dashboard-zoom";
 import {
   DISPLAY_ZOOM_DEFAULT,
   DISPLAY_ZOOM_MAX,
@@ -27,6 +27,13 @@ import {
   DISPLAY_ZOOM_STEP,
   normalizeZoomLevel,
 } from "@/lib/display-zoom";
+import {
+  DISPLAY_FONT_SIZE_DEFAULT,
+  DISPLAY_FONT_SIZE_MAX,
+  DISPLAY_FONT_SIZE_MIN,
+  DISPLAY_FONT_SIZE_STEP,
+  normalizeFontSizeLevel,
+} from "@/lib/display-font-size";
 import {
   LOGO_DOCUMENT_SCALE_DEFAULT,
   LOGO_DOCUMENT_SCALE_MAX,
@@ -65,6 +72,8 @@ export default function SettingsPageClient() {
   const { settings: savedSettings, refresh: refreshContext } = useUserSettings();
   const savedZoomRef = useRef(savedSettings?.zoomLevel);
   savedZoomRef.current = savedSettings?.zoomLevel;
+  const savedFontRef = useRef(savedSettings?.fontSizeLevel);
+  savedFontRef.current = savedSettings?.fontSizeLevel;
   const [activeTab, setActiveTab] = useState("account");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -101,9 +110,16 @@ export default function SettingsPageClient() {
   /** Live preview on Display tab; revert to saved zoom when leaving settings without a full navigation remount. */
   useEffect(() => {
     if (loading) return;
-    applyDashboardZoom(draft.zoomLevel);
-    return () => applyDashboardZoom(savedZoomRef.current);
-  }, [draft.zoomLevel, loading]);
+    applyDashboardDisplay({
+      zoomLevel: draft.zoomLevel,
+      fontSizeLevel: draft.fontSizeLevel,
+    });
+    return () =>
+      applyDashboardDisplay({
+        zoomLevel: savedZoomRef.current,
+        fontSizeLevel: savedFontRef.current,
+      });
+  }, [draft.zoomLevel, draft.fontSizeLevel, loading]);
 
   const updateDraft = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
 
@@ -163,7 +179,10 @@ export default function SettingsPageClient() {
       setDraft(merged);
       setSmtpPasswordInput("");
       await refreshContext();
-      applyDashboardZoom(merged.zoomLevel);
+      applyDashboardDisplay({
+        zoomLevel: merged.zoomLevel,
+        fontSizeLevel: merged.fontSizeLevel,
+      });
       const nextUi = normalizePortalUi(merged.portalUi);
       if (previousUi !== nextUi) {
         window.location.assign(settingsPathForPortalUi(nextUi));
@@ -516,9 +535,10 @@ export default function SettingsPageClient() {
               <FormSectionTitle as="h2">Zoom level</FormSectionTitle>
               <p className="mb-4 max-w-[42rem] text-sm text-secondary">
                 Makes text and controls larger or smaller across the signed-in dashboard only (not your whole browser).
-                Drag the slider to preview; click Save changes to keep your setting.
+                Drag the slider to preview; click Save changes to keep your setting. Zoom affects overall layout; font
+                size scales text proportionally while keeping spacing closer to default.
               </p>
-              <div className="max-w-md">
+              <div className="max-w-md space-y-6">
                 <Slider
                   id="settings-display-zoom"
                   label="Zoom level"
@@ -533,6 +553,23 @@ export default function SettingsPageClient() {
                   }`}
                   onChange={(e) =>
                     updateDraft({ zoomLevel: normalizeZoomLevel(e.target.value) })
+                  }
+                />
+                <Slider
+                  id="settings-display-font-size"
+                  label="Font size"
+                  min={DISPLAY_FONT_SIZE_MIN}
+                  max={DISPLAY_FONT_SIZE_MAX}
+                  step={DISPLAY_FONT_SIZE_STEP}
+                  value={normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}
+                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${
+                    normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
+                    DISPLAY_FONT_SIZE_DEFAULT
+                      ? " (default)"
+                      : ""
+                  }`}
+                  onChange={(e) =>
+                    updateDraft({ fontSizeLevel: normalizeFontSizeLevel(e.target.value) })
                   }
                 />
               </div>
@@ -663,6 +700,7 @@ export default function SettingsPageClient() {
                     value={draft.smtpHost ?? ""}
                     onChange={(e) => updateDraft({ smtpHost: e.target.value })}
                     placeholder="smtp.gmail.com"
+                    help="Mail server hostname — not your email address."
                     autoComplete="off"
                   />
                   <Input
@@ -813,6 +851,7 @@ export default function SettingsPageClient() {
       draft.compactTables,
       draft.currency,
       draft.zoomLevel,
+      draft.fontSizeLevel,
       draft.leadEmailAlerts,
       draft.logoUrl,
       draft.logoDocumentScale,

@@ -27,6 +27,8 @@ export default function SimplePurchaseOrderPrintPreviewModal({
   po = null,
   vendor = null,
   sendMeta = null,
+  sendBodyExtra = null,
+  onSent = null,
   title = "Purchase order print preview",
 }) {
   const fmt = useFormatMoney();
@@ -120,8 +122,10 @@ export default function SimplePurchaseOrderPrintPreviewModal({
           toName: sendMeta?.toName || "",
           po,
           vendor,
+          ...(sendBodyExtra && typeof sendBodyExtra === "object" ? sendBodyExtra : {}),
         }}
-        onSent={() => {
+        onSent={(result) => {
+          onSent?.(result);
           setSendOpen(false);
           onClose?.();
         }}

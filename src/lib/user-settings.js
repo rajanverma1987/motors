@@ -14,6 +14,8 @@ export const USER_SETTINGS_DEFAULTS = {
   currency: "USD",
   /** UI zoom for dashboard only (75–150, step 5). 100 = default browser-like size. */
   zoomLevel: DISPLAY_ZOOM_DEFAULT,
+  /** Base font scale for dashboard only (75–150, step 5). 100 = default; scales rem-based text. */
+  fontSizeLevel: DISPLAY_FONT_SIZE_DEFAULT,
   /** Public path to uploaded shop logo (set via POST /api/dashboard/settings/logo only) */
   logoUrl: "",
   /** Logo size on printed documents and customer/vendor emails (50–300, step 10). 100 = current default. */
@@ -77,6 +79,7 @@ export const USER_SETTINGS_DEFAULTS = {
 };
 
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
+import { DISPLAY_FONT_SIZE_DEFAULT, normalizeFontSizeLevel } from "@/lib/display-font-size";
 import { LOGO_DOCUMENT_SCALE_DEFAULT, normalizeLogoDocumentScale } from "@/lib/logo-document-scale";
 import { normalizePortalUi } from "@/lib/portal-view";
 import { sanitizeDocumentNumberPrefix } from "@/lib/document-number-prefixes";
@@ -101,6 +104,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "weekStartsOn",
   "currency",
   "zoomLevel",
+  "fontSizeLevel",
   "logoDocumentScale",
   "workOrderStatuses",
   "shopFloorBoardOrder",
@@ -249,6 +253,7 @@ export function mergeUserSettings(stored) {
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
   merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
+  merged.fontSizeLevel = normalizeFontSizeLevel(merged.fontSizeLevel);
   merged.logoDocumentScale = normalizeLogoDocumentScale(merged.logoDocumentScale);
   merged.portalUi = normalizePortalUi(merged.portalUi);
   merged.workOrderStatusTileColors = normalizeWorkOrderStatusTileColors(
@@ -301,6 +306,10 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "zoomLevel") {
       out.zoomLevel = normalizeZoomLevel(body[key]);
+      continue;
+    }
+    if (key === "fontSizeLevel") {
+      out.fontSizeLevel = normalizeFontSizeLevel(body[key]);
       continue;
     }
     if (key === "logoDocumentScale") {

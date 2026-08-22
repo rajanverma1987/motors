@@ -2,20 +2,26 @@
 
 import { useEffect } from "react";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import { applyDashboardZoom, clearDashboardZoom } from "@/lib/apply-dashboard-zoom";
+import {
+  applyDashboardDisplay,
+  clearDashboardDisplay,
+} from "@/lib/apply-dashboard-zoom";
 
 /**
- * Applies per-account display zoom on the dashboard (html --app-zoom-factor + zoom when supported).
+ * Applies per-account display zoom and font size on the dashboard (html CSS variables).
  */
 export default function UserDisplayZoom() {
   const { settings, loading } = useUserSettings();
 
   useEffect(() => {
     if (loading) return;
-    applyDashboardZoom(settings?.zoomLevel);
-  }, [settings?.zoomLevel, loading]);
+    applyDashboardDisplay({
+      zoomLevel: settings?.zoomLevel,
+      fontSizeLevel: settings?.fontSizeLevel,
+    });
+  }, [settings?.zoomLevel, settings?.fontSizeLevel, loading]);
 
-  useEffect(() => () => clearDashboardZoom(), []);
+  useEffect(() => () => clearDashboardDisplay(), []);
 
   return null;
 }

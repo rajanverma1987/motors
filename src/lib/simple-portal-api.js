@@ -156,6 +156,22 @@ export async function createSimplePurchaseOrder(row) {
   return data.item;
 }
 
+export async function cancelSimplePurchaseOrderLines(id, payload) {
+  const data = await api(`${PO_API}/${encodeURIComponent(id)}/cancel-lines`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return data;
+}
+
+export async function returnSimplePurchaseOrderLines(id, payload) {
+  const data = await api(`${PO_API}/${encodeURIComponent(id)}/return-lines`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return data;
+}
+
 export async function updateSimplePurchaseOrder(id, row) {
   const data = await api(`${PO_API}/${encodeURIComponent(id)}`, {
     method: "PUT",

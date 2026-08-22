@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
+import { FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
 import Tabs from "@/components/ui/tabs";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimplePoLineCancellationModal from "@/components/simple/simple-po-line-cancellation-modal";
+import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-modal";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
@@ -38,9 +40,15 @@ import {
   suggestReceivingStatus,
   SIMPLE_PO_PAYMENT_METHOD_OPTIONS,
   SIMPLE_PO_RECEIVING_STATUS_OPTIONS,
+  SIMPLE_PO_RECEIVING_STATUS_CANCELLED,
+  SIMPLE_PO_RECEIVING_STATUS_RETURNED,
   SIMPLE_PO_TYPE_JOB,
   SIMPLE_PO_TYPE_OPTIONS,
   SIMPLE_PO_TYPE_SHOP,
+  isPoLineInactive,
+  canCancelPoLine,
+  canReturnPoLine,
+  poWasSentToVendor,
   storedPoToForm,
 } from "@/lib/simple-purchase-order-form";
 import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
@@ -48,10 +56,18 @@ import {
   fetchSimplePurchaseOrders,
   fetchSimpleServiceProposal,
   fetchSimpleServiceProposals,
+  cancelSimplePurchaseOrderLines,
+  returnSimplePurchaseOrderLines,
   listSimplePurchaseOrdersForJobApi,
   saveSimplePurchaseOrder,
 } from "@/lib/simple-portal-api";
 import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
+import {
+  SIMPLE_CELL_INPUT,
+  SIMPLE_FIELD_INPUT,
+  SIMPLE_FIELD_LABEL,
+  SIMPLE_FIELD_TEXTAREA,
+} from "@/lib/simple-typography";
 
 const TAB_PO = "purchase-order";
 const TAB_RECEIVING = "receiving";
@@ -66,14 +82,10 @@ const PO_MODAL_HEIGHT = "min(84.6vh, 828px)";
 /** Header row + ~10 body rows (h-7 cells). */
 const TABLE_SCROLL_MAX_CLASS = "max-h-[calc(2.25rem+10*2rem)]";
 
-const FIELD_INPUT =
-  "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
-const FIELD_TEXTAREA =
-  "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
-const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
-/** Line-item cells: square corners, flush packing. */
-const CELL_INPUT =
-  "h-7 w-full min-w-0 rounded-none border-0 bg-transparent px-1 text-xs text-title outline-none focus:bg-primary/[0.06] focus:ring-1 focus:ring-inset focus:ring-primary dark:focus:bg-primary/10 dark:text-title";
+const FIELD_INPUT = SIMPLE_FIELD_INPUT;
+const FIELD_TEXTAREA = SIMPLE_FIELD_TEXTAREA;
+const FIELD_LABEL = SIMPLE_FIELD_LABEL;
+const CELL_INPUT = `${SIMPLE_CELL_INPUT} !h-7 !font-normal`;
 const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
 
 function FieldRow({
@@ -83,9 +95,10 @@ function FieldRow({
   className = "",
   controlClassName = "",
   labelClassName = "",
+  style,
 }) {
   return (
-    <div className={`flex min-w-0 items-center gap-2.5 ${className}`}>
+    <div className={`flex min-w-0 items-center gap-2.5 ${className}`} style={style}>
       <label className={`${FIELD_LABEL} ${labelClassName}`} style={{ width: labelWidth }}>
         {label}
       </label>
@@ -97,6 +110,12 @@ function FieldRow({
 function formatMoney(n) {
   const value = Number.isFinite(n) ? n : 0;
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+/** Width in `ch` for compact read-only / select fields sized to label text. */
+function fitContentFieldWidthCh(text, { min = 10, max = 38, pad = 2 } = {}) {
+  const len = String(text || "—").trim().length;
+  return Math.min(max, Math.max(min, len + pad));
 }
 
 function lineHasContent(line) {
@@ -131,7 +150,7 @@ function applyPaymentFields(formLike, payments) {
  *   initialPoId?: string,
  *   defaultPoType?: "job" | "shop",
  *   allowPoTypeChange?: boolean,
- *   enableCreateViewTabs?: boolean,
+ *   hideViewJobButton?: boolean,
  *   onSaved?: (row: object) => void,
  * }} props
  */
@@ -144,7 +163,7 @@ export default function SimplePurchaseOrderFormModal({
   initialPoId = "",
   defaultPoType = SIMPLE_PO_TYPE_JOB,
   allowPoTypeChange = false,
-  enableCreateViewTabs = false,
+  hideViewJobButton = false,
   onSaved,
 }) {
   const alert = useAlert();
@@ -159,8 +178,7 @@ export default function SimplePurchaseOrderFormModal({
     });
     return fromSettings.length ? fromSettings : SIMPLE_PO_PAYMENT_METHOD_OPTIONS;
   }, [mergedSettings]);
-  const [workspaceTab, setWorkspaceTab] = useState(mode === "view" ? "view" : "create");
-  const isViewMode = enableCreateViewTabs ? workspaceTab === "view" : mode === "view";
+  const isViewMode = mode === "view";
   const jobView = useSimpleJobView();
 
   const [form, setForm] = useState(() => createEmptySimplePurchaseOrderForm());
@@ -183,13 +201,19 @@ export default function SimplePurchaseOrderFormModal({
   const [editPayment, setEditPayment] = useState(null);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [jobContext, setJobContext] = useState(null);
+  const [cancellationOpen, setCancellationOpen] = useState(false);
+  const [cancellationInitialLineIds, setCancellationInitialLineIds] = useState([]);
+  const [cancellingLines, setCancellingLines] = useState(false);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnInitialLineIds, setReturnInitialLineIds] = useState([]);
+  const [returningLine, setReturningLine] = useState(false);
 
   const poType = resolveSimplePoType(form);
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
   const showTypeSelect = allowPoTypeChange && !isViewMode;
   const poNumberEditable = !isViewMode && isShopPo;
   const showViewEmptyState =
-    enableCreateViewTabs && isViewMode && !loadingForm && jobPos.length === 0;
+    isViewMode && !loadingForm && jobPos.length === 0 && !String(form.id || "").trim();
 
   const vendorOptions = useMemo(
     () =>
@@ -198,6 +222,21 @@ export default function SimplePurchaseOrderFormModal({
         label: v.name || v.companyName || "Vendor",
       })),
     [vendors]
+  );
+
+  const selectedVendorLabel = useMemo(() => {
+    const found = vendorOptions.find((o) => String(o.value) === String(form.vendorId));
+    return found?.label || "Select vendor…";
+  }, [vendorOptions, form.vendorId]);
+
+  const customerNameFieldWidthCh = useMemo(
+    () => fitContentFieldWidthCh(jobContext?.companyName, { min: 12, max: 36 }),
+    [jobContext?.companyName]
+  );
+
+  const vendorFieldWidthCh = useMemo(
+    () => fitContentFieldWidthCh(selectedVendorLabel, { min: 14, max: 36, pad: 3 }),
+    [selectedVendorLabel]
   );
 
   const poSelectOptions = useMemo(
@@ -253,23 +292,29 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [open, form.serviceProposalId, serviceProposalId]);
 
-  const modalTitle = enableCreateViewTabs
-    ? `Purchase Orders${
-        jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
-      }`
-    : isViewMode
+  const modalTitle = isViewMode
+    ? isShopPo
+      ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
+      : `View Purchase Order${
+          jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
+        }`
+    : allowPoTypeChange
       ? isShopPo
-        ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
-        : `View Purchase Orders${
-            jobNumber || form.jobNumber ? ` for Job - ${jobNumber || form.jobNumber}` : ""
-          }`
-      : allowPoTypeChange
-        ? isShopPo
-          ? "New Shop Purchase Order"
-          : "New Job Purchase Order"
-        : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
-          ? "New Shop Purchase Order"
-          : `Purchase Order for Job - ${String(jobNumber || "").trim() || "—"}`;
+        ? "New Shop Purchase Order"
+        : "New Job Purchase Order"
+      : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
+        ? "New Shop Purchase Order"
+        : `New Purchase Order${
+            String(jobNumber || form.jobNumber || "").trim()
+              ? ` — Job ${jobNumber || form.jobNumber}`
+              : ""
+          }`;
+
+  const sentToVendorLabel = useMemo(() => {
+    if (!poWasSentToVendor(form)) return null;
+    const formatted = formatDate(form.sentToVendorAt);
+    return formatted ? `Sent to Vendor on ${formatted}` : "Sent to Vendor";
+  }, [form.sentToVendorAt, formatDate]);
 
   const loadJobOptionsFromApi = useCallback(async () => {
     try {
@@ -346,14 +391,11 @@ export default function SimplePurchaseOrderFormModal({
     setAttachmentsOpen(false);
     setLoadingForm(true);
     setForm(createEmptySimplePurchaseOrderForm());
-    const nextWorkspace = mode === "view" ? "view" : "create";
-    if (enableCreateViewTabs) setWorkspaceTab(nextWorkspace);
     (async () => {
       try {
         await loadJobOptionsFromApi();
         if (cancelled) return;
-        const viewMode = enableCreateViewTabs ? nextWorkspace === "view" : mode === "view";
-        if (viewMode) {
+        if (mode === "view") {
           const sid = String(serviceProposalId || "").trim();
           const job = String(jobNumber || "").trim();
           let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
@@ -390,7 +432,6 @@ export default function SimplePurchaseOrderFormModal({
   }, [
     open,
     mode,
-    enableCreateViewTabs,
     initialPoId,
     serviceProposalId,
     jobNumber,
@@ -398,46 +439,6 @@ export default function SimplePurchaseOrderFormModal({
     loadPoById,
     loadJobOptionsFromApi,
   ]);
-
-  const switchWorkspaceTab = useCallback(
-    async (tab) => {
-      const next = tab === "view" ? "view" : "create";
-      if (next === workspaceTab) return;
-      if (saving) return;
-      setWorkspaceTab(next);
-      setActiveTab(TAB_PO);
-      setPaymentDraft(emptyPoPayment());
-      setEditPayment(null);
-      setLoadingForm(true);
-      try {
-        if (next === "create") {
-          await startCreate();
-        } else {
-          const sid = String(serviceProposalId || "").trim();
-          const job = String(jobNumber || "").trim();
-          const scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
-          setJobPos(scoped);
-          if (scoped.length) {
-            const keepId = String(form.id || "").trim();
-            const pick =
-              (keepId && scoped.find((p) => String(p.id) === keepId)) || scoped[0];
-            loadPoById(pick.id, scoped);
-          } else {
-            setForm(
-              createEmptySimplePurchaseOrderForm({
-                poType: SIMPLE_PO_TYPE_JOB,
-                serviceProposalId: sid,
-                jobNumber: job,
-              })
-            );
-          }
-        }
-      } finally {
-        setLoadingForm(false);
-      }
-    },
-    [workspaceTab, saving, startCreate, serviceProposalId, jobNumber, form.id, loadPoById]
-  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -491,6 +492,130 @@ export default function SimplePurchaseOrderFormModal({
     });
   };
 
+  const handleLineRemoveClick = async (lineId) => {
+    const line = (form.lineItems || []).find((l) => l.id === lineId);
+    if (!line || isPoLineInactive(line)) return;
+    if (poWasSentToVendor(form) && String(form.id || "").trim()) {
+      if (!canCancelPoLine(line)) {
+        await alert({
+          title: "Cannot cancel",
+          message: "Only items with status Ordered can be cancelled. Received items must be returned from the Material Receiving tab.",
+          variant: "danger",
+        });
+        return;
+      }
+      setCancellationInitialLineIds([lineId]);
+      setCancellationOpen(true);
+      return;
+    }
+    removeLine(lineId);
+  };
+
+  const handleReturnLineClick = (line) => {
+    if (!line || !canReturnPoLine(line)) return;
+    setReturnInitialLineIds([line.id]);
+    setReturnOpen(true);
+  };
+
+  const handleReturnLineSubmit = async ({
+    lineIds,
+    returnTrackingNumber,
+    returnReason,
+    returnShippingCharge,
+    returnPaidBy,
+  }) => {
+    const poId = String(form.id || "").trim();
+    if (!poId || !lineIds?.length) return;
+    setReturningLine(true);
+    try {
+      const data = await returnSimplePurchaseOrderLines(poId, {
+        lineIds,
+        returnTrackingNumber,
+        returnReason,
+        returnShippingCharge,
+        returnPaidBy,
+      });
+      const saved = data?.item;
+      if (saved) {
+        setForm(storedPoToForm(saved));
+        const sid = String(saved.serviceProposalId || serviceProposalId || "").trim();
+        const job = String(saved.jobNumber || jobNumber || "").trim();
+        if (sid || job) {
+          const nextList = await listSimplePurchaseOrdersForJobApi(sid, job);
+          setJobPos(nextList);
+        }
+        onSaved?.(saved);
+      }
+      setReturnOpen(false);
+      setReturnInitialLineIds([]);
+      await alert({
+        title: "Returned",
+        message:
+          lineIds.length > 1
+            ? `${lineIds.length} items were marked as returned.`
+            : "The item was marked as returned.",
+      });
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Could not return item.",
+        variant: "danger",
+      });
+    } finally {
+      setReturningLine(false);
+    }
+  };
+
+  const handleCancelLinesSubmit = async ({
+    lineIds,
+    reason,
+    customMessage,
+    notifyVendor,
+  }) => {
+    const poId = String(form.id || "").trim();
+    if (!poId || !lineIds?.length) return;
+    setCancellingLines(true);
+    try {
+      const data = await cancelSimplePurchaseOrderLines(poId, {
+        lineIds,
+        reason,
+        customMessage,
+        notifyVendor,
+      });
+      if (data?.warning) {
+        await alert({ title: "Cancelled", message: data.warning });
+      }
+      const saved = data?.item;
+      if (saved) {
+        setForm(storedPoToForm(saved));
+        const sid = String(saved.serviceProposalId || serviceProposalId || "").trim();
+        const job = String(saved.jobNumber || jobNumber || "").trim();
+        if (sid || job) {
+          const nextList = await listSimplePurchaseOrdersForJobApi(sid, job);
+          setJobPos(nextList);
+        }
+        onSaved?.(saved);
+      }
+      setCancellationOpen(false);
+      if (!data?.warning) {
+        await alert({
+          title: notifyVendor ? "Cancelled & notified" : "Cancelled",
+          message: notifyVendor
+            ? "Selected items were cancelled. The vendor was notified if email is configured."
+            : "Selected items were cancelled.",
+        });
+      }
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Could not cancel items.",
+        variant: "danger",
+      });
+    } finally {
+      setCancellingLines(false);
+    }
+  };
+
   const handleSelectPo = (poId) => {
     setPaymentDraft(emptyPoPayment());
     setEditPayment(null);
@@ -506,6 +631,16 @@ export default function SimplePurchaseOrderFormModal({
   const contentLines = useMemo(
     () => (form.lineItems || []).filter((line) => lineHasContent(line)),
     [form.lineItems]
+  );
+
+  const receivingStatusEditOptions = useMemo(
+    () =>
+      SIMPLE_PO_RECEIVING_STATUS_OPTIONS.filter(
+        (o) =>
+          o.value !== SIMPLE_PO_RECEIVING_STATUS_CANCELLED &&
+          o.value !== SIMPLE_PO_RECEIVING_STATUS_RETURNED
+      ),
+    []
   );
 
   const paymentSummary = useMemo(
@@ -793,11 +928,7 @@ export default function SimplePurchaseOrderFormModal({
         setJobPos(nextList);
       }
       await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
-      if (enableCreateViewTabs && type === SIMPLE_PO_TYPE_JOB) {
-        setForm(storedPoToForm(saved));
-        setWorkspaceTab("view");
-        setActiveTab(TAB_PO);
-      } else if (!isViewMode) {
+      if (!isViewMode) {
         onClose?.();
       } else {
         setForm(storedPoToForm(saved));
@@ -856,6 +987,19 @@ export default function SimplePurchaseOrderFormModal({
         actions={
           showViewEmptyState ? null : (
           <>
+            {!showJobContextRow && sentToVendorLabel ? (
+              <div
+                className="mr-1 inline-flex min-h-7 shrink-0 items-center px-1 text-sm font-extrabold text-emerald-800 dark:text-emerald-400"
+                title={
+                  form.sentToVendorEmail
+                    ? `Email sent to ${form.sentToVendorEmail}`
+                    : undefined
+                }
+                role="status"
+              >
+                {sentToVendorLabel}
+              </div>
+            ) : null}
             <Button
               type="button"
               variant="outline"
@@ -872,7 +1016,7 @@ export default function SimplePurchaseOrderFormModal({
               <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
               Attachments
               {(form.vendorDocuments || []).length > 0 ? (
-                <Badge variant="primary" className="rounded-full px-1.5 py-0 text-[10px]">
+                <Badge variant="primary" className="rounded-full px-1.5 py-0 text-xs">
                   {(form.vendorDocuments || []).length}
                 </Badge>
               ) : null}
@@ -934,83 +1078,88 @@ export default function SimplePurchaseOrderFormModal({
           className="flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
           aria-hidden={loadingForm || undefined}
         >
-          {enableCreateViewTabs ? (
-            <div
-              role="tablist"
-              aria-label="Create or view purchase orders"
-              className="flex w-full max-w-full shrink-0 flex-wrap gap-1 rounded-lg border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
-            >
-              {[
-                { id: "create", label: "Create New PO" },
-                { id: "view", label: "View POs" },
-              ].map((tab) => {
-                const isActive = workspaceTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="tab"
-                    aria-selected={isActive}
-                    disabled={saving || loadingForm}
-                    className={`relative shrink-0 cursor-pointer rounded-md px-3.5 py-2 text-sm font-bold tracking-tight transition-[color,background-color,box-shadow] duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 ${
-                      isActive
-                        ? "bg-primary text-white shadow-sm"
-                        : "bg-primary/10 text-primary hover:bg-primary/15"
-                    }`}
-                    onClick={() => switchWorkspaceTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
           {showViewEmptyState ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-              <p className="text-base font-semibold text-title">No PO created for this job yet</p>
+              <p className="text-base font-semibold text-title">No purchase order found</p>
               <p className="max-w-sm text-sm text-secondary">
-                Use the Create New PO tab to add the first purchase order for this job.
+                This job has no purchase orders yet. Use Create New PO on the proposal form to add one.
               </p>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className="h-8"
-                onClick={() => switchWorkspaceTab("create")}
-              >
-                Create New PO
-              </Button>
             </div>
           ) : (
           <>
           {showJobContextRow ? (
-            <div className="flex w-full shrink-0 flex-wrap items-center gap-x-6 gap-y-2">
-              <p className="min-w-0 text-sm text-secondary">
-                Customer Name:{" "}
-                <span className="font-semibold text-title" title={jobContext?.companyName || ""}>
-                  {jobContext?.companyName || "—"}
-                </span>
-              </p>
-              <p className="text-sm text-secondary">
-                Proposal Amount:{" "}
-                <span className="font-semibold tabular-nums text-title">
-                  {jobContext && Number.isFinite(jobContext.amount)
-                    ? formatMoney(jobContext.amount)
-                    : "—"}
-                </span>
-              </p>
-              {!enableCreateViewTabs ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className="h-7 shrink-0"
-                  disabled={!linkedJobId || saving}
-                  onClick={handleViewJob}
-                >
-                  <FiEye className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  View Job
-                </Button>
+            <div className="flex w-full shrink-0 flex-wrap items-end gap-3">
+              <FieldRow
+                label="Customer Name"
+                labelWidth="100%"
+                labelClassName="!text-left !text-sm"
+                className="shrink-0 flex-col items-stretch gap-1"
+                controlClassName="w-full min-w-0"
+                style={{ width: `${customerNameFieldWidthCh}ch` }}
+              >
+                <input
+                  type="text"
+                  readOnly
+                  tabIndex={-1}
+                  value={jobContext?.companyName || "—"}
+                  title={jobContext?.companyName || ""}
+                  className={`${FIELD_INPUT} !bg-muted font-semibold`}
+                  aria-label="Customer Name"
+                />
+              </FieldRow>
+              <FieldRow
+                label="Proposal Amount"
+                labelWidth="100%"
+                labelClassName="!text-left !text-sm"
+                className="w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+                controlClassName="w-full min-w-0"
+              >
+                <input
+                  type="text"
+                  readOnly
+                  tabIndex={-1}
+                  value={
+                    jobContext && Number.isFinite(jobContext.amount)
+                      ? formatMoney(jobContext.amount)
+                      : "—"
+                  }
+                  className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
+                  aria-label="Proposal Amount"
+                />
+              </FieldRow>
+              {sentToVendorLabel || !hideViewJobButton ? (
+                <div className="ml-auto flex shrink-0 items-end gap-3 self-end">
+                  {sentToVendorLabel ? (
+                    <div
+                      className="text-right"
+                      title={
+                        form.sentToVendorEmail
+                          ? `Email sent to ${form.sentToVendorEmail}`
+                          : undefined
+                      }
+                    >
+                      <div
+                        className="inline-flex min-h-7 items-center px-1 text-right text-sm font-extrabold text-emerald-800 dark:text-emerald-400"
+                        role="status"
+                      >
+                        {sentToVendorLabel}
+                      </div>
+                    </div>
+                  ) : null}
+                  {!hideViewJobButton ? (
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      className="h-7 shrink-0"
+                      disabled={!linkedJobId || saving}
+                      onClick={handleViewJob}
+                    >
+                      <FiEye className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      View Job
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
@@ -1103,11 +1252,11 @@ export default function SimplePurchaseOrderFormModal({
               label="Vendor"
               labelWidth="100%"
               labelClassName="!text-left"
-              className="min-w-[14rem] flex-1 flex-col items-stretch gap-1"
-              controlClassName="w-full min-w-0"
+              className="shrink-0 flex-col items-stretch gap-1"
+              controlClassName="w-fit min-w-0"
             >
               <div className="flex min-w-0 items-center gap-1.5">
-                <div className="min-w-0 flex-1">
+                <div className="shrink-0" style={{ width: `${vendorFieldWidthCh}ch` }}>
                   <SimpleSelect
                     options={vendorOptions}
                     value={form.vendorId}
@@ -1196,18 +1345,31 @@ export default function SimplePurchaseOrderFormModal({
                         <tbody>
                           {(form.lineItems || []).map((line, idx) => {
                             const t = computePoLineTotals(line);
+                            const inactive = isPoLineInactive(line);
                             const canRemove =
+                              !inactive &&
                               (form.lineItems || []).length > 1 &&
-                              (idx < (form.lineItems || []).length - 1 || lineHasContent(line));
+                              (idx < (form.lineItems || []).length - 1 || lineHasContent(line)) &&
+                              (!poWasSentToVendor(form) || !String(form.id || "").trim() || canCancelPoLine(line));
+                            const rowClass = inactive
+                              ? "border-t border-border bg-danger/10 line-through"
+                              : "border-t border-border bg-card";
+                            const cellInputClass = inactive
+                              ? `${CELL_INPUT} !bg-danger/5 line-through pointer-events-none text-secondary`
+                              : CELL_INPUT;
+                            const cellMutedClass = inactive
+                              ? `${CELL_INPUT_MUTED} line-through text-secondary`
+                              : `${CELL_INPUT_MUTED} text-right tabular-nums`;
                             return (
-                              <tr key={line.id} className="border-t border-border bg-card">
+                              <tr key={line.id} className={rowClass}>
                                 <td className="border-r border-border p-0">
                                   <input
                                     type="text"
                                     value={line.itemName}
                                     onChange={(e) => patchLine(line.id, "itemName", e.target.value)}
-                                    className={CELL_INPUT}
-                                    disabled={saving}
+                                    className={cellInputClass}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1215,8 +1377,9 @@ export default function SimplePurchaseOrderFormModal({
                                     type="text"
                                     value={line.uom}
                                     onChange={(e) => patchLine(line.id, "uom", e.target.value)}
-                                    className={CELL_INPUT}
-                                    disabled={saving}
+                                    className={cellInputClass}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1225,8 +1388,9 @@ export default function SimplePurchaseOrderFormModal({
                                     inputMode="decimal"
                                     value={line.quantity}
                                     onChange={(e) => patchLine(line.id, "quantity", e.target.value)}
-                                    className={`${CELL_INPUT} text-right tabular-nums`}
-                                    disabled={saving}
+                                    className={`${cellInputClass} text-right tabular-nums`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1235,8 +1399,9 @@ export default function SimplePurchaseOrderFormModal({
                                     inputMode="decimal"
                                     value={line.price}
                                     onChange={(e) => patchLine(line.id, "price", e.target.value)}
-                                    className={`${CELL_INPUT} text-right tabular-nums`}
-                                    disabled={saving}
+                                    className={`${cellInputClass} text-right tabular-nums`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1244,7 +1409,7 @@ export default function SimplePurchaseOrderFormModal({
                                     type="text"
                                     readOnly
                                     value={formatMoney(t.total)}
-                                    className={`${CELL_INPUT_MUTED} text-right tabular-nums`}
+                                    className={cellMutedClass}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1253,8 +1418,9 @@ export default function SimplePurchaseOrderFormModal({
                                     inputMode="decimal"
                                     value={line.taxPercent}
                                     onChange={(e) => patchLine(line.id, "taxPercent", e.target.value)}
-                                    className={`${CELL_INPUT} text-right tabular-nums`}
-                                    disabled={saving}
+                                    className={`${cellInputClass} text-right tabular-nums`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1262,7 +1428,7 @@ export default function SimplePurchaseOrderFormModal({
                                     type="text"
                                     readOnly
                                     value={formatMoney(t.taxAmount)}
-                                    className={`${CELL_INPUT_MUTED} text-right tabular-nums`}
+                                    className={cellMutedClass}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1270,7 +1436,7 @@ export default function SimplePurchaseOrderFormModal({
                                     type="text"
                                     readOnly
                                     value={formatMoney(t.grandTotal)}
-                                    className={`${CELL_INPUT_MUTED} text-right font-semibold tabular-nums`}
+                                    className={`${cellMutedClass} font-semibold`}
                                   />
                                 </td>
                                 <td className="p-0 text-center">
@@ -1278,9 +1444,9 @@ export default function SimplePurchaseOrderFormModal({
                                     <button
                                       type="button"
                                       className="rounded-none p-0.5 text-danger hover:bg-danger/10"
-                                      title="Remove line"
-                                      aria-label="Remove line"
-                                      onClick={() => removeLine(line.id)}
+                                      title={poWasSentToVendor(form) ? "Cancel line" : "Remove line"}
+                                      aria-label={poWasSentToVendor(form) ? "Cancel line" : "Remove line"}
+                                      onClick={() => handleLineRemoveClick(line.id)}
                                       disabled={saving}
                                     >
                                       <FiX className="h-3.5 w-3.5" aria-hidden />
@@ -1401,15 +1567,22 @@ export default function SimplePurchaseOrderFormModal({
                               <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Ordered Qty</th>
                               <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Received Qty</th>
                               <th className="w-40 border-r border-border px-1 py-1 text-left font-semibold">Receiving Status</th>
-                              <th className="w-36 px-1 py-1 text-left font-semibold">Received Date</th>
+                              <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Received Date</th>
+                              <th className="w-16 px-1 py-1 text-center font-semibold">Return</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {contentLines.map((line) => (
-                              <tr key={line.id} className="border-t border-border bg-card">
-                                <td className="border-r border-border px-1 py-1 text-title">{line.itemName || "—"}</td>
-                                <td className="border-r border-border px-1 py-1 text-title">{line.uom || "—"}</td>
-                                <td className="border-r border-border px-1 py-1 text-right tabular-nums text-title">
+                            {contentLines.map((line) => {
+                              const inactive = isPoLineInactive(line);
+                              const canReturn = canReturnPoLine(line) && String(form.id || "").trim();
+                              const rowClass = inactive
+                                ? "border-t border-border bg-danger/10 line-through text-secondary"
+                                : "border-t border-border bg-card";
+                              return (
+                              <tr key={line.id} className={rowClass}>
+                                <td className="border-r border-border px-1 py-1">{line.itemName || "—"}</td>
+                                <td className="border-r border-border px-1 py-1">{line.uom || "—"}</td>
+                                <td className="border-r border-border px-1 py-1 text-right tabular-nums">
                                   {line.quantity || "0"}
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1418,30 +1591,51 @@ export default function SimplePurchaseOrderFormModal({
                                     inputMode="decimal"
                                     value={line.receivedQty ?? "0"}
                                     onChange={(e) => patchLine(line.id, "receivedQty", e.target.value)}
-                                    className={`${CELL_INPUT} text-right tabular-nums`}
-                                    disabled={saving}
+                                    className={`${CELL_INPUT} text-right tabular-nums ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border px-1 py-0.5">
                                   <SimpleSelect
-                                    options={SIMPLE_PO_RECEIVING_STATUS_OPTIONS}
+                                    options={
+                                      inactive
+                                        ? SIMPLE_PO_RECEIVING_STATUS_OPTIONS
+                                        : receivingStatusEditOptions
+                                    }
                                     value={line.receivingStatus || "Ordered"}
                                     onChange={(e) => patchLine(line.id, "receivingStatus", e.target.value)}
-                                    disabled={saving}
+                                    disabled={saving || inactive}
                                     aria-label={`Receiving status for ${line.itemName || "line"}`}
                                   />
                                 </td>
-                                <td className="p-0">
+                                <td className="border-r border-border p-0">
                                   <input
                                     type="date"
                                     value={String(line.receivedDate || "").slice(0, 10)}
                                     onChange={(e) => patchLine(line.id, "receivedDate", e.target.value)}
-                                    className={CELL_INPUT}
-                                    disabled={saving}
+                                    className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
+                                <td className="p-0 text-center">
+                                  {canReturn ? (
+                                    <button
+                                      type="button"
+                                      className="rounded-none p-0.5 text-primary hover:bg-primary/10"
+                                      title="Return item to vendor"
+                                      aria-label={`Return ${line.itemName || "line"}`}
+                                      onClick={() => handleReturnLineClick(line)}
+                                      disabled={saving || returningLine}
+                                    >
+                                      <FiCornerUpLeft className="h-3.5 w-3.5" aria-hidden />
+                                    </button>
+                                  ) : null}
+                                </td>
                               </tr>
-                            ))}
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -1746,14 +1940,9 @@ export default function SimplePurchaseOrderFormModal({
         width="min(32rem, 96vw)"
         closeOnOutsideClick={false}
         actions={
-          <>
-            <Button type="button" variant="secondary" size="sm" onClick={() => setEditPayment(null)}>
-              Cancel
-            </Button>
-            <Button type="submit" form={EDIT_PAYMENT_FORM_ID} variant="primary" size="sm">
-              Save
-            </Button>
-          </>
+          <Button type="submit" form={EDIT_PAYMENT_FORM_ID} variant="primary" size="sm">
+            Save
+          </Button>
         }
       >
         {editPayment ? (
@@ -1811,6 +2000,32 @@ export default function SimplePurchaseOrderFormModal({
         ) : null}
       </Modal>
 
+      <SimplePoLineCancellationModal
+        open={cancellationOpen}
+        onClose={() => setCancellationOpen(false)}
+        poNumber={form.poNumber}
+        lines={(form.lineItems || []).filter((line) => lineHasContent(line))}
+        initialLineIds={cancellationInitialLineIds}
+        busy={cancellingLines}
+        onSubmit={handleCancelLinesSubmit}
+      />
+
+      <SimplePoLineReturnModal
+        open={returnOpen}
+        onClose={() => {
+          if (returningLine) return;
+          setReturnOpen(false);
+          setReturnInitialLineIds([]);
+        }}
+        poNumber={form.poNumber}
+        lines={(form.lineItems || []).filter((line) => lineHasContent(line))}
+        initialLineIds={returnInitialLineIds}
+        vendorName={selectedVendor?.name || selectedVendor?.companyName || form.vendorName || ""}
+        companyName={user?.shopName || ""}
+        busy={returningLine}
+        onSubmit={handleReturnLineSubmit}
+      />
+
       <SimplePurchaseOrderPrintPreviewModal
         open={printOpen}
         onClose={() => {
@@ -1822,6 +2037,15 @@ export default function SimplePurchaseOrderFormModal({
         po={printPo}
         vendor={printVendor}
         sendMeta={printSendMeta}
+        sendBodyExtra={{ poId: String(form.id || printPo?.id || "").trim() }}
+        onSent={(meta) => {
+          const sentAt = new Date().toISOString();
+          setForm((f) => ({
+            ...f,
+            sentToVendorAt: sentAt,
+            sentToVendorEmail: meta?.toEmail || f.sentToVendorEmail || "",
+          }));
+        }}
         title={
           printPo?.poNumber
             ? `Purchase order ${printPo.poNumber}`

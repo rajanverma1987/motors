@@ -6,23 +6,23 @@ import Modal from "@/components/ui/modal";
 import Textarea from "@/components/ui/textarea";
 
 /**
- * Normal text input; double-click opens a larger textarea modal to edit/save.
+ * Normal textarea; double-click opens a larger textarea modal to edit/save.
  */
-export default function SimpleDoubleClickTextEditInput({
+export default function SimpleDoubleClickTextEditTextarea({
   value = "",
   onChange,
   label = "Edit field",
   placeholder = "",
   className = "",
   disabled = false,
-  rows = 8,
+  rows = 2,
+  modalRows = 8,
   zIndex = 160,
-  inputMode,
   "aria-label": ariaLabel,
   ...rest
 }) {
   const uid = useId();
-  const formId = `dbl-edit-${uid.replace(/:/g, "")}`;
+  const formId = `dbl-edit-textarea-${uid.replace(/:/g, "")}`;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -52,12 +52,11 @@ export default function SimpleDoubleClickTextEditInput({
 
   return (
     <>
-      <input
-        type="text"
+      <textarea
         value={text}
         placeholder={placeholder}
         disabled={disabled}
-        inputMode={inputMode}
+        rows={rows}
         aria-label={ariaLabel || label}
         title={disabled ? undefined : "Double-click to edit in a larger box"}
         className={className}
@@ -86,7 +85,7 @@ export default function SimpleDoubleClickTextEditInput({
             label={label}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            rows={rows}
+            rows={modalRows}
             placeholder={placeholder || "Enter value…"}
             textareaClassName="min-h-[10rem]"
           />

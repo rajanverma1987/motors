@@ -19,10 +19,26 @@ export function resolveWorkspaceSmtpSecure(port, smtpSecure) {
   return smtpSecure === true;
 }
 
+/** @param {string} host */
+export function validateWorkspaceSmtpHost(host) {
+  const h = String(host || "").trim();
+  if (!h) return "SMTP host is required.";
+  if (h.includes("@")) {
+    return "SMTP host must be a server name (e.g. smtp.gmail.com or mail.yourshop.com), not an email address. Put your email in SMTP username and From email.";
+  }
+  if (/\s/.test(h)) {
+    return "SMTP host cannot contain spaces.";
+  }
+  return null;
+}
+
 /** @param {unknown} err */
 export function humanizeSmtpConnectionError(err) {
   const msg = String(err?.message || err || "").trim();
   if (!msg) return "SMTP connection failed.";
+  if (msg.includes("ENOTFOUND") || msg.includes("getaddrinfo")) {
+    return "Could not find the SMTP server. SMTP host must be a server name like smtp.gmail.com or mail.yourshop.com — not your email address.";
+  }
   if (msg.includes("wrong version number") || msg.includes("0A00010B")) {
     return "SSL/TLS settings do not match the port. Use port 587 with “Use SSL/TLS” off (STARTTLS), or port 465 with it on.";
   }

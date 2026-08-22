@@ -1,6 +1,6 @@
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { formatDateForCurrency } from "@/lib/format-date";
-import { parsePoMoney } from "@/lib/simple-purchase-order-form";
+import { isPoLineInactive, parsePoMoney } from "@/lib/simple-purchase-order-form";
 
 /**
  * Map Simple PO form (+ vendor / settings) to Classic PoPrintSheetBody shape.
@@ -20,10 +20,11 @@ export function buildSimplePurchaseOrderPrintPayload({
   const lines = (Array.isArray(form?.lineItems) ? form.lineItems : [])
     .filter(
       (line) =>
-        String(line?.itemName ?? "").trim() ||
-        parsePoMoney(line?.quantity) ||
-        parsePoMoney(line?.price) ||
-        parsePoMoney(line?.taxPercent)
+        !isPoLineInactive(line) &&
+        (String(line?.itemName ?? "").trim() ||
+          parsePoMoney(line?.quantity) ||
+          parsePoMoney(line?.price) ||
+          parsePoMoney(line?.taxPercent))
     )
     .map((line) => ({
       description: String(line.itemName || "").trim(),

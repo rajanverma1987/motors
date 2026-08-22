@@ -5,6 +5,7 @@ import {
   workspaceSmtpIsComplete,
   resolveWorkspaceSmtpSecure,
   humanizeSmtpConnectionError,
+  validateWorkspaceSmtpHost,
 } from "@/lib/workspace-smtp-fields";
 
 const platformFrom = process.env.EMAIL_FROM || process.env.SMTP_USER || "";
@@ -77,6 +78,10 @@ export function resolveCustomerMailDelivery(mergedSettings, shopCompanyName = ""
 
 /** @param {ReturnType<typeof normalizeWorkspaceSmtpFields>} cfg */
 export async function verifyWorkspaceSmtpConnection(cfg) {
+  const hostError = validateWorkspaceSmtpHost(cfg?.smtpHost);
+  if (hostError) {
+    return { ok: false, error: hostError };
+  }
   const transport = createWorkspaceSmtpTransport(cfg);
   if (!transport) {
     return {

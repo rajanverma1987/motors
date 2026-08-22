@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Base font size; --app-zoom-factor from Settings → Display scales rem-based UI (all browsers) */
+/* Base font size; Settings → Display scales via --app-zoom-factor and --app-font-scale-factor */
 html {
-  font-size: calc(95% * var(--app-zoom-factor, 1));
+  font-size: calc(95% * var(--app-zoom-factor, 1) * var(--app-font-scale-factor, 1));
 }
 
 /* Design system theme tokens (HSL values without hsl()) */
@@ -435,6 +435,9 @@ html.dark .simple-portal .simple-settings-nav {
   }
   html[data-app-zoom] {
     --app-zoom-factor: 1 !important;
+  }
+  html[data-app-font-size] {
+    --app-font-scale-factor: 1 !important;
   }
   /* Force light design tokens even when html still has .dark */
   html.dark {

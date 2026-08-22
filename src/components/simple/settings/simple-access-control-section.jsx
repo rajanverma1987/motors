@@ -403,14 +403,9 @@ export default function SimpleAccessControlSection() {
         title={editingPolicy ? "Edit policy" : "Add policy"}
         size="4xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" form="simple-policy-form" variant="primary" size="sm" disabled={saving}>
-              {saving ? "Saving…" : editingPolicy ? "Update" : "Create"}
-            </Button>
-          </>
+          <Button type="submit" form="simple-policy-form" variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : editingPolicy ? "Update" : "Create"}
+          </Button>
         }
       >
         <Form

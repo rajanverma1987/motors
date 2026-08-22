@@ -46,14 +46,9 @@ function DeleteClientModal({ client, open, onClose, onDeleted }) {
       title="Delete client permanently?"
       size="3xl"
       actions={
-        <>
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={loading}>
-            {loading ? "Deleting…" : "Delete permanently"}
-          </Button>
-        </>
+        <Button type="button" variant="danger" size="sm" onClick={handleDelete} disabled={loading}>
+          {loading ? "Deleting…" : "Delete permanently"}
+        </Button>
       }
     >
       <p className="text-sm text-secondary">

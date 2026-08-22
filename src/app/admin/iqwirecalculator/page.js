@@ -472,14 +472,9 @@ export default function AdminIqWireCalculatorPage() {
         title={editAccount ? `Edit ${editAccount.email}` : "Edit client"}
         size="md"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditAccount(null)} disabled={editSaving}>
-              Cancel
-            </Button>
-            <Button type="submit" form="iqwire-account-edit-form" variant="primary" size="sm" disabled={editSaving}>
-              {editSaving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="iqwire-account-edit-form" variant="primary" size="sm" disabled={editSaving}>
+            {editSaving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         {editAccount ? (
@@ -516,14 +511,9 @@ export default function AdminIqWireCalculatorPage() {
         title="Add IQWireCalculator account"
         size="md"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setCreateOpen(false)} disabled={createSaving}>
-              Cancel
-            </Button>
-            <Button type="submit" form="iqwire-account-create-form" variant="primary" size="sm" disabled={createSaving}>
-              {createSaving ? "Creating…" : "Create"}
-            </Button>
-          </>
+          <Button type="submit" form="iqwire-account-create-form" variant="primary" size="sm" disabled={createSaving}>
+            {createSaving ? "Creating…" : "Create"}
+          </Button>
         }
       >
         <Form id="iqwire-account-create-form" onSubmit={saveCreate} className="flex flex-col gap-4 !space-y-0">

@@ -464,14 +464,9 @@ export default function SimpleMarketplaceSection() {
         title={editingId ? "Edit listing" : "New listing"}
         size="2xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeModal} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" form="simple-mp-item-form" variant="primary" size="sm" disabled={saving}>
-              {saving ? "Saving…" : editingId ? "Update" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form="simple-mp-item-form" variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : editingId ? "Update" : "Save"}
+          </Button>
         }
       >
         <Form id="simple-mp-item-form" onSubmit={submitItem} className="flex flex-col gap-3 !space-y-0">

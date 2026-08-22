@@ -184,16 +184,11 @@ export default function VendorViewModal({
       size="4xl"
       zIndex={zIndex}
       actions={
-        <>
-          {onEdit && vendor ? (
-            <Button type="button" variant="outline" size="sm" onClick={() => onEdit(vendor)}>
-              Edit
-            </Button>
-          ) : null}
-          <Button type="button" variant="outline" size="sm" onClick={onClose}>
-            Close
+        onEdit && vendor ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => onEdit(vendor)}>
+            Edit
           </Button>
-        </>
+        ) : null
       }
     >
       {loading ? (

@@ -239,11 +239,17 @@ export default function Table({
   const cellPy = isCompact ? "py-1" : "py-1.5";
   /** Header stays roomier than body cells so column titles remain scannable. */
   const headerPy = isCompact ? "py-1.5" : "py-2";
-  /** Default dense=15px / normal=17px; textSize "xs"|"sm" matches controls like status pills. */
+  /** Default dense=xs / normal=sm; textSize "xs"|"sm" overrides. */
   const cellText =
-    textSize === "xs" ? "text-xs" : textSize === "sm" ? "text-sm" : isCompact ? "text-[15px]" : "text-[17px]";
+    textSize === "xs" ? "text-xs" : textSize === "sm" ? "text-sm" : isCompact ? "text-xs" : "text-sm";
   const headerText =
-    textSize === "xs" ? "text-xs" : textSize === "sm" ? "text-sm" : isCompact ? "text-[12px]" : "text-[13px]";
+    textSize === "xs"
+      ? "text-xs font-semibold"
+      : textSize === "sm"
+        ? "text-sm font-semibold"
+        : isCompact
+          ? "text-xs font-semibold"
+          : "text-sm font-semibold";
   const actionPad = isCompact ? "p-0.5" : "p-1";
   const actionIcon = isCompact ? "h-3.5 w-3.5" : "h-4 w-4";
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { connectDB } from "@/lib/db";
+import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { getWorkspaceSmtpDeliveryNotice } from "@/lib/workspace-smtp-fields";
@@ -10,6 +10,8 @@ import { parseCcEmailList } from "@/lib/send-document-custom-message";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
 import { getTransporter } from "@/lib/email-transport";
+import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
+import { isValidSimplePortalId } from "@/lib/simple-portal-mongo";
 import { buildPoVendorAddressesEmailBlock } from "@/lib/accounts-display";
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
@@ -179,6 +181,14 @@ export async function POST(request) {
         ? { attachments: mergeMailAttachments(shopLogo?.attachments, pdfAttachment) }
         : {}),
     });
+
+    const poId = String(body?.poId || po?.id || "").trim();
+    if (poId && isValidSimplePortalId(poId)) {
+      await SimplePurchaseOrder.findOneAndUpdate(
+        { _id: poId, createdByEmail: email },
+        { $set: { sentToVendorAt: new Date(), sentToVendorEmail: toEmail } }
+      );
+    }
 
     return NextResponse.json({ ok: true, message: "Email sent to vendor." });
   } catch (err) {

@@ -659,26 +659,15 @@ export default function SimpleJobPostingsSection() {
         title="New job posting"
         size="lg"
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setCreateModalOpen(false)}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form="simple-job-create-form"
-              variant="primary"
-              size="sm"
-              disabled={saving}
-            >
-              {saving ? "Saving…" : "Create"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form="simple-job-create-form"
+            variant="primary"
+            size="sm"
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Create"}
+          </Button>
         }
       >
         <Form

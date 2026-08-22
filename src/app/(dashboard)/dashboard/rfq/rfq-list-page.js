@@ -2240,9 +2240,6 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
               <FiTool className="h-4 w-4 shrink-0" aria-hidden />
               Create
             </Button>
-            <Button type="button" variant="outline" size="sm" onClick={() => setOpenWoPrompt(null)}>
-              Cancel
-            </Button>
           </>
         }
       >

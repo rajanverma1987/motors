@@ -512,11 +512,6 @@ function InvoicesInner({ embedded = false, actionsRef = null }) {
         }
         width="min(1200px, 94vw)"
         zIndex={115}
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={closeLinkedJobModal}>
-            Close
-          </Button>
-        }
       >
         <div className="w-full min-w-0 max-w-none">
           {linkedJobId ? (

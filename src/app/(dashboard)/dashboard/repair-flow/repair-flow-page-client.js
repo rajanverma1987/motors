@@ -495,14 +495,7 @@ export default function RepairFlowPageClient() {
         }
         width="min(1200px, 94vw)"
         headerClassName="flex-wrap"
-        actions={
-          <>
-            {viewJobId ? <ModalActionsDropdown items={viewJobToolbarItems} /> : null}
-            <Button type="button" variant="outline" size="sm" onClick={closeJobModal}>
-              Close
-            </Button>
-          </>
-        }
+        actions={viewJobId ? <ModalActionsDropdown items={viewJobToolbarItems} /> : null}
       >
         <div className="w-full min-w-0 max-w-none">
           {viewJobId ? (

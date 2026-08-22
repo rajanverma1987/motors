@@ -66,6 +66,7 @@ function paymentStatusBadgeVariant(status) {
 
 function poStatusBadgeVariant(status) {
   const s = String(status || "").trim().toLowerCase();
+  if (s === "cancelled" || s === "returned") return "danger";
   if (s === "received") return "success";
   if (s.includes("partial")) return "warning";
   return "default";

@@ -21,23 +21,18 @@ export default function TrialSubscriptionUpgradeModal({ open, onClose }) {
       title={TRIAL_UPGRADE_TITLE}
       size="md"
       actions={
-        <>
-          <Button type="button" variant="secondary" size="sm" onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            className="inline-flex shrink-0 items-center gap-1.5"
-            onClick={() => {
-              onClose();
-              router.push("/contact");
-            }}
-          >
-            {TRIAL_UPGRADE_CONTACT_LABEL}
-          </Button>
-        </>
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          className="inline-flex shrink-0 items-center gap-1.5"
+          onClick={() => {
+            onClose();
+            router.push("/contact");
+          }}
+        >
+          {TRIAL_UPGRADE_CONTACT_LABEL}
+        </Button>
       }
     >
       <div className="space-y-3 text-sm text-secondary">

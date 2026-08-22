@@ -26,12 +26,29 @@ export const SIMPLE_PO_PAYMENT_STATUS_OPTIONS = [
 export const SIMPLE_PO_RECEIVING_STATUS_ORDERED = "Ordered";
 export const SIMPLE_PO_RECEIVING_STATUS_PARTIAL = "Partially Received";
 export const SIMPLE_PO_RECEIVING_STATUS_RECEIVED = "Received";
+export const SIMPLE_PO_RECEIVING_STATUS_CANCELLED = "Cancelled";
+export const SIMPLE_PO_RECEIVING_STATUS_RETURNED = "Returned";
 
 export const SIMPLE_PO_RECEIVING_STATUS_OPTIONS = [
   { value: SIMPLE_PO_RECEIVING_STATUS_ORDERED, label: "Ordered" },
   { value: SIMPLE_PO_RECEIVING_STATUS_PARTIAL, label: "Partially Received" },
   { value: SIMPLE_PO_RECEIVING_STATUS_RECEIVED, label: "Received" },
+  { value: SIMPLE_PO_RECEIVING_STATUS_CANCELLED, label: "Cancelled" },
+  { value: SIMPLE_PO_RECEIVING_STATUS_RETURNED, label: "Returned" },
 ];
+
+export const SIMPLE_PO_RETURN_PAID_BY_OPTIONS = [
+  { value: "Vendor", label: "Vendor" },
+  { value: "Company", label: "Company" },
+];
+
+/** Dropdown labels for return shipping — values stay Vendor | Company for storage. */
+export function buildPoReturnPaidByOptions(vendorName, companyName) {
+  return [
+    { value: "Vendor", label: String(vendorName || "").trim() || "Vendor" },
+    { value: "Company", label: String(companyName || "").trim() || "Company" },
+  ];
+}
 
 export function parsePoMoney(value) {
   const n = Number.parseFloat(String(value ?? "").replace(/[^0-9.-]/g, ""));
@@ -93,7 +110,65 @@ export function emptyPoLine() {
     receivedDate: "",
     /** Optional — when set and line becomes Received, on-hand increases */
     inventoryItemId: "",
+    cancelled: false,
+    cancelledAt: "",
+    cancellationReason: "",
+    returned: false,
+    returnedAt: "",
+    returnTrackingNumber: "",
+    returnReason: "",
+    returnShippingCharge: "",
+    returnPaidBy: "",
   };
+}
+
+export function isPoLineCancelled(line) {
+  return Boolean(line?.cancelled);
+}
+
+export function isPoLineReturned(line) {
+  return Boolean(line?.returned);
+}
+
+/** Cancelled or returned — excluded from totals and shown with strikethrough styling. */
+export function isPoLineInactive(line) {
+  return isPoLineCancelled(line) || isPoLineReturned(line);
+}
+
+export function getPoLineReceivingStatus(line) {
+  if (isPoLineCancelled(line)) return SIMPLE_PO_RECEIVING_STATUS_CANCELLED;
+  if (isPoLineReturned(line)) return SIMPLE_PO_RECEIVING_STATUS_RETURNED;
+  return normalizeReceivingStatus(
+    line?.receivingStatus || suggestReceivingStatus(line?.quantity, line?.receivedQty)
+  );
+}
+
+/** Only Ordered lines (not received) can be cancelled. */
+export function canCancelPoLine(line) {
+  if (!poLineHasContent(line) || isPoLineInactive(line)) return false;
+  return getPoLineReceivingStatus(line) === SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+}
+
+/** Received or partially received lines can be returned. */
+export function canReturnPoLine(line) {
+  if (!poLineHasContent(line) || isPoLineInactive(line)) return false;
+  const status = getPoLineReceivingStatus(line);
+  return (
+    status === SIMPLE_PO_RECEIVING_STATUS_RECEIVED ||
+    status === SIMPLE_PO_RECEIVING_STATUS_PARTIAL
+  );
+}
+
+export function poWasSentToVendor(rowOrForm) {
+  return Boolean(String(rowOrForm?.sentToVendorAt || "").trim());
+}
+
+function todayIsoDate() {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function emptyPoPayment(overrides = {}) {
@@ -149,14 +224,6 @@ export function computePoPaymentSummary(payments, grandTotal) {
   return { amountPaid, balance, grandTotal: total, paymentStatus, latestPaymentDate: latestDate };
 }
 
-function todayIsoDate() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
 export function createEmptySimplePurchaseOrderForm(overrides = {}) {
   return {
     id: "",
@@ -180,11 +247,17 @@ export function createEmptySimplePurchaseOrderForm(overrides = {}) {
     lineItems: [emptyPoLine()],
     payments: [],
     vendorDocuments: [],
+    sentToVendorAt: "",
+    sentToVendorEmail: "",
+    poCancelledAt: "",
     ...overrides,
   };
 }
 
 export function computePoLineTotals(line) {
+  if (isPoLineInactive(line)) {
+    return { total: 0, taxAmount: 0, grandTotal: 0 };
+  }
   const qty = parsePoMoney(line?.quantity);
   const price = parsePoMoney(line?.price);
   const taxPct = parsePoMoney(line?.taxPercent);
@@ -199,6 +272,7 @@ export function computePoFormTotals(lineItems, shippingCharge = 0) {
   let totalTax = 0;
   let grandTotal = 0;
   for (const line of Array.isArray(lineItems) ? lineItems : []) {
+    if (isPoLineInactive(line)) continue;
     const t = computePoLineTotals(line);
     total = roundPoMoney(total + t.total);
     totalTax = roundPoMoney(totalTax + t.taxAmount);
@@ -231,6 +305,8 @@ export function computeNextSimplePoNumber(jobNumber, existingPos = []) {
 
 export function normalizeReceivingStatus(raw) {
   const s = String(raw || "").trim().toLowerCase();
+  if (s === "cancelled") return SIMPLE_PO_RECEIVING_STATUS_CANCELLED;
+  if (s === "returned") return SIMPLE_PO_RECEIVING_STATUS_RETURNED;
   if (s === "received") return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
   if (s.includes("partial")) return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
   return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
@@ -243,16 +319,20 @@ export function normalizeReceivingStatus(raw) {
 export function resolvePoStatus(lineItems) {
   const lines = (Array.isArray(lineItems) ? lineItems : []).filter((line) => poLineHasContent(line));
   if (lines.length === 0) return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
+  const active = lines.filter((line) => !isPoLineInactive(line));
+  if (active.length === 0) {
+    if (lines.every((line) => isPoLineReturned(line))) return SIMPLE_PO_RECEIVING_STATUS_RETURNED;
+    if (lines.every((line) => isPoLineCancelled(line))) return SIMPLE_PO_RECEIVING_STATUS_CANCELLED;
+    return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
+  }
   let received = 0;
   let partial = 0;
-  for (const line of lines) {
-    const status = normalizeReceivingStatus(
-      line?.receivingStatus || suggestReceivingStatus(line?.quantity, line?.receivedQty)
-    );
+  for (const line of active) {
+    const status = getPoLineReceivingStatus(line);
     if (status === SIMPLE_PO_RECEIVING_STATUS_RECEIVED) received += 1;
     else if (status === SIMPLE_PO_RECEIVING_STATUS_PARTIAL) partial += 1;
   }
-  if (received === lines.length) return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
+  if (received === active.length) return SIMPLE_PO_RECEIVING_STATUS_RECEIVED;
   if (partial > 0 || received > 0) return SIMPLE_PO_RECEIVING_STATUS_PARTIAL;
   return SIMPLE_PO_RECEIVING_STATUS_ORDERED;
 }
@@ -266,8 +346,24 @@ export function storedPoToForm(row) {
         const merged = { ...emptyPoLine(), ...line };
         return {
           ...merged,
+          cancelled: Boolean(merged.cancelled),
+          cancelledAt: String(merged.cancelledAt || "").trim(),
+          cancellationReason: String(merged.cancellationReason || "").trim(),
+          returned: Boolean(merged.returned),
+          returnedAt: String(merged.returnedAt || "").trim(),
+          returnTrackingNumber: String(merged.returnTrackingNumber || "").trim(),
+          returnReason: String(merged.returnReason || "").trim(),
+          returnShippingCharge:
+            merged.returnShippingCharge != null && String(merged.returnShippingCharge).trim() !== ""
+              ? String(merged.returnShippingCharge)
+              : "",
+          returnPaidBy: String(merged.returnPaidBy || "").trim(),
           receivedQty: merged.receivedQty != null && merged.receivedQty !== "" ? String(merged.receivedQty) : "0",
-          receivingStatus: normalizeReceivingStatus(merged.receivingStatus),
+          receivingStatus: isPoLineCancelled(merged)
+            ? SIMPLE_PO_RECEIVING_STATUS_CANCELLED
+            : isPoLineReturned(merged)
+              ? SIMPLE_PO_RECEIVING_STATUS_RETURNED
+              : normalizeReceivingStatus(merged.receivingStatus),
           receivedDate: String(merged.receivedDate || "").slice(0, 10),
         };
       })
@@ -349,13 +445,31 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
       : `spo-${Date.now()}`);
   const lineItems = (Array.isArray(form.lineItems) ? form.lineItems : [])
     .map((line) => {
+      const cancelled = isPoLineCancelled(line);
+      const returned = isPoLineReturned(line);
       const t = computePoLineTotals(line);
       const receivedQty = String(line.receivedQty ?? "0");
-      const receivingStatus = normalizeReceivingStatus(
-        line.receivingStatus || suggestReceivingStatus(line.quantity, receivedQty)
-      );
+      const receivingStatus = cancelled
+        ? SIMPLE_PO_RECEIVING_STATUS_CANCELLED
+        : returned
+          ? SIMPLE_PO_RECEIVING_STATUS_RETURNED
+          : normalizeReceivingStatus(
+              line.receivingStatus || suggestReceivingStatus(line.quantity, receivedQty)
+            );
       return {
         ...line,
+        cancelled,
+        cancelledAt: String(line.cancelledAt || "").trim(),
+        cancellationReason: String(line.cancellationReason || "").trim(),
+        returned,
+        returnedAt: String(line.returnedAt || "").trim(),
+        returnTrackingNumber: String(line.returnTrackingNumber || "").trim(),
+        returnReason: String(line.returnReason || "").trim(),
+        returnShippingCharge:
+          line.returnShippingCharge != null && String(line.returnShippingCharge).trim() !== ""
+            ? String(line.returnShippingCharge)
+            : "",
+        returnPaidBy: String(line.returnPaidBy || "").trim(),
         receivedQty,
         receivingStatus,
         receivedDate: String(line.receivedDate || "").slice(0, 10),
@@ -396,7 +510,13 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
 
   const allReceived =
     lineItems.length > 0 &&
-    lineItems.every((l) => normalizeReceivingStatus(l.receivingStatus) === SIMPLE_PO_RECEIVING_STATUS_RECEIVED);
+    lineItems.every(
+      (l) =>
+        isPoLineInactive(l) ||
+        normalizeReceivingStatus(l.receivingStatus) === SIMPLE_PO_RECEIVING_STATUS_RECEIVED
+    );
+  const activeLines = lineItems.filter((l) => !isPoLineInactive(l));
+  const allCancelled = lineItems.length > 0 && activeLines.length === 0 && lineItems.every((l) => isPoLineCancelled(l));
   let poItemReceiveDate = String(form.poItemReceiveDate || "").slice(0, 10);
   if (allReceived) {
     let latest = "";
@@ -423,6 +543,11 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
     total: totals.total,
     totalTax: totals.totalTax,
     grandTotal: totals.grandTotal,
+    sentToVendorAt: String(form.sentToVendorAt || "").trim(),
+    sentToVendorEmail: String(form.sentToVendorEmail || "").trim(),
+    poCancelledAt: allCancelled
+      ? String(form.poCancelledAt || "").trim() || new Date().toISOString()
+      : "",
     updatedAt: new Date().toISOString(),
     createdAt: form.createdAt || new Date().toISOString(),
   };

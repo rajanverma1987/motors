@@ -1111,14 +1111,9 @@ export default function ServiceProposalsPanel({
         title={notesEdit?.quote ? `Notes — ${notesEdit.quote}` : "Notes"}
         size="md"
         actions={
-          <>
-            <Button type="button" variant="secondary" size="sm" onClick={closeNotesEdit}>
-              Cancel
-            </Button>
-            <Button type="submit" form={NOTES_EDIT_FORM_ID} variant="primary" size="sm">
-              Save
-            </Button>
-          </>
+          <Button type="submit" form={NOTES_EDIT_FORM_ID} variant="primary" size="sm">
+            Save
+          </Button>
         }
       >
         <form id={NOTES_EDIT_FORM_ID} onSubmit={handleNotesSave} className="flex flex-col gap-3">

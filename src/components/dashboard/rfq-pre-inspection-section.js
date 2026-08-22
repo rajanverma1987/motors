@@ -237,11 +237,6 @@ export default function RfqPreInspectionSection({ quoteId, quoteStatus, disabled
         onClose={() => setViewing(null)}
         title="Pre-inspection"
         width="min(920px, 96vw)"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => setViewing(null)}>
-            Close
-          </Button>
-        }
       >
         {viewing ? (
           <div className="space-y-3">

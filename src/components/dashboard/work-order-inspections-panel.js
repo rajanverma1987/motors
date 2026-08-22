@@ -305,11 +305,6 @@ export default function WorkOrderInspectionsPanel({
         title="Inspection"
         size="lg"
         width="min(900px, 94vw)"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => setViewingInspection(null)}>
-            Close
-          </Button>
-        }
       >
         {viewingInspection ? (
           <div className="space-y-4 text-sm">

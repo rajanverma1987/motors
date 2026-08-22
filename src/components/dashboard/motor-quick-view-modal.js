@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/modal";
-import Button from "@/components/ui/button";
 import { useToast } from "@/components/toast-provider";
 import MotorAssetReadonlyDetail from "@/components/motor-asset-readonly-detail";
 
@@ -67,11 +66,6 @@ export default function MotorQuickViewModal({
       title={title}
       width="min(1200px, 96vw)"
       zIndex={zIndex}
-      actions={
-        <Button type="button" variant="outline" size="sm" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       {loading ? (
         <p className="py-8 text-center text-secondary">Loading…</p>

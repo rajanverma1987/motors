@@ -1063,11 +1063,6 @@ export default function RepairFlowJobDetailClient({
         onClose={() => setViewingInspection(null)}
         title="Inspection"
         size="lg"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => setViewingInspection(null)}>
-            Close
-          </Button>
-        }
       >
         {viewingInspection ? (
           <div className="space-y-4 text-sm">

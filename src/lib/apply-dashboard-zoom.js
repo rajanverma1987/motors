@@ -1,4 +1,5 @@
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
+import { DISPLAY_FONT_SIZE_DEFAULT, normalizeFontSizeLevel } from "@/lib/display-font-size";
 
 /**
  * Apply dashboard UI zoom via --app-zoom-factor (see globals.css html font-size).
@@ -12,13 +13,40 @@ export function applyDashboardZoom(level) {
   const factor = normalized / DISPLAY_ZOOM_DEFAULT;
 
   if (factor === 1) {
-    clearDashboardZoom();
+    root.style.removeProperty("--app-zoom-factor");
+    root.removeAttribute("data-app-zoom");
     return;
   }
 
   root.setAttribute("data-app-zoom", String(normalized));
   root.style.zoom = "";
   root.style.setProperty("--app-zoom-factor", String(factor));
+}
+
+/**
+ * Apply dashboard base font scale via --app-font-scale-factor (html font-size).
+ * Scales rem-based Tailwind text utilities proportionally.
+ */
+export function applyDashboardFontSize(level) {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  const normalized = normalizeFontSizeLevel(level);
+  const factor = normalized / DISPLAY_FONT_SIZE_DEFAULT;
+
+  if (factor === 1) {
+    root.style.removeProperty("--app-font-scale-factor");
+    root.removeAttribute("data-app-font-size");
+    return;
+  }
+
+  root.setAttribute("data-app-font-size", String(normalized));
+  root.style.setProperty("--app-font-scale-factor", String(factor));
+}
+
+/** Apply zoom + font size from user settings. */
+export function applyDashboardDisplay({ zoomLevel, fontSizeLevel } = {}) {
+  applyDashboardZoom(zoomLevel);
+  applyDashboardFontSize(fontSizeLevel);
 }
 
 /** Remove dashboard zoom (e.g. when leaving signed-in app shell). */
@@ -28,6 +56,19 @@ export function clearDashboardZoom() {
   root.style.zoom = "";
   root.style.removeProperty("--app-zoom-factor");
   root.removeAttribute("data-app-zoom");
+}
+
+/** Remove dashboard font scale. */
+export function clearDashboardFontSize() {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  root.style.removeProperty("--app-font-scale-factor");
+  root.removeAttribute("data-app-font-size");
+}
+
+export function clearDashboardDisplay() {
+  clearDashboardZoom();
+  clearDashboardFontSize();
 }
 
 /**
