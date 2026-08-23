@@ -1,7 +1,7 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
-import GetQuoteCta from "@/components/marketing/GetQuoteCta";
 import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
+import RepairRequestForm from "@/components/marketing/repair-request-form";
 
 const path = "/when-to-repair-or-replace-electric-motor";
 
@@ -43,9 +43,8 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
       description="Motor failure or repeated issues force a choice: repair or replace? The right decision depends on cost, lead time, efficiency, and how critical the application is. Here’s a practical way to think it through."
       breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
-      sidebarTitle="Get a repair quote"
-      sidebarDescription="Send your motor details and we’ll connect you with repair shops that can inspect and quote your job."
-      sidebarCta={<GetQuoteCta />}
+      sidebarUnwrapped
+      sidebarCta={<RepairRequestForm mode="city" className="mx-auto w-full max-w-none" />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <section>

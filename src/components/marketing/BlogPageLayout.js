@@ -28,10 +28,24 @@ export default function BlogPageLayout({
   wideSidebar = false,
   /** When false, sidebar scrolls with the page (e.g. tall embedded calculators). */
   stickySidebar = true,
+  /** Skip the card wrapper — use for RepairRequestForm and other self-contained sidebar blocks. */
+  sidebarUnwrapped = false,
   children,
 }) {
   const sidebarHasLeader = Boolean(sidebarTitle || sidebarDescription || sidebarCta);
   const sidebarHasAny = sidebarHasLeader || Boolean(sidebarBelowCta);
+  const sidebarInner = (
+    <>
+      {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
+      {sidebarDescription ? (
+        <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
+      ) : null}
+      {sidebarCta ? <div className={sidebarTitle || sidebarDescription ? "mt-4 flex flex-col gap-3" : ""}>{sidebarCta}</div> : null}
+      {sidebarBelowCta ? (
+        <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>{sidebarBelowCta}</div>
+      ) : null}
+    </>
+  );
 
   const articleUrl = canonicalPath ? `${siteUrl.replace(/\/$/, "")}${canonicalPath.startsWith("/") ? "" : "/"}${canonicalPath}` : null;
   const jsonLd = articleUrl
@@ -109,19 +123,10 @@ export default function BlogPageLayout({
         >
           {/* Mobile CTA / tools — above content, only on small screens */}
           {sidebarHasAny ? (
-            sidebarHasLeader ? (
-              <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">
-                {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
-                {sidebarDescription ? (
-                  <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
-                ) : null}
-                {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
-                {sidebarBelowCta ? (
-                  <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>
-                    {sidebarBelowCta}
-                  </div>
-                ) : null}
-              </div>
+            sidebarUnwrapped ? (
+              <div className="md:hidden">{sidebarInner}</div>
+            ) : sidebarHasLeader ? (
+              <div className="rounded-xl border border-border bg-card p-5 shadow-sm md:hidden">{sidebarInner}</div>
             ) : (
               <div className="md:hidden">{sidebarBelowCta}</div>
             )
@@ -137,16 +142,13 @@ export default function BlogPageLayout({
               stickySidebar ? "md:sticky md:top-24 md:self-start" : ""
             }`}
           >
-            <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
-              {sidebarTitle ? <h2 className="text-lg font-semibold text-title">{sidebarTitle}</h2> : null}
-              {sidebarDescription ? (
-                <p className={`text-sm text-secondary ${sidebarTitle ? "mt-2" : ""}`}>{sidebarDescription}</p>
-              ) : null}
-              {sidebarCta ? <div className="mt-4 flex flex-col gap-3">{sidebarCta}</div> : null}
-              {sidebarBelowCta ? (
-                <div className={sidebarHasLeader ? "mt-6 border-t border-border pt-6" : "mt-0"}>{sidebarBelowCta}</div>
-              ) : null}
-            </div>
+            {sidebarUnwrapped ? (
+              sidebarInner
+            ) : (
+              <div className={`rounded-xl border border-border bg-card shadow-sm ${wideSidebar ? "p-5 sm:p-6" : "p-5"}`}>
+                {sidebarInner}
+              </div>
+            )}
           </aside>
         </div>
       </div>
