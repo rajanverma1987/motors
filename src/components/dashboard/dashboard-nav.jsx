@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath, portalLandingPath, settingsPathForPortalUi } from "@/lib/portal-view";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
+import PwaInstallButton from "@/components/pwa-install-button";
 
 export default function DashboardNav() {
   const { user, logout } = useAuth();
@@ -106,6 +107,7 @@ export default function DashboardNav() {
               </Link>
             </>
           ) : null}
+          <PwaInstallButton className="hidden sm:inline-flex" />
           <ThemeToggle />
           {userDisplayName ? (
             <span

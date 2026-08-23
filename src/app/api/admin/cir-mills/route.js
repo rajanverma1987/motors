@@ -4,9 +4,10 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import PlatformCirMills from "@/models/PlatformCirMills";
 import {
   ensurePlatformCirMillsSeeded,
+  resetPlatformCirMillsToDefaults,
   serializeCirMillsDoc,
 } from "@/lib/platform-cir-mills-db";
-import { DEFAULT_CIR_MILLS_ROWS } from "@/lib/platform-cir-mills";
+import { normalizeCirMillsUnit, CIR_MILLS_UNIT_AWG } from "@/lib/platform-cir-mills";
 import { clampString } from "@/lib/validation";
 
 export async function GET(request) {
@@ -15,10 +16,16 @@ export async function GET(request) {
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const seed = await ensurePlatformCirMillsSeeded();
-    const list = await PlatformCirMills.find({}).sort({ sortOrder: 1, size: 1 }).lean();
+    const { searchParams } = new URL(request.url);
+    const unitParam = searchParams.get("unit");
+    const filter = {};
+    if (unitParam) filter.unit = normalizeCirMillsUnit(unitParam);
+    const list = await PlatformCirMills.find(filter).sort({ unit: 1, sortOrder: 1, size: 1 }).lean();
     return NextResponse.json({
       items: list.map(serializeCirMillsDoc),
-      seeded: seed.seeded,
+      seeded: seed.seededAwg || seed.seededMetric,
+      seededAwg: seed.seededAwg,
+      seededMetric: seed.seededMetric,
     });
   } catch (err) {
     console.error("Admin GET cir-mills:", err);
@@ -33,19 +40,11 @@ export async function POST(request) {
 
     const body = await request.json().catch(() => ({}));
     if (body?.action === "reset-defaults") {
-      await connectDB();
-      await PlatformCirMills.deleteMany({});
-      const docs = DEFAULT_CIR_MILLS_ROWS.map((row, index) => ({
-        size: String(row.size).trim(),
-        circularMills: Number(row.circularMills),
-        sortOrder: index,
-        isActive: true,
-      }));
-      await PlatformCirMills.insertMany(docs);
-      const list = await PlatformCirMills.find({}).sort({ sortOrder: 1, size: 1 }).lean();
-      return NextResponse.json({ ok: true, items: list.map(serializeCirMillsDoc) });
+      const items = await resetPlatformCirMillsToDefaults();
+      return NextResponse.json({ ok: true, items });
     }
 
+    const unit = normalizeCirMillsUnit(body?.unit || CIR_MILLS_UNIT_AWG);
     const size = clampString(body?.size, 40);
     const circularMills = Number(body?.circularMills);
     if (!size) {
@@ -56,13 +55,15 @@ export async function POST(request) {
     }
 
     await connectDB();
-    const maxSort = await PlatformCirMills.findOne({}).sort({ sortOrder: -1 }).select("sortOrder").lean();
+    await ensurePlatformCirMillsSeeded();
+    const maxSort = await PlatformCirMills.findOne({ unit }).sort({ sortOrder: -1 }).select("sortOrder").lean();
     const sortOrder =
       body?.sortOrder != null && Number.isFinite(Number(body.sortOrder))
         ? Number(body.sortOrder)
         : (Number(maxSort?.sortOrder) || 0) + 1;
 
     const doc = await PlatformCirMills.create({
+      unit,
       size,
       circularMills,
       sortOrder,
@@ -71,7 +72,7 @@ export async function POST(request) {
     return NextResponse.json({ ok: true, item: serializeCirMillsDoc(doc.toObject()) });
   } catch (err) {
     if (err?.code === 11000) {
-      return NextResponse.json({ error: "That wire size already exists." }, { status: 400 });
+      return NextResponse.json({ error: "That wire size already exists for this unit." }, { status: 400 });
     }
     console.error("Admin POST cir-mills:", err);
     return NextResponse.json({ error: err.message || "Failed to save" }, { status: 500 });
@@ -88,6 +89,7 @@ export async function PATCH(request) {
     if (!id) return NextResponse.json({ error: "id required" }, { status: 400 });
 
     const update = {};
+    if (body.unit !== undefined) update.unit = normalizeCirMillsUnit(body.unit);
     if (body.size !== undefined) {
       const size = clampString(body.size, 40);
       if (!size) return NextResponse.json({ error: "Wire size is required." }, { status: 400 });
@@ -111,7 +113,7 @@ export async function PATCH(request) {
     return NextResponse.json({ ok: true, item: serializeCirMillsDoc(doc) });
   } catch (err) {
     if (err?.code === 11000) {
-      return NextResponse.json({ error: "That wire size already exists." }, { status: 400 });
+      return NextResponse.json({ error: "That wire size already exists for this unit." }, { status: 400 });
     }
     console.error("Admin PATCH cir-mills:", err);
     return NextResponse.json({ error: err.message || "Failed to update" }, { status: 500 });

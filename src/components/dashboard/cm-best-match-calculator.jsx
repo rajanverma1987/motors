@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { FiPlus, FiPrinter } from "react-icons/fi";
 import Button from "@/components/ui/button";
-import Checkbox from "@/components/ui/checkbox";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
-import { formatOriginalWireSelection } from "@/lib/platform-cir-mills";
+import {
+  CIR_MILLS_UNIT_AWG,
+  CIR_MILLS_UNIT_METRIC,
+  formatOriginalWireSelection,
+  normalizeCirMillsUnit,
+} from "@/lib/platform-cir-mills";
+import { loadCirMillsSessionCatalogs, getCirMillsSessionCatalog, hasCirMillsSessionCatalogs } from "@/lib/cir-mills-session-cache";
 import { useToast } from "@/components/toast-provider";
 import { useFormatDateTime } from "@/contexts/user-settings-context";
 import "./cm-best-match-print.css";
@@ -148,6 +153,7 @@ function OriginalWiresSelectModal({
   loading = false,
   initialQtys = {},
   onApply,
+  sizeColumnLabel = "Wire size",
 }) {
   const [qtyById, setQtyById] = useState({});
 
@@ -198,7 +204,18 @@ function OriginalWiresSelectModal({
           Enter quantity for each size in the winding. Total circular mils = Cir. Mills × qty for all selected sizes.
         </p>
         {loading ? (
-          <p className="text-sm text-secondary">Loading Cir Mills table…</p>
+          <div
+            className="flex min-h-[160px] flex-col items-center justify-center gap-3"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <span
+              className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+              aria-hidden
+            />
+            <p className="text-sm text-secondary">Loading Cir Mills…</p>
+          </div>
         ) : catalog.length === 0 ? (
           <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
         ) : (
@@ -206,7 +223,7 @@ function OriginalWiresSelectModal({
             <table className="w-full border-collapse text-sm">
               <thead className="sticky top-0 z-[1] border-b border-border bg-form-bg">
                 <tr>
-                  <th className="px-2 py-2 text-left text-xs font-bold text-title">Wire size</th>
+                  <th className="px-2 py-2 text-left text-xs font-bold text-title">{sizeColumnLabel}</th>
                   <th className="px-2 py-2 text-right text-xs font-bold text-title">Cir. Mills</th>
                   <th className="w-28 px-2 py-2 text-right text-xs font-bold text-title">Qty</th>
                 </tr>
@@ -251,37 +268,62 @@ export default function CmBestMatchCalculator() {
   const [results, setResults] = useState([]);
   const [resultContext, setResultContext] = useState(null);
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
-  const [cirMillsCatalog, setCirMillsCatalog] = useState([]);
-  const [cirMillsLoading, setCirMillsLoading] = useState(false);
+  const [catalogsByUnit, setCatalogsByUnit] = useState(() => ({
+    [CIR_MILLS_UNIT_AWG]: getCirMillsSessionCatalog(CIR_MILLS_UNIT_AWG),
+    [CIR_MILLS_UNIT_METRIC]: getCirMillsSessionCatalog(CIR_MILLS_UNIT_METRIC),
+  }));
+  const [cirMillsLoading, setCirMillsLoading] = useState(() => !hasCirMillsSessionCatalogs());
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
   const [originalWireQtys, setOriginalWireQtys] = useState({});
-
-  const loadCirMills = useCallback(async () => {
-    setCirMillsLoading(true);
-    try {
-      const res = await fetch("/api/dashboard/cir-mills", { credentials: "include", cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to load Cir Mills");
-      const list = Array.isArray(data.items) ? data.items : [];
-      setCirMillsCatalog(list);
-      setSelected((prev) => {
-        const next = new Set();
-        for (const row of list) {
-          if (row.id && prev.has(row.id)) next.add(row.id);
-        }
-        return next;
-      });
-    } catch (e) {
-      toast.error(e.message || "Could not load Cir Mills table");
-      setCirMillsCatalog([]);
-    } finally {
-      setCirMillsLoading(false);
-    }
-  }, [toast]);
+  const [wireUnit, setWireUnit] = useState(CIR_MILLS_UNIT_AWG);
 
   useEffect(() => {
-    loadCirMills();
-  }, [loadCirMills]);
+    let cancelled = false;
+    const alreadyCached = hasCirMillsSessionCatalogs();
+    if (!alreadyCached) setCirMillsLoading(true);
+
+    loadCirMillsSessionCatalogs()
+      .then((catalogs) => {
+        if (cancelled) return;
+        setCatalogsByUnit({
+          [CIR_MILLS_UNIT_AWG]: catalogs.awg || [],
+          [CIR_MILLS_UNIT_METRIC]: catalogs.metric || [],
+        });
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(e.message || "Could not load Cir Mills table");
+        setCatalogsByUnit({
+          [CIR_MILLS_UNIT_AWG]: [],
+          [CIR_MILLS_UNIT_METRIC]: [],
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setCirMillsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const setUnit = (next) => {
+    const u = normalizeCirMillsUnit(next);
+    if (u === wireUnit) return;
+    setSelected(new Set());
+    setWireUnit(u);
+    setOriginalWireQtys({});
+    setOriginalWireSize("");
+    setOriginalWiredInHand("");
+    setOriginalCM("");
+    setTargetedCM("");
+    setResults([]);
+    setResultContext(null);
+    setResultsModalOpen(false);
+  };
+
+  const wireSizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
+  const unitToggleLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
 
   /** Scope print layout fixes to CM results only (see cm-best-match-print.css) */
   useEffect(() => {
@@ -301,14 +343,8 @@ export default function CmBestMatchCalculator() {
     };
   }, []);
 
-  const wireRows = cirMillsCatalog;
-
-  const firstNIds = useMemo(() => wireRows.map((w) => w.id).filter(Boolean).slice(0, MAX_SELECT), [wireRows]);
-
-  const allCatalogSelected = useMemo(() => {
-    if (firstNIds.length === 0) return false;
-    return firstNIds.every((id) => selected.has(id));
-  }, [firstNIds, selected]);
+  const wireRows = catalogsByUnit[wireUnit] || [];
+  const cirMillsCatalog = wireRows;
 
   const selectedList = useMemo(() => {
     return wireRows.filter((w) => w.id && selected.has(w.id));
@@ -331,21 +367,6 @@ export default function CmBestMatchCalculator() {
       }
       return next;
     });
-  };
-
-  const selectAll = () => {
-    const ids = wireRows.map((w) => w.id).filter(Boolean).slice(0, MAX_SELECT);
-    setSelected(new Set(ids));
-    if (wireRows.length > MAX_SELECT) {
-      toast.warning(`Only the first ${MAX_SELECT} sizes were selected (limit).`);
-    }
-  };
-
-  const clearSelection = () => setSelected(new Set());
-
-  const toggleSelectAllCheckbox = () => {
-    if (allCatalogSelected) clearSelection();
-    else selectAll();
   };
 
   const handlePrint = useCallback(() => {
@@ -429,25 +450,61 @@ export default function CmBestMatchCalculator() {
       <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: Wire catalog (shared Cir Mills) */}
         <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
-          <p className="mb-4 text-xs text-secondary">
-            Shared Cir Mills table. Use <strong className="text-title">Select all</strong> or pick sizes to include in the
-            search. Up to {MAX_SELECT} selections.
-          </p>
-
-          {wireRows.length > 0 ? (
-            <div className="mb-2">
-              <Checkbox
-                label="Select all"
-                checked={allCatalogSelected && firstNIds.length > 0}
-                onChange={toggleSelectAllCheckbox}
-                disabled={cirMillsLoading || wireRows.length === 0}
-              />
+          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
+              <p className="text-xs text-secondary">
+                Shared Cir Mills table ({unitToggleLabel}). Pick sizes to include in the search. Up to {MAX_SELECT}{" "}
+                selections.
+              </p>
             </div>
-          ) : null}
+            <div
+              className="inline-flex shrink-0 rounded-md border border-border bg-form-bg p-0.5"
+              role="group"
+              aria-label="Wire measurement unit"
+            >
+              <button
+                type="button"
+                onClick={() => setUnit(CIR_MILLS_UNIT_AWG)}
+                disabled={cirMillsLoading}
+                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                  wireUnit === CIR_MILLS_UNIT_AWG
+                    ? "bg-primary text-white"
+                    : "text-secondary hover:bg-card hover:text-title"
+                }`}
+                aria-pressed={wireUnit === CIR_MILLS_UNIT_AWG}
+              >
+                AWG
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnit(CIR_MILLS_UNIT_METRIC)}
+                disabled={cirMillsLoading}
+                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+                  wireUnit === CIR_MILLS_UNIT_METRIC
+                    ? "bg-primary text-white"
+                    : "text-secondary hover:bg-card hover:text-title"
+                }`}
+                aria-pressed={wireUnit === CIR_MILLS_UNIT_METRIC}
+              >
+                Metric
+              </button>
+            </div>
+          </div>
 
           {cirMillsLoading ? (
-            <p className="text-sm text-secondary">Loading Cir Mills table…</p>
+            <div
+              className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-md border border-border bg-bg"
+              role="status"
+              aria-live="polite"
+              aria-busy="true"
+            >
+              <span
+                className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+                aria-hidden
+              />
+              <p className="text-sm text-secondary">Loading Cir Mills…</p>
+            </div>
           ) : wireRows.length === 0 ? (
             <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
           ) : (
@@ -456,7 +513,7 @@ export default function CmBestMatchCalculator() {
                 <thead className="sticky top-0 z-[1] border-b border-border bg-card">
                   <tr>
                     <th className="w-10 px-2 py-2 text-left" aria-label="Select" />
-                    <th className="px-3 py-2 text-left font-medium text-title">Wire size</th>
+                    <th className="px-3 py-2 text-left font-medium text-title">{wireSizeColumnLabel}</th>
                     <th className="px-3 py-2 text-right font-medium text-title">Cir. Mills</th>
                   </tr>
                 </thead>
@@ -494,17 +551,6 @@ export default function CmBestMatchCalculator() {
           <p className="mb-4 text-xs text-secondary">
             Enter original winding data and search limits. Choose wire sizes in the catalog at left.
           </p>
-
-          <div className="mb-4 flex flex-wrap items-center justify-end gap-3 border-b border-border pb-4">
-            {results.length > 0 ? (
-              <Button type="button" variant="outline" size="sm" onClick={() => setResultsModalOpen(true)}>
-                View results ({results.length})
-              </Button>
-            ) : null}
-            <Button type="button" variant="primary" size="sm" onClick={runCalculate}>
-              Calculate Best Match
-            </Button>
-          </div>
 
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
@@ -569,6 +615,17 @@ export default function CmBestMatchCalculator() {
             />
           </div>
 
+          <div className="mb-4 flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4">
+            {results.length > 0 ? (
+              <Button type="button" variant="outline" size="sm" onClick={() => setResultsModalOpen(true)}>
+                View results ({results.length})
+              </Button>
+            ) : null}
+            <Button type="button" variant="primary" size="sm" onClick={runCalculate}>
+              Calculate Best Match
+            </Button>
+          </div>
+
           <div
             className="mb-4 rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed text-secondary dark:bg-muted/10"
             aria-label="Variable descriptions"
@@ -613,6 +670,7 @@ export default function CmBestMatchCalculator() {
         loading={cirMillsLoading}
         initialQtys={originalWireQtys}
         onApply={applyOriginalWireSelection}
+        sizeColumnLabel={wireSizeColumnLabel}
       />
 
       {results.length > 0 && resultContext ? (

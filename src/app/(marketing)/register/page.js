@@ -38,8 +38,8 @@ function RegisterPageContent() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
-    if (user) router.replace(nextPath);
+    if (!mounted || !user) return;
+    router.replace(nextPath);
   }, [mounted, user, router, nextPath]);
 
   const handleChange = (e) => {
@@ -137,14 +137,6 @@ function RegisterPageContent() {
     }
   };
 
-  if (!mounted || user) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-secondary">Loading…</p>
-      </div>
-    );
-  }
-
   const leftColumn = (
     <div>
       <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 text-sm">
@@ -197,7 +189,7 @@ function RegisterPageContent() {
             One month free trial — no credit card required
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">
-            Register your center
+            Register your shop
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal—work orders, quotes, customers, shop inventory, and repair leads in one place.
@@ -314,51 +306,51 @@ function RegisterPageContent() {
                   }}
                   className="bg-card/80 shadow-sm backdrop-blur sm:p-8"
                 >
-                    <Input
-                      label="Center name"
-                      name="shopName"
-                      type="text"
-                      placeholder="e.g. Acme Motor Center"
-                      value={form.shopName}
-                      onChange={handleChange}
-                      required
-                    />
-                    <Input
-                      label="Your name"
-                      name="contactName"
-                      type="text"
-                      placeholder="Contact person"
-                      value={form.contactName}
-                      onChange={handleChange}
-                      required
-                    />
-                    <Input
-                      label="Email (verified)"
-                      name="email"
-                      type="email"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      readOnly
-                    />
-                    <Input
-                      label="Password"
-                      name="password"
-                      type="password"
-                      placeholder="At least 6 characters"
-                      value={form.password}
-                      onChange={handleChange}
-                      required
-                    />
-                    <Input
-                      label="Confirm password"
-                      name="confirmPassword"
-                      type="password"
-                      placeholder="Repeat password"
-                      value={form.confirmPassword}
-                      onChange={handleChange}
-                      required
-                    />
+                  <Input
+                    label="Center name"
+                    name="shopName"
+                    type="text"
+                    placeholder="e.g. Acme Motor Center"
+                    value={form.shopName}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    label="Your name"
+                    name="contactName"
+                    type="text"
+                    placeholder="Contact person"
+                    value={form.contactName}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    label="Email (verified)"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                    readOnly
+                  />
+                  <Input
+                    label="Password"
+                    name="password"
+                    type="password"
+                    placeholder="At least 6 characters"
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    label="Confirm password"
+                    name="confirmPassword"
+                    type="password"
+                    placeholder="Repeat password"
+                    value={form.confirmPassword}
+                    onChange={handleChange}
+                    required
+                  />
                   {error && (
                     <p className="mt-4 text-sm text-danger" role="alert">
                       {error}

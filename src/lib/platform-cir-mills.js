@@ -1,7 +1,18 @@
 /**
- * Default AWG / circular mils table (from documents/cirmills.csv).
- * Used to seed PlatformCirMills when the collection is empty.
+ * Platform Cir Mills catalogs (AWG + Metric).
+ * AWG seed: historical half-size table (documents/cirmills-awg.csv).
+ * Metric seed: documents/cirmills.csv (Metric mm → Cir mills).
  */
+
+export const CIR_MILLS_UNIT_AWG = "awg";
+export const CIR_MILLS_UNIT_METRIC = "metric";
+
+export function normalizeCirMillsUnit(raw) {
+  const u = String(raw || "").trim().toLowerCase();
+  return u === CIR_MILLS_UNIT_METRIC ? CIR_MILLS_UNIT_METRIC : CIR_MILLS_UNIT_AWG;
+}
+
+/** Default AWG / circular mils table. Used to seed PlatformCirMills when AWG unit is empty. */
 export const DEFAULT_CIR_MILLS_ROWS = [
   { size: "0.5", circularMills: 94000 },
   { size: "1", circularMills: 83690 },
@@ -70,6 +81,82 @@ export const DEFAULT_CIR_MILLS_ROWS = [
   { size: "34", circularMills: 39.7 },
   { size: "35", circularMills: 31.4 },
   { size: "36", circularMills: 25 },
+];
+
+/** Default Metric (mm) / circular mils table from documents/cirmills.csv. */
+export const DEFAULT_METRIC_CIR_MILLS_ROWS = [
+  { size: "7.5", circularMills: 87190 },
+  { size: "7.1", circularMills: 78140 },
+  { size: "6.7", circularMills: 69580 },
+  { size: "6.3", circularMills: 61520 },
+  { size: "6", circularMills: 55800 },
+  { size: "5.6", circularMills: 48610 },
+  { size: "5.3", circularMills: 43540 },
+  { size: "5", circularMills: 38750 },
+  { size: "4.75", circularMills: 34970 },
+  { size: "4.5", circularMills: 31390 },
+  { size: "4.25", circularMills: 28000 },
+  { size: "4", circularMills: 24800 },
+  { size: "3.75", circularMills: 21800 },
+  { size: "3.55", circularMills: 19530 },
+  { size: "3.35", circularMills: 17390 },
+  { size: "3.15", circularMills: 15380 },
+  { size: "3", circularMills: 13950 },
+  { size: "2.8", circularMills: 12150 },
+  { size: "2.65", circularMills: 10880 },
+  { size: "2.5", circularMills: 9690 },
+  { size: "2.36", circularMills: 8630 },
+  { size: "2.24", circularMills: 7780 },
+  { size: "2.12", circularMills: 6970 },
+  { size: "2", circularMills: 6200 },
+  { size: "1.9", circularMills: 5600 },
+  { size: "1.8", circularMills: 5020 },
+  { size: "1.7", circularMills: 4480 },
+  { size: "1.6", circularMills: 3970 },
+  { size: "1.5", circularMills: 3490 },
+  { size: "1.4", circularMills: 3040 },
+  { size: "1.32", circularMills: 2700 },
+  { size: "1.25", circularMills: 2420 },
+  { size: "1.18", circularMills: 2160 },
+  { size: "1.12", circularMills: 1940 },
+  { size: "1.06", circularMills: 1740 },
+  { size: "1", circularMills: 1550 },
+  { size: "0.95", circularMills: 1400 },
+  { size: "0.9", circularMills: 1260 },
+  { size: "0.85", circularMills: 1120 },
+  { size: "0.8", circularMills: 992 },
+  { size: "0.75", circularMills: 872 },
+  { size: "0.71", circularMills: 781 },
+  { size: "0.67", circularMills: 696 },
+  { size: "0.63", circularMills: 615 },
+  { size: "0.6", circularMills: 558 },
+  { size: "0.56", circularMills: 486 },
+  { size: "0.53", circularMills: 435 },
+  { size: "0.5", circularMills: 388 },
+  { size: "0.475", circularMills: 350 },
+  { size: "0.45", circularMills: 314 },
+  { size: "0.425", circularMills: 280 },
+  { size: "0.4", circularMills: 248 },
+  { size: "0.375", circularMills: 218 },
+  { size: "0.355", circularMills: 195 },
+  { size: "0.335", circularMills: 174 },
+  { size: "0.315", circularMills: 140 },
+  { size: "0.3", circularMills: 122 },
+  { size: "0.28", circularMills: 122 },
+  { size: "0.265", circularMills: 109 },
+  { size: "0.25", circularMills: 96.3 },
+  { size: "0.236", circularMills: 86.3 },
+  { size: "0.224", circularMills: 77.8 },
+  { size: "0.212", circularMills: 69.7 },
+  { size: "0.2", circularMills: 62 },
+  { size: "0.19", circularMills: 56 },
+  { size: "0.18", circularMills: 50.4 },
+  { size: "0.17", circularMills: 44.8 },
+  { size: "0.16", circularMills: 39.7 },
+  { size: "0.15", circularMills: 34.9 },
+  { size: "0.14", circularMills: 30.4 },
+  { size: "0.132", circularMills: 27 },
+  { size: "0.125", circularMills: 24.2 },
 ];
 
 /**

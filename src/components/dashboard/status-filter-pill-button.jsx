@@ -402,7 +402,7 @@ function BodySoft(props) {
       style={fillStyle}
     >
       <span
-        className={`block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs font-bold uppercase leading-none tracking-wide sm:text-sm ${
+        className={`status-filter-pill__label block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-[11px] lg:text-sm ${
           labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
         }`}
         style={labelStyle}
@@ -410,12 +410,12 @@ function BodySoft(props) {
       >
         {card.label}
       </span>
-      <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap">
+      <span className="flex min-w-0 items-center gap-1 whitespace-nowrap sm:gap-1.5">
         {active ? (
           <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
         ) : null}
         <span
-          className={`min-w-0 truncate text-sm font-bold leading-none tabular-nums sm:text-base ${
+          className={`status-filter-pill__value min-w-0 truncate text-xs font-bold leading-none tabular-nums sm:text-[13px] lg:text-base ${
             amountStyle || fillStyle ? "" : "text-title"
           }`}
           style={amountStyle}
@@ -425,7 +425,7 @@ function BodySoft(props) {
         </span>
         {showCount ? (
           <span
-            className="ml-auto shrink-0 text-sm font-extrabold leading-none tabular-nums sm:text-base"
+            className="status-filter-pill__count ml-auto shrink-0 text-xs font-extrabold leading-none tabular-nums sm:text-[13px] lg:text-base"
             style={{
               backgroundColor: "#ffffff",
               color:
@@ -434,7 +434,7 @@ function BodySoft(props) {
                   : tileText && !isLightCssColor(tileText)
                     ? tileText
                     : "#111827",
-              padding: "0.1rem 0.35rem",
+              padding: "0.1rem 0.3rem",
             }}
             title={`Count: ${count}`}
           >
@@ -572,8 +572,8 @@ export default function StatusFilterPillButton({
     labelOnly
       ? "min-w-0 items-center"
       : isSoft
-        ? // Match Simple hub tab strip height (`DASHBOARDS_TAB_BUTTON_CLASS`).
-          "h-[4.75rem] sm:h-[5.25rem] min-w-0 w-full flex-1 basis-0 flex-col"
+        ? // Match Simple hub tab strip height on large screens; slightly shorter on tablet.
+          "h-[4.25rem] sm:h-[4.5rem] lg:h-[5.25rem] min-w-0 w-full flex-1 basis-0 flex-col"
         : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
     variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
     readOnly ? "" : "cursor-pointer",

@@ -1029,7 +1029,7 @@ export default function SettingsPageClient() {
 
   if (loading) {
     return (
-      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden py-4`}>
+      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden py-4`}>
         <Link
           href={SIMPLE_PORTAL_PATH}
           className="mb-4 inline-flex items-center gap-2 text-base font-semibold text-secondary transition-colors hover:text-primary sm:text-lg"
@@ -1043,7 +1043,7 @@ export default function SettingsPageClient() {
   }
 
   return (
-    <div className={`${SIMPLE_PORTAL_ROOT_CLASS} simple-settings-shell`}>
+    <div className={`${SIMPLE_PORTAL_ROOT_CLASS} simple-settings-shell h-full min-h-0 flex-1`}>
       <div className="simple-settings-header">
         <Link
           href={SIMPLE_PORTAL_PATH}
@@ -1058,15 +1058,12 @@ export default function SettingsPageClient() {
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:flex-row md:gap-4">
+      <div className="simple-settings-body">
         <nav
-          className="simple-settings-nav shrink-0 border-b md:border-b-0 md:border-r"
+          className="simple-settings-nav border-b md:border-b-0 md:border-r"
           aria-label="Settings sections"
         >
-          <ul
-            ref={navListRef}
-            className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-x-hidden md:overflow-y-auto"
-          >
+          <ul ref={navListRef}>
             {SIMPLE_SETTINGS_SECTIONS.map((item) => {
               const active = item.id === activeSection;
               const href = simpleSettingsHref(
@@ -1099,17 +1096,19 @@ export default function SettingsPageClient() {
         </nav>
 
         <div className="simple-settings-content">
-          <div className="simple-settings-content-scroll">
-            {sectionContentById[activeSection] || sectionContentById.account}
-          </div>
-
-          {showSaveBar ? (
-            <div className="simple-settings-save-bar">
-              <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
-                {saving ? "Saving…" : "Save changes"}
-              </Button>
+          <div className="simple-settings-content-inner">
+            <div className="simple-settings-content-scroll">
+              {sectionContentById[activeSection] || sectionContentById.account}
             </div>
-          ) : null}
+
+            {showSaveBar ? (
+              <div className="simple-settings-save-bar">
+                <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving…" : "Save changes"}
+                </Button>
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

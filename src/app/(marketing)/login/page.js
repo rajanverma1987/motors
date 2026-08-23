@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
@@ -34,25 +34,44 @@ function destForUser(nextUser, nextPath) {
   });
 }
 
-function LoginPageContent() {
+function readQueryParam(name) {
+  if (typeof window === "undefined") return "";
+  try {
+    return new URLSearchParams(window.location.search).get(name) || "";
+  } catch {
+    return "";
+  }
+}
+
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const nextPath = useMemo(
-    () => safeNextPath(searchParams.get("next")),
-    [searchParams]
-  );
-  const intent = searchParams.get("intent") || "";
+  const [nextRaw, setNextRaw] = useState("");
+  const [intent, setIntent] = useState("");
+  const nextPath = useMemo(() => safeNextPath(nextRaw), [nextRaw]);
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
-    if (!mounted) return;
-    if (user) {
-      router.replace(destForUser(user, nextPath));
-    }
-  }, [mounted, user, router, nextPath]);
+    setNextRaw(readQueryParam("next"));
+    setIntent(readQueryParam("intent"));
+  }, []);
+
+  // Never block the form on session check — tablet/LAN auth can hang.
+  // Redirect only after we know there is a session.
+  useEffect(() => {
+    if (!mounted || !user || redirecting) return;
+    setRedirecting(true);
+    const dest = destForUser(user, nextPath);
+    const t = window.setTimeout(() => {
+      // If navigation stalls, user can still use the form.
+      setRedirecting(false);
+    }, 4000);
+    router.replace(dest);
+    return () => window.clearTimeout(t);
+  }, [mounted, user, redirecting, router, nextPath]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -77,14 +96,6 @@ function LoginPageContent() {
       setSubmitting(false);
     }
   };
-
-  if (!mounted || user) {
-    return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-secondary">Loading…</p>
-      </div>
-    );
-  }
 
   return (
     <>
@@ -146,14 +157,21 @@ function LoginPageContent() {
               <p className="mt-6 text-sm text-secondary">
                 If you don&apos;t have an account yet, you can{" "}
                 <Link href="/register" className="font-medium text-primary hover:underline">
-                  register your center here
+                  Register your shop here
                 </Link>
                 .
               </p>
             </div>
 
             <div>
+              {redirecting ? (
+                <p className="mb-3 text-sm text-secondary" role="status">
+                  Signed in — opening your portal…
+                </p>
+              ) : null}
               <Form
+                method="post"
+                action="#"
                 onSubmit={handleSubmit}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
@@ -163,24 +181,26 @@ function LoginPageContent() {
                 }}
                 className="bg-card/80 shadow-sm backdrop-blur sm:p-8"
               >
-                  <Input
-                    label="Email"
-                    name="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    value={form.email}
-                    onChange={handleChange}
-                    required
-                  />
-                  <Input
-                    label="Password"
-                    name="password"
-                    type="password"
-                    placeholder="Your password"
-                    value={form.password}
-                    onChange={handleChange}
-                    required
-                  />
+                <Input
+                  label="Email"
+                  name="email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={handleChange}
+                  required
+                  autoComplete="email"
+                />
+                <Input
+                  label="Password"
+                  name="password"
+                  type="password"
+                  placeholder="Your password"
+                  value={form.password}
+                  onChange={handleChange}
+                  required
+                  autoComplete="current-password"
+                />
                 {error && (
                   <p className="mt-4 text-sm text-danger" role="alert">
                     {error}
@@ -191,7 +211,7 @@ function LoginPageContent() {
                     {submitting ? "Signing in…" : "Log in"}
                   </Button>
                   <p className="text-center text-sm text-secondary">
-                    Don&apos;t have an account?{" "}
+                    DoRegister your shopount?{" "}
                     <Link href="/register" className="font-medium text-primary hover:underline">
                       Register your center
                     </Link>
@@ -203,19 +223,5 @@ function LoginPageContent() {
         </div>
       </section>
     </>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[40vh] items-center justify-center">
-          <p className="text-secondary">Loading…</p>
-        </div>
-      }
-    >
-      <LoginPageContent />
-    </Suspense>
   );
 }

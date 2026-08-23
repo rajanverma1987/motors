@@ -757,25 +757,25 @@ export default function SimpleMotorLogisticsModal({
             }
           />
         </div>
-      </Modal>
+    </Modal>
 
       {printing ? (
-        <DocumentPrintOffscreenPortal
-          open
-          onClose={() => {
-            setPrinting(false);
-          }}
-        >
-          <SimpleMotorShippingPrintSheet
+      <DocumentPrintOffscreenPortal
+        open
+        onClose={() => {
+          setPrinting(false);
+        }}
+      >
+        <SimpleMotorShippingPrintSheet
             entry={shippingForm}
-            customerName={customerName}
-            companyName={companyName || user?.shopName || ""}
-            customerEmail={customerEmail}
-            customerPhone={customerPhone}
-            paidByLabel={paidByLabel}
-          />
-        </DocumentPrintOffscreenPortal>
-      ) : null}
+          customerName={customerName}
+          companyName={companyName || user?.shopName || ""}
+          customerEmail={customerEmail}
+          customerPhone={customerPhone}
+          paidByLabel={paidByLabel}
+        />
+      </DocumentPrintOffscreenPortal>
+    ) : null}
 
       <SimpleMotorShippingSendModal
         open={sendOpen}

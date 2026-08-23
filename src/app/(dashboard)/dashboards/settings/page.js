@@ -3,10 +3,12 @@ import SettingsPageClient from "./settings-page-client";
 
 export default function DashboardsSettingsPage() {
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4">
+    <div className="simple-portal simple-settings-page relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Suspense
         fallback={
-          <div className="flex items-center justify-center py-16 text-sm text-secondary">Loading settings…</div>
+          <div className="flex flex-1 items-center justify-center px-4 text-sm text-secondary">
+            Loading settings…
+          </div>
         }
       >
         <SettingsPageClient />

@@ -4,13 +4,50 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 const AuthContext = createContext(null);
 
+const AUTH_ME_TIMEOUT_MS = 5000;
+
+function fetchWithTimeout(url, options = {}, timeoutMs = AUTH_ME_TIMEOUT_MS) {
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timeoutId =
+    typeof window !== "undefined"
+      ? window.setTimeout(() => {
+          try {
+            controller?.abort();
+          } catch {
+            // ignore
+          }
+        }, timeoutMs)
+      : null;
+
+  const started = fetch(url, {
+    ...options,
+    signal: controller?.signal ?? options.signal,
+  });
+
+/* Hard ceiling: some mobile browsers never settle abort on hung LAN requests. */
+  const raced = Promise.race([
+    started,
+    new Promise((_, reject) => {
+      if (typeof window === "undefined") return;
+      window.setTimeout(() => reject(new Error("auth_timeout")), timeoutMs + 250);
+    }),
+  ]);
+
+  return raced.finally(() => {
+    if (timeoutId != null) window.clearTimeout(timeoutId);
+  });
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [mounted, setMounted] = useState(false);
 
   const loadUser = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
+      const res = await fetchWithTimeout("/api/auth/me", {
+        credentials: "include",
+        cache: "no-store",
+      });
       if (res.ok) {
         const data = await res.json();
         setUser({
@@ -24,11 +61,28 @@ export function AuthProvider({ children }) {
       }
     } catch {
       setUser(null);
+    } finally {
+      setMounted(true);
     }
   }, []);
 
   useEffect(() => {
-    loadUser().then(() => setMounted(true));
+    let cancelled = false;
+    const failSafe = window.setTimeout(() => {
+      if (!cancelled) setMounted(true);
+    }, AUTH_ME_TIMEOUT_MS + 500);
+
+    loadUser().finally(() => {
+      if (!cancelled) {
+        window.clearTimeout(failSafe);
+        setMounted(true);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(failSafe);
+    };
   }, [loadUser]);
 
   const login = useCallback(async (email, password) => {

@@ -28,7 +28,7 @@ export default function FooterNavLinks() {
   const pathname = usePathname();
   return (
     <nav
-      className="flex flex-wrap items-center justify-center gap-1"
+      className="flex flex-wrap items-center justify-center gap-1 sm:justify-start"
       aria-label="Blog, marketplace, shops, careers, and IQWireCalculator"
     >
       {NAV_LINKS.map(({ href, label }) => (

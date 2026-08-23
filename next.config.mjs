@@ -2,6 +2,16 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Allow tablets / phones on LAN to load /_next assets during `next dev`.
+  // Without this, JS never hydrates and login falls back to a plain GET form.
+  allowedDevOrigins: [
+    "192.168.1.230",
+    "127.0.0.1",
+    "localhost",
+    ...(process.env.ALLOWED_DEV_ORIGINS
+      ? process.env.ALLOWED_DEV_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
+      : []),
+  ],
   serverExternalPackages: ["pdfkit", "exceljs"],
   /** Runtime uploads live under public/uploads — never bundle them into server traces. */
   outputFileTracingExcludes: {
@@ -69,12 +79,22 @@ const nextConfig = {
       "child-src 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com https://www.paypalobjects.com",
       "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com https://*.paypal.com",
       "media-src 'self' blob:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
     ].join("; ");
 
     return [
       {
         source: "/uploads/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
       },
       {
         source: "/:path*",

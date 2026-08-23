@@ -367,6 +367,30 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   background: transparent !important;
 }
 
+/* Tablet / mid widths: keep filter summary text compact so labels/amounts fit. */
+@media (min-width: 768px) and (max-width: 1280px) {
+  .simple-portal .simple-screen-filters > .status-filter-pill--soft {
+    min-height: 0;
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__label {
+    font-size: 0.625rem !important; /* 10px */
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__value,
+  .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__count {
+    font-size: 0.75rem !important; /* 12px */
+  }
+
+  .simple-portal .simple-screen-filters .status-filter-pill--soft > span {
+    padding-left: 0.4rem;
+    padding-right: 0.4rem;
+    gap: 0.35rem;
+  }
+}
+
 .simple-portal .simple-screen-table-wrap {
   min-height: 0;
   min-width: 0;
@@ -378,44 +402,106 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   padding: 0.5rem 0.625rem 0.625rem;
 }
 
-.simple-portal .simple-settings-shell {
+/* Settings: fill shell main (h-screen chain); only right pane scrolls. */
+.simple-settings-page {
   display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
   height: 100%;
   max-height: 100%;
   min-height: 0;
-  width: 100%;
-  min-width: 0;
+  overflow: hidden;
+  padding: 0.5rem 0.625rem 0.625rem;
+}
+
+.simple-portal .simple-settings-shell {
+  display: flex;
   flex: 1 1 auto;
   flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
   overflow: hidden;
 }
 
 .simple-portal .simple-settings-header {
-  margin-bottom: 0.75rem;
   flex-shrink: 0;
+  margin-bottom: 0.75rem;
   border-bottom: 1px solid hsl(var(--border));
   padding-bottom: 0.75rem;
 }
 
+.simple-portal .simple-settings-body {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+  max-height: 100%;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .simple-portal .simple-settings-body {
+    grid-template-columns: 13rem minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+
+/* Side menu stays put; only the content pane scrolls. */
 .simple-portal .simple-settings-nav {
-  flex-shrink: 0;
+  align-self: stretch;
   border-color: hsl(var(--border));
   background: var(--simple-muted);
   padding: 0.5rem;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .simple-portal .simple-settings-nav ul {
+  display: flex;
+  flex-direction: row;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  overflow-y: hidden;
   scrollbar-width: thin;
 }
 
-@media (max-width: 767px) {
+@media (min-width: 768px) {
   .simple-portal .simple-settings-nav {
-    position: sticky;
-    top: 0;
-    z-index: 5;
+    display: flex;
+    height: 100%;
+    max-height: 100%;
+    flex-direction: column;
+    border-right-width: 1px;
+    border-bottom-width: 0;
+    padding: 0.5rem 0.75rem 0.5rem 0.5rem;
+    overflow: hidden;
   }
 
+  .simple-portal .simple-settings-nav ul {
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .simple-portal .simple-settings-nav a[data-active="true"],
+  .simple-portal .simple-settings-nav button[data-active="true"] {
+    box-shadow: inset 2px 0 0 hsl(var(--primary));
+  }
+}
+
+@media (max-width: 767px) {
   .simple-portal .simple-settings-nav a,
   .simple-portal .simple-settings-nav button {
     min-height: 2.25rem;
@@ -426,32 +512,6 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
   .simple-portal .simple-settings-nav a[data-active="true"],
   .simple-portal .simple-settings-nav button[data-active="true"] {
     box-shadow: inset 0 -2px 0 hsl(var(--primary));
-  }
-}
-
-@media (min-width: 768px) {
-  .simple-portal .simple-settings-nav {
-    display: flex;
-    width: 13rem;
-    max-height: 100%;
-    flex-direction: column;
-    overflow: hidden;
-    border-right-width: 1px;
-    border-bottom-width: 0;
-    padding: 0.5rem 0.75rem 0.5rem 0.5rem;
-  }
-
-  .simple-portal .simple-settings-nav ul {
-    min-height: 0;
-    flex: 1 1 auto;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .simple-portal .simple-settings-nav a[data-active="true"],
-  .simple-portal .simple-settings-nav button[data-active="true"] {
-    box-shadow: inset 2px 0 0 hsl(var(--primary));
   }
 }
 
@@ -468,34 +528,43 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
 }
 
 .simple-portal .simple-settings-content {
+  position: relative;
   min-height: 0;
   min-width: 0;
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
   overflow: hidden;
   background: var(--simple-surface);
   border: 1px solid hsl(var(--border));
-  padding: 0.75rem 1rem 0;
+}
+
+/* Absolute fill so flex ancestors cannot grow past viewport. */
+.simple-portal .simple-settings-content-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .simple-portal .simple-settings-content-scroll {
-  min-height: 0;
   flex: 1 1 auto;
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: 0.5rem;
+  touch-action: pan-y;
+  padding: 0.75rem 1rem 0.5rem;
 }
 
 .simple-portal .simple-settings-save-bar {
   flex-shrink: 0;
   z-index: 4;
-  margin-top: 0;
   border-top: 1px solid hsl(var(--border));
   background: color-mix(in srgb, hsl(var(--card)) 95%, transparent);
-  padding: 0.75rem 0;
+  padding: 0.75rem 1rem;
   backdrop-filter: blur(8px);
 }
 

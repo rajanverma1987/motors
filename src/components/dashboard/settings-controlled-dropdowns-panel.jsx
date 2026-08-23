@@ -223,13 +223,6 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     <div className="flex flex-col gap-8 pb-4">
       <FormContainer>
         <FormSectionTitle as="h2">Status</FormSectionTitle>
-        <p className="mb-4 text-sm text-secondary">
-          Define status option lists for quotes, work orders, and invoices. Purchase payment statuses (Paid / Unpaid /
-          Partial Paid) are fixed for the Purchase / Payable filter cards — you can change their display labels and tile
-          colors only. Add values below for other lists, delete with the trash icon or × on each chip, reorder rows, set
-          display labels, and pick tile background and text colors for badges and summary cards. Save settings when
-          finished.
-        </p>
         <div className="max-w-md">
           <Select
             label="Select dropdown"
@@ -282,7 +275,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
               </>
             ) : null}
           </p>
-          <div className="mb-4 flex flex-wrap gap-2">
+          <div className="mb-6 flex flex-wrap gap-2 border-b border-border pb-5">
             {entries.map((row, chipIdx) => {
               const chipTile = resolveStatusTileProps(row.tileColor, chipIdx, row);
               return (
@@ -308,37 +301,21 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             })}
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-border">
-            <table className={`w-full text-sm ${showQuoteFilterGroupColumns ? "min-w-[62rem]" : "min-w-[36rem]"}`}>
-              <thead className="border-b border-border bg-form-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-secondary">
-                <tr>
-                  {!isFixedValues ? <th className="w-24 px-3 py-2">Order</th> : null}
-                  <th className="px-3 py-2">Value</th>
-                  {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
-                  {showQuoteFilterGroupColumns ? (
-                    <>
-                      <th className="min-w-[8rem] px-3 py-2">Filter Group</th>
-                      <th className="w-24 px-3 py-2">Sort</th>
-                      <th className="min-w-[14rem] px-3 py-2">Filter Group colors</th>
-                    </>
-                  ) : null}
-                  {showShopFloorColumn ? (
-                    <th className="px-3 py-2 text-center">Shop floor</th>
-                  ) : null}
-                  <th className="min-w-[14rem] px-3 py-2">Tile colors</th>
-                  <th className="px-3 py-2 text-right">Preview</th>
-                  {!isFixedValues ? <th className="w-12 px-3 py-2" aria-label="Delete" /> : null}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entries.map((row, idx) => (
-                  <tr key={row.value}>
-                    {!isFixedValues ? (
-                      <td className="px-3 py-2">
-                        <div className="flex gap-1">
+          <ul className="flex flex-col gap-5">
+            {entries.map((row, idx) => {
+              const preview = resolveStatusTileProps(row.tileColor, idx, row);
+              return (
+                <li
+                  key={row.value}
+                  className="overflow-hidden rounded-xl border border-border bg-card shadow-sm ring-1 ring-border/50 dark:shadow-black/20"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-form-bg px-4 py-3 sm:px-5">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+                      {!isFixedValues ? (
+                        <div className="flex shrink-0 gap-1.5">
                           <button
                             type="button"
-                            className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-sm text-title hover:border-primary/40 hover:text-primary disabled:opacity-40"
                             aria-label="Move up"
                             onClick={() => moveEntry(idx, -1)}
                             disabled={idx === 0}
@@ -347,7 +324,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           </button>
                           <button
                             type="button"
-                            className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-card text-sm text-title hover:border-primary/40 hover:text-primary disabled:opacity-40"
                             aria-label="Move down"
                             onClick={() => moveEntry(idx, 1)}
                             disabled={idx === entries.length - 1}
@@ -355,99 +332,111 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                             ↓
                           </button>
                         </div>
-                      </td>
+                      ) : null}
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary">
+                          Value
+                        </p>
+                        <p className="mt-0.5 break-all font-mono text-base font-semibold text-title">
+                          {row.value}
+                        </p>
+                      </div>
+                      <span
+                        className={`job-board-status-pill inline-flex max-w-full truncate rounded-full px-3 py-1 text-sm font-semibold ${preview.className}`}
+                        style={preview.style}
+                      >
+                        {chipLabel(row)}
+                      </span>
+                    </div>
+                    {!isFixedValues ? (
+                      <button
+                        type="button"
+                        onClick={() => removeValue(row.value)}
+                        disabled={entries.length <= 1}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Delete ${chipLabel(row)}`}
+                        title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
+                      >
+                        <FiX className="h-5 w-5 shrink-0" aria-hidden />
+                      </button>
                     ) : null}
-                    <td className="px-3 py-2 font-mono text-xs font-medium text-title">{row.value}</td>
+                  </div>
+
+                  <div className="space-y-5 px-4 py-4 sm:px-5 sm:py-5">
+                  <div
+                    className={`grid gap-4 ${
+                      showQuoteFilterGroupColumns
+                        ? "sm:grid-cols-2 xl:grid-cols-3"
+                        : showEntryLabels
+                          ? "sm:grid-cols-2"
+                          : ""
+                    }`}
+                  >
                     {showEntryLabels ? (
-                      <td className="px-3 py-2">
-                        <Input
-                          value={row.label ?? ""}
-                          onChange={(e) => {
-                            const next = [...entries];
-                            next[idx] = { ...next[idx], label: e.target.value ?? "" };
-                            patchEntries(next);
-                          }}
-                          className="!gap-0"
-                          placeholder={row.value}
-                        />
-                      </td>
+                      <Input
+                        label="Display label"
+                        value={row.label ?? ""}
+                        onChange={(e) => {
+                          const next = [...entries];
+                          next[idx] = { ...next[idx], label: e.target.value ?? "" };
+                          patchEntries(next);
+                        }}
+                        placeholder={row.value}
+                        inputClassName="text-base py-2.5"
+                      />
                     ) : null}
                     {showQuoteFilterGroupColumns ? (
                       <>
-                        <td className="px-3 py-2">
-                          <Input
-                            value={row.filterGroup ?? ""}
-                            onChange={(e) => {
-                              const nextName = e.target.value ?? "";
-                              const nextKey = filterGroupKey(nextName || row.label || row.value);
-                              const peer =
-                                nextKey &&
-                                entries.find(
-                                  (e2, i2) =>
-                                    i2 !== idx &&
-                                    filterGroupKey(e2.filterGroup || e2.label || e2.value) === nextKey &&
-                                    (e2.filterGroupBgColor || e2.filterGroupTextColor)
-                                );
-                              const next = [...entries];
-                              next[idx] = {
-                                ...next[idx],
-                                filterGroup: nextName,
-                                ...(peer
-                                  ? {
-                                      filterGroupBgColor: peer.filterGroupBgColor ?? "",
-                                      filterGroupTextColor: peer.filterGroupTextColor ?? "",
-                                    }
-                                  : {}),
-                              };
-                              patchEntries(next);
-                            }}
-                            className="!gap-0"
-                            placeholder={row.label || row.value}
-                          />
-                        </td>
-                        <td className="px-3 py-2">
-                          <Input
-                            type="number"
-                            value={row.sortOrder ?? idx * 10}
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              const n = Number(raw);
-                              const next = [...entries];
-                              next[idx] = {
-                                ...next[idx],
-                                sortOrder: Number.isFinite(n) ? Math.trunc(n) : idx * 10,
-                              };
-                              patchEntries(next);
-                            }}
-                            className="!gap-0"
-                          />
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <TileColorPicker
-                            bgColor={row.filterGroupBgColor ?? ""}
-                            textColor={row.filterGroupTextColor ?? ""}
-                            onChange={({ tileBgColor, tileTextColor }) => {
-                              const gk = filterGroupKey(row.filterGroup || row.label || row.value);
-                              const next = entries.map((e, i) => {
-                                const sameGroup =
-                                  i === idx ||
-                                  (gk &&
-                                    filterGroupKey(e.filterGroup || e.label || e.value) === gk);
-                                if (!sameGroup) return e;
-                                return {
-                                  ...e,
-                                  filterGroupBgColor: tileBgColor ?? "",
-                                  filterGroupTextColor: tileTextColor ?? "",
-                                };
-                              });
-                              patchEntries(next);
-                            }}
-                          />
-                        </td>
+                        <Input
+                          label="Filter group"
+                          value={row.filterGroup ?? ""}
+                          onChange={(e) => {
+                            const nextName = e.target.value ?? "";
+                            const nextKey = filterGroupKey(nextName || row.label || row.value);
+                            const peer =
+                              nextKey &&
+                              entries.find(
+                                (e2, i2) =>
+                                  i2 !== idx &&
+                                  filterGroupKey(e2.filterGroup || e2.label || e2.value) === nextKey &&
+                                  (e2.filterGroupBgColor || e2.filterGroupTextColor)
+                              );
+                            const next = [...entries];
+                            next[idx] = {
+                              ...next[idx],
+                              filterGroup: nextName,
+                              ...(peer
+                                ? {
+                                    filterGroupBgColor: peer.filterGroupBgColor ?? "",
+                                    filterGroupTextColor: peer.filterGroupTextColor ?? "",
+                                  }
+                                : {}),
+                            };
+                            patchEntries(next);
+                          }}
+                          placeholder={row.label || row.value}
+                          inputClassName="text-base py-2.5"
+                        />
+                        <Input
+                          label="Sort"
+                          type="number"
+                          value={row.sortOrder ?? idx * 10}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const n = Number(raw);
+                            const next = [...entries];
+                            next[idx] = {
+                              ...next[idx],
+                              sortOrder: Number.isFinite(n) ? Math.trunc(n) : idx * 10,
+                            };
+                            patchEntries(next);
+                          }}
+                          inputClassName="text-base py-2.5"
+                        />
                       </>
                     ) : null}
                     {showShopFloorColumn ? (
-                      <td className="px-3 py-2 text-center">
+                      <div className="flex items-end pb-1">
                         <Checkbox
                           checked={row.showOnShopFloor !== false}
                           onChange={(e) => {
@@ -455,12 +444,44 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                             next[idx] = { ...next[idx], showOnShopFloor: e.target.checked };
                             patchEntries(next);
                           }}
-                          className="inline-flex justify-center"
+                          label="Show on shop floor"
                           aria-label={`Show ${row.value} on shop floor job board`}
                         />
-                      </td>
+                      </div>
                     ) : null}
-                    <td className="px-3 py-2 align-top">
+                  </div>
+
+                  <div
+                    className={`grid gap-5 border-t border-border pt-5 ${
+                      showQuoteFilterGroupColumns ? "lg:grid-cols-2" : ""
+                    }`}
+                  >
+                    {showQuoteFilterGroupColumns ? (
+                      <div className="rounded-lg border border-border/80 bg-form-bg/60 p-3 sm:p-4">
+                        <p className="mb-3 text-sm font-medium text-title">Filter group colors</p>
+                        <TileColorPicker
+                          bgColor={row.filterGroupBgColor ?? ""}
+                          textColor={row.filterGroupTextColor ?? ""}
+                          onChange={({ tileBgColor, tileTextColor }) => {
+                            const gk = filterGroupKey(row.filterGroup || row.label || row.value);
+                            const next = entries.map((e, i) => {
+                              const sameGroup =
+                                i === idx ||
+                                (gk && filterGroupKey(e.filterGroup || e.label || e.value) === gk);
+                              if (!sameGroup) return e;
+                              return {
+                                ...e,
+                                filterGroupBgColor: tileBgColor ?? "",
+                                filterGroupTextColor: tileTextColor ?? "",
+                              };
+                            });
+                            patchEntries(next);
+                          }}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="rounded-lg border border-border/80 bg-form-bg/60 p-3 sm:p-4">
+                      <p className="mb-3 text-sm font-medium text-title">Tile colors</p>
                       <TileColorPicker
                         bgColor={row.tileBgColor ?? ""}
                         textColor={row.tileTextColor ?? ""}
@@ -475,39 +496,13 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           patchEntries(next);
                         }}
                       />
-                    </td>
-                    <td className="px-3 py-2 text-right align-top">
-                      {(() => {
-                        const preview = resolveStatusTileProps(row.tileColor, idx, row);
-                        return (
-                      <span
-                        className={`job-board-status-pill inline-flex max-w-[10rem] truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ${preview.className}`}
-                        style={preview.style}
-                      >
-                        {chipLabel(row)}
-                      </span>
-                        );
-                      })()}
-                    </td>
-                    {!isFixedValues ? (
-                      <td className="px-3 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeValue(row.value)}
-                          disabled={entries.length <= 1}
-                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
-                          aria-label={`Delete ${chipLabel(row)}`}
-                          title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
-                        >
-                          <FiX className="h-4 w-4 shrink-0" aria-hidden />
-                        </button>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
 
           {!isFixedValues ? (
             <div className="mt-4 flex flex-wrap items-end gap-2">
@@ -523,6 +518,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                       ? "e.g. awaiting_payment"
                       : "New status"
                 }
+                inputClassName="text-base py-2.5"
               />
               <Button type="button" variant="outline" onClick={addValue}>
                 Add

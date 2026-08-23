@@ -55,32 +55,37 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-border bg-card">
-      <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-5">
-          <div>
-            <Link href="/" className="inline-block transition-opacity hover:opacity-90" aria-label="IQ Motorbase — home">
-              <Image
-                src={BRAND_LOGO_PUBLIC_PATH}
-                alt="IQ Motorbase"
-                width={BRAND_LOGO_WIDTH}
-                height={BRAND_LOGO_HEIGHT}
-                className="h-[2.7rem] w-auto max-w-[min(100%,216px)] object-contain object-left"
-              />
-            </Link>
-            <p className="mt-2 text-sm text-secondary">
-              Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
-              businesses.
-            </p>
-          </div>
+      <div className="mx-auto max-w-[86.4rem] px-4 py-8 sm:px-6 md:py-10">
+        <div className="mb-6 flex flex-col gap-3 md:mb-8 md:flex-row md:items-start md:gap-8">
+          <Link
+            href="/"
+            className="inline-block shrink-0 transition-opacity hover:opacity-90"
+            aria-label="IQ Motorbase — home"
+          >
+            <Image
+              src={BRAND_LOGO_PUBLIC_PATH}
+              alt="IQ Motorbase"
+              width={BRAND_LOGO_WIDTH}
+              height={BRAND_LOGO_HEIGHT}
+              className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]"
+            />
+          </Link>
+          <p className="max-w-2xl text-sm leading-snug text-secondary md:pt-1">
+            Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
+            businesses.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:gap-x-8 md:grid-cols-4 md:gap-x-5 lg:gap-x-8">
           {Object.entries(footerLinks).map(([title, links]) => (
-            <div key={title}>
+            <div key={title} className="min-w-0">
               <h3 className="text-sm font-semibold text-title">{title}</h3>
-              <ul className="mt-3 space-y-2">
+              <ul className="mt-2 space-y-1.5">
                 {links.map(({ href, label }) => (
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm text-secondary hover:text-primary transition-colors"
+                      className="text-sm leading-snug text-secondary transition-colors hover:text-primary"
                     >
                       {label}
                     </Link>
@@ -90,11 +95,12 @@ export default function Footer() {
             </div>
           ))}
         </div>
-        <div className="mt-10 border-t border-border pt-8">
+
+        <div className="mt-8 flex flex-col items-center gap-4 border-t border-border pt-6 sm:mt-10 sm:flex-row sm:justify-between sm:gap-6 sm:pt-8">
           <FooterNavLinks />
-        </div>
-        <div className="mt-8 text-center text-sm text-secondary">
-          © {year} IQMotorBase.com. All rights reserved.
+          <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
+            © {year} IQMotorBase.com. All rights reserved.
+          </p>
         </div>
       </div>
     </footer>

@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/toast-provider";
 import { ConfirmProvider } from "@/components/confirm-provider";
 import { ModalStackProvider } from "@/components/modal-provider";
 import { AuthProvider } from "@/contexts/auth-context";
+import PwaRegister from "@/components/pwa-register";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import "./globals.css";
 
@@ -25,8 +26,19 @@ const geistMono = Geist_Mono({
 
 const siteUrl = getPublicSiteUrl();
 
+export const viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f3f1ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#1f1c1a" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export const metadata = {
   metadataBase: new URL(siteUrl),
+  applicationName: "IQMotorBase",
   title: {
     default: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
     template: "%s | IQMotorBase",
@@ -43,6 +55,19 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   creator: "IQMotorBase.com",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "IQMotorBase",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -85,7 +110,10 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <ToastProvider>
               <ModalStackProvider>
-                <ConfirmProvider>{children}</ConfirmProvider>
+                <ConfirmProvider>
+                  <PwaRegister />
+                  {children}
+                </ConfirmProvider>
               </ModalStackProvider>
             </ToastProvider>
           </AuthProvider>
