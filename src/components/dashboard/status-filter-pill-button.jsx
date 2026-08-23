@@ -94,7 +94,7 @@ function IconWell({ Icon, iconWellStyle, tileBgClassName, tileTextClassName, til
   );
 }
 
-function LabelOnlyBody({ Icon, card, iconStyle, tileTextClassName }) {
+function LabelOnlyBody({ Icon, card, iconStyle, tileTextClassName, active }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5 px-2.5 py-1 pl-3">
       {Icon ? (
@@ -104,7 +104,10 @@ function LabelOnlyBody({ Icon, card, iconStyle, tileTextClassName }) {
           aria-hidden
         />
       ) : null}
-      <span className="truncate text-xs font-semibold text-title" title={card.label}>
+      <span
+        className={`truncate text-xs font-semibold ${active ? "text-primary" : "text-title"}`}
+        title={card.label}
+      >
         {card.label}
       </span>
     </span>
@@ -376,7 +379,7 @@ function SoftSelectedMark({ accentColor }) {
   );
 }
 
-/** Soft — filled with status colors; title only on line 1; selected mark + amount + count on line 2. */
+/** Soft — filled with status colors; title + amount wrap (no truncate). */
 function BodySoft(props) {
   const {
     card,
@@ -396,36 +399,34 @@ function BodySoft(props) {
   const amountStyle = tileText ? { color: tileText } : undefined;
   return (
     <span
-      className={`flex h-full w-full min-w-0 flex-col justify-center gap-2 px-2.5 py-1.5 ${
+      className={`flex h-full w-full min-w-0 flex-col justify-center gap-1.5 px-2.5 py-2 sm:gap-2 ${
         fillStyle ? "" : tileClassName || "bg-primary/15 text-primary"
       }`}
       style={fillStyle}
     >
       <span
-        className={`status-filter-pill__label block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-bold uppercase leading-tight tracking-wide sm:text-[11px] lg:text-sm ${
+        className={`status-filter-pill__label block min-w-0 whitespace-normal break-words text-[10px] font-bold uppercase leading-snug tracking-wide sm:text-[11px] lg:text-sm ${
           labelStyle || fillStyle ? "" : tileTextClassName || "text-title"
         }`}
         style={labelStyle}
-        title={card.label}
       >
         {card.label}
       </span>
-      <span className="flex min-w-0 items-center gap-1 whitespace-nowrap sm:gap-1.5">
+      <span className="flex min-w-0 flex-wrap items-start gap-1 sm:gap-1.5">
         {active ? (
           <SoftSelectedMark accentColor={iconColorOnCard(tileBg, tileText)} />
         ) : null}
         <span
-          className={`status-filter-pill__value min-w-0 truncate text-xs font-bold leading-none tabular-nums sm:text-[13px] lg:text-base ${
+          className={`status-filter-pill__value min-w-0 flex-1 basis-[3.5rem] whitespace-normal break-words text-xs font-bold leading-snug tabular-nums sm:text-[13px] lg:text-base ${
             amountStyle || fillStyle ? "" : "text-title"
           }`}
           style={amountStyle}
-          title={displayValue}
         >
           {displayValue}
         </span>
         {showCount ? (
           <span
-            className="status-filter-pill__count ml-auto shrink-0 text-xs font-extrabold leading-none tabular-nums sm:text-[13px] lg:text-base"
+            className="status-filter-pill__count ml-auto shrink-0 self-start text-xs font-extrabold leading-none tabular-nums sm:text-[13px] lg:text-base"
             style={{
               backgroundColor: "#ffffff",
               color:
@@ -572,8 +573,8 @@ export default function StatusFilterPillButton({
     labelOnly
       ? "min-w-0 items-center"
       : isSoft
-        ? // Match Simple hub tab strip height on large screens; slightly shorter on tablet.
-          "h-[4.25rem] sm:h-[4.5rem] lg:h-[5.25rem] min-w-0 w-full flex-1 basis-0 flex-col"
+        ? // Grow with wrapped text; row wrap handled by `.simple-screen-filters`.
+          "min-h-[4.25rem] sm:min-h-[4.5rem] lg:min-h-[5rem] h-auto min-w-0 w-full flex-col"
         : "min-w-[7.5rem] max-w-[12.5rem] flex-col",
     variant === "split" && !labelOnly ? "max-w-[13.5rem]" : "",
     readOnly ? "" : "cursor-pointer",
@@ -606,7 +607,15 @@ export default function StatusFilterPillButton({
   const content = labelOnly ? (
     <>
       <span
-        className={`absolute inset-y-0 left-0 w-[3px] ${tileBg ? "" : tileBgClassName || "bg-primary/50"}`}
+        className={`absolute inset-y-0 left-0 w-[3px] ${
+          active
+            ? tileBg
+              ? ""
+              : tileBgClassName || "bg-primary"
+            : tileBg
+              ? ""
+              : tileBgClassName || "bg-primary/50"
+        }`}
         style={accentStyle}
         aria-hidden
       />
@@ -615,6 +624,7 @@ export default function StatusFilterPillButton({
         card={card}
         iconStyle={iconStyle}
         tileTextClassName={tileTextClassName}
+        active={active}
       />
     </>
   ) : (

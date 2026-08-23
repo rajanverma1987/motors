@@ -99,20 +99,25 @@ export async function POST(request) {
       /* ignore */
     }
 
-    const token = await createPortalToken({
-      email: ownerEmail,
-      shopName: ownerUser.shopName,
-      contactName: ownerUser.contactName,
-      authType: actingEmployee ? "employee" : "owner",
-      employeeId: actingEmployee?.id || "",
-      employeeEmail: actingEmployee?.email || "",
-      calculatorOnlyPortal: calculatorOnlyAccount,
-    });
+    const rememberMe = !!body?.rememberMe;
+    const token = await createPortalToken(
+      {
+        email: ownerEmail,
+        shopName: ownerUser.shopName,
+        contactName: ownerUser.contactName,
+        authType: actingEmployee ? "employee" : "owner",
+        employeeId: actingEmployee?.id || "",
+        employeeEmail: actingEmployee?.email || "",
+        calculatorOnlyPortal: calculatorOnlyAccount,
+      },
+      { rememberMe }
+    );
     const cookieStore = await cookies();
     await setPortalSessionCookies(cookieStore, {
       token,
       calculatorOnlyPortal: calculatorOnlyAccount,
       portalUi,
+      rememberMe,
     });
 
     return NextResponse.json({

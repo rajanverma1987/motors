@@ -340,6 +340,15 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ),
       },
       {
+        key: "customerName",
+        label: "Customer",
+        sortable: false,
+        render: (v, row) => {
+          if (resolveSimplePoType(row) !== SIMPLE_PO_TYPE_JOB) return "—";
+          return String(v || "").trim() || "—";
+        },
+      },
+      {
         key: "poType",
         label: "Type",
         sortable: true,

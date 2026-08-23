@@ -995,16 +995,9 @@ export default function ServiceProposalsPanel({
     />
   );
 
-  const filterCardCount = Math.max(statusSummaryCards.length, 1);
-
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
-      <div
-        className={`${SIMPLE_SCREEN_FILTERS_CLASS} !grid shrink-0 items-stretch gap-2`}
-        style={{
-          gridTemplateColumns: `repeat(${filterCardCount}, minmax(0, 1fr))`,
-        }}
-      >
+      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
         {statusSummaryCards.map(renderStatusCard)}
       </div>
 

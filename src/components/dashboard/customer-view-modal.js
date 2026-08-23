@@ -34,12 +34,12 @@ const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 const SECTION_TITLE =
   "text-sm font-bold uppercase tracking-wide text-title";
 const TH_CLASS =
-  "pl-[5px] pr-1 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary";
-const TD_CLASS = "pl-[5px] pr-1 py-1.5 text-sm font-semibold text-title whitespace-nowrap";
+  "sticky top-0 z-20 border-b border-border pl-[5px] pr-1 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary bg-card";
+const TD_CLASS =
+  "border-b border-border pl-[5px] pr-1 py-1.5 text-sm font-semibold text-title whitespace-nowrap";
 const TABLE_WRAP = "min-h-0 flex-1 overflow-auto rounded-sm border border-border";
-const TABLE_CLASS = "w-full min-w-[24rem] border-collapse text-sm";
-const THEAD_ROW =
-  "sticky top-0 z-[1] border-b border-border bg-primary/[0.06] dark:bg-primary/10";
+const TABLE_CLASS = "w-full min-w-[24rem] border-separate border-spacing-0 text-sm";
+const THEAD_ROW = "";
 const ACTIVITY_PANEL =
   "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card";
 const ACTIVITY_PANEL_HEADER =
@@ -483,9 +483,10 @@ export default function CustomerViewModal({
             <span className="text-sm text-secondary">Loading…</span>
           </div>
         ) : customer ? (
-          <div className="relative h-full min-h-0">
-            <div className="absolute inset-0 grid min-h-0 grid-rows-1 gap-5 overflow-y-auto overscroll-contain lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.2fr)] lg:overflow-hidden">
-            <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto overscroll-contain lg:pr-1">
+          <div className="relative min-h-0 h-auto lg:h-full">
+            {/* Tablet: one scroll (modal body). Desktop: split panes with independent scroll. */}
+            <div className="flex flex-col gap-5 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.2fr)] lg:grid-rows-1 lg:gap-5 lg:overflow-hidden">
+            <div className="flex min-w-0 flex-col gap-4 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
               <Form
                 id={CUSTOMER_VIEW_FORM_ID}
                 onSubmit={handleCustomerSave}
@@ -548,7 +549,7 @@ export default function CustomerViewModal({
                         </thead>
                         <tbody>
                           {filteredInvoices.map((inv) => (
-                            <tr key={inv.id} className="border-b border-border last:border-b-0">
+                            <tr key={inv.id} className="last:[&>td]:border-b-0">
                               <td className={TD_CLASS}>
                                 {inv?.id ? (
                                   <button
@@ -633,7 +634,7 @@ export default function CustomerViewModal({
                         </thead>
                         <tbody>
                           {filteredQuotes.map((q) => (
-                            <tr key={q.id} className="border-b border-border last:border-b-0">
+                            <tr key={q.id} className="last:[&>td]:border-b-0">
                               <td className={TD_CLASS}>
                                 {q?.id ? (
                                   <button

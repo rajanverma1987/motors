@@ -1,5 +1,5 @@
-/* IQMotorBase PWA service worker — installability only (do not block navigations). */
-const SW_VERSION = "iqmotorbase-pwa-v2";
+/* IQMotorBase PWA service worker — installability + network-only (no stale cache). */
+const SW_VERSION = "iqmotorbase-pwa-v3";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
@@ -15,6 +15,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Required for Chromium installability. Do not call respondWith — let the browser
-// handle all requests so tablet/LAN loads and Next.js HMR never hang in the SW.
-self.addEventListener("fetch", () => {});
+/**
+ * Chromium WebAPK minting expects a fetch handler. Network-only passthrough —
+ * do not cache app shells (keeps Next.js / auth / HMR correct).
+ */
+self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") return;
+  event.respondWith(
+    fetch(event.request).catch(() =>
+      new Response("You are offline. Reconnect to use IQMotorBase.", {
+        status: 503,
+        statusText: "Offline",
+        headers: { "Content-Type": "text/plain; charset=utf-8" },
+      })
+    )
+  );
+});

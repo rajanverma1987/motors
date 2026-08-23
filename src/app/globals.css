@@ -134,7 +134,8 @@ html.dark .job-board-status-pill.tile-colors-custom {
   background-color: hsl(var(--card));
 }
 .ui-table-shell thead th.ui-table-sticky-col {
-  background-color: color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)));
+  background-color: hsl(var(--card));
+  z-index: 40;
 }
 .ui-table-shell tbody tr:hover > td.ui-table-sticky-col {
   background-color: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--card)));
@@ -341,16 +342,20 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
 .simple-portal .simple-screen-filters {
   display: flex;
   flex-wrap: wrap;
+  align-items: stretch;
   gap: 0.5rem;
   /* Tight gap under hub tab strip (panel padding is 0). */
   margin-top: 5px;
   margin-bottom: 0.5rem;
 }
 
-/* Soft cards share the full filter row width equally; labels stay single-line. */
+/* Soft cards wrap to extra rows when needed; text is allowed to wrap (no truncate). */
 .simple-portal .simple-screen-filters > .status-filter-pill--soft {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 8.5rem;
+  min-width: min(100%, 8.5rem);
+  max-width: 100%;
+  height: auto;
+  align-self: stretch;
 }
 
 .simple-portal .simple-screen-filters .status-filter-pill {
@@ -365,23 +370,26 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
 
 .simple-portal .simple-screen-filters .status-filter-pill--soft {
   background: transparent !important;
+  height: auto !important;
 }
 
-/* Tablet / mid widths: keep filter summary text compact so labels/amounts fit. */
+/* Tablet / mid widths: keep filter summary text compact. */
 @media (min-width: 768px) and (max-width: 1280px) {
   .simple-portal .simple-screen-filters > .status-filter-pill--soft {
-    min-height: 0;
+    flex-basis: 7.25rem;
+    min-width: min(100%, 7.25rem);
   }
 
   .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__label {
     font-size: 0.625rem !important; /* 10px */
     letter-spacing: 0.04em;
-    line-height: 1.15;
+    line-height: 1.25;
   }
 
   .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__value,
   .simple-portal .simple-screen-filters .status-filter-pill--soft .status-filter-pill__count {
     font-size: 0.75rem !important; /* 12px */
+    line-height: 1.25;
   }
 
   .simple-portal .simple-screen-filters .status-filter-pill--soft > span {

@@ -1,14 +1,77 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
+import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
+  isValidSimplePortalId,
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
 import { mongoCalendarDateRange } from "@/lib/format-date";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import {
+  resolveSimplePoType,
+  SIMPLE_PO_TYPE_JOB,
+} from "@/lib/simple-purchase-order-form";
+
+/**
+ * Attach customerName from the linked Job (service proposal) for Job POs only.
+ * @param {string} email
+ * @param {Array<Record<string, unknown>>} items
+ */
+async function attachJobCustomerNames(email, items) {
+  if (!Array.isArray(items) || items.length === 0) return items;
+
+  const proposalIds = [];
+  const jobNumbers = [];
+  for (const item of items) {
+    if (resolveSimplePoType(item) !== SIMPLE_PO_TYPE_JOB) continue;
+    const sid = String(item.serviceProposalId || "").trim();
+    const job = String(item.jobNumber || "").trim();
+    if (sid && isValidSimplePortalId(sid)) proposalIds.push(sid);
+    if (job) jobNumbers.push(job);
+  }
+
+  const uniqueIds = [...new Set(proposalIds)];
+  const uniqueJobs = [...new Set(jobNumbers)];
+  if (uniqueIds.length === 0 && uniqueJobs.length === 0) {
+    return items.map((item) => ({ ...item, customerName: "" }));
+  }
+
+  const or = [];
+  if (uniqueIds.length) or.push({ _id: { $in: uniqueIds } });
+  if (uniqueJobs.length) or.push({ documentNumber: { $in: uniqueJobs } });
+
+  const proposals = await SimpleServiceProposal.find({
+    createdByEmail: email,
+    $or: or,
+  })
+    .select({ companyName: 1, documentNumber: 1 })
+    .lean();
+
+  const nameById = new Map();
+  const nameByJob = new Map();
+  for (const p of proposals || []) {
+    const name = String(p.companyName || "").trim();
+    if (!name) continue;
+    nameById.set(String(p._id), name);
+    const docNum = String(p.documentNumber || "").trim();
+    if (docNum) nameByJob.set(docNum, name);
+  }
+
+  return items.map((item) => {
+    if (resolveSimplePoType(item) !== SIMPLE_PO_TYPE_JOB) {
+      return { ...item, customerName: "" };
+    }
+    const sid = String(item.serviceProposalId || "").trim();
+    const job = String(item.jobNumber || "").trim();
+    const customerName =
+      (sid && nameById.get(sid)) || (job && nameByJob.get(job)) || "";
+    return { ...item, customerName };
+  });
+}
 
 export async function GET(request) {
   try {
@@ -129,7 +192,10 @@ export async function GET(request) {
         },
       ]),
     ]);
-    const items = list.map((doc) => serializeSimplePortalDoc(doc));
+    const items = await attachJobCustomerNames(
+      email,
+      list.map((doc) => serializeSimplePortalDoc(doc))
+    );
     if (!includePagination) return NextResponse.json(items);
     return NextResponse.json({
       items,

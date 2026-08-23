@@ -291,7 +291,7 @@ export default function Table({
     return "";
   };
 
-  const cellBorderClass = "border-r border-border";
+  const cellBorderClass = "border-r border-b border-border";
 
   useEffect(() => {
     if (!enableClientPagination) return;
@@ -561,11 +561,12 @@ export default function Table({
     const sticky = {
       position: "sticky",
       left,
-      zIndex: isHeader ? (effectiveStickyHeader ? 30 : 20) : 5,
+      /* Body sticky cols must stay under sticky headers when scrolling vertically. */
+      zIndex: isHeader ? (effectiveStickyHeader ? 40 : 20) : 5,
     };
     if (isHeader && effectiveStickyHeader) {
       sticky.top = 0;
-      sticky.backgroundColor = "color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)))";
+      sticky.backgroundColor = "hsl(var(--card))";
       sticky.boxShadow = "inset 0 -1px 0 hsl(var(--border))";
     }
     return baseStyle ? { ...baseStyle, ...sticky } : sticky;
@@ -693,9 +694,11 @@ export default function Table({
     URL.revokeObjectURL(url);
   };
 
+  /* border-collapse breaks position:sticky on th/td in Chromium; use separate + zero spacing. */
+  const useStickyTableLayout = effectiveStickyHeader || stickyColumnsActive;
   const tableClass = (hasColumnWidths || resizableColumns || responsive)
-    ? "min-w-full w-max table-auto border-collapse"
-    : "w-full border-collapse";
+    ? `min-w-full w-max table-auto ${useStickyTableLayout ? "border-separate border-spacing-0" : "border-collapse"}`
+    : `w-full ${useStickyTableLayout ? "border-separate border-spacing-0" : "border-collapse"}`;
   const thClass = (col) => {
     const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
     const wrap = col.headerWrap ? "whitespace-normal" : "whitespace-nowrap";
@@ -706,8 +709,8 @@ export default function Table({
     ? {
         position: "sticky",
         top: 0,
-        zIndex: 10,
-        backgroundColor: "color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)))",
+        zIndex: 20,
+        backgroundColor: "hsl(var(--card))",
         boxShadow: "inset 0 -1px 0 hsl(var(--border))",
       }
     : undefined;
@@ -835,7 +838,7 @@ export default function Table({
           displayData.map((row, i) => (
             <tr
               key={getRowId(row, i, rowKey)}
-              className={`border-b border-border last:border-b-0 transition-colors hover:bg-primary/[0.08] ${
+              className={`transition-colors hover:bg-primary/[0.08] last:[&>td]:border-b-0 ${
                 striped && i % 2 === 1 ? "bg-card/50" : ""
               }`}
               onMouseEnter={() => setCellHover((prev) => ({ row: i, col: prev.col }))}
@@ -881,7 +884,7 @@ export default function Table({
       {hasFooter && !effectiveStickyHeader && (
         <tfoot className="border-t-2 border-border bg-card font-medium text-title">
           {(Array.isArray(footer) ? footer : [footer]).map((row, ri) => (
-            <tr key={ri} className="border-b border-border last:border-b-0">
+            <tr key={ri} className="last:[&>td]:border-b-0">
               {displayColumns.map((col, j) => {
                 if (col.isSelect || col.isAction)
                   return (

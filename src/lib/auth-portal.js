@@ -51,10 +51,11 @@ export async function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createPortalToken(payload) {
+export async function createPortalToken(payload, options = {}) {
+  const expiresIn = options.expiresIn || (options.rememberMe ? "90d" : "7d");
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
     .sign(getPortalJwtSecret());
 }
 
@@ -71,13 +72,13 @@ export function getPortalCookieName() {
   return COOKIE_NAME;
 }
 
-export function portalSessionCookieOptions() {
+export function portalSessionCookieOptions({ rememberMe = false } = {}) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: rememberMe ? 60 * 60 * 24 * 90 : 60 * 60 * 24 * 7,
   };
 }
 
@@ -85,19 +86,24 @@ export function getPortalUiCookieName() {
   return PORTAL_UI_COOKIE;
 }
 
-export function setPortalUiCookie(cookieStore, portalUi) {
-  cookieStore.set(PORTAL_UI_COOKIE, normalizePortalUi(portalUi), portalSessionCookieOptions());
+export function setPortalUiCookie(cookieStore, portalUi, options = {}) {
+  cookieStore.set(PORTAL_UI_COOKIE, normalizePortalUi(portalUi), portalSessionCookieOptions(options));
 }
 
-export async function setPortalSessionCookies(cookieStore, { token, calculatorOnlyPortal, portalUi }) {
-  const common = portalSessionCookieOptions();
+export async function setPortalSessionCookies(
+  cookieStore,
+  { token, calculatorOnlyPortal, portalUi, rememberMe = false }
+) {
+  const common = portalSessionCookieOptions({ rememberMe: !!rememberMe });
   cookieStore.set(getPortalCookieName(), token, common);
   cookieStore.set(
     getPortalTierCookieName(),
     calculatorOnlyPortal ? PORTAL_TIER_CALCULATOR_ONLY : PORTAL_TIER_FULL,
     common
   );
-  setPortalUiCookie(cookieStore, calculatorOnlyPortal ? PORTAL_UI_SIMPLE : portalUi);
+  setPortalUiCookie(cookieStore, calculatorOnlyPortal ? PORTAL_UI_SIMPLE : portalUi, {
+    rememberMe: !!rememberMe,
+  });
 }
 
 export function clearPortalSessionCookies(cookieStore) {

@@ -26,13 +26,21 @@ import {
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 
-const DATE_FILTER_PILL_CLASS =
-  "!h-7 !min-h-7 shrink-0 !flex !items-center !justify-center !rounded-none !border-border/80 !bg-card !px-2 !py-0 text-xs font-semibold !shadow-none";
+const DATE_FILTER_PILL_BASE =
+  "!h-7 !min-h-7 shrink-0 !flex !items-center !justify-center !rounded-none !px-2 !py-0 text-xs font-semibold";
+const DATE_FILTER_PILL_INACTIVE =
+  "!border-border/80 !bg-card !shadow-none hover:!border-primary/45 hover:!bg-primary/[0.03]";
+const DATE_FILTER_PILL_ACTIVE =
+  "!border-primary !bg-primary/20 !text-primary !shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]";
 const DATE_FILTER_INPUT_CLASS =
   "mb-0 !flex !w-auto !min-w-0 !flex-row !items-center !gap-1 [&_label]:mb-0 [&_label]:shrink-0 [&_label]:text-[11px] [&_label]:font-medium [&_label]:text-secondary";
 const DATE_FILTER_INPUT_FIELD_CLASS =
   "!h-7 !min-h-7 !w-[8.25rem] !rounded-none !border-border/80 !bg-bg !px-1.5 !py-0 text-xs leading-none";
 const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 !rounded-none px-2.5 text-xs";
+
+function dateFilterPillClass(active) {
+  return `${DATE_FILTER_PILL_BASE} ${active ? DATE_FILTER_PILL_ACTIVE : DATE_FILTER_PILL_INACTIVE}`;
+}
 
 /**
  * Hub date range controls for Simple `/dashboards`.
@@ -109,7 +117,7 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
     >
       <StatusFilterPillButton
         labelOnly
-        className={DATE_FILTER_PILL_CLASS}
+        className={dateFilterPillClass(isCurrentFy)}
         card={{
           key: "fy",
           label: "FY",
@@ -120,7 +128,7 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
       />
       <StatusFilterPillButton
         labelOnly
-        className={DATE_FILTER_PILL_CLASS}
+        className={dateFilterPillClass(isAllDates)}
         card={{
           key: "all",
           label: "All",

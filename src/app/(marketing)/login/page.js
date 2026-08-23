@@ -5,10 +5,51 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import Checkbox from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { portalLandingPath } from "@/lib/portal-view";
+
+const REMEMBER_LOGIN_KEY = "iqmotorbase.rememberLogin";
+
+function readRememberedLogin() {
+  if (typeof window === "undefined") return { rememberMe: false, email: "", password: "" };
+  try {
+    const raw = window.localStorage.getItem(REMEMBER_LOGIN_KEY);
+    if (!raw) return { rememberMe: false, email: "", password: "" };
+    const parsed = JSON.parse(raw);
+    return {
+      rememberMe: true,
+      email: String(parsed?.email || ""),
+      password: String(parsed?.password || ""),
+    };
+  } catch {
+    return { rememberMe: false, email: "", password: "" };
+  }
+}
+
+function saveRememberedLogin(email, password) {
+  try {
+    window.localStorage.setItem(
+      REMEMBER_LOGIN_KEY,
+      JSON.stringify({
+        email: String(email || "").trim(),
+        password: String(password || ""),
+      })
+    );
+  } catch {
+    // ignore quota / private mode
+  }
+}
+
+function clearRememberedLogin() {
+  try {
+    window.localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 /** Open redirect safe: same-origin path only. */
 function safeNextPath(raw) {
@@ -50,6 +91,7 @@ export default function LoginPage() {
   const nextPath = useMemo(() => safeNextPath(nextRaw), [nextRaw]);
   const { login, user, mounted } = useAuth();
   const [form, setForm] = useState({ email: "", password: "" });
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
@@ -57,6 +99,11 @@ export default function LoginPage() {
   useEffect(() => {
     setNextRaw(readQueryParam("next"));
     setIntent(readQueryParam("intent"));
+    const remembered = readRememberedLogin();
+    if (remembered.rememberMe && (remembered.email || remembered.password)) {
+      setRememberMe(true);
+      setForm({ email: remembered.email, password: remembered.password });
+    }
   }, []);
 
   // Never block the form on session check — tablet/LAN auth can hang.
@@ -84,8 +131,10 @@ export default function LoginPage() {
     setError("");
     setSubmitting(true);
     try {
-      const result = await login(form.email, form.password);
+      const result = await login(form.email, form.password, { rememberMe });
       if (result.ok) {
+        if (rememberMe) saveRememberedLogin(form.email, form.password);
+        else clearRememberedLogin();
         router.push(destForUser(result.user, nextPath));
         return;
       }
@@ -201,6 +250,18 @@ export default function LoginPage() {
                   required
                   autoComplete="current-password"
                 />
+                <Checkbox
+                  name="rememberMe"
+                  className="mt-4"
+                  label="Remember me on this device"
+                  help="Saves your email and password on this device and keeps you signed in longer."
+                  checked={rememberMe}
+                  onChange={(e) => {
+                    const on = e.target.checked;
+                    setRememberMe(on);
+                    if (!on) clearRememberedLogin();
+                  }}
+                />
                 {error && (
                   <p className="mt-4 text-sm text-danger" role="alert">
                     {error}
@@ -211,7 +272,7 @@ export default function LoginPage() {
                     {submitting ? "Signing in…" : "Log in"}
                   </Button>
                   <p className="text-center text-sm text-secondary">
-                    DoRegister your shopount?{" "}
+                    Don't have an account?{" "}
                     <Link href="/register" className="font-medium text-primary hover:underline">
                       Register your center
                     </Link>
