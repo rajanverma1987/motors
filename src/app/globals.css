@@ -416,12 +416,14 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
     z-index: 5;
   }
 
+  .simple-portal .simple-settings-nav a,
   .simple-portal .simple-settings-nav button {
     min-height: 2.25rem;
     padding-left: 0.75rem;
     padding-right: 0.75rem;
   }
 
+  .simple-portal .simple-settings-nav a[data-active="true"],
   .simple-portal .simple-settings-nav button[data-active="true"] {
     box-shadow: inset 0 -2px 0 hsl(var(--primary));
   }
@@ -447,15 +449,18 @@ html.dark .simple-portal .simple-hub-tablist [role="tab"][aria-selected="true"] 
     overscroll-behavior: contain;
   }
 
+  .simple-portal .simple-settings-nav a[data-active="true"],
   .simple-portal .simple-settings-nav button[data-active="true"] {
     box-shadow: inset 2px 0 0 hsl(var(--primary));
   }
 }
 
+.simple-portal .simple-settings-nav a,
 .simple-portal .simple-settings-nav button {
   transition: background-color 160ms ease, color 160ms ease;
 }
 
+.simple-portal .simple-settings-nav a[data-active="true"],
 .simple-portal .simple-settings-nav button[data-active="true"] {
   background: hsl(var(--primary) / 0.12);
   color: hsl(var(--primary));

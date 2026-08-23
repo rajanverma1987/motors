@@ -98,8 +98,11 @@ export default function SettingsPageClient() {
   savedZoomRef.current = savedSettings?.zoomLevel;
   const savedFontRef = useRef(savedSettings?.fontSizeLevel);
   savedFontRef.current = savedSettings?.fontSizeLevel;
-  const activeSection = resolveSimpleSettingsSection(searchParams.get("section"));
+  const urlSection = resolveSimpleSettingsSection(searchParams.get("section"));
   const masterTab = resolveSimpleMasterTab(searchParams.get("masterTab"));
+  /** Immediate section for tablet/iPad where soft URL replace can lag behind the tap. */
+  const [pendingSection, setPendingSection] = useState(null);
+  const activeSection = pendingSection || urlSection;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(() => ({ ...USER_SETTINGS_DEFAULTS }));
@@ -148,9 +151,15 @@ export default function SettingsPageClient() {
 
   const updateDraft = (patch) => setDraft((prev) => ({ ...prev, ...patch }));
 
+  useEffect(() => {
+    setPendingSection(null);
+  }, [urlSection]);
+
   const goSection = useCallback(
     (sectionId, extra = {}) => {
-      router.replace(simpleSettingsHref(sectionId, extra), { scroll: false });
+      const next = resolveSimpleSettingsSection(sectionId);
+      setPendingSection(next);
+      router.replace(simpleSettingsHref(next, extra), { scroll: false });
     },
     [router]
   );
@@ -1012,9 +1021,9 @@ export default function SettingsPageClient() {
   useEffect(() => {
     const list = navListRef.current;
     if (!list) return;
-    const activeBtn = list.querySelector('button[data-active="true"]');
-    if (activeBtn && typeof activeBtn.scrollIntoView === "function") {
-      activeBtn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    const activeEl = list.querySelector('[data-active="true"]');
+    if (activeEl && typeof activeEl.scrollIntoView === "function") {
+      activeEl.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
     }
   }, [activeSection]);
 
@@ -1060,20 +1069,29 @@ export default function SettingsPageClient() {
           >
             {SIMPLE_SETTINGS_SECTIONS.map((item) => {
               const active = item.id === activeSection;
+              const href = simpleSettingsHref(
+                item.id,
+                item.id === "master" ? { masterTab } : {}
+              );
               return (
                 <li key={item.id} className="shrink-0 md:w-full">
-                  <button
-                    type="button"
+                  <Link
+                    href={href}
+                    scroll={false}
+                    replace
                     data-active={active ? "true" : "false"}
-                    onClick={() => goSection(item.id, item.id === "master" ? { masterTab } : {})}
-                    className={`w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm touch-manipulation ${
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goSection(item.id, item.id === "master" ? { masterTab } : {});
+                    }}
+                    className={`block w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm touch-manipulation ${
                       active
                         ? "font-semibold text-primary"
                         : "text-secondary hover:bg-card hover:text-title"
                     }`}
                   >
                     {item.label}
-                  </button>
+                  </Link>
                 </li>
               );
             })}
