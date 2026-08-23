@@ -39,6 +39,11 @@ import {
   SIMPLE_PO_TYPE_SHOP,
   simplePoTypeLabel,
 } from "@/lib/simple-purchase-order-form";
+import {
+  normalizePoPaymentStatusKey,
+  poPaymentStatusTileColorForValue,
+} from "@/lib/dropdown-catalog";
+import { useUserSettings } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 
 const FILTER_ALL = "";
@@ -47,14 +52,7 @@ const FILTER_UNPAID = "Unpaid";
 const FILTER_PARTIAL_PAID = "Partial Paid";
 
 function normalizePaymentStatus(status) {
-  const s = String(status || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_-]+/g, " ");
-  if (s === "paid") return FILTER_PAID;
-  if (s.includes("partial")) return FILTER_PARTIAL_PAID;
-  if (!s || s === "unpaid") return FILTER_UNPAID;
-  return String(status || "").trim() || FILTER_UNPAID;
+  return normalizePoPaymentStatusKey(status);
 }
 
 function paymentStatusBadgeVariant(status) {
@@ -87,6 +85,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
   const formatDate = useFormatDate();
+  const { settings: mergedSettings } = useUserSettings();
   const searchParams = useSearchParams();
   const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
 
@@ -201,7 +200,6 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   );
 
   const paymentSummaryCards = useMemo(() => {
-    const tileFor = (index) => resolveStatusTileProps("", index);
     const bucketMap = new Map();
     for (const b of paymentBuckets) {
       const key = normalizePaymentStatus(b.paymentStatus);
@@ -213,19 +211,23 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     }
     const allCount = [...bucketMap.values()].reduce((s, b) => s + b.count, 0);
     const allAmount = [...bucketMap.values()].reduce((s, b) => s + b.amount, 0);
-    const statusCards = [
-      { key: FILTER_PAID, label: "Paid", tileIndex: 2 },
-      { key: FILTER_UNPAID, label: "Unpaid", tileIndex: 4 },
-      { key: FILTER_PARTIAL_PAID, label: "Partial Paid", tileIndex: 3 },
-    ].map(({ key, label, tileIndex }) => {
+    const statusCards = [FILTER_PAID, FILTER_UNPAID, FILTER_PARTIAL_PAID].map((key) => {
       const hit = bucketMap.get(key) || { count: 0, amount: 0 };
+      const { tileColor, tileBgColor, tileTextColor, index, label } = poPaymentStatusTileColorForValue(
+        mergedSettings,
+        key
+      );
       return {
         key,
-        label,
+        label: label || key,
         count: hit.count,
         amount: hit.amount,
-        tileAppearance: tileFor(tileIndex),
-        icon: paymentFilterIcon(label),
+        tileAppearance: resolveStatusTileProps(tileColor, index, {
+          tileBgColor,
+          tileTextColor,
+          tileColor,
+        }),
+        icon: paymentFilterIcon(key),
       };
     });
     return [
@@ -234,12 +236,12 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         label: "All",
         count: allCount,
         amount: allAmount,
-        tileAppearance: tileFor(0),
+        tileAppearance: resolveStatusTileProps("", 0),
         icon: paymentFilterIcon("All"),
       },
       ...statusCards,
     ];
-  }, [paymentBuckets]);
+  }, [paymentBuckets, mergedSettings]);
 
   const displayRows = enrichedRows;
 
@@ -425,14 +427,34 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         label: "Payment Status",
         sortable: true,
         render: (v) => {
-          const label = String(v || "").trim() || "—";
-          if (label === "—") return label;
+          const raw = String(v || "").trim() || "—";
+          if (raw === "—") return raw;
+          const { tileColor, tileBgColor, tileTextColor, index, label } = poPaymentStatusTileColorForValue(
+            mergedSettings,
+            raw
+          );
+          const pill = resolveStatusTileProps(tileColor, index, {
+            tileBgColor,
+            tileTextColor,
+            tileColor,
+          });
+          const hasCustom = Boolean(tileBgColor || tileTextColor || tileColor);
+          if (hasCustom) {
+            return (
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${pill.className}`}
+                style={pill.style}
+              >
+                {label || raw}
+              </span>
+            );
+          }
           return (
             <Badge
-              variant={paymentStatusBadgeVariant(label)}
+              variant={paymentStatusBadgeVariant(raw)}
               className="rounded-full px-2.5 py-0.5 text-xs"
             >
-              {label}
+              {label || raw}
             </Badge>
           );
         },
@@ -488,7 +510,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ),
       },
     ],
-    [formatDate, handleDelete]
+    [formatDate, handleDelete, mergedSettings]
   );
 
   const isCreate = modalMode === "create";

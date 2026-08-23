@@ -59,23 +59,62 @@ function csvEscape(val) {
   return s;
 }
 
-/** Export rows currently shown in the table (respects status filter + search). */
+function csvJoinArray(val) {
+  if (!Array.isArray(val) || val.length === 0) return "";
+  return val.map((v) => String(v ?? "").trim()).filter(Boolean).join("; ");
+}
+
+/** Full Listing collection export (all documents, not just the current table page). */
 function buildListingsCsv(rows) {
   const headers = [
     "id",
     "companyName",
     "email",
     "phone",
+    "website",
+    "primaryContactPerson",
+    "address",
     "city",
     "state",
     "zipCode",
     "country",
+    "shortDescription",
+    "yearsInBusiness",
     "status",
     "isSeed",
     "urlSlug",
     "crmUserId",
+    "crmOnboardedAt",
+    "directoryScore",
+    "services",
+    "maxMotorSizeHP",
+    "maxVoltage",
+    "maxWeightHandled",
+    "motorCapabilities",
+    "equipmentTesting",
+    "rewindingCapabilities",
+    "industriesServed",
+    "pickupDeliveryAvailable",
+    "craneCapacity",
+    "forkliftCapacity",
+    "rushRepairAvailable",
+    "turnaroundTime",
+    "certifications",
+    "shopSizeSqft",
+    "numTechnicians",
+    "numEngineers",
+    "yearsCombinedExperience",
+    "serviceZipCode",
+    "serviceRadiusMiles",
+    "statesServed",
+    "citiesOrMetrosServed",
+    "areaCoveredFrom",
+    "rejectionReason",
+    "reviewedBy",
     "submittedAt",
     "reviewedAt",
+    "createdAt",
+    "updatedAt",
   ];
   const lines = rows.map((r) =>
     [
@@ -83,16 +122,50 @@ function buildListingsCsv(rows) {
       r.companyName,
       r.email,
       r.phone,
+      r.website,
+      r.primaryContactPerson,
+      r.address,
       r.city,
       r.state,
       r.zipCode,
       r.country,
+      r.shortDescription,
+      r.yearsInBusiness,
       r.status,
       r.isSeed ? "yes" : "no",
       r.urlSlug,
       r.crmUserId != null && r.crmUserId !== "" ? String(r.crmUserId) : "",
+      r.crmOnboardedAt ? new Date(r.crmOnboardedAt).toISOString() : "",
+      r.directoryScore != null ? String(r.directoryScore) : "",
+      csvJoinArray(r.services),
+      r.maxMotorSizeHP,
+      r.maxVoltage,
+      r.maxWeightHandled,
+      csvJoinArray(r.motorCapabilities),
+      csvJoinArray(r.equipmentTesting),
+      csvJoinArray(r.rewindingCapabilities),
+      csvJoinArray(r.industriesServed),
+      r.pickupDeliveryAvailable ? "yes" : "no",
+      r.craneCapacity,
+      r.forkliftCapacity,
+      r.rushRepairAvailable ? "yes" : "no",
+      r.turnaroundTime,
+      csvJoinArray(r.certifications),
+      r.shopSizeSqft,
+      r.numTechnicians,
+      r.numEngineers,
+      r.yearsCombinedExperience,
+      r.serviceZipCode,
+      r.serviceRadiusMiles,
+      r.statesServed,
+      r.citiesOrMetrosServed,
+      r.areaCoveredFrom,
+      r.rejectionReason,
+      r.reviewedBy,
       r.submittedAt ? new Date(r.submittedAt).toISOString() : "",
       r.reviewedAt ? new Date(r.reviewedAt).toISOString() : "",
+      r.createdAt ? new Date(r.createdAt).toISOString() : "",
+      r.updatedAt ? new Date(r.updatedAt).toISOString() : "",
     ].map(csvEscape)
   );
   const body = [headers.map(csvEscape).join(","), ...lines.map((l) => l.join(","))].join("\r\n");
@@ -135,6 +208,7 @@ export default function AdminListingsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
+  const [exportingCsv, setExportingCsv] = useState(false);
   const { tableSort, handleTableSort } = useAdminTableSort("submittedAt", "desc");
 
   const onTableSort = useCallback(
@@ -372,13 +446,21 @@ export default function AdminListingsPage() {
     }
   }
 
-  const handleDownloadCsv = useCallback(() => {
-    if (!listings.length) {
-      toast.error("No listings to export.");
-      return;
-    }
+  const handleDownloadCsv = useCallback(async () => {
+    setExportingCsv(true);
     try {
-      const csv = buildListingsCsv(listings);
+      const res = await fetch("/api/listings?export=1", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load listings for export");
+      const rows = Array.isArray(data?.items) ? data.items : [];
+      if (!rows.length) {
+        toast.error("No listings to export.");
+        return;
+      }
+      const csv = buildListingsCsv(rows);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -386,11 +468,13 @@ export default function AdminListingsPage() {
       a.download = `listings-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("CSV downloaded.");
+      toast.success(`CSV downloaded (${rows.length} listings).`);
     } catch (e) {
       toast.error(e.message || "Export failed");
+    } finally {
+      setExportingCsv(false);
     }
-  }, [listings, toast]);
+  }, [toast]);
 
   const handleRefresh = useCallback(async () => {
     setLoading(true);
@@ -647,11 +731,11 @@ export default function AdminListingsPage() {
             variant="outline"
             size="sm"
             onClick={handleDownloadCsv}
-            disabled={loading || listings.length === 0}
+            disabled={loading || exportingCsv}
             className="h-10 min-h-[2.5rem] shrink-0"
           >
             <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
-            Download CSV
+            {exportingCsv ? "Exporting…" : "Download CSV"}
           </Button>
           <Button type="button" variant="primary" size="sm" onClick={openNewListingFlow} className="h-10 min-h-[2.5rem] shrink-0">
             <FiPlus className="h-4 w-4 shrink-0" aria-hidden />

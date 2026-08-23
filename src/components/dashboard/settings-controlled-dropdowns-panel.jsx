@@ -50,6 +50,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   const quoteEntries = merged.controlledDropdowns?.quote_status?.entries ?? [];
   const woEntries = merged.controlledDropdowns?.work_order_status?.entries ?? [];
   const invoiceEntries = merged.controlledDropdowns?.invoice_status?.entries ?? [];
+  const poPaymentEntries = merged.controlledDropdowns?.po_payment_status?.entries ?? [];
 
   const dropdownSelectOptions = useMemo(
     () =>
@@ -84,22 +85,44 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     syncWorkOrderLegacy(setDraft, nextEntries);
   };
 
+  const patchPoPaymentEntries = (nextEntries) => {
+    setDraft((prev) => ({
+      ...prev,
+      controlledDropdowns: {
+        ...(prev.controlledDropdowns && typeof prev.controlledDropdowns === "object" ? prev.controlledDropdowns : {}),
+        po_payment_status: { entries: nextEntries },
+      },
+    }));
+  };
+
   const selectedDef = DROPDOWN_DEFINITIONS[selectedKey];
+  const isFixedValues = Boolean(selectedDef?.fixedValues);
   const entries =
-    selectedKey === "quote_status" ? quoteEntries : selectedKey === "invoice_status" ? invoiceEntries : woEntries;
-  const showEntryLabels = selectedKey === "quote_status" || selectedKey === "invoice_status";
+    selectedKey === "quote_status"
+      ? quoteEntries
+      : selectedKey === "invoice_status"
+        ? invoiceEntries
+        : selectedKey === "po_payment_status"
+          ? poPaymentEntries
+          : woEntries;
+  const showEntryLabels =
+    selectedKey === "quote_status" ||
+    selectedKey === "invoice_status" ||
+    selectedKey === "po_payment_status";
   const showQuoteFilterGroupColumns = selectedKey === "quote_status";
   const showShopFloorColumn = selectedKey === "work_order_status";
 
   const patchEntries = (next) => {
     if (selectedKey === "quote_status") patchQuoteEntries(next);
     else if (selectedKey === "invoice_status") patchInvoiceEntries(next);
+    else if (selectedKey === "po_payment_status") patchPoPaymentEntries(next);
     else patchWoEntries(next);
   };
 
   const chipLabel = (row) => (showEntryLabels ? row.label || row.value : row.value);
 
   const addValue = () => {
+    if (isFixedValues) return;
     const nextVal = (drafts[selectedKey] || "").trim();
     if (!nextVal) return;
     if (entries.some((e) => e.value.toLowerCase() === nextVal.toLowerCase())) {
@@ -130,6 +153,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   };
 
   const removeValue = async (value) => {
+    if (isFixedValues) return;
     if (entries.length <= 1) {
       toast.error("Keep at least one value.");
       return;
@@ -146,6 +170,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   };
 
   const moveEntry = (idx, delta) => {
+    if (isFixedValues) return;
     const j = idx + delta;
     if (j < 0 || j >= entries.length) return;
     const next = [...entries];
@@ -199,9 +224,11 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
       <FormContainer>
         <FormSectionTitle as="h2">Status</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">
-          Define status option lists for quotes, work orders, and invoices. Add values below, delete with the trash icon or × on each chip, reorder rows,
-          set display labels (quotes and invoices), and pick tile background and text colors for badges and the shop floor.
-          Save settings when finished.
+          Define status option lists for quotes, work orders, and invoices. Purchase payment statuses (Paid / Unpaid /
+          Partial Paid) are fixed for the Purchase / Payable filter cards — you can change their display labels and tile
+          colors only. Add values below for other lists, delete with the trash icon or × on each chip, reorder rows, set
+          display labels, and pick tile background and text colors for badges and summary cards. Save settings when
+          finished.
         </p>
         <div className="max-w-md">
           <Select
@@ -219,6 +246,14 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           <FormSectionTitle as="h2">{selectedDef.label}</FormSectionTitle>
           <p className="mb-4 text-xs text-secondary">
             Total values: {entries.length}.
+            {isFixedValues ? (
+              <>
+                {" "}
+                These values are <span className="font-medium text-title">fixed</span> (Paid, Unpaid, Partial Paid) for
+                Purchase / Payable filter summary cards. Change display labels and tile colors only — they cannot be
+                added or removed.
+              </>
+            ) : null}
             {showShopFloorColumn ? (
               <>
                 {" "}
@@ -236,12 +271,16 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                 <span className="font-medium text-title">Sort</span> controls status column order in the table.
               </>
             ) : null}{" "}
-            Quote statuses are stored on each RFQ; keep an{" "}
-            <span className="font-medium text-title">approved</span>-labeled option if you use{" "}
-            <span className="font-medium text-title">Create work order</span> from Quotes (API checks that slug). For
-            invoices, keep slugs like <span className="font-medium text-title">sent</span>,{" "}
-            <span className="font-medium text-title">partial_paid</span>, and{" "}
-            <span className="font-medium text-title">fully_paid</span> if you use email send and payment recording.
+            {!isFixedValues ? (
+              <>
+                Quote statuses are stored on each RFQ; keep an{" "}
+                <span className="font-medium text-title">approved</span>-labeled option if you use{" "}
+                <span className="font-medium text-title">Create work order</span> from Quotes (API checks that slug). For
+                invoices, keep slugs like <span className="font-medium text-title">sent</span>,{" "}
+                <span className="font-medium text-title">partial_paid</span>, and{" "}
+                <span className="font-medium text-title">fully_paid</span> if you use email send and payment recording.
+              </>
+            ) : null}
           </p>
           <div className="mb-4 flex flex-wrap gap-2">
             {entries.map((row, chipIdx) => {
@@ -253,15 +292,17 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                 style={chipTile.style}
               >
                 {chipLabel(row)}
-                <button
-                  type="button"
-                  onClick={() => removeValue(row.value)}
-                  className="rounded p-0.5 text-secondary hover:bg-card hover:text-danger"
-                  aria-label={`Delete ${chipLabel(row)}`}
-                  title={`Delete ${chipLabel(row)}`}
-                >
-                  ×
-                </button>
+                {!isFixedValues ? (
+                  <button
+                    type="button"
+                    onClick={() => removeValue(row.value)}
+                    className="rounded p-0.5 text-secondary hover:bg-card hover:text-danger"
+                    aria-label={`Delete ${chipLabel(row)}`}
+                    title={`Delete ${chipLabel(row)}`}
+                  >
+                    ×
+                  </button>
+                ) : null}
               </span>
             );
             })}
@@ -271,7 +312,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             <table className={`w-full text-sm ${showQuoteFilterGroupColumns ? "min-w-[62rem]" : "min-w-[36rem]"}`}>
               <thead className="border-b border-border bg-form-bg/80 text-left text-xs font-semibold uppercase tracking-wide text-secondary">
                 <tr>
-                  <th className="w-24 px-3 py-2">Order</th>
+                  {!isFixedValues ? <th className="w-24 px-3 py-2">Order</th> : null}
                   <th className="px-3 py-2">Value</th>
                   {showEntryLabels ? <th className="px-3 py-2">Display label</th> : null}
                   {showQuoteFilterGroupColumns ? (
@@ -286,34 +327,36 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                   ) : null}
                   <th className="min-w-[14rem] px-3 py-2">Tile colors</th>
                   <th className="px-3 py-2 text-right">Preview</th>
-                  <th className="w-12 px-3 py-2" aria-label="Delete" />
+                  {!isFixedValues ? <th className="w-12 px-3 py-2" aria-label="Delete" /> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {entries.map((row, idx) => (
                   <tr key={row.value}>
-                    <td className="px-3 py-2">
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
-                          aria-label="Move up"
-                          onClick={() => moveEntry(idx, -1)}
-                          disabled={idx === 0}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
-                          aria-label="Move down"
-                          onClick={() => moveEntry(idx, 1)}
-                          disabled={idx === entries.length - 1}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </td>
+                    {!isFixedValues ? (
+                      <td className="px-3 py-2">
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
+                            aria-label="Move up"
+                            onClick={() => moveEntry(idx, -1)}
+                            disabled={idx === 0}
+                          >
+                            ↑
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-border px-2 py-1 text-xs hover:bg-card"
+                            aria-label="Move down"
+                            onClick={() => moveEntry(idx, 1)}
+                            disabled={idx === entries.length - 1}
+                          >
+                            ↓
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                     <td className="px-3 py-2 font-mono text-xs font-medium text-title">{row.value}</td>
                     {showEntryLabels ? (
                       <td className="px-3 py-2">
@@ -446,45 +489,49 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                         );
                       })()}
                     </td>
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => removeValue(row.value)}
-                        disabled={entries.length <= 1}
-                        className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
-                        aria-label={`Delete ${chipLabel(row)}`}
-                        title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
-                      >
-                        <FiX className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                    </td>
+                    {!isFixedValues ? (
+                      <td className="px-3 py-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeValue(row.value)}
+                          disabled={entries.length <= 1}
+                          className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label={`Delete ${chipLabel(row)}`}
+                          title={entries.length <= 1 ? "Keep at least one value" : `Delete ${chipLabel(row)}`}
+                        >
+                          <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                        </button>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-end gap-2">
-            <Input
-              label="Add value"
-              className="min-w-[240px] flex-1"
-              value={drafts[selectedKey] || ""}
-              onChange={(e) => setDrafts((p) => ({ ...p, [selectedKey]: e.target.value }))}
-              placeholder={
-                selectedKey === "quote_status"
-                  ? "e.g. pending_review"
-                  : selectedKey === "invoice_status"
-                    ? "e.g. awaiting_payment"
-                    : "New status"
-              }
-            />
-            <Button type="button" variant="outline" onClick={addValue}>
-              Add
-            </Button>
-            <Button type="button" variant="outline" onClick={openBulk}>
-              Bulk edit
-            </Button>
-          </div>
+          {!isFixedValues ? (
+            <div className="mt-4 flex flex-wrap items-end gap-2">
+              <Input
+                label="Add value"
+                className="min-w-[240px] flex-1"
+                value={drafts[selectedKey] || ""}
+                onChange={(e) => setDrafts((p) => ({ ...p, [selectedKey]: e.target.value }))}
+                placeholder={
+                  selectedKey === "quote_status"
+                    ? "e.g. pending_review"
+                    : selectedKey === "invoice_status"
+                      ? "e.g. awaiting_payment"
+                      : "New status"
+                }
+              />
+              <Button type="button" variant="outline" onClick={addValue}>
+                Add
+              </Button>
+              <Button type="button" variant="outline" onClick={openBulk}>
+                Bulk edit
+              </Button>
+            </div>
+          ) : null}
         </FormContainer>
       ) : null}
 

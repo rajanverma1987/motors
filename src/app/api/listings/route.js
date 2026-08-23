@@ -166,6 +166,18 @@ export async function POST(request) {
   }
 }
 
+function mapListingAdminRows(list, emailMap) {
+  return list.map((l) => {
+    const resolved = resolveListingCrmUserId(l, emailMap);
+    return {
+      ...l,
+      id: l._id.toString(),
+      _id: undefined,
+      crmUserId: resolved,
+    };
+  });
+}
+
 export async function GET(request) {
   try {
     const admin = await getAdminFromRequest(request);
@@ -174,6 +186,24 @@ export async function GET(request) {
     }
     await connectDB();
     const { searchParams } = new URL(request.url);
+    const exportAll = searchParams.get("export") === "1" || searchParams.get("export") === "all";
+
+    // Full-collection export for CSV (ignores page / status / search filters).
+    if (exportAll) {
+      const list = await Listing.find({})
+        .sort({ submittedAt: -1 })
+        .lean();
+      const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
+      const listWithId = mapListingAdminRows(list, emailMap);
+      return NextResponse.json({
+        items: listWithId,
+        page: 1,
+        pageSize: listWithId.length,
+        totalCount: listWithId.length,
+        export: true,
+      });
+    }
+
     const status = searchParams.get("status");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
@@ -212,15 +242,7 @@ export async function GET(request) {
         .lean(),
     ]);
     const emailMap = await buildEmailToCrmUserIdMap(list.map((l) => l.email));
-    const listWithId = list.map((l) => {
-      const resolved = resolveListingCrmUserId(l, emailMap);
-      return {
-        ...l,
-        id: l._id.toString(),
-        _id: undefined,
-        crmUserId: resolved,
-      };
-    });
+    const listWithId = mapListingAdminRows(list, emailMap);
     return NextResponse.json({ items: listWithId, page, pageSize, totalCount });
   } catch (err) {
     console.error("List listings error:", err);

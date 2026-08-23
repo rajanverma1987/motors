@@ -34,6 +34,22 @@ const DEFAULT_INVOICE_LABELS = {
   fully_paid: "Fully Paid",
 };
 
+/** Fixed Purchase / Payable payment filter statuses (not user-extensible). */
+export const PO_PAYMENT_STATUS_VALUES = ["Paid", "Unpaid", "Partial Paid"];
+
+const DEFAULT_PO_PAYMENT_STATUS_LABELS = {
+  Paid: "Paid",
+  Unpaid: "Unpaid",
+  "Partial Paid": "Partial Paid",
+};
+
+/** Fallback tile preset indices when no custom colors are set (matches prior hard-coded cards). */
+export const PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX = {
+  Paid: 2,
+  Unpaid: 4,
+  "Partial Paid": 3,
+};
+
 export const DROPDOWN_DEFINITIONS = {
   quote_status: {
     key: "quote_status",
@@ -46,6 +62,11 @@ export const DROPDOWN_DEFINITIONS = {
   invoice_status: {
     key: "invoice_status",
     label: "Invoice status",
+  },
+  po_payment_status: {
+    key: "po_payment_status",
+    label: "Purchase payment status",
+    fixedValues: true,
   },
 };
 
@@ -196,6 +217,34 @@ function normalizeInvoiceEntries(rawEntries) {
   return uniq;
 }
 
+/**
+ * Fixed Paid / Unpaid / Partial Paid — colors and labels only; values cannot be added/removed.
+ * @param {unknown} rawEntries
+ */
+function normalizePoPaymentStatusEntries(rawEntries) {
+  const byLower = new Map();
+  if (Array.isArray(rawEntries)) {
+    for (const raw of rawEntries) {
+      const value = String(raw?.value ?? "").trim();
+      if (!value) continue;
+      byLower.set(value.toLowerCase(), raw);
+    }
+  }
+  return PO_PAYMENT_STATUS_VALUES.map((canon) => {
+    const raw = byLower.get(canon.toLowerCase()) || {};
+    const tile = tileFieldsFromEntry(raw, null);
+    const label =
+      clampDropdownLabel(raw?.label) || DEFAULT_PO_PAYMENT_STATUS_LABELS[canon] || canon;
+    return {
+      value: canon,
+      label,
+      tileBgColor: tile.tileBgColor,
+      tileTextColor: tile.tileTextColor,
+      tileColor: tile.tileColor,
+    };
+  });
+}
+
 function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoardOrder) {
   const tiles =
     legacyTiles && typeof legacyTiles === "object" && !Array.isArray(legacyTiles) ? legacyTiles : {};
@@ -262,6 +311,8 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
   const quoteRaw = obj.quote_status && typeof obj.quote_status === "object" ? obj.quote_status : {};
   const woRaw = obj.work_order_status && typeof obj.work_order_status === "object" ? obj.work_order_status : {};
   const invRaw = obj.invoice_status && typeof obj.invoice_status === "object" ? obj.invoice_status : {};
+  const poPayRaw =
+    obj.po_payment_status && typeof obj.po_payment_status === "object" ? obj.po_payment_status : {};
 
   return {
     quote_status: {
@@ -272,6 +323,9 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
     },
     invoice_status: {
       entries: normalizeInvoiceEntries(invRaw.entries),
+    },
+    po_payment_status: {
+      entries: normalizePoPaymentStatusEntries(poPayRaw.entries),
     },
   };
 }
@@ -542,6 +596,56 @@ export function invoiceStatusTileColorForValue(mergedSettings, value, fallbackIn
     tileBgColor: entry?.tileBgColor ?? "",
     tileTextColor: entry?.tileTextColor ?? "",
     index: idx >= 0 ? idx : fallbackIndex,
+  };
+}
+
+/**
+ * Canonical PO payment status label: Paid | Unpaid | Partial Paid.
+ * @param {unknown} status
+ */
+export function normalizePoPaymentStatusKey(status) {
+  const s = String(status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, " ");
+  if (s === "paid") return "Paid";
+  if (s.includes("partial")) return "Partial Paid";
+  if (!s || s === "unpaid") return "Unpaid";
+  const hit = PO_PAYMENT_STATUS_VALUES.find((v) => v.toLowerCase() === String(status || "").trim().toLowerCase());
+  return hit || "Unpaid";
+}
+
+export function poPaymentStatusSelectOptionsFromMerged(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.po_payment_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizePoPaymentStatusEntries([]);
+  return list.map((e) => ({
+    value: e.value,
+    label: clampDropdownLabel(e.label) || DEFAULT_PO_PAYMENT_STATUS_LABELS[e.value] || e.value,
+  }));
+}
+
+/**
+ * Tile colors for Purchase / Payable filter summary cards and payment badges.
+ * @param {unknown} mergedSettings
+ * @param {string} value Paid | Unpaid | Partial Paid (any casing)
+ * @param {number} [fallbackIndex]
+ */
+export function poPaymentStatusTileColorForValue(mergedSettings, value, fallbackIndex) {
+  const entries = mergedSettings?.controlledDropdowns?.po_payment_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizePoPaymentStatusEntries([]);
+  const key = normalizePoPaymentStatusKey(value);
+  const idx = list.findIndex((e) => String(e.value ?? "").trim() === key);
+  const entry = idx >= 0 ? list[idx] : null;
+  const defaultIdx =
+    typeof fallbackIndex === "number" && fallbackIndex >= 0
+      ? fallbackIndex
+      : PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX[key] ?? 0;
+  return {
+    tileColor: entry?.tileColor ?? "",
+    tileBgColor: entry?.tileBgColor ?? "",
+    tileTextColor: entry?.tileTextColor ?? "",
+    index: idx >= 0 ? (PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX[key] ?? idx) : defaultIdx,
+    label: entry?.label || DEFAULT_PO_PAYMENT_STATUS_LABELS[key] || key,
   };
 }
 
