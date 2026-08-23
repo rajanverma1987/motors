@@ -1,5 +1,5 @@
 /* IQMotorBase PWA service worker — installability + network-only (no stale cache). */
-const SW_VERSION = "iqmotorbase-pwa-v3";
+const SW_VERSION = "iqmotorbase-pwa-v4";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
