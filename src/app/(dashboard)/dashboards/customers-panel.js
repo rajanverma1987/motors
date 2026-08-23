@@ -704,6 +704,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
           responsive
           dense
           textSize="xs"
+          stickyColumns
           paginateClientSide={false}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {

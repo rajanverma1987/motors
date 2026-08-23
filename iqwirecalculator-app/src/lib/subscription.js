@@ -15,7 +15,7 @@ import {
 import { appFetch } from "../api";
 
 export const IAP_PRODUCT_ID = "IQWireMonthly";
-export const IAP_ANDROID_PACKAGE = "com.iqmotorbase.iqwirecalculator";
+export const IAP_ANDROID_PACKAGE = "com.iqwirecalculator.iqmotorbase.com";
 
 function isCancelled(error) {
   const code = String(error?.code || "");

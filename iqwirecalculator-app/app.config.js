@@ -34,8 +34,8 @@ module.exports = {
       },
     },
     android: {
-      package: "com.iqmotorbase.iqwirecalculator",
-      versionCode: 4,
+      package: "com.iqwirecalculator.iqmotorbase.com",
+      versionCode: 5,
       softwareKeyboardLayoutMode: "resize",
       adaptiveIcon: {
         backgroundColor: "#FDFCFB",

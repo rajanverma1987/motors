@@ -129,6 +129,28 @@ html.dark .job-board-status-pill.tile-colors-custom {
   scrollbar-color: hsl(var(--border)) transparent;
 }
 
+/* Frozen leading columns (hub tables on tablet / smaller) */
+.ui-table-shell td.ui-table-sticky-col {
+  background-color: hsl(var(--card));
+}
+.ui-table-shell thead th.ui-table-sticky-col {
+  background-color: color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)));
+}
+.ui-table-shell tbody tr:hover > td.ui-table-sticky-col {
+  background-color: color-mix(in srgb, hsl(var(--primary)) 8%, hsl(var(--card)));
+}
+.ui-table-shell tbody tr.bg-card\/50 > td.ui-table-sticky-col {
+  background-color: color-mix(in srgb, hsl(var(--card)) 50%, transparent);
+}
+.ui-table-shell td.ui-table-sticky-col-last,
+.ui-table-shell th.ui-table-sticky-col-last {
+  box-shadow: 2px 0 4px -2px rgb(0 0 0 / 0.18);
+}
+.dark .ui-table-shell td.ui-table-sticky-col-last,
+.dark .ui-table-shell th.ui-table-sticky-col-last {
+  box-shadow: 2px 0 4px -2px rgb(0 0 0 / 0.45);
+}
+
 /* Table: hide focus ring on mouse click; Tab still shows browser outline for plain links/buttons in cells */
 .ui-table-shell button:focus:not(:focus-visible),
 .ui-table-shell a:focus:not(:focus-visible) {
@@ -216,7 +238,6 @@ body.simple-dashboards-square-inputs [role="button"] {
 
 .simple-portal .simple-hub-date-bar,
 .simple-hub-date-bar {
-  display: flex;
   min-width: 0;
   flex-wrap: wrap;
   align-items: center;
@@ -233,6 +254,13 @@ body.simple-dashboards-square-inputs [role="button"] {
   justify-content: flex-start;
   background: hsl(var(--bg));
   padding: 0.2rem 0.35rem;
+}
+
+/* Full-width strip under the navbar on small screens */
+.simple-hub-date-bar--below {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 /* Continuous hub tab stripe — strong, one-bar navigation */

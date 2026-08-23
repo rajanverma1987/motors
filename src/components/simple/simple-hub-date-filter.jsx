@@ -35,10 +35,11 @@ const DATE_FILTER_INPUT_FIELD_CLASS =
 const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 !rounded-none px-2.5 text-xs";
 
 /**
- * Hub date range controls for Simple `/dashboards` (lives in navbar).
+ * Hub date range controls for Simple `/dashboards`.
  * Native calendar via type="date" (ISO value); title shows Settings country format.
+ * @param {{ className?: string, placement?: "nav" | "below" }} props
  */
-export default function SimpleHubDateFilter({ className = "" }) {
+export default function SimpleHubDateFilter({ className = "", placement = "nav" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useUserSettings();
@@ -97,9 +98,12 @@ export default function SimpleHubDateFilter({ className = "" }) {
 
   if (activeTab === SIMPLE_TAB_CALCULATORS) return null;
 
+  const placementClass =
+    placement === "below" ? "simple-hub-date-bar--below" : "simple-hub-date-bar--nav";
+
   return (
     <div
-      className={`simple-hub-date-bar simple-hub-date-bar--nav shrink-0 ${className}`.trim()}
+      className={`simple-hub-date-bar ${placementClass} flex shrink-0 ${className}`.trim()}
       role="group"
       aria-label="Hub date range"
     >

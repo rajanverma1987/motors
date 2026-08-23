@@ -404,6 +404,7 @@ export default function MasterDataSearchPanel() {
                 searchable={false}
                 dense
                 textSize="xs"
+                stickyColumns
               />
             )}
           </div>

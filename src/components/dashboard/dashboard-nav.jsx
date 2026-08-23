@@ -127,9 +127,9 @@ export default function DashboardNav() {
         </div>
       </div>
       {onSimpleHub ? (
-        <div className="mt-2 lg:hidden">
+        <div className="mt-2 flex w-full justify-end lg:hidden">
           <Suspense fallback={null}>
-            <SimpleHubDateFilter />
+            <SimpleHubDateFilter placement="below" />
           </Suspense>
         </div>
       ) : null}

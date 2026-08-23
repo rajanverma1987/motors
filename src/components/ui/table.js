@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { FiEdit2, FiX, FiRotateCw, FiDownload, FiSearch } from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
@@ -9,6 +9,10 @@ import Modal from "./modal";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { formatDateForCurrency } from "@/lib/format-date";
 import { resolveTablePageSize } from "@/lib/user-settings";
+import {
+  SIMPLE_HUB_STICKY_COLUMN_COUNT,
+  SIMPLE_HUB_STICKY_COLUMNS_MQ,
+} from "@/lib/simple-screen-ui";
 
 /** Column keys that hold calendar dates (not timestamps) when no custom render is set. */
 const TABLE_DATE_COLUMN_KEYS = new Set([
@@ -196,7 +200,20 @@ export default function Table({
   fillHeight = true,
   /** Client-side slice when server pagination is not used (default: on). Set false to show all rows. */
   paginateClientSide = true,
+  /**
+   * Freeze the first N data columns while scrolling horizontally.
+   * When true, uses SIMPLE_HUB_STICKY_COLUMN_COUNT (3). When a number, freezes that many.
+   */
+  stickyColumns = false,
+  /** Media query for when sticky columns apply (default: tablet / ≤1400px). Pass "" to always freeze. */
+  stickyColumnsMediaQuery = SIMPLE_HUB_STICKY_COLUMNS_MQ,
 }) {
+  const stickyColumnCount =
+    stickyColumns === true
+      ? SIMPLE_HUB_STICKY_COLUMN_COUNT
+      : typeof stickyColumns === "number" && stickyColumns > 0
+        ? Math.floor(stickyColumns)
+        : 0;
   const hasPagination = pagination && typeof onPageChange === "function";
   const enableClientPagination = !hasPagination && paginateClientSide;
   const hasEdit = typeof onEdit === "function";
@@ -463,6 +480,103 @@ export default function Table({
   const visibleDataColumns = columns.filter((c) => !hiddenColumnKeys.includes(c.key));
   const displayColumns = [...selectColumn, ...visibleDataColumns, ...actionsColumn];
 
+  const tableRef = useRef(null);
+  const [stickyColumnsActive, setStickyColumnsActive] = useState(false);
+  const [stickyLeftOffsets, setStickyLeftOffsets] = useState([]);
+
+  useEffect(() => {
+    if (stickyColumnCount <= 0) {
+      setStickyColumnsActive(false);
+      return undefined;
+    }
+    const mqRaw = String(stickyColumnsMediaQuery || "").trim();
+    if (!mqRaw) {
+      setStickyColumnsActive(true);
+      return undefined;
+    }
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      setStickyColumnsActive(true);
+      return undefined;
+    }
+    const mq = window.matchMedia(mqRaw);
+    const sync = () => setStickyColumnsActive(mq.matches);
+    sync();
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", sync);
+      return () => mq.removeEventListener("change", sync);
+    }
+    mq.addListener(sync);
+    return () => mq.removeListener(sync);
+  }, [stickyColumnCount, stickyColumnsMediaQuery]);
+
+  const measureStickyOffsets = useCallback(() => {
+    const tableEl = tableRef.current;
+    if (!tableEl || stickyColumnCount <= 0 || !stickyColumnsActive) {
+      setStickyLeftOffsets([]);
+      return;
+    }
+    const ths = tableEl.querySelectorAll("thead tr th");
+    const n = Math.min(stickyColumnCount, ths.length, displayColumns.length);
+    const next = [];
+    let acc = 0;
+    for (let i = 0; i < n; i += 1) {
+      next.push(acc);
+      acc += ths[i].getBoundingClientRect().width;
+    }
+    setStickyLeftOffsets((prev) => {
+      if (prev.length === next.length && prev.every((v, i) => Math.abs(v - next[i]) < 0.5)) {
+        return prev;
+      }
+      return next;
+    });
+  }, [stickyColumnCount, stickyColumnsActive, displayColumns.length]);
+
+  useLayoutEffect(() => {
+    measureStickyOffsets();
+  }, [measureStickyOffsets, displayData.length, columnWidthOverrides, isCompact, textSize]);
+
+  useEffect(() => {
+    if (!stickyColumnsActive || stickyColumnCount <= 0) return undefined;
+    const tableEl = tableRef.current;
+    if (!tableEl || typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(() => measureStickyOffsets());
+    ro.observe(tableEl);
+    const scrollParent = tableEl.closest(".table-scroll-x");
+    if (scrollParent) ro.observe(scrollParent);
+    window.addEventListener("resize", measureStickyOffsets);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measureStickyOffsets);
+    };
+  }, [stickyColumnsActive, stickyColumnCount, measureStickyOffsets]);
+
+  const stickyColActiveCount =
+    stickyColumnsActive && stickyColumnCount > 0 && stickyLeftOffsets.length > 0
+      ? Math.min(stickyColumnCount, stickyLeftOffsets.length, displayColumns.length)
+      : 0;
+
+  const mergeStickyCellStyle = (colIndex, baseStyle, { isHeader = false } = {}) => {
+    if (colIndex < 0 || colIndex >= stickyColActiveCount) return baseStyle;
+    const left = stickyLeftOffsets[colIndex] ?? 0;
+    const sticky = {
+      position: "sticky",
+      left,
+      zIndex: isHeader ? (effectiveStickyHeader ? 30 : 20) : 5,
+    };
+    if (isHeader && effectiveStickyHeader) {
+      sticky.top = 0;
+      sticky.backgroundColor = "color-mix(in srgb, hsl(var(--primary)) 3%, hsl(var(--card)))";
+      sticky.boxShadow = "inset 0 -1px 0 hsl(var(--border))";
+    }
+    return baseStyle ? { ...baseStyle, ...sticky } : sticky;
+  };
+
+  const stickyColClassName = (colIndex) => {
+    if (colIndex < 0 || colIndex >= stickyColActiveCount) return "";
+    const last = colIndex === stickyColActiveCount - 1 ? " ui-table-sticky-col-last" : "";
+    return `ui-table-sticky-col${last}`;
+  };
+
   const openSettingsModal = () => {
     setDraftHiddenKeys([...hiddenColumnKeys]);
     setSettingsModalOpen(true);
@@ -607,7 +721,7 @@ export default function Table({
   );
 
   const tableContent = (
-    <table className={tableClass} onMouseLeave={clearCellHover}>
+    <table ref={tableRef} className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
       <thead className="border-b-2 border-border bg-primary/[0.03] outline-none dark:bg-primary/5">
         <tr>
@@ -617,11 +731,17 @@ export default function Table({
             const isSortable = col.sortable && hasSort;
             const isFilterable = col.filterable && hasFilter && !col.isSelect && !col.isAction;
             const canResize = resizableColumns && !col.isSelect && !col.isAction;
+            const stickyCls = stickyColClassName(i);
+            const thStyle = mergeStickyCellStyle(
+              i,
+              effectiveStickyHeader ? { ...thStickyStyle, ...style } : style,
+              { isHeader: true }
+            );
             return (
               <th
                 key={col.key ?? i}
-                className={`${thClass(col)} ${cellHoverClass(null, i)} ${canResize ? "relative" : ""} transition-colors`}
-                style={effectiveStickyHeader ? { ...thStickyStyle, ...style } : style}
+                className={`${thClass(col)} ${cellHoverClass(null, i)} ${canResize ? "relative" : ""}${stickyCls ? ` ${stickyCls}` : ""} transition-colors`}
+                style={thStyle}
                 onMouseEnter={() => setCellHover({ row: null, col: i })}
               >
                 {col.isSelect ? (
@@ -741,11 +861,13 @@ export default function Table({
                 /** Parent cursor does not override UA `button` cursor; target descendants explicitly. */
                 const actionCellCursor = "[&_button]:cursor-pointer [&_a]:cursor-pointer";
                 const hasRowCellColor = Boolean(rowCellStyle || rowCellClass);
+                const stickyCls = stickyColClassName(j);
+                const cellStyle = mergeStickyCellStyle(j, style);
                 return (
                   <td
                     key={col.key ?? j}
-                    className={`${cellPx(col)} ${cellPy} ${cellText} leading-snug ${hasRowCellColor ? "" : "text-text"} tabular whitespace-nowrap ${align} ${cellBorderClass} ${hasRowCellColor ? "" : cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}${rowCellClass ? ` ${rowCellClass}` : ""}`}
-                    style={style}
+                    className={`${cellPx(col)} ${cellPy} ${cellText} leading-snug ${hasRowCellColor ? "" : "text-text"} tabular whitespace-nowrap ${align} ${cellBorderClass} ${hasRowCellColor ? "" : cellHoverClass(i, j)} transition-colors${isActionLikeColumn ? ` cursor-pointer ${actionCellCursor}` : ""}${rowCellClass ? ` ${rowCellClass}` : ""}${stickyCls ? ` ${stickyCls}` : ""}`}
+                    style={cellStyle}
                     onMouseEnter={() => setCellHover({ row: i, col: j })}
                   >
                     {renderCell(col, row, i)}

@@ -978,20 +978,6 @@ export default function ServiceProposalsPanel({
     ]
   );
 
-  const invoiceSummaryKeys = useMemo(
-    () =>
-      new Set([FILTER_AMOUNT_RECEIVABLE, FILTER_TAX_COLLECTED, FILTER_TAX_TO_COLLECT]),
-    []
-  );
-  const mainStatusCards = useMemo(
-    () => statusSummaryCards.filter((c) => !invoiceSummaryKeys.has(c.key)),
-    [statusSummaryCards, invoiceSummaryKeys]
-  );
-  const invoiceSummaryCards = useMemo(
-    () => statusSummaryCards.filter((c) => invoiceSummaryKeys.has(c.key)),
-    [statusSummaryCards, invoiceSummaryKeys]
-  );
-
   const renderStatusCard = (card) => (
     <StatusFilterPillButton
       key={card.key || "__all__"}
@@ -1009,27 +995,17 @@ export default function ServiceProposalsPanel({
     />
   );
 
+  const filterCardCount = Math.max(statusSummaryCards.length, 1);
+
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
-      <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0 items-stretch justify-between`}>
-        <div
-          className="grid min-w-0 w-full flex-1 items-stretch gap-2 self-stretch"
-          style={{
-            gridTemplateColumns: `repeat(${Math.max(mainStatusCards.length, 1)}, minmax(0, 1fr))`,
-          }}
-        >
-          {mainStatusCards.map(renderStatusCard)}
-        </div>
-        {invoiceSummaryCards.length > 0 ? (
-          <div
-            className="ml-6 grid min-w-0 shrink-0 items-stretch gap-2 self-stretch sm:ml-8"
-            style={{
-              gridTemplateColumns: `repeat(${Math.max(invoiceSummaryCards.length, 1)}, minmax(0, 1fr))`,
-            }}
-          >
-            {invoiceSummaryCards.map(renderStatusCard)}
-          </div>
-        ) : null}
+      <div
+        className={`${SIMPLE_SCREEN_FILTERS_CLASS} !grid shrink-0 items-stretch gap-2`}
+        style={{
+          gridTemplateColumns: `repeat(${filterCardCount}, minmax(0, 1fr))`,
+        }}
+      >
+        {statusSummaryCards.map(renderStatusCard)}
       </div>
 
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
@@ -1085,6 +1061,7 @@ export default function ServiceProposalsPanel({
           responsive
           dense
           textSize="xs"
+          stickyColumns
           paginateClientSide={false}
           pagination={{ page, pageSize, totalCount }}
           onPageChange={(nextPage, nextPageSize) => {
