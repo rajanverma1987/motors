@@ -41,7 +41,7 @@ export default function SettingsProductDropdownsPanel({ draft, setDraft }) {
   };
 
   return (
-    <div className="flex flex-col gap-8 pb-24">
+    <div className="flex flex-col gap-8 pb-4">
       <FormContainer>
         <FormSectionTitle as="h2">Product dropdowns</FormSectionTitle>
         <p className="mb-4 text-sm text-secondary">

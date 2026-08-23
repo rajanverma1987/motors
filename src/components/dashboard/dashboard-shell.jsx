@@ -22,6 +22,13 @@ export default function DashboardShell({ children }) {
   const simpleView = isSimplePortalPath(pathname);
   const calcOnly = !!user?.calculatorOnlyAccount;
   const onCalculatorsRoute = isCalculatorOnlyDashboardPath(pathname);
+  const onSettingsPage =
+    typeof pathname === "string" &&
+    (pathname === "/dashboards/settings" ||
+      pathname.startsWith("/dashboards/settings/") ||
+      pathname === "/dashboard/settings" ||
+      pathname.startsWith("/dashboard/settings/"));
+
 
   useEffect(() => {
     if (!mounted || !calcOnly || onCalculatorsRoute) return;
@@ -56,9 +63,9 @@ export default function DashboardShell({ children }) {
           {!simpleView ? <DashboardSidebar /> : null}
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div
-              className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain ${
-                simpleView ? "px-2 py-0 sm:px-3" : "p-[10px]"
-              }`}
+              className={`flex min-h-0 min-w-0 flex-1 flex-col overscroll-y-contain ${
+                onSettingsPage ? "overflow-hidden" : "overflow-y-auto"
+              } ${simpleView ? "px-2 py-0 sm:px-3" : "p-[10px]"}`}
             >
               {children}
             </div>

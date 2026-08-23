@@ -340,7 +340,7 @@ export default function SettingsPageClient() {
         id: "account",
         label: "Account",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Account</FormSectionTitle>
               <p className="text-sm text-secondary">
@@ -426,7 +426,7 @@ export default function SettingsPageClient() {
         id: "accounts",
         label: "Accounts",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Company billing</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -513,7 +513,7 @@ export default function SettingsPageClient() {
         id: "branding",
         label: "Branding",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Company logo</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -594,7 +594,7 @@ export default function SettingsPageClient() {
         id: "display",
         label: "Display",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Zoom level</FormSectionTitle>
               <p className="mb-4 max-w-[42rem] text-sm text-secondary">
@@ -743,7 +743,7 @@ export default function SettingsPageClient() {
         id: "smtp",
         label: "Email Settings",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Email Settings</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -867,7 +867,7 @@ export default function SettingsPageClient() {
         id: "inventory",
         label: "Inventory",
         children: (
-          <div className="flex flex-col gap-8 pb-24">
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
               <FormSectionTitle as="h2">Inventory locations</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
@@ -1007,10 +1007,20 @@ export default function SettingsPageClient() {
   }, [settingsTabs]);
 
   const showSaveBar = SIMPLE_SETTINGS_DRAFT_SECTION_IDS.has(activeSection);
+  const navListRef = useRef(null);
+
+  useEffect(() => {
+    const list = navListRef.current;
+    if (!list) return;
+    const activeBtn = list.querySelector('button[data-active="true"]');
+    if (activeBtn && typeof activeBtn.scrollIntoView === "function") {
+      activeBtn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    }
+  }, [activeSection]);
 
   if (loading) {
     return (
-      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} w-full min-w-0 py-8`}>
+      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-col overflow-hidden py-4`}>
         <Link
           href={SIMPLE_PORTAL_PATH}
           className="mb-4 inline-flex items-center gap-2 text-base font-semibold text-secondary transition-colors hover:text-primary sm:text-lg"
@@ -1039,21 +1049,24 @@ export default function SettingsPageClient() {
         </p>
       </div>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-3 md:flex-row md:gap-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden md:flex-row md:gap-4">
         <nav
           className="simple-settings-nav shrink-0 border-b md:border-b-0 md:border-r"
           aria-label="Settings sections"
         >
-          <ul className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-visible">
+          <ul
+            ref={navListRef}
+            className="flex flex-row gap-0.5 overflow-x-auto md:flex-col md:overflow-x-hidden md:overflow-y-auto"
+          >
             {SIMPLE_SETTINGS_SECTIONS.map((item) => {
               const active = item.id === activeSection;
               return (
-                <li key={item.id} className="shrink-0">
+                <li key={item.id} className="shrink-0 md:w-full">
                   <button
                     type="button"
                     data-active={active ? "true" : "false"}
                     onClick={() => goSection(item.id, item.id === "master" ? { masterTab } : {})}
-                    className={`w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm md:w-full ${
+                    className={`w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm touch-manipulation ${
                       active
                         ? "font-semibold text-primary"
                         : "text-secondary hover:bg-card hover:text-title"
@@ -1068,12 +1081,12 @@ export default function SettingsPageClient() {
         </nav>
 
         <div className="simple-settings-content">
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="simple-settings-content-scroll">
             {sectionContentById[activeSection] || sectionContentById.account}
           </div>
 
           {showSaveBar ? (
-            <div className="sticky bottom-0 mt-3 border-t border-border bg-card/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+            <div className="simple-settings-save-bar">
               <Button variant="primary" size="sm" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving…" : "Save changes"}
               </Button>
