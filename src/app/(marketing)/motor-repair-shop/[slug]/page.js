@@ -18,8 +18,10 @@ import {
 import { getListingLocationMatchType } from "@/lib/location-filter";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import HeroBackground from "@/components/marketing/HeroBackground";
-import ListingsHeroCta from "@/app/(marketing)/electric-motor-repair-shops-listings/listings-hero-cta";
+import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
+import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
 import PublicListingCard from "@/components/listings/public-listing-card";
+import { LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import LocationPageFilters from "@/components/marketing/location-page/location-page-filters";
 import LocationPageInsights from "@/components/marketing/location-page/location-page-insights";
 import LocationPageBody from "@/components/marketing/location-page/location-page-body";
@@ -115,7 +117,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
 
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+        <div className={`relative z-10 ${LISTINGS_PAGE_CONTAINER}`}>
           <nav className="text-sm text-secondary" aria-label="Breadcrumb">
             <Link href="/electric-motor-repair-shops-listings" prefetch className="text-primary hover:underline">
               All listings
@@ -131,13 +133,22 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
             {page.metaDescription ||
               `Browse motor repair and rewinding centers in ${areaLabel}. Filter by location type and capabilities, then open profiles or submit your requirement.`}
           </p>
-          <ListingsHeroCta />
           <LocationPageInsights insights={insights} />
         </div>
       </section>
 
       <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
+        <div className={LISTINGS_PAGE_CONTAINER}>
+          <ListingsWithRepairFormLayout
+            sidebar={
+              <ListingsRepairFormSidebar
+                mode="city"
+                city={page.city || ""}
+                state={page.state || ""}
+                zipCode={page.zip || ""}
+              />
+            }
+          >
           {insights.total > 0 ? (
             <>
               <LocationPageFilters
@@ -173,7 +184,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
             </div>
           ) : (
             <>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <div className={LISTINGS_GRID}>
                 {listings.map((listing, index) => (
                   <PublicListingCard
                     key={listing.id}
@@ -228,6 +239,8 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
               )}
             </>
           )}
+
+          </ListingsWithRepairFormLayout>
 
           <LocationPageBody
             areaLabel={areaLabel}

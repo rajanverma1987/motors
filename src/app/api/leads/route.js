@@ -7,6 +7,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getAllListingsForLocationArea } from "@/lib/listings-public";
 import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
@@ -57,6 +58,7 @@ export async function POST(request) {
       listingId,
       company,
       city,
+      state,
       zipCode,
       motorType,
       motorHp,
@@ -81,8 +83,8 @@ export async function POST(request) {
 
     let sourceListingId = "";
     let assignedListingIds = [];
-    /** If RFQ came from a public listing page, notify that shop by email after create. */
-    let listingNotify = null;
+    /** Shops to email after create (listing page or city-matched leads). */
+    const listingNotifyTargets = [];
     const rawListingId = listingId != null ? String(listingId).trim() : "";
     if (rawListingId) {
       if (!mongoose.isValidObjectId(rawListingId)) {
@@ -100,10 +102,32 @@ export async function POST(request) {
       sourceListingId = listingDoc._id.toString();
       /** Shop sees this lead in CRM; admin list shows it assigned to this listing company. */
       assignedListingIds = [sourceListingId];
-      listingNotify = {
+      listingNotifyTargets.push({
         email: listingDoc.email ? String(listingDoc.email).trim() : "",
         companyName: listingDoc.companyName || "",
-      };
+      });
+    } else {
+      const matchCity = clampString(city, LIMITS.city.max);
+      const matchState = clampString(state, LIMITS.city.max);
+      const matchZip = clampString(zipCode, LIMITS.zip.max);
+      if (matchCity || matchState || matchZip) {
+        const matches = await getAllListingsForLocationArea({
+          city: matchCity,
+          state: matchState,
+          zip: matchZip,
+        });
+        const topMatches = matches.slice(0, 3);
+        assignedListingIds = topMatches.map((listing) => listing.id);
+        for (const listing of topMatches) {
+          const email = listing.email ? String(listing.email).trim() : "";
+          if (email && isValidEmail(email)) {
+            listingNotifyTargets.push({
+              email,
+              companyName: listing.companyName || "",
+            });
+          }
+        }
+      }
     }
 
     const sanitizedCalc = sanitizeCalculatorContext(rawCalculatorContext);
@@ -135,13 +159,16 @@ export async function POST(request) {
       }
     }
 
+    const cityParts = [clampString(city, LIMITS.city.max), clampString(state, LIMITS.city.max)].filter(Boolean);
+    const cityOut = cityParts.length ? cityParts.join(", ").slice(0, LIMITS.city.max) : clampString(city, LIMITS.city.max);
+
     const doc = await Lead.create({
       name: clampString(name, LIMITS.name.max),
       email: (email.trim().toLowerCase()).slice(0, LIMITS.email.max),
       phone: clampString(phone, 30),
       message: messageOut,
       company: clampString(company, LIMITS.companyName.max),
-      city: clampString(city, LIMITS.city.max),
+      city: cityOut,
       zipCode: clampString(zipCode, LIMITS.zip.max),
       motorType: clampString(motorType, LIMITS.shortText.max),
       motorHp: clampString(motorHp, LIMITS.shortText.max),
@@ -154,11 +181,12 @@ export async function POST(request) {
       leadSource: "website",
     });
 
-    if (listingNotify?.email && isValidEmail(listingNotify.email)) {
+    for (const target of listingNotifyTargets) {
+      if (!target.email || !isValidEmail(target.email)) continue;
       try {
         await sendNewWebsiteLeadNotificationToShop({
-          to: listingNotify.email,
-          listingCompanyName: listingNotify.companyName,
+          to: target.email,
+          listingCompanyName: target.companyName,
           leadContactName: doc.name,
           leadContactCompany: doc.company,
           siteUrl: getPublicSiteUrl(request),

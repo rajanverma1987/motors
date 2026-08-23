@@ -1,14 +1,24 @@
 /** Shown while directory listing query runs (inside Suspense). */
+import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
+import { LISTINGS_FORM_STICKY, LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
+
 export default function ListingsDirectoryResultsSkeleton() {
   return (
     <section className="py-10 sm:py-14" aria-busy="true" aria-label="Loading repair center listings">
       <span className="sr-only">Loading repair center listings</span>
-      <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
+      <div className={LISTINGS_PAGE_CONTAINER}>
+        <ListingsWithRepairFormLayout
+          sidebar={
+            <aside className={LISTINGS_FORM_STICKY}>
+              <div className="h-[28rem] animate-pulse rounded-xl border border-border bg-card" aria-hidden />
+            </aside>
+          }
+        >
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="h-11 min-h-[2.75rem] w-full max-w-[50.4rem] animate-pulse rounded-md bg-muted/70" />
           <div className="h-5 w-44 shrink-0 animate-pulse rounded-md bg-muted/50 sm:ml-auto" />
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={LISTINGS_GRID}>
           {Array.from({ length: 9 }).map((_, i) => (
             <div
               key={`sk-${i}`}
@@ -24,6 +34,7 @@ export default function ListingsDirectoryResultsSkeleton() {
             </div>
           ))}
         </div>
+        </ListingsWithRepairFormLayout>
       </div>
     </section>
   );

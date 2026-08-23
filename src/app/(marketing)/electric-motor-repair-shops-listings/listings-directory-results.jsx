@@ -4,6 +4,9 @@ import { FormContainer } from "@/components/ui/form-layout";
 import PublicListingCard from "@/components/listings/public-listing-card";
 import ListingsDirectorySeoContent from "./listings-directory-seo-content";
 import { ListingsDirectoryItemListJsonLd } from "./listings-directory-seo-jsonld";
+import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
+import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
+import { LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 
 const PAGE_SIZE = 40;
 
@@ -42,8 +45,9 @@ export default async function ListingsDirectoryResults({ searchParams }) {
           total={total}
         />
       )}
-      <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
-        <form method="GET" className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className={LISTINGS_PAGE_CONTAINER}>
+        <ListingsWithRepairFormLayout sidebar={<ListingsRepairFormSidebar mode="city" />}>
+          <form method="GET" className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {city && <input type="hidden" name="city" value={city} />}
           {state && <input type="hidden" name="state" value={state} />}
           <input
@@ -89,7 +93,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
           </FormContainer>
         ) : (
           <>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={LISTINGS_GRID}>
               {listings.map((listing, index) => (
                 <PublicListingCard key={listing.id} listing={listing} imagePriority={index < 6} />
               ))}
@@ -133,6 +137,8 @@ export default async function ListingsDirectoryResults({ searchParams }) {
         )}
 
         <ListingsDirectorySeoContent total={total} />
+
+        </ListingsWithRepairFormLayout>
       </div>
     </section>
   );

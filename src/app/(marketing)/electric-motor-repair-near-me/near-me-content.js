@@ -5,7 +5,9 @@ import Link from "next/link";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import PublicListingCard from "@/components/listings/public-listing-card";
-import ListingsHeroCta from "@/app/(marketing)/electric-motor-repair-shops-listings/listings-hero-cta";
+import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
+import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
+import { LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import { useToast } from "@/components/toast-provider";
 
 export default function NearMeContent() {
@@ -156,9 +158,18 @@ export default function NearMeContent() {
           </Button>
         </Link>
       </div>
-      <ListingsHeroCta />
       <section className="py-10 sm:py-14">
-        <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
+        <div className={LISTINGS_PAGE_CONTAINER}>
+          <ListingsWithRepairFormLayout
+            sidebar={
+              <ListingsRepairFormSidebar
+                mode="city"
+                city={userLocation.city}
+                state={userLocation.state}
+                zipCode={userLocation.zip}
+              />
+            }
+          >
           {needsZipFallback && (
             <div className="mb-8 rounded-xl border border-border bg-card px-6 py-10 text-center sm:px-10 sm:py-12">
               <p className="text-2xl font-semibold leading-snug text-title sm:text-3xl">
@@ -308,12 +319,13 @@ export default function NearMeContent() {
           )}
 
           {locationStatus === "detected" && !loadingListings && listings.length > 0 && (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={LISTINGS_GRID}>
               {listings.map((listing, index) => (
                 <PublicListingCard key={listing.id} listing={listing} imagePriority={index < 6} />
               ))}
             </div>
           )}
+          </ListingsWithRepairFormLayout>
         </div>
       </section>
     </>

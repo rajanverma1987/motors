@@ -1,11 +1,11 @@
 import HeroBackground from "@/components/marketing/HeroBackground";
-import ListingsHeroCta from "./listings-hero-cta";
+import { LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 
 export default function ListingsDirectoryHero() {
   return (
     <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
       <HeroBackground />
-      <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+      <div className={`relative z-10 ${LISTINGS_PAGE_CONTAINER}`}>
         <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
           Directory
         </span>
@@ -17,7 +17,6 @@ export default function ListingsDirectoryHero() {
           city, state, or ZIP. Search this directory or submit your requirement and we&apos;ll match you with qualified
           repair shops in your area.
         </p>
-        <ListingsHeroCta />
       </div>
     </section>
   );

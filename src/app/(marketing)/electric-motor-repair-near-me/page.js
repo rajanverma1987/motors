@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import NearMeContent from "./near-me-content";
@@ -51,7 +52,7 @@ export default function NearMePage() {
     <>
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
+        <div className={`relative z-10 ${LISTINGS_PAGE_CONTAINER}`}>
           <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
             Electric motor repair near me
           </h1>
@@ -79,7 +80,7 @@ export default function NearMePage() {
       </section>
 
       <div className="border-b border-border bg-bg">
-        <div className="mx-auto max-w-[86.4rem] px-4 py-4 sm:px-6">
+        <div className={`${LISTINGS_PAGE_CONTAINER} py-4`}>
           <nav aria-label="Breadcrumb" className="text-[13px] text-secondary">
             <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0">
               <li className="flex items-center gap-1.5">

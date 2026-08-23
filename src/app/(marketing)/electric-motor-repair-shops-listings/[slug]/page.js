@@ -10,6 +10,7 @@ import {
   buildListingDetailJsonLdGraph,
   listingAssetAbsoluteUrl,
 } from "@/lib/listing-detail-seo";
+import { LISTINGS_FORM_STICKY, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 import ListingDetailFaqSection from "./listing-detail-faq-section";
@@ -276,7 +277,7 @@ export default async function ListingDetailPage({ params }) {
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
         }}
       />
-      <div className="mx-auto max-w-[86.4rem] px-4 py-8 sm:py-12">
+      <div className={`${LISTINGS_PAGE_CONTAINER} py-8 sm:py-12`}>
         <Link
           href="/electric-motor-repair-shops-listings"
           prefetch
@@ -285,7 +286,7 @@ export default async function ListingDetailPage({ params }) {
           ← Back to listings
         </Link>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_340px] lg:gap-10 lg:items-start">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="min-w-0">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               {heroImage && (
@@ -294,8 +295,7 @@ export default async function ListingDetailPage({ params }) {
                 </div>
               )}
               <div className="p-6 sm:p-8">
-                <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
                     {logoUrl && (
                       <div className="shrink-0">
                         <ListingInlineLogo src={logoUrl} />
@@ -325,8 +325,6 @@ export default async function ListingDetailPage({ params }) {
                       )}
                     </div>
                   </div>
-                  <ListingDetailCta listing={listingForClient} />
-                </div>
 
                 <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
                   <p className="text-sm text-secondary">
@@ -507,11 +505,16 @@ export default async function ListingDetailPage({ params }) {
             <OwnAShopLikeThisModule className="mt-10" />
             <ListingDetailFaqSection items={faqs} />
           </div>
-          <div className="lg:sticky lg:top-8">
-            <ListingReviewsSidebar
-              listingId={listing.id}
-              listingPagePath={`/electric-motor-repair-shops-listings/${canonicalSlug}`}
-            />
+          <div>
+            <div className={LISTINGS_FORM_STICKY}>
+              <div className="flex flex-col gap-6">
+                <ListingDetailCta listing={listingForClient} />
+                <ListingReviewsSidebar
+                  listingId={listing.id}
+                  listingPagePath={`/electric-motor-repair-shops-listings/${canonicalSlug}`}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
