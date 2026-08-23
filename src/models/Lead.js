@@ -14,6 +14,8 @@ const leadSchema = new mongoose.Schema(
     voltage: { type: String, default: "" },
     problemDescription: { type: String, default: "" },
     urgencyLevel: { type: String, default: "" },
+    /** Industry vertical tag from marketing pages (e.g. manufacturing, water-treatment). */
+    industry: { type: String, default: "" },
     motorPhotos: [{ type: String }],
     sourceListingId: { type: String, default: "" },
     assignedListingIds: [{ type: String }],

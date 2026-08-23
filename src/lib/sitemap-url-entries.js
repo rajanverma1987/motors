@@ -46,6 +46,36 @@ export async function getSitemapEntries() {
       priority: 0.7,
     },
     {
+      url: `${baseUrl}/electric-motor-repair-manufacturing`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-water-treatment`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-oil-gas`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-food-processing`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/electric-motor-repair-mining`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/cost-of-motor-repair-and-rewinding`,
       lastModified: new Date(),
       changeFrequency: "weekly",

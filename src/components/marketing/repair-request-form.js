@@ -48,7 +48,7 @@ function buildProblemDescription(failureDescription, canShip) {
 
 /**
  * Inline repair request form for directory / location / shop listing pages.
- * @param {{ mode: 'city' | 'shop', city?: string, state?: string, zipCode?: string, listing?: { id: string, companyName?: string } | null, className?: string }} props
+ * @param {{ mode: 'city' | 'shop', city?: string, state?: string, zipCode?: string, listing?: { id: string, companyName?: string } | null, defaultUrgency?: 'standard' | 'emergency', defaultIndustry?: string, formHeading?: string, className?: string }} props
  */
 export default function RepairRequestForm({
   mode = "city",
@@ -56,12 +56,17 @@ export default function RepairRequestForm({
   state = "",
   zipCode = "",
   listing = null,
+  defaultUrgency = "standard",
+  defaultIndustry = "",
+  formHeading = "",
   className = "",
 }) {
+  const lockUrgency = defaultUrgency === "emergency";
   const [form, setForm] = useState({
     ...INITIAL_FORM,
     city: city || "",
     state: state || "",
+    urgency: defaultUrgency === "emergency" ? "emergency" : "standard",
   });
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -100,6 +105,7 @@ export default function RepairRequestForm({
           voltage: form.voltage,
           problemDescription: buildProblemDescription(form.failureDescription, form.canShip),
           urgencyLevel: isEmergency ? "emergency" : "low",
+          industry: defaultIndustry ? String(defaultIndustry).trim() : "",
           listingId: mode === "shop" ? listingId : "",
         }),
       });
@@ -151,16 +157,22 @@ export default function RepairRequestForm({
           </span>
         ) : null}
         <h3 className="text-lg font-bold text-title">
-          {mode === "shop"
-            ? `Request a quote from ${shopName || "this shop"}`
-            : city
-              ? `Submit a repair requirement in ${city}${state ? `, ${state}` : ""}`
-              : "Submit a repair requirement"}
+          {formHeading
+            ? formHeading
+            : lockUrgency
+              ? "Submit emergency repair request"
+              : mode === "shop"
+                ? `Request a quote from ${shopName || "this shop"}`
+                : city
+                  ? `Submit a repair requirement in ${city}${state ? `, ${state}` : ""}`
+                  : "Submit a repair requirement"}
         </h3>
         <p className="mt-1 text-sm text-secondary">
-          {mode === "shop"
-            ? "Describe your motor and failure — the shop will respond directly."
-            : "Describe your motor and failure — we'll match you with shops that serve this area."}
+          {lockUrgency
+            ? "Motor down? Describe the failure — we match you to 24/7 shops in your area within minutes."
+            : mode === "shop"
+              ? "Describe your motor and failure — the shop will respond directly."
+              : "Describe your motor and failure — we'll match you with shops that serve this area."}
         </p>
       </div>
 
@@ -174,26 +186,28 @@ export default function RepairRequestForm({
 
       {step === 1 ? (
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              variant={form.urgency === "standard" ? "primary" : "outline"}
-              size="sm"
-              className="min-w-0 flex-1"
-              onClick={() => setField("urgency", "standard")}
-            >
-              Standard repair
-            </Button>
-            <Button
-              type="button"
-              variant={form.urgency === "emergency" ? "danger" : "outline"}
-              size="sm"
-              className="min-w-0 flex-1"
-              onClick={() => setField("urgency", "emergency")}
-            >
-              Emergency — motor is down
-            </Button>
-          </div>
+          {!lockUrgency ? (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="button"
+                variant={form.urgency === "standard" ? "primary" : "outline"}
+                size="sm"
+                className="min-w-0 flex-1"
+                onClick={() => setField("urgency", "standard")}
+              >
+                Standard repair
+              </Button>
+              <Button
+                type="button"
+                variant={form.urgency === "emergency" ? "danger" : "outline"}
+                size="sm"
+                className="min-w-0 flex-1"
+                onClick={() => setField("urgency", "emergency")}
+              >
+                Emergency — motor is down
+              </Button>
+            </div>
+          ) : null}
 
           <Select
             label="Motor type *"

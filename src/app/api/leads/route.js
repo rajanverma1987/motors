@@ -8,6 +8,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString, clampArray } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getAllListingsForLocationArea } from "@/lib/listings-public";
+import { industryTagToListingKey } from "@/lib/industry-pages";
 import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } from "@/lib/email";
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
@@ -65,6 +66,7 @@ export async function POST(request) {
       voltage,
       problemDescription,
       urgencyLevel,
+      industry,
       motorPhotos,
       calculatorContext: rawCalculatorContext,
     } = body;
@@ -116,7 +118,17 @@ export async function POST(request) {
           state: matchState,
           zip: matchZip,
         });
-        const topMatches = matches.slice(0, 3);
+        const industryKey = industryTagToListingKey(clampString(industry, LIMITS.shortText.max));
+        const sortedMatches =
+          industryKey && matches.length > 1
+            ? [...matches].sort((a, b) => {
+                const aMatch = (a.industriesServed || []).includes(industryKey) ? 0 : 1;
+                const bMatch = (b.industriesServed || []).includes(industryKey) ? 0 : 1;
+                if (aMatch !== bMatch) return aMatch - bMatch;
+                return 0;
+              })
+            : matches;
+        const topMatches = sortedMatches.slice(0, 3);
         assignedListingIds = topMatches.map((listing) => listing.id);
         for (const listing of topMatches) {
           const email = listing.email ? String(listing.email).trim() : "";
@@ -175,6 +187,7 @@ export async function POST(request) {
       voltage: clampString(voltage, LIMITS.shortText.max),
       problemDescription: problemOut,
       urgencyLevel: clampString(urgencyLevel, LIMITS.shortText.max),
+      industry: clampString(industry, LIMITS.shortText.max),
       motorPhotos: clampArray(motorPhotos, 20),
       sourceListingId: clampString(sourceListingId, 50),
       assignedListingIds,

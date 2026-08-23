@@ -228,6 +228,26 @@ export async function getPublicListingByUrlSlug(urlSlug) {
 }
 
 /**
+ * Approved listings with confirmed emergency / rush capability.
+ */
+export async function getEmergencyRepairListings() {
+  await connectDB();
+  await ensureApprovedListingsHaveUrlSlug();
+  const list = await Listing.find({
+    status: "approved",
+    $or: [{ rushRepairAvailable: true }, { services: "emergencyRepair" }],
+  })
+    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .select("companyName phone city state urlSlug rushRepairAvailable services")
+    .lean();
+  return list.map((l) => ({
+    ...l,
+    id: l._id.toString(),
+    _id: undefined,
+  }));
+}
+
+/**
  * Resolve listing from URL slug (new urlSlug or legacy company-name-{objectId}).
  * @returns {{ listing: object | null, redirectToSlug: string | null }}
  */

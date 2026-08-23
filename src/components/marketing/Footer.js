@@ -31,6 +31,11 @@ const footerLinks = {
     { href: "/when-to-repair-or-replace-electric-motor", label: "Repair vs. replace" },
     { href: "/types-of-electric-motor-repair-services", label: "Types of repair" },
     { href: "/emergency-motor-repair-what-to-do", label: "Emergency repair" },
+    { href: "/electric-motor-repair-manufacturing", label: "Manufacturing motor repair" },
+    { href: "/electric-motor-repair-water-treatment", label: "Water treatment motor repair" },
+    { href: "/electric-motor-repair-oil-gas", label: "Oil & gas motor repair" },
+    { href: "/electric-motor-repair-food-processing", label: "Food processing motor repair" },
+    { href: "/electric-motor-repair-mining", label: "Mining motor repair" },
     { href: "/cost-of-motor-repair-and-rewinding", label: "Repair costs" },
   ],
   Company: [
