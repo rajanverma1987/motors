@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { FiDownload, FiEye, FiUserPlus } from "react-icons/fi";
+import { FiDownload, FiEye, FiTrash2, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
+import { useConfirm } from "@/components/confirm-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
 import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
@@ -74,6 +75,7 @@ function buildLeadsCsv(leads) {
 
 export default function AdminLeadsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [leads, setLeads] = useState([]);
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,7 @@ export default function AdminLeadsPage() {
   const [assigningLead, setAssigningLead] = useState(null);
   const [assignIds, setAssignIds] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
@@ -197,6 +200,48 @@ export default function AdminLeadsPage() {
     }
   };
 
+  const handleDeleteLead = useCallback(
+    async (lead) => {
+      if (!lead?.id || deletingId) return;
+      const label = [lead.name, lead.email].filter(Boolean).join(" — ") || "this lead";
+      const first = await confirm({
+        title: "Delete lead?",
+        message: `Delete ${label}? This cannot be undone.`,
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        variant: "danger",
+      });
+      if (!first) return;
+      const second = await confirm({
+        title: "Confirm permanent delete",
+        message: "Are you sure? The lead and its assignment history will be permanently removed.",
+        confirmLabel: "Delete permanently",
+        cancelLabel: "Cancel",
+        variant: "danger",
+      });
+      if (!second) return;
+      setDeletingId(lead.id);
+      try {
+        const res = await fetch(`/api/leads/${lead.id}`, {
+          method: "DELETE",
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to delete");
+        setLeads((prev) => prev.filter((l) => l.id !== lead.id));
+        setTotalCount((n) => Math.max(0, n - 1));
+        if (viewingLead?.id === lead.id) closeViewModal();
+        if (assigningLead?.id === lead.id) closeAssignModal();
+        toast.success("Lead deleted.");
+      } catch (err) {
+        toast.error(err.message || "Failed to delete");
+      } finally {
+        setDeletingId("");
+      }
+    },
+    [assigningLead?.id, confirm, deletingId, toast, viewingLead?.id]
+  );
+
   const listingOptions = useMemo(
     () =>
       listings
@@ -228,6 +273,15 @@ export default function AdminLeadsPage() {
             >
               <FiUserPlus className="h-4 w-4" />
             </button>
+            <button
+              type="button"
+              onClick={() => handleDeleteLead(row)}
+              disabled={deletingId === row.id}
+              className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+              aria-label="Delete"
+            >
+              <FiTrash2 className="h-4 w-4" />
+            </button>
           </div>
         ),
       },
@@ -255,7 +309,7 @@ export default function AdminLeadsPage() {
         render: (val) => (val ? new Date(val).toLocaleString() : "—"),
       },
     ],
-    []
+    [deletingId, handleDeleteLead]
   );
 
   return (
@@ -309,6 +363,15 @@ export default function AdminLeadsPage() {
         size="lg"
         actions={
           <>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              disabled={!viewingLead || deletingId === viewingLead?.id}
+              onClick={() => handleDeleteLead(viewingLead)}
+            >
+              {deletingId === viewingLead?.id ? "Deleting…" : "Delete"}
+            </Button>
             <Button
               type="button"
               variant="primary"

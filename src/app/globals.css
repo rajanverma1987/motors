@@ -71,6 +71,8 @@ body {
 
 /* Soft gray nav — slightly darker than page/card, not near-black */
 .dashboard-nav {
+  position: relative;
+  z-index: 40;
   background-color: hsl(28 10% 95.5%);
 }
 

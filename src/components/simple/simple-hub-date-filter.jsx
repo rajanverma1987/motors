@@ -4,9 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import { useUserSettings } from "@/contexts/user-settings-context";
-import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import {
   ALL_JOBS_DATE_FROM_PARAM,
   ALL_JOBS_DATE_TO_PARAM,
@@ -27,16 +25,16 @@ import {
 } from "@/lib/simple-portal-tabs";
 
 const DATE_FILTER_PILL_BASE =
-  "!h-7 !min-h-7 shrink-0 !flex !items-center !justify-center !rounded-none !px-2 !py-0 text-xs font-semibold";
+  "inline-flex h-9 min-h-9 min-w-[2.75rem] shrink-0 cursor-pointer items-center justify-center rounded-none border px-3 text-xs font-semibold transition-colors";
 const DATE_FILTER_PILL_INACTIVE =
-  "!border-border/80 !bg-card !shadow-none hover:!border-primary/45 hover:!bg-primary/[0.03]";
+  "border-border/80 bg-card text-title shadow-none hover:border-primary/45 hover:bg-primary/[0.03]";
 const DATE_FILTER_PILL_ACTIVE =
-  "!border-primary !bg-primary/20 !text-primary !shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]";
+  "border-primary bg-primary/20 text-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]";
 const DATE_FILTER_INPUT_CLASS =
   "mb-0 !flex !w-auto !min-w-0 !flex-row !items-center !gap-1 [&_label]:mb-0 [&_label]:shrink-0 [&_label]:text-[11px] [&_label]:font-medium [&_label]:text-secondary";
 const DATE_FILTER_INPUT_FIELD_CLASS =
-  "!h-7 !min-h-7 !w-[8.25rem] !rounded-none !border-border/80 !bg-bg !px-1.5 !py-0 text-xs leading-none";
-const DATE_FILTER_BUTTON_CLASS = "h-7 shrink-0 !rounded-none px-2.5 text-xs";
+  "!h-9 !min-h-9 !w-[8.25rem] !rounded-none !border-border/80 !bg-bg !px-1.5 !py-0 text-xs leading-none";
+const DATE_FILTER_BUTTON_CLASS = "h-9 shrink-0 !rounded-none px-2.5 text-xs";
 
 function dateFilterPillClass(active) {
   return `${DATE_FILTER_PILL_BASE} ${active ? DATE_FILTER_PILL_ACTIVE : DATE_FILTER_PILL_INACTIVE}`;
@@ -109,34 +107,31 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
   const placementClass =
     placement === "below" ? "simple-hub-date-bar--below" : "simple-hub-date-bar--nav";
 
+  /** Do not combine bare `flex` with `hidden` — Tailwind conflict shows both bars on tablet. */
+  const visibilityClass = placement === "nav" ? "hidden lg:flex" : "flex";
+
   return (
     <div
-      className={`simple-hub-date-bar ${placementClass} flex shrink-0 ${className}`.trim()}
+      className={`simple-hub-date-bar ${placementClass} ${visibilityClass} relative z-30 shrink-0 pointer-events-auto ${className}`.trim()}
       role="group"
       aria-label="Hub date range"
     >
-      <StatusFilterPillButton
-        labelOnly
+      <button
+        type="button"
         className={dateFilterPillClass(isCurrentFy)}
-        card={{
-          key: "fy",
-          label: "FY",
-          tileAppearance: resolveStatusTileProps("", 5),
-        }}
-        active={isCurrentFy}
+        aria-pressed={isCurrentFy}
         onClick={() => applyDateRange(fyDefault.from, fyDefault.to)}
-      />
-      <StatusFilterPillButton
-        labelOnly
+      >
+        FY
+      </button>
+      <button
+        type="button"
         className={dateFilterPillClass(isAllDates)}
-        card={{
-          key: "all",
-          label: "All",
-          tileAppearance: resolveStatusTileProps("", 6),
-        }}
-        active={isAllDates}
+        aria-pressed={isAllDates}
         onClick={() => applyDateRange("", "")}
-      />
+      >
+        All
+      </button>
       <div title={fromTitle || undefined}>
         <Input
           label="From"

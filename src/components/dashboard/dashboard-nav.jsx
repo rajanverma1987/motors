@@ -84,7 +84,7 @@ export default function DashboardNav() {
             <>
               {onSimpleHub ? (
                 <Suspense fallback={null}>
-                  <SimpleHubDateFilter className="hidden lg:flex" />
+                  <SimpleHubDateFilter placement="nav" />
                 </Suspense>
               ) : null}
               <button
@@ -129,7 +129,7 @@ export default function DashboardNav() {
         </div>
       </div>
       {onSimpleHub ? (
-        <div className="mt-2 flex w-full justify-end lg:hidden">
+        <div className="relative z-30 mt-2 flex w-full justify-end lg:hidden">
           <Suspense fallback={null}>
             <SimpleHubDateFilter placement="below" />
           </Suspense>

@@ -47,3 +47,29 @@ export async function PATCH(request, context) {
     );
   }
 }
+
+export async function DELETE(request, context) {
+  try {
+    const admin = await getAdminFromRequest(request);
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const id = params?.id;
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
+    }
+    await connectDB();
+    const doc = await Lead.findByIdAndDelete(id);
+    if (!doc) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("Delete lead error:", err);
+    return NextResponse.json(
+      { error: err.message || "Failed to delete" },
+      { status: 500 }
+    );
+  }
+}
