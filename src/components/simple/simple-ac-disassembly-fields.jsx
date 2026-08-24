@@ -89,7 +89,7 @@ export default function SimpleAcDisassemblyFields({
   return (
     <div className="flex w-full min-w-0 flex-col gap-4">
       {/* Visual (50%) + Status (50%) */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <fieldset className="min-w-0 rounded-sm border border-border px-3 py-2">
           <legend className="px-1 text-sm font-bold text-title">Visual Status</legend>
           <div className="flex flex-col">
@@ -144,10 +144,10 @@ export default function SimpleAcDisassemblyFields({
         </fieldset>
       </div>
 
-      {/* Intake */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <label className={LABEL}>Marked Motor Sides</label>
+      {/* Intake — two columns on tablet+ */}
+      <div className="grid grid-cols-1 gap-x-8 gap-y-1.5 md:grid-cols-2">
+        <div className="flex min-w-0 items-start gap-2 md:col-span-2">
+          <label className={`${LABEL} pt-1`}>Marked Motor Sides</label>
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1.5">
             {[
               { key: "markedMotorSidesF1", label: "F1" },

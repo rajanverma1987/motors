@@ -4,10 +4,28 @@ const nextConfig = {
   poweredByHeader: false,
   // Allow tablets / phones on LAN to load /_next assets during `next dev`.
   // Without this, JS never hydrates and login falls back to a plain GET form.
+  // Wildcards cover typical home/office LAN IPs so you do not re-edit per Wi‑Fi.
   allowedDevOrigins: [
-    "192.168.1.230",
     "127.0.0.1",
     "localhost",
+    "192.168.*.*",
+    "10.*.*.*",
+    "172.16.*.*",
+    "172.17.*.*",
+    "172.18.*.*",
+    "172.19.*.*",
+    "172.20.*.*",
+    "172.21.*.*",
+    "172.22.*.*",
+    "172.23.*.*",
+    "172.24.*.*",
+    "172.25.*.*",
+    "172.26.*.*",
+    "172.27.*.*",
+    "172.28.*.*",
+    "172.29.*.*",
+    "172.30.*.*",
+    "172.31.*.*",
     ...(process.env.ALLOWED_DEV_ORIGINS
       ? process.env.ALLOWED_DEV_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
       : []),

@@ -70,65 +70,67 @@ export default function SimpleAcElectricalTestsFields({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <SectionBar>Magger Test</SectionBar>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TextField label="Magger Voltage">
-            <SimpleDoubleClickTextEditInput
-              label="Magger Voltage"
-              value={v.maggerVoltage ?? "0"}
-              onChange={(next) => patch("maggerVoltage", next)}
-              className={INPUT}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div>
+          <SectionBar>Magger Test</SectionBar>
+          <div className="flex flex-col gap-2">
+            <TextField label="Magger Voltage">
+              <SimpleDoubleClickTextEditInput
+                label="Magger Voltage"
+                value={v.maggerVoltage ?? "0"}
+                onChange={(next) => patch("maggerVoltage", next)}
+                className={INPUT}
+              />
+            </TextField>
+            <TextField label="Magger Readings">
+              <SimpleDoubleClickTextEditInput
+                label="Magger Readings"
+                value={v.maggerMicroAmps ?? "0"}
+                onChange={(next) => patch("maggerMicroAmps", next)}
+                className={INPUT}
+              />
+            </TextField>
+            <ResultBox
+              name={`${idPrefix}Magger`}
+              label="Magger Test"
+              value={v.maggerTest ?? ""}
+              onChange={(val) => patch("maggerTest", val)}
             />
-          </TextField>
-          <TextField label="Magger Readings">
-            <SimpleDoubleClickTextEditInput
-              label="Magger Readings"
-              value={v.maggerMicroAmps ?? "0"}
-              onChange={(next) => patch("maggerMicroAmps", next)}
-              className={INPUT}
-            />
-          </TextField>
-          <ResultBox
-            name={`${idPrefix}Magger`}
-            label="Magger Test"
-            value={v.maggerTest ?? ""}
-            onChange={(val) => patch("maggerTest", val)}
-          />
+          </div>
         </div>
-      </div>
 
-      <div>
-        <SectionBar>High-pot test</SectionBar>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <TextField label="High-pot Voltage">
-            <SimpleDoubleClickTextEditInput
-              label="High-pot Voltage"
-              value={v.highPotVoltage ?? "0"}
-              onChange={(next) => patch("highPotVoltage", next)}
-              className={INPUT}
+        <div>
+          <SectionBar>High-pot test</SectionBar>
+          <div className="flex flex-col gap-2">
+            <TextField label="High-pot Voltage">
+              <SimpleDoubleClickTextEditInput
+                label="High-pot Voltage"
+                value={v.highPotVoltage ?? "0"}
+                onChange={(next) => patch("highPotVoltage", next)}
+                className={INPUT}
+              />
+            </TextField>
+            <TextField label="High-pot Micro Amps">
+              <SimpleDoubleClickTextEditInput
+                label="High-pot Micro Amps"
+                value={v.highPotMicroAmps ?? "0"}
+                onChange={(next) => patch("highPotMicroAmps", next)}
+                className={INPUT}
+              />
+            </TextField>
+            <ResultBox
+              name={`${idPrefix}HighPot`}
+              label="High-pot test"
+              value={v.highPotTest ?? ""}
+              onChange={(val) => patch("highPotTest", val)}
             />
-          </TextField>
-          <TextField label="High-pot Micro Amps">
-            <SimpleDoubleClickTextEditInput
-              label="High-pot Micro Amps"
-              value={v.highPotMicroAmps ?? "0"}
-              onChange={(next) => patch("highPotMicroAmps", next)}
-              className={INPUT}
-            />
-          </TextField>
-          <ResultBox
-            name={`${idPrefix}HighPot`}
-            label="High-pot test"
-            value={v.highPotTest ?? ""}
-            onChange={(val) => patch("highPotTest", val)}
-          />
+          </div>
         </div>
       </div>
 
       <div>
         <SectionBar>Surge Test</SectionBar>
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
           <TextField label="Surge Voltage">
             <SimpleDoubleClickTextEditInput
               label="Surge Voltage"
@@ -137,12 +139,14 @@ export default function SimpleAcElectricalTestsFields({
               className={INPUT}
             />
           </TextField>
-          <ResultBox
-            name={`${idPrefix}Surge`}
-            label="SurgeTest"
-            value={v.surgeTest ?? ""}
-            onChange={(val) => patch("surgeTest", val)}
-          />
+          <div className="flex items-center">
+            <ResultBox
+              name={`${idPrefix}Surge`}
+              label="SurgeTest"
+              value={v.surgeTest ?? ""}
+              onChange={(val) => patch("surgeTest", val)}
+            />
+          </div>
         </div>
         <div className="mt-2.5 grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {AC_DISASSEMBLY_SURGE_FAILURE_KEYS.map(({ key, label }) => (

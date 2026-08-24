@@ -66,7 +66,7 @@ export default function DatasheetFieldGrid({
       className={
         dense
           ? "grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3"
-          : "grid grid-cols-1 gap-x-4 gap-y-1.5 lg:grid-cols-3"
+          : "grid grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-2 lg:grid-cols-3"
       }
     >
       {(Array.isArray(columns) ? columns : []).map((col, colIdx) => (
