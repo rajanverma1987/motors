@@ -42,7 +42,7 @@ export const AC_DATASHEET_FIELD_COLUMNS = [
     { key: "t_width", label: "Tooth Width" },
     { key: "lugs_hole_size", label: "Lugs Size / Hole Size" },
     { key: "overloads", label: "Overloads" },
-    { key: "therm", label: "Themrister" },
+    { key: "therm", label: "Thermistors" },
     { key: "heaters", label: "Heaters" },
     { key: "head_size", label: "Head Size" },
     { key: "distance", label: "Distance" },

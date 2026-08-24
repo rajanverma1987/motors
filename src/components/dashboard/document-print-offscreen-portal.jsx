@@ -51,6 +51,10 @@ function injectDocumentPrintStyles() {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
+      /* Datasheet: pull content higher so letter page can hold full field grid + signatures */
+      .${PRINT_ROOT_CLASS}:has(.datasheet-print-root) {
+        padding: 0.28in 0.45in 0.32in !important;
+      }
       .${PRINT_ROOT_CLASS} * {
         box-shadow: none !important;
       }
