@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeLocationInput } from "@/lib/us-state-normalize";
 
 /**
  * GET: Return approximate location (city, state, zip, country) from the request IP.
@@ -16,10 +17,15 @@ export async function GET(request) {
     if (data.status !== "success") {
       return NextResponse.json({ city: "", state: "", zip: "", country: "United States" });
     }
+    const normalized = normalizeLocationInput({
+      city: data.city,
+      state: data.regionName,
+      zip: data.zip,
+    });
     return NextResponse.json({
-      city: data.city || "",
-      state: data.regionName || "",
-      zip: data.zip || "",
+      city: normalized.city,
+      state: normalized.state,
+      zip: normalized.zip,
       country: data.country || "United States",
     });
   } catch (err) {

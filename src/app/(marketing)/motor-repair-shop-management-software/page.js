@@ -1,6 +1,6 @@
 import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
-import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
+import SoftwareDemoBookingPanel from "@/components/marketing/SoftwareDemoBookingPanel";
 import SoftwareSeoFaqJsonLd from "@/components/marketing/SoftwareSeoFaqJsonLd";
 import SoftwareClusterLinks from "@/components/marketing/SoftwareClusterLinks";
 import {
@@ -80,9 +80,12 @@ export default function MotorRepairShopManagementSoftwarePage() {
         description="Job write-ups, work orders, inventory, invoicing, and repair leads in one system—built for motor repair, not adapted from auto repair. Book a demo to see the workflow on your shop’s terms."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
-        sidebarTitle="Book a demo"
-        sidebarDescription="Custom pricing for your shop’s workflow. Tell us who you are and we’ll follow up."
-        sidebarCta={<SeoLeadMiniForm sourcePage={path} submitLabel="Book a demo" />}
+        wideSidebar
+        sidebarUnwrapped
+        stickySidebar
+        sidebarCta={
+          <SoftwareDemoBookingPanel sourcePage={path} layout="sidebar" idPrefix="software-demo-sidebar" />
+        }
       >
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <section>
@@ -377,19 +380,23 @@ export default function MotorRepairShopManagementSoftwarePage() {
             </dl>
           </section>
 
-          <section>
-            <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
-            <p className="mt-4 text-secondary leading-relaxed">
-              There is no self-serve signup priced on a public rate card. Pricing is monthly, yearly, or one-time,
-              matched to how your shop runs. Use the form to book a demo, or start from the{" "}
-              <Link href="/pricing" className="text-primary font-medium hover:underline">
-                pricing page
-              </Link>
-              . If you are evaluating options, read the{" "}
+          <section className="mt-10 not-prose">
+            <SoftwareDemoBookingPanel
+              sourcePage={path}
+              layout="inline"
+              idPrefix="software-demo-inline"
+              className="mt-2"
+            />
+            <p className="mt-6 text-center text-sm text-secondary sm:text-base">
+              Evaluating options? Read the{" "}
               <Link href={SEO_SOFTWARE_COMPARISON_PATH} className="text-primary font-medium hover:underline">
                 2026 software comparison
               </Link>{" "}
-              after you understand the Job Write-Up path above.
+              or see{" "}
+              <Link href="/pricing" className="text-primary font-medium hover:underline">
+                pricing
+              </Link>
+              .
             </p>
           </section>
 

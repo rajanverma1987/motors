@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
+import { FiMapPin } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
@@ -10,32 +11,82 @@ import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-r
 import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
 import { LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import { US_STATES } from "@/lib/directory-listing-constants";
+import { normalizeLocationInput } from "@/lib/us-state-normalize";
 import { useToast } from "@/components/toast-provider";
 
 const STATE_OPTIONS = [{ value: "", label: "Select state…" }, ...US_STATES.map((st) => ({ value: st, label: st }))];
+const STORAGE_KEY = "iqmotorbase_near_me_location";
+
+function readStoredLocation() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const normalized = normalizeLocationInput(parsed);
+    if (!normalized.city && !normalized.state && !normalized.zip) return null;
+    return normalized;
+  } catch {
+    return null;
+  }
+}
+
+function readUrlLocation() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const normalized = normalizeLocationInput({
+    city: params.get("city"),
+    state: params.get("state"),
+    zip: params.get("zip"),
+  });
+  if (!normalized.city && !normalized.state && !normalized.zip) return null;
+  return normalized;
+}
+
+function persistLocation(location) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
+  } catch {
+    /* ignore quota errors */
+  }
+  const params = new URLSearchParams();
+  if (location.city) params.set("city", location.city);
+  if (location.state) params.set("state", location.state);
+  if (location.zip) params.set("zip", location.zip);
+  const qs = params.toString();
+  const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  window.history.replaceState(null, "", nextUrl);
+}
 
 export default function NearMeContent() {
   const toast = useToast();
   const autoNotifiedRef = useRef(null);
+  const initStartedRef = useRef(false);
   const [searchCity, setSearchCity] = useState("");
   const [searchState, setSearchState] = useState("");
+  const [searchZip, setSearchZip] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [userLocation, setUserLocation] = useState({ city: "", state: "" });
+  const [locating, setLocating] = useState(false);
+  const [prefilling, setPrefilling] = useState(true);
+  const [userLocation, setUserLocation] = useState({ city: "", state: "", zip: "" });
   const [listings, setListings] = useState([]);
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySent, setNotifySent] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
 
-  const fetchListingsNear = useCallback(async (city, state) => {
+  const fetchListingsNear = useCallback(async (location) => {
     setSearching(true);
     try {
       const params = new URLSearchParams();
-      if (state) params.set("state", state);
-      if (city) params.set("city", city);
-      const res = await fetch(`/api/listings/public?${params.toString()}`);
+      if (location.state) params.set("state", location.state);
+      if (location.city) params.set("city", location.city);
+      if (location.zip) params.set("zip", location.zip);
+      const res = await fetch(`/api/listings/nearby?${params.toString()}`);
       const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      const list = Array.isArray(data.listings) ? data.listings : [];
       setListings(list);
       return list.length;
     } catch {
@@ -46,46 +97,155 @@ export default function NearMeContent() {
     }
   }, []);
 
-  const searchByLocation = useCallback(
-    async (e) => {
-      e?.preventDefault?.();
-      const city = searchCity.trim();
-      const state = searchState.trim();
-      if (!city && !state) {
-        toast.error("Enter a city or select a state to search.");
-        return;
+  const runSearch = useCallback(
+    async (rawLocation, { notifyOnEmpty = true } = {}) => {
+      const location = normalizeLocationInput(rawLocation);
+      if (!location.city && !location.state && !location.zip) {
+        toast.error("Enter a city, state, or ZIP code to search.");
+        return 0;
       }
+
+      setSearchCity(location.city);
+      setSearchState(location.state);
+      setSearchZip(location.zip);
       setNotifySent(false);
       setHasSearched(true);
-      setUserLocation({ city, state });
-      const count = await fetchListingsNear(city, state);
-      if (count === 0) {
-        const key = [city, state].filter(Boolean).join("|");
+      setUserLocation(location);
+      persistLocation(location);
+
+      const count = await fetchListingsNear(location);
+
+      if (count === 0 && notifyOnEmpty) {
+        const key = [location.city, location.state, location.zip].filter(Boolean).join("|");
         if (autoNotifiedRef.current !== key) {
           autoNotifiedRef.current = key;
           fetch("/api/notify-no-listings-near-me", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              city: city || undefined,
-              state: state || undefined,
+              city: location.city || undefined,
+              state: location.state || undefined,
             }),
           }).catch((err) => console.error("Auto-notify no listings error:", err));
         }
       }
+
+      return count;
     },
-    [fetchListingsNear, searchCity, searchState, toast]
+    [fetchListingsNear, toast]
   );
 
-  const locationLabel = [userLocation.city, userLocation.state].filter(Boolean).join(", ") || "your area";
+  const searchByLocation = useCallback(
+    async (e) => {
+      e?.preventDefault?.();
+      await runSearch({ city: searchCity, state: searchState, zip: searchZip });
+    },
+    [runSearch, searchCity, searchState, searchZip]
+  );
+
+  const useMyLocation = useCallback(async () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      toast.error("Location is not supported in this browser.");
+      return;
+    }
+    setLocating(true);
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false,
+          timeout: 12000,
+          maximumAge: 300000,
+        });
+      });
+      const { latitude, longitude } = position.coords;
+      const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
+      const data = await res.json();
+      const location = normalizeLocationInput(data);
+      if (!location.city && !location.state && !location.zip) {
+        toast.error("Could not determine your city from GPS. Enter it manually.");
+        return;
+      }
+      const count = await runSearch(location);
+      if (count > 0) {
+        toast.success(`Showing shops near ${[location.city, location.state].filter(Boolean).join(", ")}`);
+      }
+    } catch (err) {
+      const code = err?.code;
+      if (code === 1) {
+        toast.error("Location permission denied. Enter your city manually or allow location access.");
+      } else if (code === 2) {
+        toast.error("Location unavailable. Try entering your city and state.");
+      } else if (code === 3) {
+        toast.error("Location timed out. Try again or enter your city manually.");
+      } else {
+        toast.error("Could not use your location. Enter your city and state.");
+      }
+    } finally {
+      setLocating(false);
+    }
+  }, [runSearch, toast]);
+
+  useEffect(() => {
+    if (initStartedRef.current) return;
+    initStartedRef.current = true;
+
+    async function initLocation() {
+      const fromUrl = readUrlLocation();
+      if (fromUrl) {
+        setSearchCity(fromUrl.city);
+        setSearchState(fromUrl.state);
+        setSearchZip(fromUrl.zip);
+        setPrefilling(false);
+        await runSearch(fromUrl, { notifyOnEmpty: true });
+        return;
+      }
+
+      const stored = readStoredLocation();
+      if (stored) {
+        setSearchCity(stored.city);
+        setSearchState(stored.state);
+        setSearchZip(stored.zip);
+        setPrefilling(false);
+        await runSearch(stored, { notifyOnEmpty: false });
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/geo");
+        const data = await res.json();
+        const location = normalizeLocationInput(data);
+        if (location.city || location.state || location.zip) {
+          setSearchCity(location.city);
+          setSearchState(location.state);
+          setSearchZip(location.zip);
+          await runSearch(location, { notifyOnEmpty: true });
+        }
+      } catch {
+        /* silent — manual entry fallback */
+      } finally {
+        setPrefilling(false);
+      }
+    }
+
+    initLocation();
+  }, [runSearch]);
+
+  const locationLabel =
+    [userLocation.city, userLocation.state].filter(Boolean).join(", ") ||
+    (userLocation.zip ? `ZIP ${userLocation.zip}` : "your area");
+
+  const formBusy = searching || locating || prefilling;
 
   return (
     <>
       <div className="mt-8 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
         <p className="text-lg font-semibold text-title">Find repair shops in your area</p>
-        <p className="mt-1 text-sm text-secondary">Enter your city and state — we&apos;ll show matching shops and pre-fill your repair request.</p>
+        <p className="mt-1 text-sm text-secondary">
+          We&apos;ll detect your area when possible — or enter city, state, and ZIP. Matching shops pre-fill your repair
+          request.
+        </p>
         <form
-          className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end"
+          className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_7rem_auto_auto]"
           onSubmit={searchByLocation}
         >
           <Input
@@ -104,10 +264,39 @@ export default function NearMeContent() {
             onChange={(e) => setSearchState(e.target.value)}
             searchable
           />
-          <Button type="submit" variant="primary" size="lg" disabled={searching} className="w-full sm:w-auto sm:min-w-[8.5rem]">
+          <Input
+            label="ZIP"
+            name="nearMeZip"
+            autoComplete="postal-code"
+            placeholder="77001"
+            value={searchZip}
+            onChange={(e) => setSearchZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+            inputClassName="font-mono tracking-wide"
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            disabled={formBusy}
+            className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto lg:min-w-[8.5rem] lg:self-end"
+          >
             {searching ? "Searching…" : "Find shops"}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            disabled={formBusy}
+            onClick={useMyLocation}
+            className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto lg:self-end"
+          >
+            <FiMapPin className="h-4 w-4 shrink-0" aria-hidden />
+            {locating ? "Locating…" : "Use my location"}
+          </Button>
         </form>
+        {prefilling && !hasSearched ? (
+          <p className="mt-3 text-sm text-secondary">Detecting your area…</p>
+        ) : null}
         <p className="mt-4 text-sm text-secondary">
           Or{" "}
           <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
@@ -121,17 +310,26 @@ export default function NearMeContent() {
         <div className={LISTINGS_PAGE_CONTAINER}>
           <ListingsWithRepairFormLayout
             sidebar={
-              <ListingsRepairFormSidebar mode="city" city={userLocation.city} state={userLocation.state} />
+              <ListingsRepairFormSidebar
+                mode="city"
+                city={userLocation.city}
+                state={userLocation.state}
+                zipCode={userLocation.zip}
+              />
             }
           >
-            {!hasSearched ? (
+            {!hasSearched && !prefilling ? (
               <div className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center sm:px-10">
-                <p className="text-lg font-medium text-title">Enter your city above to see nearby shops</p>
+                <p className="text-lg font-medium text-title">Enter your location above to see nearby shops</p>
                 <p className="mx-auto mt-2 max-w-md text-sm text-secondary">
-                  Search by city and state to load repair centers that serve your area. Your repair request form will
-                  match the same location.
+                  Search by city, state, or ZIP — or tap &ldquo;Use my location&rdquo;. Your repair request form will
+                  match the same area.
                 </p>
               </div>
+            ) : null}
+
+            {prefilling && !hasSearched ? (
+              <p className="py-12 text-center text-secondary">Loading shops near you…</p>
             ) : null}
 
             {hasSearched && !searching ? (
@@ -155,7 +353,7 @@ export default function NearMeContent() {
                 </p>
                 <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
                   <Button type="button" variant="outline" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-                    Change city
+                    Change location
                   </Button>
                   <Link href="/electric-motor-repair-shops-listings">
                     <Button variant="primary">Browse all listings</Button>
@@ -218,7 +416,12 @@ export default function NearMeContent() {
             {hasSearched && !searching && listings.length > 0 ? (
               <div className={LISTINGS_GRID}>
                 {listings.map((listing, index) => (
-                  <PublicListingCard key={listing.id} listing={listing} imagePriority={index < 6} />
+                  <PublicListingCard
+                    key={listing.id}
+                    listing={listing}
+                    imagePriority={index < 6}
+                    locationMatchType={listing.locationMatchType || null}
+                  />
                 ))}
               </div>
             ) : null}
