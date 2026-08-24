@@ -9,6 +9,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
  * @param {string} opts.description
  * @param {string} opts.path pathname starting with `/`, or `/` for home
  * @param {boolean} [opts.index=true]
+ * @param {boolean} [opts.follow] defaults to true; set false with index:false for login/register
  * @param {string[]} [opts.keywords]
  * @param {string} [opts.ogTitle]
  * @param {string} [opts.ogDescription]
@@ -19,6 +20,7 @@ export function marketingPageMetadata({
   description,
   path,
   index = true,
+  follow,
   keywords,
   ogTitle,
   ogDescription,
@@ -28,13 +30,14 @@ export function marketingPageMetadata({
   const canonical = normalized === "/" ? base : `${base}${normalized}`;
   const socialTitle = ogTitle || title;
   const socialDescription = ogDescription || description;
+  const allowFollow = follow == null ? true : !!follow;
 
   return {
     title,
     description,
     ...(keywords?.length ? { keywords } : {}),
     alternates: { canonical },
-    robots: { index, follow: true },
+    robots: { index, follow: allowFollow },
     openGraph: {
       title: socialTitle,
       description: socialDescription,

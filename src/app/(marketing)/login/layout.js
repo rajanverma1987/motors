@@ -5,6 +5,7 @@ export const metadata = marketingPageMetadata({
   title: "Log in",
   description: "Log in to your IQMotorBase.com center portal.",
   index: false,
+  follow: false,
 });
 
 export default function LoginLayout({ children }) {

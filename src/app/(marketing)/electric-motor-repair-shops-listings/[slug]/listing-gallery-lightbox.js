@@ -7,7 +7,12 @@ import Button from "@/components/ui/button";
 import { ListingGalleryThumb } from "@/components/listings/listing-optimized-images";
 import { getListingImageSrc } from "@/lib/listing-image";
 
-export default function ListingGalleryLightbox({ urls, companyName = "" }) {
+export default function ListingGalleryLightbox({
+  urls,
+  companyName = "",
+  city = "",
+  state = "",
+}) {
   const list = Array.isArray(urls) ? urls.filter(Boolean) : [];
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
@@ -38,7 +43,10 @@ export default function ListingGalleryLightbox({ urls, companyName = "" }) {
   if (list.length === 0) return null;
 
   const fullSrc = getListingImageSrc(list[index]);
-  const altBase = String(companyName || "Repair center").trim() || "Gallery";
+  const shop = String(companyName || "Repair center").trim() || "Gallery";
+  const place = [city, state].filter(Boolean).join(" ");
+  const thumbAlt = (i) =>
+    `${shop} — ${i === 0 ? "shop facility" : `photo ${i + 1}`}${place ? `, ${place}` : ""}`;
   const multi = list.length > 1;
 
   return (
@@ -55,7 +63,7 @@ export default function ListingGalleryLightbox({ urls, companyName = "" }) {
             }}
             aria-label={`Open gallery image ${i + 1} of ${list.length} in full size`}
           >
-            <ListingGalleryThumb src={url} />
+            <ListingGalleryThumb src={url} alt={thumbAlt(i)} />
           </button>
         ))}
       </div>
@@ -101,7 +109,7 @@ export default function ListingGalleryLightbox({ urls, companyName = "" }) {
             <img
               key={fullSrc}
               src={fullSrc}
-              alt={`${altBase} — gallery image ${index + 1} of ${list.length}`}
+              alt={thumbAlt(index)}
               className="max-h-[min(75vh,880px)] w-auto max-w-full rounded-md object-contain"
               loading="eager"
               decoding="async"

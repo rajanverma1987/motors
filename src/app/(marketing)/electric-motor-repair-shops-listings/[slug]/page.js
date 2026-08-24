@@ -8,7 +8,15 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import {
   buildListingDetailFaqs,
   buildListingDetailJsonLdGraph,
+  buildListingDetailTitle,
+  buildListingDetailH1,
+  buildListingDetailDescription,
+  formatListingOptionLabels,
   listingAssetAbsoluteUrl,
+  listingIndustryItems,
+  listingNearbyCityLinks,
+  listingModifiedIso,
+  listingOffersEmergency,
 } from "@/lib/listing-detail-seo";
 import { LISTINGS_FORM_STICKY, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import ListingDetailCta from "./listing-detail-cta";
@@ -39,58 +47,6 @@ const LABELS = {
   certifications: "Certifications",
 };
 
-const READABLE_OPTION_LABELS = {
-  acMotorRepair: "AC Motor Repair",
-  dcMotorRepair: "DC Motor Repair",
-  motorRewinding: "Motor Rewinding",
-  pumpRepair: "Pump Repair",
-  generatorRepair: "Generator Repair",
-  servoMotorRepair: "Servo Motor Repair",
-  spindleRepair: "Spindle Repair",
-  vfdRepair: "VFD Repair",
-  fieldService: "Field Service",
-  emergencyRepair: "Emergency Repair (24/7)",
-  onSiteTroubleshooting: "On-site Troubleshooting",
-  lowVoltage: "Low Voltage",
-  mediumVoltage: "Medium Voltage",
-  highVoltage: "High Voltage",
-  explosionProof: "Explosion Proof",
-  hazardousLocation: "Hazardous Location",
-  submersible: "Submersible",
-  dynamometer: "Dynamometer",
-  surge: "Surge Testing",
-  vibration: "Vibration Analysis",
-  balancing: "Balancing",
-  laserAlignment: "Laser Alignment",
-  infrared: "Infrared",
-  loadTesting: "Load Testing",
-  highVoltageTesting: "High Voltage Testing",
-  acMotorRewinding: "AC Motor Rewinding",
-  dcArmatureRewinding: "DC Armature Rewinding",
-  fieldCoilRewinding: "Field Coil Rewinding",
-  coilManufacturing: "Coil Manufacturing",
-  vpi: "VPI",
-  insulationUpgrades: "Insulation Upgrades",
-  manufacturing: "Manufacturing",
-  oilGas: "Oil & Gas",
-  waterTreatment: "Water Treatment",
-  powerPlants: "Power Plants",
-  mining: "Mining",
-  hvac: "HVAC",
-  foodProcessing: "Food Processing",
-  agriculture: "Agriculture",
-  easaMember: "EASA Member",
-  isoCertification: "ISO Certification",
-  ulCertified: "UL Certified",
-  factoryAuthorizedRepair: "Factory Authorized Repair",
-  insuranceCoverage: "Insurance Coverage",
-};
-
-function formatListAsReadableArray(arr) {
-  if (!Array.isArray(arr) || arr.length === 0) return [];
-  return arr.map((item) => READABLE_OPTION_LABELS[item] || item);
-}
-
 /** Plain JSON object for Client Components (no ObjectId / BSON / Mongoose toJSON). */
 function toClientListingProps(listing) {
   return JSON.parse(JSON.stringify(listing));
@@ -110,55 +66,31 @@ export async function generateMetadata({ params }) {
   const canonicalSlug = getListingPublicPathSegment(listing);
   const canonicalUrl = `${siteUrl}/electric-motor-repair-shops-listings/${canonicalSlug}`;
 
-  const city = String(listing.city || "").trim();
-  const state = String(listing.state || "").trim();
-  const zip = String(listing.zipCode || "").trim();
-  const locationBits = [city, state, zip].filter(Boolean);
-  const locationLabel = locationBits.join(", ");
-  const serviceRegionBits = [
-    listing.serviceZipCode ? `ZIP ${listing.serviceZipCode}` : "",
-    listing.serviceRadiusMiles ? `${listing.serviceRadiusMiles} mile radius` : "",
-    listing.statesServed ? String(listing.statesServed) : "",
-    listing.citiesOrMetrosServed ? String(listing.citiesOrMetrosServed) : "",
-    listing.areaCoveredFrom ? String(listing.areaCoveredFrom) : "",
-  ].filter(Boolean);
-
-  const capabilities = [
-    ...formatListAsReadableArray(listing.services).slice(0, 6),
-    ...formatListAsReadableArray(listing.motorCapabilities).slice(0, 4),
-    ...formatListAsReadableArray(listing.rewindingCapabilities).slice(0, 3),
-  ];
-  const uniqueCaps = [...new Set(capabilities)].slice(0, 8);
-  const capabilitiesText = uniqueCaps.length ? uniqueCaps.join(", ") : "";
-
-  const titleParts = [
-    listing.companyName,
-    locationLabel ? `- Electric Motor Repair in ${locationLabel}` : " - Electric Motor Repair Center",
-  ];
-  const title = titleParts.join(" ").replace(/\s+/g, " ").trim();
-
-  const descriptionParts = [
-    listing.shortDescription ? String(listing.shortDescription).trim() : "",
-    capabilitiesText ? `Capabilities: ${capabilitiesText}.` : "",
-    serviceRegionBits.length ? `Service region: ${serviceRegionBits.slice(0, 2).join(" · ")}.` : "",
-  ].filter(Boolean);
-  const description = (descriptionParts.join(" ") || `Electric motor repair services by ${listing.companyName}.`).slice(0, 160);
+  const serviceLabels = formatListingOptionLabels(listing.services);
+  const title = buildListingDetailTitle(listing);
+  const description = buildListingDetailDescription(listing, serviceLabels);
+  const modified = listingModifiedIso(listing);
 
   const logoUrl = String(listing.logoUrl || "").trim();
-  const firstGallery = Array.isArray(listing.galleryPhotoUrls) ? listing.galleryPhotoUrls.find(Boolean) : "";
+  const firstGallery = Array.isArray(listing.galleryPhotoUrls)
+    ? listing.galleryPhotoUrls.find(Boolean)
+    : "";
   const imageCandidate = logoUrl || firstGallery || "";
   const ogImage = imageCandidate ? listingAssetAbsoluteUrl(siteUrl, imageCandidate) : null;
 
-  const keywordSet = new Set([
-    "electric motor repair",
-    "motor rewinding",
-    "industrial motor repair",
-    city && `motor repair ${city}`,
-    state && `motor rewinding ${state}`,
-    ...uniqueCaps.slice(0, 5),
-    ...serviceRegionBits.slice(0, 3),
-    String(listing.companyName || "").trim(),
-  ].filter(Boolean));
+  const city = String(listing.city || "").trim();
+  const state = String(listing.state || "").trim();
+  const keywordSet = new Set(
+    [
+      "electric motor repair",
+      "motor rewinding",
+      "industrial motor repair",
+      city && `motor repair ${city}`,
+      state && `motor rewinding ${state}`,
+      ...serviceLabels.slice(0, 5),
+      String(listing.companyName || "").trim(),
+    ].filter(Boolean)
+  );
 
   return {
     title,
@@ -173,13 +105,18 @@ export async function generateMetadata({ params }) {
       url: canonicalUrl,
       siteName: "IQMotorBase.com",
       locale: "en_US",
-      images: ogImage ? [{ url: ogImage, alt: `${listing.companyName} — electric motor repair` }] : undefined,
+      images: ogImage
+        ? [{ url: ogImage, alt: `${listing.companyName} — electric motor repair` }]
+        : undefined,
     },
     twitter: {
       card: ogImage ? "summary_large_image" : "summary",
       title,
       description,
       images: ogImage ? [ogImage] : undefined,
+    },
+    other: {
+      "article:modified_time": modified,
     },
   };
 }
@@ -197,7 +134,11 @@ export default async function ListingDetailPage({ params }) {
     return (
       <div className="mx-auto max-w-[67.2rem] px-4 py-16 text-center">
         <p className="text-secondary">Repair center not found.</p>
-        <Link href="/electric-motor-repair-shops-listings" prefetch className="mt-4 inline-block text-primary hover:underline">
+        <Link
+          href="/electric-motor-repair-shops-listings"
+          prefetch
+          className="mt-4 inline-block text-primary hover:underline"
+        >
           ← Back to listings
         </Link>
       </div>
@@ -211,24 +152,52 @@ export default async function ListingDetailPage({ params }) {
 
   const locationParts = [listing.city, listing.state, listing.zipCode].filter(Boolean);
   const location = locationParts.join(", ");
-  const fullAddress = [listing.address, listing.city, listing.state, listing.zipCode, listing.country].filter(Boolean);
+  const fullAddress = [
+    listing.address,
+    listing.city,
+    listing.state,
+    listing.zipCode,
+    listing.country,
+  ].filter(Boolean);
   const logoUrl = listing.logoUrl?.trim();
-  const gallery = Array.isArray(listing.galleryPhotoUrls) ? listing.galleryPhotoUrls.filter(Boolean) : [];
+  const gallery = Array.isArray(listing.galleryPhotoUrls)
+    ? listing.galleryPhotoUrls.filter(Boolean)
+    : [];
   const firstGallery = gallery[0];
-  const firstGallerySrc = firstGallery?.startsWith("http") ? firstGallery : firstGallery?.startsWith("/") ? firstGallery : firstGallery ? `/${firstGallery}` : null;
-  /** Wide hero only for gallery photos — not the logo (logo stays compact next to the title). */
+  const firstGallerySrc = firstGallery?.startsWith("http")
+    ? firstGallery
+    : firstGallery?.startsWith("/")
+      ? firstGallery
+      : firstGallery
+        ? `/${firstGallery}`
+        : null;
   const heroImage = firstGallerySrc;
 
   const reviewStats = await getListingReviewStats(listing.id);
   const sameAreaPage = await getLocationPageForArea(listing.city, listing.state);
   const sameAreaLabel = [listing.city, listing.state].filter(Boolean).join(", ") || "this area";
+  const sameAreaHref = sameAreaPage
+    ? `/motor-repair-shop/${sameAreaPage.slug}`
+    : `/electric-motor-repair-shops-listings?${new URLSearchParams({
+        ...(listing.city && { city: listing.city }),
+        ...(listing.state && { state: listing.state }),
+      }).toString()}`;
 
   const listingForClient = toClientListingProps(listing);
+  const emergency = listingOffersEmergency(listing);
+  const industryItems = listingIndustryItems(listing.industriesServed);
+  const nearbyLinks = listingNearbyCityLinks(listing);
+  const modifiedIso = listingModifiedIso(listing);
+  const modifiedLabel = (() => {
+    const d = new Date(modifiedIso);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-US", { year: "numeric", month: "long" });
+  })();
 
   const serviceBits = [
-    ...formatListAsReadableArray(listing.services),
-    ...formatListAsReadableArray(listing.motorCapabilities),
-    ...formatListAsReadableArray(listing.equipmentTesting).slice(0, 4),
+    ...formatListingOptionLabels(listing.services),
+    ...formatListingOptionLabels(listing.motorCapabilities),
+    ...formatListingOptionLabels(listing.equipmentTesting).slice(0, 4),
   ].filter(Boolean);
   const servicesPreview = [...new Set(serviceBits)].slice(0, 18).join(", ");
 
@@ -245,6 +214,7 @@ export default async function ListingDetailPage({ params }) {
     : "";
 
   const addressLine = fullAddress.length ? fullAddress.join(", ") : "";
+  const h1 = buildListingDetailH1(listing);
 
   const siteBase = getPublicSiteUrl().replace(/\/$/, "");
   const faqs = buildListingDetailFaqs(
@@ -265,6 +235,8 @@ export default async function ListingDetailPage({ params }) {
     siteBase,
     reviewStats,
     faqs,
+    sameAreaHref,
+    sameAreaLabel: sameAreaPage ? sameAreaPage.title || sameAreaLabel : sameAreaLabel,
   });
 
   return (
@@ -278,59 +250,96 @@ export default async function ListingDetailPage({ params }) {
         }}
       />
       <div className={`${LISTINGS_PAGE_CONTAINER} py-8 sm:py-12`}>
-        <Link
-          href="/electric-motor-repair-shops-listings"
-          prefetch
-          className="inline-flex items-center text-sm text-secondary hover:text-primary"
-        >
-          ← Back to listings
-        </Link>
+        <nav aria-label="Breadcrumb" className="text-sm text-secondary">
+          <ol className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <li>
+              <Link href="/" prefetch className="hover:text-primary">
+                Home
+              </Link>
+            </li>
+            <li aria-hidden>›</li>
+            <li>
+              <Link
+                href="/electric-motor-repair-shops-listings"
+                prefetch
+                className="hover:text-primary"
+              >
+                Motor Repair Shops
+              </Link>
+            </li>
+            <li aria-hidden>›</li>
+            <li>
+              <Link href={sameAreaHref} prefetch className="hover:text-primary">
+                {sameAreaLabel}
+              </Link>
+            </li>
+            <li aria-hidden>›</li>
+            <li className="text-title" aria-current="page">
+              {listing.companyName}
+            </li>
+          </ol>
+        </nav>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_352px] lg:items-start">
           <div className="min-w-0">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               {heroImage && (
                 <div className="relative aspect-[21/9] w-full bg-muted/30">
-                  <ListingHeroImage src={heroImage} />
+                  <ListingHeroImage
+                    src={heroImage}
+                    alt={`${listing.companyName} — shop facility, ${sameAreaLabel}`}
+                  />
                 </div>
               )}
               <div className="p-6 sm:p-8">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
-                    {logoUrl && (
-                      <div className="shrink-0">
-                        <ListingInlineLogo src={logoUrl} />
-                      </div>
-                    )}
-                    <div>
-                      <h1 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-                        {listing.companyName}
-                      </h1>
-                      {reviewStats.count > 0 && (
-                        <p className="mt-1 flex items-center gap-1.5 text-sm text-secondary">
-                          <span className="font-medium text-title">{reviewStats.average.toFixed(1)}</span>
-                          <span aria-hidden>★</span>
-                          <span>({reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""})</span>
-                        </p>
-                      )}
-                      {location && (
-                        <p className="mt-1 text-secondary">{location}</p>
-                      )}
-                      {listing.country && listing.country !== "United States" && (
-                        <p className="text-sm text-secondary">{listing.country}</p>
-                      )}
-                      {listing.yearsInBusiness && (
-                        <p className="mt-0.5 text-sm text-secondary">
-                          {listing.yearsInBusiness} years in business
-                        </p>
-                      )}
+                  {logoUrl && (
+                    <div className="shrink-0">
+                      <ListingInlineLogo
+                        src={logoUrl}
+                        alt={`${listing.companyName} logo — electric motor repair`}
+                      />
                     </div>
+                  )}
+                  <div className="min-w-0">
+                    <h1 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
+                      {h1}
+                    </h1>
+                    {reviewStats.count > 0 && (
+                      <p className="mt-1 flex items-center gap-1.5 text-sm text-secondary">
+                        <span className="font-medium text-title">
+                          {reviewStats.average.toFixed(1)}
+                        </span>
+                        <span aria-hidden>★</span>
+                        <span>
+                          ({reviewStats.count} review{reviewStats.count !== 1 ? "s" : ""})
+                        </span>
+                      </p>
+                    )}
                   </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 rounded-lg border border-border bg-muted/25 px-3 py-2.5 text-xs text-secondary sm:gap-3 sm:px-4 sm:text-sm">
+                  {location ? <span>{location}</span> : null}
+                  {listing.yearsInBusiness ? (
+                    <span>{listing.yearsInBusiness} years in business</span>
+                  ) : null}
+                  {listing.maxMotorSizeHP ? (
+                    <span>Up to {listing.maxMotorSizeHP} HP</span>
+                  ) : null}
+                  {emergency ? (
+                    <span className="font-semibold text-danger">24/7 Emergency</span>
+                  ) : null}
+                  {listing.pickupDeliveryAvailable ? (
+                    <span>Pickup &amp; delivery</span>
+                  ) : null}
+                </div>
 
                 <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
                   <p className="text-sm text-secondary">
-                    <span className="font-medium text-title">Is this your business?</span>{" "}
-                    Sign in to your IQMotorBase account to update this directory listing—services, service area, photos,
-                    and contact details—whenever they change.{" "}
+                    <span className="font-medium text-title">Is this your business?</span> Sign
+                    in to your IQMotorBase account to update this directory listing—services,
+                    service area, photos, and contact details—whenever they change.{" "}
                     <Link
                       href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
                       className="font-medium text-primary underline-offset-2 hover:underline"
@@ -343,75 +352,169 @@ export default async function ListingDetailPage({ params }) {
 
                 {listing.shortDescription && (
                   <div className="mt-8">
-                    <h2 className="text-sm font-semibold tracking-wide text-title">About us</h2>
+                    <h2 className="text-sm font-semibold tracking-wide text-title">
+                      About {listing.companyName}
+                    </h2>
                     <p className="mt-3 text-sm text-secondary">{listing.shortDescription}</p>
+                    {modifiedLabel ? (
+                      <p className="mt-2 text-xs text-secondary/80">
+                        Listing last updated: {modifiedLabel}
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
                 <div className="mt-8 grid gap-8 sm:grid-cols-2">
                   {fullAddress.length > 0 && (
                     <div>
-                      <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Address</h2>
-                      <ul className="mt-3 space-y-1.5 text-sm text-secondary">
-                        <li>{fullAddress.join(", ")}</li>
-                      </ul>
+                      <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                        Location
+                      </h2>
+                      <address className="mt-3 not-italic text-sm text-secondary">
+                        {listing.companyName}
+                        <br />
+                        {listing.address ? (
+                          <>
+                            {listing.address}
+                            <br />
+                          </>
+                        ) : null}
+                        {[listing.city, listing.state, listing.zipCode]
+                          .filter(Boolean)
+                          .join(", ")}
+                        <br />
+                        {listing.country || "United States"}
+                      </address>
+                      {listing.phone ? (
+                        <p className="mt-2 text-sm">
+                          <a
+                            href={`tel:${String(listing.phone).replace(/\D/g, "")}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {listing.phone}
+                          </a>
+                        </p>
+                      ) : null}
+                      {listing.website ? (
+                        <p className="mt-1 text-sm">
+                          <a
+                            href={listing.website}
+                            target="_blank"
+                            rel="noopener noreferrer nofollow"
+                            className="font-medium text-primary hover:underline"
+                          >
+                            Visit website
+                          </a>
+                        </p>
+                      ) : null}
                     </div>
                   )}
 
                   <div>
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Capabilities</h2>
-                    <ul className="mt-3 space-y-1.5 text-sm text-secondary">
-                      {listing.maxMotorSizeHP && (
-                        <li>Max motor size: {listing.maxMotorSizeHP} HP</li>
-                      )}
-                      {listing.maxVoltage && (
-                        <li>Max voltage: {listing.maxVoltage}</li>
-                      )}
-                      {listing.maxWeightHandled && (
-                        <li>Max weight handled: {listing.maxWeightHandled}</li>
-                      )}
-                      {listing.turnaroundTime && (
-                        <li>Turnaround: {listing.turnaroundTime}</li>
-                      )}
-                      {listing.pickupDeliveryAvailable && (
-                        <li>Pickup & delivery available</li>
-                      )}
-                      {listing.rushRepairAvailable && (
-                        <li>Rush repair available</li>
-                      )}
-                      {listing.craneCapacity && (
-                        <li>Crane capacity: {listing.craneCapacity}</li>
-                      )}
-                      {listing.forkliftCapacity && (
-                        <li>Forklift capacity: {listing.forkliftCapacity}</li>
-                      )}
-                    </ul>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                      Capabilities
+                    </h2>
+                    <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+                      {listing.maxMotorSizeHP ? (
+                        <>
+                          <dt className="text-secondary">Max motor size</dt>
+                          <dd className="text-title">{listing.maxMotorSizeHP} HP</dd>
+                        </>
+                      ) : null}
+                      {listing.maxVoltage ? (
+                        <>
+                          <dt className="text-secondary">Max voltage</dt>
+                          <dd className="text-title">{listing.maxVoltage}</dd>
+                        </>
+                      ) : null}
+                      {listing.maxWeightHandled ? (
+                        <>
+                          <dt className="text-secondary">Max weight handled</dt>
+                          <dd className="text-title">{listing.maxWeightHandled}</dd>
+                        </>
+                      ) : null}
+                      {listing.turnaroundTime ? (
+                        <>
+                          <dt className="text-secondary">Turnaround</dt>
+                          <dd className="text-title">{listing.turnaroundTime}</dd>
+                        </>
+                      ) : null}
+                      {listing.pickupDeliveryAvailable ? (
+                        <>
+                          <dt className="text-secondary">Pickup &amp; delivery</dt>
+                          <dd className="text-title">Available</dd>
+                        </>
+                      ) : null}
+                      {listing.rushRepairAvailable ? (
+                        <>
+                          <dt className="text-secondary">Rush repair</dt>
+                          <dd className="text-title">Available</dd>
+                        </>
+                      ) : null}
+                      {listing.craneCapacity ? (
+                        <>
+                          <dt className="text-secondary">Crane capacity</dt>
+                          <dd className="text-title">{listing.craneCapacity}</dd>
+                        </>
+                      ) : null}
+                      {listing.forkliftCapacity ? (
+                        <>
+                          <dt className="text-secondary">Forklift capacity</dt>
+                          <dd className="text-title">{listing.forkliftCapacity}</dd>
+                        </>
+                      ) : null}
+                    </dl>
                   </div>
                 </div>
 
-                {(listing.shopSizeSqft || listing.numTechnicians || listing.numEngineers || listing.yearsCombinedExperience) && (
+                {(listing.shopSizeSqft ||
+                  listing.numTechnicians ||
+                  listing.numEngineers ||
+                  listing.yearsCombinedExperience) && (
                   <div className="mt-8 border-t border-border pt-8">
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Shop facilities</h2>
-                    <ul className="mt-3 space-y-1.5 text-sm text-secondary">
-                      {listing.shopSizeSqft && (
-                        <li>Shop size: {listing.shopSizeSqft} sq ft</li>
-                      )}
-                      {listing.numTechnicians && (
-                        <li>Technicians: {listing.numTechnicians}</li>
-                      )}
-                      {listing.numEngineers && (
-                        <li>Engineers: {listing.numEngineers}</li>
-                      )}
-                      {listing.yearsCombinedExperience && (
-                        <li>Years combined experience: {listing.yearsCombinedExperience}</li>
-                      )}
-                    </ul>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                      Shop facilities
+                    </h2>
+                    <dl className="mt-3 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+                      {listing.shopSizeSqft ? (
+                        <>
+                          <dt className="text-secondary">Shop size</dt>
+                          <dd className="text-title">{listing.shopSizeSqft} sq ft</dd>
+                        </>
+                      ) : null}
+                      {listing.numTechnicians ? (
+                        <>
+                          <dt className="text-secondary">Technicians</dt>
+                          <dd className="text-title">{listing.numTechnicians}</dd>
+                        </>
+                      ) : null}
+                      {listing.numEngineers ? (
+                        <>
+                          <dt className="text-secondary">Engineers</dt>
+                          <dd className="text-title">{listing.numEngineers}</dd>
+                        </>
+                      ) : null}
+                      {listing.yearsCombinedExperience ? (
+                        <>
+                          <dt className="text-secondary">Combined experience</dt>
+                          <dd className="text-title">
+                            {listing.yearsCombinedExperience} years
+                          </dd>
+                        </>
+                      ) : null}
+                    </dl>
                   </div>
                 )}
 
                 <div className="mt-8 grid grid-cols-2 gap-x-8 gap-y-6 border-t border-border pt-8 sm:grid-cols-3">
-                  {["services", "motorCapabilities", "equipmentTesting", "rewindingCapabilities", "industriesServed", "certifications"].map((key) => {
-                    const items = formatListAsReadableArray(listing[key]);
+                  {[
+                    "services",
+                    "motorCapabilities",
+                    "equipmentTesting",
+                    "rewindingCapabilities",
+                    "certifications",
+                  ].map((key) => {
+                    const items = formatListingOptionLabels(listing[key]);
                     if (items.length === 0) return null;
                     return (
                       <div key={key}>
@@ -421,8 +524,19 @@ export default async function ListingDetailPage({ params }) {
                         <ul className="mt-1.5 space-y-0.5 text-sm text-title">
                           {items.map((label, i) => (
                             <li key={i} className="flex items-center gap-2">
-                              <svg className="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <svg
+                                className="h-4 w-4 shrink-0 text-primary"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                                aria-hidden
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
                               </svg>
                               {label}
                             </li>
@@ -431,11 +545,55 @@ export default async function ListingDetailPage({ params }) {
                       </div>
                     );
                   })}
+                  {industryItems.length > 0 ? (
+                    <div>
+                      <h3 className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                        {LABELS.industriesServed}
+                      </h3>
+                      <ul className="mt-1.5 space-y-0.5 text-sm text-title">
+                        {industryItems.map((item) => (
+                          <li key={item.label} className="flex items-center gap-2">
+                            <svg
+                              className="h-4 w-4 shrink-0 text-primary"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              aria-hidden
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                            {item.href ? (
+                              <Link
+                                href={item.href}
+                                prefetch
+                                className="text-primary hover:underline"
+                              >
+                                {item.label}
+                              </Link>
+                            ) : (
+                              item.label
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
 
-                {(listing.serviceZipCode || listing.serviceRadiusMiles || listing.statesServed || listing.citiesOrMetrosServed || listing.areaCoveredFrom) && (
+                {(listing.serviceZipCode ||
+                  listing.serviceRadiusMiles ||
+                  listing.statesServed ||
+                  listing.citiesOrMetrosServed ||
+                  listing.areaCoveredFrom) && (
                   <div className="mt-6 border-t border-border pt-6">
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Service region</h2>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                      Service region
+                    </h2>
                     <ul className="mt-3 space-y-1.5 text-sm text-secondary">
                       {listing.serviceZipCode && (
                         <li>Service ZIP: {listing.serviceZipCode}</li>
@@ -443,9 +601,7 @@ export default async function ListingDetailPage({ params }) {
                       {listing.serviceRadiusMiles && (
                         <li>Service radius: {listing.serviceRadiusMiles} miles</li>
                       )}
-                      {listing.statesServed && (
-                        <li>States served: {listing.statesServed}</li>
-                      )}
+                      {listing.statesServed && <li>States served: {listing.statesServed}</li>}
                       {listing.citiesOrMetrosServed && (
                         <li>Cities / metros: {listing.citiesOrMetrosServed}</li>
                       )}
@@ -457,44 +613,76 @@ export default async function ListingDetailPage({ params }) {
                 )}
 
                 <div className="mt-8 border-t border-border pt-8">
-                  <p className="text-sm text-secondary">
-                    Find more shops in the same area:{" "}
-                    {sameAreaPage ? (
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                    Motor repair shops in nearby areas
+                  </h2>
+                  <ul className="mt-3 space-y-1.5 text-sm">
+                    {nearbyLinks.map((link) => (
+                      <li key={link.href}>
+                        <Link
+                          href={link.href}
+                          prefetch
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {link.label}
+                        </Link>
+                      </li>
+                    ))}
+                    <li>
                       <Link
-                        href={`/motor-repair-shop/${sameAreaPage.slug}`}
+                        href={sameAreaHref}
+                        prefetch
                         className="font-medium text-primary hover:underline"
                       >
-                        {sameAreaPage.title}
+                        {sameAreaPage
+                          ? sameAreaPage.title
+                          : `All motor repair shops in ${sameAreaLabel}`}
                       </Link>
-                    ) : (
+                    </li>
+                    <li>
                       <Link
-                        href={`/electric-motor-repair-shops-listings?${new URLSearchParams({
-                          ...(listing.city && { city: listing.city }),
-                          ...(listing.state && { state: listing.state }),
-                        }).toString()}`}
+                        href="/electric-motor-repair-near-me"
+                        prefetch
                         className="font-medium text-primary hover:underline"
                       >
-                        Browse repair shops in {sameAreaLabel}
+                        Find motor repair shops near me →
                       </Link>
-                    )}
-                  </p>
+                    </li>
+                  </ul>
                 </div>
 
                 {(logoUrl || gallery.length > 0) && (
                   <div className="mt-8 border-t border-border pt-8">
-                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">Logo & gallery</h2>
+                    <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
+                      Photos
+                    </h2>
                     <div className="mt-4 flex flex-col gap-6">
                       {logoUrl && (
                         <div>
-                          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Company logo</h3>
-                          <ListingLogoImage src={logoUrl} alt="Company logo" />
+                          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+                            Company logo
+                          </h3>
+                          <ListingLogoImage
+                            src={logoUrl}
+                            alt={`${listing.companyName} — electric motor repair logo`}
+                          />
                         </div>
                       )}
                       {gallery.length > 0 && (
                         <div>
-                          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">Gallery</h3>
-                          <p className="mb-3 text-xs text-secondary">Click a photo to view it larger. Use Previous / Next or arrow keys to move between images.</p>
-                          <ListingGalleryLightbox urls={gallery} companyName={listing.companyName} />
+                          <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-secondary">
+                            Gallery
+                          </h3>
+                          <p className="mb-3 text-xs text-secondary">
+                            Click a photo to view it larger. Use Previous / Next or arrow keys to
+                            move between images.
+                          </p>
+                          <ListingGalleryLightbox
+                            urls={gallery}
+                            companyName={listing.companyName}
+                            city={listing.city}
+                            state={listing.state}
+                          />
                         </div>
                       )}
                     </div>

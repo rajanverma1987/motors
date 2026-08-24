@@ -37,7 +37,7 @@ export function ListingCardImage({ src, priority = false }) {
 }
 
 /** Wide detail hero (gallery photo). */
-export function ListingHeroImage({ src }) {
+export function ListingHeroImage({ src, alt = "" }) {
   const normalized = getListingImageSrc(src);
   if (!normalized) return null;
 
@@ -45,7 +45,7 @@ export function ListingHeroImage({ src }) {
     return (
       <img
         src={normalized}
-        alt=""
+        alt={alt}
         className="h-full w-full object-cover"
         loading="eager"
         decoding="async"
@@ -57,7 +57,7 @@ export function ListingHeroImage({ src }) {
   return (
     <Image
       src={normalized}
-      alt=""
+      alt={alt}
       fill
       className="object-cover"
       sizes={HERO_SIZES}
@@ -68,7 +68,7 @@ export function ListingHeroImage({ src }) {
 }
 
 /** Small square next to the company name (header). */
-export function ListingInlineLogo({ src }) {
+export function ListingInlineLogo({ src, alt = "" }) {
   const normalized = getListingImageSrc(src);
   if (!normalized) return null;
   const cls =
@@ -78,7 +78,7 @@ export function ListingInlineLogo({ src }) {
     return (
       <img
         src={normalized}
-        alt=""
+        alt={alt}
         className={cls}
         loading="eager"
         decoding="async"
@@ -90,7 +90,7 @@ export function ListingInlineLogo({ src }) {
   return (
     <Image
       src={normalized}
-      alt=""
+      alt={alt}
       width={96}
       height={96}
       className={cls}
@@ -167,7 +167,7 @@ export function ListingLogoImage({ src, alt = "Company logo" }) {
 }
 
 /** Square gallery cell. */
-export function ListingGalleryThumb({ src }) {
+export function ListingGalleryThumb({ src, alt = "" }) {
   const normalized = getListingImageSrc(src);
   if (!normalized) return null;
 
@@ -175,7 +175,7 @@ export function ListingGalleryThumb({ src }) {
     return (
       <img
         src={normalized}
-        alt=""
+        alt={alt}
         className="h-full w-full object-cover"
         loading="lazy"
         decoding="async"
@@ -186,7 +186,7 @@ export function ListingGalleryThumb({ src }) {
   return (
     <Image
       src={normalized}
-      alt=""
+      alt={alt}
       fill
       className="object-cover"
       sizes={GALLERY_SIZES}
