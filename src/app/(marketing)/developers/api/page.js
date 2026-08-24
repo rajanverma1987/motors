@@ -12,7 +12,7 @@ export default function PublicApiDocsPage() {
 
   return (
     <main className="mx-auto max-w-[76.8rem] px-4 py-10 text-sm">
-      <h1 className="text-3xl font-bold text-title">Motors CRM Public API</h1>
+      <h1 className="text-3xl font-bold text-title">Motors Shop Management Public API</h1>
       <p className="mt-3 text-secondary">
         This API targets the Simple portal (`/dashboards`) data model. It excludes admin functionality and classic
         Quote / Motor / Work Order collections.
@@ -21,7 +21,7 @@ export default function PublicApiDocsPage() {
       <section className="mt-8 space-y-3">
         <h2 className="text-xl font-semibold text-title">1) Create API key in dashboard</h2>
         <ol className="list-decimal pl-5 text-secondary space-y-1">
-          <li>Sign in to the CRM.</li>
+          <li>Sign in to the Shop Management System.</li>
           <li>
             Open Simple settings → <strong>API Integration</strong> (
             <code>/dashboards/settings?section=api-integration</code>).

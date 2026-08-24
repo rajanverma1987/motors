@@ -4,6 +4,7 @@ import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import Breadcrumbs from "@/components/seo/breadcrumbs";
+import { REPAIR_FORM_SIDEBAR_MAX_H } from "@/lib/listings-directory-layout";
 
 const siteUrl = getPublicSiteUrl();
 
@@ -115,10 +116,14 @@ export default function BlogPageLayout({
 
       <div className={`mx-auto px-4 sm:px-6 ${wideSidebar ? "max-w-[96rem]" : "max-w-[86.4rem]"}`}>
         {topContent ? <div className="pt-10 sm:pt-12 md:pt-14">{topContent}</div> : null}
-        {/* Default ~65/35; wideSidebar ~48/52 so sidebar tools (e.g. calculator) breathe */}
+        {/* Default ~65/35; sidebarUnwrapped (inline form) ~62/38 (~10% wider form); wideSidebar ~48/52 */}
         <div
           className={`grid grid-cols-1 gap-8 py-12 sm:py-16 ${
-            wideSidebar ? "md:grid-cols-[minmax(0,11fr)_minmax(0,13fr)]" : "md:grid-cols-[13fr_7fr]"
+            wideSidebar
+              ? "md:grid-cols-[minmax(0,11fr)_minmax(0,13fr)]"
+              : sidebarUnwrapped
+                ? "md:grid-cols-[minmax(0,12fr)_minmax(0,8fr)]"
+                : "md:grid-cols-[13fr_7fr]"
           }`}
         >
           {/* Mobile CTA / tools — above content, only on small screens */}
@@ -140,7 +145,7 @@ export default function BlogPageLayout({
           <aside
             className={`hidden min-w-0 md:col-start-2 md:row-start-1 md:block ${
               stickySidebar ? "md:sticky md:top-24 md:self-start" : ""
-            }`}
+            } ${sidebarUnwrapped ? REPAIR_FORM_SIDEBAR_MAX_H : ""}`}
           >
             {sidebarUnwrapped ? (
               sidebarInner

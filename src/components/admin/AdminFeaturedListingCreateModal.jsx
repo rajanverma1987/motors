@@ -186,7 +186,7 @@ export default function AdminFeaturedListingCreateModal({
       }
     >
       <p className="text-sm text-secondary">
-        Creates an <strong className="text-title">approved</strong> directory listing and a listing-only CRM login.
+        Creates an <strong className="text-title">approved</strong> directory listing and a listing-only Shop Management System login.
         Complete form matches the listing editor.
       </p>
       {prefilledFromJson ? (

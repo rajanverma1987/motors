@@ -22,7 +22,7 @@ export async function generateMetadata({ params }) {
   const state = getStateBySlug(stateSlug);
   if (!state) return { title: "Not found" };
   const path = `/usa/${state.slug}/motor-repair-business-listing`;
-  const title = `Motor Repair Business Listing in ${state.name} | Free + CRM`;
+  const title = `Motor Repair Business Listing in ${state.name} | Free + Shop Management System`;
   const description = `List your motor repair or rewinding business in ${state.name}. Get more customers and manage jobs with our free system.`;
   return {
     title,
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }) {
       `motor repair business listing ${state.name}`,
       `electric motor repair ${state.name}`,
       `motor rewinding shop ${state.name}`,
-      "motor repair CRM",
+      "motor repair shop management system",
     ],
     openGraph: {
       title: `${title} | IQMotorBase.com`,
@@ -65,7 +65,7 @@ function linkSections(state) {
       title: "USA hub",
       links: [
         { href: SEO_USA_HUB_PATH, label: "United States — motor repair business listing" },
-        { href: "/register", label: "Create free CRM account" },
+        { href: "/register", label: "Create free Shop Management System account" },
         { href: "/list-your-electric-motor-services", label: "Submit your directory profile" },
       ],
     },

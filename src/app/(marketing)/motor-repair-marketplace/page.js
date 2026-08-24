@@ -10,7 +10,7 @@ export async function generateMetadata() {
   const title =
     "Motor Repair Marketplace for Shops — Sell Parts, Surplus Motors & Tools | IQMotorBase.com";
   const description =
-    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your CRM, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking—separate from job inventory. For industrial motor shops in the USA.";
+    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your Shop Management System, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking—separate from job inventory. For industrial motor shops in the USA.";
   return {
     title,
     description,
@@ -31,7 +31,7 @@ export async function generateMetadata() {
 const faqItems = [
   {
     q: "What is the IQMotorBase.com motor repair marketplace?",
-    a: "It is a public catalog where motor repair and rewinding shops list spare parts, surplus motors, tools, and related equipment. Visitors browse and submit a request with their contact details—you follow up, quote, and invoice the same way you already run your business. It is built into the same CRM you use for work orders and quotes, not a separate storefront product.",
+    a: "It is a public catalog where motor repair and rewinding shops list spare parts, surplus motors, tools, and related equipment. Visitors browse and submit a request with their contact details—you follow up, quote, and invoice the same way you already run your business. It is built into the same Shop Management System you use for work orders and quotes, not a separate storefront product.",
   },
   {
     q: "Is the marketplace the same as my shop inventory for jobs?",
@@ -55,7 +55,7 @@ const faqItems = [
   },
   {
     q: "How do we manage requests?",
-    a: "Buyer requests are visible in your CRM under Marketplace so your team can respond, convert to a quote or invoice, and track status without losing context in personal inboxes alone.",
+    a: "Buyer requests are visible in your Shop Management System under Marketplace so your team can respond, convert to a quote or invoice, and track status without losing context in personal inboxes alone.",
   },
   {
     q: "What about platform-managed listings?",
@@ -63,7 +63,7 @@ const faqItems = [
   },
   {
     q: "How is buyer and seller data handled for privacy?",
-    a: "Buyer requests are shared with the listing shop so they can quote and fulfill the request. Data is used for transaction communication and CRM tracking, not sold as a standalone contact list. Shops should limit access to authorized team members and follow their own privacy/compliance policies.",
+    a: "Buyer requests are shared with the listing shop so they can quote and fulfill the request. Data is used for transaction communication and Shop Management System tracking, not sold as a standalone contact list. Shops should limit access to authorized team members and follow their own privacy/compliance policies.",
   },
 ];
 
@@ -74,7 +74,7 @@ function JsonLd({ baseUrl }) {
     "@type": "WebPage",
     name: "Motor repair marketplace for shops — IQMotorBase.com",
     description:
-      "B2B-friendly marketplace for motor repair and rewinding shops to list parts, surplus motors, and tools from the CRM with SEO-friendly pages and buyer requests.",
+      "B2B-friendly marketplace for motor repair and rewinding shops to list parts, surplus motors, and tools from the Shop Management System with SEO-friendly pages and buyer requests.",
     url,
     isPartOf: {
       "@type": "WebSite",
@@ -135,7 +135,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <span className="text-title">Motor repair marketplace</span>
           </nav>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-            Motor repair marketplace for electric motor shops — list surplus parts &amp; equipment from your CRM
+            Motor repair marketplace for electric motor shops — list surplus parts &amp; equipment from your Shop Management System
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
             IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}
@@ -147,7 +147,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link href="/register" className="w-full min-w-0 sm:w-auto">
               <Button variant="primary" size="lg" className="w-full sm:w-auto">
-                Get CRM access
+                Get Shop Management System access
               </Button>
             </Link>
             <Link href="/marketplace" className="w-full min-w-0 sm:w-auto">
@@ -202,7 +202,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
               customer&apos;s job with a one-off sale.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">Publish from the CRM</strong> — Add title, description, category, price
+              <strong className="text-title">Publish from the Shop Management System</strong> — Add title, description, category, price
               note, and images. Use drafts until you are ready; then flip to live when pricing and photos are final.
             </li>
             <li className="leading-relaxed">
@@ -216,7 +216,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
               mandatory cart or processor on the marketing site.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">Requests in one place</strong> — Buyer inquiries flow into your CRM under
+              <strong className="text-title">Requests in one place</strong> — Buyer inquiries flow into your Shop Management System under
               Marketplace so estimators and counter staff see the same thread without relying on scattered inbox
               screenshots.
             </li>
@@ -269,7 +269,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <ol className="mt-6 list-decimal space-y-4 pl-5 text-secondary marker:font-semibold marker:text-primary">
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Activate your CRM</strong> — Register for IQMotorBase.com and open the
+              <strong className="text-title">Activate your Shop Management System</strong> — Register for IQMotorBase.com and open the
               dashboard. Your team uses the same workspace for quotes, jobs, and marketplace listings.
             </li>
             <li className="leading-relaxed pl-1">
@@ -349,7 +349,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           aria-labelledby="section-cta"
         >
           <h2 id="section-cta" className="text-xl font-bold text-title sm:text-2xl">
-            Ready to list from your motor repair CRM?
+            Ready to list from your motor repair shop management system?
           </h2>
           <p className="mt-3 max-w-[50.4rem] text-secondary">
             Open <strong className="text-title">Marketplace</strong> in your dashboard sidebar after you sign in. New

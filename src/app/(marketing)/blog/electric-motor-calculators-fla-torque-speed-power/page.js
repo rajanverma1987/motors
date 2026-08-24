@@ -103,7 +103,7 @@ export default function BlogElectricMotorCalculatorsPage() {
         description="Motor repair and rewinding shops live in a world of nameplates, field measurements, and quick sanity checks. Here is what each calculator tab does under the hood, when technicians reach for it, and what still belongs on the nameplate or in the code book."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
-        sidebarTitle="Try calculators in CRM"
+        sidebarTitle="Try calculators in Shop Management System"
         sidebarDescription="Power, speed, torque, bench electrical, plus CM Best Match for rewinds—all under Dashboard → Calculators."
         sidebarCta={<ListYourShopCta />}
       >

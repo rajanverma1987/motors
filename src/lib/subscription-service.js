@@ -25,7 +25,7 @@ export async function ensureFreeUltimatePlan() {
       name: "Free Ultimate",
       slug: FREE_ULTIMATE_SLUG,
       planType: "internal",
-      description: "Full CRM access — internal comped plan until revoked.",
+      description: "Full Shop Management System access — internal comped plan until revoked.",
       customPrice: 0,
       billingCycle: "custom",
       billingIntervalCount: 1,
@@ -45,7 +45,7 @@ export async function ensureTrialPlan() {
       slug: TRIAL_PLAN_SLUG,
       planType: "internal",
       description:
-        "One-month trial with full CRM access and up to 3 saved customers. Contact us to upgrade for unlimited customers.",
+        "One-month trial with full Shop Management System access and up to 3 saved customers. Contact us to upgrade for unlimited customers.",
       customPrice: 0,
       billingCycle: "custom",
       billingIntervalCount: 1,
@@ -55,7 +55,7 @@ export async function ensureTrialPlan() {
   return plan;
 }
 
-/** Internal plan shown on Subscription page for directory / listing-only CRM tier. */
+/** Internal plan shown on Subscription page for directory / listing-only Shop Management System tier. */
 export async function ensureListingOnlyPlan() {
   await connectDB();
   let plan = await SubscriptionPlan.findOne({ slug: LISTING_ONLY_PLAN_SLUG });
@@ -65,7 +65,7 @@ export async function ensureListingOnlyPlan() {
       slug: LISTING_ONLY_PLAN_SLUG,
       planType: "internal",
       description:
-        "Directory listing plan: full CRM with up to 2 saved customers and full contact details for 2 website leads per calendar month.",
+        "Directory listing plan: full Shop Management System with up to 2 saved customers and full contact details for 2 website leads per calendar month.",
       customPrice: 0,
       billingCycle: "custom",
       billingIntervalCount: 1,
@@ -465,7 +465,7 @@ export async function assignInternalFreeUltimateToShop(ownerEmail, adminEmail) {
   return sub;
 }
 
-/** Switch shop to Trial (internal) — 3-customer cap enforced in CRM. */
+/** Switch shop to Trial (internal) — 3-customer cap enforced in the Shop Management System. */
 export async function assignInternalTrialToShop(ownerEmail, adminEmail) {
   await connectDB();
   const plan = await ensureTrialPlan();

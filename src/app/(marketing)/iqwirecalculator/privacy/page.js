@@ -42,7 +42,7 @@ export default function IqwirecalculatorPrivacyPage() {
       <p className="mt-6 rounded-lg border border-border bg-muted/30 p-4 text-sm text-secondary">
         This policy applies to the <strong className="text-title">IQWireCalculator</strong> mobile app published by
         IQMotorBase (“we,” “us,” or “our”). It describes information collected when you create an account, use CM Best
-        Match, save calculations, or subscribe. For website and shop CRM privacy, see our{" "}
+        Match, save calculations, or subscribe. For website and shop management system privacy, see our{" "}
         <Link href="/privacy" className="font-medium text-primary hover:underline">
           website Privacy Policy
         </Link>
@@ -57,7 +57,7 @@ export default function IqwirecalculatorPrivacyPage() {
         <h2 className="text-xl font-semibold text-title">1. Who we are</h2>
         <p className="mt-3 leading-relaxed text-secondary">
           IQWireCalculator is a standalone circular mils / wire substitution calculator for motor rewind work. It is
-          not the IQMotorBase shop CRM. The app and related services are operated at{" "}
+          not the IQMotorBase shop management system. The app and related services are operated at{" "}
           <a href={siteUrl} className="text-primary hover:underline">
             {siteUrl}
           </a>

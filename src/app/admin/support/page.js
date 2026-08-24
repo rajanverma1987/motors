@@ -212,7 +212,7 @@ export default function AdminSupportPage() {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl font-bold text-title">Support tickets</h1>
-            <p className="mt-1 text-sm text-secondary">CRM customer submissions — reply and update status.</p>
+            <p className="mt-1 text-sm text-secondary">Shop Management System customer submissions — reply and update status.</p>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
             <div className="w-48">

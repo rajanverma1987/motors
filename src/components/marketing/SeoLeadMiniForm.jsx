@@ -13,7 +13,7 @@ export default function SeoLeadMiniForm({
   defaultCity = "",
   defaultState = "",
   /** Button label — software SEO pages use "Book a demo" per Seo.md. */
-  submitLabel = "Request info & CRM access",
+  submitLabel = "Request info & Shop Management System access",
 }) {
   const router = useRouter();
   const [form, setForm] = useState({

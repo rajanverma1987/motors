@@ -169,7 +169,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Shops that already run a dedicated accounting package are not forced to rip it out on day one. An API can
-              sync customers, work orders, and quotes with external CRM, accounting, or ERP tools—one operational source
+              sync customers, work orders, and quotes with external Shop Management System, accounting, or ERP tools—one operational source
               of truth while the shop keeps apps the team already uses. The claim here is narrower: inside IQMotorBase,
               approved quote lines through completed work order to invoice do not require re-keying commercial detail
               that already lives on the job.

@@ -94,7 +94,7 @@ export default function BlogIndexPage() {
                 Blog for motor repair shop owners
               </h2>
               <p className="mt-2 text-sm text-secondary">
-                Request info and CRM access for your shop.
+                Request info and Shop Management System access for your shop.
               </p>
               <div className="mt-4">
                 <SeoLeadMiniForm sourcePage={path} />

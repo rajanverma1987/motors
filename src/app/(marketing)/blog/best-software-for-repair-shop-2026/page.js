@@ -46,7 +46,7 @@ export const metadata = {
 const faqItems = [
   {
     q: "What is the best software for an electric motor repair shop in 2026?",
-    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second CRM. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition—both publicly positioned for electro-mechanical / apparatus repair shops.",
+    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second Shop Management System. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition—both publicly positioned for electro-mechanical / apparatus repair shops.",
   },
   {
     q: "How is IQMotorBase different from auto repair shop software?",
@@ -54,7 +54,7 @@ const faqItems = [
   },
   {
     q: "Does IQMotorBase generate leads for the shop?",
-    a: "Yes. Leads come from the IQMotorBase public directory and local SEO pages. Shops can choose shared leads (sent to multiple shops) or exclusive leads (one shop). Credits deduct when a lead is delivered. A won lead converts into a customer and Job Write-Up without retyping into a separate CRM.",
+    a: "Yes. Leads come from the IQMotorBase public directory and local SEO pages. Shops can choose shared leads (sent to multiple shops) or exclusive leads (one shop). Credits deduct when a lead is delivered. A won lead converts into a customer and Job Write-Up without retyping into a separate Shop Management System.",
   },
 ];
 
@@ -122,7 +122,7 @@ export default function BlogBestSoftware2026Page() {
                       Yes — directory + local SEO pages; shared/exclusive credits; convert to customer + Job Write-Up
                     </td>
                     <td className="py-3 pr-3">
-                      <span className="font-bold text-danger">No</span> — CRM tracks opportunities/prospects; no public
+                      <span className="font-bold text-danger">No</span> — Shop Management System tracks opportunities/prospects; no public
                       claim of originating inbound repair leads for the shop
                     </td>
                     <td className="py-3 pr-3">
@@ -177,7 +177,7 @@ export default function BlogBestSoftware2026Page() {
                       Independent and regional electric motor/rewind shops that want ops + leads in one product
                     </td>
                     <td className="py-3 pr-3">
-                      Apparatus sales &amp; service centers wanting a full ERP suite (jobs, QM, accounting, CRM,
+                      Apparatus sales &amp; service centers wanting a full ERP suite (jobs, QM, accounting, Shop Management System,
                       portal)—ops-first, not lead-marketplace
                     </td>
                     <td className="py-3 pr-3">
@@ -200,7 +200,7 @@ export default function BlogBestSoftware2026Page() {
               </Link>
               ,{" "}
               <Link href={SEO_SOFTWARE_CRM_PATH} className="text-primary font-medium hover:underline">
-                CRM and leads
+                Shop Management System and leads
               </Link>
               ,{" "}
               <Link href={SEO_SOFTWARE_WORK_ORDER_PATH} className="text-primary font-medium hover:underline">
@@ -252,7 +252,7 @@ export default function BlogBestSoftware2026Page() {
               quoting habit, inventory that is not reserved against approved quotes, invoices that re-key from a PDF,
               and leads sitting in email. If you want one job number from intake through work order and invoice, motor
               history that returns with the serial number, Tag QR updates from the floor, and leads from the same
-              company’s directory converting into a Job Write-Up without a second CRM, this product matches that map.
+              company’s directory converting into a Job Write-Up without a second Shop Management System, this product matches that map.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               It is also the right conversation when lead generation matters. Most shop-management tools stop at

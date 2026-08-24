@@ -196,7 +196,7 @@ export default function MarketplacePageClient() {
   const deleteItem = async (row) => {
     const ok = await confirm({
       title: "Delete listing?",
-      message: "This removes the item from your CRM and the public marketplace.",
+      message: "This removes the item from your Shop Management System and the public marketplace.",
       confirmLabel: "Delete",
       variant: "danger",
     });

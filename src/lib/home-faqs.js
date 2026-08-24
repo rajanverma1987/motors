@@ -29,6 +29,6 @@ export const HOME_FAQS = [
   {
     question: "Is there an API for integrating with other software?",
     answer:
-      "Yes. Alongside built-in QuickBooks Online sync, IQMotorBase provides an API to sync customers, work orders, and quotes with your existing CRM, accounting, or ERP tools.",
+      "Yes. Alongside built-in QuickBooks Online sync, IQMotorBase provides an API to sync customers, work orders, and quotes with your existing Shop Management System, accounting, or ERP tools.",
   },
 ];

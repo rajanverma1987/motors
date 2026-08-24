@@ -42,7 +42,7 @@ export default function TrialSubscriptionUpgradeModal({ open, onClose }) {
             <span className="text-title">Trial limit:</span> up to {TRIAL_MAX_CUSTOMERS} saved customers
           </li>
           <li>
-            <span className="text-title">Upgrade:</span> unlimited customers and continued full CRM access
+            <span className="text-title">Upgrade:</span> unlimited customers and continued full Shop Management System access
           </li>
         </ul>
         <p>

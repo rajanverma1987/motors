@@ -39,7 +39,7 @@ function ClientDetailModal({ client, open, onClose }) {
         ? "Calculators only"
         : client.listingOnlyAccount
           ? "Directory listing"
-          : "Full CRM",
+          : "Full Shop Management System",
     },
     {
       label: "Subscription",
@@ -252,7 +252,7 @@ export default function AdminActiveClientsPage() {
         }
         return (
           <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
-            CRM
+            Shop Management System
           </Badge>
         );
       },

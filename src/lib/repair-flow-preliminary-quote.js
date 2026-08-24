@@ -219,7 +219,7 @@ export function buildFinalQuoteFromDetailedInspections(detailedInspections) {
 
   if (lineItems.length === 0) {
     lineItems.push({
-      description: "Repair per detailed inspection — finalize line items in CRM",
+      description: "Repair per detailed inspection — finalize line items in Shop Management System",
       quantity: 1,
       unitPrice: 0,
       notes: "Add precise labor and parts before sending for approval.",

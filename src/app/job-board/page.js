@@ -86,20 +86,20 @@ function JobBoardSharePageInner() {
         <div className="max-w-[43.2rem] rounded-2xl border border-border bg-card p-6 text-left shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
           <h1 className="mt-2 text-xl font-semibold text-title">
-            {isProtected ? "This job board is private to CRM users." : error || "Job board not found"}
+            {isProtected ? "This job board is private to Shop Management System users." : error || "Job board not found"}
           </h1>
           <p className="mt-3 text-sm text-secondary">
             This page shows live shop-floor jobs with status columns, customer references, and active job flow for
-            a repair center. Access is restricted to shared secure links or authenticated CRM users.
+            a repair center. Access is restricted to shared secure links or authenticated Shop Management System users.
           </p>
           <p className="mt-2 text-sm text-secondary">
             {isProtected
-              ? "If you run a motor repair or rewinding business, request CRM access to manage customers, service proposals, jobs, and billing in one system."
+              ? "If you run a motor repair or rewinding business, request Shop Management System access to manage customers, service proposals, jobs, and billing in one system."
               : "This link may be invalid or expired. Ask your shop to send a new job board link."}
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/contact">
-              <Button size="sm" variant="primary">Get CRM access</Button>
+              <Button size="sm" variant="primary">Get Shop Management System access</Button>
             </Link>
             <Link href="/">
               <Button size="sm" variant="outline">Go to home</Button>

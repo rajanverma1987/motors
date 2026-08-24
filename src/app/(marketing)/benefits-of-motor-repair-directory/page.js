@@ -254,7 +254,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
 
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-12">
-              Turn visibility into jobs with your CRM
+              Turn visibility into jobs with your Shop Management System
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               The benefit of a lead is only realized when your team converts it. IQMotorBase.com offers{" "}

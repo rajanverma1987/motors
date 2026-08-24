@@ -88,7 +88,7 @@ export default function CalculatorAccountGate({
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-secondary">
               This page is for a <strong className="text-title">calculators-only subscription</strong>—not the full
-              IQMotorBase repair-shop CRM. You will only get the Calculators workspace after login, not customers, work
+              IQMotorBase repair-shop management system. You will only get the Calculators workspace after login, not customers, work
               orders, inventory, or other dashboard modules.
             </p>
             <p className="mt-2 text-sm text-secondary">

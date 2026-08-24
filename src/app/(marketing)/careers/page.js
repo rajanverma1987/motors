@@ -23,7 +23,7 @@ export default async function CareersPage() {
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
           Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Shop owners create and manage
-          listings in the CRM—each role appears here with an SEO-friendly page; candidates select a job to read details and
+          listings in the Shop Management System—each role appears here with an SEO-friendly page; candidates select a job to read details and
           apply with contact information and experience.
         </p>
       </div>
@@ -35,7 +35,7 @@ export default async function CareersPage() {
             <Link href="/list-your-electric-motor-services" className="text-primary font-medium hover:underline">
               list your shop
             </Link>{" "}
-            and use CRM access to post employee job openings on this Careers page.
+            and use Shop Management System access to post employee job openings on this Careers page.
           </li>
         ) : (
           jobs.map((job) => (

@@ -4,7 +4,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 export const metadata = {
   title: "Privacy Policy",
   description:
-    "How IQMotorBase.com collects, uses, and protects personal information for visitors, repair shops, and buyers using our website and CRM.",
+    "How IQMotorBase.com collects, uses, and protects personal information for visitors, repair shops, and buyers using our website and Shop Management System.",
   alternates: { canonical: "/privacy" },
   robots: { index: false, follow: true },
   openGraph: {
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
         <ul className="mt-3 list-disc space-y-2 pl-6 text-secondary">
           <li>
             <strong className="text-title">Account and profile data</strong> — such as name, email address, business name,
-            phone number, and credentials you provide when you register or use the CRM.
+            phone number, and credentials you provide when you register or use the Shop Management System.
           </li>
           <li>
             <strong className="text-title">Business and operational data</strong> — information you enter into the platform

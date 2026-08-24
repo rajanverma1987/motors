@@ -44,7 +44,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
       breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
       sidebarUnwrapped
-      sidebarCta={<RepairRequestForm mode="city" className="mx-auto w-full max-w-none" />}
+      sidebarCta={<RepairRequestForm mode="city" layout="sidebar" className="mx-auto w-full max-w-none" />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">
         <section>

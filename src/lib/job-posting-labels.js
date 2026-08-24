@@ -1,4 +1,4 @@
-/** Human-readable labels for job posting enums (CRM + marketing). */
+/** Human-readable labels for job posting enums (Shop Management System + marketing). */
 
 export const EMPLOYMENT_LABELS = {
   full_time: "Full-time",

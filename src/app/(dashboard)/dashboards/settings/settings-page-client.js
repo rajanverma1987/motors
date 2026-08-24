@@ -378,7 +378,7 @@ export default function SettingsPageClient() {
                 <Checkbox
                   name="marketingTips"
                   label="Tips & product updates"
-                  help="Occasional ideas to get more from the directory and CRM."
+                  help="Occasional ideas to get more from the directory and Shop Management System."
                   checked={!!draft.marketingTips}
                   onChange={(e) => updateDraft({ marketingTips: e.target.checked })}
                 />

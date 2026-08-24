@@ -5,12 +5,12 @@ import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/l
 
 const footerLinks = {
   "For repair shops": [
-    { href: "/usa/motor-repair-business-listing", label: "USA — list + CRM (SEO hub)" },
+    { href: "/usa/motor-repair-business-listing", label: "USA — list + Shop Management System (SEO hub)" },
     { href: "/careers", label: "Careers — hire technicians (public job posts)" },
     { href: "/blog", label: "Blog — shop guides & calculators" },
     { href: "/iqwirecalculator", label: "IQWireCalculator — CM Best Match app" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
-    { href: "/motor-repair-crm-software", label: "Motor repair CRM" },
+    { href: "/motor-repair-crm-software", label: "Motor repair shop management system" },
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },
     { href: "/motor-repair-inventory-software", label: "Inventory software" },
     { href: "/motor-repair-invoicing-and-quoting-software", label: "Invoicing & quoting" },

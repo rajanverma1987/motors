@@ -168,7 +168,7 @@ function RegisterPageContent() {
           <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
           <span>
             Connect to your{" "}
-            <span className="font-medium text-title">existing CRM or tools with the API</span> and upload
+            <span className="font-medium text-title">existing Shop Management System or tools with the API</span> and upload
             your existing data when you&apos;re ready.
           </span>
         </li>

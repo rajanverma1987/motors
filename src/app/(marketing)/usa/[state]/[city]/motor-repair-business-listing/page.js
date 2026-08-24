@@ -22,7 +22,7 @@ export async function generateMetadata({ params }) {
   if (!ctx) return { title: "Not found" };
   const { state, city } = ctx;
   const path = `/usa/${state.slug}/${city.slug}/motor-repair-business-listing`;
-  const title = `Motor Repair Business Listing in ${city.name}, ${state.name} | Free + CRM`;
+  const title = `Motor Repair Business Listing in ${city.name}, ${state.name} | Free + Shop Management System`;
   const description = `List your motor repair or rewinding business in ${city.name}, ${state.name}. Get more customers and manage jobs with our free system.`;
   return {
     title,
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }) {
       `motor repair ${city.name}`,
       `electric motor repair ${city.name} ${state.name}`,
       `motor rewinding ${city.name}`,
-      "motor repair CRM",
+      "motor repair shop management system",
     ],
     openGraph: {
       title: `${title} | IQMotorBase.com`,
@@ -70,7 +70,7 @@ function linkSections(state, city) {
       ],
     },
     {
-      title: "Guides & CRM",
+      title: "Guides & Shop Management System",
       links: [
         { href: "/blog/how-to-get-more-customers-for-motor-repair-shop", label: "Get more motor repair customers" },
         { href: "/motor-repair-shop-management-software", label: "Motor repair shop management software" },

@@ -10,13 +10,13 @@ import { buildUsaLeadCopy } from "@/lib/seo-usa-lead-copy";
 const path = SEO_USA_HUB_PATH;
 
 export const metadata = {
-  title: "Motor Repair Business Listing in the USA | Free + CRM",
+  title: "Motor Repair Business Listing in the USA | Free + Shop Management System",
   description:
     "List your motor repair or rewinding business in the United States. Get more customers and manage jobs with our free system built for motor shops—not a passive directory.",
   keywords: [
     "motor repair business listing USA",
     "electric motor repair leads",
-    "motor rewinding shop CRM",
+    "motor rewinding shop management system",
     "industrial motor repair marketing",
     "motor shop job management",
   ],
@@ -32,7 +32,7 @@ export const metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
-    description: "More leads + motor-repair-focused CRM for shops across the United States.",
+    description: "More leads + motor-repair-focused Shop Management System for shops across the United States.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -75,7 +75,7 @@ function linkSections() {
         { href: "/motor-repair-shop-management-software", label: "Motor repair shop management software" },
         { href: "/job-card-system-for-repair-shop", label: "Job card system for repair shops" },
         { href: "/track-motor-repair-jobs", label: "Track motor repair jobs" },
-        { href: "/features", label: "CRM features overview" },
+        { href: "/features", label: "Shop Management System features overview" },
         { href: "/pricing", label: "Pricing" },
       ],
     },

@@ -11,18 +11,18 @@ export function buildCityLeadCopy(state, city) {
     problemTitle: "The real problem isn’t “more ads”—it’s missed jobs and messy follow-up",
     problemParagraphs: [
       `In ${city.name} and across ${state.name}, maintenance teams still call the shop they remember—or the first name that appears when a motor drops offline. If your Google footprint is thin, your phone stays quiet even when plants nearby are desperate.`,
-      "Meanwhile, internal chaos hurts just as much: job folders on the desk, parts guessed from memory, and invoices sent late. You don’t need another generic CRM—you need visibility from first call to paid invoice, tuned for motor repair and rewinding.",
+      "Meanwhile, internal chaos hurts just as much: job folders on the desk, parts guessed from memory, and invoices sent late. You don’t need another generic shop management system—you need visibility from first call to paid invoice, tuned for motor repair and rewinding.",
       `${city.blurb}`,
     ],
     solutionTitle: "List your shop where buyers search—then run the job in one system",
     solutionParagraphs: [
       `IQMotorBase.com helps motor repair businesses in ${city.name} show up with a rich profile (services, voltages, industries, certifications, and service region) so buyers compare you on substance, not guesswork. That listing works as the top of your funnel.`,
-      "Behind the listing is a workshop CRM: leads, quotes, job cards, billing, and inventory context so your team executes without dropping handoffs. You’re not paying for “directory vanity metrics”—you’re building a pipeline you can measure.",
+      "Behind the listing is a workshop management system: leads, quotes, job cards, billing, and inventory context so your team executes without dropping handoffs. You’re not paying for “directory vanity metrics”—you’re building a pipeline you can measure.",
       `${state.industryBlurb}`,
     ],
     introParagraphs: [
       `Industrial buyers and facility teams in ${city.name}, ${state.name} don’t have time to hunt for a motor shop when a line is down. They search, shortlist, and call fast. If your capabilities aren’t visible—and your follow-up isn’t systematic—you lose the job to a competitor who answered first and sounded organized.`,
-      `This page is for owners who want more repair and rewinding work in ${city.name}: clearer positioning online, faster responses to inquiries, and a CRM that matches how motor shops actually operate (quotes, job documentation, billing).`,
+      `This page is for owners who want more repair and rewinding work in ${city.name}: clearer positioning online, faster responses to inquiries, and a Shop Management System that matches how motor shops actually operate (quotes, job documentation, billing).`,
     ],
   };
 }
@@ -37,7 +37,7 @@ export function buildStateLeadCopy(state) {
       ? state.stateIntroParagraphs
       : [
           `${state.name} is dense with manufacturing, logistics, and infrastructure that depend on rotating equipment. Motor repair and rewinding shops power that ecosystem—but only if they’re discoverable when pumps, fans, compressors, and line motors fail.`,
-          `If you serve ${state.name}, this is your hub to list your business for more qualified inquiries and adopt a CRM that’s built around repair jobs—not generic tickets. You’ll connect your listing to the same workspace your team uses every day.`,
+          `If you serve ${state.name}, this is your hub to list your business for more qualified inquiries and adopt a Shop Management System that’s built around repair jobs—not generic tickets. You’ll connect your listing to the same workspace your team uses every day.`,
         ];
   return {
     problemTitle: "Why great motor shops in " + state.name + " still lose work",
@@ -63,7 +63,7 @@ export function buildUsaLeadCopy() {
       "On the operations side, paper job bags and scattered spreadsheets break down when mix increases: quotes stall, WIP is unclear, and invoices go out late. That’s not a people problem—it’s the cost of tools that weren’t built for motor shops.",
       "The shops winning in 2026 combine discoverability with disciplined execution: they show up where buyers look, and they run the job lifecycle in one place.",
     ],
-    solutionTitle: "More repair jobs + a CRM that fits the workshop",
+    solutionTitle: "More repair jobs + a Shop Management System that fits the workshop",
     solutionParagraphs: [
       "IQMotorBase.com is positioned as a system to get more repair work and manage the workshop—not a passive listing. Start with a rich profile so buyers understand what you do and where you travel, then run leads through quotes, job cards, and billing in the same platform.",
       "Whether you’re a single-location rewind shop or a multi-bay operation with field service, the goal is the same: shorten response time, reduce dropped handoffs, and make revenue predictable.",

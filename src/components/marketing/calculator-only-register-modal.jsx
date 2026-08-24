@@ -12,7 +12,7 @@ import { CALCULATORS_SUBSCRIBE_PATH } from "@/lib/calculator-auth-flow";
 const FORM_ID = "calculator-only-register-form";
 
 /**
- * In-page signup for calculators-only accounts (not full CRM / repair shop portal).
+ * In-page signup for calculators-only accounts (not full Shop Management System / repair shop portal).
  */
 export default function CalculatorOnlyRegisterModal({ open, onClose, nextPath = CALCULATORS_SUBSCRIBE_PATH, onRegistered }) {
   const { register } = useAuth();
@@ -177,7 +177,7 @@ export default function CalculatorOnlyRegisterModal({ open, onClose, nextPath = 
     >
       <div className="flex flex-col gap-4 text-sm text-secondary">
         <p className="rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-2.5 text-xs leading-relaxed">
-          This creates a <strong className="text-title">calculators-only</strong> login—not a full repair-shop CRM account.
+          This creates a <strong className="text-title">calculators-only</strong> login—not a full repair shop Shop Management System account.
           After signup you will only see the <strong className="text-title">Calculators</strong> area, not leads, work orders,
           or inventory.
         </p>
@@ -199,7 +199,7 @@ export default function CalculatorOnlyRegisterModal({ open, onClose, nextPath = 
             />
             {portalExists ? (
               <p className="text-xs text-amber-700 dark:text-amber-400">
-                An account with this email already exists. Log in instead—if you have a full shop CRM account, use that
+                An account with this email already exists. Log in instead—if you have a full shop Shop Management System account, use that
                 login; otherwise contact us if you need help.
               </p>
             ) : null}

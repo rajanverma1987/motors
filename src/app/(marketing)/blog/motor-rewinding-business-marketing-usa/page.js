@@ -63,7 +63,7 @@ export default function BlogRewindingMarketingPage() {
               </Link>
             </span>
           ))}
-          . Pair that visibility with a CRM that tracks quotes and jobs so leads don’t die in voicemail—see{" "}
+          . Pair that visibility with a Shop Management System that tracks quotes and jobs so leads don’t die in voicemail—see{" "}
           <Link href="/motor-repair-shop-management-software" className="text-primary font-medium hover:underline">
             motor repair shop management software
           </Link>{" "}

@@ -71,7 +71,7 @@ const faqItems = [
   },
   {
     q: "Can I manage leads in one place?",
-    a: "On IQMotorBase.com you can pair a directory presence with CRM tools—quotes, work orders, and customer records—so inquiries do not die in a single inbox. See our features and registration paths for details.",
+    a: "On IQMotorBase.com you can pair a directory presence with Shop Management System tools—quotes, work orders, and customer records—so inquiries do not die in a single inbox. See our features and registration paths for details.",
   },
   {
     q: "How do I get started?",
@@ -79,7 +79,7 @@ const faqItems = [
   },
   {
     q: "How is my business and lead data handled for privacy?",
-    a: "Your listing and inquiry data is used to connect buyers with your services and help you manage follow-up in the CRM workflow. It is not intended to be sold as a standalone contact list. You should also restrict account access to authorized team members and maintain internal privacy controls.",
+    a: "Your listing and inquiry data is used to connect buyers with your services and help you manage follow-up in the Shop Management System workflow. It is not intended to be sold as a standalone contact list. You should also restrict account access to authorized team members and maintain internal privacy controls.",
   },
 ];
 
@@ -293,7 +293,7 @@ export default function WhyListYourMotorRepairShopPage() {
 
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-12">
-              Directory + CRM: keep leads from going cold
+              Directory + Shop Management System: keep leads from going cold
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Visibility gets the conversation started; your process wins the job. IQMotorBase.com is built for motor

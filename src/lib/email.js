@@ -238,7 +238,7 @@ export async function sendAreaListedNotification(toEmail, locationLabel, shopLis
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Send demo request to admin as plain HTML table. Subject: RFQ - IQMotorBase CRM Demo. */
+/** Send demo request to admin as plain HTML table. Subject: RFQ - IQMotorBase Shop Management System Demo. */
 export async function sendDemoRequestToAdmin(fields) {
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const rows = [
@@ -261,13 +261,13 @@ export async function sendDemoRequestToAdmin(fields) {
     .map(([label, value]) => `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">${esc(label)}</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(value)}</td></tr>`)
     .join("");
   const html = `
-    <p>A visitor requested a CRM demo${fields.sourcePage ? ` (source: ${esc(fields.sourcePage)})` : ""}.</p>
+    <p>A visitor requested a Shop Management System demo${fields.sourcePage ? ` (source: ${esc(fields.sourcePage)})` : ""}.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
     <p style="margin-top:16px;">— IQMotorBase.com (contact form)</p>
   `;
-  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase CRM Demo.", wrapPlatformBrandedHtml(html));
+  return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase Shop Management System Demo.", wrapPlatformBrandedHtml(html));
 }
 
 /** Send thank-you email to client after demo request. */
@@ -366,8 +366,8 @@ export async function sendNewWebsiteLeadNotificationToShop({
     <p>Hello,</p>
     <p>You received a new repair inquiry (RFQ) from your <strong>IQMotorBase.com</strong> directory listing.</p>
     <p><strong>From:</strong> ${fromLine || "A visitor"}</p>
-    <p>Log in to your shop dashboard to view full contact details and respond in your CRM:</p>
-    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in CRM</a></p>
+    <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System:</p>
+    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
     <p>— IQMotorBase.com</p>
   `;
@@ -439,7 +439,7 @@ export async function sendDemoAccountCredentialsEmail({
 }
 
 /**
- * Admin seeds a directory listing: notify the business they are featured + CRM login (listing-only tier).
+ * Admin seeds a directory listing: notify the business they are featured + Shop Management System login (listing-only tier).
  */
 export async function sendListingFeaturedAccountEmail({
   to,
@@ -473,7 +473,7 @@ export async function sendListingFeaturedAccountEmail({
     </table>
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
     <p><strong>Security:</strong> Change your password after you sign in under <strong>Settings</strong> → <strong>Account</strong>.</p>
-    <p>To unlock the full CRM (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
+    <p>To unlock the full Shop Management System (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
     <p>— IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
@@ -505,7 +505,7 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
       <li>Is there anything confusing or missing from your day-to-day use?</li>
     </ul>
     <p>Simply reply to this email with your thoughts — even a few sentences help us prioritize improvements.</p>
-    <p><strong>Interested in a paid subscription?</strong> If you are on a free or trial plan and want full CRM access, calculators, marketplace tools, and ongoing support, we would be happy to walk you through options:</p>
+    <p><strong>Interested in a paid subscription?</strong> If you are on a free or trial plan and want full Shop Management System access, calculators, marketplace tools, and ongoing support, we would be happy to walk you through options:</p>
     <ul>
       <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
       <li><a href="${esc(subscriptionUrl)}">Manage subscription in your dashboard</a></li>
@@ -606,7 +606,7 @@ export async function sendSubscriptionPlanAttachedEmail({
     : `Your IQMotorBase.com plan: ${esc(planName || "Free Ultimate")}`;
   const approvalBlock =
     isPaypal && approvalUrl
-      ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">CRM → Subscription</a>):</p>
+      ? `<p><strong>Complete setup in PayPal:</strong> your administrator assigned a paid plan. Open this link to approve billing (you can also find it under <a href="${esc(subUrl)}">Shop Management System → Subscription</a>):</p>
          <p><a href="${esc(approvalUrl)}" style="word-break:break-all;">${esc(approvalUrl)}</a></p>`
       : "";
   const html = `

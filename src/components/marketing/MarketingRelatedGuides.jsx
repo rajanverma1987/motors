@@ -66,7 +66,7 @@ const SHOP_LINKS = [
   },
   {
     href: "/motor-repair-crm-software",
-    label: "Motor repair CRM & leads",
+    label: "Motor repair shop management system & leads",
     hint: "Customer/motor registry + directory leads",
   },
   {
@@ -112,7 +112,7 @@ const SHOP_LINKS = [
   {
     href: "/motor-repair-marketplace",
     label: "Marketplace for shops",
-    hint: "List surplus from the CRM",
+    hint: "List surplus from the Shop Management System",
   },
   {
     href: "/usa/motor-repair-business-listing",

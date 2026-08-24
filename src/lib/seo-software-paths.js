@@ -23,7 +23,7 @@ export const SEO_SOFTWARE_CLUSTER_LINKS = [
   { href: SEO_SOFTWARE_PILLAR_PATH, label: "Motor repair shop management software" },
   { href: SEO_SOFTWARE_WORK_ORDER_PATH, label: "Work order software for motor repair shops" },
   { href: SEO_SOFTWARE_INVENTORY_PATH, label: "Motor repair inventory software" },
-  { href: SEO_SOFTWARE_CRM_PATH, label: "Motor repair CRM software" },
+  { href: SEO_SOFTWARE_CRM_PATH, label: "Motor repair shop management system" },
   { href: SEO_SOFTWARE_INVOICING_PATH, label: "Motor repair invoicing & quoting software" },
   { href: SEO_SOFTWARE_COMPARISON_PATH, label: "Best software for motor repair shops (2026)" },
 ];

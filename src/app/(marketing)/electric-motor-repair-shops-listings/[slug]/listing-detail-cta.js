@@ -9,6 +9,7 @@ export default function ListingDetailCta({ listing }) {
       listing={listing}
       city={listing?.city || ""}
       state={listing?.state || ""}
+      layout="sidebar"
       className="w-full max-w-none"
     />
   );

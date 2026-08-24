@@ -12,7 +12,7 @@ import {
 
 const path = SEO_SOFTWARE_CRM_PATH;
 
-const TITLE = "Motor Repair Shop CRM Software | IQMotorBase";
+const TITLE = "Motor Repair Shop Management System | IQMotorBase";
 const DESCRIPTION =
   "One customer and motor registry with full repair history — plus the leads that fill it. See how IQMotorBase connects leads, customers, and jobs.";
 
@@ -21,7 +21,7 @@ export const metadata = {
   description: DESCRIPTION,
   keywords: [
     "motor repair customer management software",
-    "electric motor repair CRM",
+    "electric motor repair shop management system",
     "motor repair customer database",
   ],
   openGraph: {
@@ -52,7 +52,7 @@ const faqItems = [
   },
   {
     q: "What happens when we win a lead?",
-    a: "A won lead converts directly into a customer record and a Job Write-Up. You do not retype the inquiry into a separate CRM. From that Job Write-Up you continue into quotes, work orders, and the rest of the shop path on the same job number.",
+    a: "A won lead converts directly into a customer record and a Job Write-Up. You do not retype the inquiry into a separate Shop Management System. From that Job Write-Up you continue into quotes, work orders, and the rest of the shop path on the same job number.",
   },
   {
     q: "Can we import existing customers and motors?",
@@ -65,7 +65,7 @@ export default function MotorRepairCrmSoftwarePage() {
     <>
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
-        title="Motor repair shop CRM software: customers, motors, and the leads that fill them"
+        title="Motor repair shop shop management system: customers, motors, and the leads that fill them"
         description="One customer and motor registry with full repair history—plus directory and local SEO leads that convert into a customer and Job Write-Up without re-entry. Book a demo."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
@@ -76,7 +76,7 @@ export default function MotorRepairCrmSoftwarePage() {
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <section>
             <p className="mt-2 text-secondary leading-relaxed">
-              Most “CRM” pages for repair shops describe a contact list with notes. That is not the operational
+              Most shop management systems pages for repair shops describe a contact list with notes. That is not the operational
               problem in an electric motor or rewind shop. The problem is that the person who answered the phone, the
               motor that showed up on a pallet, the quote you sent last spring, and the test sheet from the last
               rewind all live in different places—until a returning customer asks for history and the office spends
@@ -90,7 +90,7 @@ export default function MotorRepairCrmSoftwarePage() {
               : Job Write-Ups, quotes, work orders, and billing. The differentiator is how that registry gets filled.
               Leads originate from the IQMotorBase public directory and local SEO pages, land in the shop with shared
               or exclusive delivery, and—when you win—convert directly into a customer record and a Job Write-Up. No
-              second CRM. No retyping the inquiry so the floor can start intake. This page is about that connection:
+              second Shop Management System. No retyping the inquiry so the floor can start intake. This page is about that connection:
               lead generation into the shop system, and a durable customer/motor history once the work repeats.
             </p>
           </section>
@@ -157,7 +157,7 @@ export default function MotorRepairCrmSoftwarePage() {
               Leads to customers without re-entry
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              This is the section generic shop CRMs and most motor-industry competitors cannot write honestly: the
+              This is the section generic shop management systems and most motor-industry competitors cannot write honestly: the
               product also originates leads for the shop. Leads come from the IQMotorBase public directory and local
               SEO pages—searches like electric motor repair in a city or emergency motor repair near me. The directory
               side of the business is visible on the{" "}
@@ -196,7 +196,7 @@ export default function MotorRepairCrmSoftwarePage() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               When you win a lead, conversion is direct: customer record plus Job Write-Up. You do not export a CSV
-              into a different CRM. You do not copy the name, phone, plant, and motor description from a lead email
+              into a different Shop Management System. You do not copy the name, phone, plant, and motor description from a lead email
               into a blank intake form while the truck is already waiting. The Job Write-Up gets its own job number
               and becomes the continuous record for intake, inspection notes, preliminary and final quotes, customer
               send, attachments, and shop actions—the same object the rest of the product uses. From there the path
@@ -210,7 +210,7 @@ export default function MotorRepairCrmSoftwarePage() {
               That closed loop is the real differentiator versus Spring Point, Aptean, Tekmetric, or any generic
               shop-management tool that expects you to buy leads elsewhere and paste them in. Those systems may store
               customers well enough. They do not originate directory and local SEO leads into the same database that
-              opens the Job Write-Up. IQMotorBase does. The CRM page is not a separate product SKU bolted on for
+              opens the Job Write-Up. IQMotorBase does. The Shop Management System page is not a separate product SKU bolted on for
               marketers—it is the registry plus the lead path that fills it, sitting beside the same job board,
               inventory, and AR tools described on the{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
@@ -257,7 +257,7 @@ export default function MotorRepairCrmSoftwarePage() {
               Leads that convert into the registry also change the economics of acquisition. A won exclusive or shared
               lead is not a one-off phone call that dies in someone’s inbox. It becomes a customer and motor record
               that can earn a second and third Job Write-Up. The credit was spent at delivery; the asset value of the
-              relationship is the history you keep afterward. That is why this CRM page leans so hard on the lead
+              relationship is the history you keep afterward. That is why this Shop Management System page leans so hard on the lead
               path: acquisition without re-entry, then retention through a registry that actually remembers the motor.
             </p>
           </section>

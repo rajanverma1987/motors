@@ -56,7 +56,7 @@ export default function CalculatorsSubscriptionPageClient() {
         <p className="mt-3 max-w-2xl text-secondary">
           Professional motor-shop calculators—rewind cost ballparks, CM Best Match, FLA, torque, speed, and bench
           electrical helpers. Sign up for a <strong className="text-title">calculators-only account</strong> (not full
-          CRM), then subscribe monthly. After login you use only the Calculators area of IQMotorBase.
+          Shop Management System), then subscribe monthly. After login you use only the Calculators area of IQMotorBase.
         </p>
 
         <CalculatorAccountGate pricing={access.pricing} onRegistered={() => setPaywallOpen(true)}>

@@ -14,6 +14,7 @@ export default function IndustryPageForm({ page }) {
         mode="city"
         defaultIndustry={page.industryTag}
         formHeading={`Submit a repair request — ${page.industry} specialists matched first`}
+        layout="sidebar"
         className="mx-auto w-full max-w-none"
       />
     </aside>

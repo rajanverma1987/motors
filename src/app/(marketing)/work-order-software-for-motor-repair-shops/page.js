@@ -127,7 +127,7 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
               agreed—because the WO was never a free-floating list someone typed from memory. For how customers and
               motors persist across visits so that history is available when you quote, see{" "}
               <Link href={SEO_SOFTWARE_CRM_PATH} className="text-primary font-medium hover:underline">
-                motor repair CRM software
+                motor repair shop management system
               </Link>
               .
             </p>

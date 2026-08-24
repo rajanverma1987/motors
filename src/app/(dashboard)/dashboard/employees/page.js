@@ -267,7 +267,7 @@ export default function DashboardEmployeesPage() {
       { key: "phone", label: "Phone", sortable: true },
       {
         key: "canLogin",
-        label: "CRM login",
+        label: "Shop Management System login",
         sortable: true,
         render: (_, row) => (
           <Badge variant={row.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
@@ -385,7 +385,7 @@ export default function DashboardEmployeesPage() {
             />
             <div className="sm:col-span-2 space-y-3 rounded-lg border border-border bg-form-bg/50 p-3">
               <Checkbox
-                label="Can login to CRM"
+                label="Can login to Shop Management System"
                 name="canLogin"
                 checked={form.canLogin}
                 onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
@@ -431,7 +431,7 @@ export default function DashboardEmployeesPage() {
             <div><dt className="text-secondary">Email</dt><dd className="text-title">{viewingEmployee.email || "—"}</dd></div>
             <div><dt className="text-secondary">Phone</dt><dd className="text-title">{viewingEmployee.phone || "—"}</dd></div>
             <div className="sm:col-span-2">
-              <dt className="text-secondary">CRM login</dt>
+              <dt className="text-secondary">Shop Management System login</dt>
               <dd className="mt-0.5">
                 <Badge variant={viewingEmployee.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
                   {viewingEmployee.canLogin ? "Enabled" : "Off"}
@@ -506,7 +506,7 @@ export default function DashboardEmployeesPage() {
             />
             <div className="sm:col-span-2 space-y-3 rounded-lg border border-border bg-form-bg/50 p-3">
               <Checkbox
-                label="Can login to CRM"
+                label="Can login to Shop Management System"
                 name="canLogin"
                 checked={form.canLogin}
                 onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}

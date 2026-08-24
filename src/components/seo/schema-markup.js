@@ -41,7 +41,7 @@ export function SoftwareAppSchema() {
           "Employee job postings and careers page",
           "Vendor POs and accounts payable",
           "Customer motor history registry",
-          "API and CRM integrations",
+          "API and Shop Management System integrations",
         ],
       },
       {

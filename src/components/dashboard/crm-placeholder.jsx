@@ -13,7 +13,7 @@ export default function CrmPlaceholder({ title, description, contextNote }) {
         </p>
       ) : null}
       <div className="mt-8 rounded-lg border border-border bg-card p-6 text-sm text-secondary">
-        Content will go here. Use the sidebar to switch between CRM sections.
+        Content will go here. Use the sidebar to switch between Shop Management System sections.
       </div>
     </div>
   );

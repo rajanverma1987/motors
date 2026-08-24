@@ -342,7 +342,7 @@ export default function IntegrationsPageClient() {
           <Input label="Webhook name" value={hookName} onChange={(e) => setHookName(e.target.value)} />
           <Input label="Endpoint URL" value={hookUrl} onChange={(e) => setHookUrl(e.target.value)} />
           <Checkbox
-            label="Subscribe to all CRM events"
+            label="Subscribe to all Shop Management System events"
             checked={hookAllEvents}
             onChange={(e) => setHookAllEvents(e.target.checked)}
           />

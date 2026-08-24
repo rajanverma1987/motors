@@ -46,7 +46,7 @@ const faqJsonLd = {
       name: "Where do I open CM Best Match in the dashboard?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Sign in to your IQMotorBase CRM, go to Dashboard → Calculators, and open the CM Best Match tab (default tab). The same calculator logic aligns with common motor-shop bench workflows.",
+        text: "Sign in to your IQMotorBase Shop Management System, go to Dashboard → Calculators, and open the CM Best Match tab (default tab). The same calculator logic aligns with common motor-shop bench workflows.",
       },
     },
   ],
@@ -94,7 +94,7 @@ export default function BlogCmBestMatchGuidePage() {
         description="Circular mils (CM) drive slot fill and ampacity in rewinds. This guide explains the IQMotorBase CM Best Match tool—catalog-backed combinations, match bands, and where it fits between takeoff data and final engineering review."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
-        sidebarTitle="Calculators in your CRM"
+        sidebarTitle="Calculators in your Shop Management System"
         sidebarDescription="CM Best Match plus power, speed, torque, and bench tools—same place your jobs and quotes live."
         sidebarCta={<ListYourShopCta />}
       >

@@ -30,7 +30,7 @@ export default function BlogMoreCustomersPage() {
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
       sidebarTitle="List where buyers search"
-      sidebarDescription="Use our USA hub + state/city pages to localize your reach, then convert with the CRM."
+      sidebarDescription="Use our USA hub + state/city pages to localize your reach, then convert with the Shop Management System."
       sidebarCta={<ListYourShopCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">

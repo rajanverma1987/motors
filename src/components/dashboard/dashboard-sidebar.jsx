@@ -197,7 +197,7 @@ export default function DashboardSidebar() {
       >
         {!sidebarCollapsed ? (
           <span className="truncate text-sm font-semibold tracking-tight text-title">
-            {calculatorOnly ? "Calculators" : "CRM"}
+            {calculatorOnly ? "Calculators" : "Shop Management System"}
           </span>
         ) : null}
         <button

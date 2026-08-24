@@ -15,7 +15,7 @@ export const SEO_USA_STATES = [
       "Texas hosts massive petrochemical, LNG, power generation, and manufacturing corridors from the Gulf Coast to the Permian. Motor repair and rewinding shops that show up when plants search for emergency work and planned outages win the highest-value jobs.",
     stateIntroParagraphs: [
       "From Gulf Coast refineries and chemical complexes to Permian-region drilling support and statewide power-generation assets, Texas runs on rotating equipment that fails loudly when it stops. Buyers often choose the shop that answers clearly about field service, voltage classes, and realistic lead times—not the one with the prettiest homepage.",
-      "This Texas-focused page helps motor repair and rewinding owners turn search intent into work: list your capabilities for statewide visibility, then run quotes, job cards, and billing in the same CRM your bench team actually uses.",
+      "This Texas-focused page helps motor repair and rewinding owners turn search intent into work: list your capabilities for statewide visibility, then run quotes, job cards, and billing in the same Shop Management System your bench team actually uses.",
     ],
     cities: [
       {
@@ -141,7 +141,7 @@ export const SEO_USA_STATES = [
       "Pennsylvania’s energy, manufacturing, and logistics mix spans Marcellus-region equipment, legacy steel and machining, and East Coast distribution—each segment needs trustworthy motor repair partners.",
     stateIntroParagraphs: [
       "Pennsylvania stretches from Philadelphia’s port and packaging corridors to Pittsburgh’s advanced materials and legacy machining—and energy-field equipment in between. Buyers evaluate motor partners on honesty about lead times, documentation, and whether you’ve handled similar loads before.",
-      "This page helps Pennsylvania repair shops compete on substance: a discoverable listing for the right searches, paired with CRM tools for quotes, WIP, and billing so growth doesn’t turn into chaos.",
+      "This page helps Pennsylvania repair shops compete on substance: a discoverable listing for the right searches, paired with Shop Management System tools for quotes, WIP, and billing so growth doesn’t turn into chaos.",
     ],
     cities: [
       {
@@ -325,7 +325,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
       "Directory presence that reflects your real capabilities—voltages, motor types, industries served, certifications, and service region—so buyers self-match before they call.",
       "State and city landing pages across the USA that help you localize messaging for industrial-heavy regions without maintaining separate websites.",
       "Fewer wasted inquiries: when your profile is specific, procurement teams compare you on fit, not just price.",
-      "Faster first response: inquiries land in the CRM inbox instead of scattered email threads.",
+      "Faster first response: inquiries land in the Shop Management System inbox instead of scattered email threads.",
       "Optional marketplace visibility for surplus parts and equipment when you want to monetize inventory alongside repair work.",
     ],
   },
@@ -358,15 +358,15 @@ export function buildSeoLeadFaq(placeLabel) {
   return [
     {
       q: `What does IQMotorBase.com do for shops in ${placeLabel}?`,
-      a: "We combine lead generation with a motor-repair-focused CRM: list your capabilities, capture inquiries, and run jobs with quotes, invoices, and inventory-aware workflows—so you’re not juggling spreadsheets and missed callbacks.",
+      a: "We combine lead generation with a motor-repair-focused Shop Management System: list your capabilities, capture inquiries, and run jobs with quotes, invoices, and inventory-aware workflows—so you’re not juggling spreadsheets and missed callbacks.",
     },
     {
       q: "Is there a free way to get started?",
-      a: "Yes. New accounts receive a Free Ultimate–style tier so you can list your business and use core CRM features without a credit card. Paid options exist when you want more capacity or support.",
+      a: "Yes. New accounts receive a Free Ultimate–style tier so you can list your business and use core Shop Management System features without a credit card. Paid options exist when you want more capacity or support.",
     },
     {
       q: "How is this different from a plain business directory?",
-      a: "A directory alone doesn’t run your shop. IQMotorBase.com is positioned around winning repair jobs and managing the workshop—your listing is the front door; the CRM is where work gets executed.",
+      a: "A directory alone doesn’t run your shop. IQMotorBase.com is positioned around winning repair jobs and managing the workshop—your listing is the front door; the Shop Management System is where work gets executed.",
     },
     {
       q: "Do you integrate payments or only leads?",
@@ -378,7 +378,7 @@ export function buildSeoLeadFaq(placeLabel) {
     },
     {
       q: "How does IQMotorBase.com handle data privacy?",
-      a: "Business and contact details submitted through listings and forms are used to deliver inquiries, quote follow-up, and CRM workflows. We do not sell your private contact data as a standalone data product. Access should be limited to authorized users in your team, and we recommend role-based access controls and strong passwords for your account.",
+      a: "Business and contact details submitted through listings and forms are used to deliver inquiries, quote follow-up, and Shop Management System workflows. We do not sell your private contact data as a standalone data product. Access should be limited to authorized users in your team, and we recommend role-based access controls and strong passwords for your account.",
     },
   ];
 }

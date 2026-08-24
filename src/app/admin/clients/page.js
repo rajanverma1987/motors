@@ -54,7 +54,7 @@ function DeleteClientModal({ client, open, onClose, onDeleted }) {
       <p className="text-sm text-secondary">
         This will permanently delete{" "}
         <strong className="text-title">{client?.email || "—"}</strong>
-        {client?.shopName ? ` (${client.shopName})` : ""} and all related CRM data for this shop: customers,
+        {client?.shopName ? ` (${client.shopName})` : ""} and all related Shop Management System data for this shop: customers,
         leads, quotes, motors, work orders, invoices, purchase orders, employees, inventory, vendors,
         policies, subscriptions, directory listings, marketplace listings, integrations, and settings. This
         cannot be undone.
@@ -307,7 +307,7 @@ function SubscriptionManageModal({ client, open, onClose, onSaved }) {
           <div>
             <h3 className="text-sm font-semibold text-title">Upgrade / change plan (PayPal)</h3>
             <p className="mt-1 text-xs text-secondary">
-              Creates a PayPal subscription and stores the approval URL. Client completes payment from CRM →
+              Creates a PayPal subscription and stores the approval URL. Client completes payment from Shop Management System →
               Subscription or you copy the link below.
             </p>
             {plans.length > 0 ? (

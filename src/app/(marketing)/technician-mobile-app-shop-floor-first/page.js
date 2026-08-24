@@ -110,7 +110,7 @@ export default function TechnicianMobileAppPage() {
             <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               calculators module
             </Link>{" "}
-            in the CRM.
+            in the Shop Management System.
           </p>
         </section>
 

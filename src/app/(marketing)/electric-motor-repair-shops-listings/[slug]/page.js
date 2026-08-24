@@ -286,7 +286,7 @@ export default async function ListingDetailPage({ params }) {
           ← Back to listings
         </Link>
 
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_352px] lg:items-start">
           <div className="min-w-0">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
               {heroImage && (

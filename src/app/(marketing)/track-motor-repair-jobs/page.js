@@ -42,7 +42,7 @@ export default function TrackMotorRepairJobsPage() {
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
       sidebarTitle="Quotes → jobs → billing"
-      sidebarDescription="Keep the whole lifecycle in one CRM instead of sticky notes."
+      sidebarDescription="Keep the whole lifecycle in one Shop Management System instead of sticky notes."
       sidebarCta={<ListYourShopCta />}
     >
       <article className="prose prose-neutral dark:prose-invert max-w-none">

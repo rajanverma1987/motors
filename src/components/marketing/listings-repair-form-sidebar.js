@@ -18,6 +18,7 @@ export default function ListingsRepairFormSidebar({
         state={state}
         zipCode={zipCode}
         listing={listing}
+        layout="sidebar"
         className="mx-auto w-full max-w-none"
       />
     </aside>

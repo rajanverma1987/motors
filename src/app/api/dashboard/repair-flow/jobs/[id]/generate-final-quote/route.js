@@ -99,7 +99,7 @@ export async function POST(request, context) {
     ]);
     if (!cust || !mot) {
       return NextResponse.json(
-        { error: "Job customer or motor is missing or invalid for CRM quote" },
+        { error: "Job customer or motor is missing or invalid for Shop Management System quote" },
         { status: 400 }
       );
     }

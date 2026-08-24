@@ -177,7 +177,7 @@ export default async function EmergencyMotorRepairWhatToDoPage() {
           within minutes. Or call a shop directly from the directory.
         </p>
 
-        <div className="mt-8 max-w-3xl">
+        <div className="mt-8 max-w-[53rem]">
           <RepairRequestForm mode="city" defaultUrgency="emergency" className="mx-auto w-full max-w-none" />
         </div>
 

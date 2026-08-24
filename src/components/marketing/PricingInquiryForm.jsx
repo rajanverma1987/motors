@@ -128,7 +128,7 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
           value={form.currentTools}
           onChange={onChange}
           className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-title outline-none focus:ring-2 focus:ring-primary/40"
-          placeholder="Excel, ERP, CRM, WhatsApp..."
+          placeholder="Excel, ERP, Shop Management System, WhatsApp..."
         />
       </div>
       <div>

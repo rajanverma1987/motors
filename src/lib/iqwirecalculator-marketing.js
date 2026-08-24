@@ -47,11 +47,11 @@ export const IQWIRECALCULATOR_FAQS = [
   {
     question: "Is this the same tool used in IQMotorBase’s shop dashboard?",
     answer:
-      "Same core CM Best Match math: ±10% of target, up to three distinct sizes, ranked closest first. IQWireCalculator is the standalone phone app with a built-in AWG table plus your custom sizes, save, print, and email. Shops on IQMotorBase also have CM Best Match in the dashboard and a technician app that uses the shop’s CRM wire catalog.",
+      "Same core CM Best Match math: ±10% of target, up to three distinct sizes, ranked closest first. IQWireCalculator is the standalone phone app with a built-in AWG table plus your custom sizes, save, print, and email. Shops on IQMotorBase also have CM Best Match in the dashboard and a technician app that uses the shop’s Shop Management System wire catalog.",
   },
   {
     question: "Who is IQWireCalculator for versus the IQMotorBase technician app?",
     answer:
-      "Independent rewinders and small shops that need a wire substitution calculator on the phone without a full CRM. If your shop already runs IQMotorBase, floor techs can use the technician app against the shop catalog instead. Both exist so you are not forced into the wrong product.",
+      "Independent rewinders and small shops that need a wire substitution calculator on the phone without a full Shop Management System. If your shop already runs IQMotorBase, floor techs can use the technician app against the shop catalog instead. Both exist so you are not forced into the wrong product.",
   },
 ];

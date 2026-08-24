@@ -32,7 +32,7 @@ const workflowFeatures = [
   },
   {
     title: "Work orders tied to the job — and the approved RFQ",
-    detail: "Create work orders from the primary final CRM quote on that job. Motor, customer, scope, and line items carry through; numbering stays aligned with the job so desk and floor share the same ID. Inventory reservations and consumption still follow the quote-backed path through delivery.",
+    detail: "Create work orders from the primary final Shop Management System quote on that job. Motor, customer, scope, and line items carry through; numbering stays aligned with the job so desk and floor share the same ID. Inventory reservations and consumption still follow the quote-backed path through delivery.",
   },
   {
     title: "Center floor job board",
@@ -96,9 +96,9 @@ const managementFeatures = [
       "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders into QBO—so the shop floor and your books stay aligned without re-keying line items.",
   },
   {
-    title: "API and CRM integrations",
+    title: "API and Shop Management System integrations",
     detail:
-      "An API is available to integrate IQMotorBase.com with any other CRM or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—alongside the built-in QuickBooks Online sync—so you can keep one source of truth while using the apps your team already relies on.",
+      "An API is available to integrate IQMotorBase.com with any other Shop Management System or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—alongside the built-in QuickBooks Online sync—so you can keep one source of truth while using the apps your team already relies on.",
   },
   {
     title: "Upload your existing data",
@@ -107,12 +107,12 @@ const managementFeatures = [
   {
     title: "Public marketplace listings",
     detail:
-      "Publish spare parts, surplus motors, and tools to the IQMotorBase.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your CRM alongside work orders and invoices.",
+      "Publish spare parts, surplus motors, and tools to the IQMotorBase.com marketplace from your dashboard. Each listing gets its own SEO-friendly page; buyers submit a request (no checkout on our site) and you manage follow-up and fulfillment from your Shop Management System alongside work orders and invoices.",
   },
   {
     title: "Employee job postings (public careers)",
     detail:
-      "Post open roles for technicians, winders, and shop staff from your CRM. Listings appear on the public Careers page with your shop name and location, and each job gets its own SEO-friendly URL. Candidates apply online; you review applications in the dashboard—so hiring stays in the same system as work orders and customers.",
+      "Post open roles for technicians, winders, and shop staff from your Shop Management System. Listings appear on the public Careers page with your shop name and location, and each job gets its own SEO-friendly URL. Candidates apply online; you review applications in the dashboard—so hiring stays in the same system as work orders and customers.",
   },
 ];
 
@@ -486,7 +486,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">List excess inventory on the public site</h3>
                 <p className="mt-3 max-w-[50.4rem] text-secondary">
-                  Publish parts, motors, tools, and surplus from your CRM. Each listing gets its own SEO-friendly URL.
+                  Publish parts, motors, tools, and surplus from your Shop Management System. Each listing gets its own SEO-friendly URL.
                   Buyers search and filter on{" "}
                   <Link href="/marketplace" className="font-medium text-primary hover:underline">
                     the marketplace
@@ -528,7 +528,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-title sm:text-3xl">Post jobs, candidates apply on the site</h3>
                 <p className="mt-3 max-w-[50.4rem] text-secondary">
-                  Shops using the CRM can publish employee job postings that appear on the public{" "}
+                  Shops using the Shop Management System can publish employee job postings that appear on the public{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     Careers
                   </Link>{" "}
@@ -544,7 +544,7 @@ export default function HomePage() {
                 </Link>
                 <Link href="/contact">
                   <Button variant="outline" size="lg" className="w-full sm:w-auto lg:w-full">
-                    Get CRM access to post jobs
+                    Get Shop Management System access to post jobs
                   </Button>
                 </Link>
               </div>
@@ -591,7 +591,7 @@ export default function HomePage() {
                   List your repair company in the directory - Free to list
                 </h2>
                 <p className="mt-3 max-w-[43.2rem] text-secondary">
-                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With CRM access you can also{" "}
+                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With Shop Management System access you can also{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     post employee job openings
                   </Link>{" "}

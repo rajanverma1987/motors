@@ -418,7 +418,7 @@ export default function AdminIqWireCalculatorPage() {
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold text-title">IQWireCalculator clients</h1>
             <p className="mt-1 text-sm text-secondary">
-              Mobile app accounts (not shop CRM). Remove access locks the app; ban blocks sign-in.
+              Mobile app accounts (not shop management system). Remove access locks the app; ban blocks sign-in.
             </p>
           </div>
           <Button

@@ -312,12 +312,12 @@ export default function AdminListingsPage() {
               onClick={() => openOnboardModal(row)}
               className="inline-flex rounded-md p-2 text-emerald-700 hover:bg-emerald-500/10 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-emerald-400"
               aria-label={
-                isListingCrmClient(row) ? "Already onboarded to CRM" : "Onboard to CRM"
+                isListingCrmClient(row) ? "Already onboarded to Shop Management System" : "Onboard to Shop Management System"
               }
               title={
                 isListingCrmClient(row)
-                  ? "Already onboarded to CRM"
-                  : "Onboard to CRM"
+                  ? "Already onboarded to Shop Management System"
+                  : "Onboard to Shop Management System"
               }
             >
               <FiUserPlus className="h-4 w-4" />
@@ -327,8 +327,8 @@ export default function AdminListingsPage() {
                 type="button"
                 onClick={() => goManageSubscription(row)}
                 className="inline-flex rounded-md p-2 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="CRM client — subscription and access"
-                title="CRM client — open subscription & access"
+                aria-label="Shop Management System client — subscription and access"
+                title="Shop Management System client — open subscription & access"
               >
                 <FiCreditCard className="h-4 w-4" />
               </button>
@@ -357,10 +357,10 @@ export default function AdminListingsPage() {
             {isListingCrmClient(row) ? (
               <span
                 className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-emerald-500/50 bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-900 dark:border-emerald-400/40 dark:bg-emerald-500/20 dark:text-emerald-100"
-                title="Onboarded to CRM"
+                title="Onboarded to Shop Management System"
               >
                 <FiCheckCircle className="h-3 w-3" aria-hidden />
-                CRM
+                Shop Management System
               </span>
             ) : null}
           </div>
@@ -401,7 +401,7 @@ export default function AdminListingsPage() {
     e.preventDefault();
     if (!onboardRow?.id) return;
     if (!onboardPassword || onboardPassword.length < 6) {
-      toast.error("Set a password (at least 6 characters) for the CRM login.");
+      toast.error("Set a password (at least 6 characters) for the Shop Management System login.");
       return;
     }
     setOnboardSubmitting(true);
@@ -699,7 +699,7 @@ export default function AdminListingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Listings</h1>
           <p className="text-sm text-secondary">
-            Review and approve submissions. Use <strong className="text-title">Onboard to CRM</strong> to create a client,
+            Review and approve submissions. Use <strong className="text-title">Onboard to Shop Management System</strong> to create a client,
             Free Ultimate subscription, then manage plans under Registered clients.
           </p>
         </div>
@@ -801,10 +801,10 @@ export default function AdminListingsPage() {
         />
       </div>
 
-      <Modal open={onboardModalOpen} onClose={closeOnboardModal} title="Onboard to CRM" size="md">
+      <Modal open={onboardModalOpen} onClose={closeOnboardModal} title="Onboard to Shop Management System" size="md">
         <form onSubmit={handleOnboardSubmit} className="flex flex-col gap-4">
           <p className="text-sm text-secondary">
-            Creates a <strong className="text-title">registered client</strong> (CRM login) using this listing’s
+            Creates a <strong className="text-title">registered client</strong> (Shop Management System login) using this listing’s
             email, assigns <strong className="text-title">Free Ultimate</strong> like self-registration, then you can
             attach PayPal plans or overrides under{" "}
             <Link href="/admin/clients" className="text-primary font-medium hover:underline">
@@ -824,7 +824,7 @@ export default function AdminListingsPage() {
             </div>
           )}
           <Input
-            label="Shop name (CRM)"
+            label="Shop name (Shop Management System)"
             value={onboardShopName}
             onChange={(e) => setOnboardShopName(e.target.value)}
             placeholder="Company / shop display name"

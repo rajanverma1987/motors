@@ -48,7 +48,7 @@ export async function POST(request, context) {
     if (listing.crmUserId) {
       return NextResponse.json(
         {
-          error: "This listing was already onboarded to the CRM.",
+          error: "This listing was already onboarded to the Shop Management System.",
           code: "ALREADY_ONBOARDED",
           userId: String(listing.crmUserId),
         },

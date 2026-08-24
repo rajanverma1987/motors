@@ -156,7 +156,7 @@ export default function SeoLeadLandingPage({
                 We don&apos;t position this as a passive directory—you get a system to{" "}
                 <strong className="text-title">win repair jobs and run the workshop</strong> in one place. Explore{" "}
                 <Link href="/features" className="text-primary font-medium hover:underline">
-                  CRM features
+                  Shop Management System features
                 </Link>
                 ,{" "}
                 <Link href="/pricing" className="text-primary font-medium hover:underline">
@@ -209,7 +209,7 @@ export default function SeoLeadLandingPage({
 
           <aside className="lg:sticky lg:top-24 space-y-4">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-              <h2 className="text-lg font-semibold text-title">Get more jobs + CRM access</h2>
+              <h2 className="text-lg font-semibold text-title">Get more jobs + Shop Management System access</h2>
               <p className="mt-2 text-sm text-secondary">
                 Tell us who you are—we&apos;ll help you get listed and onboarded to manage quotes, jobs, and billing.
               </p>

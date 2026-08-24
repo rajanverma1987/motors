@@ -248,7 +248,7 @@ export default function IqwireCalculatorMarketingPage() {
             ))}
           </ul>
           <p className="mt-6 text-sm text-secondary">
-            This is the standalone phone app. It does not sync a shop CRM catalog. Shops on IQMotorBase keep CM Best
+            This is the standalone phone app. It does not sync a shop Shop Management System catalog. Shops on IQMotorBase keep CM Best
             Match in the{" "}
             <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               dashboard calculators
@@ -344,7 +344,7 @@ export default function IqwireCalculatorMarketingPage() {
             >
               CM Best Match calculator guide
             </Link>
-            . Shop CRM:{" "}
+            . Shop Management System:{" "}
             <Link href="/" className="font-medium text-primary hover:underline">
               IQMotorBase
             </Link>

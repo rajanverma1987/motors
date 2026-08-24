@@ -243,7 +243,7 @@ function EmployeesTab() {
       { key: "phone", label: "Phone", sortable: true },
       {
         key: "canLogin",
-        label: "CRM login",
+        label: "Shop Management System login",
         sortable: true,
         render: (_, row) => (
           <Badge variant={row.canLogin ? "success" : "default"} className="rounded-full px-2.5 py-0.5 text-xs">
@@ -392,7 +392,7 @@ function EmployeesTab() {
                   onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
                   className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
                 />
-                Can login to CRM
+                Can login to Shop Management System
               </label>
               <label className="inline-flex items-center gap-2 text-sm text-title">
                 <input

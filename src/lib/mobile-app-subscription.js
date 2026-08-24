@@ -71,7 +71,7 @@ export async function ensureMobileAppSubscriptionPlan() {
       slug,
       planType: "paypal",
       description:
-        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop CRM.",
+        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop management system.",
       customPrice: MOBILE_APP_DEFAULT_MONTHLY_USD,
       currency: "USD",
       billingCycle: "monthly",
@@ -82,7 +82,7 @@ export async function ensureMobileAppSubscriptionPlan() {
     plan.name = "IQWireCalculator";
     if (!plan.description || /IQMotorBase Calculators mobile app/.test(plan.description)) {
       plan.description =
-        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop CRM.";
+        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop management system.";
     }
     await plan.save();
   }

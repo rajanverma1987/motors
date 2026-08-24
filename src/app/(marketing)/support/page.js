@@ -70,7 +70,7 @@ const SUPPORT_FAQS = [
   },
   {
     q: "Is this the same as IQMotorBase shop software?",
-    a: "No. IQWireCalculator is a standalone wire calculator app. IQMotorBase is the shop CRM. Floor technicians on an IQMotorBase shop should use the technician app, not this listing.",
+    a: "No. IQWireCalculator is a standalone wire calculator app. IQMotorBase is the shop management system. Floor technicians on an IQMotorBase shop should use the technician app, not this listing.",
   },
 ];
 
@@ -217,7 +217,7 @@ export default function SupportPage() {
             with your account email and we will help.
           </p>
           <p className="mt-6 text-sm text-secondary">
-            IQMotorBase shop CRM support lives on{" "}
+            IQMotorBase shop management system support lives on{" "}
             <Link href="/contact" className="font-medium text-primary hover:underline">
               Contact
             </Link>

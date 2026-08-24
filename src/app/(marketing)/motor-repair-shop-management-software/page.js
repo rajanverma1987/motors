@@ -63,7 +63,7 @@ const faqItems = [
   },
   {
     q: "Does the software also generate leads for my shop?",
-    a: "Yes. Leads originate from the IQMotorBase public directory and local SEO pages. Shops can take shared leads (sent to multiple shops) or exclusive leads (one shop only). A credit balance deducts when a lead is delivered. A won lead converts directly into a customer and Job Write-Up—no re-entry into a separate CRM.",
+    a: "Yes. Leads originate from the IQMotorBase public directory and local SEO pages. Shops can take shared leads (sent to multiple shops) or exclusive leads (one shop only). A credit balance deducts when a lead is delivered. A won lead converts directly into a customer and Job Write-Up—no re-entry into a separate Shop Management System.",
   },
   {
     q: "Does IQMotorBase integrate with QuickBooks Online?",
@@ -97,7 +97,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               The one-sentence difference versus almost every competitor in “motor repair software” search results:
               IQMotorBase is the only shop system in this cluster that also generates the shop’s leads. Leads come
               from the public directory and local SEO pages, convert into a customer and Job Write-Up without a second
-              CRM, and sit beside the same inventory, board, and billing tools the floor already uses. If you run a
+              Shop Management System, and sit beside the same inventory, board, and billing tools the floor already uses. If you run a
               rewind shop and you are tired of spreadsheets for WIP and a separate inbox for inquiries, this page is
               the map of how the product actually works.
             </p>
@@ -111,7 +111,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               Search “motor repair software” and you will still see tools built for cars—Tekmetric, Shop-Ware,
               Torque360, and other auto-shop platforms. Those products optimize vehicle repair orders, tire packages,
               and consumer-facing RO workflows. An electric motor on a stand with coil data, insulation resistance
-              readings, and a customer who asks for last year’s test sheet is a different job. Adapting an auto CRM
+              readings, and a customer who asks for last year’s test sheet is a different job. Adapting an auto Shop Management System
               means stuffing winding notes into a “comments” field and hoping nobody loses the paper slip from the
               test bench.
             </p>
@@ -184,7 +184,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
               customers without exporting to a spreadsheet just to see the week. Built-in QuickBooks Online sync pushes
               customers, invoices, payments, and vendor purchase orders when a job reaches the closed status you
               configure—so the shop floor does not become a retyping station for accounting. An API is also available to
-              sync customers, work orders, and quotes with other CRM or ERP tools when the shop already relies on those
+              sync customers, work orders, and quotes with other Shop Management System or ERP tools when the shop already relies on those
               apps—one source of truth for the repair job, not a mandate to rip out accounting overnight.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -198,11 +198,11 @@ export default function MotorRepairShopManagementSoftwarePage() {
               (for example city- and service-oriented searches). Shared leads go to multiple shops; exclusive leads go
               to one shop—used for emergency or high-value work. The shop tops up a lead credit balance; credits deduct
               when a lead is delivered, not when you decide you “like” it. A won lead becomes a customer and a Job
-              Write-Up without retyping into a separate CRM. That lead-to-job path is the differentiator versus Spring
+              Write-Up without retyping into a separate Shop Management System. That lead-to-job path is the differentiator versus Spring
               Point, Aptean, Tekmetric, or any generic shop tool that only manages work after the phone already rang.
               Details live on{" "}
               <Link href={SEO_SOFTWARE_CRM_PATH} className="text-primary font-medium hover:underline">
-                motor repair CRM software
+                motor repair shop management system
               </Link>
               .
             </p>
@@ -262,7 +262,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
                       <span className="font-bold text-danger">Typically no</span>
                     </td>
                     <td className="py-3">
-                      <span className="font-bold text-danger">No</span> — CRM manages sales opportunities/prospects; no
+                      <span className="font-bold text-danger">No</span> — Shop Management System manages sales opportunities/prospects; no
                       public claim of originating inbound repair leads for the shop
                     </td>
                   </tr>
@@ -291,7 +291,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-4 font-medium text-title">API / integrations</td>
                     <td className="py-3 pr-4">
-                      Yes — QuickBooks Online sync (customers, invoices, payments, vendor POs) plus API for CRM/ERP
+                      Yes — QuickBooks Online sync (customers, invoices, payments, vendor POs) plus API for Shop Management System/ERP
                     </td>
                     <td className="py-3 pr-4">N/A</td>
                     <td className="py-3 pr-4">Varies by product</td>
@@ -326,12 +326,12 @@ export default function MotorRepairShopManagementSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               IQMotorBase consolidates that stack around the Job Write-Up: quotes and work orders on the same job
               number, reservations and POs from the quote path, board and mobile updates for the floor, invoices and
-              AR for the office, and directory-driven leads that become customers without a second CRM. Built-in
+              AR for the office, and directory-driven leads that become customers without a second Shop Management System. Built-in
               QuickBooks Online sync pushes customers, invoices, payments, and vendor POs when a job closes—so
               accounting does not become another retyping station. Marketplace listings for spare parts, surplus
               motors, and tools can publish from the dashboard with SEO-friendly URLs when you have surplus to
               move—there is no on-platform checkout; the buyer sends a request and the shop follows up. Careers
-              postings for technicians and winders can go from the CRM to the public Careers page with the shop’s name
+              postings for technicians and winders can go from the Shop Management System to the public Careers page with the shop’s name
               and location; candidates apply online and applications are reviewed in the dashboard. None of that
               requires inventing a parallel process outside the shop system.
             </p>
@@ -344,7 +344,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               How leads fill the customer list is covered in depth on{" "}
               <Link href={SEO_SOFTWARE_CRM_PATH} className="text-primary font-medium hover:underline">
-                motor repair CRM software
+                motor repair shop management system
               </Link>
               . For directory scale as proof of the lead side of the product, browse the{" "}
               <Link

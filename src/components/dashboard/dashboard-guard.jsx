@@ -35,7 +35,7 @@ export default function DashboardGuard({ children }) {
   const pageCopy = useMemo(
     () =>
       PROTECTED_PAGE_COPY[pathname] || {
-        title: "CRM dashboard",
+        title: "Shop Management System dashboard",
         detail:
           "Access your business workspace for leads, customers, quotes, work orders, inventory, receivables, payables, and reporting.",
       },
@@ -49,7 +49,7 @@ export default function DashboardGuard({ children }) {
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
           <h1 className="mt-2 text-xl font-semibold text-title">Checking access…</h1>
           <p className="mt-3 text-sm text-secondary">
-            This CRM page is available to authenticated users. If you do not have access yet, request a demo and CRM
+            This Shop Management System page is available to authenticated users. If you do not have access yet, request a demo and Shop Management System
             onboarding for your repair center.
           </p>
         </div>
@@ -62,14 +62,14 @@ export default function DashboardGuard({ children }) {
       <div className="flex min-h-screen items-center justify-center bg-bg p-6">
         <div className="max-w-[43.2rem] rounded-2xl border border-border bg-card p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-primary">Protected Page</p>
-          <h1 className="mt-2 text-xl font-semibold text-title">{pageCopy.title} requires CRM access.</h1>
+          <h1 className="mt-2 text-xl font-semibold text-title">{pageCopy.title} requires Shop Management System access.</h1>
           <p className="mt-3 text-sm text-secondary">{pageCopy.detail}</p>
           <p className="mt-2 text-sm text-secondary">
-            Sign in to your existing account, or request CRM access to run your full motor repair workflow in one system.
+            Sign in to your existing account, or request Shop Management System access to run your full motor repair workflow in one system.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             <Link href="/contact">
-              <Button size="sm" variant="primary">Get CRM access</Button>
+              <Button size="sm" variant="primary">Get Shop Management System access</Button>
             </Link>
             <Link href="/login">
               <Button size="sm" variant="outline">Sign in</Button>

@@ -42,7 +42,7 @@ export function buildDemoAccountCredentialsEmailContent({
         ${planRow}
       </tbody>
     </table>
-    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the Shop Management System</a></p>
     <p><strong>Security:</strong> Change this password after you sign in under <strong>Settings</strong> → <strong>Account</strong> (or open <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>).</p>
     <p>If you have questions about your package or need a walkthrough, reply to this email.</p>
     <p>— IQMotorBase.com</p>
@@ -51,7 +51,7 @@ export function buildDemoAccountCredentialsEmailContent({
 }
 
 /**
- * CRM welcome email body (listing onboard). Safe for client + server.
+ * Shop Management System welcome email body (listing onboard). Safe for client + server.
  */
 export function buildCrmWelcomeEmailContent({
   to,
@@ -66,7 +66,7 @@ export function buildCrmWelcomeEmailContent({
   const settingsUrl = `${site}/dashboards/settings`;
   const esc = escHtmlEmail;
   const greet = contactName ? ` ${esc(contactName)}` : "";
-  const subject = "Your IQMotorBase.com CRM account is ready";
+  const subject = "Your IQMotorBase.com Shop Management System account is ready";
   const planRow = planLabel
     ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Package</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planLabel)}</td></tr>`
     : "";
@@ -81,7 +81,7 @@ export function buildCrmWelcomeEmailContent({
         ${planRow}
       </tbody>
     </table>
-    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the CRM</a></p>
+    <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to the Shop Management System</a></p>
     <p><strong>Security:</strong> Change this password after you sign in. In the dashboard go to <strong>Settings</strong> → <strong>Account</strong> → <strong>Password</strong>, or open your account settings directly: <a href="${esc(settingsUrl)}">${esc(settingsUrl)}</a>.</p>
     <p>Your account includes access to leads, quotes, jobs, and billing. If you have questions, reply to this email.</p>
     <p>— IQMotorBase.com</p>

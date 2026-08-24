@@ -12,7 +12,7 @@ export const CALCULATOR_CATALOG = [
     id: "cm_best_match",
     name: "CM Best Match",
     description:
-      "Circular mils and wire-size matching for rewinding. Phone app: IQWireCalculator. Shop CRM: dashboard CM Best Match.",
+      "Circular mils and wire-size matching for rewinding. Phone app: IQWireCalculator. Shop management system: dashboard CM Best Match.",
     href: "/iqwirecalculator",
     dashboardPath: "/dashboards?tab=calculators",
   },
