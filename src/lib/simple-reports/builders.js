@@ -24,11 +24,183 @@ import {
   resolveDocDay,
   toYmd,
 } from "@/lib/simple-reports/helpers";
-import { buildSimpleReportWorkbook } from "@/lib/simple-reports/workbook";
+import { buildSimpleReportWorkbook, isReportAmountHeader } from "@/lib/simple-reports/workbook";
 import { isValidSimpleReportId } from "@/lib/simple-reports/catalog";
 import { normalizeInvoicePayments, parseMoneyInput } from "@/lib/simple-service-proposal-form";
 
 const FETCH_LIMIT = 20000;
+const VIEW_DEFAULT_PAGE_SIZE = 50;
+const VIEW_MAX_PAGE_SIZE = 200;
+
+/** Default sort column (0-based) — prefer primary date, else meaningful amount/name. */
+const DEFAULT_SORT_COLUMN = {
+  "jobs-pipeline": 6, // Date created
+  "invoices-ar": 4, // Date created
+  "purchase-ap": 6, // PO date
+  "vendor-spend": 2, // Ordered total
+  "inventory-stock": 0, // Part
+  "customers": 10, // Created
+  "sales-commissions": 7, // Created
+  "sales-tax": 3, // Invoice date
+  "purchase-tax": 4, // PO date
+  "ar-aging": 4, // Invoice date
+  "ap-aging": 4, // PO date
+  "cash-receipts": 2, // Paid date
+};
+
+const DEFAULT_SORT_DIR = {
+  "inventory-stock": "asc",
+};
+
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ * @param {"asc"|"desc"} dir
+ */
+function compareReportCells(a, b, dir) {
+  const mul = dir === "asc" ? 1 : -1;
+  const sa = a == null ? "" : String(a).trim();
+  const sb = b == null ? "" : String(b).trim();
+  if (sa === "" && sb === "") return 0;
+  if (sa === "") return 1 * mul;
+  if (sb === "") return -1 * mul;
+  const na = Number(sa.replace(/,/g, ""));
+  const nb = Number(sb.replace(/,/g, ""));
+  if (Number.isFinite(na) && Number.isFinite(nb) && /^-?\d+(\.\d+)?$/.test(sa.replace(/,/g, "")) && /^-?\d+(\.\d+)?$/.test(sb.replace(/,/g, ""))) {
+    if (na !== nb) return (na - nb) * mul;
+    return 0;
+  }
+  return sa.localeCompare(sb, undefined, { numeric: true, sensitivity: "base" }) * mul;
+}
+
+/**
+ * @param {Array<Array<unknown>>} rows
+ * @param {number[]} amountColumns
+ */
+function sumAmountColumns(rows, amountColumns, colCount) {
+  const totals = new Array(colCount).fill(null);
+  for (const colIdx of amountColumns) {
+    let sum = 0;
+    for (const row of rows) {
+      const n = Number(row?.[colIdx]);
+      if (Number.isFinite(n)) sum += n;
+    }
+    totals[colIdx] = sum;
+  }
+  return totals;
+}
+
+/**
+ * @param {string} sheetName
+ * @param {string[]} headers
+ * @param {Array<Array<string|number|boolean|null|undefined>>} rows
+ * @param {string} filenameBase
+ * @param {{
+ *   amountColumns?: number[],
+ *   format?: "xlsx"|"json",
+ *   page?: number,
+ *   pageSize?: number,
+ *   sortBy?: number|string,
+ *   sortDir?: string,
+ *   rowSortKeys?: string[],
+ *   defaultSortColumn?: number,
+ * }} [options]
+ */
+async function finalizeReport(sheetName, headers, rows, filenameBase, options = {}) {
+  const safeHeaders = Array.isArray(headers) ? headers.map((h) => String(h ?? "")) : [];
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const amountColumns =
+    Array.isArray(options.amountColumns) && options.amountColumns.length > 0
+      ? options.amountColumns.filter((i) => Number.isInteger(i) && i >= 0 && i < safeHeaders.length)
+      : safeHeaders.map((h, i) => (isReportAmountHeader(h) ? i : -1)).filter((i) => i >= 0);
+
+  const filename = `${filenameBase}-${fileStamp()}.xlsx`;
+  const tableRows = safeRows.map((row) =>
+    safeHeaders.map((_, idx) => {
+      const cell = row?.[idx];
+      return cell == null ? "" : cell;
+    })
+  );
+
+  const defaultSortColumn =
+    Number.isInteger(options.defaultSortColumn) && options.defaultSortColumn >= 0
+      ? options.defaultSortColumn
+      : DEFAULT_SORT_COLUMN[filenameBase] ?? 0;
+  const defaultSortDir = DEFAULT_SORT_DIR[filenameBase] || "desc";
+
+  let sortBy = Number(options.sortBy);
+  if (!Number.isInteger(sortBy) || sortBy < 0 || sortBy >= safeHeaders.length) {
+    sortBy = defaultSortColumn;
+  }
+  const sortDir = options.sortDir === "asc" || options.sortDir === "desc" ? options.sortDir : defaultSortDir;
+  const sortKeys = Array.isArray(options.rowSortKeys) ? options.rowSortKeys : null;
+  const useSortKeys =
+    Array.isArray(sortKeys) &&
+    sortKeys.length === tableRows.length &&
+    sortBy === defaultSortColumn;
+
+  const indexed = tableRows.map((row, i) => ({ row, key: useSortKeys ? String(sortKeys[i] || "") : "", i }));
+  indexed.sort((a, b) => {
+    if (useSortKeys) {
+      const cmp = String(a.key).localeCompare(String(b.key));
+      if (cmp !== 0) return sortDir === "asc" ? cmp : -cmp;
+      return a.i - b.i;
+    }
+    const cmp = compareReportCells(a.row[sortBy], b.row[sortBy], sortDir);
+    if (cmp !== 0) return cmp;
+    return a.i - b.i;
+  });
+  const sortedRows = indexed.map((x) => x.row);
+  const amountTotals = sumAmountColumns(sortedRows, amountColumns, safeHeaders.length);
+
+  if (options.format === "json") {
+    const pageSize = Math.min(
+      VIEW_MAX_PAGE_SIZE,
+      Math.max(1, Number(options.pageSize) || VIEW_DEFAULT_PAGE_SIZE)
+    );
+    const totalCount = sortedRows.length;
+    const totalPages = Math.max(1, Math.ceil((totalCount || 1) / pageSize));
+    const page = Math.min(totalPages, Math.max(1, Number(options.page) || 1));
+    const start = (page - 1) * pageSize;
+    const pageRows = sortedRows.slice(start, start + pageSize);
+    return {
+      buffer: null,
+      sheetName: String(sheetName || "Report"),
+      headers: safeHeaders,
+      rows: pageRows,
+      amountColumns,
+      amountTotals,
+      rowCount: totalCount,
+      page,
+      pageSize,
+      totalPages,
+      sortBy,
+      sortDir,
+      defaultSortColumn,
+      filename,
+    };
+  }
+
+  const buffer = await buildSimpleReportWorkbook(sheetName, safeHeaders, sortedRows, {
+    amountColumns,
+  });
+  return {
+    buffer,
+    sheetName: String(sheetName || "Report"),
+    headers: safeHeaders,
+    rows: sortedRows,
+    amountColumns,
+    amountTotals,
+    rowCount: sortedRows.length,
+    filename,
+  };
+}
+
+/** Push a report row and its ISO date sort key (YYYY-MM-DD). */
+function pushReportRow(rows, sortKeys, sortDay, cells) {
+  rows.push(cells);
+  sortKeys.push(toYmd(sortDay) || "");
+}
 
 /**
  * @param {{
@@ -37,6 +209,11 @@ const FETCH_LIMIT = 20000;
  *   from?: string,
  *   to?: string,
  *   filters?: Record<string, string>,
+ *   format?: "xlsx"|"json",
+ *   page?: number,
+ *   pageSize?: number,
+ *   sortBy?: number|string,
+ *   sortDir?: string,
  * }} opts
  */
 export async function buildSimpleReportExport(opts) {
@@ -50,33 +227,41 @@ export async function buildSimpleReportExport(opts) {
   const from = String(opts.from || "").trim().slice(0, 10);
   const to = String(opts.to || "").trim().slice(0, 10);
   const filters = opts.filters && typeof opts.filters === "object" ? opts.filters : {};
+  const format = opts.format === "json" ? "json" : "xlsx";
   const currency = await loadOwnerCurrency(ownerEmail);
+  const reportOpts = {
+    format,
+    page: opts.page,
+    pageSize: opts.pageSize,
+    sortBy: opts.sortBy,
+    sortDir: opts.sortDir,
+  };
 
   switch (report) {
     case "jobs-pipeline":
-      return buildJobsPipeline(ownerEmail, from, to, currency, filters);
+      return buildJobsPipeline(ownerEmail, from, to, currency, filters, reportOpts);
     case "invoices-ar":
-      return buildInvoicesAr(ownerEmail, from, to, currency, filters);
+      return buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOpts);
     case "purchase-ap":
-      return buildPurchaseAp(ownerEmail, from, to, currency, filters);
+      return buildPurchaseAp(ownerEmail, from, to, currency, filters, reportOpts);
     case "vendor-spend":
-      return buildVendorSpend(ownerEmail, from, to, filters);
+      return buildVendorSpend(ownerEmail, from, to, filters, reportOpts);
     case "inventory-stock":
-      return buildInventoryStock(ownerEmail, filters);
+      return buildInventoryStock(ownerEmail, filters, reportOpts);
     case "customers":
-      return buildCustomers(ownerEmail, filters);
+      return buildCustomers(ownerEmail, filters, reportOpts);
     case "sales-commissions":
-      return buildSalesCommissions(ownerEmail, from, to, currency, filters);
+      return buildSalesCommissions(ownerEmail, from, to, currency, filters, reportOpts);
     case "sales-tax":
-      return buildSalesTax(ownerEmail, from, to, currency, filters);
+      return buildSalesTax(ownerEmail, from, to, currency, filters, reportOpts);
     case "purchase-tax":
-      return buildPurchaseTax(ownerEmail, from, to, currency, filters);
+      return buildPurchaseTax(ownerEmail, from, to, currency, filters, reportOpts);
     case "ar-aging":
-      return buildArAging(ownerEmail, currency, filters);
+      return buildArAging(ownerEmail, currency, filters, reportOpts);
     case "ap-aging":
-      return buildApAging(ownerEmail, currency, filters);
+      return buildApAging(ownerEmail, currency, filters, reportOpts);
     case "cash-receipts":
-      return buildCashReceipts(ownerEmail, from, to, currency);
+      return buildCashReceipts(ownerEmail, from, to, currency, reportOpts);
     default:
       throw new Error("Unknown report");
   }
@@ -102,7 +287,7 @@ async function loadPurchaseOrders(ownerEmail) {
     .lean();
 }
 
-async function buildJobsPipeline(ownerEmail, from, to, currency, filters) {
+async function buildJobsPipeline(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const typeFilter = String(filters.type || "").toUpperCase();
   const statusBucket = String(filters.status || "").trim();
@@ -123,6 +308,7 @@ async function buildJobsPipeline(ownerEmail, from, to, currency, filters) {
     "Grand total",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     if (!isPipelineSp(doc)) continue;
     const recordType = String(doc.recordType || "RFQ").toUpperCase();
@@ -131,7 +317,7 @@ async function buildJobsPipeline(ownerEmail, from, to, currency, filters) {
     const day = resolveDocDay(doc, ["dateCreated", "date", "createdAt"]);
     if (!dayInRange(day, from, to)) continue;
     const money = computeSpMoney(doc);
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.documentNumber || doc.quote || "").trim(),
       recordType,
       String(doc.companyName || "").trim(),
@@ -148,11 +334,10 @@ async function buildJobsPipeline(ownerEmail, from, to, currency, filters) {
       moneyCell(money.grandTotal),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Jobs pipeline", headers, rows);
-  return { buffer, filename: `jobs-pipeline-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Jobs pipeline", headers, rows, "jobs-pipeline", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
+async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const paymentFilter = String(filters.payment || "").toLowerCase();
   const headers = [
@@ -172,6 +357,7 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
     "Unpaid",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     const day = resolveDocDay(doc, ["dateCreated", "invoiceSubmitDate", "date", "createdAt"]);
@@ -179,7 +365,7 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
     const money = computeSpInvoiceMoney(doc);
     if (paymentFilter === "paid" && !money.isPaid) continue;
     if (paymentFilter === "unpaid" && money.isPaid) continue;
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
@@ -196,11 +382,10 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters) {
       moneyCell(money.unpaid),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Invoices AR", headers, rows);
-  return { buffer, filename: `invoices-ar-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Invoices AR", headers, rows, "invoices-ar", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildPurchaseAp(ownerEmail, from, to, currency, filters) {
+async function buildPurchaseAp(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadPurchaseOrders(ownerEmail);
   const poTypeFilter = String(filters.poType || "").toLowerCase();
   const paymentFilter = String(filters.payment || "").trim();
@@ -220,6 +405,7 @@ async function buildPurchaseAp(ownerEmail, from, to, currency, filters) {
     "Last payment date",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     const day = resolveDocDay(doc, ["poCutDate", "createdAt"]);
     if (!dayInRange(day, from, to)) continue;
@@ -227,7 +413,7 @@ async function buildPurchaseAp(ownerEmail, from, to, currency, filters) {
     const money = computePoMoney(doc);
     if (paymentFilter && money.paymentStatus !== paymentFilter) continue;
     if (receivingFilter && money.poStatus !== receivingFilter) continue;
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.poNumber || "").trim(),
       money.poTypeLabel,
       String(doc.vendorName || "").trim(),
@@ -242,11 +428,10 @@ async function buildPurchaseAp(ownerEmail, from, to, currency, filters) {
       formatReportDate(money.latestPaymentDate, currency),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Purchase AP", headers, rows);
-  return { buffer, filename: `purchase-ap-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Purchase AP", headers, rows, "purchase-ap", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildVendorSpend(ownerEmail, from, to, filters) {
+async function buildVendorSpend(ownerEmail, from, to, filters, reportOpts = {}) {
   const docs = await loadPurchaseOrders(ownerEmail);
   const poTypeFilter = String(filters.poType || "").toLowerCase();
   const paymentFilter = String(filters.payment || "").trim();
@@ -281,11 +466,10 @@ async function buildVendorSpend(ownerEmail, from, to, filters) {
       moneyCell(r.paid),
       moneyCell(r.unpaid),
     ]);
-  const buffer = await buildSimpleReportWorkbook("Vendor spend", headers, rows);
-  return { buffer, filename: `vendor-spend-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Vendor spend", headers, rows, "vendor-spend", reportOpts);
 }
 
-async function buildInventoryStock(ownerEmail, filters) {
+async function buildInventoryStock(ownerEmail, filters, reportOpts = {}) {
   const docs = await InventoryItem.find({ createdByEmail: ownerEmail })
     .sort({ name: 1 })
     .limit(FETCH_LIMIT)
@@ -324,13 +508,12 @@ async function buildInventoryStock(ownerEmail, filters) {
       boolLabel(low),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Inventory stock", headers, rows);
-  return { buffer, filename: `inventory-stock-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Inventory stock", headers, rows, "inventory-stock", reportOpts);
 }
 
-async function buildCustomers(ownerEmail, filters) {
+async function buildCustomers(ownerEmail, filters, reportOpts = {}) {
   const docs = await Customer.find({ createdByEmail: ownerEmail })
-    .sort({ companyName: 1 })
+    .sort({ createdAt: -1 })
     .limit(FETCH_LIMIT)
     .lean();
   const taxFilter = String(filters.taxExempt || "").toLowerCase();
@@ -345,13 +528,15 @@ async function buildCustomers(ownerEmail, filters) {
     "Tax exempt",
     "Tax %",
     "EIN",
+    "Created",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     const exempt = !!doc.taxExempt;
     if (taxFilter === "yes" && !exempt) continue;
     if (taxFilter === "no" && exempt) continue;
-    rows.push([
+    pushReportRow(rows, sortKeys, doc.createdAt, [
       String(doc.companyName || "").trim(),
       String(doc.primaryContactName || "").trim(),
       String(doc.phone || "").trim(),
@@ -362,13 +547,17 @@ async function buildCustomers(ownerEmail, filters) {
       boolLabel(exempt),
       String(doc.taxPercent ?? "0").trim(),
       String(doc.ein || "").trim(),
+      formatReportDate(doc.createdAt, "USD"),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Customers", headers, rows);
-  return { buffer, filename: `customers-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Customers", headers, rows, "customers", {
+    ...reportOpts,
+    rowSortKeys: sortKeys,
+    defaultSortColumn: 10,
+  });
 }
 
-async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
+async function buildSalesCommissions(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const [serviceProposals, salesPeople] = await Promise.all([
     SimpleServiceProposal.find({ createdByEmail: ownerEmail })
       .select("_id documentNumber quote companyName recordType status")
@@ -382,12 +571,13 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
   }
   const simpleQuoteIds = Array.from(spById.keys());
   if (simpleQuoteIds.length === 0) {
-    const buffer = await buildSimpleReportWorkbook(
+    return finalizeReport(
       "Sales commissions",
       ["Job #", "Customer", "Sales person", "Amount", "Status", "Paid date", "Notes", "Created"],
-      []
+      [],
+      "sales-commissions",
+      reportOpts
     );
-    return { buffer, filename: `sales-commissions-${fileStamp()}.xlsx`, rowCount: 0 };
   }
 
   const commissions = await SalesCommission.find({
@@ -415,6 +605,7 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
     "Created",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of commissions) {
     const quoteId = String(doc.quoteId || "").trim();
     const linkedSp = spById.get(quoteId);
@@ -431,7 +622,7 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
       String(linkedSp.documentNumber || linkedSp.quote || "").trim() ||
       String(doc.jobNumber || doc.rfqNumber || "").trim();
 
-    rows.push([
+    pushReportRow(rows, sortKeys, doc.createdAt, [
       jobNumber,
       String(linkedSp.companyName || "").trim(),
       nameById[String(doc.salesPersonId)] || "",
@@ -442,11 +633,10 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters) {
       formatReportDate(doc.createdAt, currency),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Sales commissions", headers, rows);
-  return { buffer, filename: `sales-commissions-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Sales commissions", headers, rows, "sales-commissions", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildSalesTax(ownerEmail, from, to, currency, filters) {
+async function buildSalesTax(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const collectionFilter = String(filters.collection || "").toLowerCase();
   const headers = [
@@ -462,6 +652,7 @@ async function buildSalesTax(ownerEmail, from, to, currency, filters) {
     "Tax status",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     if (doc.customerTaxExempt !== false) continue;
@@ -473,7 +664,7 @@ async function buildSalesTax(ownerEmail, from, to, currency, filters) {
     if (collectionFilter === "collected" && !money.isPaid) continue;
     if (collectionFilter === "outstanding" && money.isPaid) continue;
     const taxPct = parseMoneyInput(doc.taxPercent);
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
@@ -486,11 +677,10 @@ async function buildSalesTax(ownerEmail, from, to, currency, filters) {
       taxStatus,
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Sales tax", headers, rows);
-  return { buffer, filename: `sales-tax-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Sales tax", headers, rows, "sales-tax", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildPurchaseTax(ownerEmail, from, to, currency, filters) {
+async function buildPurchaseTax(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadPurchaseOrders(ownerEmail);
   const poTypeFilter = String(filters.poType || "").toLowerCase();
   const headers = [
@@ -505,13 +695,14 @@ async function buildPurchaseTax(ownerEmail, from, to, currency, filters) {
     "Payment status",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     const day = resolveDocDay(doc, ["poCutDate", "createdAt"]);
     if (!dayInRange(day, from, to)) continue;
     if (poTypeFilter && resolveSimplePoType(doc) !== poTypeFilter) continue;
     const money = computePoMoney(doc);
     if (money.taxAmount <= 0) continue;
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.poNumber || "").trim(),
       money.poTypeLabel,
       String(doc.vendorName || "").trim(),
@@ -523,11 +714,10 @@ async function buildPurchaseTax(ownerEmail, from, to, currency, filters) {
       money.paymentStatus,
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Purchase tax", headers, rows);
-  return { buffer, filename: `purchase-tax-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Purchase tax", headers, rows, "purchase-tax", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildArAging(ownerEmail, currency, filters) {
+async function buildArAging(ownerEmail, currency, filters, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const bucketFilter = String(filters.bucket || "").trim();
   const headers = [
@@ -544,6 +734,7 @@ async function buildArAging(ownerEmail, currency, filters) {
     "Tax",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     const money = computeSpInvoiceMoney(doc);
@@ -551,7 +742,7 @@ async function buildArAging(ownerEmail, currency, filters) {
     const aging = agingFromDueDate(doc.dueDate);
     if (bucketFilter && aging.bucket !== bucketFilter) continue;
     const day = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
@@ -565,16 +756,10 @@ async function buildArAging(ownerEmail, currency, filters) {
       moneyCell(money.taxAmount),
     ]);
   }
-  rows.sort((a, b) => {
-    const da = typeof a[6] === "number" ? a[6] : -99999;
-    const db = typeof b[6] === "number" ? b[6] : -99999;
-    return db - da;
-  });
-  const buffer = await buildSimpleReportWorkbook("AR aging", headers, rows);
-  return { buffer, filename: `ar-aging-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("AR aging", headers, rows, "ar-aging", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildApAging(ownerEmail, currency, filters) {
+async function buildApAging(ownerEmail, currency, filters, reportOpts = {}) {
   const docs = await loadPurchaseOrders(ownerEmail);
   const bucketFilter = String(filters.bucket || "").trim();
   const headers = [
@@ -591,13 +776,14 @@ async function buildApAging(ownerEmail, currency, filters) {
     "Payment status",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     const money = computePoMoney(doc);
     if (money.unpaid <= 0) continue;
     const aging = agingFromDueDate(doc.dueDate);
     if (bucketFilter && aging.bucket !== bucketFilter) continue;
     const day = resolveDocDay(doc, ["poCutDate", "createdAt"]);
-    rows.push([
+    pushReportRow(rows, sortKeys, day, [
       String(doc.poNumber || "").trim(),
       money.poTypeLabel,
       String(doc.vendorName || "").trim(),
@@ -611,16 +797,10 @@ async function buildApAging(ownerEmail, currency, filters) {
       money.paymentStatus,
     ]);
   }
-  rows.sort((a, b) => {
-    const da = typeof a[6] === "number" ? a[6] : -99999;
-    const db = typeof b[6] === "number" ? b[6] : -99999;
-    return db - da;
-  });
-  const buffer = await buildSimpleReportWorkbook("AP aging", headers, rows);
-  return { buffer, filename: `ap-aging-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("AP aging", headers, rows, "ap-aging", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
-async function buildCashReceipts(ownerEmail, from, to, currency) {
+async function buildCashReceipts(ownerEmail, from, to, currency, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const headers = [
     "Invoice #",
@@ -633,6 +813,7 @@ async function buildCashReceipts(ownerEmail, from, to, currency) {
     "Amount received",
   ];
   const rows = [];
+  const sortKeys = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     const invoiceDay = resolveDocDay(doc, ["invoiceSubmitDate", "dateCreated", "date", "createdAt"]);
@@ -645,7 +826,7 @@ async function buildCashReceipts(ownerEmail, from, to, currency) {
         if (amount <= 0) continue;
         const paidDay = toYmd(payment.date);
         if (!dayInRange(paidDay, from, to)) continue;
-        rows.push([
+        pushReportRow(rows, sortKeys, paidDay, [
           invoiceNo,
           customer,
           formatReportDate(paidDay, currency),
@@ -665,7 +846,7 @@ async function buildCashReceipts(ownerEmail, from, to, currency) {
     if (money.grandTotal <= 0) continue;
     const paidDay = toYmd(doc.invoicePaidDate) || resolveDocDay(doc, ["invoicePaidDate", "updatedAt"]);
     if (!dayInRange(paidDay, from, to)) continue;
-    rows.push([
+    pushReportRow(rows, sortKeys, paidDay, [
       invoiceNo,
       customer,
       formatReportDate(paidDay, currency),
@@ -676,8 +857,7 @@ async function buildCashReceipts(ownerEmail, from, to, currency) {
       moneyCell(money.grandTotal),
     ]);
   }
-  const buffer = await buildSimpleReportWorkbook("Cash receipts", headers, rows);
-  return { buffer, filename: `cash-receipts-${fileStamp()}.xlsx`, rowCount: rows.length };
+  return finalizeReport("Cash receipts", headers, rows, "cash-receipts", { ...reportOpts, rowSortKeys: sortKeys });
 }
 
 function fileStamp() {

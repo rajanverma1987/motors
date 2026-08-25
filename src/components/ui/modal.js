@@ -43,6 +43,8 @@ export default function Modal({
   actions,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
+  /** Optional class on the scrollable body wrapper. */
+  bodyClassName = "",
   /** @deprecated Ignored when ModalStackProvider is active — stack order sets z-index. */
   zIndex: zIndexOverride,
   /** Optional id on the outer portal wrapper (e.g. for print CSS targeting). */
@@ -272,7 +274,7 @@ export default function Modal({
             )}
           </div>
         )}
-        <div className="flex-1 min-h-0 w-full min-w-0 overflow-auto p-4">{children}</div>
+        <div className={`flex-1 min-h-0 w-full min-w-0 overflow-auto p-4 ${bodyClassName}`.trim()}>{children}</div>
       </div>
     </div>
   );
