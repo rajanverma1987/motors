@@ -16,6 +16,8 @@ import Button from "@/components/ui/button";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
+import CustomerViewModal from "@/components/dashboard/customer-view-modal";
+import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import {
@@ -88,6 +90,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const { settings: mergedSettings } = useUserSettings();
   const searchParams = useSearchParams();
   const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
+  const jobView = useSimpleJobView();
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +106,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [modalMode, setModalMode] = useState("view");
   const [editingPo, setEditingPo] = useState(null);
   const [openVendorId, setOpenVendorId] = useState(null);
+  const [openCustomerId, setOpenCustomerId] = useState(null);
   const lastHandledCreateNonceRef = useRef(createNonce);
 
   const reload = useCallback(async () => {
@@ -345,7 +349,22 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortable: false,
         render: (v, row) => {
           if (resolveSimplePoType(row) !== SIMPLE_PO_TYPE_JOB) return "—";
-          return String(v || "").trim() || "—";
+          const customerId = String(row.customerId || "").trim();
+          const name = String(v || "").trim() || "—";
+          if (!customerId || name === "—") return name;
+          return (
+            <button
+              type="button"
+              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenCustomerId(customerId);
+              }}
+              title="Open customer"
+            >
+              {name}
+            </button>
+          );
         },
       },
       {
@@ -365,7 +384,24 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         key: "jobNumber",
         label: "Job#",
         sortable: true,
-        render: (v) => v || "—",
+        render: (v, row) => {
+          const jobLabel = String(v || "").trim() || "—";
+          const proposalId = String(row.serviceProposalId || "").trim();
+          if (!proposalId || jobLabel === "—") return jobLabel;
+          return (
+            <button
+              type="button"
+              className="font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              onClick={(e) => {
+                e.stopPropagation();
+                jobView?.openJob?.(proposalId);
+              }}
+              title="Open service proposal"
+            >
+              {jobLabel}
+            </button>
+          );
+        },
       },
       {
         key: "vendorName",
@@ -519,7 +555,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ),
       },
     ],
-    [formatDate, handleDelete, mergedSettings]
+    [formatDate, handleDelete, jobView, mergedSettings]
   );
 
   const isCreate = modalMode === "create";
@@ -636,6 +672,28 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         onOpenPo={(po) => {
           setOpenVendorId(null);
           openEdit(po);
+        }}
+      />
+
+      <CustomerViewModal
+        open={!!openCustomerId}
+        customerId={openCustomerId}
+        onClose={() => setOpenCustomerId(null)}
+        zIndex={120}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || openCustomerId || "").trim();
+          if (!cid) return;
+          const nextName =
+            String(customer?.companyName || "").trim() ||
+            String(customer?.primaryContactName || "").trim();
+          if (!nextName) return;
+          setRows((prev) =>
+            prev.map((r) => {
+              if (String(r.customerId || "") !== cid) return r;
+              return { ...r, customerName: nextName };
+            })
+          );
         }}
       />
     </div>

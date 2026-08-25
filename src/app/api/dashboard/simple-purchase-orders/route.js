@@ -17,7 +17,7 @@ import {
 } from "@/lib/simple-purchase-order-form";
 
 /**
- * Attach customerName from the linked Job (service proposal) for Job POs only.
+ * Attach customerName / customerId (and resolve serviceProposalId) from the linked Job.
  * @param {string} email
  * @param {Array<Record<string, unknown>>} items
  */
@@ -37,7 +37,7 @@ async function attachJobCustomerNames(email, items) {
   const uniqueIds = [...new Set(proposalIds)];
   const uniqueJobs = [...new Set(jobNumbers)];
   if (uniqueIds.length === 0 && uniqueJobs.length === 0) {
-    return items.map((item) => ({ ...item, customerName: "" }));
+    return items.map((item) => ({ ...item, customerName: "", customerId: "" }));
   }
 
   const or = [];
@@ -48,28 +48,35 @@ async function attachJobCustomerNames(email, items) {
     createdByEmail: email,
     $or: or,
   })
-    .select({ companyName: 1, documentNumber: 1 })
+    .select({ companyName: 1, documentNumber: 1, customerId: 1 })
     .lean();
 
-  const nameById = new Map();
-  const nameByJob = new Map();
+  const byId = new Map();
+  const byJob = new Map();
   for (const p of proposals || []) {
-    const name = String(p.companyName || "").trim();
-    if (!name) continue;
-    nameById.set(String(p._id), name);
+    const meta = {
+      id: String(p._id),
+      companyName: String(p.companyName || "").trim(),
+      customerId: String(p.customerId || "").trim(),
+    };
+    byId.set(meta.id, meta);
     const docNum = String(p.documentNumber || "").trim();
-    if (docNum) nameByJob.set(docNum, name);
+    if (docNum) byJob.set(docNum, meta);
   }
 
   return items.map((item) => {
     if (resolveSimplePoType(item) !== SIMPLE_PO_TYPE_JOB) {
-      return { ...item, customerName: "" };
+      return { ...item, customerName: "", customerId: "" };
     }
     const sid = String(item.serviceProposalId || "").trim();
     const job = String(item.jobNumber || "").trim();
-    const customerName =
-      (sid && nameById.get(sid)) || (job && nameByJob.get(job)) || "";
-    return { ...item, customerName };
+    const hit = (sid && byId.get(sid)) || (job && byJob.get(job)) || null;
+    return {
+      ...item,
+      customerName: hit?.companyName || "",
+      customerId: hit?.customerId || "",
+      serviceProposalId: sid || hit?.id || "",
+    };
   });
 }
 

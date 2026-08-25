@@ -1095,6 +1095,7 @@ export default function ServiceProposalFormModal({
       form={FORM_ID}
       variant="primary"
       size="sm"
+      className="text-xs"
       disabled={saving || copying || loadingRecord}
     >
       {saving ? "Saving…" : "Save"}
@@ -1226,9 +1227,11 @@ export default function ServiceProposalFormModal({
             </div>
           </div>
 
-          {/* Three columns: customer/motor | meta + status | notes + PO lines (wider right) */}
+          {/* Columns: customer/motor | meta + status | notes + PO lines.
+              Tablet portrait (md): two side-by-side, third full-width below.
+              Desktop (lg+): three columns with wider right. */}
           <div
-            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)] lg:items-stretch lg:min-h-[min(28rem,42vh)]"
+            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)] lg:min-h-[min(28rem,42vh)]"
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
@@ -1556,8 +1559,8 @@ export default function ServiceProposalFormModal({
               ) : null}
             </div>
 
-            {/* Column 3 — notes + purchase orders */}
-            <div className="flex min-h-0 min-w-0 flex-col gap-2">
+            {/* Column 3 — notes + purchase orders (full width under the first two on tablet) */}
+            <div className="flex min-h-0 min-w-0 flex-col gap-2 md:col-span-2 lg:col-span-1">
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-xs font-bold text-title">Internal Notes</span>
                 <SimpleDoubleClickTextEditTextarea

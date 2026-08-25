@@ -17,7 +17,7 @@ export const SIMPLE_FIELD_TEXTAREA =
 
 /** Header / toolbar buttons on Simple modals. */
 export const SIMPLE_TOOLBAR_BTN =
-  "h-9 shrink-0 rounded-none px-2.5 py-2 text-sm font-semibold";
+  "h-9 shrink-0 rounded-none px-2.5 py-2 text-xs font-semibold";
 
 /** Editable cells in line-item grids (quotes, PO lines). */
 export const SIMPLE_CELL_INPUT =
