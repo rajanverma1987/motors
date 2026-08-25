@@ -15,6 +15,7 @@ import {
 } from "@/lib/all-jobs-date-filter";
 import { useFormatDate } from "@/contexts/user-settings-context";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
+import { nativeShareFile } from "@/lib/mobile-native-share";
 
 const CATEGORY_ORDER = ["Accounting", "Operations", "Sales"];
 
@@ -114,6 +115,54 @@ export default function ReportsPanel() {
       }
     },
     [alert, buildReportParams, busyId]
+  );
+
+  const shareReportPdf = useCallback(
+    async (reportId) => {
+      const id = String(reportId || "").trim();
+      if (!id || busyId) return;
+      setBusyId(id);
+      setBusyAction("share");
+      try {
+        const params = buildReportParams(id);
+        if (viewSortBy != null && Number.isFinite(Number(viewSortBy))) {
+          params.set("sortBy", String(Number(viewSortBy)));
+        }
+        if (viewSortDir === "asc" || viewSortDir === "desc") {
+          params.set("sortDir", viewSortDir);
+        }
+        const res = await fetch(`/api/dashboard/simple-reports/pdf?${params.toString()}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || "Failed to build PDF");
+        }
+        const blob = await res.blob();
+        const disposition = res.headers.get("Content-Disposition") || "";
+        const match = /filename="([^"]+)"/i.exec(disposition);
+        const filename = match?.[1] || `${id}.pdf`;
+        const catalog = SIMPLE_REPORT_CATALOG.find((r) => r.id === id);
+        await nativeShareFile({
+          blob,
+          filename,
+          title: catalog?.title || "Report",
+          text: `${catalog?.title || "Report"} PDF from IQMotorBase`,
+        });
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+        await alert({
+          title: "Share failed",
+          message: err?.message || "Could not share this report.",
+          variant: "danger",
+        });
+      } finally {
+        setBusyId("");
+        setBusyAction("");
+      }
+    },
+    [alert, buildReportParams, busyId, viewSortBy, viewSortDir]
   );
 
   const loadViewPage = useCallback(
@@ -372,7 +421,9 @@ export default function ReportsPanel() {
         onPageChange={handleViewPageChange}
         onSortChange={handleViewSortChange}
         downloading={busyId === viewReportId && busyAction === "download"}
+        sharing={busyId === viewReportId && busyAction === "share"}
         onDownload={viewReportId ? () => downloadReport(viewReportId) : undefined}
+        onShare={viewReportId ? () => shareReportPdf(viewReportId) : undefined}
       />
     </div>
   );

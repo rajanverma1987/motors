@@ -25,6 +25,7 @@ import {
   toYmd,
 } from "@/lib/simple-reports/helpers";
 import { buildSimpleReportWorkbook, isReportAmountHeader } from "@/lib/simple-reports/workbook";
+import { buildSimpleReportPdfBuffer } from "@/lib/simple-reports/pdf";
 import { isValidSimpleReportId } from "@/lib/simple-reports/catalog";
 import { normalizeInvoicePayments, parseMoneyInput } from "@/lib/simple-service-proposal-form";
 
@@ -97,13 +98,14 @@ function sumAmountColumns(rows, amountColumns, colCount) {
  * @param {string} filenameBase
  * @param {{
  *   amountColumns?: number[],
- *   format?: "xlsx"|"json",
+ *   format?: "xlsx"|"json"|"pdf",
  *   page?: number,
  *   pageSize?: number,
  *   sortBy?: number|string,
  *   sortDir?: string,
  *   rowSortKeys?: string[],
  *   defaultSortColumn?: number,
+ *   subtitle?: string,
  * }} [options]
  */
 async function finalizeReport(sheetName, headers, rows, filenameBase, options = {}) {
@@ -114,7 +116,7 @@ async function finalizeReport(sheetName, headers, rows, filenameBase, options = 
       ? options.amountColumns.filter((i) => Number.isInteger(i) && i >= 0 && i < safeHeaders.length)
       : safeHeaders.map((h, i) => (isReportAmountHeader(h) ? i : -1)).filter((i) => i >= 0);
 
-  const filename = `${filenameBase}-${fileStamp()}.xlsx`;
+  const stamp = fileStamp();
   const tableRows = safeRows.map((row) =>
     safeHeaders.map((_, idx) => {
       const cell = row?.[idx];
@@ -177,7 +179,25 @@ async function finalizeReport(sheetName, headers, rows, filenameBase, options = 
       sortBy,
       sortDir,
       defaultSortColumn,
-      filename,
+      filename: `${filenameBase}-${stamp}.xlsx`,
+    };
+  }
+
+  if (options.format === "pdf") {
+    const buffer = await buildSimpleReportPdfBuffer(sheetName, safeHeaders, sortedRows, {
+      amountColumns,
+      amountTotals,
+      subtitle: options.subtitle,
+    });
+    return {
+      buffer,
+      sheetName: String(sheetName || "Report"),
+      headers: safeHeaders,
+      rows: sortedRows,
+      amountColumns,
+      amountTotals,
+      rowCount: sortedRows.length,
+      filename: `${filenameBase}-${stamp}.pdf`,
     };
   }
 
@@ -192,7 +212,7 @@ async function finalizeReport(sheetName, headers, rows, filenameBase, options = 
     amountColumns,
     amountTotals,
     rowCount: sortedRows.length,
-    filename,
+    filename: `${filenameBase}-${stamp}.xlsx`,
   };
 }
 
@@ -209,11 +229,12 @@ function pushReportRow(rows, sortKeys, sortDay, cells) {
  *   from?: string,
  *   to?: string,
  *   filters?: Record<string, string>,
- *   format?: "xlsx"|"json",
+ *   format?: "xlsx"|"json"|"pdf",
  *   page?: number,
  *   pageSize?: number,
  *   sortBy?: number|string,
  *   sortDir?: string,
+ *   subtitle?: string,
  * }} opts
  */
 export async function buildSimpleReportExport(opts) {
@@ -227,7 +248,7 @@ export async function buildSimpleReportExport(opts) {
   const from = String(opts.from || "").trim().slice(0, 10);
   const to = String(opts.to || "").trim().slice(0, 10);
   const filters = opts.filters && typeof opts.filters === "object" ? opts.filters : {};
-  const format = opts.format === "json" ? "json" : "xlsx";
+  const format = opts.format === "json" || opts.format === "pdf" ? opts.format : "xlsx";
   const currency = await loadOwnerCurrency(ownerEmail);
   const reportOpts = {
     format,
@@ -235,6 +256,7 @@ export async function buildSimpleReportExport(opts) {
     pageSize: opts.pageSize,
     sortBy: opts.sortBy,
     sortDir: opts.sortDir,
+    subtitle: opts.subtitle,
   };
 
   switch (report) {

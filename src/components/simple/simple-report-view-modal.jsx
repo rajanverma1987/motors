@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiChevronDown, FiChevronUp, FiDownload } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiDownload, FiShare2 } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { SIMPLE_TOOLBAR_BTN } from "@/lib/simple-typography";
+import {
+  canNativeShareFile,
+  isIosOrAndroidDevice,
+} from "@/lib/mobile-native-share";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
@@ -21,6 +25,7 @@ function formatCell(value, isAmount) {
 /**
  * Modal preview of a Simple report table (same columns/rows as Excel export).
  * Supports server-side pagination + column sorting.
+ * Share (PDF via native share sheet) shows only on iOS / Android.
  */
 export default function SimpleReportViewModal({
   open,
@@ -43,13 +48,21 @@ export default function SimpleReportViewModal({
   onSortChange,
   onDownload,
   downloading = false,
+  onShare,
+  sharing = false,
 }) {
   const amountSet = useMemo(() => new Set(amountColumns || []), [amountColumns]);
   const [jumpPage, setJumpPage] = useState(String(page || 1));
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     setJumpPage(String(page || 1));
   }, [page]);
+
+  useEffect(() => {
+    if (!open) return;
+    setShowShare(isIosOrAndroidDevice() && canNativeShareFile() && typeof onShare === "function");
+  }, [open, onShare]);
 
   const subtotals = useMemo(() => {
     if (Array.isArray(amountTotals) && amountTotals.length === (headers || []).length) {
@@ -72,13 +85,27 @@ export default function SimpleReportViewModal({
 
   const headerActions = (
     <div className="flex flex-wrap items-center justify-end gap-2">
+      {showShare ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className={SIMPLE_TOOLBAR_BTN}
+          disabled={loading || sharing || downloading || Boolean(error)}
+          onClick={onShare}
+          title="Share PDF"
+        >
+          <FiShare2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {sharing ? "…" : "Share"}
+        </Button>
+      ) : null}
       {typeof onDownload === "function" ? (
         <Button
           type="button"
           variant="primary"
           size="sm"
           className={SIMPLE_TOOLBAR_BTN}
-          disabled={loading || downloading}
+          disabled={loading || downloading || sharing}
           onClick={onDownload}
         >
           <FiDownload className="h-3.5 w-3.5 shrink-0" aria-hidden />
