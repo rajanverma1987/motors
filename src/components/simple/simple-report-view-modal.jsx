@@ -6,8 +6,7 @@ import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { SIMPLE_TOOLBAR_BTN } from "@/lib/simple-typography";
 import {
-  canNativeShareFile,
-  isIosOrAndroidDevice,
+  shouldShowReportShareButton,
 } from "@/lib/mobile-native-share";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
@@ -60,8 +59,7 @@ export default function SimpleReportViewModal({
   }, [page]);
 
   useEffect(() => {
-    if (!open) return;
-    setShowShare(isIosOrAndroidDevice() && canNativeShareFile() && typeof onShare === "function");
+    setShowShare(shouldShowReportShareButton() && typeof onShare === "function");
   }, [open, onShare]);
 
   const subtotals = useMemo(() => {
@@ -84,7 +82,20 @@ export default function SimpleReportViewModal({
   const endItem = Math.min(page * pageSize, rowCount);
 
   const headerActions = (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div className="flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+      {typeof onDownload === "function" ? (
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          className={SIMPLE_TOOLBAR_BTN}
+          disabled={loading || downloading || sharing}
+          onClick={onDownload}
+        >
+          <FiDownload className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {downloading ? "…" : "Excel"}
+        </Button>
+      ) : null}
       {showShare ? (
         <Button
           type="button"
@@ -99,20 +110,7 @@ export default function SimpleReportViewModal({
           {sharing ? "…" : "Share"}
         </Button>
       ) : null}
-      {typeof onDownload === "function" ? (
-        <Button
-          type="button"
-          variant="primary"
-          size="sm"
-          className={SIMPLE_TOOLBAR_BTN}
-          disabled={loading || downloading || sharing}
-          onClick={onDownload}
-        >
-          <FiDownload className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          {downloading ? "…" : "Excel"}
-        </Button>
-      ) : null}
-      <Button type="button" variant="outline" size="sm" className="text-xs" onClick={onClose}>
+      <Button type="button" variant="outline" size="sm" className="text-xs shrink-0" onClick={onClose}>
         Close
       </Button>
     </div>
@@ -141,6 +139,20 @@ export default function SimpleReportViewModal({
                     rowCount === 0 ? "0 rows" : `${startItem}–${endItem} of ${rowCount} rows`
                   }`}
           </p>
+          {showShare ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={SIMPLE_TOOLBAR_BTN}
+              disabled={loading || sharing || downloading || Boolean(error)}
+              onClick={onShare}
+              title="Share PDF via apps on this device"
+            >
+              <FiShare2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              {sharing ? "Preparing…" : "Share PDF"}
+            </Button>
+          ) : null}
         </div>
 
         {loading ? (
