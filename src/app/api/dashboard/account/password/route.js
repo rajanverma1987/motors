@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import User from "@/models/User";
 import { getPortalUserFromRequest, hashPassword, verifyPassword } from "@/lib/auth-portal";
 import { LIMITS } from "@/lib/validation";
+import { getPasswordPolicyError } from "@/lib/password-policy";
 
 /**
  * POST: Change portal password (Settings → Account → Password).
@@ -26,6 +27,10 @@ export async function POST(request) {
         { error: `New password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.` },
         { status: 400 }
       );
+    }
+    const passwordError = getPasswordPolicyError(newPassword);
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
     }
     if (currentPassword === newPassword) {
       return NextResponse.json({ error: "New password must be different from the current password." }, { status: 400 });

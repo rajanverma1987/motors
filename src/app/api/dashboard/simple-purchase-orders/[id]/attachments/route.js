@@ -7,6 +7,7 @@ import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clampString, LIMITS } from "@/lib/validation";
+import { readValidatedUploadFile, buildSafeUploadFileName } from "@/lib/upload-security";
 import { isValidSimplePortalId, serializeSimplePortalDoc } from "@/lib/simple-portal-mongo";
 
 const UPLOAD_ROOT = "public/uploads/simple-purchase-orders";
@@ -48,7 +49,7 @@ function resolveOwnedFilePath(url, ownerKey, recordId) {
 
 /** Upload a vendor document for a saved Simple purchase order. */
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-po-upload", 30);
+  const { allowed } = await checkRateLimit(request, "simple-po-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -70,8 +71,11 @@ export async function POST(request, context) {
     }
     const documentName = clampString(String(formData.get("documentName") ?? ""), LIMITS.name?.max || 200);
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
+    const validated = await readValidatedUploadFile(file, "document");
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
+    if (validated.buffer.length > MAX_SIZE_MB * 1024 * 1024) {
       return NextResponse.json({ error: `File exceeds ${MAX_SIZE_MB}MB` }, { status: 400 });
     }
 
@@ -90,10 +94,9 @@ export async function POST(request, context) {
     const dir = path.join(process.cwd(), UPLOAD_ROOT, ownerKey, recordId);
     mkdirSync(dir, { recursive: true });
 
-    const ext = path.extname(file.name || "") || "";
-    const safeName = `${Date.now()}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const safeName = buildSafeUploadFileName(0, validated.ext);
     const filePath = path.join(dir, safeName);
-    writeFileSync(filePath, buffer);
+    writeFileSync(filePath, validated.buffer);
 
     const url = `/uploads/simple-purchase-orders/${ownerKey}/${recordId}/${safeName}`;
     const name = (documentName || file.name || safeName).trim() || safeName;
@@ -117,7 +120,7 @@ export async function POST(request, context) {
 
 /** Delete a vendor document for a saved Simple purchase order. */
 export async function DELETE(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-po-delete-attachment", 60);
+  const { allowed } = await checkRateLimit(request, "simple-po-delete-attachment", 60);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

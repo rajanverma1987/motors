@@ -6,6 +6,7 @@ import Listing from "@/models/Listing";
 import { hashPassword, createPortalToken, setPortalSessionCookies } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { getPasswordPolicyError } from "@/lib/password-policy";
 import {
   applyListingOnlySubscriptionToShop,
   ensureShopSubscriptionOnRegister,
@@ -15,7 +16,7 @@ import { recordPortalLogin } from "@/lib/portal-login-audit";
 import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "register", 5);
+  const { allowed } = await checkRateLimit(request, "register", 5);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -36,9 +37,13 @@ export async function POST(request) {
     }
     if (password.length < LIMITS.password.min) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: `Password must be at least ${LIMITS.password.min} characters` },
         { status: 400 }
       );
+    }
+    const passwordError = getPasswordPolicyError(password);
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
     }
     if (password.length > LIMITS.password.max) {
       return NextResponse.json(

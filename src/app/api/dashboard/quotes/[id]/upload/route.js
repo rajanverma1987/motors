@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { connectDB } from "@/lib/db";
 import Quote from "@/models/Quote";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { saveEntityUploadFiles } from "@/lib/safe-buffer-upload";
 
 const UPLOAD_DIR = "public/uploads/quotes";
 const MAX_FILES = 20;
@@ -17,7 +17,7 @@ function getParams(context) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "quotes-upload", 30);
+  const { allowed } = await checkRateLimit(request, "quotes-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -42,39 +42,20 @@ export async function POST(request, context) {
 
     const formData = await request.formData();
     const files = formData.getAll("files").filter((f) => f && typeof f.arrayBuffer === "function");
-    if (files.length === 0) {
-      return NextResponse.json({ error: "No files provided" }, { status: 400 });
-    }
-    if (files.length > MAX_FILES) {
-      return NextResponse.json(
-        { error: `Maximum ${MAX_FILES} files per upload` },
-        { status: 400 }
-      );
-    }
-
     const dir = path.join(process.cwd(), UPLOAD_DIR, id);
-    mkdirSync(dir, { recursive: true });
+    const uploadResult = await saveEntityUploadFiles(files, {
+      profile: "document",
+      maxSizeMb: MAX_SIZE_MB,
+      maxFiles: MAX_FILES,
+      dir,
+      buildUrl: (safeName) => `/uploads/quotes/${id}/${safeName}`,
+    });
+    if (!uploadResult.ok) {
+      return NextResponse.json({ error: uploadResult.error }, { status: uploadResult.status || 400 });
+    }
 
     const attachments = Array.isArray(doc.attachments) ? doc.attachments.map((a) => ({ ...a })) : [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const buffer = Buffer.from(await file.arrayBuffer());
-      if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
-        return NextResponse.json(
-          { error: `File ${file.name} exceeds ${MAX_SIZE_MB}MB` },
-          { status: 400 }
-        );
-      }
-      const ext = path.extname(file.name) || "";
-      const safeName = `${Date.now()}-${i}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = path.join(dir, safeName);
-      writeFileSync(filePath, buffer);
-      const url = `/uploads/quotes/${id}/${safeName}`;
-      const name = (file.name || safeName).trim() || safeName;
-      attachments.push({ url, name });
-    }
-
+    attachments.push(...uploadResult.attachments);
     doc.attachments = attachments.slice(-50);
     await doc.save();
 

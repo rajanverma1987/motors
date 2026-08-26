@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "contact-demo", 10);
+  const { allowed } = await checkRateLimit(request, "contact-demo", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

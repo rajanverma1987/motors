@@ -70,3 +70,39 @@ export function sanitizeIntegrationDoc(doc, cfg) {
   }
   return out;
 }
+
+/** Fields that must never be set through the public integration API. */
+const INTEGRATION_WRITE_BLOCKLIST = new Set([
+  "_id",
+  "id",
+  "__v",
+  "passwordHash",
+  "createdByEmail",
+  "shopOwnerEmail",
+  "email",
+  "portalToken",
+  "rejectionReason",
+  "reviewedBy",
+]);
+
+/**
+ * Strip dangerous / server-owned fields from integration write payloads.
+ * @param {Record<string, unknown>} body
+ * @param {{ ownerField: string, strip?: string[] }} cfg
+ * @param {string} ownerEmail
+ * @param {{ forUpdate?: boolean }} [options]
+ */
+export function buildIntegrationWritePayload(body, cfg, ownerEmail, options = {}) {
+  const src = body && typeof body === "object" ? body : {};
+  const payload = {};
+  for (const [key, value] of Object.entries(src)) {
+    if (INTEGRATION_WRITE_BLOCKLIST.has(key)) continue;
+    if ((cfg.strip || []).includes(key)) continue;
+    if (key === cfg.ownerField) continue;
+    payload[key] = value;
+  }
+  if (!options.forUpdate) {
+    payload[cfg.ownerField] = ownerEmail;
+  }
+  return payload;
+}

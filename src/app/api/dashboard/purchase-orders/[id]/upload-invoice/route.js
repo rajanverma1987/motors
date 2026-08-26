@@ -1,15 +1,14 @@
 import { NextResponse } from "next/server";
-import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
+import { mkdirSync, writeFileSync } from "fs";
 import { connectDB } from "@/lib/db";
 import PurchaseOrder from "@/models/PurchaseOrder";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readValidatedUploadFile } from "@/lib/upload-security";
 
 const UPLOAD_DIR = "public/uploads/purchase-orders";
 const MAX_SIZE_MB = 10;
-
-const ALLOWED_EXT = [".pdf", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".doc", ".docx", ".xls", ".xlsx"];
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -18,7 +17,7 @@ function getParams(context) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "po-upload-invoice", 20);
+  const { allowed } = await checkRateLimit(request, "po-upload-invoice", 20);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -47,19 +46,13 @@ export async function POST(request, context) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
+    const validated = await readValidatedUploadFile(file, "document");
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
+    if (validated.buffer.length > MAX_SIZE_MB * 1024 * 1024) {
       return NextResponse.json(
         { error: `File must be under ${MAX_SIZE_MB}MB` },
-        { status: 400 }
-      );
-    }
-
-    const originalName = (file.name || "").trim() || "invoice";
-    const ext = path.extname(originalName).toLowerCase() || ".pdf";
-    if (!ALLOWED_EXT.includes(ext)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Use PDF, image, or document (DOC, XLS)." },
         { status: 400 }
       );
     }
@@ -67,12 +60,11 @@ export async function POST(request, context) {
     const dir = path.join(process.cwd(), UPLOAD_DIR, id);
     mkdirSync(dir, { recursive: true });
 
-    const safeName = `${Date.now()}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filePath = path.join(dir, safeName);
-    writeFileSync(filePath, buffer);
+    const safeName = `${Date.now()}${validated.ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
+    writeFileSync(path.join(dir, safeName), validated.buffer);
 
     const url = `/uploads/purchase-orders/${id}/${safeName}`;
-    const name = originalName;
+    const name = (validated.name || safeName).trim() || safeName;
     return NextResponse.json({ ok: true, url, name });
   } catch (err) {
     console.error("PO upload invoice error:", err);

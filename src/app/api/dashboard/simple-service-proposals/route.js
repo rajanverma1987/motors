@@ -21,6 +21,10 @@ import {
   simpleSpSortField,
   statusSortRankExpression,
 } from "@/lib/simple-service-proposal-list-query";
+import {
+  assertSimplePortalJobNumberAvailable,
+  createSimpleServiceProposalWithUniqueJobNumber,
+} from "@/lib/simple-portal-job-numbers";
 
 function emptyInvoiceFinance() {
   return {
@@ -281,18 +285,34 @@ export async function POST(request) {
     const email = user.email.trim().toLowerCase();
     const body = await request.json().catch(() => ({}));
     const payload = sanitizeSimplePortalPayload(body);
-    const doc = await SimpleServiceProposal.create({
-      ...payload,
-      createdByEmail: email,
-      customerId: String(payload.customerId || "").trim(),
-      documentNumber: String(payload.documentNumber || payload.quote || "").trim(),
-      recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
-      status: String(payload.status || "").trim(),
-      jobStatus: String(payload.jobStatus || "").trim(),
-      dateCreated: payload.dateCreated ?? null,
-      date: payload.date ?? payload.dateCreated ?? null,
-      companyName: String(payload.companyName || "").trim(),
-    });
+    const mergedSettings = await loadMergedSettingsForEmail(email);
+    const requestedNumber = String(payload.documentNumber || payload.quote || "").trim();
+    if (requestedNumber) {
+      try {
+        await assertSimplePortalJobNumberAvailable(email, requestedNumber);
+      } catch (numErr) {
+        if (numErr?.code === "DUPLICATE_JOB_NUMBER") {
+          return NextResponse.json({ error: numErr.message }, { status: 409 });
+        }
+        throw numErr;
+      }
+    }
+
+    const doc = await createSimpleServiceProposalWithUniqueJobNumber(
+      {
+        ...payload,
+        createdByEmail: email,
+        customerId: String(payload.customerId || "").trim(),
+        recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
+        status: String(payload.status || "").trim(),
+        jobStatus: String(payload.jobStatus || "").trim(),
+        dateCreated: payload.dateCreated ?? null,
+        date: payload.date ?? payload.dateCreated ?? null,
+        companyName: String(payload.companyName || "").trim(),
+      },
+      email,
+      mergedSettings
+    );
     const item = serializeSimplePortalDoc(doc);
     try {
       await applySimpleServiceProposalInventoryLifecycle(email, item.id, null, doc);

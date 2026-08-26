@@ -67,7 +67,7 @@ function resolveOwnedFilePath(url, ownerKey, recordId, kind) {
 
 /** Upload an attachment onto motorReceiving or motorShipping on a saved Simple SP. */
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-sp-logistics-upload", 30);
+  const { allowed } = await checkRateLimit(request, "simple-sp-logistics-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -150,7 +150,7 @@ export async function POST(request, context) {
 
 /** Delete a receiving/shipping attachment file and remove it from the SP record. */
 export async function DELETE(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-sp-logistics-delete-attachment", 60);
+  const { allowed } = await checkRateLimit(request, "simple-sp-logistics-delete-attachment", 60);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

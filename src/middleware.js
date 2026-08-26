@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertSameOriginApiMutation } from "@/lib/api-origin-guard";
 import {
   CALCULATOR_ONLY_DASHBOARD_HREF,
   isCalculatorOnlyAllowedDashboardApi,
@@ -66,6 +67,13 @@ export function middleware(request) {
     }
   }
 
+  if (pathname.startsWith("/api/dashboard/") || pathname.startsWith("/api/admin/")) {
+    const originCheck = assertSameOriginApiMutation(request);
+    if (!originCheck.ok) {
+      return NextResponse.json({ error: originCheck.error }, { status: originCheck.status });
+    }
+  }
+
   return NextResponse.next();
 }
 
@@ -90,5 +98,6 @@ export const config = {
     "/dashboards",
     "/dashboards/:path*",
     "/api/dashboard/:path*",
+    "/api/admin/:path*",
   ],
 };

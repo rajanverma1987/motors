@@ -18,7 +18,7 @@ function getParams(context) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "repair-flow-job-attachments-upload", 30);
+  const { allowed } = await checkRateLimit(request, "repair-flow-job-attachments-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }

@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /** Check if email already has a portal account (calculators subscribe flow). */
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "calc-account-status", 20);
+  const { allowed } = await checkRateLimit(request, "calc-account-status", 20);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

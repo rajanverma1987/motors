@@ -36,7 +36,7 @@ function lineReceiveQty(line) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-po-return", 30);
+  const { allowed } = await checkRateLimit(request, "simple-po-return", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

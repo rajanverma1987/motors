@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import { authenticateIntegrationApiKey } from "@/lib/integration-auth";
-import { getIntegrationCollection, sanitizeIntegrationDoc } from "@/lib/integration-collections";
+import { getIntegrationCollection, sanitizeIntegrationDoc, buildIntegrationWritePayload } from "@/lib/integration-collections";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { recordSecurityEvent } from "@/lib/security-audit";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 
 function scopeAllows(scopes, collection) {
@@ -10,8 +12,20 @@ function scopeAllows(scopes, collection) {
 
 export async function GET(request, context) {
   try {
+    const { allowed } = await checkRateLimit(request, "integration-api", 120);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const auth = await authenticateIntegrationApiKey(request);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 });
+    if (!auth.ok) {
+      await recordSecurityEvent({
+        event: "integration_api_auth_fail",
+        request,
+        success: false,
+        metadata: { error: auth.error },
+      });
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const collection = params?.collection;
     const id = params?.id;
@@ -31,8 +45,20 @@ export async function GET(request, context) {
 
 export async function PUT(request, context) {
   try {
+    const { allowed } = await checkRateLimit(request, "integration-api", 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const auth = await authenticateIntegrationApiKey(request);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 });
+    if (!auth.ok) {
+      await recordSecurityEvent({
+        event: "integration_api_auth_fail",
+        request,
+        success: false,
+        metadata: { error: auth.error },
+      });
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const collection = params?.collection;
     const id = params?.id;
@@ -43,10 +69,7 @@ export async function PUT(request, context) {
     if (cfg.readOnly) return NextResponse.json({ error: "Collection is read-only" }, { status: 405 });
 
     const body = await request.json().catch(() => ({}));
-    const patch = { ...body };
-    delete patch._id;
-    delete patch.id;
-    delete patch[cfg.ownerField];
+    const patch = buildIntegrationWritePayload(body, cfg, auth.ownerEmail, { forUpdate: true });
 
     await connectDB();
     const doc = await cfg.model.findOneAndUpdate(
@@ -72,8 +95,20 @@ export async function PUT(request, context) {
 
 export async function DELETE(request, context) {
   try {
+    const { allowed } = await checkRateLimit(request, "integration-api", 60);
+    if (!allowed) {
+      return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+    }
     const auth = await authenticateIntegrationApiKey(request);
-    if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: 401 });
+    if (!auth.ok) {
+      await recordSecurityEvent({
+        event: "integration_api_auth_fail",
+        request,
+        success: false,
+        metadata: { error: auth.error },
+      });
+      return NextResponse.json({ error: auth.error }, { status: 401 });
+    }
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const collection = params?.collection;
     const id = params?.id;

@@ -3,7 +3,7 @@
  */
 export const LIMITS = {
   email: { max: 320 },
-  password: { min: 6, max: 128 },
+  password: { min: 10, max: 128 },
   name: { max: 200 },
   companyName: { max: 300 },
   message: { max: 2000 },

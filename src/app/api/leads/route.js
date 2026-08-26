@@ -44,7 +44,7 @@ async function enrichLeadsWithListingNames(leads) {
 }
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "lead", 20);
+  const { allowed } = await checkRateLimit(request, "lead", 20);
   if (!allowed) {
     return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
   }

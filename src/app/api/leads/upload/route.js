@@ -1,59 +1,35 @@
 import { NextResponse } from "next/server";
-import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { saveEntityUploadFiles } from "@/lib/safe-buffer-upload";
 
 const UPLOAD_DIR = "public/uploads/leads";
 const MAX_FILES = 5;
 const MAX_SIZE_MB = 5;
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "leads-upload", 10);
+  const { allowed } = await checkRateLimit(request, "leads-upload", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
   try {
     const formData = await request.formData();
     const files = formData.getAll("files").filter((f) => f && typeof f.arrayBuffer === "function");
-    if (files.length === 0) {
-      return NextResponse.json({ error: "No files" }, { status: 400 });
-    }
-    if (files.length > MAX_FILES) {
-      return NextResponse.json(
-        { error: `Maximum ${MAX_FILES} files allowed` },
-        { status: 400 }
-      );
-    }
 
     const subdir = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
     const dir = path.join(process.cwd(), UPLOAD_DIR, subdir);
-    mkdirSync(dir, { recursive: true });
-
-    const urls = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const type = (file.type || "").toLowerCase();
-      if (!ALLOWED_TYPES.includes(type)) {
-        return NextResponse.json(
-          { error: "Only JPEG, PNG, GIF, or WebP images are allowed." },
-          { status: 400 }
-        );
-      }
-      const buffer = Buffer.from(await file.arrayBuffer());
-      if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
-        return NextResponse.json(
-          { error: `File ${file.name} exceeds ${MAX_SIZE_MB}MB` },
-          { status: 400 }
-        );
-      }
-      const ext = path.extname(file.name) || ".jpg";
-      const safeName = `${Date.now()}-${i}${ext}`.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const filePath = path.join(dir, safeName);
-      writeFileSync(filePath, buffer);
-      urls.push(`/uploads/leads/${subdir}/${safeName}`);
+    const uploadResult = await saveEntityUploadFiles(files, {
+      profile: "image",
+      maxSizeMb: MAX_SIZE_MB,
+      maxFiles: MAX_FILES,
+      dir,
+      buildUrl: (safeName) => `/uploads/leads/${subdir}/${safeName}`,
+    });
+    if (!uploadResult.ok) {
+      return NextResponse.json({ error: uploadResult.error }, { status: uploadResult.status || 400 });
     }
 
+    const urls = uploadResult.attachments.map((a) => a.url);
     return NextResponse.json({ ok: true, urls });
   } catch (err) {
     console.error("Lead upload error:", err);

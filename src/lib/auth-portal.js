@@ -53,7 +53,7 @@ export async function verifyPassword(password, hash) {
 
 export async function createPortalToken(payload, options = {}) {
   const expiresIn = options.expiresIn || (options.rememberMe ? "90d" : "7d");
-  return new SignJWT(payload)
+  return new SignJWT({ ...payload, typ: "motors_portal" })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime(expiresIn)
     .sign(getPortalJwtSecret());
@@ -62,7 +62,12 @@ export async function createPortalToken(payload, options = {}) {
 export async function verifyPortalToken(token) {
   try {
     const { payload } = await jwtVerify(token, getPortalJwtSecret());
-    return payload;
+    if (!payload || typeof payload !== "object") return null;
+    if (payload.typ === "motors_admin") return null;
+    if (payload.typ === "motors_portal") return payload;
+    // Legacy portal tokens issued before typ claim.
+    if (payload.shopName || payload.authType || payload.employeeId) return payload;
+    return null;
   } catch {
     return null;
   }

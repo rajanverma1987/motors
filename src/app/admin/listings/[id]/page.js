@@ -136,7 +136,7 @@ export default function AdminListingDetailPage() {
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const up = await fetch("/api/upload/logo", { method: "POST", body: fd });
+      const up = await fetch("/api/upload/logo", { method: "POST", body: fd, credentials: "include" });
       const upData = await up.json();
       if (!up.ok) throw new Error(upData.error || "Logo upload failed");
       const patchRes = await fetch(`/api/listings/${id}`, {

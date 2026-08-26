@@ -3,11 +3,16 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { createAdminToken, getAdminCookieName } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
-
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+import { recordSecurityEvent } from "@/lib/security-audit";
+import {
+  createAdminPendingToken,
+  getAdminPendingCookieOptions,
+  getAdminSessionCookieOptions,
+  isAdminTotpEnabled,
+} from "@/lib/auth-admin-totp";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "admin-login", 10);
+  const { allowed } = await checkRateLimit(request, "admin-login", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -32,7 +37,15 @@ export async function POST(request) {
       );
     }
 
-    if (email !== adminEmail) {
+    const emailNorm = String(email).trim().toLowerCase();
+    if (emailNorm !== String(adminEmail).trim().toLowerCase()) {
+      await recordSecurityEvent({
+        event: "admin_login_fail",
+        request,
+        actorEmail: emailNorm,
+        success: false,
+        metadata: { reason: "invalid_email" },
+      });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
@@ -47,20 +60,36 @@ export async function POST(request) {
     }
 
     if (!valid) {
+      await recordSecurityEvent({
+        event: "admin_login_fail",
+        request,
+        actorEmail: emailNorm,
+        success: false,
+        metadata: { reason: "invalid_password" },
+      });
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
     }
 
-    const token = await createAdminToken(email);
     const cookieStore = await cookies();
-    cookieStore.set(getAdminCookieName(), token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: COOKIE_MAX_AGE,
-      path: "/",
+
+    if (isAdminTotpEnabled()) {
+      const pendingToken = await createAdminPendingToken(emailNorm);
+      cookieStore.set("motors_admin_pending", pendingToken, getAdminPendingCookieOptions());
+      return NextResponse.json({ ok: true, requiresTotp: true });
+    }
+
+    const token = await createAdminToken(emailNorm);
+    cookieStore.set(getAdminCookieName(), token, getAdminSessionCookieOptions());
+    cookieStore.delete("motors_admin_pending");
+
+    await recordSecurityEvent({
+      event: "admin_login_success",
+      request,
+      actorEmail: emailNorm,
+      success: true,
     });
 
     return NextResponse.json({ ok: true });

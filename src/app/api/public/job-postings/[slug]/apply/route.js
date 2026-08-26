@@ -7,7 +7,7 @@ import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { getPublicJobPostingBySlug } from "@/lib/job-postings-public";
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "job-apply", 10);
+  const { allowed } = await checkRateLimit(request, "job-apply", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many applications. Try again later." }, { status: 429 });
   }

@@ -59,7 +59,7 @@ async function assertAssignedTechnician(request, woId) {
 }
 
 export async function DELETE(request, context) {
-  const { allowed } = checkRateLimit(request, "tech-wo-photo-del", 60);
+  const { allowed } = await checkRateLimit(request, "tech-wo-photo-del", 60);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }
@@ -124,7 +124,7 @@ export async function DELETE(request, context) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "tech-wo-photo", 40);
+  const { allowed } = await checkRateLimit(request, "tech-wo-photo", 40);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }

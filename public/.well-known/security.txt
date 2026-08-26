@@ -1,0 +1,10 @@
+Contact: mailto:security@iqmotorbase.com
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en
+Canonical: https://iqmotorbase.com/.well-known/security.txt
+Policy: https://iqmotorbase.com/privacy-policy
+
+If you discover a security vulnerability, please report it responsibly to security@iqmotorbase.com.
+Include steps to reproduce, impact, and any proof-of-concept. We aim to respond within 5 business days.
+
+Do not test against production data you do not own. Do not use social engineering or denial-of-service attacks.

@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import sharp from "sharp";
+import { validateUploadBuffer } from "@/lib/upload-security";
 
 const UPLOAD_DIR = "public/uploads/logos";
 const MAX_SIZE_MB = 2;
@@ -46,12 +47,16 @@ export async function saveUploadedLogoFile(file) {
   if (buffer.length > MAX_SIZE_MB * 1024 * 1024) {
     throw new Error(`File must be under ${MAX_SIZE_MB}MB`);
   }
+  const validation = validateUploadBuffer(buffer, file.name || "", type, "image");
+  if (!validation.ok) {
+    throw new Error(validation.error);
+  }
   const dir = path.join(process.cwd(), UPLOAD_DIR);
   mkdirSync(dir, { recursive: true });
 
   const optimized = await optimizeLogoBuffer(buffer);
   const useBuffer = optimized || buffer;
-  const useExt = optimized ? ".webp" : path.extname(file.name || "") ||
+  const useExt = optimized ? ".webp" : validation.ext || path.extname(file.name || "") ||
     (type.includes("png") ? ".png" : type.includes("gif") ? ".gif" : type.includes("webp") ? ".webp" : ".jpg");
 
   const safeName = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}${useExt}`.replace(/[^a-zA-Z0-9._-]/g, "_");

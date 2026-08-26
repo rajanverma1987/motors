@@ -9,7 +9,7 @@ import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
  * Body: { email: string, city?: string, state?: string, zip?: string }
  */
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "area-notify", 10);
+  const { allowed } = await checkRateLimit(request, "area-notify", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

@@ -11,10 +11,11 @@ import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
 import { recordPortalLogin } from "@/lib/portal-login-audit";
+import { recordSecurityEvent } from "@/lib/security-audit";
 import { loadShopPortalUi } from "@/lib/shop-portal-ui";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "portal-login", 10);
+  const { allowed } = await checkRateLimit(request, "portal-login", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -64,6 +65,12 @@ export async function POST(request) {
     }
 
     if (!ownerUser) {
+      await recordSecurityEvent({
+        event: "portal_login_fail",
+        request,
+        actorEmail: emailRaw,
+        success: false,
+      });
       return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
     }
 

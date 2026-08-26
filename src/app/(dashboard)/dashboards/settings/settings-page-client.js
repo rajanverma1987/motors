@@ -174,7 +174,7 @@ export default function SettingsPageClient() {
       });
       return;
     }
-    if ((pwNew || "").length < 6) {
+    if ((pwNew || "").length < 10) {
       await alert({
         title: "Error",
         message: "New password must be at least 6 characters.",

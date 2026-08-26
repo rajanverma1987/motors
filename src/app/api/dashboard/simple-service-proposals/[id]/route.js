@@ -17,6 +17,7 @@ import {
   notifySimpleJobBoardFromSp,
 } from "@/lib/job-board-emit";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { assertSimplePortalJobNumberAvailable } from "@/lib/simple-portal-job-numbers";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -67,10 +68,26 @@ export async function PUT(request, context) {
     }
     const body = await request.json().catch(() => ({}));
     const payload = sanitizeSimplePortalPayload(body);
+    const nextDocumentNumber = String(payload.documentNumber || payload.quote || "").trim();
+    const prevDocumentNumber = String(previous.documentNumber || previous.quote || "").trim();
+    if (
+      nextDocumentNumber &&
+      nextDocumentNumber.toLowerCase() !== prevDocumentNumber.toLowerCase()
+    ) {
+      try {
+        await assertSimplePortalJobNumberAvailable(email, nextDocumentNumber, id);
+      } catch (numErr) {
+        if (numErr?.code === "DUPLICATE_JOB_NUMBER") {
+          return NextResponse.json({ error: numErr.message }, { status: 409 });
+        }
+        throw numErr;
+      }
+    }
     const update = {
       ...payload,
       customerId: String(payload.customerId ?? "").trim(),
-      documentNumber: String(payload.documentNumber || payload.quote || "").trim(),
+      documentNumber: nextDocumentNumber,
+      quote: nextDocumentNumber || String(payload.quote ?? "").trim(),
       recordType: String(payload.recordType || "RFQ").trim().toUpperCase() || "RFQ",
       status: String(payload.status ?? "").trim(),
       jobStatus: String(payload.jobStatus ?? "").trim(),

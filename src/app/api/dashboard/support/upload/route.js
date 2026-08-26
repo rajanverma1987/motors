@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { saveSupportTicketImage } from "@/lib/support-ticket-image-upload";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "dashboard-support-upload", 40);
+  const { allowed } = await checkRateLimit(request, "dashboard-support-upload", 40);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }

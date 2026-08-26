@@ -4,7 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { saveMarketplaceListingImage } from "@/lib/marketplace-image-upload";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "admin-mp-upload", 30);
+  const { allowed } = await checkRateLimit(request, "admin-mp-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }

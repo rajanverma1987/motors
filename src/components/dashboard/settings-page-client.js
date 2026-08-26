@@ -129,7 +129,7 @@ export default function SettingsPageClient() {
       toast.error("New password and confirmation do not match.");
       return;
     }
-    if ((pwNew || "").length < 6) {
+    if ((pwNew || "").length < 10) {
       toast.error("New password must be at least 6 characters.");
       return;
     }

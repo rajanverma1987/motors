@@ -1,12 +1,12 @@
 /**
  * In-memory rate limiter for API routes. Use for auth, public forms, and uploads.
- * For multi-instance production, replace with Redis or edge rate limiting.
+ * For multi-instance production later, add Redis (see documents/PlatformSecurity.md).
  */
 const store = new Map();
-const WINDOW_MS = 60 * 1000; // 1 minute
-const CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+const WINDOW_MS = 60 * 1000;
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
-function getKey(request, routeId) {
+export function getRateLimitClientKey(request, routeId) {
   const forwarded = request.headers.get("x-forwarded-for");
   const ip = forwarded ? forwarded.split(",")[0].trim() : request.headers.get("x-real-ip") || "unknown";
   return `${routeId}:${ip}`;
@@ -28,8 +28,8 @@ if (typeof setInterval !== "undefined") {
  * @param {string} routeId - e.g. "login", "register", "lead", "area-notify", "upload-logo"
  * @param {number} maxPerWindow - max requests per window (default 10)
  */
-export function checkRateLimit(request, routeId, maxPerWindow = 10) {
-  const key = getKey(request, routeId);
+export async function checkRateLimit(request, routeId, maxPerWindow = 10) {
+  const key = getRateLimitClientKey(request, routeId);
   const now = Date.now();
   let data = store.get(key);
   if (!data || now - data.start > WINDOW_MS) {

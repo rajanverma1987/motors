@@ -27,7 +27,7 @@ async function loadOwnedCustomer(user, id) {
 }
 
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "customers-documents", 30);
+  const { allowed } = await checkRateLimit(request, "customers-documents", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -95,7 +95,7 @@ export async function POST(request, context) {
 }
 
 export async function DELETE(request, context) {
-  const { allowed } = checkRateLimit(request, "customers-documents-delete", 40);
+  const { allowed } = await checkRateLimit(request, "customers-documents-delete", 40);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

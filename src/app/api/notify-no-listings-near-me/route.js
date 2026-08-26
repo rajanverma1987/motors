@@ -8,7 +8,7 @@ import { LIMITS, clampString } from "@/lib/validation";
  * Body: { city?: string, state?: string, zip?: string }
  */
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "notify-no-listings", 15);
+  const { allowed } = await checkRateLimit(request, "notify-no-listings", 15);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

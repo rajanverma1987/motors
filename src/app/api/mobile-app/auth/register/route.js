@@ -3,14 +3,14 @@ import { connectDB } from "@/lib/db";
 import MobileAppAccount from "@/models/MobileAppAccount";
 import { hashPassword, createMobileAppToken } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { getPasswordPolicyError } from "@/lib/password-policy";
 import { trialEndsAtFrom } from "@/lib/mobile-app-subscription";
 import { mobileAppSessionPayload } from "@/lib/mobile-app-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "mobile-app-register", 5);
+  const { allowed } = await checkRateLimit(request, "mobile-app-register", 5);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }
@@ -30,7 +30,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
     if (password.length < LIMITS.password.min) {
-      return NextResponse.json({ error: "Password must be at least 6 characters." }, { status: 400 });
+      return NextResponse.json({ error: `Password must be at least ${LIMITS.password.min} characters.` }, { status: 400 });
+    }
+    const passwordError = getPasswordPolicyError(password);
+    if (passwordError) {
+      return NextResponse.json({ error: passwordError }, { status: 400 });
     }
     if (password.length > LIMITS.password.max) {
       return NextResponse.json({ error: "Password is too long." }, { status: 400 });

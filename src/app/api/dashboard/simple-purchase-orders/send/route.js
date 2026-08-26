@@ -79,7 +79,7 @@ export async function GET(request) {
 
 /** Email vendor for a Simple portal purchase order. */
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "simple-po-send", 20);
+  const { allowed } = await checkRateLimit(request, "simple-po-send", 20);
   if (!allowed) {
     return NextResponse.json({ error: "Too many send requests. Try again later." }, { status: 429 });
   }

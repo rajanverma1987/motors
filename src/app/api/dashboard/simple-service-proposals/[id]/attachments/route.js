@@ -48,7 +48,7 @@ function resolveOwnedFilePath(url, ownerKey, recordId) {
 
 /** Upload an attachment for a saved Simple service proposal record. */
 export async function POST(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-sp-upload", 30);
+  const { allowed } = await checkRateLimit(request, "simple-sp-upload", 30);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }
@@ -116,7 +116,7 @@ export async function POST(request, context) {
 
 /** Delete an attachment file for a saved Simple service proposal record. */
 export async function DELETE(request, context) {
-  const { allowed } = checkRateLimit(request, "simple-sp-delete-attachment", 60);
+  const { allowed } = await checkRateLimit(request, "simple-sp-delete-attachment", 60);
   if (!allowed) {
     return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
   }

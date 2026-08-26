@@ -8,7 +8,7 @@ import { mobileAppSessionPayload } from "@/lib/mobile-app-auth";
 export const dynamic = "force-dynamic";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "mobile-app-login", 15);
+  const { allowed } = await checkRateLimit(request, "mobile-app-login", 15);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

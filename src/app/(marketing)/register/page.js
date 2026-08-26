@@ -111,7 +111,7 @@ function RegisterPageContent() {
       setError("Passwords do not match.");
       return;
     }
-    if (form.password.length < 6) {
+    if (form.password.length < 10) {
       setError("Password must be at least 6 characters.");
       return;
     }

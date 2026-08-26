@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Employee from "@/models/Employee";
 import { getPortalUserFromRequest, hashPassword } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
+import { getPasswordPolicyError } from "@/lib/password-policy";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -96,6 +97,10 @@ export async function PATCH(request, context) {
           { error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.` },
           { status: 400 }
         );
+      }
+      const passwordError = getPasswordPolicyError(rawPassword);
+      if (passwordError) {
+        return NextResponse.json({ error: passwordError }, { status: 400 });
       }
       doc.passwordHash = await hashPassword(rawPassword);
     }

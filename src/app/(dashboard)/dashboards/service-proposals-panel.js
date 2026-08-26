@@ -63,7 +63,6 @@ import {
   INVOICE_FILTER_TAX_COLLECTED,
   INVOICE_FILTER_TAX_TO_BE_COLLECTED,
 } from "@/lib/invoice-tax-collected";
-import { computeNextJobNumber } from "@/lib/job-document-number-format";
 
 const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
 const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
@@ -390,14 +389,7 @@ export default function ServiceProposalsPanel({
     const forceNew = options?.forceNew === true;
     const id = forceNew ? undefined : editingId || form.id || undefined;
     let documentNumber = forceNew ? "" : String(form.documentNumber ?? "").trim();
-    if (!documentNumber) {
-      // Simple portal sequence only — do not pull Classic Quotes counters (e.g. A00127).
-      const localNumbers = rows
-        .filter((r) => r.id !== id)
-        .map((r) => r.documentNumber || r.quote)
-        .filter(Boolean);
-      documentNumber = computeNextJobNumber(localNumbers, mergedSettings);
-    }
+    // Job numbers are assigned on the server from the full DB (not paginated list rows).
     const row = formToServiceProposalListRow(
       { ...form, documentNumber, ...(forceNew ? { id: "", recordType: RECORD_TYPE_RFQ } : {}) },
       {

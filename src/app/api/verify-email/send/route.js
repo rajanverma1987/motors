@@ -8,7 +8,7 @@ import { isValidEmail } from "@/lib/validation";
 const CODE_EXPIRY_MINUTES = 15;
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "verify-email-send", 5);
+  const { allowed } = await checkRateLimit(request, "verify-email-send", 5);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

@@ -13,7 +13,7 @@ import { sendCalculatorPriceEnquiryToAdmin, sendCalculatorEstimatePdfToCustomer 
 const VISITOR_TYPES = new Set(["end_user", "motor_repair_shop"]);
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "calculator-estimate-pdf", 15);
+  const { allowed } = await checkRateLimit(request, "calculator-estimate-pdf", 15);
   if (!allowed) {
     return NextResponse.json({ error: "Too many download requests. Try again later." }, { status: 429 });
   }

@@ -9,7 +9,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendContactUnlockNotificationToShop } from "@/lib/email";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "contact-unlock", 15);
+  const { allowed } = await checkRateLimit(request, "contact-unlock", 15);
   if (!allowed) {
     return NextResponse.json(
       { success: false, message: "Too many submissions. Try again later." },

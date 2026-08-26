@@ -25,7 +25,16 @@ const simpleServiceProposalSchema = new mongoose.Schema(
 );
 
 simpleServiceProposalSchema.index({ createdByEmail: 1, updatedAt: -1 });
-simpleServiceProposalSchema.index({ createdByEmail: 1, documentNumber: 1 });
+simpleServiceProposalSchema.index(
+  { createdByEmail: 1, documentNumber: 1 },
+  {
+    unique: true,
+    name: "simple_sp_unique_job_number",
+    partialFilterExpression: {
+      documentNumber: { $type: "string", $gt: "" },
+    },
+  }
+);
 simpleServiceProposalSchema.index({ createdByEmail: 1, recordType: 1 });
 simpleServiceProposalSchema.index({ createdByEmail: 1, customerId: 1 });
 simpleServiceProposalSchema.index({ createdByEmail: 1, dateCreated: -1 });

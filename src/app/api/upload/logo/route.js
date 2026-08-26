@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
+import { getAdminFromRequest } from "@/lib/auth-admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { saveUploadedLogoFile } from "@/lib/logo-upload";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "upload-logo", 15);
+  const adminEmail = await getAdminFromRequest(request);
+  if (!adminEmail) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { allowed } = await checkRateLimit(request, "upload-logo", 15);
   if (!allowed) {
     return NextResponse.json({ error: "Too many uploads. Try again later." }, { status: 429 });
   }

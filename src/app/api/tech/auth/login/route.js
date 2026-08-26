@@ -8,7 +8,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { mergeUserSettings } from "@/lib/user-settings";
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "tech-login", 15);
+  const { allowed } = await checkRateLimit(request, "tech-login", 15);
   if (!allowed) {
     return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   }

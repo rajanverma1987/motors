@@ -15,7 +15,7 @@ const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
 
 export async function POST(request) {
-  const { allowed } = checkRateLimit(request, "listing-submit", 10);
+  const { allowed } = await checkRateLimit(request, "listing-submit", 10);
   if (!allowed) {
     return NextResponse.json({ error: "Too many submissions. Try again later." }, { status: 429 });
   }
