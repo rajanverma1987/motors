@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiChevronDown, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
+import { FiChevronDown, FiChevronLeft, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -378,6 +378,8 @@ export default function ServiceProposalFormModal({
   onSave,
   onAttachmentsChange,
   initialForm = null,
+  /** When opened from a search results list — show Previous / Next in modal header center. */
+  searchResultNavigation = null,
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
@@ -1118,6 +1120,43 @@ export default function ServiceProposalFormModal({
     </Button>
   );
 
+  const searchNav = searchResultNavigation;
+  const navBusy = saving || copying || loadingRecord;
+  const headerCenter =
+    searchNav && Number(searchNav.total) > 1 ? (
+      <div
+        className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
+        role="navigation"
+        aria-label="Search results"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex items-center gap-1 text-xs"
+          disabled={navBusy || !searchNav.canPrevious}
+          onClick={() => searchNav.onPrevious?.()}
+        >
+          <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Previous
+        </Button>
+        <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
+          {Number(searchNav.currentIndex) + 1} of {Number(searchNav.total)}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex items-center gap-1 text-xs"
+          disabled={navBusy || !searchNav.canNext}
+          onClick={() => searchNav.onNext?.()}
+        >
+          Next
+          <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        </Button>
+      </div>
+    ) : null;
+
   return (
     <>
       <Modal
@@ -1130,6 +1169,7 @@ export default function ServiceProposalFormModal({
         showClose={!saving && !copying && !loadingRecord}
         closeOnOutsideClick={false}
         headerClassName="[&_h2]:max-w-none [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-none"
+        headerCenter={headerCenter}
         actions={headerActions}
       >
         <div className="relative min-h-[12rem]">

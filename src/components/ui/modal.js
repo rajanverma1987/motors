@@ -41,6 +41,8 @@ export default function Modal({
   className = "",
   /** Actions (e.g. Save) rendered in header right, before close. Use size="sm" buttons. */
   actions,
+  /** Optional centered header content (e.g. result navigation). */
+  headerCenter,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
   /** Optional class on the scrollable body wrapper. */
@@ -237,40 +239,83 @@ export default function Modal({
         className={`absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {(title != null || showClose || actions) && (
+        {(title != null || showClose || actions || headerCenter != null) && (
           <div
-            className={`flex min-h-11 min-w-0 flex-nowrap items-center gap-2 border-b border-border px-4 py-2 select-none sm:gap-3 ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
+            className={`min-h-11 min-w-0 border-b border-border px-4 py-2 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
             onMouseDown={handleHeaderMouseDown}
           >
-            {title != null && (
-              <h2
-                id="modal-title"
-                className="pointer-events-none max-w-[min(12rem,36vw)] shrink-0 self-center truncate text-lg font-semibold leading-snug text-title sm:max-w-[14rem] md:max-w-xs lg:max-w-sm"
-              >
-                {title}
-              </h2>
-            )}
-            {actions != null ? (
-              <div className="pointer-events-auto flex min-h-0 min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
-                <div className="flex min-h-0 w-full min-w-0 flex-nowrap items-center justify-end gap-1 pr-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button:disabled]:cursor-not-allowed">
-                  {actions}
+            {headerCenter != null ? (
+              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                {title != null ? (
+                  <h2
+                    id="modal-title"
+                    className="pointer-events-none min-w-0 justify-self-start truncate text-lg font-semibold leading-snug text-title"
+                  >
+                    {title}
+                  </h2>
+                ) : (
+                  <span aria-hidden />
+                )}
+                <div
+                  className="pointer-events-auto flex justify-center"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {headerCenter}
+                </div>
+                <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-1.5">
+                  {actions != null ? (
+                    <div className="pointer-events-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button:disabled]:cursor-not-allowed">
+                      {actions}
+                    </div>
+                  ) : null}
+                  {showClose && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label="Close"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
-              <span className="min-w-0 flex-1" aria-hidden />
-            )}
-            {showClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                onMouseDown={(e) => e.stopPropagation()}
-                className="inline-flex shrink-0 cursor-pointer items-center justify-center self-center rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
-                aria-label="Close"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+              <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
+                {title != null && (
+                  <h2
+                    id="modal-title"
+                    className="pointer-events-none max-w-[min(12rem,36vw)] shrink-0 self-center truncate text-lg font-semibold leading-snug text-title sm:max-w-[14rem] md:max-w-xs lg:max-w-sm"
+                  >
+                    {title}
+                  </h2>
+                )}
+                {actions != null ? (
+                  <div className="pointer-events-auto flex min-h-0 min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
+                    <div className="flex min-h-0 w-full min-w-0 flex-nowrap items-center justify-end gap-1 pr-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button:disabled]:cursor-not-allowed">
+                      {actions}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="min-w-0 flex-1" aria-hidden />
+                )}
+                {showClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    className="inline-flex shrink-0 cursor-pointer items-center justify-center self-center rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                    aria-label="Close"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}

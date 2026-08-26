@@ -320,6 +320,31 @@ export default function MasterDataSearchPanel() {
     [openProposalId]
   );
 
+  const openProposalIndex = useMemo(() => {
+    if (!openProposalId) return -1;
+    return rows.findIndex((r) => String(r.id) === String(openProposalId));
+  }, [openProposalId, rows]);
+
+  const searchResultNavigation = useMemo(() => {
+    if (openProposalIndex < 0 || rows.length < 2) return null;
+    return {
+      currentIndex: openProposalIndex,
+      total: rows.length,
+      canPrevious: openProposalIndex > 0,
+      canNext: openProposalIndex < rows.length - 1,
+      onPrevious: () => {
+        const prev = rows[openProposalIndex - 1];
+        const id = String(prev?.id || "").trim();
+        if (id) setOpenProposalId(id);
+      },
+      onNext: () => {
+        const next = rows[openProposalIndex + 1];
+        const id = String(next?.id || "").trim();
+        if (id) setOpenProposalId(id);
+      },
+    };
+  }, [openProposalIndex, rows]);
+
   return (
     <div className={`${SIMPLE_SCREEN_PANEL_CLASS} flex min-h-0 flex-1 flex-col gap-3 overflow-hidden`}>
       <div className="shrink-0 border-b border-border pb-3">
@@ -416,6 +441,7 @@ export default function MasterDataSearchPanel() {
         onClose={() => setOpenProposalId(null)}
         initialForm={editingProposal}
         onSave={handleProposalSave}
+        searchResultNavigation={searchResultNavigation}
       />
 
       <CustomerViewModal
