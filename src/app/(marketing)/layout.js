@@ -1,5 +1,6 @@
 import Script from "next/script";
 import Navbar from "@/components/marketing/Navbar";
+import PreferredSourceButton from "@/components/marketing/PreferredSourceButton";
 import Footer from "@/components/marketing/Footer";
 import ContextualAiWidget from "@/components/contextual-ai-widget";
 import WebsiteClarity from "@/components/marketing/website-clarity";
@@ -26,9 +27,16 @@ gtag('config', '${GA_MEASUREMENT_ID}');
           `.trim(),
         }}
       />
+      {/* Google Preferred Sources — one [google-add-preferred-source-btn] slot in the stripe below Navbar. */}
+      <Script
+        id="google-preferred-source"
+        src="https://news.google.com/swg/js/v1/publisher.js"
+        strategy="lazyOnload"
+      />
       <SoftwareAppSchema />
       <WebsiteClarity />
       <Navbar />
+      <PreferredSourceButton variant="stripe" />
       <main className="flex-1">{children}</main>
       <Footer />
       <ContextualAiWidget />

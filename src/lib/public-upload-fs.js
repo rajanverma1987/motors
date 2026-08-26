@@ -1,14 +1,18 @@
 import path from "path";
 import { mkdirSync, writeFileSync } from "fs";
 
-/** Split so Turbopack does not glob every file under public/uploads during `next build`. */
+/** @returns {string} Absolute path to runtime upload root (never traced by Turbopack). */
 function getPublicUploadsRoot() {
   const fromEnv = String(process.env.UPLOADS_DIR || "").trim();
-  if (fromEnv) return path.resolve(fromEnv);
-  return path.join(process.cwd(), "pub" + "lic", "up" + "loads");
+  if (fromEnv) {
+    return path.resolve(/* turbopackIgnore: true */ fromEnv);
+  }
+  return path.join(
+    /* turbopackIgnore: true */ process.cwd(),
+    "pub" + "lic",
+    "up" + "loads"
+  );
 }
-
-export const PUBLIC_UPLOADS_ROOT = getPublicUploadsRoot();
 
 /**
  * Sanitize a path segment for public/uploads/<category>/<id>/ files.
@@ -30,7 +34,7 @@ export function resolvePublicUploadFilePath(parts) {
   if (!cleaned.length) return null;
   if (cleaned.some((p) => p.includes("..") || p.includes("\\"))) return null;
   const root = getPublicUploadsRoot();
-  const resolved = path.resolve(root, ...cleaned);
+  const resolved = path.resolve(/* turbopackIgnore: true */ root, ...cleaned);
   if (!resolved.startsWith(`${root}${path.sep}`) && resolved !== root) {
     return null;
   }
@@ -50,7 +54,7 @@ export function resolvePublicUploadEntityDir(category, entityId) {
   if (!safeCategory || !safeId) {
     throw new Error("Invalid upload id");
   }
-  return path.join(getPublicUploadsRoot(), safeCategory, safeId);
+  return path.join(/* turbopackIgnore: true */ getPublicUploadsRoot(), safeCategory, safeId);
 }
 
 /**
@@ -72,7 +76,7 @@ export function publicUploadUrlPath(category, entityId, fileName) {
  */
 export function writeFileInUploadDir(absDir, fileName, buffer) {
   mkdirSync(absDir, { recursive: true });
-  const filePath = path.join(absDir, fileName);
+  const filePath = path.join(/* turbopackIgnore: true */ absDir, fileName);
   writeFileSync(filePath, buffer);
   return filePath;
 }

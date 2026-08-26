@@ -102,11 +102,13 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-col items-center gap-4 border-t border-border pt-6 sm:mt-10 sm:flex-row sm:justify-between sm:gap-6 sm:pt-8">
-          <FooterNavLinks />
-          <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
-            © {year} IQMotorBase.com. All rights reserved.
-          </p>
+        <div className="mt-8 border-t border-border pt-6 sm:mt-10 sm:pt-8">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:gap-6">
+            <FooterNavLinks />
+            <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
+              © {year} IQMotorBase.com. All rights reserved.
+            </p>
+          </div>
         </div>
       </div>
     </footer>
