@@ -374,6 +374,34 @@ export async function sendNewWebsiteLeadNotificationToShop({
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
+/**
+ * Notify a listed repair center when a visitor unlocks their contact info on the public listing page.
+ */
+export async function sendContactUnlockNotificationToShop({
+  to,
+  listingCompanyName,
+  leadContactName,
+  siteUrl,
+}) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const base = String(siteUrl || getPublicSiteUrl()).replace(/\/+$/, "");
+  const leadsUrl = `${base}/dashboards?tab=customers`;
+  const loginUrl = `${base}/login`;
+  const fromLine = esc(leadContactName || "Someone");
+  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} – IQMotorBase.com`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${fromLine}</strong> viewed your contact information on your <strong>IQMotorBase.com</strong> directory listing.</p>
+    <p>This is a softer lead than a full repair request — they may follow up directly or submit an RFQ later.</p>
+    <p>Log in to your shop dashboard to view their contact details:</p>
+    <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
+    <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
+    <p>— IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
 /** Send verification code for list-your-electric-motor-services email verification. */
 export async function sendVerificationCodeEmail(to, code) {
   const subject = "Your IQMotorBase.com verification code";

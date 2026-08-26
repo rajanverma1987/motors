@@ -21,8 +21,18 @@ const leadSchema = new mongoose.Schema(
     assignedListingIds: [{ type: String }],
     /** CRM: new → contacted → quoted → won | lost */
     status: { type: String, enum: ["new", "contacted", "quoted", "won", "lost"], default: "new" },
-    /** How lead arrived: website submission, admin assignment, or manual entry */
-    leadSource: { type: String, enum: ["website", "admin_assigned", "manual"], default: "website" },
+    /** How lead arrived: website submission, admin assignment, manual entry, or contact unlock */
+    leadSource: {
+      type: String,
+      enum: ["website", "admin_assigned", "manual", "contact_unlock"],
+      default: "website",
+    },
+    /** Softer intent than repair_request — set when visitor unlocks shop contact info */
+    leadType: {
+      type: String,
+      enum: ["repair_request", "contact_view", ""],
+      default: "",
+    },
     /** Set when lead is created manually from dashboard (shop user email) */
     createdByEmail: { type: String, default: "" },
   },

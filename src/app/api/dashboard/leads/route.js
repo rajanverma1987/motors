@@ -10,6 +10,7 @@ const SOURCE_LABELS = {
   website: "Website",
   admin_assigned: "Admin-assigned",
   manual: "Manual",
+  contact_unlock: "Contact unlock",
 };
 
 export async function GET(request) {

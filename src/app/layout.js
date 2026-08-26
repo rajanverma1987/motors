@@ -89,6 +89,7 @@ export const metadata = {
     title: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
     description:
       "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+    images: ["/og-image.png"],
   },
   robots: {
     index: true,

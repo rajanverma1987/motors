@@ -25,6 +25,7 @@ import ListingDetailFaqSection from "./listing-detail-faq-section";
 import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
 import ListingGalleryLightbox from "./listing-gallery-lightbox";
 import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
+import ContactReveal from "@/components/marketing/contact-reveal";
 import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
@@ -365,48 +366,63 @@ export default async function ListingDetailPage({ params }) {
                 )}
 
                 <div className="mt-8 grid gap-8 sm:grid-cols-2">
-                  {fullAddress.length > 0 && (
+                  {(fullAddress.length > 0 || listing.phone || listing.email || listing.website) && (
                     <div>
                       <h2 className="text-sm font-semibold uppercase tracking-wide text-title">
-                        Location
+                        Location &amp; contact
                       </h2>
-                      <address className="mt-3 not-italic text-sm text-secondary">
-                        {listing.companyName}
-                        <br />
-                        {listing.address ? (
-                          <>
-                            {listing.address}
-                            <br />
-                          </>
-                        ) : null}
-                        {[listing.city, listing.state, listing.zipCode]
-                          .filter(Boolean)
-                          .join(", ")}
-                        <br />
-                        {listing.country || "United States"}
-                      </address>
-                      {listing.phone ? (
-                        <p className="mt-2 text-sm">
+                      {fullAddress.length > 0 ? (
+                        <address className="listing-address mt-3 not-italic text-sm text-secondary">
+                          {listing.companyName}
+                          <br />
+                          {listing.address ? (
+                            <>
+                              {listing.address}
+                              <br />
+                            </>
+                          ) : null}
+                          {[listing.city, listing.state, listing.zipCode]
+                            .filter(Boolean)
+                            .join(", ")}
+                          <br />
+                          {listing.country || "United States"}
+                        </address>
+                      ) : null}
+
+                      {/* Hidden contact data for Google crawlers — keep in HTML */}
+                      <div className="contact-seo-hidden" aria-hidden="true">
+                        {listing.phone ? (
                           <a
                             href={`tel:${String(listing.phone).replace(/\D/g, "")}`}
-                            className="font-medium text-primary hover:underline"
+                            className="seo-phone"
                           >
                             {listing.phone}
                           </a>
-                        </p>
-                      ) : null}
-                      {listing.website ? (
-                        <p className="mt-1 text-sm">
-                          <a
-                            href={listing.website}
-                            target="_blank"
-                            rel="noopener noreferrer nofollow"
-                            className="font-medium text-primary hover:underline"
-                          >
-                            Visit website
+                        ) : null}
+                        {listing.email ? (
+                          <a href={`mailto:${listing.email}`} className="seo-email">
+                            {listing.email}
                           </a>
-                        </p>
-                      ) : null}
+                        ) : null}
+                        {listing.website ? (
+                          <a href={listing.website} className="seo-website">
+                            {listing.website}
+                          </a>
+                        ) : null}
+                      </div>
+
+                      <ContactReveal
+                        shopId={listing.id}
+                        shopSlug={canonicalSlug}
+                        shopName={listing.companyName}
+                        shopCity={listing.city || ""}
+                        shopState={listing.state || ""}
+                        phone={listing.phone || ""}
+                        email={listing.email || ""}
+                        website={listing.website || ""}
+                        address={addressLine}
+                        listing={listingForClient}
+                      />
                     </div>
                   )}
 
