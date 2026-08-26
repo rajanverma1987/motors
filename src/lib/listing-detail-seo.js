@@ -243,7 +243,7 @@ export function listingModifiedIso(listing) {
  * @param {Record<string, unknown>} listing
  * @param {{ locationLine: string, addressLine: string, servicesPreview: string, regionLine: string }} ctx
  * @param {string} siteBase canonical origin (no trailing slash)
- * @returns {{ question: string, answer: string }[]}
+ * @returns {{ question: string, answer: string, contactCta?: boolean, contactCtaSuffix?: string }[]}
  */
 export function buildListingDetailFaqs(listing, ctx, siteBase) {
   const base = String(siteBase || "https://IQMotorBase.com").replace(/\/$/, "");
@@ -279,10 +279,16 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
     });
   }
 
-  if (listing.phone) {
+  const hasGatedContact = Boolean(
+    listing.phone || String(listing.email || "").trim() || String(listing.website || "").trim()
+  );
+
+  if (hasGatedContact) {
     items.push({
       question: `How do I contact ${name}?`,
-      answer: `Submit a repair request through the form on this IQMotorBase listing, or call ${String(listing.phone).trim()}.`,
+      answer: `Submit a repair request through the form on this IQMotorBase listing, or`,
+      contactCta: true,
+      contactCtaSuffix: " to reveal phone, email, and website.",
     });
   } else {
     items.push({
@@ -294,7 +300,12 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   if (emergency) {
     items.push({
       question: `Does ${name} offer emergency motor repair?`,
-      answer: `Yes. ${name} offers emergency / rush motor repair service. For emergency repairs, submit a request through this listing or call directly.`,
+      answer: hasGatedContact
+        ? `Yes. ${name} offers emergency / rush motor repair service. Submit a request through this listing or`
+        : `Yes. ${name} offers emergency / rush motor repair service. Submit a request through this listing to reach the shop.`,
+      ...(hasGatedContact
+        ? { contactCta: true, contactCtaSuffix: " to reach the shop directly." }
+        : {}),
     });
   }
 
@@ -317,6 +328,18 @@ export function buildListingDetailFaqs(listing, ctx, siteBase) {
   });
 
   return items;
+}
+
+/**
+ * Plain-text FAQ answer for FAQPage JSON-LD (no gated phone/email; complete sentences).
+ * @param {{ answer: string, contactCta?: boolean, contactCtaSuffix?: string }} item
+ */
+export function listingFaqAnswerForJsonLd(item) {
+  if (item.contactCta) {
+    const suffix = String(item.contactCtaSuffix || ".").trim();
+    return `${item.answer} use View contact info on this listing${suffix.startsWith(" ") ? suffix : ` ${suffix}`}`;
+  }
+  return item.answer;
 }
 
 /**
@@ -516,7 +539,7 @@ export function buildListingDetailJsonLdGraph(opts) {
       name: f.question,
       acceptedAnswer: {
         "@type": "Answer",
-        text: f.answer,
+        text: listingFaqAnswerForJsonLd(f),
       },
     })),
   };

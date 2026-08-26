@@ -44,6 +44,21 @@ export default function ContactReveal({
     } catch (_) {}
   }, [shopId]);
 
+  useEffect(() => {
+    if (!shopId) return;
+    const onOpenRequest = (event) => {
+      if (String(event?.detail?.shopId || "") !== String(shopId)) return;
+      if (unlocked) {
+        document.getElementById("listing-contact-reveal")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        return;
+      }
+      setModalTab("unlock");
+      setModalOpen(true);
+    };
+    window.addEventListener("contact-reveal:open", onOpenRequest);
+    return () => window.removeEventListener("contact-reveal:open", onOpenRequest);
+  }, [shopId, unlocked]);
+
   const setField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const isValid =
@@ -108,7 +123,7 @@ export default function ContactReveal({
 
   if (unlocked) {
     return (
-      <div className="mt-4 rounded-xl border border-success/40 bg-success/10 p-4 sm:p-5">
+      <div id="listing-contact-reveal" className="mt-4 rounded-xl border border-success/40 bg-success/10 p-4 sm:p-5">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-success">
           <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success text-xs text-white">
             <FiCheck className="h-3 w-3" aria-hidden />
@@ -183,7 +198,7 @@ export default function ContactReveal({
 
   return (
     <>
-      <div className="mt-4 rounded-xl border border-border bg-muted/30 p-4 text-center sm:p-5">
+      <div id="listing-contact-reveal" className="mt-4 rounded-xl border border-border bg-muted/30 p-4 text-center sm:p-5">
         <div className="mx-auto mb-4 flex max-w-[12rem] flex-col gap-2" aria-hidden="true">
           <div className="contact-reveal-blur-line contact-reveal-blur-phone" />
           <div className="contact-reveal-blur-line contact-reveal-blur-email" />

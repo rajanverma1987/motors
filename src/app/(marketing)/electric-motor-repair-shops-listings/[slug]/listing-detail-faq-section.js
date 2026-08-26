@@ -1,15 +1,20 @@
 /**
- * Visible FAQ — questions/answers must match FAQPage JSON-LD on the same page.
+ * Visible FAQ — answers must not expose gated contact info (phone/email/website).
+ * FAQPage JSON-LD uses the same public answers; NAP stays in LocalBusiness JSON-LD + SEO-hidden HTML.
  * @param {{
- *   items: { question: string, answer: string }[],
+ *   items: { question: string, answer: string, contactCta?: boolean, contactCtaSuffix?: string }[],
  *   heading?: string,
  *   description?: string,
+ *   shopId?: string | null,
  * }} props
  */
+import ContactRevealFaqLink from "@/components/marketing/contact-reveal-faq-link";
+
 export default function ListingDetailFaqSection({
   items,
   heading = "Frequently asked questions",
   description = "Common questions about this electric motor repair listing and how to use the IQMotorBase directory.",
+  shopId = null,
 }) {
   if (!Array.isArray(items) || items.length === 0) return null;
 
@@ -37,6 +42,13 @@ export default function ListingDetailFaqSection({
             </summary>
             <div className="mt-3 max-w-[57.6rem] text-sm leading-relaxed text-secondary whitespace-pre-line">
               {item.answer}
+              {item.contactCta && shopId ? (
+                <>
+                  {" "}
+                  <ContactRevealFaqLink shopId={shopId} />
+                  {item.contactCtaSuffix || ""}
+                </>
+              ) : null}
             </div>
           </details>
         ))}

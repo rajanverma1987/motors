@@ -707,7 +707,7 @@ export default async function ListingDetailPage({ params }) {
               </div>
             </div>
             <OwnAShopLikeThisModule className="mt-10" />
-            <ListingDetailFaqSection items={faqs} />
+            <ListingDetailFaqSection items={faqs} shopId={listing.id} />
           </div>
           <div>
             <div className={LISTINGS_FORM_STICKY}>
