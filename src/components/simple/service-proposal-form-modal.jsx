@@ -105,6 +105,8 @@ import {
   poLineHasContent,
   resolvePoStatus,
   suggestReceivingStatus,
+  computePoFormTotals,
+  computePoPaymentSummary,
 } from "@/lib/simple-purchase-order-form";
 import {
   applyCustomerLogisticsChargeToOtherItems,
@@ -153,6 +155,16 @@ function poReceivingBadgeVariant(status) {
   return "default";
 }
 
+function poPaymentStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "paid") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+const PROPOSAL_PO_HEADER_GRID =
+  "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)_minmax(4.25rem,0.85fr)] gap-x-2";
+
 /** Group job POs into parent rows (PO header) + child line rows. */
 function buildProposalPoTableGroups(purchaseOrders) {
   const groups = [];
@@ -161,6 +173,10 @@ function buildProposalPoTableGroups(purchaseOrders) {
     const poNumber = String(po?.poNumber || "").trim() || "—";
     const vendorName = String(po?.vendorName || "").trim() || "—";
     const poStatus = resolvePoStatus(po?.lineItems);
+    const totals = computePoFormTotals(po?.lineItems, po?.shippingCharge);
+    const paySummary = computePoPaymentSummary(po?.payments, totals.grandTotal);
+    const poPaymentStatus =
+      paySummary.paymentStatus || String(po?.paymentStatus || "").trim() || "Unpaid";
     const lines = (Array.isArray(po?.lineItems) ? po.lineItems : []).filter((line) =>
       poLineHasContent(line)
     );
@@ -182,7 +198,7 @@ function buildProposalPoTableGroups(purchaseOrders) {
     });
     if (!poId) continue;
     const poDateRaw = String(po?.poCutDate || po?.createdAt || "").trim();
-    groups.push({ poId, poNumber, vendorName, poStatus, poDateRaw, items });
+    groups.push({ poId, poNumber, vendorName, poStatus, poPaymentStatus, poDateRaw, items });
   }
   return groups;
 }
@@ -1619,13 +1635,14 @@ export default function ServiceProposalFormModal({
                 ) : (
                   <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border border-border">
                     <div
-                      className={`sticky top-0 z-[1] grid grid-cols-[1.75rem_minmax(5.5rem,1fr)_minmax(6rem,1.4fr)_minmax(4.5rem,0.9fr)_minmax(5.5rem,1fr)] gap-x-2 border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
+                      className={`sticky top-0 z-[1] ${PROPOSAL_PO_HEADER_GRID} border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
                     >
                       <span aria-hidden />
                       <span>PO#</span>
                       <span>Vendor</span>
                       <span>PO Date</span>
                       <span>PO Status</span>
+                      <span>PO Payment</span>
                     </div>
                     {proposalPoTableGroups.map((group) => {
                       const poExpanded = expandedPoIds.has(group.poId);
@@ -1635,7 +1652,7 @@ export default function ServiceProposalFormModal({
                         className="border-b border-border last:border-b-0"
                       >
                         <div
-                          className={`grid grid-cols-[1.75rem_minmax(5.5rem,1fr)_minmax(6rem,1.4fr)_minmax(4.5rem,0.9fr)_minmax(5.5rem,1fr)] items-center gap-x-2 gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
+                          className={`${PROPOSAL_PO_HEADER_GRID} items-center gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
                         >
                           <button
                             type="button"
@@ -1682,6 +1699,15 @@ export default function ServiceProposalFormModal({
                               title={group.poStatus}
                             >
                               {group.poStatus}
+                            </Badge>
+                          </div>
+                          <div className="min-w-0">
+                            <Badge
+                              variant={poPaymentStatusBadgeVariant(group.poPaymentStatus)}
+                              className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
+                              title={group.poPaymentStatus}
+                            >
+                              {group.poPaymentStatus}
                             </Badge>
                           </div>
                         </div>
@@ -1878,6 +1904,7 @@ export default function ServiceProposalFormModal({
         initialTab={logisticsTab}
         serviceProposalId={recordId}
         defaultJobNumber={docNumber}
+        defaultReceivingPo={form.motorReceiving?.receivingPo || form.customerPo || ""}
         defaultInvoiceNumber={docNumber}
         defaultShippingPo={form.shippingPo || form.customerPo || ""}
         initialReceiving={form.motorReceiving}

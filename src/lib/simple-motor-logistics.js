@@ -69,6 +69,7 @@ export function emptyMotorLogisticsRecord(kind, defaults = {}) {
   return {
     date: todayISODate(),
     jobNumber: isReceiving ? String(defaults.jobNumber || "").trim() : "",
+    receivingPo: isReceiving ? String(defaults.receivingPo || "").trim() : "",
     invoiceNumber: !isReceiving ? String(defaults.invoiceNumber || "").trim() : "",
     shippingPo: !isReceiving ? String(defaults.shippingPo || "").trim() : "",
     mannerOfTransport: "",
@@ -105,6 +106,9 @@ export function normalizeMotorLogisticsRecord(raw, kind, defaults = {}) {
     jobNumber: isReceiving
       ? String(raw.jobNumber || defaults.jobNumber || "").trim()
       : "",
+    receivingPo: isReceiving
+      ? String(raw.receivingPo || defaults.receivingPo || "").trim()
+      : "",
     invoiceNumber: !isReceiving
       ? String(raw.invoiceNumber || defaults.invoiceNumber || "").trim()
       : "",
@@ -130,6 +134,7 @@ export function motorLogisticsFormToStored(form, kind) {
   return {
     date: String(src.date || "").trim() || todayISODate(),
     jobNumber: isReceiving ? String(src.jobNumber || "").trim() : "",
+    receivingPo: isReceiving ? String(src.receivingPo || "").trim() : "",
     invoiceNumber: !isReceiving ? String(src.invoiceNumber || "").trim() : "",
     shippingPo: !isReceiving ? String(src.shippingPo || "").trim() : "",
     mannerOfTransport: String(src.mannerOfTransport || "").trim(),

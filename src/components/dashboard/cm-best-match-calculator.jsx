@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { FiPlus, FiPrinter } from "react-icons/fi";
+import { FiPlus, FiPrinter, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
+import { useConfirm } from "@/components/confirm-provider";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
 import {
   CIR_MILLS_UNIT_AWG,
@@ -60,6 +61,43 @@ function VarCell({ label, value }) {
     <div>
       <span className="cm-var-label block text-xs font-medium text-secondary">{label}</span>
       <span className="cm-var-value tabular-nums text-sm font-semibold text-title">{value}</span>
+    </div>
+  );
+}
+
+function WireUnitToggle({ wireUnit, onUnitChange, disabled = false }) {
+  return (
+    <div
+      className="inline-flex shrink-0 rounded-md border border-border bg-form-bg p-0.5"
+      role="group"
+      aria-label="Wire measurement unit"
+    >
+      <button
+        type="button"
+        onClick={() => onUnitChange(CIR_MILLS_UNIT_AWG)}
+        disabled={disabled}
+        className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+          wireUnit === CIR_MILLS_UNIT_AWG
+            ? "bg-primary text-white"
+            : "text-secondary hover:bg-card hover:text-title"
+        }`}
+        aria-pressed={wireUnit === CIR_MILLS_UNIT_AWG}
+      >
+        AWG
+      </button>
+      <button
+        type="button"
+        onClick={() => onUnitChange(CIR_MILLS_UNIT_METRIC)}
+        disabled={disabled}
+        className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
+          wireUnit === CIR_MILLS_UNIT_METRIC
+            ? "bg-primary text-white"
+            : "text-secondary hover:bg-card hover:text-title"
+        }`}
+        aria-pressed={wireUnit === CIR_MILLS_UNIT_METRIC}
+      >
+        Metric
+      </button>
     </div>
   );
 }
@@ -149,13 +187,32 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
 function OriginalWiresSelectModal({
   open,
   onClose,
-  catalog = [],
+  wireUnit = CIR_MILLS_UNIT_AWG,
+  onUnitChange,
+  customWireRows = [],
+  catalogsByUnit = {},
   loading = false,
   initialQtys = {},
   onApply,
-  sizeColumnLabel = "Wire size",
 }) {
   const [qtyById, setQtyById] = useState({});
+
+  const platformWireRows = useMemo(
+    () =>
+      (catalogsByUnit[wireUnit] || []).map((row) => ({
+        ...row,
+        id: row.id ? `platform:${row.id}` : "",
+        source: "platform",
+      })),
+    [catalogsByUnit, wireUnit]
+  );
+
+  const catalog = useMemo(
+    () => [...customWireRows, ...platformWireRows],
+    [customWireRows, platformWireRows]
+  );
+
+  const sizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
 
   useEffect(() => {
     if (!open) return;
@@ -200,9 +257,12 @@ function OriginalWiresSelectModal({
       }
     >
       <form id={ORIGINAL_WIRES_FORM_ID} onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-3">
-        <p className="text-sm text-secondary">
-          Enter quantity for each size in the winding. Total circular mils = Cir. Mills × qty for all selected sizes.
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <p className="min-w-0 flex-1 text-sm text-secondary">
+            Enter quantity for each size in the winding. Total circular mils = Cir. Mills × qty for all selected sizes.
+          </p>
+          <WireUnitToggle wireUnit={wireUnit} onUnitChange={onUnitChange} disabled={loading} />
+        </div>
         {loading ? (
           <div
             className="flex min-h-[160px] flex-col items-center justify-center gap-3"
@@ -214,10 +274,12 @@ function OriginalWiresSelectModal({
               className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
               aria-hidden
             />
-            <p className="text-sm text-secondary">Loading Cir Mills…</p>
+            <p className="text-sm text-secondary">Loading wire catalog…</p>
           </div>
         ) : catalog.length === 0 ? (
-          <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
+          <p className="text-sm text-secondary">
+            No wire sizes available for this unit. Add custom sizes on the catalog or ask an admin to seed Cir Mills.
+          </p>
         ) : (
           <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border">
             <table className="w-full border-collapse text-sm">
@@ -231,7 +293,14 @@ function OriginalWiresSelectModal({
               <tbody>
                 {catalog.map((row) => (
                   <tr key={row.id} className="border-b border-border last:border-b-0">
-                    <td className="px-2 py-1.5 tabular-nums font-semibold text-title">{row.size}</td>
+                    <td className="px-2 py-1.5 tabular-nums font-semibold text-title">
+                      {row.size}
+                      {row.source === "shop" ? (
+                        <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                          Custom
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-2 py-1.5 text-right tabular-nums text-secondary">{row.circularMills}</td>
                     <td className="px-2 py-1">
                       <input
@@ -257,6 +326,7 @@ function OriginalWiresSelectModal({
 
 export default function CmBestMatchCalculator() {
   const toast = useToast();
+  const confirm = useConfirm();
   const formatDateTime = useFormatDateTime();
   const [selected, setSelected] = useState(() => new Set());
   const [originalWiredInHand, setOriginalWiredInHand] = useState("");
@@ -276,6 +346,42 @@ export default function CmBestMatchCalculator() {
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
   const [originalWireQtys, setOriginalWireQtys] = useState({});
   const [wireUnit, setWireUnit] = useState(CIR_MILLS_UNIT_AWG);
+  const [shopWireRows, setShopWireRows] = useState([]);
+  const [shopWiresLoading, setShopWiresLoading] = useState(true);
+  const [newSize, setNewSize] = useState("");
+  const [newCm, setNewCm] = useState("");
+  const [savingWire, setSavingWire] = useState(false);
+
+  const loadShopWires = useCallback(async () => {
+    setShopWiresLoading(true);
+    try {
+      const res = await fetch("/api/dashboard/wire-sizes", { credentials: "include", cache: "no-store" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load wire catalog");
+      const list = Array.isArray(data) ? data : [];
+      setShopWireRows(list);
+      setSelected((prev) => {
+        const next = new Set();
+        for (const row of list) {
+          if (row.id && prev.has(row.id)) next.add(row.id);
+        }
+        for (const id of prev) {
+          if (next.has(id)) continue;
+          if (String(id).startsWith("platform:")) next.add(id);
+        }
+        return next;
+      });
+    } catch (e) {
+      toast.error(e.message || "Could not load your wire catalog");
+      setShopWireRows([]);
+    } finally {
+      setShopWiresLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    loadShopWires();
+  }, [loadShopWires]);
 
   useEffect(() => {
     let cancelled = false;
@@ -310,7 +416,13 @@ export default function CmBestMatchCalculator() {
   const setUnit = (next) => {
     const u = normalizeCirMillsUnit(next);
     if (u === wireUnit) return;
-    setSelected(new Set());
+    setSelected((prev) => {
+      const kept = new Set();
+      for (const id of prev) {
+        if (!String(id).startsWith("platform:")) kept.add(id);
+      }
+      return kept;
+    });
     setWireUnit(u);
     setOriginalWireQtys({});
     setOriginalWireSize("");
@@ -324,6 +436,88 @@ export default function CmBestMatchCalculator() {
 
   const wireSizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
   const unitToggleLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
+
+  const platformWireRows = useMemo(
+    () =>
+      (catalogsByUnit[wireUnit] || []).map((row) => ({
+        ...row,
+        id: row.id ? `platform:${row.id}` : "",
+        source: "platform",
+      })),
+    [catalogsByUnit, wireUnit]
+  );
+
+  const customWireRows = useMemo(
+    () =>
+      shopWireRows.map((row) => ({
+        ...row,
+        source: "shop",
+      })),
+    [shopWireRows]
+  );
+
+  const wireRows = useMemo(() => [...customWireRows, ...platformWireRows], [customWireRows, platformWireRows]);
+  const cirMillsCatalog = wireRows;
+  const catalogLoading = cirMillsLoading || shopWiresLoading;
+
+  const addWire = async () => {
+    const size = newSize.trim();
+    const cm = num(newCm);
+    if (!size) {
+      toast.warning("Enter a wire size label (e.g. 19 or 18.5).");
+      return;
+    }
+    if (!Number.isFinite(cm) || cm <= 0) {
+      toast.warning("Enter a positive circular mils value.");
+      return;
+    }
+    setSavingWire(true);
+    try {
+      const res = await fetch("/api/dashboard/wire-sizes", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ size, circularMills: cm }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setNewSize("");
+      setNewCm("");
+      await loadShopWires();
+      toast.success("Wire size added to your catalog.");
+    } catch (e) {
+      toast.error(e.message || "Could not add wire size");
+    } finally {
+      setSavingWire(false);
+    }
+  };
+
+  const removeWire = async (id) => {
+    const ok = await confirm({
+      title: "Remove wire size",
+      message: "Remove this custom wire size from your shop catalog?",
+      confirmLabel: "Remove",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      const res = await fetch(`/api/dashboard/wire-sizes?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Remove failed");
+      setSelected((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      await loadShopWires();
+      toast.success("Wire size removed.");
+    } catch (e) {
+      toast.error(e.message || "Could not remove wire size");
+    }
+  };
 
   /** Scope print layout fixes to CM results only (see cm-best-match-print.css) */
   useEffect(() => {
@@ -342,9 +536,6 @@ export default function CmBestMatchCalculator() {
       window.removeEventListener("afterprint", onAfterPrint);
     };
   }, []);
-
-  const wireRows = catalogsByUnit[wireUnit] || [];
-  const cirMillsCatalog = wireRows;
 
   const selectedList = useMemo(() => {
     return wireRows.filter((w) => w.id && selected.has(w.id));
@@ -454,45 +645,45 @@ export default function CmBestMatchCalculator() {
             <div className="min-w-0">
               <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
               <p className="text-xs text-secondary">
-                Shared Cir Mills table ({unitToggleLabel}). Pick sizes to include in the search. Up to {MAX_SELECT}{" "}
-                selections.
+                Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Pick sizes to include in
+                the search. Up to {MAX_SELECT} selections.
               </p>
             </div>
-            <div
-              className="inline-flex shrink-0 rounded-md border border-border bg-form-bg p-0.5"
-              role="group"
-              aria-label="Wire measurement unit"
-            >
-              <button
-                type="button"
-                onClick={() => setUnit(CIR_MILLS_UNIT_AWG)}
-                disabled={cirMillsLoading}
-                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
-                  wireUnit === CIR_MILLS_UNIT_AWG
-                    ? "bg-primary text-white"
-                    : "text-secondary hover:bg-card hover:text-title"
-                }`}
-                aria-pressed={wireUnit === CIR_MILLS_UNIT_AWG}
-              >
-                AWG
-              </button>
-              <button
-                type="button"
-                onClick={() => setUnit(CIR_MILLS_UNIT_METRIC)}
-                disabled={cirMillsLoading}
-                className={`rounded px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60 ${
-                  wireUnit === CIR_MILLS_UNIT_METRIC
-                    ? "bg-primary text-white"
-                    : "text-secondary hover:bg-card hover:text-title"
-                }`}
-                aria-pressed={wireUnit === CIR_MILLS_UNIT_METRIC}
-              >
-                Metric
-              </button>
-            </div>
+            <WireUnitToggle wireUnit={wireUnit} onUnitChange={setUnit} disabled={cirMillsLoading} />
           </div>
 
-          {cirMillsLoading ? (
+          <div className="mb-4 flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">
+            <Input
+              label="New size"
+              className="min-w-0 flex-1 sm:min-w-[100px]"
+              value={newSize}
+              onChange={(e) => setNewSize(e.target.value)}
+              placeholder="e.g. 19 or 18.5"
+              disabled={savingWire}
+            />
+            <Input
+              label="Circular mils"
+              className="w-full sm:w-32"
+              type="text"
+              inputMode="decimal"
+              value={newCm}
+              onChange={(e) => setNewCm(e.target.value)}
+              placeholder="12360"
+              disabled={savingWire}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={addWire}
+              disabled={savingWire}
+              className="shrink-0"
+            >
+              {savingWire ? "Adding…" : "Add to catalog"}
+            </Button>
+          </div>
+
+          {catalogLoading ? (
             <div
               className="flex min-h-[220px] flex-col items-center justify-center gap-3 rounded-md border border-border bg-bg"
               role="status"
@@ -503,10 +694,12 @@ export default function CmBestMatchCalculator() {
                 className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
                 aria-hidden
               />
-              <p className="text-sm text-secondary">Loading Cir Mills…</p>
+              <p className="text-sm text-secondary">Loading wire catalog…</p>
             </div>
           ) : wireRows.length === 0 ? (
-            <p className="text-sm text-secondary">No Cir Mills sizes available. Ask an admin to seed the table.</p>
+            <p className="text-sm text-secondary">
+              Add custom wire sizes above or ask an admin to seed the Cir Mills table.
+            </p>
           ) : (
             <div className="min-h-[220px] max-h-[min(420px,calc(100vh-340px))] flex-1 overflow-auto rounded-md border border-border bg-bg">
               <table className="w-full text-sm">
@@ -515,6 +708,7 @@ export default function CmBestMatchCalculator() {
                     <th className="w-10 px-2 py-2 text-left" aria-label="Select" />
                     <th className="px-3 py-2 text-left font-medium text-title">{wireSizeColumnLabel}</th>
                     <th className="px-3 py-2 text-right font-medium text-title">Cir. Mills</th>
+                    <th className="w-12 px-2 py-2" aria-label="Remove custom size" />
                   </tr>
                 </thead>
                 <tbody>
@@ -529,8 +723,27 @@ export default function CmBestMatchCalculator() {
                           aria-label={`Select ${w.size}`}
                         />
                       </td>
-                      <td className="px-3 py-2 tabular-nums text-title">{w.size}</td>
+                      <td className="px-3 py-2 tabular-nums text-title">
+                        {w.size}
+                        {w.source === "shop" ? (
+                          <span className="ml-2 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                            Custom
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-2 text-right tabular-nums text-secondary">{w.circularMills}</td>
+                      <td className="px-2 py-2 text-right">
+                        {w.source === "shop" && w.id ? (
+                          <button
+                            type="button"
+                            onClick={() => removeWire(w.id)}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
+                            aria-label={`Remove ${w.size}`}
+                          >
+                            <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                          </button>
+                        ) : null}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -666,11 +879,13 @@ export default function CmBestMatchCalculator() {
       <OriginalWiresSelectModal
         open={originalWiresModalOpen}
         onClose={() => setOriginalWiresModalOpen(false)}
-        catalog={cirMillsCatalog}
-        loading={cirMillsLoading}
+        wireUnit={wireUnit}
+        onUnitChange={setUnit}
+        customWireRows={customWireRows}
+        catalogsByUnit={catalogsByUnit}
+        loading={catalogLoading}
         initialQtys={originalWireQtys}
         onApply={applyOriginalWireSelection}
-        sizeColumnLabel={wireSizeColumnLabel}
       />
 
       {results.length > 0 && resultContext ? (

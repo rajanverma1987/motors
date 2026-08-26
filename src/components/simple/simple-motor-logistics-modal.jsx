@@ -93,17 +93,30 @@ function LogisticsColumn({
 
       <div className="flex min-h-0 flex-col gap-2.5 overflow-y-auto pr-0.5">
         {isReceiving ? (
-          <FieldRow label="REF# / Job">
-            <input
-              type="text"
-              value={form.jobNumber}
-              onChange={(e) => patch("jobNumber", e.target.value)}
-              className={FIELD_INPUT}
-              placeholder="e.g. A00001"
-              disabled={busy}
-              aria-label="REF or Job number"
-            />
-          </FieldRow>
+          <>
+            <FieldRow label="RFQ# /Job#">
+              <input
+                type="text"
+                value={form.jobNumber}
+                onChange={(e) => patch("jobNumber", e.target.value)}
+                className={FIELD_INPUT}
+                placeholder="e.g. A00001"
+                disabled={busy}
+                aria-label="REF or Job number"
+              />
+            </FieldRow>
+            <FieldRow label="REF/PO#">
+              <input
+                type="text"
+                value={form.receivingPo}
+                onChange={(e) => patch("receivingPo", e.target.value)}
+                className={FIELD_INPUT}
+                placeholder="Customer PO / reference"
+                disabled={busy}
+                aria-label="REF or PO number"
+              />
+            </FieldRow>
+          </>
         ) : (
           <>
             <FieldRow label="Invoice #">
@@ -372,6 +385,7 @@ export default function SimpleMotorLogisticsModal({
   initialTab: _initialTab = null,
   serviceProposalId = "",
   defaultJobNumber = "",
+  defaultReceivingPo = "",
   defaultInvoiceNumber = "",
   defaultShippingPo = "",
   initialReceiving = null,
@@ -398,6 +412,7 @@ export default function SimpleMotorLogisticsModal({
   const [receivingForm, setReceivingForm] = useState(() =>
     emptyMotorLogisticsRecord(KIND_RECEIVING, {
       jobNumber: defaultJobNumber,
+      receivingPo: defaultReceivingPo,
       invoiceNumber: defaultInvoiceNumber,
     })
   );
@@ -475,6 +490,7 @@ export default function SimpleMotorLogisticsModal({
 
     const defaults = {
       jobNumber: defaultJobNumber,
+      receivingPo: defaultReceivingPo,
       invoiceNumber: defaultInvoiceNumber,
       shippingPo: defaultShippingPo,
     };
@@ -486,7 +502,7 @@ export default function SimpleMotorLogisticsModal({
     setShippingFile(null);
     // Seed intentionally from open-time props only.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset when modal opens
-  }, [open, defaultJobNumber, defaultInvoiceNumber, defaultShippingPo]);
+  }, [open, defaultJobNumber, defaultReceivingPo, defaultInvoiceNumber, defaultShippingPo]);
 
   const patchReceiving = (key, value) => setReceivingForm((f) => ({ ...f, [key]: value }));
   const patchShipping = (key, value) => setShippingForm((f) => ({ ...f, [key]: value }));

@@ -632,7 +632,10 @@ export function simpleServiceProposalDocToForm(doc) {
 
   const docNumber = next.documentNumber;
   next.motorReceiving = d.motorReceiving
-    ? normalizeMotorLogisticsRecord(d.motorReceiving, KIND_RECEIVING, { jobNumber: docNumber })
+    ? normalizeMotorLogisticsRecord(d.motorReceiving, KIND_RECEIVING, {
+        jobNumber: docNumber,
+        receivingPo: next.customerPo || "",
+      })
     : null;
   next.motorShipping = d.motorShipping
     ? normalizeMotorLogisticsRecord(d.motorShipping, KIND_SHIPPING, {

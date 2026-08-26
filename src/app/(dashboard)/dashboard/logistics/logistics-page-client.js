@@ -212,7 +212,7 @@ export default function LogisticsPageClient() {
           label: `REF# ${ref} · ${w.workOrderNumber || "—"}${co ? ` · ${co}` : ""}`,
         };
       }).filter((o) => o.value),
-      { value: MANUAL_OPTION, label: "Other (type REF# / job #)" },
+      { value: MANUAL_OPTION, label: "Other (type RFQ# /Job# #)" },
     ];
     return opts;
   }, [workOrders]);
@@ -453,7 +453,7 @@ export default function LogisticsPageClient() {
           ),
         },
         { key: "date", label: "Date", sortable: true },
-        { key: "jobNumber", label: "REF# / Job", sortable: true },
+        { key: "jobNumber", label: "RFQ# /Job#", sortable: true },
         { key: "mannerOfTransport", label: "Transport", sortable: true },
         { key: "freight", label: "Freight", sortable: true },
         { key: "droppedBy", label: "Dropped by", sortable: true },
@@ -594,11 +594,10 @@ export default function LogisticsPageClient() {
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
-              tab === t.id
+            className={`rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${tab === t.id
                 ? "bg-primary text-white"
                 : "bg-card text-secondary hover:bg-muted/50 hover:text-title"
-            }`}
+              }`}
           >
             <span className="block">{t.label}</span>
             <span className={`mt-0.5 block text-xs ${tab === t.id ? "text-white/85" : "text-secondary"}`}>
@@ -698,7 +697,7 @@ export default function LogisticsPageClient() {
                 />
                 {refSelectValue === MANUAL_OPTION && (
                   <Input
-                    label="REF# / Job # (manual)"
+                    label="RFQ# /Job# # (manual)"
                     value={form.jobNumber}
                     onChange={(e) => setForm((f) => ({ ...f, jobNumber: e.target.value }))}
                     placeholder="e.g. A00001 or W-A00001-1"
