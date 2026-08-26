@@ -1,4 +1,9 @@
+"use client";
+
+import { useCallback, useEffect, useRef } from "react";
 import { FiBookmark } from "react-icons/fi";
+
+const PREFERRED_SOURCE_DEEPLINK = "https://www.google.com/preferences/source?q=iqmotorbase.com";
 
 /** Official-style multicolor Google "G" mark (SVG). */
 function GoogleLogoMark({ className = "h-5 w-5", title = "Google" }) {
@@ -31,25 +36,50 @@ function GoogleLogoMark({ className = "h-5 w-5", title = "Google" }) {
   );
 }
 
-/**
- * Google "Add as preferred source" button — marketing site only.
- *
- * Google's publisher.js (loaded once in app/(marketing)/layout.js) finds the
- * [google-add-preferred-source-btn] element and injects the localized button.
- * Only one slot should exist per page.
- *
- * https://developers.google.com/search/docs/appearance/preferred-sources
- */
+/** Wire up Google Preferred Sources SDK when publisher.js loads (manual mode). */
+function usePreferredSourceAction() {
+  const sdkRef = useRef(null);
 
-function GoogleButtonSlot({ className = "" }) {
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    (window.PREFERRED_SOURCE = window.PREFERRED_SOURCE || []).push((preferredSource) => {
+      sdkRef.current = preferredSource;
+      try {
+        preferredSource.init({ theme: "light", lang: "en" });
+      } catch {
+        /* ignore */
+      }
+    });
+  }, []);
+
+  return useCallback((event) => {
+    const sdk = sdkRef.current;
+    if (sdk && typeof sdk.addPreferredSource === "function") {
+      event.preventDefault();
+      try {
+        sdk.addPreferredSource();
+        return;
+      } catch {
+        /* fall through to deeplink */
+      }
+    }
+  }, []);
+}
+
+function PreferredSourceCta({ className = "", label = "Add preferred source" }) {
+  const onActivate = usePreferredSourceAction();
+
   return (
-    <div
-      google-add-preferred-source-btn=""
-      data-theme="light"
-      data-lang="en"
-      suppressHydrationWarning
-      className={`min-h-10 min-w-[10.5rem] shrink-0 ${className}`.trim()}
-    />
+    <a
+      href={PREFERRED_SOURCE_DEEPLINK}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onActivate}
+      className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#1f1f1f] shadow-md transition-colors hover:bg-gray-50 active:bg-gray-100 ${className}`.trim()}
+    >
+      <GoogleLogoMark className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="whitespace-nowrap">{label}</span>
+    </a>
   );
 }
 
@@ -58,7 +88,7 @@ function NoscriptLink({ className = "" }) {
     <noscript>
       <a
         className={`inline-flex min-h-10 items-center rounded-md bg-white px-4 text-sm font-semibold text-primary underline-offset-2 transition-opacity hover:opacity-90 ${className}`.trim()}
-        href="https://www.google.com/preferences/source?q=iqmotorbase.com"
+        href={PREFERRED_SOURCE_DEEPLINK}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -74,6 +104,8 @@ export default function PreferredSourceButton({
   variant = "prominent",
   className = "",
 }) {
+  const onActivate = usePreferredSourceAction();
+
   if (variant === "stripe") {
     return (
       <aside
@@ -81,27 +113,24 @@ export default function PreferredSourceButton({
         aria-label="Add IQMotorBase as a preferred source in Google Search"
       >
         <div className="mx-auto flex max-w-[86.4rem] flex-col items-center gap-3 px-4 py-3 sm:flex-row sm:justify-between sm:gap-4 sm:px-6 sm:py-2.5">
-          <div className="flex min-w-0 items-center gap-3 text-center sm:text-left">
-            <div
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm sm:h-10 sm:w-10"
-              aria-hidden
-            >
+          <a
+            href={PREFERRED_SOURCE_DEEPLINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onActivate}
+            className="flex min-w-0 cursor-pointer items-center gap-3 text-center transition-opacity hover:opacity-95 sm:text-left"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm sm:h-10 sm:w-10">
               <GoogleLogoMark className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold leading-snug text-white sm:text-base">{title}</p>
-              <p className="mt-0.5 hidden text-xs leading-snug text-white/90 sm:block">{description}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2.5">
-            <span className="hidden text-xs font-semibold uppercase tracking-wide text-white/90 lg:inline">
-              Free · 1 click
             </span>
-            <div className="flex min-h-10 items-center justify-center gap-2 rounded-md bg-white px-2.5 py-1 shadow-md">
-              <GoogleLogoMark className="h-4 w-4 shrink-0" aria-hidden />
-              <GoogleButtonSlot />
-            </div>
-            <NoscriptLink />
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold leading-snug text-white sm:text-base">{title}</span>
+              <span className="mt-0.5 hidden text-xs leading-snug text-white/90 sm:block">{description}</span>
+            </span>
+          </a>
+          <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
+            <span className="text-xs font-semibold uppercase tracking-wide text-white/90">Free · 1 click</span>
+            <PreferredSourceCta />
           </div>
         </div>
       </aside>
@@ -114,7 +143,7 @@ export default function PreferredSourceButton({
         className={`flex min-h-10 flex-wrap items-center justify-center gap-2.5 sm:justify-start ${className}`}
       >
         <span className="text-sm leading-snug text-secondary">{title}</span>
-        <GoogleButtonSlot />
+        <PreferredSourceCta className="!px-2.5" label="Add source" />
         <NoscriptLink className="!bg-primary !text-white" />
       </div>
     );
@@ -142,9 +171,7 @@ export default function PreferredSourceButton({
           <p className="text-center text-xs font-medium uppercase tracking-wide text-primary lg:text-right">
             Free · one click
           </p>
-          <div className="flex min-h-11 items-center justify-center rounded-lg border border-primary/25 bg-white/90 px-3 py-2 shadow-sm dark:bg-white">
-            <GoogleButtonSlot className="min-h-11 min-w-[11rem]" />
-          </div>
+          <PreferredSourceCta className="min-h-11 px-4" />
           <NoscriptLink className="!bg-primary !text-white" />
         </div>
       </div>

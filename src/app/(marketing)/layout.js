@@ -31,7 +31,8 @@ gtag('config', '${GA_MEASUREMENT_ID}');
       <Script
         id="google-preferred-source"
         src="https://news.google.com/swg/js/v1/publisher.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
+        preferred-sources-control="manual"
       />
       <SoftwareAppSchema />
       <WebsiteClarity />
