@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Button from "@/components/ui/button";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import SoftwareDemoBookingPanel from "@/components/marketing/SoftwareDemoBookingPanel";
 import SoftwareSeoFaqJsonLd from "@/components/marketing/SoftwareSeoFaqJsonLd";
@@ -11,12 +12,21 @@ import {
   SEO_SOFTWARE_INVOICING_PATH,
   SEO_SOFTWARE_COMPARISON_PATH,
 } from "@/lib/seo-software-paths";
+import {
+  HERO_DASHBOARD_TABLET_ALT,
+  HERO_DASHBOARD_TABLET_PATH,
+  heroDashboardTabletOgImage,
+} from "@/lib/hero-dashboard-seo";
 
 const path = SEO_SOFTWARE_PILLAR_PATH;
 
 const TITLE = "Motor Repair Shop Management Software | IQMotorBase";
 const DESCRIPTION =
   "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built specifically for electric motor repair shops. Book a demo.";
+
+const heroOg = heroDashboardTabletOgImage({
+  alt: "IQMotorBase motor repair shop management software dashboard on a tablet — service proposals pipeline and job list",
+});
 
 export const metadata = {
   title: TITLE,
@@ -34,11 +44,18 @@ export const metadata = {
     type: "article",
     siteName: "IQMotorBase.com",
     locale: "en_US",
+    images: [heroOg],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: DESCRIPTION,
+    images: [
+      {
+        url: HERO_DASHBOARD_TABLET_PATH,
+        alt: heroOg.alt,
+      },
+    ],
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -83,6 +100,28 @@ export default function MotorRepairShopManagementSoftwarePage() {
         wideSidebar
         sidebarUnwrapped
         stickySidebar
+        heroImage={HERO_DASHBOARD_TABLET_PATH}
+        heroImageAlt={HERO_DASHBOARD_TABLET_ALT}
+        heroEyebrow="Built for motor repair shops"
+        heroHighlights={[
+          "Job Write-Ups & work orders",
+          "Inventory & QuickBooks Online",
+          "Repair leads built in",
+        ]}
+        heroPrimaryCta={
+          <Link href="#book-a-demo" className="w-full min-w-0 sm:w-auto">
+            <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
+              Book a demo
+            </Button>
+          </Link>
+        }
+        heroSecondaryCta={
+          <Link href="/pricing" className="w-full min-w-0 sm:w-auto">
+            <Button variant="outline" size="lg" className="w-full min-w-0 sm:w-auto">
+              See pricing
+            </Button>
+          </Link>
+        }
         sidebarCta={
           <SoftwareDemoBookingPanel sourcePage={path} layout="sidebar" idPrefix="software-demo-sidebar" />
         }
@@ -381,13 +420,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
           </section>
 
           <section className="mt-10 not-prose">
-            <SoftwareDemoBookingPanel
-              sourcePage={path}
-              layout="inline"
-              idPrefix="software-demo-inline"
-              className="mt-2"
-            />
-            <p className="mt-6 text-center text-sm text-secondary sm:text-base">
+            <p className="text-center text-sm text-secondary sm:text-base">
               Evaluating options? Read the{" "}
               <Link href={SEO_SOFTWARE_COMPARISON_PATH} className="text-primary font-medium hover:underline">
                 2026 software comparison

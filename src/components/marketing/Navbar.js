@@ -11,7 +11,7 @@ import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/l
 
 const productNav = {
   href: "/motor-repair-shop-management-software",
-  label: "Motor Shop Management System",
+  label: "Motor Shop Management Software",
 };
 
 /** Dark mode only: light warm copper panel (hue ~28–32°) so dark logo artwork reads clearly. */

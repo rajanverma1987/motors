@@ -72,6 +72,7 @@ export default function SoftwareDemoBookingPanel({
 
   return (
     <div
+      id="book-a-demo"
       className={`overflow-hidden rounded-2xl border-2 border-primary/25 bg-gradient-to-br from-primary/[0.1] via-card to-card shadow-lg ${className}`}
     >
       <div className="border-b border-primary/15 bg-primary/[0.08] px-5 py-6 sm:px-6 sm:py-7">

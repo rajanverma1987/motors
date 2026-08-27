@@ -1,5 +1,11 @@
 import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import {
+  HERO_DASHBOARD_TABLET_ALT,
+  HERO_DASHBOARD_TABLET_HEIGHT,
+  HERO_DASHBOARD_TABLET_PATH,
+  HERO_DASHBOARD_TABLET_WIDTH,
+} from "@/lib/hero-dashboard-seo";
 
 function JsonLd({ id, data }) {
   return (
@@ -14,6 +20,7 @@ function JsonLd({ id, data }) {
 /** Sitewide SoftwareApplication + Organization graph (marketing layout). */
 export function SoftwareAppSchema() {
   const siteUrl = getPublicSiteUrl().replace(/\/$/, "");
+  const heroUrl = `${siteUrl}${HERO_DASHBOARD_TABLET_PATH}`;
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -25,6 +32,16 @@ export function SoftwareAppSchema() {
         operatingSystem: "Web, iOS, Android",
         description:
           "Shop management software for electric motor repair businesses. Work orders, lead generation, inventory, invoicing, job board, technician mobile app, and marketplace.",
+        image: heroUrl,
+        screenshot: {
+          "@type": "ImageObject",
+          url: heroUrl,
+          contentUrl: heroUrl,
+          width: HERO_DASHBOARD_TABLET_WIDTH,
+          height: HERO_DASHBOARD_TABLET_HEIGHT,
+          caption: HERO_DASHBOARD_TABLET_ALT,
+          description: HERO_DASHBOARD_TABLET_ALT,
+        },
         offers: {
           "@type": "Offer",
           price: "0",

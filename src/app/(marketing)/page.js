@@ -1,12 +1,23 @@
+import Image from "next/image";
 import Link from "next/link";
 import Button from "@/components/ui/button";
 import { HomePageJsonLd } from "@/components/seo/JsonLd";
-import HeroBackground from "@/components/marketing/HeroBackground";
 import HomeFAQ from "@/components/marketing/home-faq";
+import {
+  HERO_DASHBOARD_TABLET_ALT,
+  HERO_DASHBOARD_TABLET_PATH,
+  heroDashboardTabletOgImage,
+  FEATURES_WINDERS_TABLET_ALT,
+  FEATURES_WINDERS_TABLET_PATH,
+  FEATURES_WINDERS_TABLET_WIDTH,
+  FEATURES_WINDERS_TABLET_HEIGHT,
+} from "@/lib/hero-dashboard-seo";
 
 const HOME_TITLE = "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase";
 const HOME_DESCRIPTION =
   "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop — all in one platform. Book a free demo today.";
+
+const heroOg = heroDashboardTabletOgImage();
 
 export const metadata = {
   title: { absolute: HOME_TITLE },
@@ -15,10 +26,21 @@ export const metadata = {
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
     url: "/",
+    type: "website",
+    siteName: "IQMotorBase.com",
+    locale: "en_US",
+    images: [heroOg],
   },
   twitter: {
+    card: "summary_large_image",
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
+    images: [
+      {
+        url: HERO_DASHBOARD_TABLET_PATH,
+        alt: HERO_DASHBOARD_TABLET_ALT,
+      },
+    ],
   },
   alternates: {
     canonical: "/",
@@ -139,133 +161,92 @@ export default function HomePage() {
   return (
     <>
       <HomePageJsonLd />
-      {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border">
-        {/* Background: soft gradient + grid */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/[0.03] via-card to-card" aria-hidden />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,hsl(var(--border))_1px,transparent_1px),linear-gradient(to_bottom,hsl(var(--border))_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,black_40%,transparent_100%)] opacity-50" aria-hidden />
-        <HeroBackground />
-        <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 lg:items-center">
-            {/* Left: copy + CTAs */}
-            <div>
-              <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
-                Built for motor repair shops
-              </span>
-              <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
-                Motor Repair Shop Software — Work Orders, Leads & Inventory in One Place
-              </h1>
-              <p className="mt-6 max-w-[43.2rem] text-lg text-secondary sm:text-xl">
-                From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
-                Online sync—one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
-                inventory, invoicing, repair leads,{" "}
-                <Link href="/careers" className="font-medium text-primary hover:underline">
-                  hiring
-                </Link>
-                , and the{" "}
-                <Link href="/marketplace" className="font-medium text-primary hover:underline">
-                  marketplace
-                </Link>{" "}
-                are built in too.
-              </p>
-              <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <Link href="/contact" className="w-full min-w-0 sm:w-auto">
-                  <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
-                    Get a demo
-                  </Button>
-                </Link>
-                <a href="#features" className="w-full min-w-0 sm:w-auto">
-                  <Button variant="outline" size="lg" className="w-full min-w-0 sm:w-auto">
-                    See what’s included
-                  </Button>
-                </a>
-              </div>
-              <ul className="mt-12 flex flex-wrap gap-x-8 gap-y-2 text-sm text-secondary sm:gap-x-10">
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Job Write-Up & quote-to-delivery
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Floor & office in sync
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Repair leads built in
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  <Link href="/careers" className="hover:text-primary hover:underline">
-                    Careers &amp; job postings for shops
-                  </Link>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  <Link href="/marketplace" className="hover:text-primary hover:underline">
-                    Marketplace for parts & surplus
-                  </Link>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  Shop inventory, reservations &amp; low-stock alerts
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
-                  QuickBooks Online sync
-                </li>
-              </ul>
+      {/* Hero — full-bleed product visual */}
+      <section className="relative min-h-[min(92vh,52rem)] overflow-hidden border-b border-border">
+        <Image
+          src={HERO_DASHBOARD_TABLET_PATH}
+          alt={HERO_DASHBOARD_TABLET_ALT}
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_30%] sm:object-center"
+        />
+        {/* Readability wash — keeps copy clear over the photo */}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/25 sm:via-card/85 sm:to-transparent"
+          aria-hidden
+        />
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-card/40"
+          aria-hidden
+        />
+        <div className="relative z-10 mx-auto flex min-h-[min(92vh,52rem)] max-w-[86.4rem] items-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
+          <div className="max-w-xl lg:max-w-[36rem]">
+            <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm">
+              Built for motor repair shops
+            </span>
+            <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
+              Motor Repair Shop Software — Work Orders, Leads & Inventory in One Place
+            </h1>
+            <p className="mt-6 text-lg text-secondary sm:text-xl">
+              From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
+              Online sync—one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
+              inventory, invoicing, repair leads,{" "}
+              <Link href="/careers" className="font-medium text-primary hover:underline">
+                hiring
+              </Link>
+              , and the{" "}
+              <Link href="/marketplace" className="font-medium text-primary hover:underline">
+                marketplace
+              </Link>{" "}
+              are built in too.
+            </p>
+            <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+                <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
+                  Get a demo
+                </Button>
+              </Link>
+              <a href="#features" className="w-full min-w-0 sm:w-auto">
+                <Button variant="outline" size="lg" className="w-full min-w-0 border-border/80 bg-card/70 backdrop-blur-sm sm:w-auto">
+                  See what’s included
+                </Button>
+              </a>
             </div>
-            {/* Right: business pipeline (see documents/hero.md) */}
-            <div className="relative">
-              <div className="rounded-2xl border border-border bg-card p-7 shadow-lg shadow-primary/10 sm:p-10">
-                <p className="text-center text-sm font-semibold uppercase tracking-[0.16em] text-secondary">
-                  Platform features
-                </p>
-                <p className="mt-1.5 text-center text-xs text-secondary">
-                  Compact, connected workflow
-                </p>
-                <div className="mt-6 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  {[
-                    "Leads",
-                    "Customers",
-                    "Job Write-Up",
-                    "Quotes (RFQs)",
-                    "Work orders & motor testing data",
-                    "Accounts receivable",
-                    "Vendor PO",
-                    "QuickBooks Online sync",
-                    "Sales commissions",
-                    "... and many more",
-                  ].map((label, i) => (
-                    <div
-                      key={label}
-                      className="flex items-center gap-2.5 rounded-lg border border-border bg-bg/80 px-3.5 py-3"
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold tabular-nums text-primary">
-                        {i + 1}
-                      </span>
-                      <p className="min-w-0 flex-1 text-[15px] font-medium leading-snug text-title">{label}</p>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-5 rounded-xl border border-border bg-bg/70 p-4">
-                  <Link
-                    href="/technician-mobile-app-shop-floor-first"
-                    className="text-xs font-semibold uppercase tracking-wide text-primary hover:underline"
-                  >
-                    Mobile App For Technician on the floor
-                  </Link>
-                  <p className="mt-2 text-sm text-secondary">
-                    Give technicians mobile access to assigned jobs on the shop floor. They scan Tag QR codes that carry
-                    the repair job number, open the right work order, update status in real time, and add testing notes
-                    without going back to a desk—keeping office and floor synced throughout the repair process.
-                  </p>
-                </div>
-                <p className="mt-6 text-center text-sm text-secondary">
-                  Everything linked in one system
-                </p>
-              </div>
-            </div>
+            <ul className="mt-12 flex flex-wrap gap-x-8 gap-y-2 text-sm text-secondary sm:gap-x-10">
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Job Write-Up & quote-to-delivery
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Floor & office in sync
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Repair leads built in
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                <Link href="/careers" className="hover:text-primary hover:underline">
+                  Careers &amp; job postings for shops
+                </Link>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                <Link href="/marketplace" className="hover:text-primary hover:underline">
+                  Marketplace for parts & surplus
+                </Link>
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Shop inventory, reservations &amp; low-stock alerts
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                QuickBooks Online sync
+              </li>
+            </ul>
           </div>
         </div>
       </section>
@@ -357,20 +338,37 @@ export default function HomePage() {
 
           {/* Motor repair workflow */}
           <div className="mt-20 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                </svg>
-              </span>
-              <span className="text-sm font-semibold uppercase tracking-wide text-primary">Workflow</span>
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-10">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                    </svg>
+                  </span>
+                  <span className="text-sm font-semibold uppercase tracking-wide text-primary">Workflow</span>
+                </div>
+                <h3 className="mt-6 text-2xl font-bold text-title sm:text-3xl">
+                  Motor repair workflow
+                </h3>
+                <p className="mt-3 text-secondary">
+                  Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
+                </p>
+              </div>
+              <figure className="relative mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border bg-bg shadow-sm lg:max-w-none">
+                <Image
+                  src={FEATURES_WINDERS_TABLET_PATH}
+                  alt={FEATURES_WINDERS_TABLET_ALT}
+                  width={FEATURES_WINDERS_TABLET_WIDTH}
+                  height={FEATURES_WINDERS_TABLET_HEIGHT}
+                  sizes="(max-width: 1024px) 90vw, 28rem"
+                  className="h-auto w-full object-cover object-center"
+                />
+                <figcaption className="border-t border-border bg-card/80 px-3 py-2 text-center text-xs text-secondary sm:text-sm">
+                  Draw diagrams on the job tablet.
+                </figcaption>
+              </figure>
             </div>
-            <h3 className="mt-6 text-2xl font-bold text-title sm:text-3xl">
-              Motor repair workflow
-            </h3>
-            <p className="mt-3 max-w-[50.4rem] text-secondary">
-              Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
-            </p>
             <ul className="mt-8 space-y-6">
               {workflowFeatures.map((item) => (
                 <li key={item.title} className="flex gap-4">
