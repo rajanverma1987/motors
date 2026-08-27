@@ -28,7 +28,13 @@ export function marketingPageMetadata({
   const base = getPublicSiteUrl().replace(/\/$/, "");
   const normalized = path === "/" || path === "" ? "/" : path.startsWith("/") ? path : `/${path}`;
   const canonical = normalized === "/" ? base : `${base}${normalized}`;
-  const socialTitle = ogTitle || title;
+  const titleString =
+    title && typeof title === "object" && "absolute" in title
+      ? title.absolute
+      : typeof title === "string"
+        ? title
+        : "";
+  const socialTitle = ogTitle || titleString;
   const socialDescription = ogDescription || description;
   const allowFollow = follow == null ? true : !!follow;
 

@@ -10,7 +10,7 @@ export function buildLocationAreaLabel(page) {
   if (city) return city;
   if (state) return state;
   if (zip) return zip;
-  return String(page?.title || "this area").replace(/^Motor Repair Shops in\s+/i, "").trim() || "this area";
+  return String(page?.title || "this area").replace(/^((Electric )?Motor Repair( & Rewinding)? Shops in\s+)/i, "").trim() || "this area";
 }
 
 export function buildLocationIntroParagraphs(areaLabel, insights) {
@@ -19,7 +19,7 @@ export function buildLocationIntroParagraphs(areaLabel, insights) {
   const basedIn = insights?.basedIn || 0;
 
   return [
-    `This page lists ${total} motor repair and rewinding ${total === 1 ? "center" : "centers"} that match ${areaLabel}—either based here or explicitly serving this area. Browse profiles to compare capabilities, then contact shops directly or submit one requirement through IQMotorBase.com.`,
+    `Browse certified electric motor repair and rewinding centers in ${areaLabel}. This page lists ${total} ${total === 1 ? "shop" : "shops"} that match this area—either based here or explicitly serving it. Filter by capability — AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service — then submit your repair or rewind requirement to be matched with shops serving your area.`,
     basedIn > 0
       ? `${basedIn} ${basedIn === 1 ? "shop is based" : "shops are based"} in ${areaLabel}; others appear because their service area includes this location. Look for the “Based in area” or “Serves area” badge on each card.`
       : `Shops shown here list ${areaLabel} in their service coverage. Confirm workshop location and pickup options on each profile before you ship a motor.`,

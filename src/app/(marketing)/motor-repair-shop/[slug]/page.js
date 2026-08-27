@@ -17,6 +17,7 @@ import {
 } from "@/lib/location-page-content";
 import { getListingLocationMatchType } from "@/lib/location-filter";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { usStateToAbbreviation } from "@/lib/us-state-normalize";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
 import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
@@ -29,24 +30,59 @@ import LocationPageJsonLd from "@/components/marketing/location-page/location-pa
 
 const PAGE_SIZE = 45;
 
+/** Short SERP title with rewinding + state abbr (keeps ~60 chars). */
+function buildLocationSeoTitle(page, areaLabel) {
+  const city = String(page?.city || "").trim();
+  const state = String(page?.state || "").trim();
+  const abbr = usStateToAbbreviation(state);
+  if (city && abbr) return `Motor Repair & Rewinding in ${city}, ${abbr} | IQMotorBase`;
+  if (city && state) return `Motor Repair & Rewinding in ${city}, ${state} | IQMotorBase`;
+  if (abbr || state) return `Motor Repair & Rewinding in ${abbr || state} | IQMotorBase`;
+  return `Motor Repair & Rewinding in ${areaLabel} | IQMotorBase`;
+}
+
+function buildLocationSeoDescription(areaLabel) {
+  return (
+    `Find certified electric motor repair and rewinding shops in ${areaLabel}. ` +
+    `AC motor rewinding, DC armature rewinds, and emergency service. Submit a repair request — ` +
+    `matched to shops serving your area.`
+  );
+}
+
+function buildLocationOgDescription(areaLabel) {
+  return (
+    `Certified motor repair and rewinding shops in ${areaLabel}. ` +
+    `AC, DC, armature, and stator rewinding. Submit a request — shops respond same day.`
+  );
+}
+
 export async function generateMetadata({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
   const page = slug ? await getLocationPageBySlug(slug) : null;
-  if (!page) return { title: "Motor repair shops" };
+  if (!page) return { title: "Motor Repair & Rewinding Shops | IQMotorBase" };
   const baseUrl = getPublicSiteUrl().replace(/\/$/, "");
   const url = `${baseUrl}/motor-repair-shop/${page.slug}`;
   const areaLabel = buildLocationAreaLabel(page);
+  const seoTitle = buildLocationSeoTitle(page, areaLabel);
+  const description = page.metaDescription?.trim() || buildLocationSeoDescription(areaLabel);
   return {
-    title: page.title,
-    description:
-      page.metaDescription ||
-      `Find motor repair and rewinding shops in ${areaLabel}. Compare capabilities, filter by service area, and request quotes.`,
+    title: { absolute: seoTitle },
+    description,
     alternates: { canonical: url },
     openGraph: {
-      title: page.title,
-      description: page.metaDescription || `Motor repair shops in ${areaLabel}`,
+      title: seoTitle,
+      description: page.metaDescription?.trim() || buildLocationOgDescription(areaLabel),
       url,
+      siteName: "IQMotorBase.com",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seoTitle,
+      description:
+        page.metaDescription?.trim() ||
+        `Find certified motor repair and rewinding shops in ${areaLabel}. Submit a request — matched to shops in your area.`,
     },
     robots: { index: true, follow: true },
   };
@@ -128,10 +164,12 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
           <span className="mt-4 inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
             By location
           </span>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{page.title}</h1>
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
+            Electric motor repair and rewinding shops in {areaLabel}
+          </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             {page.metaDescription ||
-              `Browse motor repair and rewinding centers in ${areaLabel}. Filter by location type and capabilities, then open profiles or submit your requirement.`}
+              `Browse certified electric motor repair and rewinding centers in ${areaLabel}. Filter by capability — AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service. Open profiles to compare turnaround, testing standards, and certifications, then submit your repair or rewind requirement to be matched directly with shops serving your area.`}
           </p>
           <LocationPageInsights insights={insights} />
         </div>

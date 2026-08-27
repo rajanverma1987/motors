@@ -60,11 +60,16 @@ export async function ensureLocationPageForArea(city, state, zip) {
   const existing = await LocationPage.findOne({ slug }).lean();
   if (existing) return { ...existing, id: existing._id.toString(), _id: undefined };
 
-  const title = c && s ? `Motor Repair Shops in ${c}, ${s}` : s ? `Motor Repair Shops in ${s}` : `Motor Repair Shops in ${c}`;
+  const title =
+    c && s
+      ? `Electric Motor Repair & Rewinding Shops in ${c}, ${s}`
+      : s
+        ? `Electric Motor Repair & Rewinding Shops in ${s}`
+        : `Electric Motor Repair & Rewinding Shops in ${c}`;
   const doc = await LocationPage.create({
     slug,
     title,
-    metaDescription: "",
+    metaDescription: `Find certified electric motor repair and rewinding shops in ${c && s ? `${c}, ${s}` : c || s}. AC motor rewinding, DC armature rewinds, and emergency service.`,
     city: c,
     state: s,
     zip: (zip || "").trim(),

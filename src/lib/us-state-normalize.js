@@ -75,6 +75,23 @@ export function normalizeUsState(input) {
 }
 
 /**
+ * Full state name or abbreviation → 2-letter US abbreviation (for short SEO titles).
+ * @param {string} input
+ * @returns {string} e.g. "MO" or "" if unknown
+ */
+export function usStateToAbbreviation(input) {
+  const trimmed = String(input || "").trim();
+  if (!trimmed) return "";
+  const upper = trimmed.toUpperCase();
+  if (ABBREV_TO_STATE[upper]) return upper;
+  const full = normalizeUsState(trimmed);
+  for (const [abbr, name] of Object.entries(ABBREV_TO_STATE)) {
+    if (name === full) return abbr;
+  }
+  return "";
+}
+
+/**
  * Normalize city/state/zip for location search and storage.
  */
 export function normalizeLocationInput({ city, state, zip } = {}) {

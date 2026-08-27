@@ -1,340 +1,538 @@
-# SEO Strategy for Motor Repair Lead Platform and SaaS
-
-Goal
-Generate repair leads and attract motor repair shops to subscribe to the SaaS.
-
-The SEO strategy focuses on **three traffic sources**:
-
-1. Industrial repair customers (lead generation)
-2. Motor repair shops (SaaS customers)
-3. Long-tail technical searches
-
----
-
-# 1. SEO Architecture
-
-The website should have **three major SEO sections**.
-
-```
-/motor-repair-near-me
-/electric-motor-repair
-/motor-rewinding
-/motor-repair-software
-```
-
-Structure
-
-```
-/electric-motor-repair-near-me
-/electric-motor-repair/{city}
-/motor-rewinding/{city}
-/motor-repair-shops
-/motor-repair-shops/{city}
-/motor-repair-software
-/blog
-```
+# IQMotorBase.com — CTR Fix: Add "Rewinding" to Metadata
+# Problem: 316 rewinding-specific queries, 6,190 impressions, 15 clicks (0.24% CTR)
+# Root cause: H1s, title tags, and meta descriptions say "repair" but not "rewinding"
+# Searchers looking for "motor rewinding near me" see "repair" in the title — don't click
+#
+# PAGES AFFECTED:
+#   1. /electric-motor-repair-near-me        (near-me hub — biggest traffic page)
+#   2. /motor-repair-shop/[city]-[state]     (all city pages — template fix)
+#   3. /cost-of-motor-repair-and-rewinding   (cost page — zero clicks at pos 14)
+#   4. /electric-motor-repair-shops-listings (directory index)
+#   5. /electric-motor-repair                (general hub)
+#   6. /industrial-motor-repair              (industrial hub)
+#
+# WHAT TO CHANGE: H1, title tag, meta description, og:title, og:description only
+# WHAT NOT TO CHANGE: page content, URL slugs, internal links, schema
 
 ---
 
-# 2. Local SEO Pages (Main Lead Engine)
-
-Create **hundreds or thousands of city pages**.
-
-Example URLs
+## THE PATTERN — apply this thinking to every fix below
 
 ```
-/electric-motor-repair-houston
-/electric-motor-repair-dallas
-/electric-motor-repair-chicago
-/motor-rewinding-los-angeles
-/motor-repair-phoenix
+BEFORE (repair-only):   "Electric Motor Repair Near Me"
+AFTER  (repair + rewind): "Electric Motor Repair & Rewinding Near Me"
+
+BEFORE (generic desc):  "Find certified electric motor repair shops near you."
+AFTER  (specific desc): "Find certified electric motor repair and rewinding shops
+                          near you — AC, DC, armature, and stator rewinding."
 ```
 
-Each page should contain
-
-Page title
-City introduction
-Local repair shop listings
-Lead capture form
-Emergency repair contact
-
-Example title
-
-```
-Electric Motor Repair in Houston | Local Motor Rewinding Shops
-```
-
-Example H1
-
-```
-Electric Motor Repair Services in Houston
-```
-
-These pages generate **high-intent repair leads**.
+The word "rewinding" in the title is what makes someone searching
+"motor rewinding near me" click your result instead of skipping it.
+Keep titles under 60 characters. Keep descriptions under 160 characters.
 
 ---
 
-# 3. Repair Shop Directory SEO
+## FIX 1 — /electric-motor-repair-near-me
 
-Create directory pages listing repair shops.
-
-Example URLs
-
+### Current state (confirmed live):
 ```
-/motor-repair-shops
-/motor-repair-shops/texas
-/motor-repair-shops/houston
-```
-
-Each shop listing page includes
-
-Company profile
-Capabilities
-Photos
-Services
-Contact options
-
-Schema markup
-
-```
-LocalBusiness
-IndustrialService
+Title:       Electric Motor Repair Near Me — Find Local Motor Repair Shops | IQMotorBase
+H1:          Electric motor repair near me
+Meta desc:   Find certified electric motor repair and rewinding shops near you.
+             Browse by state, compare capabilities, and submit a repair request in minutes.
+OG title:    Electric Motor Repair Near Me | IQMotorBase
+OG desc:     Find certified electric motor repair shops near you.
+             Browse by state or submit a repair request.
 ```
 
-This helps Google understand the listings.
+The meta description already says "rewinding" — good.
+The title and H1 do not. That's the gap.
 
----
+### File: `app/electric-motor-repair-near-me/page.tsx`
 
-# 4. Long-Tail Technical Content
+```tsx
+export const metadata: Metadata = {
+  // BEFORE:
+  // title: 'Electric Motor Repair Near Me — Find Local Motor Repair Shops | IQMotorBase',
 
-Create blog content targeting engineering searches.
+  // AFTER — "rewinding" added, stays under 60 chars in Google display:
+  title: 'Electric Motor Repair & Rewinding Near Me | IQMotorBase',
 
-Example topics
+  // Meta description — already good but improve specificity:
+  // BEFORE:
+  // description: 'Find certified electric motor repair and rewinding shops near you.
+  //   Browse by state, compare capabilities, and submit a repair request in minutes.',
 
+  // AFTER — adds "armature" and "stator" for long-tail rewinding queries:
+  description:
+    'Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature rewinding, stator rewinds, and emergency service. Browse by state or submit a request.',
+
+  alternates: {
+    canonical: 'https://iqmotorbase.com/electric-motor-repair-near-me',
+  },
+
+  openGraph: {
+    // BEFORE:
+    // title: 'Electric Motor Repair Near Me | IQMotorBase',
+    // description: 'Find certified electric motor repair shops near you...',
+
+    // AFTER:
+    title: 'Electric Motor Repair & Rewinding Near Me | IQMotorBase',
+    description:
+      'Find certified motor repair and rewinding shops near you. AC, DC, armature, stator, and emergency rewinds. Browse by state or submit a repair request.',
+    url: 'https://iqmotorbase.com/electric-motor-repair-near-me',
+    siteName: 'IQMotorBase.com',
+    type: 'website',
+    locale: 'en_US',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Electric Motor Repair & Rewinding Near Me | IQMotorBase',
+    description:
+      'Find certified motor repair and rewinding shops near you. Browse by state or submit a repair request.',
+  },
+};
 ```
-cost to rewind electric motor
-electric motor repair vs replacement
-how to test motor winding
-what causes motor winding failure
-megger test for motors
+
+### H1 update — in the page component JSX:
+
+```tsx
+// FIND in app/electric-motor-repair-near-me/page.tsx or NearMeClient.tsx:
+// BEFORE:
+<h1>Electric motor repair near me</h1>
+
+// AFTER:
+<h1>Electric motor repair and rewinding near me</h1>
 ```
 
-Example URLs
+### Trust bar chips — update one chip to mention rewinding:
 
-```
-/blog/cost-to-rewind-electric-motor
-/blog/motor-winding-failure-causes
-/blog/how-to-test-electric-motor
-```
+```tsx
+// BEFORE:
+// - 33+ states covered
+// - EASA-accredited shops listed
+// - AC · DC · Servo · High-voltage
+// - 24/7 emergency repair available
 
-These pages attract **engineers and maintenance staff**.
-
----
-
-# 5. Emergency Repair Keywords
-
-Many leads happen when equipment fails.
-
-Target keywords
-
-```
-emergency motor repair
-24 hour motor repair
-industrial motor repair near me
-pump motor repair near me
-```
-
-Create dedicated landing pages.
-
-Example
-
-```
-/emergency-motor-repair
-/24-hour-motor-repair
+// AFTER — swap third chip:
+// - 33+ states covered
+// - EASA-accredited shops listed
+// - AC · DC · Armature · Stator rewinding    ← changed
+// - 24/7 emergency service available
 ```
 
 ---
 
-# 6. SaaS SEO (Software Buyers)
+## FIX 2 — /motor-repair-shop/[city]-[state] (ALL CITY PAGES)
 
-Target motor repair businesses.
-
-Keywords
-
+### Current state (confirmed from search snippets):
+City pages currently show titles like:
 ```
-motor repair shop software
-motor rewinding shop software
-motor repair CRM
-electric motor repair management software
-repair shop management software
+Title:   "Motor Repair Shops in St. Louis, Missouri | IQMotorBase"
+H1:      "Motor repair shops in [city], [state]"
 ```
 
-Create landing pages
+No mention of rewinding anywhere in the title, H1, or meta description.
+GSC shows "motor rewinding services st louis" (114 imp, pos 13) — zero clicks.
+That query is matching the city page but the title says "repair shops" not "rewinding."
 
-```
-/motor-repair-software
-/motor-repair-crm
-/repair-shop-management-software
-```
+### File: `app/motor-repair-shop/[city]/page.tsx`
+(or wherever your city page `generateMetadata` lives)
 
----
+```tsx
+export async function generateMetadata({
+  params,
+}: {
+  params: { city: string; state?: string };
+}): Promise<Metadata> {
 
-# 7. Programmatic SEO Strategy
+  // Derive display labels from URL params
+  const cityLabel = params.city
+    .replace(/-/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
-Automatically generate pages using database data.
+  // State label — derive from your existing logic
+  // (however you currently format the state name)
+  const stateLabel = /* your existing state label logic */ '';
 
-Examples
+  const canonical = `https://iqmotorbase.com/motor-repair-shop/${params.city}`;
 
-```
-electric motor repair in {city}
-motor rewinding service in {city}
-motor repair shops in {state}
-```
+  return {
+    // BEFORE:
+    // title: `Motor Repair Shops in ${cityLabel}, ${stateLabel} | IQMotorBase`
 
-This can generate **500+ pages easily**.
+    // AFTER — adds "Rewinding":
+    title: `Electric Motor Repair & Rewinding Shops in ${cityLabel}, ${stateLabel} | IQMotorBase`,
 
-Example dynamic page
+    // BEFORE (generic — no rewinding mention):
+    // description: `Browse motor repair and rewinding centers in ${cityLabel}, ${stateLabel}.`
 
-```
-/electric-motor-repair/{city}
-```
+    // AFTER — specific, includes rewinding, includes CTA:
+    description:
+      `Find certified electric motor repair and rewinding shops in ${cityLabel}, ${stateLabel}. ` +
+      `AC motor rewinding, DC armature rewinds, and emergency service. Submit a repair request — ` +
+      `matched to shops serving your area.`,
 
----
+    alternates: { canonical },
 
-# 8. Internal Linking Strategy
+    openGraph: {
+      // BEFORE:
+      // title: `Motor Repair Shops in ${cityLabel}, ${stateLabel} | IQMotorBase`
 
-Each page must link to related pages.
+      // AFTER:
+      title: `Motor Repair & Rewinding in ${cityLabel}, ${stateLabel} | IQMotorBase`,
+      description:
+        `Certified motor repair and rewinding shops in ${cityLabel}, ${stateLabel}. ` +
+        `AC, DC, armature, and stator rewinding. Submit a request — shops respond same day.`,
+      url: canonical,
+      siteName: 'IQMotorBase.com',
+      type: 'website',
+    },
 
-Example structure
-
-City page links to
-
-Local repair shop listings
-Emergency repair page
-Motor repair blog content
-
-Blog articles link to
-
-Lead capture pages
-Directory pages
-Software pages
-
----
-
-# 9. Lead Capture Optimization
-
-Add lead forms on:
-
-City pages
-Emergency repair pages
-Blog pages
-
-Form placement
-
-Hero section
-Middle content
-Bottom CTA
-
-Example CTA
-
-```
-Need Electric Motor Repair?
-Get Quotes from Local Repair Shops
+    twitter: {
+      card: 'summary_large_image',
+      title: `Motor Repair & Rewinding in ${cityLabel}, ${stateLabel} | IQMotorBase`,
+      description:
+        `Find certified motor repair and rewinding shops in ${cityLabel}, ${stateLabel}. ` +
+        `Submit a request — matched to shops in your area.`,
+    },
+  };
+}
 ```
 
----
+### H1 update — in the city page component:
 
-# 10. Technical SEO Requirements
+```tsx
+// BEFORE:
+<h1>Motor repair shops in {cityLabel}, {stateLabel}</h1>
 
-Cursor should implement
-
-```
-server-side rendering
-fast page load
-sitemap generation
-robots.txt
-structured data schema
+// AFTER:
+<h1>Electric motor repair and rewinding shops in {cityLabel}, {stateLabel}</h1>
 ```
 
-Next.js SEO improvements
+### City page intro paragraph — add rewinding:
 
-```
-metadata API
-dynamic meta titles
-dynamic meta descriptions
-open graph tags
+```tsx
+// FIND the existing intro paragraph and update:
+
+// BEFORE (example):
+// "Browse motor repair centers in {cityLabel}..."
+
+// AFTER:
+<p>
+  Browse certified electric motor repair and rewinding centers in {cityLabel}, {stateLabel}.
+  Filter by capability — AC motor rewinding, DC armature rewinding, stator rewinds,
+  high-voltage, servo, and emergency service. Open profiles to compare turnaround,
+  testing standards, and certifications, then submit your repair or rewind requirement
+  to be matched directly with shops serving your area.
+</p>
 ```
 
 ---
 
-# 11. Schema Markup
+## FIX 3 — /cost-of-motor-repair-and-rewinding
 
-Add structured data for
+### Current state:
+Title and H1 don't include a cost range — nobody clicks because there's
+no value signal in the SERP result. 125 impressions at position 14, zero clicks.
 
+### File: `app/cost-of-motor-repair-and-rewinding/page.tsx`
+
+```tsx
+export const metadata: Metadata = {
+  // BEFORE (no price range — no reason to click):
+  // title: 'Electric Motor Repair and Rewinding Costs | IQMotorBase'
+
+  // AFTER — price range in title = dramatically higher CTR:
+  title: 'Motor Rewinding Cost: $400–$9,000 — Full Price Guide | IQMotorBase',
+
+  // BEFORE (vague):
+  // description: 'Learn about motor repair and rewinding costs...'
+
+  // AFTER (specific ranges, action-oriented):
+  description:
+    'Motor rewinding costs by HP: $400–$900 for small motors, $1,200–$3,500 for 10–50 HP, ' +
+    '$3,000–$9,000 for 50–200 HP. AC, DC, armature, and stator rewind price ranges. Get a quote.',
+
+  alternates: {
+    canonical: 'https://iqmotorbase.com/cost-of-motor-repair-and-rewinding',
+  },
+
+  openGraph: {
+    title: 'Motor Rewinding Cost Guide: $400–$9,000 by HP | IQMotorBase',
+    description:
+      'Motor rewinding price ranges by HP — AC, DC, armature, and stator rewinds. ' +
+      'Get matched to certified shops for a real quote.',
+    url: 'https://iqmotorbase.com/cost-of-motor-repair-and-rewinding',
+    siteName: 'IQMotorBase.com',
+  },
+
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Motor Rewinding Cost: $400–$9,000 | IQMotorBase',
+    description:
+      'Motor rewinding price guide by HP. AC, DC, armature, and stator rewinds. Get a quote.',
+  },
+};
 ```
-LocalBusiness
-Service
-FAQPage
-Article
-```
 
-This improves search visibility.
+### H1 update — in the page component:
+
+```tsx
+// BEFORE:
+<h1>Electric motor repair and rewinding costs</h1>
+
+// AFTER — mirrors title tag, signals cost info immediately:
+<h1>Motor rewinding cost: what shops charge in 2026</h1>
+```
 
 ---
 
-# 12. Backlink Strategy
+## FIX 4 — /electric-motor-repair-shops-listings (Directory Index)
 
-Target backlinks from
+### File: `app/electric-motor-repair-shops-listings/page.tsx`
 
-Industrial blogs
-Manufacturing websites
-Maintenance engineering websites
-Industry directories
+```tsx
+export const metadata: Metadata = {
+  // BEFORE:
+  // title: 'Find Electric Motor Repair Shops | IQMotorBase Directory'
 
-Also list the website on
+  // AFTER:
+  title: 'Find Electric Motor Repair & Rewinding Shops | IQMotorBase Directory',
 
-Industrial directories
-Repair service directories
+  // BEFORE (generic):
+  // description: 'Browse approved electric motor repair centers by location...'
+
+  // AFTER (includes rewinding, includes key types):
+  description:
+    'Browse certified electric motor repair and rewinding shops by state. ' +
+    'AC motor rewinding, DC armature rewinds, stator rewinding, and emergency service. ' +
+    'Submit a repair request — matched to shops in your area.',
+
+  alternates: {
+    canonical: 'https://iqmotorbase.com/electric-motor-repair-shops-listings',
+  },
+
+  openGraph: {
+    title: 'Electric Motor Repair & Rewinding Shop Directory | IQMotorBase',
+    description:
+      'Find certified motor repair and rewinding shops near you. ' +
+      'AC, DC, armature, and stator rewinds. Browse by state or submit a requirement.',
+    url: 'https://iqmotorbase.com/electric-motor-repair-shops-listings',
+    siteName: 'IQMotorBase.com',
+  },
+};
+```
+
+### H1 update:
+
+```tsx
+// BEFORE:
+<h1>Find electric motor repair shops</h1>
+// or similar
+
+// AFTER:
+<h1>Find electric motor repair and rewinding shops</h1>
+```
 
 ---
 
-# 13. Conversion Optimization
+## FIX 5 — /electric-motor-repair (General Hub)
 
-Every page must include CTA
+### File: `app/electric-motor-repair/page.tsx`
 
+```tsx
+export const metadata: Metadata = {
+  // BEFORE:
+  // title: 'Electric Motor Repair | IQMotorBase'
+
+  // AFTER:
+  title: 'Electric Motor Repair & Rewinding — Find Certified Shops | IQMotorBase',
+
+  description:
+    'Find certified electric motor repair and rewinding shops near you. ' +
+    'AC motor rewinding, DC armature and stator rewinds, servo, high-voltage, ' +
+    'and emergency repair. Browse shops by state.',
+
+  alternates: {
+    canonical: 'https://iqmotorbase.com/electric-motor-repair',
+  },
+
+  openGraph: {
+    title: 'Electric Motor Repair & Rewinding | IQMotorBase',
+    description:
+      'Find certified motor repair and rewinding shops. AC, DC, armature, ' +
+      'stator, and emergency rewinds. Browse by state.',
+    url: 'https://iqmotorbase.com/electric-motor-repair',
+    siteName: 'IQMotorBase.com',
+  },
+};
 ```
-Get Repair Quotes
-Find Local Motor Repair Shops
-Start Free Trial
-```
-
-Lead generation pages should prioritize:
-
-Call
-Lead form
-Emergency contact
 
 ---
 
-# 14. Expected SEO Outcome
+## FIX 6 — /industrial-motor-repair
 
-Within 6–12 months the site should rank for
+### File: `app/industrial-motor-repair/page.tsx`
 
+```tsx
+export const metadata: Metadata = {
+  // BEFORE:
+  // title: 'Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase Directory'
+  // (already has rewinding — good, just strengthen the description)
+
+  // Keep title — it already has rewinding. Just fix the description:
+
+  // BEFORE (generic):
+  // description: 'Find industrial motor repair and rewinding shops in your area...'
+
+  // AFTER (specific — adds query types):
+  description:
+    'Find industrial motor repair and rewinding shops near you. ' +
+    'Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, ' +
+    'and emergency service. Submit a requirement — matched to qualified shops.',
+
+  alternates: {
+    canonical: 'https://iqmotorbase.com/industrial-motor-repair',
+  },
+
+  openGraph: {
+    title: 'Industrial Motor Rewinding & Repair Shops | IQMotorBase',
+    description:
+      'Find industrial motor repair and rewinding shops. Large-frame, HV, ' +
+      'AC/DC armature rewinding. Submit a requirement — matched to shops near you.',
+    url: 'https://iqmotorbase.com/industrial-motor-repair',
+    siteName: 'IQMotorBase.com',
+  },
+};
 ```
-electric motor repair near me
-motor rewinding service
-industrial motor repair
-motor repair shops
-```
-
-These keywords produce **high-value repair leads**.
 
 ---
 
-# Final Goal
+## BONUS — Add "Motor Rewinders Near Me" as a page alias
 
-SEO should drive:
+GSC shows "motor rewinders near me" (64 imp, pos 20.9) and
+"electric motor rewinders near me" (54 imp, 7.41% CTR) — both driving traffic.
 
-Repair job leads for repair shops
-SaaS customers for the software
-Organic traffic from industrial searches
+The near-me page already catches some of this but the word "rewinders"
+(plural, implies specialist) converts at 7.41% vs 0.95% for "repair."
+
+Add this to the near-me page's keyword meta as an additional signal:
+
+```tsx
+// In /electric-motor-repair-near-me metadata — update keywords array:
+keywords: [
+  'electric motor repair near me',
+  'electric motor rewinding near me',      // ← high volume, was missing
+  'motor rewinding near me',               // ← 422 impressions, pos 22
+  'motor rewinders near me',               // ← 64 impressions
+  'electric motor rewinders near me',      // ← 7.41% CTR
+  'motor rewind shop near me',             // ← 105 impressions
+  'motor rewinding shop near me',          // ← 105 impressions
+  'armature rewinding near me',            // ← 7.69% CTR
+  'stator rewinding near me',              // ← good long tail
+  'ac motor rewinding near me',            // ← 77 impressions
+  'dc motor rewinding near me',
+  'electric motor repair near me',
+  'industrial motor repair near me',
+  'electric motor repair shop near me',
+  'emergency motor repair',
+  'motor rewinding cost',
+  'electric motor rewinding cost',
+],
+```
+
+---
+
+## VERIFICATION CHECKLIST
+
+### Confirm each title tag live after deploy:
+
+```bash
+# Near-me page — should contain "Rewinding"
+curl -s https://iqmotorbase.com/electric-motor-repair-near-me \
+  | grep -i "<title" | head -1
+# Expected: "Electric Motor Repair & Rewinding Near Me | IQMotorBase"
+
+# Cost page — should contain "$400"
+curl -s https://iqmotorbase.com/cost-of-motor-repair-and-rewinding \
+  | grep -i "<title" | head -1
+# Expected: "Motor Rewinding Cost: $400–$9,000..."
+
+# Directory index — should contain "Rewinding"
+curl -s https://iqmotorbase.com/electric-motor-repair-shops-listings \
+  | grep -i "<title" | head -1
+# Expected: "...Repair & Rewinding..."
+
+# A city page — should contain "Rewinding"
+curl -s "https://iqmotorbase.com/motor-repair-shop/st-louis-missouri" \
+  | grep -i "<title" | head -1
+# Expected: "Electric Motor Repair & Rewinding Shops in St. Louis, Missouri..."
+```
+
+### Confirm H1s:
+
+```bash
+# Near-me H1
+curl -s https://iqmotorbase.com/electric-motor-repair-near-me \
+  | grep -i "<h1"
+# Expected: contains "repair and rewinding near me"
+
+# Cost page H1
+curl -s https://iqmotorbase.com/cost-of-motor-repair-and-rewinding \
+  | grep -i "<h1"
+# Expected: contains "what shops charge"
+```
+
+### Google Search Console — after deploy:
+
+1. Use URL Inspection on all 6 pages → "Request indexing"
+   This speeds up Google re-reading the new title tags.
+
+2. Wait 5–7 days, then check Performance → Queries
+   Filter to queries containing "rewinding" and check if CTR improved.
+   Position may stay the same initially — CTR improvement comes first,
+   position improvement follows 2–4 weeks later as click signals build.
+
+3. Key queries to watch:
+   - "motor rewinding near me" (422 imp, pos 22) → CTR should rise from 0.95%
+   - "motor rewinds cost" (125 imp, pos 14) → should start getting clicks
+   - "motor rewinding cost" (108 imp, pos 18) → same
+   - "electric motor rewinding near me" (160 imp, pos 32) → position should improve
+   - "motor rewinding services st louis" (114 imp, pos 13) → clicks should start
+
+### Title length check — all under 60 chars for full display in Google:
+
+| Page | New title | Chars |
+|---|---|---|
+| Near-me | Electric Motor Repair & Rewinding Near Me \| IQMotorBase | 57 ✅ |
+| City (example) | Electric Motor Repair & Rewinding in St. Louis, MO \| IQMotorBase | 67 ⚠️ |
+| Cost | Motor Rewinding Cost: $400–$9,000 — Full Price Guide \| IQMotorBase | 67 ⚠️ |
+| Directory | Find Electric Motor Repair & Rewinding Shops \| IQMotorBase Directory | 69 ⚠️ |
+
+> Note: City and cost page titles are slightly over 60 chars.
+> Google will display them truncated but still shows enough to communicate value.
+> The cost range "$400–$9,000" is the most important part — keep it.
+> If you want strictly under 60 chars, use these shorter versions:
+
+```tsx
+// Strict 60-char alternatives if needed:
+
+// City pages (52 chars):
+title: `Motor Repair & Rewinding in ${cityLabel}, ${stateAbbr} | IQMotorBase`
+// e.g. "Motor Repair & Rewinding in St. Louis, MO | IQMotorBase" = 56 chars ✅
+
+// Cost page (51 chars):
+title: 'Motor Rewinding Cost: $400–$9,000 | IQMotorBase'
+// = 48 chars ✅
+
+// Directory (52 chars):
+title: 'Motor Repair & Rewinding Shop Directory | IQMotorBase'
+// = 53 chars ✅
+```
+
+Use the state abbreviation (MO, TX, FL) instead of the full state name
+in city page titles — saves 5–10 chars and keeps the most important
+keywords visible in the Google result.

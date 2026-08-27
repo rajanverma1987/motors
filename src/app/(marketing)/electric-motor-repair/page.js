@@ -7,9 +7,11 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 const path = "/electric-motor-repair";
 
 export const metadata = {
-  title: "Electric Motor Repair & Rewinding — Buyer Resource Hub",
+  title: {
+    absolute: "Electric Motor Repair & Rewinding — Find Certified Shops | IQMotorBase",
+  },
   description:
-    "Hub for electric motor repair and rewinding: compare costs, choose a shop, repair vs. replace, service types, emergencies, directory, and quote requests—all in one place on IQMotorBase.com.",
+    "Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature and stator rewinds, servo, high-voltage, and emergency repair. Browse shops by state.",
   keywords: [
     "electric motor repair",
     "motor rewinding",
@@ -20,8 +22,9 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Electric Motor Repair & Rewinding Hub | IQMotorBase.com",
-    description: "Buyer guides: costs, choosing a shop, repair vs. replace, emergencies, and find repair shops.",
+    title: "Electric Motor Repair & Rewinding | IQMotorBase",
+    description:
+      "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
     url: path,
     type: "website",
     siteName: "IQMotorBase.com",
@@ -29,8 +32,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Electric Motor Repair Hub | IQMotorBase.com",
-    description: "Costs, shop selection, repair vs. replace, and directory links for motor repair buyers.",
+    title: "Electric Motor Repair & Rewinding | IQMotorBase",
+    description:
+      "Find certified motor repair and rewinding shops. AC, DC, armature, stator, and emergency rewinds. Browse by state.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },

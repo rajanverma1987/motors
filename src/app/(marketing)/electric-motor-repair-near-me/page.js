@@ -9,8 +9,8 @@ import { NEAR_ME_FAQS, NEAR_ME_PATH } from "./near-me-seo-data";
 const TRUST_CHIPS = [
   "33+ states covered",
   "EASA-accredited shops listed",
-  "AC · DC · Servo · High-voltage",
-  "24/7 emergency repair available",
+  "AC · DC · Armature · Stator rewinding",
+  "24/7 emergency service available",
 ];
 
 export default function NearMePage() {
@@ -54,11 +54,11 @@ export default function NearMePage() {
         <HeroBackground />
         <div className={`relative z-10 ${LISTINGS_PAGE_CONTAINER}`}>
           <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
-            Electric motor repair near me
+            Electric motor repair and rewinding near me
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
-            Find certified AC, DC, servo, and high-voltage motor repair shops in your area. Browse approved shops by
-            state, compare capabilities, and submit a repair request in minutes.
+            Find certified AC, DC, servo, and high-voltage motor repair and rewinding shops in your area. Browse approved
+            shops by state, compare capabilities, and submit a repair or rewind request in minutes.
           </p>
           <ul className="mt-6 flex list-none flex-wrap gap-2 p-0">
             {TRUST_CHIPS.map((chip) => (
@@ -90,7 +90,7 @@ export default function NearMePage() {
                 <span aria-hidden>›</span>
               </li>
               <li>
-                <span aria-current="page">Electric motor repair near me</span>
+                <span aria-current="page">Electric motor repair and rewinding near me</span>
               </li>
             </ol>
           </nav>

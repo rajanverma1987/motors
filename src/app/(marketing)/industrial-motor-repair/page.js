@@ -4,6 +4,7 @@ import CalculatorSidebarScrollGate from "@/components/marketing/calculator-sideb
 import GetQuoteCta from "@/components/marketing/GetQuoteCta";
 import MarketingRelatedGuides from "@/components/marketing/MarketingRelatedGuides";
 import MotorRewindCostCalculator from "@/components/marketing/motor-rewind-cost-calculator";
+import RepairRequestForm from "@/components/marketing/repair-request-form";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const path = "/industrial-motor-repair";
@@ -12,9 +13,11 @@ const CALC_SIDEBAR_SCROLLABLE =
   "min-h-0 max-h-[min(34rem,calc(100dvh-6rem))] overflow-y-auto overflow-x-hidden overscroll-y-contain [scrollbar-gutter:stable] md:max-h-[calc(100dvh-7.5rem)] md:pr-1";
 
 export const metadata = {
-  title: "Industrial Motor Repair Services, Costs & Shop Finder (2026 Guide)",
+  title: {
+    absolute: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase Directory",
+  },
   description:
-    "Industrial motor repair explained: AC/DC rewinding, medium-voltage work, pump & fan motors, testing, and US cost ballparks. Find qualified shops, use the free rewind calculator, and request quotes on IQMotorBase.com.",
+    "Find industrial motor repair and rewinding shops near you. Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, and emergency service. Submit a requirement — matched to qualified shops.",
   keywords: [
     "industrial motor repair",
     "industrial motor repair near me",
@@ -31,12 +34,13 @@ export const metadata = {
     "motor repair shop industrial",
     "industrial motor rebuild",
     "industrial motor testing",
+    "who offers industrial motor rewinding",
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Industrial Motor Repair — Services, Costs & Shop Finder | IQMotorBase.com",
+    title: "Industrial Motor Rewinding & Repair Shops | IQMotorBase",
     description:
-      "Guide to industrial motor repair and rewinding: service types, cost drivers, how to choose a shop, free calculator, and directory links.",
+      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement — matched to shops near you.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -44,9 +48,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Industrial Motor Repair Guide | IQMotorBase.com",
+    title: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase",
     description:
-      "Services, costs, shop selection, and free rewind calculator for industrial electric motor repair.",
+      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement — matched to shops near you.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -139,9 +143,9 @@ function IndustrialMotorRepairWebPageJsonLd({ pageUrl, site }) {
     "@type": "WebPage",
     "@id": `${pageUrl}#webpage`,
     url: pageUrl,
-    name: "Industrial motor repair — services, costs & shop finder",
+    name: "Who offers industrial motor rewinding and repair?",
     description:
-      "Buyer guide to industrial electric motor repair and rewinding: service types, cost drivers, shop selection, calculator, and directory links.",
+      "Find industrial motor repair and rewinding shops in your area. Submit a requirement — matched to shops near you.",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
     about: [
       { "@type": "Thing", name: "Industrial motor repair" },
@@ -219,8 +223,8 @@ export default function IndustrialMotorRepairPage() {
       <IndustrialMotorRepairBreadcrumbJsonLd pageUrl={pageUrl} site={site} />
       <IndustrialMotorRepairWebPageJsonLd pageUrl={pageUrl} site={site} />
       <BlogPageLayout
-        title="Industrial motor repair: services, costs & how to find a qualified shop"
-        description="When plant equipment stops, industrial motor repair decisions affect uptime, safety, and budget. This guide covers common motor types, repair services, cost drivers, shop selection, and tools to get quotes faster."
+        title="Who offers industrial motor rewinding and repair?"
+        description="Find industrial motor repair and rewinding shops for AC, DC, high-voltage, and large-frame work. Submit a requirement — matched to shops near you with the right capabilities."
         breadcrumbLink={{ href: "/electric-motor-repair", label: "Electric motor repair hub" }}
         canonicalPath={path}
         sidebarTitle="Get industrial motor repair quotes"
@@ -246,6 +250,73 @@ export default function IndustrialMotorRepairPage() {
             </Link>
             .
           </p>
+
+          <section className="mt-10 not-prose" aria-labelledby="industrial-req-heading">
+            <h2 id="industrial-req-heading" className="text-2xl font-bold text-title sm:text-3xl">
+              Submit an industrial motor repair requirement
+            </h2>
+            <p className="mt-3 text-secondary">
+              Describe your motor and failure below — matched to industrial repair shops in your area with the right
+              capabilities for your application.
+            </p>
+            <div className="mt-4 rounded-xl border border-primary/25 bg-primary/[0.06] p-4 sm:p-5">
+              <RepairRequestForm
+                mode="city"
+                defaultIndustry="manufacturing"
+                formHeading="Submit an industrial motor repair requirement"
+                className="mx-auto w-full max-w-none border-0 bg-transparent p-0 shadow-none"
+              />
+            </div>
+          </section>
+
+          <section className="mt-10" aria-labelledby="industry-links-heading">
+            <h2 id="industry-links-heading" className="text-2xl font-bold text-title sm:text-3xl">
+              Motor repair by industry
+            </h2>
+            <p className="mt-4 text-secondary">
+              Find shops with experience in your specific industry — capabilities, certifications, and documentation
+              requirements vary significantly between sectors.
+            </p>
+            <ul className="mt-4 list-disc space-y-2 pl-6 text-secondary">
+              <li>
+                <Link href="/electric-motor-repair-manufacturing" className="font-medium text-primary hover:underline">
+                  Motor repair for manufacturing facilities
+                </Link>
+              </li>
+              <li>
+                <Link href="/electric-motor-repair-water-treatment" className="font-medium text-primary hover:underline">
+                  Motor repair for water and wastewater treatment
+                </Link>
+              </li>
+              <li>
+                <Link href="/electric-motor-repair-oil-gas" className="font-medium text-primary hover:underline">
+                  Motor repair for oil and gas — hazardous location specialists
+                </Link>
+              </li>
+              <li>
+                <Link href="/electric-motor-repair-food-processing" className="font-medium text-primary hover:underline">
+                  Motor repair for food processing — washdown and food-grade
+                </Link>
+              </li>
+              <li>
+                <Link href="/electric-motor-repair-mining" className="font-medium text-primary hover:underline">
+                  Motor repair for mining — large frame and HV specialists
+                </Link>
+              </li>
+            </ul>
+          </section>
+
+          <aside className="mt-8 not-prose rounded-xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-sm text-secondary">
+              Looking for a verified industrial motor repair shop? Browse the full directory by state and capability.
+            </p>
+            <Link
+              href="/electric-motor-repair-shops-listings"
+              className="mt-2 inline-flex text-sm font-semibold text-primary hover:underline"
+            >
+              Browse all industrial repair centers →
+            </Link>
+          </aside>
 
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">

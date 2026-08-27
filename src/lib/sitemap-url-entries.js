@@ -82,6 +82,24 @@ export async function getSitemapEntries() {
       priority: 0.95,
     },
     {
+      url: `${baseUrl}/rewind-vs-surplus-motor-replacement`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/generator-rewinding-cost`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/where-to-get-electric-motor-repaired`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
       url: `${baseUrl}/electric-motor-rewinding-cost-calculator`,
       lastModified: new Date(),
       changeFrequency: "weekly",

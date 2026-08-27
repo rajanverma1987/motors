@@ -49,7 +49,7 @@ function buildProblemDescription(failureDescription, canShip) {
 
 /**
  * Inline repair request form for directory / location / shop listing pages.
- * @param {{ mode: 'city' | 'shop', city?: string, state?: string, zipCode?: string, listing?: { id: string, companyName?: string } | null, defaultUrgency?: 'standard' | 'emergency', defaultIndustry?: string, formHeading?: string, layout?: 'default' | 'sidebar', className?: string }} props
+ * @param {{ mode: 'city' | 'shop', city?: string, state?: string, zipCode?: string, listing?: { id: string, companyName?: string } | null, defaultUrgency?: 'standard' | 'emergency', defaultIndustry?: string, defaultMotorType?: string, formHeading?: string, layout?: 'default' | 'sidebar', className?: string }} props
  */
 export default function RepairRequestForm({
   mode = "city",
@@ -59,6 +59,7 @@ export default function RepairRequestForm({
   listing = null,
   defaultUrgency = "standard",
   defaultIndustry = "",
+  defaultMotorType = "",
   formHeading = "",
   layout = "default",
   className = "",
@@ -67,6 +68,7 @@ export default function RepairRequestForm({
   const lockUrgency = defaultUrgency === "emergency";
   const [form, setForm] = useState({
     ...INITIAL_FORM,
+    motorType: defaultMotorType ? String(defaultMotorType).trim() : "",
     city: city || "",
     state: state || "",
     urgency: defaultUrgency === "emergency" ? "emergency" : "standard",

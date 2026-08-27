@@ -2,6 +2,7 @@ import Link from "next/link";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import CalculatorSidebarScrollGate from "@/components/marketing/calculator-sidebar-scroll-gate";
 import MotorRewindCostCalculator from "@/components/marketing/motor-rewind-cost-calculator";
+import RepairRequestForm from "@/components/marketing/repair-request-form";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const path = "/cost-of-motor-repair-and-rewinding";
@@ -11,10 +12,10 @@ const COST_SIDEBAR_CALC_SCROLLABLE =
 
 export const metadata = {
   title: {
-    absolute: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
+    absolute: "Motor Rewinding Cost: $400–$9,000 — Full Price Guide | IQMotorBase",
   },
   description:
-    "US motor rewinding costs by HP: $250–$60k+ ballpark tables, free rewind calculator, and 12 FAQs. Compare written quotes from repair shops.",
+    "Motor rewinding costs by HP: $400–$900 for small motors, $1,200–$3,500 for 10–50 HP, $3,000–$9,000 for 50–200 HP. AC, DC, armature, and stator rewind price ranges. Get a quote.",
   keywords: [
     "motor repair cost",
     "electric motor repair cost",
@@ -43,9 +44,9 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
+    title: "Motor Rewinding Cost Guide: $400–$9,000 by HP | IQMotorBase",
     description:
-      "US ballpark motor rewinding prices by HP ($250–$60k+), free calculator, pricing tables, and FAQs—compare shop quotes after inspection.",
+      "Motor rewinding price ranges by HP — AC, DC, armature, and stator rewinds. Get matched to certified shops for a real quote.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -54,9 +55,9 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "How Much Does Motor Rewinding Cost? (2026 US Guide)",
+    title: "Motor Rewinding Cost: $400–$9,000 | IQMotorBase",
     description:
-      "Free rewind calculator + US pricing tables by HP. Ballpark motor repair and rewinding costs with 12 FAQs.",
+      "Motor rewinding price guide by HP. AC, DC, armature, and stator rewinds. Get a quote.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -280,7 +281,7 @@ export default function CostOfMotorRepairPage() {
       <CostPageWebPageJsonLd pageUrl={pageUrl} site={site} />
       <CostPageCalculatorJsonLd pageUrl={pageUrl} />
       <BlogPageLayout
-        title="How much does electric motor repair & rewinding cost?"
+        title="Motor rewinding cost: what shops charge in 2026"
         description="US ballpark ranges from ~$250 for small motors to $60k+ for large industrial rewinds. Use the free calculator, HP pricing tables, and FAQs below—then compare written quotes from shops. Updated June 2026."
         breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
         canonicalPath={path}
@@ -461,6 +462,21 @@ export default function CostOfMotorRepairPage() {
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-8 rounded-xl border border-primary/25 bg-primary/[0.06] p-5 sm:p-6 not-prose">
+              <p className="text-base font-bold text-title">Get a real quote for your motor</p>
+              <p className="mt-1.5 text-sm text-secondary">
+                These are ballpark ranges. Submit your motor details below and get a quote from a certified repair shop
+                in your area.
+              </p>
+              <div className="mt-4">
+                <RepairRequestForm
+                  mode="city"
+                  formHeading="Request a repair quote"
+                  className="mx-auto w-full max-w-none border-0 bg-transparent p-0 shadow-none"
+                />
+              </div>
             </div>
 
             <div className="mt-8 overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
