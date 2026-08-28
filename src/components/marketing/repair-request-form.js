@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import { isValidEmail } from "@/lib/validation";
 import { REPAIR_FORM_SIDEBAR_MAX_H } from "@/lib/listings-directory-layout";
+import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
 
 const MOTOR_TYPE_OPTIONS = [
   { value: "", label: "Select motor type…" },
@@ -78,6 +79,18 @@ export default function RepairRequestForm({
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    setForm((prev) =>
+      withLeadContactPrefill(prev, {
+        skip: [
+          ...(city ? ["city"] : []),
+          ...(state ? ["state"] : []),
+          ...(zipCode ? ["zipCode"] : []),
+        ],
+      })
+    );
+  }, [city, state, zipCode]);
+
   const shopName = listing?.companyName || "";
   const listingId = listing?.id != null ? String(listing.id).trim() : "";
   const isEmergency = form.urgency === "emergency";
@@ -94,6 +107,9 @@ export default function RepairRequestForm({
     setSubmitting(true);
     setError("");
     try {
+      const contactCity = (form.city || city || "").trim();
+      const contactState = (form.state || state || "").trim();
+      const contactZip = String(zipCode || "").trim();
       const res = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,9 +118,9 @@ export default function RepairRequestForm({
           email: form.email.trim(),
           phone: form.phone.trim(),
           company: form.company.trim(),
-          city: (form.city || city || "").trim(),
-          state: (form.state || state || "").trim(),
-          zipCode: zipCode || "",
+          city: contactCity,
+          state: contactState,
+          zipCode: contactZip,
           motorType: form.motorType,
           motorHp: form.horsepower,
           voltage: form.voltage,
@@ -116,6 +132,15 @@ export default function RepairRequestForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Submission failed");
+      saveLeadContact({
+        name: form.name,
+        company: form.company,
+        phone: form.phone,
+        email: form.email,
+        city: contactCity,
+        state: contactState,
+        zipCode: contactZip,
+      });
       setSubmitted(true);
     } catch (err) {
       setError(err.message || "Something went wrong. Please try again.");
@@ -394,7 +419,7 @@ export default function RepairRequestForm({
       </div>
       <p className="text-center text-xs text-secondary">
         Your contact details are shared only with the repair shop(s) matched to your request. We do not sell or share your
-        data with third parties.
+        data with third parties. On this device we remember your contact so the next request form fills in faster.
       </p>
     </>
   );

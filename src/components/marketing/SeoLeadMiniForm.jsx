@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
 
 /**
  * Compact lead capture for SEO landings → /api/contact-demo (extended with business/city/source).
@@ -38,6 +39,19 @@ export default function SeoLeadMiniForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => {
+    const saved = loadLeadContact();
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name || saved.name || "",
+      email: prev.email || saved.email || "",
+      phone: prev.phone || saved.phone || "",
+      businessName: prev.businessName || saved.company || "",
+      city: prev.city || saved.city || defaultCity || "",
+      state: prev.state || saved.state || defaultState || "",
+    }));
+  }, [defaultCity, defaultState]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
@@ -67,6 +81,14 @@ export default function SeoLeadMiniForm({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
+      saveLeadContact({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        company: form.businessName,
+        city: form.city,
+        state: form.state,
+      });
       router.push("/contact/thank-you");
     } catch (err) {
       setError(err.message || "Failed to send. Please try again.");

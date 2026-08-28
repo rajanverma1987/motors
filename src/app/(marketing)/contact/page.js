@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
 
 function getDetectedTimezone() {
   try {
@@ -30,7 +31,14 @@ export default function ContactPage() {
 
   useEffect(() => {
     const tz = getDetectedTimezone();
-    if (tz) setForm((prev) => ({ ...prev, timezone: tz }));
+    const saved = loadLeadContact();
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name || saved.name || "",
+      email: prev.email || saved.email || "",
+      phone: prev.phone || saved.phone || "",
+      timezone: tz || prev.timezone,
+    }));
   }, []);
 
   const handleChange = (e) => {
@@ -51,6 +59,11 @@ export default function ContactPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
+      saveLeadContact({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+      });
       router.push("/contact/thank-you");
     } catch (err) {
       setError(err.message || "Failed to send. Please try again.");

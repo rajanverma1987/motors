@@ -8,6 +8,7 @@ import Input from "@/components/ui/input";
 import Tabs from "@/components/ui/tabs";
 import RepairRequestForm from "@/components/marketing/repair-request-form";
 import { isValidEmail } from "@/lib/validation";
+import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
 
 const sessionKey = (shopId) => `contact_unlocked_${shopId}`;
 
@@ -43,6 +44,15 @@ export default function ContactReveal({
       }
     } catch (_) {}
   }, [shopId]);
+
+  useEffect(() => {
+    setForm((prev) => withLeadContactPrefill(prev));
+  }, []);
+
+  useEffect(() => {
+    if (!modalOpen) return;
+    setForm((prev) => withLeadContactPrefill(prev));
+  }, [modalOpen]);
 
   useEffect(() => {
     if (!shopId) return;
@@ -94,6 +104,13 @@ export default function ContactReveal({
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Something went wrong. Please try again.");
       }
+      saveLeadContact({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        city: shopCity,
+        state: shopState,
+      });
       setUnlocked(true);
       setModalOpen(false);
       try {

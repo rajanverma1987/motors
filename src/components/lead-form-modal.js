@@ -7,6 +7,7 @@ import Textarea from "@/components/ui/textarea";
 import Modal from "@/components/ui/modal";
 import Select from "@/components/ui/select";
 import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
+import { saveLeadContact, withLeadContactPrefill } from "@/lib/lead-contact-storage";
 
 const URGENCY_OPTIONS = [
   { value: "", label: "Select urgency…" },
@@ -48,7 +49,11 @@ export default function LeadFormModal({
 
   useEffect(() => {
     if (!open) return;
-    setForm({ ...INITIAL_FORM, ...(prefill && typeof prefill === "object" ? prefill : {}) });
+    const fromPrefill = prefill && typeof prefill === "object" ? prefill : {};
+    const nonEmptyPrefill = Object.fromEntries(
+      Object.entries(fromPrefill).filter(([, v]) => v != null && String(v).trim() !== "")
+    );
+    setForm(withLeadContactPrefill({ ...INITIAL_FORM, ...nonEmptyPrefill }));
     setSubmitted(false);
     setMotorPhotoFiles([]);
   }, [open, prefill]);
@@ -99,6 +104,14 @@ export default function LeadFormModal({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to submit");
+      saveLeadContact({
+        name: form.name,
+        company: form.company,
+        phone: form.phone,
+        email: form.email,
+        city: form.city,
+        zipCode: form.zipCode,
+      });
       setSubmitted(true);
       setForm(INITIAL_FORM);
       setMotorPhotoFiles([]);

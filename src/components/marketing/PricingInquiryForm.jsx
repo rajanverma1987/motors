@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
+import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
 
 const INITIAL = {
   name: "",
@@ -18,6 +19,17 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const saved = loadLeadContact();
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name || saved.name || "",
+      email: prev.email || saved.email || "",
+      phone: prev.phone || saved.phone || "",
+      businessType: prev.businessType || saved.company || "",
+    }));
+  }, []);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -52,8 +64,20 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to submit inquiry");
+      saveLeadContact({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        company: form.businessType,
+      });
       setSuccess(true);
-      setForm(INITIAL);
+      setForm((prev) => ({
+        ...INITIAL,
+        name: prev.name,
+        email: prev.email,
+        phone: prev.phone,
+        businessType: prev.businessType,
+      }));
     } catch (err) {
       setError(err.message || "Failed to submit inquiry");
     } finally {
