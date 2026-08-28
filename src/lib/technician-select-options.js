@@ -2,6 +2,8 @@
  * Client-safe employee dropdown helpers (no DB / mongoose imports).
  */
 
+const MONGO_OBJECT_ID_RE = /^[a-f0-9]{24}$/i;
+
 function employeeOptionId(e) {
   return String(e?.id ?? e?._id ?? "").trim();
 }
@@ -13,6 +15,30 @@ function employeeOptionLabel(e, fallback = "") {
     String(fallback || "").trim() ||
     "—"
   );
+}
+
+/** True for a 24-char hex Mongo ObjectId string (never show these as display names). */
+export function isMongoObjectIdString(value) {
+  return MONGO_OBJECT_ID_RE.test(String(value ?? "").trim());
+}
+
+/**
+ * Resolve stored preparedBy / quotedBy (employee id or legacy name) to a display name.
+ * Never returns a raw Mongo ObjectId.
+ * @param {Array<{ id?: string, _id?: string, name?: string, email?: string }>} employees
+ * @param {string} value
+ * @returns {string}
+ */
+export function resolveEmployeeDisplayName(employees, value) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+  const found = findEmployeeByIdOrName(employees, raw);
+  if (found) {
+    const label = employeeOptionLabel(found, "");
+    if (label && label !== "—") return label;
+  }
+  if (isMongoObjectIdString(raw)) return "";
+  return raw;
 }
 
 /**
@@ -65,7 +91,11 @@ export function buildEmployeeSelectOptions(employees, selectedValue = "") {
     const found = findEmployeeByIdOrName(employees, sel);
     opts.push({
       value: sel,
-      label: found ? employeeOptionLabel(found, sel) : "Unknown employee",
+      label: found
+        ? employeeOptionLabel(found, sel)
+        : isMongoObjectIdString(sel)
+          ? "Unknown employee"
+          : sel,
     });
   }
   return opts;

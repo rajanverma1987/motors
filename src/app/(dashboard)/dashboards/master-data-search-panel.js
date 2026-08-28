@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FiSearch } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Input from "@/components/ui/input";
 import Table from "@/components/ui/table";
 import Tabs from "@/components/ui/tabs";
@@ -14,7 +15,12 @@ import {
   MASTER_DATA_SEARCH_FORMS,
   createEmptyDatasheetCriteria,
 } from "@/lib/simple-datasheet-form";
-import { formToServiceProposalListRow } from "@/lib/simple-service-proposal-form";
+import {
+  RECORD_TYPE_INVOICE,
+  RECORD_TYPE_JOB,
+  RECORD_TYPE_RFQ,
+  formToServiceProposalListRow,
+} from "@/lib/simple-service-proposal-form";
 import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
 import {
   SIMPLE_SCREEN_PANEL_CLASS,
@@ -24,7 +30,7 @@ import {
 function emptyCriteriaForForm(formId) {
   const form = MASTER_DATA_SEARCH_FORMS[formId];
   if (form?.searchType === "customer") {
-    return { companyName: "", primaryContactName: "" };
+    return { companyName: "", primaryContactName: "", documentNumber: "" };
   }
   /** @type {Record<string, Record<string, string>>} */
   const out = {};
@@ -33,6 +39,20 @@ function emptyCriteriaForForm(formId) {
     out[block.id] = createEmptyDatasheetCriteria(block.columns);
   }
   return out;
+}
+
+function recordTypeBadgeVariant(recordType) {
+  const t = String(recordType || RECORD_TYPE_RFQ).toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return "success";
+  if (t === RECORD_TYPE_JOB) return "primary";
+  return "default";
+}
+
+function formatRecordType(recordType) {
+  const t = String(recordType || RECORD_TYPE_RFQ).trim().toUpperCase();
+  if (t === RECORD_TYPE_INVOICE) return RECORD_TYPE_INVOICE;
+  if (t === RECORD_TYPE_JOB) return RECORD_TYPE_JOB;
+  return RECORD_TYPE_RFQ;
 }
 
 /**
@@ -166,6 +186,7 @@ export default function MasterDataSearchPanel() {
             ? {
                 ...r,
                 id: sid,
+                recordType: formatRecordType(saved?.recordType || r.recordType),
                 jobNumber:
                   String(saved?.documentNumber || saved?.quote || r.jobNumber || "").trim() ||
                   r.jobNumber,
@@ -185,6 +206,23 @@ export default function MasterDataSearchPanel() {
     const searched = resultMeta?.searchedFields || [];
     const isCustomerSearch = resultMeta?.searchType === "customer";
     const base = [
+      {
+        key: "recordType",
+        label: "Type",
+        sortable: true,
+        className: "w-24",
+        render: (v) => {
+          const label = formatRecordType(v);
+          return (
+            <Badge
+              variant={recordTypeBadgeVariant(label)}
+              className="rounded-full px-2.5 py-0.5 text-xs"
+            >
+              {label}
+            </Badge>
+          );
+        },
+      },
       {
         key: "jobNumber",
         label: "Job #",
@@ -279,10 +317,21 @@ export default function MasterDataSearchPanel() {
                     : ""
                 }
               />
+              <Input
+                label="RFQ#/Job#/Invoice#"
+                value={criteriaByForm.customer?.documentNumber ?? ""}
+                onChange={(e) => patchCustomerField("documentNumber", e.target.value)}
+                placeholder="e.g. *123* or exact number"
+                inputClassName={
+                  highlightFilledFields && String(criteriaByForm.customer?.documentNumber || "").trim()
+                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                    : ""
+                }
+              />
               <p className="text-xs text-secondary">
                 Use <span className="font-medium text-title">*</span> wildcards — e.g.{" "}
                 <span className="font-mono text-title">*abb*</span> or{" "}
-                <span className="font-mono text-title">Smith*</span>. Both fields are combined with AND.
+                <span className="font-mono text-title">Smith*</span>. Filled fields are combined with AND.
               </p>
             </div>
           ) : (

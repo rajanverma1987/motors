@@ -65,7 +65,7 @@ export function collectFilledMasterDataCriteria(formId, criteriaByBlock) {
 }
 
 /**
- * Customer tab criteria (company + contact name wildcards).
+ * Customer tab criteria (company, contact name, RFQ/Job/Invoice # wildcards).
  * @param {Record<string, string>} criteria
  */
 export function collectCustomerSearchCriteria(criteria) {

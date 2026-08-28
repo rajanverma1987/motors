@@ -42,7 +42,7 @@ import {
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
-import { buildEmployeeSelectOptions } from "@/lib/technician-select-options";
+import { resolveEmployeeDisplayName } from "@/lib/technician-select-options";
 import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import {
   formatSimpleMoney,
@@ -281,8 +281,10 @@ export default function ServiceProposalsPanel({
       ]);
       const customersList = Array.isArray(cust) ? cust : [];
       const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
+      const employeesList = Array.isArray(emps) ? emps : [];
       const normalized = (Array.isArray(pageData.items) ? pageData.items : []).map((doc) => {
         const customer = byId.get(String(doc?.customerId || "").trim()) || null;
+        const preparedByRaw = String(doc?.preparedBy || doc?.quotedBy || "").trim();
         return toSimpleServiceProposalListRow(
           {
             ...doc,
@@ -292,7 +294,7 @@ export default function ServiceProposalsPanel({
             companyName: customer?.companyName || doc?.companyName || "",
             phone: customer?.phone || doc?.phone || doc?.customerPhone || "",
             email: customer?.email || doc?.email || doc?.customerEmail || "",
-            preparedByLabel: "",
+            preparedByLabel: resolveEmployeeDisplayName(employeesList, preparedByRaw),
           }
         );
       });
@@ -302,7 +304,7 @@ export default function ServiceProposalsPanel({
       setListTotals(pageData.totals || { total: 0, taxCollected: 0, count: 0 });
       setInvoiceFinance(pageData.invoiceFinance || EMPTY_INVOICE_FINANCE);
       setCustomers(customersList);
-      setEmployees(Array.isArray(emps) ? emps : []);
+      setEmployees(employeesList);
     } catch {
       setRows([]);
       setTotalCount(0);
@@ -333,7 +335,7 @@ export default function ServiceProposalsPanel({
   }, [dateFrom, dateTo]);
 
   const employeeLabel = useCallback(
-    (id) => buildEmployeeSelectOptions(employees, id).find((o) => o.value === id)?.label || id || "",
+    (id) => resolveEmployeeDisplayName(employees, id),
     [employees]
   );
 
@@ -362,10 +364,19 @@ export default function ServiceProposalsPanel({
         try {
           const doc = await fetchSimpleServiceProposal(openId);
           if (doc) {
-            row = toSimpleServiceProposalListRow({
-              ...doc,
-              status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
-            });
+            row = toSimpleServiceProposalListRow(
+              {
+                ...doc,
+                status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
+              },
+              {
+                companyName: customerName(doc.customerId) || doc.companyName || "",
+                preparedByLabel: resolveEmployeeDisplayName(
+                  employees,
+                  doc.preparedBy || doc.quotedBy
+                ),
+              }
+            );
           }
         } catch {
           return true;
@@ -377,7 +388,7 @@ export default function ServiceProposalsPanel({
       openEdit(row);
       return true;
     },
-    [rows, isInvoices, invoiceStatusValues, quoteStatusValues, mergedSettings]
+    [rows, isInvoices, invoiceStatusValues, quoteStatusValues, mergedSettings, customerName, employees]
   );
 
   useSimpleOpenParam({
@@ -728,7 +739,13 @@ export default function ServiceProposalsPanel({
       },
       ...(!isInvoices ? [{ key: "phone", label: "Phone", sortable: true }] : []),
       { key: "email", label: "Email", sortable: true },
-      { key: "quotedBy", label: "Quoted By", sortable: true },
+      {
+        key: "quotedBy",
+        label: "Quoted By",
+        sortable: true,
+        render: (v, row) =>
+          resolveEmployeeDisplayName(employees, v || row?.preparedBy) || "—",
+      },
       { key: "quoteType", label: "Quote Type", sortable: true },
       {
         key: "total",
@@ -956,6 +973,7 @@ export default function ServiceProposalsPanel({
       handleRowJobStatusChange,
       openNotesEdit,
       customerName,
+      employees,
       mergedSettings,
       quoteOpts,
       invoiceOpts,

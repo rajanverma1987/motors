@@ -12,6 +12,7 @@ import {
   normalizeMotorLogisticsRecord,
   stripLogisticsChargeOtherItems,
 } from "@/lib/simple-motor-logistics";
+import { isMongoObjectIdString } from "@/lib/technician-select-options";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -20,6 +21,21 @@ export const RECORD_TYPE_INVOICE = "INVOICE";
 export const RECORD_TYPES = [RECORD_TYPE_RFQ, RECORD_TYPE_JOB, RECORD_TYPE_INVOICE];
 
 export const QUOTE_TYPE_VALUES = ["Phone", "Email", "Walk-in", "Other"];
+
+/**
+ * Prefer a human-readable Quoted By label; never persist/display a raw Mongo ObjectId.
+ * @param {...unknown} candidates
+ * @returns {string}
+ */
+export function pickQuotedByDisplay(...candidates) {
+  for (const c of candidates) {
+    const s = String(c ?? "").trim();
+    if (!s) continue;
+    if (isMongoObjectIdString(s)) continue;
+    return s;
+  }
+  return "";
+}
 
 function normalizeQuoteTypeValue(raw) {
   const t = String(raw ?? "").trim();
@@ -511,7 +527,7 @@ export function toSimpleServiceProposalListRow(doc, meta = null) {
     email,
     customerPhone: String(form.customerPhone || phone).trim(),
     customerEmail: String(form.customerEmail || email).trim(),
-    quotedBy: String(m.preparedByLabel || form.quotedBy || form.preparedBy || "").trim(),
+    quotedBy: pickQuotedByDisplay(m.preparedByLabel, form.quotedBy, form.preparedBy),
     quoteType: String(form.quoteType || "").trim(),
     notes: String(form.notes || form.internalNotes || "").trim(),
     total: totals.total,
