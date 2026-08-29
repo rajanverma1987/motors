@@ -51,6 +51,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
   const woEntries = merged.controlledDropdowns?.work_order_status?.entries ?? [];
   const invoiceEntries = merged.controlledDropdowns?.invoice_status?.entries ?? [];
   const poPaymentEntries = merged.controlledDropdowns?.po_payment_status?.entries ?? [];
+  const otherEntries = merged.controlledDropdowns?.other_status?.entries ?? [];
 
   const dropdownSelectOptions = useMemo(
     () =>
@@ -95,6 +96,16 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     }));
   };
 
+  const patchOtherEntries = (nextEntries) => {
+    setDraft((prev) => ({
+      ...prev,
+      controlledDropdowns: {
+        ...(prev.controlledDropdowns && typeof prev.controlledDropdowns === "object" ? prev.controlledDropdowns : {}),
+        other_status: { entries: nextEntries },
+      },
+    }));
+  };
+
   const selectedDef = DROPDOWN_DEFINITIONS[selectedKey];
   const isFixedValues = Boolean(selectedDef?.fixedValues);
   const entries =
@@ -104,11 +115,14 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         ? invoiceEntries
         : selectedKey === "po_payment_status"
           ? poPaymentEntries
-          : woEntries;
+          : selectedKey === "other_status"
+            ? otherEntries
+            : woEntries;
   const showEntryLabels =
     selectedKey === "quote_status" ||
     selectedKey === "invoice_status" ||
-    selectedKey === "po_payment_status";
+    selectedKey === "po_payment_status" ||
+    selectedKey === "other_status";
   const showQuoteFilterGroupColumns = selectedKey === "quote_status";
   const showShopFloorColumn = selectedKey === "work_order_status";
 
@@ -116,6 +130,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
     if (selectedKey === "quote_status") patchQuoteEntries(next);
     else if (selectedKey === "invoice_status") patchInvoiceEntries(next);
     else if (selectedKey === "po_payment_status") patchPoPaymentEntries(next);
+    else if (selectedKey === "other_status") patchOtherEntries(next);
     else patchWoEntries(next);
   };
 
@@ -240,12 +255,21 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
           <p className="mb-4 text-xs text-secondary">
             Total values: {entries.length}.
             {isFixedValues ? (
-              <>
-                {" "}
-                These values are <span className="font-medium text-title">fixed</span> (Paid, Unpaid, Partial Paid) for
-                Purchase / Payable filter summary cards. Change display labels and tile colors only — they cannot be
-                added or removed.
-              </>
+              selectedKey === "other_status" ? (
+                <>
+                  {" "}
+                  These are <span className="font-medium text-title">system filter cards</span> on Service Proposals /
+                  Invoices (All, Amount Receivable, Tax Collected, Tax To Be Collected). Change display labels and tile
+                  colors only — they cannot be added or removed.
+                </>
+              ) : (
+                <>
+                  {" "}
+                  These values are <span className="font-medium text-title">fixed</span> (Paid, Unpaid, Partial Paid) for
+                  Purchase / Payable filter summary cards. Change display labels and tile colors only — they cannot be
+                  added or removed.
+                </>
+              )
             ) : null}
             {showShopFloorColumn ? (
               <>

@@ -44,6 +44,8 @@ import {
 import {
   normalizePoPaymentStatusKey,
   poPaymentStatusTileColorForValue,
+  otherStatusTileColorForValue,
+  OTHER_STATUS_ALL,
 } from "@/lib/dropdown-catalog";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
@@ -234,14 +236,19 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         icon: paymentFilterIcon(key),
       };
     });
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
     return [
       {
         key: FILTER_ALL,
-        label: "All",
+        label: allTile.label || "All",
         count: allCount,
         amount: allAmount,
-        tileAppearance: resolveStatusTileProps("", 0),
-        icon: paymentFilterIcon("All"),
+        tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+          tileBgColor: allTile.tileBgColor,
+          tileTextColor: allTile.tileTextColor,
+          tileColor: allTile.tileColor,
+        }),
+        icon: paymentFilterIcon(allTile.label || "All"),
       },
       ...statusCards,
     ];

@@ -38,6 +38,8 @@ import {
   buildQuoteStatusFilterCardSpecs,
   resolveConfiguredStatusSlug,
   workOrderStatusSelectOptionsFromMerged,
+  otherStatusTileColorForValue,
+  OTHER_STATUS_ALL,
 } from "@/lib/dropdown-catalog";
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -612,43 +614,63 @@ export default function ServiceProposalsPanel({
 
     const allCount = [...bucketByStatus.values()].reduce((s, b) => s + b.count, 0);
     const allAmount = [...bucketByStatus.values()].reduce((s, b) => s + b.amount, 0);
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
     buttons.unshift({
       key: "",
-      label: "All",
+      label: allTile.label || "All",
       count: allCount,
       amount: allAmount,
-      tileAppearance: tileAppearanceForKey("", 0),
-      icon: statusCardIcon("All"),
+      tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+        tileBgColor: allTile.tileBgColor,
+        tileTextColor: allTile.tileTextColor,
+        tileColor: allTile.tileColor,
+      }),
+      icon: statusCardIcon(allTile.label || "All"),
     });
 
     if (isInvoices) {
       const ar = invoiceFinance?.amountReceivable || { count: 0, amount: 0 };
       const taxPaid = invoiceFinance?.taxCollected || { count: 0, amount: 0 };
       const taxDue = invoiceFinance?.taxToCollect || { count: 0, amount: 0 };
+      const arTile = otherStatusTileColorForValue(mergedSettings, FILTER_AMOUNT_RECEIVABLE, 3);
+      const taxPaidTile = otherStatusTileColorForValue(mergedSettings, FILTER_TAX_COLLECTED, 2);
+      const taxDueTile = otherStatusTileColorForValue(mergedSettings, FILTER_TAX_TO_COLLECT, 4);
       buttons.push(
         {
           key: FILTER_AMOUNT_RECEIVABLE,
-          label: "Amount Receivable",
+          label: arTile.label || "Amount Receivable",
           count: ar.count,
           amount: ar.amount,
-          tileAppearance: resolveStatusTileProps("", 3),
-          icon: statusCardIcon("Amount Receivable"),
+          tileAppearance: resolveStatusTileProps(arTile.tileColor, arTile.index, {
+            tileBgColor: arTile.tileBgColor,
+            tileTextColor: arTile.tileTextColor,
+            tileColor: arTile.tileColor,
+          }),
+          icon: statusCardIcon(arTile.label || "Amount Receivable"),
         },
         {
           key: FILTER_TAX_COLLECTED,
-          label: "Tax Collected",
+          label: taxPaidTile.label || "Tax Collected",
           count: taxPaid.count,
           amount: taxPaid.amount,
-          tileAppearance: resolveStatusTileProps("", 2),
-          icon: statusCardIcon("Tax Collected"),
+          tileAppearance: resolveStatusTileProps(taxPaidTile.tileColor, taxPaidTile.index, {
+            tileBgColor: taxPaidTile.tileBgColor,
+            tileTextColor: taxPaidTile.tileTextColor,
+            tileColor: taxPaidTile.tileColor,
+          }),
+          icon: statusCardIcon(taxPaidTile.label || "Tax Collected"),
         },
         {
           key: FILTER_TAX_TO_COLLECT,
-          label: "Tax to be collected",
+          label: taxDueTile.label || "Tax To Be Collected",
           count: taxDue.count,
           amount: taxDue.amount,
-          tileAppearance: resolveStatusTileProps("", 4),
-          icon: statusCardIcon("Tax to be collected"),
+          tileAppearance: resolveStatusTileProps(taxDueTile.tileColor, taxDueTile.index, {
+            tileBgColor: taxDueTile.tileBgColor,
+            tileTextColor: taxDueTile.tileTextColor,
+            tileColor: taxDueTile.tileColor,
+          }),
+          icon: statusCardIcon(taxDueTile.label || "Tax To Be Collected"),
         }
       );
     }

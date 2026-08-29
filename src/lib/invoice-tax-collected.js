@@ -1,18 +1,19 @@
+import {
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY,
+} from "@/lib/invoice-filter-keys";
 import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import { invoiceStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 import { computeTotalsFromLaborAndParts, resolveInvoiceTaxFields } from "@/lib/quote-invoice-totals";
 
-/** Status filter key for fully paid invoices with sales tax collected. */
-export const INVOICE_FILTER_TAX_COLLECTED = "__tax_collected__";
-
-/** Status filter key for billed invoices with sales tax still to be collected. */
-export const INVOICE_FILTER_TAX_TO_BE_COLLECTED = "__tax_to_be_collected__";
-
-/** Legacy Simple key — still accepted by list query. */
-export const INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY = "__tax_to_collect__";
-
-/** Status filter key for open (not fully paid) invoice balance. */
-export const INVOICE_FILTER_AMOUNT_RECEIVABLE = "__amount_receivable__";
+export {
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY,
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+};
 
 /** Invoice status slug for billed / sent-to-customer (Settings → Dropdowns → Invoice status). */
 export const INVOICE_BILLED_STATUS_SLUG = "billed";

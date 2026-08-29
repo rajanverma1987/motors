@@ -44,7 +44,7 @@ export const USER_SETTINGS_DEFAULTS = {
    * Omitted statuses use automatic rotation by column order.
    */
   workOrderStatusTileColors: {},
-  /** Controlled dropdown definitions (quote_status, work_order_status, invoice_status, po_payment_status) — see dropdown-catalog.js */
+  /** Controlled dropdown definitions (quote_status, work_order_status, invoice_status, po_payment_status, other_status) — see dropdown-catalog.js */
   controlledDropdowns: {},
   /** Product form dropdowns (transport, quote type, payment methods) — see product-dropdown-catalog.js */
   productDropdowns: {},

@@ -9,6 +9,12 @@ import {
   tileFieldsFromEntry,
   serializeTileColorForMap,
 } from "@/lib/work-order-status-tiles";
+import {
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY,
+} from "@/lib/invoice-filter-keys";
 
 /** Default quote statuses when Settings → Dropdowns has never been configured (legacy). */
 export const QUOTE_STATUS_VALUES = ["draft", "sent", "approved", "rejected", "rnr"];
@@ -50,6 +56,30 @@ export const PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX = {
   "Partial Paid": 3,
 };
 
+/** System filter cards (Service Proposals / Invoices) — not user-extensible. */
+export const OTHER_STATUS_ALL = "__all__";
+
+export const OTHER_STATUS_VALUES = [
+  OTHER_STATUS_ALL,
+  INVOICE_FILTER_AMOUNT_RECEIVABLE,
+  INVOICE_FILTER_TAX_COLLECTED,
+  INVOICE_FILTER_TAX_TO_BE_COLLECTED,
+];
+
+const DEFAULT_OTHER_STATUS_LABELS = {
+  [OTHER_STATUS_ALL]: "All",
+  [INVOICE_FILTER_AMOUNT_RECEIVABLE]: "Amount Receivable",
+  [INVOICE_FILTER_TAX_COLLECTED]: "Tax Collected",
+  [INVOICE_FILTER_TAX_TO_BE_COLLECTED]: "Tax To Be Collected",
+};
+
+export const OTHER_STATUS_FALLBACK_TILE_INDEX = {
+  [OTHER_STATUS_ALL]: 0,
+  [INVOICE_FILTER_AMOUNT_RECEIVABLE]: 3,
+  [INVOICE_FILTER_TAX_COLLECTED]: 2,
+  [INVOICE_FILTER_TAX_TO_BE_COLLECTED]: 4,
+};
+
 export const DROPDOWN_DEFINITIONS = {
   quote_status: {
     key: "quote_status",
@@ -66,6 +96,11 @@ export const DROPDOWN_DEFINITIONS = {
   po_payment_status: {
     key: "po_payment_status",
     label: "Purchase payment status",
+    fixedValues: true,
+  },
+  other_status: {
+    key: "other_status",
+    label: "Others",
     fixedValues: true,
   },
 };
@@ -245,6 +280,29 @@ function normalizePoPaymentStatusEntries(rawEntries) {
   });
 }
 
+function normalizeOtherStatusEntries(rawEntries) {
+  const byLower = new Map();
+  if (Array.isArray(rawEntries)) {
+    for (const raw of rawEntries) {
+      const value = String(raw?.value ?? "").trim();
+      if (!value) continue;
+      byLower.set(value.toLowerCase(), raw);
+    }
+  }
+  return OTHER_STATUS_VALUES.map((canon) => {
+    const raw = byLower.get(canon.toLowerCase()) || {};
+    const tile = tileFieldsFromEntry(raw, null);
+    const label = clampDropdownLabel(raw?.label) || DEFAULT_OTHER_STATUS_LABELS[canon] || canon;
+    return {
+      value: canon,
+      label,
+      tileBgColor: tile.tileBgColor,
+      tileTextColor: tile.tileTextColor,
+      tileColor: tile.tileColor,
+    };
+  });
+}
+
 function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoardOrder) {
   const tiles =
     legacyTiles && typeof legacyTiles === "object" && !Array.isArray(legacyTiles) ? legacyTiles : {};
@@ -313,6 +371,7 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
   const invRaw = obj.invoice_status && typeof obj.invoice_status === "object" ? obj.invoice_status : {};
   const poPayRaw =
     obj.po_payment_status && typeof obj.po_payment_status === "object" ? obj.po_payment_status : {};
+  const otherRaw = obj.other_status && typeof obj.other_status === "object" ? obj.other_status : {};
 
   return {
     quote_status: {
@@ -326,6 +385,9 @@ export function normalizeControlledDropdowns(raw, legacyWoStatuses, legacyWoTile
     },
     po_payment_status: {
       entries: normalizePoPaymentStatusEntries(poPayRaw.entries),
+    },
+    other_status: {
+      entries: normalizeOtherStatusEntries(otherRaw.entries),
     },
   };
 }
@@ -646,6 +708,62 @@ export function poPaymentStatusTileColorForValue(mergedSettings, value, fallback
     tileTextColor: entry?.tileTextColor ?? "",
     index: idx >= 0 ? (PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX[key] ?? idx) : defaultIdx,
     label: entry?.label || DEFAULT_PO_PAYMENT_STATUS_LABELS[key] || key,
+  };
+}
+
+/**
+ * Normalize stored / filter key for Others (system summary cards).
+ * Empty string (list "All" filter) maps to OTHER_STATUS_ALL.
+ */
+export function normalizeOtherStatusKey(value) {
+  const s = String(value ?? "").trim();
+  if (!s) return OTHER_STATUS_ALL;
+  const lower = s.toLowerCase();
+  if (lower === OTHER_STATUS_ALL || lower === "all") return OTHER_STATUS_ALL;
+  if (lower === INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY) {
+    return INVOICE_FILTER_TAX_TO_BE_COLLECTED;
+  }
+  const hit = OTHER_STATUS_VALUES.find((v) => v.toLowerCase() === lower);
+  return hit || s;
+}
+
+/** Filter key used on Service Proposals / Invoices list (`""` for All). */
+export function otherStatusFilterKey(value) {
+  const key = normalizeOtherStatusKey(value);
+  return key === OTHER_STATUS_ALL ? "" : key;
+}
+
+export function otherStatusSelectOptionsFromMerged(mergedSettings) {
+  const entries = mergedSettings?.controlledDropdowns?.other_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeOtherStatusEntries([]);
+  return list.map((e) => ({
+    value: e.value,
+    label: clampDropdownLabel(e.label) || DEFAULT_OTHER_STATUS_LABELS[e.value] || e.value,
+  }));
+}
+
+/**
+ * Tile colors / labels for system filter cards (All, Amount Receivable, Tax…).
+ * @param {unknown} mergedSettings
+ * @param {string} value OTHER_STATUS_* / invoice filter key / "" for All
+ * @param {number} [fallbackIndex]
+ */
+export function otherStatusTileColorForValue(mergedSettings, value, fallbackIndex) {
+  const entries = mergedSettings?.controlledDropdowns?.other_status?.entries;
+  const list = Array.isArray(entries) && entries.length ? entries : normalizeOtherStatusEntries([]);
+  const key = normalizeOtherStatusKey(value);
+  const idx = list.findIndex((e) => String(e.value ?? "").trim() === key);
+  const entry = idx >= 0 ? list[idx] : null;
+  const defaultIdx =
+    typeof fallbackIndex === "number" && fallbackIndex >= 0
+      ? fallbackIndex
+      : OTHER_STATUS_FALLBACK_TILE_INDEX[key] ?? 0;
+  return {
+    tileColor: entry?.tileColor ?? "",
+    tileBgColor: entry?.tileBgColor ?? "",
+    tileTextColor: entry?.tileTextColor ?? "",
+    index: idx >= 0 ? (OTHER_STATUS_FALLBACK_TILE_INDEX[key] ?? idx) : defaultIdx,
+    label: entry?.label || DEFAULT_OTHER_STATUS_LABELS[key] || key,
   };
 }
 
