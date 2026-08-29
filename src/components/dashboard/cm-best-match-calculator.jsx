@@ -321,23 +321,23 @@ function OriginalWiresSelectModal({
   const sizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
   const unitLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
   const qtyOnOtherLists = useMemo(() => {
-    const visiblePlatformIds = new Set(platformWireRows.map((r) => r.id).filter(Boolean));
+    const visibleIds = new Set(catalog.map((r) => r.id).filter(Boolean));
     let count = 0;
     for (const [id, raw] of Object.entries(qtyById || {})) {
       const qty = num(raw);
       if (!Number.isFinite(qty) || qty <= 0) continue;
-      if (String(id).startsWith("platform:") && !visiblePlatformIds.has(id)) count += 1;
+      if (!visibleIds.has(id)) count += 1;
     }
     return count;
-  }, [platformWireRows, qtyById]);
+  }, [catalog, qtyById]);
 
-  const hasQtyOnCurrentUnit = useMemo(() => {
-    for (const row of platformWireRows) {
+  const hasQtyOnCurrentList = useMemo(() => {
+    for (const row of catalog) {
       const qty = num(qtyById[row.id]);
       if (Number.isFinite(qty) && qty > 0) return true;
     }
     return false;
-  }, [platformWireRows, qtyById]);
+  }, [catalog, qtyById]);
 
   useEffect(() => {
     if (!open) return;
@@ -350,17 +350,17 @@ function OriginalWiresSelectModal({
   };
 
   const clearCurrentUnitSelection = async () => {
-    if (!hasQtyOnCurrentUnit) return;
+    if (!hasQtyOnCurrentList) return;
     const ok = await confirm({
       title: `Clear ${unitLabel} selection`,
-      message: `Clear quantities on the ${unitLabel} list only? The other unit’s quantities stay.`,
+      message: `Clear quantities on this ${unitLabel} list (including custom sizes shown here)? Quantities on the other unit stay.`,
       confirmLabel: `Clear ${unitLabel}`,
       variant: "danger",
     });
     if (!ok) return;
     setQtyById((prev) => {
       const next = { ...prev };
-      for (const row of platformWireRows) {
+      for (const row of catalog) {
         if (row.id) delete next[row.id];
       }
       return next;
@@ -399,7 +399,7 @@ function OriginalWiresSelectModal({
             type="button"
             variant="outline"
             size="sm"
-            disabled={!hasQtyOnCurrentUnit}
+            disabled={!hasQtyOnCurrentList}
             onClick={clearCurrentUnitSelection}
           >
             Clear {unitLabel}
@@ -744,6 +744,16 @@ export default function CmBestMatchCalculator() {
     return n;
   }, [platformWireRows, selected]);
 
+  const selectedCustom = useMemo(() => {
+    let n = 0;
+    for (const w of customWireRows) {
+      if (w.id && selected.has(w.id)) n += 1;
+    }
+    return n;
+  }, [customWireRows, selected]);
+
+  const clearableOnCurrentList = selectedPlatformOnCurrentUnit + selectedCustom;
+
   const wiresForCalc = useMemo(() => {
     return selectedList
       .map((w) => {
@@ -773,10 +783,10 @@ export default function CmBestMatchCalculator() {
   };
 
   const clearCatalogCurrentUnit = async () => {
-    if (selectedPlatformOnCurrentUnit === 0) return;
+    if (clearableOnCurrentList === 0) return;
     const ok = await confirm({
       title: `Clear ${unitToggleLabel} selection`,
-      message: `Clear selected ${unitToggleLabel} sizes only? Selections on the other list stay.`,
+      message: `Clear selected ${unitToggleLabel} sizes and custom sizes on this list? Selections on the other unit stay.`,
       confirmLabel: `Clear ${unitToggleLabel}`,
       variant: "danger",
     });
@@ -784,6 +794,9 @@ export default function CmBestMatchCalculator() {
     setSelected((prev) => {
       const next = new Set(prev);
       for (const w of platformWireRows) {
+        if (w.id) next.delete(w.id);
+      }
+      for (const w of customWireRows) {
         if (w.id) next.delete(w.id);
       }
       return next;
@@ -932,7 +945,7 @@ export default function CmBestMatchCalculator() {
               variant="primary"
               size="sm"
               className="ml-auto shrink-0"
-              disabled={selectedPlatformOnCurrentUnit === 0}
+              disabled={clearableOnCurrentList === 0}
               onClick={clearCatalogCurrentUnit}
             >
               Clear {unitToggleLabel}
