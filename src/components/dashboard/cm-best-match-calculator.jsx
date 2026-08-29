@@ -319,24 +319,25 @@ function OriginalWiresSelectModal({
   }, [customWireRows, catalogsByUnit]);
 
   const sizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
+  const unitLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
   const qtyOnOtherLists = useMemo(() => {
-    const visible = new Set(catalog.map((r) => r.id).filter(Boolean));
+    const visiblePlatformIds = new Set(platformWireRows.map((r) => r.id).filter(Boolean));
     let count = 0;
     for (const [id, raw] of Object.entries(qtyById || {})) {
       const qty = num(raw);
       if (!Number.isFinite(qty) || qty <= 0) continue;
-      if (!visible.has(id)) count += 1;
+      if (String(id).startsWith("platform:") && !visiblePlatformIds.has(id)) count += 1;
     }
     return count;
-  }, [catalog, qtyById]);
+  }, [platformWireRows, qtyById]);
 
-  const hasAnyQty = useMemo(() => {
-    for (const raw of Object.values(qtyById || {})) {
-      const qty = num(raw);
+  const hasQtyOnCurrentUnit = useMemo(() => {
+    for (const row of platformWireRows) {
+      const qty = num(qtyById[row.id]);
       if (Number.isFinite(qty) && qty > 0) return true;
     }
     return false;
-  }, [qtyById]);
+  }, [platformWireRows, qtyById]);
 
   useEffect(() => {
     if (!open) return;
@@ -348,16 +349,22 @@ function OriginalWiresSelectModal({
     setQtyById((prev) => ({ ...prev, [id]: cleaned }));
   };
 
-  const clearSelection = async () => {
-    if (!hasAnyQty) return;
+  const clearCurrentUnitSelection = async () => {
+    if (!hasQtyOnCurrentUnit) return;
     const ok = await confirm({
-      title: "Clear selection",
-      message: "Clear all quantities on AWG and Metric lists?",
-      confirmLabel: "Clear selection",
+      title: `Clear ${unitLabel} selection`,
+      message: `Clear quantities on the ${unitLabel} list only? The other unit’s quantities stay.`,
+      confirmLabel: `Clear ${unitLabel}`,
       variant: "danger",
     });
     if (!ok) return;
-    setQtyById({});
+    setQtyById((prev) => {
+      const next = { ...prev };
+      for (const row of platformWireRows) {
+        if (row.id) delete next[row.id];
+      }
+      return next;
+    });
   };
 
   const handleSubmit = (e) => {
@@ -392,10 +399,10 @@ function OriginalWiresSelectModal({
             type="button"
             variant="outline"
             size="sm"
-            disabled={!hasAnyQty}
-            onClick={clearSelection}
+            disabled={!hasQtyOnCurrentUnit}
+            onClick={clearCurrentUnitSelection}
           >
-            Clear selection
+            Clear {unitLabel}
           </Button>
           <Button type="submit" form={ORIGINAL_WIRES_FORM_ID} variant="primary" size="sm">
             Apply selection
@@ -406,8 +413,8 @@ function OriginalWiresSelectModal({
       <form id={ORIGINAL_WIRES_FORM_ID} onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <p className="min-w-0 flex-1 text-sm text-secondary">
-            Enter quantity for each size in the winding. Switch AWG / Metric freely — quantities are kept on both
-            lists. Total circular mils = Cir. Mills × qty for all selected sizes.
+            Enter quantity for each size. AWG and Metric quantities are kept separately — Clear only affects the list
+            you are viewing. Total circular mils = Cir. Mills × qty for all sizes with qty.
           </p>
           <WireUnitToggle wireUnit={wireUnit} onUnitChange={setWireUnit} disabled={loading} />
         </div>
@@ -729,6 +736,14 @@ export default function CmBestMatchCalculator() {
     return n;
   }, [wireRows, selected]);
 
+  const selectedPlatformOnCurrentUnit = useMemo(() => {
+    let n = 0;
+    for (const w of platformWireRows) {
+      if (w.id && selected.has(w.id)) n += 1;
+    }
+    return n;
+  }, [platformWireRows, selected]);
+
   const wiresForCalc = useMemo(() => {
     return selectedList
       .map((w) => {
@@ -757,16 +772,52 @@ export default function CmBestMatchCalculator() {
     });
   };
 
-  const clearCatalogSelection = async () => {
-    if (selected.size === 0) return;
+  const clearCatalogCurrentUnit = async () => {
+    if (selectedPlatformOnCurrentUnit === 0) return;
     const ok = await confirm({
-      title: "Clear selection",
-      message: "Clear all selected wire sizes from AWG and Metric lists?",
-      confirmLabel: "Clear selection",
+      title: `Clear ${unitToggleLabel} selection`,
+      message: `Clear selected ${unitToggleLabel} sizes only? Selections on the other list stay.`,
+      confirmLabel: `Clear ${unitToggleLabel}`,
       variant: "danger",
     });
     if (!ok) return;
-    setSelected(new Set());
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const w of platformWireRows) {
+        if (w.id) next.delete(w.id);
+      }
+      return next;
+    });
+  };
+
+  const clearBestMatchFields = async () => {
+    const hasFields =
+      Boolean(String(originalWiredInHand || "").trim()) ||
+      Boolean(String(originalWireSize || "").trim()) ||
+      Boolean(String(originalCM || "").trim()) ||
+      Boolean(String(targetedCM || "").trim()) ||
+      Object.keys(originalWireQtys || {}).length > 0 ||
+      results.length > 0 ||
+      String(minWires) !== "3" ||
+      String(maxWires) !== "10";
+    if (!hasFields) return;
+    const ok = await confirm({
+      title: "Clear fields",
+      message: "Clear all CM Best Match fields and results so you can start a new calculation?",
+      confirmLabel: "Clear fields",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setOriginalWiredInHand("");
+    setOriginalWireSize("");
+    setOriginalCM("");
+    setTargetedCM("");
+    setMinWires("3");
+    setMaxWires("10");
+    setOriginalWireQtys({});
+    setResults([]);
+    setResultContext(null);
+    setResultsModalOpen(false);
   };
 
   const handlePrint = useCallback(() => {
@@ -778,7 +829,13 @@ export default function CmBestMatchCalculator() {
   const applyOriginalWireSelection = (selections) => {
     const { display, totalQty, totalCm } = formatOriginalWireSelection(selections);
     if (!display) {
-      toast.warning("Enter a quantity greater than zero for at least one wire size.");
+      setOriginalWireQtys({});
+      setOriginalWireSize("");
+      setOriginalWiredInHand("");
+      setOriginalCM("");
+      setTargetedCM("");
+      setOriginalWiresModalOpen(false);
+      toast.success("Original wire fields cleared.");
       return;
     }
     const nextQtys = {};
@@ -865,7 +922,8 @@ export default function CmBestMatchCalculator() {
               <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
               <p className="text-xs text-secondary">
                 Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Select from AWG and
-                Metric — selections stay when you switch lists. Up to {MAX_SELECT} sizes for the search.
+                Metric — selections stay when you switch. Clear {unitToggleLabel} only clears this list. Up to{" "}
+                {MAX_SELECT} sizes for the search.
               </p>
             </div>
             <WireUnitToggle wireUnit={catalogWireUnit} onUnitChange={setCatalogUnit} disabled={cirMillsLoading} />
@@ -874,10 +932,10 @@ export default function CmBestMatchCalculator() {
               variant="primary"
               size="sm"
               className="ml-auto shrink-0"
-              disabled={selected.size === 0}
-              onClick={clearCatalogSelection}
+              disabled={selectedPlatformOnCurrentUnit === 0}
+              onClick={clearCatalogCurrentUnit}
             >
-              Clear selection
+              Clear {unitToggleLabel}
             </Button>
           </div>
 
@@ -994,10 +1052,23 @@ export default function CmBestMatchCalculator() {
 
         {/* Right: inputs */}
         <section className="flex min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
-          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">CM Best Match</h2>
-          <p className="mb-4 text-xs text-secondary">
-            Enter original winding data and search limits. Choose wire sizes in the catalog at left.
-          </p>
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">CM Best Match</h2>
+              <p className="text-xs text-secondary">
+                Enter original winding data and search limits. Choose wire sizes in the catalog at left.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="ml-auto shrink-0"
+              onClick={clearBestMatchFields}
+            >
+              Clear fields
+            </Button>
+          </div>
 
           <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input
@@ -1063,6 +1134,9 @@ export default function CmBestMatchCalculator() {
           </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-end gap-3 border-t border-border pt-4">
+            <Button type="button" variant="outline" size="sm" onClick={clearBestMatchFields}>
+              Clear fields
+            </Button>
             {results.length > 0 ? (
               <Button type="button" variant="outline" size="sm" onClick={() => setResultsModalOpen(true)}>
                 View results ({results.length})
