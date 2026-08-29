@@ -1,5 +1,5 @@
 /**
- * CM “best match” combinations (±10% of target circular mils).
+ * CM “best match” combinations (±5% of target circular mils).
  * Kept in sync with motors/src/lib/cm-calculator.js
  */
 export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
@@ -12,8 +12,8 @@ export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
     return results;
   }
 
-  const low = targetedCM * 0.9;
-  const high = targetedCM * 1.1;
+  const low = targetedCM * 0.95;
+  const high = targetedCM * 1.05;
 
   for (let a = 0; a < wires.length; a++) {
     const w1 = wires[a];

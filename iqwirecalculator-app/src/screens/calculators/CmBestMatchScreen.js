@@ -31,7 +31,7 @@ const CUSTOM_WIRES_KEY = "motop_calcs_custom_wires";
 function resultCardStyle(pct) {
   const a = Math.abs(Number(pct) || 0);
   if (a <= 2) return { backgroundColor: "hsl(152, 60%, 92%)" };
-  if (a <= 10) return { backgroundColor: "hsl(45, 90%, 88%)" };
+  if (a <= 5) return { backgroundColor: "hsl(45, 90%, 88%)" };
   return { backgroundColor: colors.formBg };
 }
 
@@ -268,7 +268,7 @@ export default function CmBestMatchScreen() {
     setResultsTitle("CM Best Match");
     if (out.length === 0) {
       setResultsOpen(false);
-      Alert.alert("No matches", "No combinations within ±10% of target with the current limits.");
+      Alert.alert("No matches", "No combinations within ±5% of target with the current limits.");
     } else {
       setResultsOpen(true);
     }
@@ -382,7 +382,7 @@ export default function CmBestMatchScreen() {
         contentContainerStyle={[styles.mainContent, { paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.intro}>Select AWG sizes, enter targets, then calculate (±10% of targeted CM).</Text>
+        <Text style={styles.intro}>Select AWG sizes, enter targets, then calculate (±5% of targeted CM).</Text>
 
         <CalcPanel title="Job inputs" style={styles.compactPanel}>
           <View style={styles.row}>
@@ -653,7 +653,7 @@ export default function CmBestMatchScreen() {
             </View>
           ) : null}
           <Text style={styles.legend}>
-            Green ≈ within 2% of target; yellow within 10%.
+            Green ≈ within 2% of target; yellow within 5%.
           </Text>
           {results.map((row, idx) => (
             <View key={idx} style={[styles.card, resultCardStyle(row.percentDifference)]}>

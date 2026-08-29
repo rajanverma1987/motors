@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback, useMemo } from "react";
 import { ToastItem } from "@/components/ui/toast";
 
 const ToastContext = createContext(null);
@@ -27,13 +27,16 @@ export function ToastProvider({ children }) {
     [addToast]
   );
 
-  const value = {
-    toast,
-    success: (msg, duration) => addToast(msg, "success", duration ?? 4000),
-    error: (msg, duration) => addToast(msg, "error", duration ?? 5000),
-    warning: (msg, duration) => addToast(msg, "warning", duration ?? 4500),
-    info: (msg, duration) => addToast(msg, "info", duration ?? 4000),
-  };
+  const value = useMemo(
+    () => ({
+      toast,
+      success: (msg, duration) => addToast(msg, "success", duration ?? 4000),
+      error: (msg, duration) => addToast(msg, "error", duration ?? 5000),
+      warning: (msg, duration) => addToast(msg, "warning", duration ?? 4500),
+      info: (msg, duration) => addToast(msg, "info", duration ?? 4000),
+    }),
+    [toast, addToast]
+  );
 
   return (
     <ToastContext.Provider value={value}>

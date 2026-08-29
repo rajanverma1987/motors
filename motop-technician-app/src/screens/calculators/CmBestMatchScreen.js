@@ -26,7 +26,7 @@ function slotQty(row, i) {
 function resultCardStyle(pct) {
   const a = Math.abs(Number(pct) || 0);
   if (a <= 2) return { backgroundColor: "hsl(152, 60%, 92%)" };
-  if (a <= 10) return { backgroundColor: "hsl(45, 90%, 88%)" };
+  if (a <= 5) return { backgroundColor: "hsl(45, 90%, 88%)" };
   return { backgroundColor: colors.formBg };
 }
 
@@ -159,7 +159,7 @@ export default function CmBestMatchScreen() {
     setResults(out);
     if (out.length === 0) {
       setModalOpen(false);
-      Alert.alert("No matches", "No combinations within ±10% of target with the current limits.");
+      Alert.alert("No matches", "No combinations within ±5% of target with the current limits.");
     } else {
       setModalOpen(true);
     }
@@ -257,7 +257,7 @@ export default function CmBestMatchScreen() {
 
         <CalcPanel title="What each field means">
           <Note>
-            Original fields are for your records on the results summary. Targeted CM is the goal (±10% search). Min/max
+            Original fields are for your records on the results summary. Targeted CM is the goal (±5% search). Min/max
             wires limit total conductors in a combination (up to three sizes).
           </Note>
         </CalcPanel>
@@ -289,7 +289,7 @@ export default function CmBestMatchScreen() {
             </View>
           ) : null}
           <Text style={styles.legend}>
-            Green ≈ within 2% of target; yellow within 10%. Unused slots show 0.
+            Green ≈ within 2% of target; yellow within 5%. Unused slots show 0.
           </Text>
           {results.map((row, idx) => (
             <View key={idx} style={[styles.card, resultCardStyle(row.percentDifference)]}>

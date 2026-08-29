@@ -20,6 +20,7 @@ import "./cm-best-match-print.css";
 
 const MAX_SELECT = 10;
 const MAX_WIRES_CAP = 200;
+const RESULTS_PAGE_SIZE = 200;
 const ORIGINAL_WIRES_FORM_ID = "cm-original-wires-form";
 
 function num(v) {
@@ -44,7 +45,7 @@ function slotQty(row, i) {
 function resultRowClass(percentDifference) {
   const a = Math.abs(Number(percentDifference) || 0);
   if (a <= 2) return "bg-emerald-500/15 dark:bg-emerald-500/20";
-  if (a <= 10) return "bg-amber-400/25 dark:bg-amber-500/15";
+  if (a <= 5) return "bg-amber-400/25 dark:bg-amber-500/15";
   return "bg-card";
 }
 
@@ -52,7 +53,7 @@ function resultRowClass(percentDifference) {
 function resultRowPrintClass(percentDifference) {
   const a = Math.abs(Number(percentDifference) || 0);
   if (a <= 2) return "cm-print-row-good";
-  if (a <= 10) return "cm-print-row-mid";
+  if (a <= 5) return "cm-print-row-mid";
   return "";
 }
 
@@ -104,13 +105,37 @@ function WireUnitToggle({ wireUnit, onUnitChange, disabled = false }) {
 
 /** Printable + on-screen results: variables + table (id required for print CSS) */
 function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
+  const [page, setPage] = useState(1);
+
+  const totalCount = results?.length || 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / RESULTS_PAGE_SIZE) || 1);
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const startItem = totalCount === 0 ? 0 : (safePage - 1) * RESULTS_PAGE_SIZE + 1;
+  const endItem = Math.min(safePage * RESULTS_PAGE_SIZE, totalCount);
+  const pageRows = useMemo(() => {
+    if (!results?.length) return [];
+    const start = (safePage - 1) * RESULTS_PAGE_SIZE;
+    return results.slice(start, start + RESULTS_PAGE_SIZE);
+  }, [results, safePage]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [results]);
+
+  useEffect(() => {
+    if (page !== safePage) setPage(safePage);
+  }, [page, safePage]);
+
   if (!resultContext || !results?.length) return null;
 
   return (
     <div id="cm-best-match-print-area" className="text-title">
       <h1 className="cm-print-title mb-1 text-lg font-bold text-title lg:text-xl">CM Best Match</h1>
       <p className="cm-print-meta mb-4 text-xs text-secondary">
-        Generated {generatedLabel || "—"} · Print uses landscape (use Print preview in your browser).
+        Generated {generatedLabel || "—"}
+        {totalPages > 1 ? ` · Page ${safePage} of ${totalPages} (${startItem}–${endItem} of ${totalCount})` : ` · ${totalCount} match${totalCount === 1 ? "" : "es"}`}
+        {" · "}
+        Print uses landscape (use Print preview in your browser).
       </p>
 
       <div className="cm-print-vars mb-4 grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/10 p-4 sm:grid-cols-3 dark:bg-muted/5">
@@ -130,8 +155,39 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
 
       <p className="cm-print-hide mb-3 text-xs text-secondary">
         Rows in <span className="text-emerald-700 dark:text-emerald-400">green</span> are within ~2% of target;{" "}
-        <span className="text-amber-800 dark:text-amber-400">yellow</span> within ~10%. Unused wire slots show 0.
+        <span className="text-amber-800 dark:text-amber-400">yellow</span> within ~5%. Unused wire slots show 0.
       </p>
+
+      {totalPages > 1 ? (
+        <div className="cm-print-hide mb-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
+          <span className="text-sm text-title">
+            Showing {startItem}–{endItem} of {totalCount}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              Previous
+            </Button>
+            <span className="min-w-[5.5rem] text-center text-sm text-title">
+              Page {safePage} of {totalPages}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <div className="cm-results-table-wrap overflow-x-auto rounded-md border border-border">
         <table className="cm-results-table w-full min-w-[920px] border-collapse text-sm">
@@ -152,9 +208,9 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
             </tr>
           </thead>
           <tbody>
-            {results.map((row, idx) => (
+            {pageRows.map((row, idx) => (
               <tr
-                key={idx}
+                key={`${startItem + idx}-${row.totalCM}-${row.wiresInHand}-${row.percentDifference}`}
                 className={`border-b border-border last:border-b-0 ${resultRowClass(row.percentDifference)} ${resultRowPrintClass(row.percentDifference)}`}
               >
                 <td className="px-2 py-2 tabular-nums text-title">{slotSize(row, 1)}</td>
@@ -177,6 +233,37 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 ? (
+        <div className="cm-print-hide mt-3 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2">
+          <span className="text-sm text-title">
+            Showing {startItem}–{endItem} of {totalCount} · {RESULTS_PAGE_SIZE} per page
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+            >
+              Previous
+            </Button>
+            <span className="min-w-[5.5rem] text-center text-sm text-title">
+              Page {safePage} of {totalPages}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -380,8 +467,10 @@ export default function CmBestMatchCalculator() {
   }, [toast]);
 
   useEffect(() => {
-    loadShopWires();
-  }, [loadShopWires]);
+    void loadShopWires();
+    // Load shop catalog once on mount. Explicit reload after add/remove only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -630,7 +719,7 @@ export default function CmBestMatchCalculator() {
     setResults(out);
     if (out.length === 0) {
       setResultsModalOpen(false);
-      toast.info("No combinations within ±10% of target with the current limits.");
+      toast.info("No combinations within ±5% of target with the current limits.");
     } else {
       setResultsModalOpen(true);
     }
@@ -861,7 +950,7 @@ export default function CmBestMatchCalculator() {
               <div>
                 <dt className="font-medium text-title">Original CM / Targeted CM</dt>
                 <dd className="mt-0.5 text-secondary">
-                  Filled from Cir. Mills × qty for all selected original sizes. Targeted CM is the search goal (±10%).
+                  Filled from Cir. Mills × qty for all selected original sizes. Targeted CM is the search goal (±5%).
                 </dd>
               </div>
               <div>

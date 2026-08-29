@@ -1,5 +1,5 @@
 /**
- * CM “best match” combinations (±10% of target circular mils).
+ * CM “best match” combinations (±5% of target circular mils).
  * Max 3 wire sizes per combination; respects min/max total conductor count.
  * No persistence — compute only.
  *
@@ -19,8 +19,8 @@ export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
     return results;
   }
 
-  const low = targetedCM * 0.9;
-  const high = targetedCM * 1.1;
+  const low = targetedCM * 0.95;
+  const high = targetedCM * 1.05;
 
   // One wire type
   for (let a = 0; a < wires.length; a++) {
