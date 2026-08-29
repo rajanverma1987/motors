@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getPublicListings, resolvePublicListingFromSlugParam } from "@/lib/listings-public";
+import { notFound, redirect } from "next/navigation";
+import { getPublicListings } from "@/lib/listings-public";
+import { resolveListing } from "./resolve-listing";
 import { getListingReviewStats } from "@/lib/reviews-public";
 import { getLocationPageForArea } from "@/lib/location-pages-public";
 import { getListingPublicPathSegment, isListingUrlSlugExportSafe } from "@/lib/listing-slug";
@@ -26,7 +27,7 @@ import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModul
 import ListingGalleryLightbox from "./listing-gallery-lightbox";
 import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
 import ContactReveal from "@/components/marketing/contact-reveal";
-import { ListingHeroImage, ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
+import { ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
@@ -56,7 +57,7 @@ function toClientListingProps(listing) {
 export async function generateMetadata({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
-  const { listing } = await resolvePublicListingFromSlugParam(slug);
+  const { listing } = await resolveListing(slug);
   if (!listing) {
     return {
       title: "Repair center not found",
@@ -125,26 +126,16 @@ export async function generateMetadata({ params }) {
 export default async function ListingDetailPage({ params }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
   const slug = resolvedParams?.slug;
-  const { listing, redirectToSlug } = await resolvePublicListingFromSlugParam(slug);
+  const { listing, redirectToSlug } = await resolveListing(slug);
 
   if (redirectToSlug) {
     redirect(`/electric-motor-repair-shops-listings/${redirectToSlug}`);
   }
 
-  if (!listing) {
-    return (
-      <div className="mx-auto max-w-[67.2rem] px-4 py-16 text-center">
-        <p className="text-secondary">Repair center not found.</p>
-        <Link
-          href="/electric-motor-repair-shops-listings"
-          prefetch
-          className="mt-4 inline-block text-primary hover:underline"
-        >
-          ← Back to listings
-        </Link>
-      </div>
-    );
-  }
+  // A removed or never-existing listing must answer 404, not a 200 stub. Returning the
+  // stub made these soft 404s: Google logged them under "Excluded by 'noindex' tag" and
+  // kept re-crawling URLs that will never come back.
+  if (!listing) notFound();
 
   const canonicalSlug = getListingPublicPathSegment(listing);
   if (slug && canonicalSlug && slug.trim() !== canonicalSlug) {
@@ -164,15 +155,6 @@ export default async function ListingDetailPage({ params }) {
   const gallery = Array.isArray(listing.galleryPhotoUrls)
     ? listing.galleryPhotoUrls.filter(Boolean)
     : [];
-  const firstGallery = gallery[0];
-  const firstGallerySrc = firstGallery?.startsWith("http")
-    ? firstGallery
-    : firstGallery?.startsWith("/")
-      ? firstGallery
-      : firstGallery
-        ? `/${firstGallery}`
-        : null;
-  const heroImage = firstGallerySrc;
 
   const reviewStats = await getListingReviewStats(listing.id);
   const sameAreaPage = await getLocationPageForArea(listing.city, listing.state);
@@ -284,24 +266,16 @@ export default async function ListingDetailPage({ params }) {
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_352px] lg:items-start">
           <div className="min-w-0">
             <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
-              {heroImage && (
-                <div className="relative aspect-[21/9] w-full bg-muted/30">
-                  <ListingHeroImage
-                    src={heroImage}
-                    alt={`${listing.companyName} — shop facility, ${sameAreaLabel}`}
-                  />
-                </div>
-              )}
               <div className="p-6 sm:p-8">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-4">
-                  {logoUrl && (
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:gap-5">
+                  {logoUrl ? (
                     <div className="shrink-0">
                       <ListingInlineLogo
                         src={logoUrl}
                         alt={`${listing.companyName} logo — electric motor repair`}
                       />
                     </div>
-                  )}
+                  ) : null}
                   <div className="min-w-0">
                     <h1 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
                       {h1}
@@ -334,21 +308,6 @@ export default async function ListingDetailPage({ params }) {
                   {listing.pickupDeliveryAvailable ? (
                     <span>Pickup &amp; delivery</span>
                   ) : null}
-                </div>
-
-                <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
-                  <p className="text-sm text-secondary">
-                    <span className="font-medium text-title">Is this your business?</span> Sign
-                    in to your IQMotorBase account to update this directory listing—services,
-                    service area, photos, and contact details—whenever they change.{" "}
-                    <Link
-                      href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    >
-                      Sign in to edit your listing
-                    </Link>
-                    .
-                  </p>
                 </div>
 
                 {listing.shortDescription && (
@@ -707,6 +666,20 @@ export default async function ListingDetailPage({ params }) {
               </div>
             </div>
             <OwnAShopLikeThisModule className="mt-10" />
+            <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
+              <p className="text-sm text-secondary">
+                <span className="font-medium text-title">Is this your business?</span> Sign in to
+                your IQMotorBase account to update this directory listing—services, service area,
+                photos, and contact details—whenever they change.{" "}
+                <Link
+                  href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
+                  className="font-medium text-primary underline-offset-2 hover:underline"
+                >
+                  Sign in to edit your listing
+                </Link>
+                .
+              </p>
+            </div>
             <ListingDetailFaqSection items={faqs} shopId={listing.id} />
           </div>
           <div>

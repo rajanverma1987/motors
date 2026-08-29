@@ -72,7 +72,7 @@ export function ListingInlineLogo({ src, alt = "" }) {
   const normalized = getListingImageSrc(src);
   if (!normalized) return null;
   const cls =
-    "h-20 w-20 rounded-lg border border-border object-contain bg-bg sm:h-24 sm:w-24";
+    "h-24 w-24 rounded-xl border border-border object-contain bg-bg sm:h-28 sm:w-28";
 
   if (isRemoteImageUrl(normalized)) {
     return (
@@ -91,10 +91,10 @@ export function ListingInlineLogo({ src, alt = "" }) {
     <Image
       src={normalized}
       alt={alt}
-      width={96}
-      height={96}
+      width={112}
+      height={112}
       className={cls}
-      sizes="96px"
+      sizes="112px"
       priority
       quality={88}
     />

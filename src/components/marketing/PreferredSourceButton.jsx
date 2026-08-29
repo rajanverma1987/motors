@@ -109,28 +109,36 @@ export default function PreferredSourceButton({
   if (variant === "stripe") {
     return (
       <aside
-        className={`w-full border-b border-primary/80 bg-primary shadow-sm ${className}`}
+        className={`w-full border-b border-primary/80 bg-primary ${className}`}
         aria-label="Add IQMotorBase as a preferred source in Google Search"
       >
-        <div className="mx-auto flex max-w-[86.4rem] flex-col items-center gap-3 px-4 py-3 sm:flex-row sm:justify-between sm:gap-4 sm:px-6 sm:py-2.5">
+        {/* Mobile: single CTA button only */}
+        <div className="mx-auto flex max-w-[86.4rem] items-center justify-center px-4 py-1.5 sm:hidden">
+          <PreferredSourceCta className="min-h-9 w-full max-w-sm py-1.5" label="Add preferred source" />
+          <NoscriptLink className="!bg-white !text-[#1f1f1f]" />
+        </div>
+        {/* sm+: one compact row */}
+        <div className="mx-auto hidden max-w-[86.4rem] items-center gap-3 px-4 py-1.5 sm:flex sm:justify-between sm:px-6">
           <a
             href={PREFERRED_SOURCE_DEEPLINK}
             target="_blank"
             rel="noopener noreferrer"
             onClick={onActivate}
-            className="flex min-w-0 cursor-pointer items-center gap-3 text-center transition-opacity hover:opacity-95 sm:text-left"
+            className="flex min-w-0 cursor-pointer items-center gap-2.5 transition-opacity hover:opacity-95"
           >
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white shadow-sm sm:h-10 sm:w-10">
-              <GoogleLogoMark className="h-5 w-5 sm:h-[1.35rem] sm:w-[1.35rem]" />
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white shadow-sm">
+              <GoogleLogoMark className="h-4 w-4" />
             </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold leading-snug text-white sm:text-base">{title}</span>
-              <span className="mt-0.5 hidden text-xs leading-snug text-white/90 sm:block">{description}</span>
+            <span className="truncate text-sm font-semibold leading-none text-white">{title}</span>
+            <span className="hidden truncate text-xs leading-none text-white/85 md:inline">
+              — {description}
             </span>
           </a>
-          <div className="flex shrink-0 flex-col items-center gap-1.5 sm:items-end">
-            <span className="text-xs font-semibold uppercase tracking-wide text-white/90">Free · 1 click</span>
-            <PreferredSourceCta />
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden text-[11px] font-semibold uppercase tracking-wide text-white/90 lg:inline">
+              Free · 1 click
+            </span>
+            <PreferredSourceCta className="min-h-8 py-1.5 text-xs" />
           </div>
         </div>
       </aside>

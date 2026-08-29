@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getLocationPageBySlug, getRelatedLocationPages } from "@/lib/location-pages-public";
+import { getRelatedLocationPages } from "@/lib/location-pages-public";
+import { resolveLocationPage } from "./resolve-location-page";
 import { getAllListingsForLocationArea } from "@/lib/listings-public";
 import {
   buildLocationListingInsights,
@@ -56,13 +57,27 @@ function buildLocationOgDescription(areaLabel) {
   );
 }
 
-export async function generateMetadata({ params }) {
+export async function generateMetadata({ params, searchParams }) {
   const resolvedParams = typeof params?.then === "function" ? await params : params ?? {};
+  const resolvedSearch = typeof searchParams?.then === "function" ? await searchParams : searchParams ?? {};
   const slug = resolvedParams?.slug;
-  const page = slug ? await getLocationPageBySlug(slug) : null;
+  const page = await resolveLocationPage(slug);
   if (!page) return { title: "Motor Repair & Rewinding Shops | IQMotorBase" };
   const baseUrl = getPublicSiteUrl().replace(/\/$/, "");
-  const url = `${baseUrl}/motor-repair-shop/${page.slug}`;
+  // Filtered/paginated views are the same city page with a narrower list. Google was
+  // crawling every match x capability x page combination and reporting them as
+  // "Duplicate without user-selected canonical" — it ignored the canonical to the clean
+  // URL and picked arbitrary sibling facets instead. So these variants are noindexed with
+  // a self-referencing canonical: noindex plus a canonical pointing at the clean URL risks
+  // Google carrying the noindex over to the city page we actually want ranked.
+  const filtered = isFilteredView(resolvedSearch);
+  const url = filtered
+    ? `${baseUrl}${buildPageHref(page.slug, {
+        page: Number.parseInt(String(resolvedSearch?.page || "1"), 10) || 1,
+        match: String(resolvedSearch?.match || "").trim().toLowerCase(),
+        capability: String(resolvedSearch?.capability || "").trim().toLowerCase(),
+      })}`
+    : `${baseUrl}/motor-repair-shop/${page.slug}`;
   const areaLabel = buildLocationAreaLabel(page);
   const seoTitle = buildLocationSeoTitle(page, areaLabel);
   const description = page.metaDescription?.trim() || buildLocationSeoDescription(areaLabel);
@@ -84,8 +99,15 @@ export async function generateMetadata({ params }) {
         page.metaDescription?.trim() ||
         `Find certified motor repair and rewinding shops in ${areaLabel}. Submit a request — matched to shops in your area.`,
     },
-    robots: { index: true, follow: true },
+    robots: { index: !filtered, follow: true },
   };
+}
+
+/** True when the request carries a filter or a page beyond the first. */
+function isFilteredView(searchParams) {
+  if (String(searchParams?.match || "").trim()) return true;
+  if (String(searchParams?.capability || "").trim()) return true;
+  return (Number.parseInt(String(searchParams?.page || "1"), 10) || 1) > 1;
 }
 
 function buildPageHref(slug, { page, match, capability }) {
@@ -103,7 +125,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
   const slug = resolvedParams?.slug?.trim();
   if (!slug) notFound();
 
-  const page = await getLocationPageBySlug(slug);
+  const page = await resolveLocationPage(slug);
   if (!page) notFound();
 
   const area = {
