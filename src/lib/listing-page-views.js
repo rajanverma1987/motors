@@ -31,6 +31,13 @@ export function currentUtcMonthPrefix(date = new Date()) {
   return `${y}-${m}`;
 }
 
+/** UTC YYYY-MM for the calendar month before `date`. */
+export function previousUtcMonthPrefix(date = new Date()) {
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+  d.setUTCMonth(d.getUTCMonth() - 1);
+  return currentUtcMonthPrefix(d);
+}
+
 /**
  * Record one page view for an approved public listing.
  * @param {string} listingId
@@ -71,10 +78,15 @@ export async function getAdminListingStats(options = {}) {
   await connectDB();
 
   const monthPrefix = currentUtcMonthPrefix();
+  const lastMonthPrefix = previousUtcMonthPrefix();
 
-  const [monthlyViews, overallViews, quoteCounts] = await Promise.all([
+  const [monthlyViews, lastMonthViews, overallViews, quoteCounts] = await Promise.all([
     ListingPageViewDaily.aggregate([
       { $match: { dateKey: { $regex: `^${monthPrefix}` } } },
+      { $group: { _id: "$listingId", count: { $sum: "$count" } } },
+    ]),
+    ListingPageViewDaily.aggregate([
+      { $match: { dateKey: { $regex: `^${lastMonthPrefix}` } } },
       { $group: { _id: "$listingId", count: { $sum: "$count" } } },
     ]),
     ListingPageViewDaily.aggregate([{ $group: { _id: "$listingId", count: { $sum: "$count" } } }]),
@@ -85,11 +97,13 @@ export async function getAdminListingStats(options = {}) {
   ]);
 
   const monthMap = new Map(monthlyViews.map((r) => [String(r._id), r.count || 0]));
+  const lastMonthMap = new Map(lastMonthViews.map((r) => [String(r._id), r.count || 0]));
   const overallMap = new Map(overallViews.map((r) => [String(r._id), r.count || 0]));
   const quoteMap = new Map(quoteCounts.map((r) => [String(r._id), r.count || 0]));
 
   const summary = {
     visitsThisMonth: monthlyViews.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
+    visitsLastMonth: lastMonthViews.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
     visitsOverall: overallViews.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
     quoteRequestCount: quoteCounts.reduce((sum, r) => sum + (Number(r.count) || 0), 0),
     shopsWithVisits: 0,
@@ -102,7 +116,15 @@ export async function getAdminListingStats(options = {}) {
   summary.shopsWithVisits = visitedIds.length;
 
   if (visitedIds.length === 0) {
-    return { items: [], totalCount: 0, page, pageSize, monthLabel: monthPrefix, summary };
+    return {
+      items: [],
+      totalCount: 0,
+      page,
+      pageSize,
+      monthLabel: monthPrefix,
+      lastMonthLabel: lastMonthPrefix,
+      summary,
+    };
   }
 
   const listings = await Listing.find({
@@ -122,6 +144,7 @@ export async function getAdminListingStats(options = {}) {
       listingPath: slug ? `${LISTING_PATH_PREFIX}/${slug}` : "",
       listingDate: listingDate ? new Date(listingDate).toISOString() : null,
       visitsThisMonth: monthMap.get(id) || 0,
+      visitsLastMonth: lastMonthMap.get(id) || 0,
       visitsOverall: overallMap.get(id) || 0,
       quoteRequestCount: quoteMap.get(id) || 0,
     };
@@ -147,6 +170,7 @@ export async function getAdminListingStats(options = {}) {
     page,
     pageSize,
     monthLabel: monthPrefix,
+    lastMonthLabel: lastMonthPrefix,
     summary,
   };
 }

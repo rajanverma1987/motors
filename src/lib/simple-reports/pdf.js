@@ -2,6 +2,7 @@ import PDFDocument from "pdfkit";
 
 /**
  * Build a landscape PDF table for a Simple report (all rows).
+ * Cell text wraps fully (no ellipsis truncation); row height grows to fit.
  * @param {string} sheetName
  * @param {string[]} headers
  * @param {Array<Array<string|number|boolean|null|undefined>>} rows
@@ -39,7 +40,6 @@ export function buildSimpleReportPdfBuffer(sheetName, headers, rows, options = {
     const colCount = Math.max(1, cols.length);
     const fontSize = colCount > 12 ? 6.5 : colCount > 9 ? 7 : 8;
     const headerFontSize = fontSize + 0.5;
-    const rowHeight = fontSize + 6;
     const colWidths = measureColumnWidths(cols, dataRows, pageWidth, amountSet);
 
     doc.font("Helvetica-Bold").fontSize(12).text(String(sheetName || "Report"), {
@@ -57,25 +57,35 @@ export function buildSimpleReportPdfBuffer(sheetName, headers, rows, options = {
 
     let y = doc.y;
 
+    const ensureSpace = (neededHeight, redrawHeader) => {
+      if (y + neededHeight <= pageBottom) return;
+      doc.addPage();
+      y = doc.page.margins.top;
+      if (redrawHeader) drawHeaderBlock();
+    };
+
     const drawHeaderBlock = () => {
-      // Subtotal row
+      const subtotalValues = cols.map((_, i) => {
+        if (i === 0) return "Subtotal";
+        if (!amountSet.has(i)) return "";
+        const n = Number(amountTotals[i]);
+        return Number.isFinite(n) ? formatAmount(n) : "";
+      });
+      ensureSpace(
+        measureRowHeight(doc, subtotalValues, colWidths, amountSet, headerFontSize, true),
+        false
+      );
       y = drawTableRow(doc, {
         y,
-        values: cols.map((_, i) => {
-          if (i === 0) return "Subtotal";
-          if (!amountSet.has(i)) return "";
-          const n = Number(amountTotals[i]);
-          return Number.isFinite(n) ? formatAmount(n) : "";
-        }),
+        values: subtotalValues,
         colWidths,
         amountSet,
         fontSize: headerFontSize,
         bold: true,
         fill: "#E8EEF5",
-        pageBottom,
         pageWidth,
       });
-      // Column headers
+      ensureSpace(measureRowHeight(doc, cols, colWidths, amountSet, headerFontSize, true), false);
       y = drawTableRow(doc, {
         y,
         values: cols,
@@ -84,7 +94,6 @@ export function buildSimpleReportPdfBuffer(sheetName, headers, rows, options = {
         fontSize: headerFontSize,
         bold: true,
         fill: "#F3F4F6",
-        pageBottom,
         pageWidth,
       });
     };
@@ -92,25 +101,22 @@ export function buildSimpleReportPdfBuffer(sheetName, headers, rows, options = {
     drawHeaderBlock();
 
     for (const row of dataRows) {
-      if (y + rowHeight > pageBottom) {
-        doc.addPage();
-        y = doc.page.margins.top;
-        drawHeaderBlock();
-      }
+      const values = cols.map((_, i) => {
+        const cell = row?.[i];
+        if (cell == null || cell === "") return "";
+        if (amountSet.has(i) && typeof cell === "number") return formatAmount(cell);
+        return String(cell);
+      });
+      const rowHeight = measureRowHeight(doc, values, colWidths, amountSet, fontSize, false);
+      ensureSpace(rowHeight, true);
       y = drawTableRow(doc, {
         y,
-        values: cols.map((_, i) => {
-          const cell = row?.[i];
-          if (cell == null || cell === "") return "";
-          if (amountSet.has(i) && typeof cell === "number") return formatAmount(cell);
-          return String(cell);
-        }),
+        values,
         colWidths,
         amountSet,
         fontSize,
         bold: false,
         fill: null,
-        pageBottom,
         pageWidth,
       });
     }
@@ -143,12 +149,25 @@ function measureColumnWidths(headers, rows, pageWidth, amountSet) {
   return weights.map((w) => (w / total) * pageWidth);
 }
 
-function drawTableRow(doc, { y, values, colWidths, amountSet, fontSize, bold, fill, pageBottom, pageWidth }) {
-  const height = fontSize + 6;
-  if (y + height > pageBottom) {
-    doc.addPage();
-    y = doc.page.margins.top;
+function measureRowHeight(doc, values, colWidths, amountSet, fontSize, bold) {
+  doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(fontSize);
+  const padY = 6;
+  let maxH = fontSize + padY;
+  for (let i = 0; i < colWidths.length; i++) {
+    const text = String(values[i] ?? "");
+    if (!text) continue;
+    const textWidth = Math.max(4, colWidths[i] - 4);
+    const h = doc.heightOfString(text, {
+      width: textWidth,
+      align: amountSet.has(i) ? "right" : "left",
+    });
+    maxH = Math.max(maxH, h + padY);
   }
+  return maxH;
+}
+
+function drawTableRow(doc, { y, values, colWidths, amountSet, fontSize, bold, fill, pageWidth }) {
+  const height = measureRowHeight(doc, values, colWidths, amountSet, fontSize, bold);
   const x0 = doc.page.margins.left;
   if (fill) {
     doc.save();
@@ -163,10 +182,9 @@ function drawTableRow(doc, { y, values, colWidths, amountSet, fontSize, bold, fi
     const align = amountSet.has(i) ? "right" : "left";
     doc.text(text, x + 2, y + 3, {
       width: Math.max(4, w - 4),
-      height: height - 2,
       align,
-      ellipsis: true,
-      lineBreak: false,
+      lineBreak: true,
+      ellipsis: false,
     });
     x += w;
   }

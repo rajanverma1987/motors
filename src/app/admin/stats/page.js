@@ -12,6 +12,7 @@ import { appendAdminSortParams } from "@/lib/admin-table-sort";
 
 const EMPTY_SUMMARY = {
   visitsThisMonth: 0,
+  visitsLastMonth: 0,
   visitsOverall: 0,
   quoteRequestCount: 0,
   shopsWithVisits: 0,
@@ -21,6 +22,15 @@ function formatCount(n) {
   const value = Number(n);
   if (!Number.isFinite(value)) return "0";
   return value.toLocaleString("en-US");
+}
+
+function formatMonthHeading(monthLabel, fallback) {
+  if (!monthLabel) return fallback;
+  return new Date(`${monthLabel}-01T12:00:00Z`).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function SummaryCard({ label, value, icon: Icon, loading }) {
@@ -52,6 +62,7 @@ export default function AdminListingStatsPage() {
   const [pageSize, setPageSize] = useState(25);
   const [totalCount, setTotalCount] = useState(0);
   const [monthLabel, setMonthLabel] = useState("");
+  const [lastMonthLabel, setLastMonthLabel] = useState("");
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -101,8 +112,10 @@ export default function AdminListingStatsPage() {
         setItems(Array.isArray(data?.items) ? data.items : []);
         setTotalCount(Number(data?.totalCount) || 0);
         setMonthLabel(data?.monthLabel || "");
+        setLastMonthLabel(data?.lastMonthLabel || "");
         setSummary({
           visitsThisMonth: Number(data?.summary?.visitsThisMonth) || 0,
+          visitsLastMonth: Number(data?.summary?.visitsLastMonth) || 0,
           visitsOverall: Number(data?.summary?.visitsOverall) || 0,
           quoteRequestCount: Number(data?.summary?.quoteRequestCount) || 0,
           shopsWithVisits: Number(data?.summary?.shopsWithVisits) || 0,
@@ -112,6 +125,7 @@ export default function AdminListingStatsPage() {
         setItems([]);
         setTotalCount(0);
         setMonthLabel("");
+        setLastMonthLabel("");
         setSummary(EMPTY_SUMMARY);
       })
       .finally(() => setLoading(false));
@@ -121,9 +135,8 @@ export default function AdminListingStatsPage() {
     loadStats();
   }, [loadStats]);
 
-  const monthHeading = monthLabel
-    ? new Date(`${monthLabel}-01T12:00:00Z`).toLocaleString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
-    : "This month";
+  const monthHeading = formatMonthHeading(monthLabel, "This month");
+  const lastMonthHeading = formatMonthHeading(lastMonthLabel, "Last month");
 
   const columns = [
     {
@@ -220,10 +233,16 @@ export default function AdminListingStatsPage() {
             Refresh
           </Button>
         </div>
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <SummaryCard
             label={`${monthHeading} visits`}
             value={summary.visitsThisMonth}
+            icon={FiEye}
+            loading={loading}
+          />
+          <SummaryCard
+            label={`${lastMonthHeading} visits`}
+            value={summary.visitsLastMonth}
             icon={FiEye}
             loading={loading}
           />
