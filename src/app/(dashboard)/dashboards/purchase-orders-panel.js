@@ -258,7 +258,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
 
   const openEdit = (row) => {
     setEditingPo(row);
-    setModalMode("view");
+    setModalMode("edit");
     setModalOpen(true);
   };
 
@@ -642,7 +642,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         onClose={closeModal}
         serviceProposalId={String(editingPo?.serviceProposalId || "").trim()}
         jobNumber={String(editingPo?.jobNumber || "").trim()}
-        mode={isCreate ? "create" : "view"}
+        mode={isCreate ? "create" : "edit"}
         initialPoId={String(editingPo?.id || "").trim()}
         defaultPoType={isCreate ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB}
         allowPoTypeChange={isCreate}

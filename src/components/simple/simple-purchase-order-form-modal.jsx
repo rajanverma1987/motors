@@ -146,7 +146,7 @@ function applyPaymentFields(formLike, payments) {
  *   onClose: () => void,
  *   serviceProposalId: string,
  *   jobNumber: string,
- *   mode?: "create" | "view",
+ *   mode?: "create" | "view" | "edit",
  *   initialPoId?: string,
  *   defaultPoType?: "job" | "shop",
  *   allowPoTypeChange?: boolean,
@@ -179,6 +179,9 @@ export default function SimplePurchaseOrderFormModal({
     return fromSettings.length ? fromSettings : SIMPLE_PO_PAYMENT_METHOD_OPTIONS;
   }, [mergedSettings]);
   const isViewMode = mode === "view";
+  const isEditMode = mode === "edit";
+  /** Load an existing PO and show payments / attachments tabs (view or edit). */
+  const isExistingPoMode = isViewMode || isEditMode;
   const jobView = useSimpleJobView();
 
   const [form, setForm] = useState(() => createEmptySimplePurchaseOrderForm());
@@ -210,10 +213,11 @@ export default function SimplePurchaseOrderFormModal({
 
   const poType = resolveSimplePoType(form);
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
-  const showTypeSelect = allowPoTypeChange && !isViewMode;
-  const poNumberEditable = !isViewMode && isShopPo;
+  const showTypeSelect = allowPoTypeChange && !isViewMode && !isEditMode;
+  const poNumberEditable = isEditMode || (!isViewMode && isShopPo);
+  const jobNumberEditable = isEditMode && !isShopPo;
   const showViewEmptyState =
-    isViewMode && !loadingForm && jobPos.length === 0 && !String(form.id || "").trim();
+    isExistingPoMode && !loadingForm && jobPos.length === 0 && !String(form.id || "").trim();
 
   const vendorOptions = useMemo(
     () =>
@@ -292,23 +296,29 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [open, form.serviceProposalId, serviceProposalId]);
 
-  const modalTitle = isViewMode
+  const modalTitle = isEditMode
     ? isShopPo
-      ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
-      : `View Purchase Order${
-          jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
+      ? `Edit Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
+      : `Edit Purchase Order${
+          form.jobNumber || jobNumber ? ` — Job ${form.jobNumber || jobNumber}` : ""
         }`
-    : allowPoTypeChange
+    : isViewMode
       ? isShopPo
-        ? "New Shop Purchase Order"
-        : "New Job Purchase Order"
-      : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
-        ? "New Shop Purchase Order"
-        : `New Purchase Order${
-            String(jobNumber || form.jobNumber || "").trim()
-              ? ` — Job ${jobNumber || form.jobNumber}`
-              : ""
-          }`;
+        ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
+        : `View Purchase Order${
+            jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
+          }`
+      : allowPoTypeChange
+        ? isShopPo
+          ? "New Shop Purchase Order"
+          : "New Job Purchase Order"
+        : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
+          ? "New Shop Purchase Order"
+          : `New Purchase Order${
+              String(jobNumber || form.jobNumber || "").trim()
+                ? ` — Job ${jobNumber || form.jobNumber}`
+                : ""
+            }`;
 
   const sentToVendorLabel = useMemo(() => {
     if (!poWasSentToVendor(form)) return null;
@@ -395,7 +405,7 @@ export default function SimplePurchaseOrderFormModal({
       try {
         await loadJobOptionsFromApi();
         if (cancelled) return;
-        if (mode === "view") {
+        if (mode === "view" || mode === "edit") {
           const sid = String(serviceProposalId || "").trim();
           const job = String(jobNumber || "").trim();
           let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
@@ -857,7 +867,7 @@ export default function SimplePurchaseOrderFormModal({
     const job = String(form.jobNumber || jobNumber || "").trim();
 
     if (type === SIMPLE_PO_TYPE_JOB) {
-      if (!sid && !isViewMode) {
+      if (!sid && !isViewMode && !isEditMode) {
         await alert({
           title: "Job required",
           message: "Select a job for this Job PO, or switch to Shop PO.",
@@ -928,7 +938,7 @@ export default function SimplePurchaseOrderFormModal({
         setJobPos(nextList);
       }
       await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
-      if (!isViewMode) {
+      if (!isViewMode && !isEditMode) {
         onClose?.();
       } else {
         setForm(storedPoToForm(saved));
@@ -1050,7 +1060,7 @@ export default function SimplePurchaseOrderFormModal({
               form={FORM_ID}
               variant="primary"
               size="sm"
-              disabled={saving || loadingForm || loadingMeta || (isViewMode && !form.id)}
+              disabled={saving || loadingForm || loadingMeta || (isExistingPoMode && !form.id)}
             >
               {saving ? "Saving…" : "Save"}
             </Button>
@@ -1200,7 +1210,8 @@ export default function SimplePurchaseOrderFormModal({
                 />
               </FieldRow>
             ) : null}
-            {!showTypeSelect && !isShopPo && (form.jobNumber || jobNumber) ? (
+            {jobNumberEditable ||
+            (!showTypeSelect && !isShopPo && (form.jobNumber || jobNumber)) ? (
               <FieldRow
                 label="Job"
                 labelWidth="100%"
@@ -1210,11 +1221,15 @@ export default function SimplePurchaseOrderFormModal({
               >
                 <input
                   type="text"
-                  readOnly
-                  tabIndex={-1}
+                  readOnly={!jobNumberEditable}
+                  tabIndex={jobNumberEditable ? undefined : -1}
                   value={form.jobNumber || jobNumber}
+                  onChange={(e) => patch("jobNumber", e.target.value)}
                   title={form.jobNumber || jobNumber}
-                  className={`${FIELD_INPUT} font-semibold tabular-nums !bg-muted`}
+                  className={`${FIELD_INPUT} font-semibold tabular-nums ${
+                    jobNumberEditable ? "" : "!bg-muted"
+                  }`}
+                  disabled={saving}
                   aria-label="Job"
                 />
               </FieldRow>
@@ -1242,7 +1257,9 @@ export default function SimplePurchaseOrderFormModal({
                   readOnly={!poNumberEditable}
                   value={form.poNumber}
                   onChange={(e) => patch("poNumber", e.target.value)}
-                  placeholder={isShopPo ? "Enter PO number…" : "Assigned from job"}
+                  placeholder={
+                    isShopPo || isEditMode ? "Enter PO number…" : "Assigned from job"
+                  }
                   className={`${FIELD_INPUT} font-semibold tabular-nums ${poNumberEditable ? "" : "!bg-muted"}`}
                   disabled={saving}
                 />
@@ -1315,11 +1332,11 @@ export default function SimplePurchaseOrderFormModal({
           </div>
 
           <Tabs
-            value={isViewMode ? activeTab : TAB_PO}
+            value={isExistingPoMode ? activeTab : TAB_PO}
             onChange={setActiveTab}
             className="flex min-h-0 flex-1 flex-col"
-            listClassName={isViewMode ? "shrink-0" : "hidden"}
-            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isViewMode ? "pt-3" : ""}`}
+            listClassName={isExistingPoMode ? "shrink-0" : "hidden"}
+            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isExistingPoMode ? "pt-3" : ""}`}
             ariaLabel="Purchase order sections"
             tabs={[
               {

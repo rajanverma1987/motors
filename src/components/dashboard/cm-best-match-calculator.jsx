@@ -226,7 +226,9 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
                   {row.percentDifference > 0 ? "+" : ""}
                   {row.percentDifference}%
                 </td>
-                <td className="px-2 py-2 tabular-nums text-secondary">{row.cmDifference}</td>
+                <td className="px-2 py-2 tabular-nums text-secondary">
+                  {Number(row.cmDifference).toFixed(3)}
+                </td>
                 <td className="px-2 py-2 tabular-nums text-secondary">{row.noOfWires}</td>
               </tr>
             ))}
@@ -281,6 +283,7 @@ function OriginalWiresSelectModal({
   initialQtys = {},
   onApply,
 }) {
+  const confirm = useConfirm();
   const [wireUnit, setWireUnit] = useState(CIR_MILLS_UNIT_AWG);
   const [qtyById, setQtyById] = useState({});
 
@@ -327,6 +330,14 @@ function OriginalWiresSelectModal({
     return count;
   }, [catalog, qtyById]);
 
+  const hasAnyQty = useMemo(() => {
+    for (const raw of Object.values(qtyById || {})) {
+      const qty = num(raw);
+      if (Number.isFinite(qty) && qty > 0) return true;
+    }
+    return false;
+  }, [qtyById]);
+
   useEffect(() => {
     if (!open) return;
     setQtyById({ ...(initialQtys || {}) });
@@ -335,6 +346,18 @@ function OriginalWiresSelectModal({
   const setQty = (id, raw) => {
     const cleaned = String(raw ?? "").replace(/[^0-9.]/g, "");
     setQtyById((prev) => ({ ...prev, [id]: cleaned }));
+  };
+
+  const clearSelection = async () => {
+    if (!hasAnyQty) return;
+    const ok = await confirm({
+      title: "Clear selection",
+      message: "Clear all quantities on AWG and Metric lists?",
+      confirmLabel: "Clear selection",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setQtyById({});
   };
 
   const handleSubmit = (e) => {
@@ -364,9 +387,20 @@ function OriginalWiresSelectModal({
       height="min(80vh, 720px)"
       zIndex={80}
       actions={
-        <Button type="submit" form={ORIGINAL_WIRES_FORM_ID} variant="primary" size="sm">
-          Apply selection
-        </Button>
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={!hasAnyQty}
+            onClick={clearSelection}
+          >
+            Clear selection
+          </Button>
+          <Button type="submit" form={ORIGINAL_WIRES_FORM_ID} variant="primary" size="sm">
+            Apply selection
+          </Button>
+        </>
       }
     >
       <form id={ORIGINAL_WIRES_FORM_ID} onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-3">
@@ -723,6 +757,18 @@ export default function CmBestMatchCalculator() {
     });
   };
 
+  const clearCatalogSelection = async () => {
+    if (selected.size === 0) return;
+    const ok = await confirm({
+      title: "Clear selection",
+      message: "Clear all selected wire sizes from AWG and Metric lists?",
+      confirmLabel: "Clear selection",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setSelected(new Set());
+  };
+
   const handlePrint = useCallback(() => {
     window.requestAnimationFrame(() => {
       window.print();
@@ -814,8 +860,8 @@ export default function CmBestMatchCalculator() {
       <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: Wire catalog (shared Cir Mills) */}
         <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
-          <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
+          <div className="mb-3 flex w-full flex-wrap items-start gap-3">
+            <div className="min-w-0 flex-1">
               <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
               <p className="text-xs text-secondary">
                 Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Select from AWG and
@@ -823,6 +869,16 @@ export default function CmBestMatchCalculator() {
               </p>
             </div>
             <WireUnitToggle wireUnit={catalogWireUnit} onUnitChange={setCatalogUnit} disabled={cirMillsLoading} />
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="ml-auto shrink-0"
+              disabled={selected.size === 0}
+              onClick={clearCatalogSelection}
+            >
+              Clear selection
+            </Button>
           </div>
 
           <div className="mb-4 flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">

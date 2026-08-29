@@ -118,7 +118,7 @@ function push(results, seen, d) {
     targetedCM: d.targetedCM,
     wiresInHand,
     percentDifference: Number(percentDifference.toFixed(2)),
-    cmDifference: Math.abs(d.total - d.targetedCM),
+    cmDifference: Number(Math.abs(d.total - d.targetedCM).toFixed(3)),
     noOfWires,
   };
 
