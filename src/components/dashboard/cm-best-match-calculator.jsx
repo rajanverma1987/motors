@@ -270,18 +270,18 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
 
 /**
  * Pick original winding sizes + qty from the shared Cir Mills catalog.
+ * AWG/Metric toggle is local to this modal and independent of the wire catalog panel.
  */
 function OriginalWiresSelectModal({
   open,
   onClose,
-  wireUnit = CIR_MILLS_UNIT_AWG,
-  onUnitChange,
   customWireRows = [],
   catalogsByUnit = {},
   loading = false,
   initialQtys = {},
   onApply,
 }) {
+  const [wireUnit, setWireUnit] = useState(CIR_MILLS_UNIT_AWG);
   const [qtyById, setQtyById] = useState({});
 
   const platformWireRows = useMemo(
@@ -290,6 +290,7 @@ function OriginalWiresSelectModal({
         ...row,
         id: row.id ? `platform:${row.id}` : "",
         source: "platform",
+        wireUnit,
       })),
     [catalogsByUnit, wireUnit]
   );
@@ -299,7 +300,32 @@ function OriginalWiresSelectModal({
     [customWireRows, platformWireRows]
   );
 
+  const allCatalogRows = useMemo(() => {
+    const byId = new Map();
+    for (const row of customWireRows) {
+      if (row?.id) byId.set(row.id, row);
+    }
+    for (const unit of [CIR_MILLS_UNIT_AWG, CIR_MILLS_UNIT_METRIC]) {
+      for (const row of catalogsByUnit[unit] || []) {
+        if (!row?.id) continue;
+        const id = `platform:${row.id}`;
+        byId.set(id, { ...row, id, source: "platform", wireUnit: unit });
+      }
+    }
+    return [...byId.values()];
+  }, [customWireRows, catalogsByUnit]);
+
   const sizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
+  const qtyOnOtherLists = useMemo(() => {
+    const visible = new Set(catalog.map((r) => r.id).filter(Boolean));
+    let count = 0;
+    for (const [id, raw] of Object.entries(qtyById || {})) {
+      const qty = num(raw);
+      if (!Number.isFinite(qty) || qty <= 0) continue;
+      if (!visible.has(id)) count += 1;
+    }
+    return count;
+  }, [catalog, qtyById]);
 
   useEffect(() => {
     if (!open) return;
@@ -314,7 +340,7 @@ function OriginalWiresSelectModal({
   const handleSubmit = (e) => {
     e.preventDefault();
     const selections = [];
-    for (const row of catalog) {
+    for (const row of allCatalogRows) {
       const id = String(row.id || "");
       const qty = num(qtyById[id]);
       if (!id || !Number.isFinite(qty) || qty <= 0) continue;
@@ -346,10 +372,16 @@ function OriginalWiresSelectModal({
       <form id={ORIGINAL_WIRES_FORM_ID} onSubmit={handleSubmit} className="flex min-h-0 flex-col gap-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <p className="min-w-0 flex-1 text-sm text-secondary">
-            Enter quantity for each size in the winding. Total circular mils = Cir. Mills × qty for all selected sizes.
+            Enter quantity for each size in the winding. Switch AWG / Metric freely — quantities are kept on both
+            lists. Total circular mils = Cir. Mills × qty for all selected sizes.
           </p>
-          <WireUnitToggle wireUnit={wireUnit} onUnitChange={onUnitChange} disabled={loading} />
+          <WireUnitToggle wireUnit={wireUnit} onUnitChange={setWireUnit} disabled={loading} />
         </div>
+        {qtyOnOtherLists > 0 ? (
+          <p className="text-xs text-secondary">
+            {qtyOnOtherLists} size{qtyOnOtherLists === 1 ? "" : "s"} with qty on the other list will also be applied.
+          </p>
+        ) : null}
         {loading ? (
           <div
             className="flex min-h-[160px] flex-col items-center justify-center gap-3"
@@ -432,7 +464,7 @@ export default function CmBestMatchCalculator() {
   const [cirMillsLoading, setCirMillsLoading] = useState(() => !hasCirMillsSessionCatalogs());
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
   const [originalWireQtys, setOriginalWireQtys] = useState({});
-  const [wireUnit, setWireUnit] = useState(CIR_MILLS_UNIT_AWG);
+  const [catalogWireUnit, setCatalogWireUnit] = useState(CIR_MILLS_UNIT_AWG);
   const [shopWireRows, setShopWireRows] = useState([]);
   const [shopWiresLoading, setShopWiresLoading] = useState(true);
   const [newSize, setNewSize] = useState("");
@@ -502,38 +534,25 @@ export default function CmBestMatchCalculator() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const setUnit = (next) => {
+  const setCatalogUnit = (next) => {
     const u = normalizeCirMillsUnit(next);
-    if (u === wireUnit) return;
-    setSelected((prev) => {
-      const kept = new Set();
-      for (const id of prev) {
-        if (!String(id).startsWith("platform:")) kept.add(id);
-      }
-      return kept;
-    });
-    setWireUnit(u);
-    setOriginalWireQtys({});
-    setOriginalWireSize("");
-    setOriginalWiredInHand("");
-    setOriginalCM("");
-    setTargetedCM("");
-    setResults([]);
-    setResultContext(null);
-    setResultsModalOpen(false);
+    if (u === catalogWireUnit) return;
+    setCatalogWireUnit(u);
   };
 
-  const wireSizeColumnLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
-  const unitToggleLabel = wireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
+  const wireSizeColumnLabel =
+    catalogWireUnit === CIR_MILLS_UNIT_METRIC ? "Wire size (mm)" : "Wire size (AWG)";
+  const unitToggleLabel = catalogWireUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
 
   const platformWireRows = useMemo(
     () =>
-      (catalogsByUnit[wireUnit] || []).map((row) => ({
+      (catalogsByUnit[catalogWireUnit] || []).map((row) => ({
         ...row,
         id: row.id ? `platform:${row.id}` : "",
         source: "platform",
+        wireUnit: catalogWireUnit,
       })),
-    [catalogsByUnit, wireUnit]
+    [catalogsByUnit, catalogWireUnit]
   );
 
   const customWireRows = useMemo(
@@ -545,8 +564,25 @@ export default function CmBestMatchCalculator() {
     [shopWireRows]
   );
 
+  /** Visible rows for the active AWG/Metric catalog table (custom sizes always listed). */
   const wireRows = useMemo(() => [...customWireRows, ...platformWireRows], [customWireRows, platformWireRows]);
-  const cirMillsCatalog = wireRows;
+
+  /** All selectable rows across AWG + Metric + custom — used so selections survive unit switches. */
+  const allSelectableWireRows = useMemo(() => {
+    const byId = new Map();
+    for (const row of customWireRows) {
+      if (row?.id) byId.set(row.id, row);
+    }
+    for (const unit of [CIR_MILLS_UNIT_AWG, CIR_MILLS_UNIT_METRIC]) {
+      for (const row of catalogsByUnit[unit] || []) {
+        if (!row?.id) continue;
+        const id = `platform:${row.id}`;
+        byId.set(id, { ...row, id, source: "platform", wireUnit: unit });
+      }
+    }
+    return [...byId.values()];
+  }, [customWireRows, catalogsByUnit]);
+
   const catalogLoading = cirMillsLoading || shopWiresLoading;
 
   const addWire = async () => {
@@ -573,7 +609,28 @@ export default function CmBestMatchCalculator() {
       setNewSize("");
       setNewCm("");
       await loadShopWires();
-      toast.success("Wire size added to your catalog.");
+      const newId = data?.id ? String(data.id) : "";
+      if (newId) {
+        const alreadySelected = selected.has(newId);
+        const atMax = !alreadySelected && selected.size >= MAX_SELECT;
+        if (!atMax && !alreadySelected) {
+          setSelected((prev) => {
+            if (prev.has(newId) || prev.size >= MAX_SELECT) return prev;
+            const next = new Set(prev);
+            next.add(newId);
+            return next;
+          });
+          toast.success("Wire size added and selected.");
+        } else if (atMax) {
+          toast.warning(
+            `Wire added, but selection is full (max ${MAX_SELECT}). Uncheck another size to include it.`
+          );
+        } else {
+          toast.success("Wire size added and selected.");
+        }
+      } else {
+        toast.success("Wire size added to your catalog.");
+      }
     } catch (e) {
       toast.error(e.message || "Could not add wire size");
     } finally {
@@ -627,11 +684,28 @@ export default function CmBestMatchCalculator() {
   }, []);
 
   const selectedList = useMemo(() => {
-    return wireRows.filter((w) => w.id && selected.has(w.id));
+    return allSelectableWireRows.filter((w) => w.id && selected.has(w.id));
+  }, [allSelectableWireRows, selected]);
+
+  const selectedOnCurrentList = useMemo(() => {
+    let n = 0;
+    for (const w of wireRows) {
+      if (w.id && selected.has(w.id)) n += 1;
+    }
+    return n;
   }, [wireRows, selected]);
 
   const wiresForCalc = useMemo(() => {
-    return selectedList.map((w) => ({ size: w.size, cm: Number(w.circularMills) || 0 })).filter((w) => w.cm > 0);
+    return selectedList
+      .map((w) => {
+        let size = String(w.size ?? "").trim();
+        if (w.source === "platform") {
+          size =
+            w.wireUnit === CIR_MILLS_UNIT_METRIC ? `${size} mm` : `${size} AWG`;
+        }
+        return { size, cm: Number(w.circularMills) || 0 };
+      })
+      .filter((w) => w.cm > 0);
   }, [selectedList]);
 
   const toggleId = (id) => {
@@ -711,7 +785,17 @@ export default function CmBestMatchCalculator() {
       targetedCM: String(t),
       minWires: String(minW),
       maxWires: String(maxW),
-      selectedCatalogSummary: selectedList.map((w) => `${w.size} (${w.circularMills} CM)`).join("; "),
+      selectedCatalogSummary: selectedList
+        .map((w) => {
+          const unitHint =
+            w.source === "platform"
+              ? w.wireUnit === CIR_MILLS_UNIT_METRIC
+                ? " mm"
+                : " AWG"
+              : "";
+          return `${w.size}${unitHint} (${w.circularMills} CM)`;
+        })
+        .join("; "),
     };
     setResultContext(ctx);
 
@@ -734,11 +818,11 @@ export default function CmBestMatchCalculator() {
             <div className="min-w-0">
               <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-title">Wire catalog</h2>
               <p className="text-xs text-secondary">
-                Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Pick sizes to include in
-                the search. Up to {MAX_SELECT} selections.
+                Shared Cir Mills table ({unitToggleLabel}) plus your shop&apos;s custom sizes. Select from AWG and
+                Metric — selections stay when you switch lists. Up to {MAX_SELECT} sizes for the search.
               </p>
             </div>
-            <WireUnitToggle wireUnit={wireUnit} onUnitChange={setUnit} disabled={cirMillsLoading} />
+            <WireUnitToggle wireUnit={catalogWireUnit} onUnitChange={setCatalogUnit} disabled={cirMillsLoading} />
           </div>
 
           <div className="mb-4 flex flex-col gap-3 rounded-md border border-border bg-muted/20 p-3 dark:bg-muted/10 sm:flex-row sm:flex-wrap sm:items-end">
@@ -842,7 +926,12 @@ export default function CmBestMatchCalculator() {
 
           {wireRows.length > 0 ? (
             <p className="mt-2 text-xs text-secondary">
-              {selected.size} of {wireRows.length} selected (max {MAX_SELECT} used for calc)
+              {selected.size} selected total
+              {selected.size !== selectedOnCurrentList
+                ? ` (${selectedOnCurrentList} on this ${unitToggleLabel} list)`
+                : ""}
+              {" · "}
+              max {MAX_SELECT} for calc
             </p>
           ) : null}
         </section>
@@ -968,8 +1057,6 @@ export default function CmBestMatchCalculator() {
       <OriginalWiresSelectModal
         open={originalWiresModalOpen}
         onClose={() => setOriginalWiresModalOpen(false)}
-        wireUnit={wireUnit}
-        onUnitChange={setUnit}
         customWireRows={customWireRows}
         catalogsByUnit={catalogsByUnit}
         loading={catalogLoading}
