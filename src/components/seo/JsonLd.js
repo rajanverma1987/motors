@@ -30,7 +30,7 @@ export function HomePageJsonLd() {
     "@type": "WebPage",
     "@id": `${siteUrl}/#webpage`,
     url: siteUrl,
-    name: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
+    name: "Motor Repair Shop Software — Proposals, Work Orders, Invoices & Inventory in One Place | IQMotorBase",
     description:
       "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop — all in one platform.",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: siteUrl },

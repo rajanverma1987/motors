@@ -186,7 +186,7 @@ export default function HomePage() {
               Built for motor repair shops
             </span>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
-              Motor Repair Shop Software — Work Orders, Leads & Inventory in One Place
+              Motor Repair Shop Software — Proposals, Work Orders, Invoices & Inventory in One Place
             </h1>
             <p className="mt-6 text-lg text-secondary sm:text-xl">
               From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
