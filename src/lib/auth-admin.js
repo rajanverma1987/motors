@@ -42,10 +42,11 @@ export async function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
-export async function createAdminToken(email) {
+export async function createAdminToken(email, { rememberMe = false } = {}) {
+  const expiresIn = rememberMe ? "90d" : "7d";
   return new SignJWT({ email, typ: ADMIN_TOKEN_TYPE })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
     .sign(getAdminJwtSecret());
 }
 

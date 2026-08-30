@@ -37,8 +37,12 @@ export function buildAdminTotpUri(email, secret) {
   });
 }
 
-export async function createAdminPendingToken(email) {
-  return new SignJWT({ email, typ: ADMIN_PENDING_TOKEN_TYPE })
+export async function createAdminPendingToken(email, { rememberMe = false } = {}) {
+  return new SignJWT({
+    email,
+    typ: ADMIN_PENDING_TOKEN_TYPE,
+    rememberMe: !!rememberMe,
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("5m")
     .sign(getAdminJwtSecret());
@@ -51,7 +55,8 @@ export async function verifyAdminPendingToken(token) {
     const email = String(payload?.email || "")
       .trim()
       .toLowerCase();
-    return email || null;
+    if (!email) return null;
+    return { email, rememberMe: !!payload.rememberMe };
   } catch {
     return null;
   }
@@ -65,12 +70,12 @@ export function getAdminPendingFromRequest(request) {
 }
 
 /** Issue full admin session cookie options after password + optional TOTP. */
-export function getAdminSessionCookieOptions() {
+export function getAdminSessionCookieOptions({ rememberMe = false } = {}) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: rememberMe ? 60 * 60 * 24 * 90 : 60 * 60 * 24 * 7,
     path: "/",
   };
 }

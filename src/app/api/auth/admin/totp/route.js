@@ -22,10 +22,12 @@ export async function POST(request) {
   }
 
   try {
-    const pendingEmail = await getAdminPendingFromRequest(request);
-    if (!pendingEmail) {
+    const pending = await getAdminPendingFromRequest(request);
+    if (!pending?.email) {
       return NextResponse.json({ error: "Session expired. Sign in again." }, { status: 401 });
     }
+    const pendingEmail = pending.email;
+    const rememberMe = pending.rememberMe === true;
 
     const body = await request.json().catch(() => ({}));
     const code = typeof body?.code === "string" ? body.code : "";
@@ -40,9 +42,9 @@ export async function POST(request) {
       return NextResponse.json({ error: "Invalid authentication code." }, { status: 401 });
     }
 
-    const token = await createAdminToken(pendingEmail);
+    const token = await createAdminToken(pendingEmail, { rememberMe });
     const cookieStore = await cookies();
-    cookieStore.set(getAdminCookieName(), token, getAdminSessionCookieOptions());
+    cookieStore.set(getAdminCookieName(), token, getAdminSessionCookieOptions({ rememberMe }));
     cookieStore.delete(ADMIN_PENDING_COOKIE);
 
     await recordSecurityEvent({

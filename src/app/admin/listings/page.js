@@ -201,6 +201,8 @@ export default function AdminListingsPage() {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchAllowsMultiple, setSearchAllowsMultiple] = useState(false);
+  const [searchMatchedByDomain, setSearchMatchedByDomain] = useState(false);
+  const [searchEmailDomain, setSearchEmailDomain] = useState("");
   const [emailVerifyError, setEmailVerifyError] = useState("");
   const [emailVerified, setEmailVerified] = useState(false);
   const [emailVerifyBypass, setEmailVerifyBypass] = useState(false);
@@ -576,6 +578,8 @@ export default function AdminListingsPage() {
     setSearching(true);
     setSearchResults([]);
     setSearchAllowsMultiple(false);
+    setSearchMatchedByDomain(false);
+    setSearchEmailDomain("");
     setEmailVerifyError("");
     setEmailVerified(false);
     setEmailVerifyBypass(false);
@@ -589,6 +593,8 @@ export default function AdminListingsPage() {
       const listings = Array.isArray(data.listings) ? data.listings : data.listing ? [data.listing] : [];
       setSearchResults(listings);
       setSearchAllowsMultiple(!!data.allowsMultiple);
+      setSearchMatchedByDomain(!!data.matchedByDomain);
+      setSearchEmailDomain(data.emailDomain ? String(data.emailDomain) : "");
       if (e && listings.length === 0 && data.emailVerification) {
         if (data.emailVerification.valid) {
           setEmailVerified(true);
@@ -609,6 +615,8 @@ export default function AdminListingsPage() {
     setSearchPhone("");
     setSearchResults([]);
     setSearchAllowsMultiple(false);
+    setSearchMatchedByDomain(false);
+    setSearchEmailDomain("");
     setSearchAttempted(false);
     setEmailVerifyError("");
     setEmailVerified(false);
@@ -643,6 +651,8 @@ export default function AdminListingsPage() {
     setSearching(true);
     setSearchResults([]);
     setSearchAllowsMultiple(false);
+    setSearchMatchedByDomain(false);
+    setSearchEmailDomain("");
     setEmailVerifyError("");
     setEmailVerified(false);
     setEmailVerifyBypass(false);
@@ -661,11 +671,17 @@ export default function AdminListingsPage() {
           : [];
       setSearchResults(listings);
       setSearchAllowsMultiple(!!apiData.allowsMultiple);
+      setSearchMatchedByDomain(!!apiData.matchedByDomain);
+      setSearchEmailDomain(apiData.emailDomain ? String(apiData.emailDomain) : "");
       setSearchAttempted(true);
 
       if (listings.length > 0 && !apiData.allowsMultiple) {
         setCreatePrefill(null);
-        toast.warning("A listing already exists for this email/phone. Open it below, or use a different contact.");
+        toast.warning(
+          apiData.matchedByDomain
+            ? `A listing already exists for this company domain (@${apiData.emailDomain}). Open it below, or use a different contact.`
+            : "A listing already exists for this email/phone. Open it below, or use a different contact."
+        );
         return;
       }
 
@@ -882,7 +898,8 @@ export default function AdminListingsPage() {
         }
       >
         <p className="text-sm text-secondary">
-          Search by email or phone, or paste listing JSON. We check for an existing listing before opening the create
+          Search by email or phone, or paste listing JSON. We check for an existing listing by email, phone, and
+          company email domain (not free providers like Gmail/Outlook) before opening the create form.
           form.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
@@ -1045,6 +1062,17 @@ export default function AdminListingsPage() {
               <p className="text-sm text-secondary">
                 {searchResults.length} listing(s) use this shared platform email. You can create another listing with the
                 same address.
+              </p>
+            ) : searchMatchedByDomain ? (
+              <p className="text-sm text-secondary">
+                Found {searchResults.length} listing(s) on company domain
+                {searchEmailDomain ? (
+                  <>
+                    {" "}
+                    <span className="font-medium text-title">@{searchEmailDomain}</span>
+                  </>
+                ) : null}
+                . Review below before creating another.
               </p>
             ) : null}
             {searchResults.map((row) => (

@@ -4,10 +4,28 @@ import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
 import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
+import {
+  emailDomainMatchFilter,
+  extractEmailDomain,
+  shouldMatchListingsByEmailDomain,
+} from "@/lib/listing-email-domain";
 import { verifyListingEmail } from "@/lib/prospectlens-email-verify";
 
 function digits(s) {
   return String(s || "").replace(/\D/g, "");
+}
+
+function mergeListingDocs(primary, extra) {
+  const seen = new Set();
+  const out = [];
+  for (const doc of [...(primary || []), ...(extra || [])]) {
+    if (!doc?._id) continue;
+    const id = doc._id.toString();
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(doc);
+  }
+  return out;
 }
 
 export async function GET(request) {
@@ -33,13 +51,32 @@ export async function GET(request) {
 
     if (email) {
       const allowsMultiple = allowsMultipleListingsForEmail(email);
-      const docs = allowsMultiple
-        ? await Listing.find({ email }).sort({ submittedAt: -1 }).lean()
-        : await Listing.findOne({ email }).lean().then((one) => (one ? [one] : []));
+      let docs = await Listing.find({ email }).sort({ submittedAt: -1 }).lean();
+
+      let matchedByDomain = false;
+      const domain = extractEmailDomain(email);
+      if (!allowsMultiple && shouldMatchListingsByEmailDomain(email)) {
+        const domainFilter = emailDomainMatchFilter(domain);
+        if (domainFilter) {
+          const domainDocs = await Listing.find(domainFilter).sort({ submittedAt: -1 }).lean();
+          const before = docs.length;
+          docs = mergeListingDocs(docs, domainDocs);
+          matchedByDomain =
+            docs.some((d) => String(d.email || "").trim().toLowerCase() !== email) ||
+            (before === 0 && docs.length > 0);
+        }
+      }
 
       if (docs.length === 0) {
         const emailVerification = await verifyListingEmail(email);
-        return NextResponse.json({ listing: null, listings: [], allowsMultiple, emailVerification });
+        return NextResponse.json({
+          listing: null,
+          listings: [],
+          allowsMultiple,
+          matchedByDomain: false,
+          emailDomain: domain || null,
+          emailVerification,
+        });
       }
 
       const emailMap = await buildEmailToCrmUserIdMap(docs.map((d) => d.email));
@@ -54,6 +91,8 @@ export async function GET(request) {
         listing: listings[0],
         listings,
         allowsMultiple,
+        matchedByDomain,
+        emailDomain: domain || null,
       });
     }
 

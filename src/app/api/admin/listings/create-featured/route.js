@@ -14,6 +14,11 @@ import { sendShopListedNotificationToAdmin } from "@/lib/email";
 import { sendListingFeaturedAccountEmail } from "@/lib/email";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { allowsMultipleListingsForEmail } from "@/lib/listing-shared-email";
+import {
+  emailDomainMatchFilter,
+  extractEmailDomain,
+  shouldMatchListingsByEmailDomain,
+} from "@/lib/listing-email-domain";
 import { verifyListingEmail } from "@/lib/prospectlens-email-verify";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
@@ -99,6 +104,32 @@ export async function POST(request) {
     await connectDB();
 
     const allowsMultiple = allowsMultipleListingsForEmail(emailNorm);
+    if (!allowsMultiple) {
+      let existingListing = await Listing.findOne({ email: emailNorm }).select("_id email companyName").lean();
+      if (!existingListing && shouldMatchListingsByEmailDomain(emailNorm)) {
+        const domainFilter = emailDomainMatchFilter(extractEmailDomain(emailNorm));
+        if (domainFilter) {
+          existingListing = await Listing.findOne(domainFilter).select("_id email companyName").lean();
+        }
+      }
+      if (existingListing) {
+        const sameEmail =
+          String(existingListing.email || "")
+            .trim()
+            .toLowerCase() === emailNorm;
+        return NextResponse.json(
+          {
+            error: sameEmail
+              ? "A listing with this email already exists. Open it from Listings search, or use a different email."
+              : `A listing already exists for this company domain (@${extractEmailDomain(emailNorm)}): ${existingListing.companyName || existingListing.email}. Open it from Listings search, or use a different domain.`,
+            code: "LISTING_EXISTS",
+            listingId: existingListing._id.toString(),
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const existingUser = await User.findOne({ email: emailNorm }).select("_id email shopName").lean();
     if (existingUser && !allowsMultiple) {
       return NextResponse.json(
