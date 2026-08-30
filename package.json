@@ -36,7 +36,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "dotenv": "^16.6.1",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.2.12",
     "jiti": "^2.6.1",
     "tailwindcss": "^4"
