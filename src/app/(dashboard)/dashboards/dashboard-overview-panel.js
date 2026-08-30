@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
+  LabelList,
   Legend,
   Line,
   Pie,
@@ -135,6 +136,218 @@ function MoneyTooltip({ active, payload, label, formatMoney }) {
         </p>
       ))}
     </div>
+  );
+}
+
+const CHART_LABEL_STYLE = {
+  fontSize: 11,
+  fontWeight: 700,
+  fill: "hsl(var(--title))",
+};
+
+function formatChartLabel(value, formatMoney) {
+  const n = Number(value) || 0;
+  if (n <= 0) return "";
+  return formatMoney(n);
+}
+
+/** Value label for vertical bars / area / line (above the point). */
+function MoneyValueLabel({
+  x,
+  y,
+  value,
+  width,
+  formatMoney,
+  dx = 0,
+  dy = -8,
+  bg = false,
+  bgFill = "hsl(var(--primary))",
+}) {
+  const text = formatChartLabel(value, formatMoney);
+  if (!text) return null;
+  const cx = width != null ? x + width / 2 : x;
+  const tx = cx + dx;
+  const ty = y + dy;
+  if (!bg) {
+    return (
+      <text
+        x={tx}
+        y={ty}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        style={CHART_LABEL_STYLE}
+      >
+        {text}
+      </text>
+    );
+  }
+  const fontSize = 11;
+  const padX = 5;
+  const padY = 3;
+  const boxW = Math.max(text.length * 6.8 + padX * 2, 28);
+  const boxH = fontSize + padY * 2;
+  return (
+    <g>
+      <rect
+        x={tx - boxW / 2}
+        y={ty - boxH + 1}
+        width={boxW}
+        height={boxH}
+        fill={bgFill}
+        rx={0}
+        ry={0}
+      />
+      <text
+        x={tx}
+        y={ty - padY + 1}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        fontSize={fontSize}
+        fontWeight={700}
+        fill="#fff"
+      >
+        {text}
+      </text>
+    </g>
+  );
+}
+
+/** Value label for horizontal (layout="vertical") bars — to the right of the bar. */
+function MoneyBarEndLabel({ x, y, value, width, height, formatMoney }) {
+  const text = formatChartLabel(value, formatMoney);
+  if (!text) return null;
+  return (
+    <text
+      x={x + (width || 0) + 6}
+      y={y + (height || 0) / 2}
+      textAnchor="start"
+      dominantBaseline="central"
+      style={CHART_LABEL_STYLE}
+    >
+      {text}
+    </text>
+  );
+}
+
+/** Stack total above the top of a stacked bar series. */
+function StackTotalLabel({ x, y, width, payload, formatMoney }) {
+  const total = (Number(payload?.paid) || 0) + (Number(payload?.unpaid) || 0);
+  const text = formatChartLabel(total, formatMoney);
+  if (!text) return null;
+  return (
+    <text
+      x={x + (width || 0) / 2}
+      y={y - 8}
+      textAnchor="middle"
+      style={CHART_LABEL_STYLE}
+    >
+      {text}
+    </text>
+  );
+}
+
+const PIE_RADIAN = Math.PI / 180;
+const PIE_LABEL_MIN_PCT = 0.04;
+
+function pieLabelGeometry({ cx, cy, midAngle, outerRadius }) {
+  const sin = Math.sin(-PIE_RADIAN * midAngle);
+  const cos = Math.cos(-PIE_RADIAN * midAngle);
+  const sx = cx + (outerRadius + 2) * cos;
+  const sy = cy + (outerRadius + 2) * sin;
+  const mx = cx + (outerRadius + 12) * cos;
+  const my = cy + (outerRadius + 12) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 10;
+  const ey = my;
+  return { sx, sy, mx, my, ex, ey, cos };
+}
+
+function DonutLabelLine(props) {
+  if ((props.percent || 0) < PIE_LABEL_MIN_PCT) return null;
+  const { sx, sy, mx, my, ex, ey } = pieLabelGeometry(props);
+  return (
+    <path
+      d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`}
+      stroke="hsl(var(--secondary))"
+      strokeWidth={1}
+      fill="none"
+    />
+  );
+}
+
+function DonutLabel(props) {
+  const name = props.name ?? props.payload?.name ?? props.payload?.status ?? props.payload?.label;
+  if ((props.percent || 0) < PIE_LABEL_MIN_PCT || !name) return null;
+  const { ex, ey, cos } = pieLabelGeometry(props);
+  const x = ex + (cos >= 0 ? 4 : -4);
+  const anchor = cos >= 0 ? "start" : "end";
+  const raw =
+    props.value ??
+    props.payload?.[props.dataKey] ??
+    props.payload?.amount ??
+    props.payload?.count;
+  const formatValue = props.formatLabelValue;
+  const amountText =
+    typeof formatValue === "function"
+      ? formatValue(raw)
+      : raw != null && Number.isFinite(Number(raw))
+        ? String(raw)
+        : "";
+
+  return (
+    <text x={x} y={ey} textAnchor={anchor} fill="hsl(var(--title))">
+      <tspan x={x} dy="-0.45em" fontSize={12}>
+        {name}
+      </tspan>
+      {amountText ? (
+        <tspan
+          x={x}
+          dy="1.35em"
+          fill="hsl(var(--title))"
+          fontSize={13}
+          fontWeight={700}
+        >
+          {amountText}
+        </tspan>
+      ) : null}
+    </text>
+  );
+}
+
+function LabeledDonut({
+  data,
+  dataKey,
+  nameKey,
+  cellFill,
+  tooltipFormatter,
+  formatLabelValue,
+}) {
+  const renderLabel = (labelProps) => (
+    <DonutLabel {...labelProps} dataKey={dataKey} formatLabelValue={formatLabelValue} />
+  );
+
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <PieChart margin={{ top: 20, right: 72, bottom: 20, left: 72 }}>
+        <Pie
+          data={data}
+          dataKey={dataKey}
+          nameKey={nameKey}
+          cx="50%"
+          cy="50%"
+          innerRadius={40}
+          outerRadius={60}
+          paddingAngle={2}
+          label={renderLabel}
+          labelLine={DonutLabelLine}
+          isAnimationActive={false}
+        >
+          {data.map((entry, i) => (
+            <Cell key={String(entry[nameKey] ?? i)} fill={cellFill(entry, i)} />
+          ))}
+        </Pie>
+        <Tooltip formatter={tooltipFormatter} />
+      </PieChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -292,32 +505,49 @@ export default function DashboardOverviewPanel() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="Revenue trend" loading={loading} empty={!loading && !hasRevenue}>
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={revenueSeries}>
+          <ResponsiveContainer width="100%" height={260}>
+            <AreaChart data={revenueSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
               <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
               <Area
-                type="monotone"
+                type="linear"
                 dataKey="amount"
                 name="Revenue"
                 stroke="hsl(var(--primary))"
                 fill="hsl(var(--primary) / 0.2)"
                 strokeWidth={2}
-              />
+              >
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => (
+                    <MoneyValueLabel
+                      {...props}
+                      formatMoney={formatMoney}
+                      bg
+                      bgFill="hsl(var(--primary))"
+                    />
+                  )}
+                />
+              </Area>
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard title="Cash received" loading={loading} empty={!loading && !hasCash}>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={cashSeries}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={cashSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
               <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
-              <Bar dataKey="amount" name="Cash" fill="hsl(142 45% 38%)" />
+              <Bar dataKey="amount" name="Cash" fill="hsl(142 45% 38%)">
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => <MoneyValueLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -325,118 +555,85 @@ export default function DashboardOverviewPanel() {
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ChartCard title="Jobs by status" loading={loading} empty={!loading && !hasJobs}>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={jobsStatus}
-                dataKey="count"
-                nameKey="status"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-              >
-                {jobsStatus.map((entry, i) => (
-                  <Cell key={entry.status} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <LabeledDonut
+            data={jobsStatus}
+            dataKey="count"
+            nameKey="status"
+            cellFill={(_, i) => CHART_COLORS[i % CHART_COLORS.length]}
+            formatLabelValue={(v) => String(Number(v) || 0)}
+          />
         </ChartCard>
 
         <ChartCard title="Invoices by payment" loading={loading} empty={!loading && !hasInv}>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={invoicePay}
-                dataKey="amount"
-                nameKey="status"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-              >
-                {invoicePay.map((entry) => (
-                  <Cell
-                    key={entry.status}
-                    fill={PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <LabeledDonut
+            data={invoicePay}
+            dataKey="amount"
+            nameKey="status"
+            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+            tooltipFormatter={(v) => formatMoney(v)}
+            formatLabelValue={(v) => formatMoney(v)}
+          />
         </ChartCard>
 
         <ChartCard title="POs by payment" loading={loading} empty={!loading && !hasPo}>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={poPay}
-                dataKey="amount"
-                nameKey="status"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-              >
-                {poPay.map((entry) => (
-                  <Cell
-                    key={entry.status}
-                    fill={PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <LabeledDonut
+            data={poPay}
+            dataKey="amount"
+            nameKey="status"
+            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+            tooltipFormatter={(v) => formatMoney(v)}
+            formatLabelValue={(v) => formatMoney(v)}
+          />
         </ChartCard>
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="Commissions paid vs unpaid" loading={loading} empty={!loading && !hasComm}>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie
-                data={commissionStatus}
-                dataKey="amount"
-                nameKey="label"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
-              >
-                {commissionStatus.map((entry) => (
-                  <Cell
-                    key={entry.status}
-                    fill={PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <LabeledDonut
+            data={commissionStatus}
+            dataKey="amount"
+            nameKey="label"
+            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+            tooltipFormatter={(v) => formatMoney(v)}
+            formatLabelValue={(v) => formatMoney(v)}
+          />
         </ChartCard>
 
         <ChartCard title="Commission trend" loading={loading} empty={!loading && !hasCommTrend}>
-          <ResponsiveContainer width="100%" height={240}>
-            <ComposedChart data={commissionTrend}>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={commissionTrend} margin={{ top: 28, right: 12, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
               <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Bar dataKey="unpaid" name="Unpaid (created)" stackId="a" fill="hsl(0 55% 48%)" />
-              <Bar dataKey="paid" name="Paid (created)" stackId="a" fill="hsl(142 45% 38%)" />
+              <Bar dataKey="paid" name="Paid (created)" stackId="a" fill="hsl(142 45% 38%)">
+                <LabelList
+                  content={(props) => <StackTotalLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
               <Line
-                type="monotone"
+                type="linear"
                 dataKey="paidOut"
                 name="Paid out"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                dot={false}
-              />
+                dot={{ r: 3 }}
+              >
+                <LabelList
+                  dataKey="paidOut"
+                  content={(props) => (
+                    <MoneyValueLabel
+                      {...props}
+                      formatMoney={formatMoney}
+                      dy={-12}
+                      bg
+                      bgFill="hsl(var(--primary))"
+                    />
+                  )}
+                />
+              </Line>
             </ComposedChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -444,25 +641,35 @@ export default function DashboardOverviewPanel() {
 
       <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartCard title="AR aging (unpaid)" loading={loading} empty={!loading && !hasAr}>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={arAging} layout="vertical" margin={{ left: 16 }}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={arAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
               <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))" />
+              <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))">
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
 
         <ChartCard title="AP aging (unpaid)" loading={loading} empty={!loading && !hasAp}>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={apAging} layout="vertical" margin={{ left: 16 }}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={apAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
               <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
               <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
               <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)" />
+              <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)">
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
