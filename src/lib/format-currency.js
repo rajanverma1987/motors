@@ -85,6 +85,9 @@ export function formatMoney(value, currencyCode = "USD") {
 /** JPY-style currencies often use 0 decimal places in UI */
 const ZERO_DECIMAL = new Set(["JPY", "KRW", "VND"]);
 
+/**
+ * Full currency with fixed fraction digits (e.g. tables). Not K/M abbreviation.
+ */
 export function formatMoneyCompact(value, currencyCode = "USD") {
   const code = (currencyCode || "USD").toUpperCase();
   const safeCode = ALLOWED.has(code) ? code : "USD";
@@ -102,5 +105,35 @@ export function formatMoneyCompact(value, currencyCode = "USD") {
     ).format(n);
   } catch {
     return formatMoney(value, "USD");
+  }
+}
+
+/**
+ * Short currency for charts/KPIs: $1.2K, $3.4M (or locale compact equivalents).
+ * @param {string|number|null|undefined} value
+ * @param {string} currencyCode ISO 4217
+ */
+export function formatMoneyAbbreviated(value, currencyCode = "USD") {
+  const code = (currencyCode || "USD").toUpperCase();
+  const safeCode = ALLOWED.has(code) ? code : "USD";
+  const n =
+    typeof value === "number"
+      ? value
+      : parseFloat(String(value ?? "").replace(/,/g, "").replace(/^\s*\$\s*/, ""));
+  if (!Number.isFinite(n)) return "—";
+  const locale = safeCode === "INR" ? "en-IN" : "en-US";
+  try {
+    const opts = currencyFormatOptions(safeCode);
+    opts.notation = "compact";
+    opts.compactDisplay = "short";
+    opts.maximumFractionDigits = 1;
+    opts.minimumFractionDigits = 0;
+    return new Intl.NumberFormat(locale, opts).format(n);
+  } catch {
+    const abs = Math.abs(n);
+    const sign = n < 0 ? "-" : "";
+    if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1)}M`;
+    if (abs >= 1_000) return `${sign}${(abs / 1_000).toFixed(1)}K`;
+    return formatMoney(n, safeCode);
   }
 }

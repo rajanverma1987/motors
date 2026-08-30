@@ -11,6 +11,7 @@ export const ACTIONS = ["view", "create", "edit", "delete"];
 
 /** Simple portal pages shown in Access Controls UI */
 export const PAGES = [
+  { id: "dashboard", label: "Dashboard" },
   { id: "customers", label: "Customers (incl. leads)" },
   { id: "service-proposals", label: "Service Proposals" },
   { id: "invoices", label: "Invoice / Receivables" },
@@ -35,7 +36,6 @@ export const PAGES = [
 
 /** Classic-only page ids still valid on stored policies until re-saved */
 export const LEGACY_PAGE_IDS = [
-  "dashboard",
   "leads",
   "motors",
   "quotes",

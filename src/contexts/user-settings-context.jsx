@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { USER_SETTINGS_DEFAULTS, mergeUserSettings, resolveTablePageSize } from "@/lib/user-settings";
-import { formatMoney } from "@/lib/format-currency";
+import { formatMoney, formatMoneyAbbreviated } from "@/lib/format-currency";
 import { formatDateForCurrency, formatDateTimeForCurrency } from "@/lib/format-date";
 
 const UserSettingsContext = createContext({
@@ -106,6 +106,16 @@ export function useFormatMoney() {
       ? settings.currency.toUpperCase().trim()
       : "USD";
   return useCallback((value) => formatMoney(value, code || "USD"), [code]);
+}
+
+/** Compact currency for charts/KPIs ($1.2K, $3.4M). */
+export function useFormatMoneyAbbreviated() {
+  const { settings } = useUserSettings();
+  const code =
+    typeof settings?.currency === "string"
+      ? settings.currency.toUpperCase().trim()
+      : "USD";
+  return useCallback((value) => formatMoneyAbbreviated(value, code || "USD"), [code]);
 }
 
 /** Format calendar dates using the country style for Settings → Currency (e.g. INR → dd/mm/yyyy). */

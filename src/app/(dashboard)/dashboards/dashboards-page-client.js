@@ -7,6 +7,7 @@ import {
   FiClipboard,
   FiDatabase,
   FiFileText,
+  FiHome,
   FiPackage,
   FiShoppingCart,
   FiSliders,
@@ -24,10 +25,12 @@ import CustomersPanel from "./customers-panel";
 import ReportsPanel from "./reports-panel";
 import MasterDataSearchPanel from "./master-data-search-panel";
 import CalculatorsPanel from "./calculators-panel";
+import DashboardOverviewPanel from "./dashboard-overview-panel";
 import {
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_CUSTOMERS,
+  SIMPLE_TAB_DASHBOARD,
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_INVOICES,
@@ -114,6 +117,11 @@ export default function DashboardsPageClient() {
 
   const tabs = useMemo(() => {
     const all = [
+      {
+        id: SIMPLE_TAB_DASHBOARD,
+        label: <TabLabel icon={FiHome}>Dashboard</TabLabel>,
+        children: <DashboardOverviewPanel />,
+      },
       {
         id: SIMPLE_TAB_CUSTOMERS,
         label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
