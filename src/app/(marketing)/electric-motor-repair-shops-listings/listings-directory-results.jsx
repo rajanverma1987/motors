@@ -55,7 +55,7 @@ export default async function ListingsDirectoryResults({ searchParams }) {
             name="search"
             placeholder="Search by company, city, state, or zip code…"
             defaultValue={search}
-            className="min-w-0 flex-1 max-w-[43.2rem] rounded-md border border-border bg-bg px-4 py-2.5 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary sm:max-w-[50.4rem]"
+            className="min-h-11 min-w-0 flex-1 max-w-full rounded-md border border-border bg-bg px-4 py-2.5 text-base text-text placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary sm:max-w-[50.4rem] sm:text-sm"
             aria-label="Search listings"
           />
           <p className="text-sm text-secondary">

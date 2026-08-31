@@ -236,7 +236,7 @@ export default function BlogPageLayout({
               ? "md:grid-cols-[minmax(0,11fr)_minmax(0,13fr)]"
               : sidebarUnwrapped
                 ? "md:grid-cols-[minmax(0,12fr)_minmax(0,8fr)]"
-                : "md:grid-cols-[13fr_7fr]"
+                : "md:grid-cols-[minmax(0,13fr)_minmax(0,7fr)]"
           }`}
         >
           {/* Mobile CTA / tools — above content, only on small screens */}

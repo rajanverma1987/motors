@@ -171,24 +171,28 @@ export default function HomePage() {
           sizes="100vw"
           className="object-cover object-[center_30%] sm:object-center"
         />
-        {/* Readability wash — keeps copy clear over the photo */}
+        {/* Readability wash — stronger on mobile so copy stays legible over the photo */}
         <div
-          className="absolute inset-0 bg-gradient-to-r from-card via-card/90 to-card/25 sm:via-card/85 sm:to-transparent"
+          className="absolute inset-0 bg-card/85 sm:bg-transparent"
           aria-hidden
         />
         <div
-          className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-card/40"
+          className="absolute inset-0 bg-gradient-to-r from-card via-card/95 to-card/50 sm:via-card/85 sm:to-transparent"
           aria-hidden
         />
-        <div className="relative z-10 mx-auto flex min-h-[min(92vh,52rem)] max-w-[86.4rem] items-center px-4 py-16 sm:px-6 sm:py-20 lg:py-24">
-          <div className="max-w-xl lg:max-w-[36rem]">
+        <div
+          className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-card/50 sm:via-transparent sm:to-card/40"
+          aria-hidden
+        />
+        <div className="relative z-10 mx-auto flex min-h-[min(92vh,52rem)] max-w-[86.4rem] items-center px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
+          <div className="w-full max-w-xl min-w-0 lg:max-w-[36rem]">
             <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm">
               Built for motor repair shops
             </span>
-            <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-[3.25rem] lg:leading-[1.15]">
+            <h1 className="mt-6 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[3.25rem] lg:leading-[1.15]">
               Motor Repair Shop Software — Proposals, Work Orders, Invoices & Inventory in One Place
             </h1>
-            <p className="mt-6 text-lg text-secondary sm:text-xl">
+            <p className="mt-6 text-pretty text-base text-secondary sm:text-lg lg:text-xl">
               From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
               Online sync—one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
               inventory, invoicing, repair leads,{" "}
@@ -203,12 +207,12 @@ export default function HomePage() {
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <Link href="/contact" className="w-full min-w-0 sm:w-auto">
-                <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
+                <Button variant="primary" size="lg" className="min-h-12 w-full min-w-0 touch-manipulation sm:w-auto">
                   Get a demo
                 </Button>
               </Link>
               <a href="#features" className="w-full min-w-0 sm:w-auto">
-                <Button variant="outline" size="lg" className="w-full min-w-0 border-border/80 bg-card/70 backdrop-blur-sm sm:w-auto">
+                <Button variant="outline" size="lg" className="min-h-12 w-full min-w-0 touch-manipulation border-border/80 bg-card/70 backdrop-blur-sm sm:w-auto">
                   See what’s included
                 </Button>
               </a>
@@ -337,7 +341,7 @@ export default function HomePage() {
           </div>
 
           {/* Motor repair workflow */}
-          <div className="mt-20 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="mt-20 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12">
             <div className="grid gap-8 lg:grid-cols-2 lg:items-center lg:gap-10">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
@@ -394,7 +398,7 @@ export default function HomePage() {
           </div>
 
           {/* Job management tools */}
-          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -429,7 +433,7 @@ export default function HomePage() {
           </div>
 
           {/* Lead generation network */}
-          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
             <div className="flex flex-wrap items-center gap-3">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -509,7 +513,7 @@ export default function HomePage() {
           </div>
 
           {/* Careers / hiring highlight */}
-          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
             <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-3">
@@ -550,7 +554,7 @@ export default function HomePage() {
           </div>
 
           {/* Custom pricing */}
-          <div className="mt-12 rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
                 <span className="text-sm font-semibold uppercase tracking-wide text-primary">Custom pricing</span>
@@ -582,7 +586,7 @@ export default function HomePage() {
       {/* List your center */}
       <section className="border-t border-border bg-bg py-16 sm:py-24">
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
-          <div className="rounded-2xl border border-border bg-card p-8 shadow-sm sm:p-10 lg:p-12">
+          <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
             <div className="flex flex-col items-center gap-6 text-center lg:flex-row lg:items-center lg:justify-between lg:text-left">
               <div>
                 <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">

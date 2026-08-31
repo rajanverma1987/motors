@@ -18,9 +18,9 @@ export default function Button({
   };
 
   const sizes = {
-    sm: "px-3 py-1 text-sm",
-    md: "px-4 py-2",
-    lg: "px-4 py-2.5 text-base sm:px-6 sm:py-3 sm:text-lg",
+    sm: "min-h-9 px-3 py-1.5 text-sm",
+    md: "min-h-11 px-4 py-2",
+    lg: "min-h-12 px-4 py-2.5 text-base sm:min-h-[3.25rem] sm:px-6 sm:py-3 sm:text-lg",
   };
 
   return (

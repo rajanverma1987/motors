@@ -3,6 +3,54 @@
 /* Base font size; Settings → Display scales via --app-zoom-factor and --app-font-scale-factor */
 html {
   font-size: calc(95% * var(--app-zoom-factor, 1) * var(--app-font-scale-factor, 1));
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Marketing pages: prevent horizontal rubber-band scroll from wide children / 100vw quirks */
+.marketing-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
+.marketing-shell main {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.marketing-skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  z-index: 100;
+  transform: translateY(-120%);
+  border-radius: 0.375rem;
+  background: hsl(var(--primary));
+  color: #fff;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: transform 0.15s ease;
+}
+
+.marketing-skip-link:focus {
+  transform: translateY(0.75rem);
+  outline: 2px solid hsl(var(--title));
+  outline-offset: 2px;
+}
+
+/* Dark mode: lift metallic logo artwork so charcoal segments don’t vanish */
+html.dark .brand-logo-img {
+  filter: brightness(1.08) contrast(1.06) saturate(1.08)
+    drop-shadow(0 0 10px hsl(var(--primary) / 0.35));
 }
 
 /* Design system theme tokens (HSL values without hsl()) */

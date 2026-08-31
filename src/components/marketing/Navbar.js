@@ -1,22 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiMenu, FiX } from "react-icons/fi";
 import { useAuth } from "@/contexts/auth-context";
 import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
-import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
+import BrandLogo from "@/components/marketing/brand-logo";
 
 const productNav = {
   href: "/motor-repair-shop-management-software",
   label: "Motor Shop Management Software",
 };
-
-/** Dark mode only: light warm copper panel (hue ~28–32°) so dark logo artwork reads clearly. */
-const navDarkSurface =
-  "dark:border-[hsl(28_18%_72%)] dark:!bg-[linear-gradient(180deg,hsl(32_32%_94%)_0%,hsl(28_26%_88%)_100%)] dark:shadow-[inset_0_1px_0_0_hsl(38_42%_98%)]";
 
 function navPathBase(href) {
   const i = href.indexOf("#");
@@ -30,15 +25,17 @@ function isNavActive(pathname, href) {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-function ProductNavLink({ href, label, pathname, className = "" }) {
+function ProductNavLink({ href, label, pathname, className = "", onClick }) {
   const active = isNavActive(pathname, href);
   return (
     <Link
       href={href}
-      className={`inline-flex items-center whitespace-normal rounded-md border px-3 py-2 text-left text-sm font-semibold leading-snug transition-colors sm:whitespace-nowrap ${active
+      onClick={onClick}
+      className={`inline-flex min-h-11 items-center whitespace-normal rounded-md border px-3 py-2.5 text-left text-sm font-semibold leading-snug transition-colors touch-manipulation sm:whitespace-nowrap ${
+        active
           ? "border-primary bg-primary/15 text-primary shadow-sm dark:border-primary/50 dark:bg-primary/20"
           : "border-primary/35 bg-primary/10 text-primary hover:border-primary/50 hover:bg-primary/15 dark:border-primary/40 dark:bg-primary/15 dark:hover:bg-primary/20"
-        } ${className}`.trim()}
+      } ${className}`.trim()}
     >
       {label}
     </Link>
@@ -52,6 +49,10 @@ export default function Navbar() {
   const dashboardHref = user?.calculatorOnlyAccount
     ? "/dashboards?tab=calculators"
     : DEFAULT_PORTAL_LANDING_PATH;
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -79,23 +80,17 @@ export default function Navbar() {
 
   return (
     <>
-      <header
-        className={`sticky top-0 z-50 border-b border-border bg-card/90 backdrop-blur-md supports-[backdrop-filter]:bg-card/75 ${navDarkSurface}`}
-      >
-        <div className="mx-auto flex h-16 max-w-[86.4rem] items-center justify-between gap-3 px-4 sm:h-[4.25rem] sm:gap-4 sm:px-6 md:min-h-[4.5rem] md:gap-6">
+      <header className="sticky top-0 z-50 border-b border-border bg-card/90 pt-[env(safe-area-inset-top)] backdrop-blur-md supports-[backdrop-filter]:bg-card/75">
+        <div className="mx-auto flex h-14 max-w-[86.4rem] items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:h-[4.25rem] md:min-h-[4.5rem] md:gap-6 md:px-6">
           <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
             <Link
               href="/"
-              className="min-w-0 shrink-0 transition-opacity hover:opacity-85"
+              className="min-w-0 shrink-0 touch-manipulation transition-opacity hover:opacity-90"
               aria-label="IQ Motorbase — home"
             >
-              <Image
-                src={BRAND_LOGO_PUBLIC_PATH}
-                alt="IQ Motorbase"
-                width={BRAND_LOGO_WIDTH}
-                height={BRAND_LOGO_HEIGHT}
-                className="h-[1.5rem] w-auto max-w-[min(100%,9rem)] object-contain object-left sm:h-[1.625rem] sm:max-w-[min(100%,10rem)] md:h-[2.43rem] md:max-w-[min(100vw-22rem,238px)]"
+              <BrandLogo
                 priority
+                className="h-[1.5rem] w-auto max-w-[min(100%,9rem)] object-contain object-left sm:h-[1.625rem] sm:max-w-[min(100%,10rem)] md:h-[2.43rem] md:max-w-[min(100%,238px)]"
               />
             </Link>
             <div className="hidden min-w-0 sm:block md:max-w-[min(100%,20rem)] lg:max-w-none">
@@ -113,7 +108,7 @@ export default function Navbar() {
               {mounted && user ? (
                 <Link
                   href={dashboardHref}
-                  className="whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
+                  className="inline-flex min-h-11 items-center whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title"
                 >
                   Dashboard
                 </Link>
@@ -121,13 +116,13 @@ export default function Navbar() {
                 <>
                   <Link
                     href="/login"
-                    className="whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title dark:text-[hsl(25_22%_34%)] dark:hover:text-[hsl(22_38%_12%)]"
+                    className="inline-flex min-h-11 items-center whitespace-nowrap px-2 py-2 text-sm font-medium text-secondary transition-colors hover:text-title"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/register"
-                    className="whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-1.5 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg dark:border-[hsl(28_20%_68%)] dark:text-[hsl(22_35%_14%)] dark:hover:border-primary/40 dark:hover:bg-[hsl(32_28%_96%)]"
+                    className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg"
                   >
                     Register
                   </Link>
@@ -135,7 +130,7 @@ export default function Navbar() {
               )}
               <Link
                 href="/contact"
-                className="whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92"
+                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92"
               >
                 Contact for demo
               </Link>
@@ -143,7 +138,7 @@ export default function Navbar() {
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border text-title transition-colors hover:bg-form-bg dark:border-[hsl(28_20%_70%)] dark:bg-[hsl(32_26%_92%)] dark:text-[hsl(22_35%_12%)] dark:hover:bg-[hsl(30_24%_96%)] md:hidden"
+              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-md border border-border text-title transition-colors hover:bg-form-bg md:hidden"
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
               aria-controls="marketing-mobile-drawer"
@@ -156,36 +151,44 @@ export default function Navbar() {
 
       <div className="md:hidden">
         <div
-          className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200 ${mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
-            }`}
+          className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200 ${
+            mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+          }`}
           aria-hidden={!mobileOpen}
           inert={!mobileOpen ? true : undefined}
           onClick={closeMobile}
         />
         <aside
           id="marketing-mobile-drawer"
-          className={`fixed inset-y-0 right-0 z-[110] flex h-dvh max-h-dvh w-[min(100%,20rem)] flex-col border-l border-border bg-card shadow-xl transition-transform duration-200 ease-out ${mobileOpen ? "translate-x-0" : "pointer-events-none translate-x-full"
-            }`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Site menu"
+          className={`fixed inset-y-0 right-0 z-[110] flex h-dvh max-h-dvh w-[min(100%,20rem)] max-w-[100vw] flex-col border-l border-border bg-card pb-[env(safe-area-inset-bottom)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)] shadow-xl transition-[transform,visibility] duration-200 ease-out ${
+            mobileOpen
+              ? "visible translate-x-0"
+              : "invisible pointer-events-none translate-x-full"
+          }`}
           aria-hidden={!mobileOpen}
           inert={!mobileOpen ? true : undefined}
         >
-          <div className="flex h-14 items-center justify-between border-b border-border px-4">
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
             <span className="text-sm font-semibold text-title">Menu</span>
             <button
               type="button"
               onClick={closeMobile}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-secondary transition-colors hover:bg-form-bg hover:text-title"
+              className="flex h-11 w-11 touch-manipulation items-center justify-center rounded-md text-secondary transition-colors hover:bg-form-bg hover:text-title"
               aria-label="Close menu"
             >
               <FiX className="h-5 w-5" aria-hidden />
             </button>
           </div>
-          <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto" aria-label="Marketing">
+          <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain" aria-label="Marketing">
             <div className="border-b border-border p-4">
               <ProductNavLink
                 href={productNav.href}
                 label={productNav.label}
                 pathname={pathname}
+                onClick={closeMobile}
                 className="w-full justify-center text-center text-base"
               />
             </div>
@@ -194,7 +197,7 @@ export default function Navbar() {
                 <Link
                   href={dashboardHref}
                   onClick={closeMobile}
-                  className="flex min-h-11 items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
+                  className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-4 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
                 >
                   Dashboard
                 </Link>
@@ -203,14 +206,14 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={closeMobile}
-                    className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
+                    className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
                   >
                     Log in
                   </Link>
                   <Link
                     href="/register"
                     onClick={closeMobile}
-                    className="flex min-h-11 items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
+                    className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
                   >
                     Register
                   </Link>
@@ -219,7 +222,7 @@ export default function Navbar() {
               <Link
                 href="/contact"
                 onClick={closeMobile}
-                className="flex min-h-11 items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-white transition-opacity hover:opacity-92"
+                className="flex min-h-12 touch-manipulation items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-white transition-opacity hover:opacity-92"
               >
                 Contact for demo
               </Link>

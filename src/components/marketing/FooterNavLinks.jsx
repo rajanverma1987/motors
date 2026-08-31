@@ -19,7 +19,7 @@ function navLinkClass(pathname, href) {
     (href === "/motor-repair-marketplace" && pathname.startsWith("/motor-repair-marketplace")) ||
     (href === "/careers" && pathname.startsWith("/careers")) ||
     (href === "/iqwirecalculator" && pathname.startsWith("/iqwirecalculator"));
-  return `rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+  return `rounded-md px-3 py-2.5 text-sm font-medium transition-colors touch-manipulation min-h-11 inline-flex items-center ${
     active ? "bg-bg text-primary" : "text-secondary hover:bg-bg hover:text-text"
   }`;
 }

@@ -20,7 +20,7 @@ function WaButton() {
       href={href}
       target={isWa ? "_blank" : undefined}
       rel={isWa ? "noopener noreferrer" : undefined}
-      className="inline-flex w-full min-w-0 max-w-full items-center justify-center gap-2 whitespace-normal text-center text-pretty rounded-md border-[0.5px] border-emerald-600/50 bg-transparent px-4 py-2.5 text-base text-emerald-700 transition-opacity hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40 sm:px-6 sm:py-3 sm:text-lg"
+      className="inline-flex min-h-12 w-full min-w-0 max-w-full touch-manipulation items-center justify-center gap-2 whitespace-normal text-center text-pretty rounded-md border-[0.5px] border-emerald-600/50 bg-transparent px-4 py-3 text-base text-emerald-700 transition-opacity hover:bg-emerald-50 dark:border-emerald-500/40 dark:text-emerald-300 dark:hover:bg-emerald-950/40 sm:px-6 sm:text-lg"
     >
       <FiMessageCircle className="h-5 w-5 shrink-0" aria-hidden />
       {isWa ? "WhatsApp us" : "Message us (contact)"}
@@ -87,13 +87,13 @@ export default function SeoLeadLandingPage({
               url: b.href,
             }))}
           />
-          <h1 className="mt-6 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{h1}</h1>
+          <h1 className="mt-6 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{h1}</h1>
         </div>
       </section>
 
       <div className="mx-auto max-w-[86.4rem] px-4 py-12 sm:px-6 sm:py-16">
-        <div className="grid gap-10 lg:grid-cols-[1fr_380px] lg:items-start">
-          <article className="min-w-0 space-y-10 prose prose-neutral dark:prose-invert max-w-none">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)] lg:items-start">
+          <article className="min-w-0 max-w-full space-y-10 prose prose-neutral dark:prose-invert">
             <section>
               {introParagraphs.map((p, i) => (
                 <p key={i} className="text-secondary leading-relaxed">
@@ -207,7 +207,7 @@ export default function SeoLeadLandingPage({
             </section>
           </article>
 
-          <aside className="lg:sticky lg:top-24 space-y-4">
+          <aside className="min-w-0 space-y-4 lg:sticky lg:top-28">
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <h2 className="text-lg font-semibold text-title">Get more jobs + Shop Management System access</h2>
               <p className="mt-2 text-sm text-secondary">

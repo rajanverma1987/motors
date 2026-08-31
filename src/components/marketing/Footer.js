@@ -1,7 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import FooterNavLinks from "./FooterNavLinks";
-import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
+import BrandLogo from "@/components/marketing/brand-logo";
 
 const footerLinks = {
   "For repair shops": [
@@ -68,13 +67,7 @@ export default function Footer() {
             className="inline-block shrink-0 transition-opacity hover:opacity-90"
             aria-label="IQ Motorbase — home"
           >
-            <Image
-              src={BRAND_LOGO_PUBLIC_PATH}
-              alt="IQ Motorbase"
-              width={BRAND_LOGO_WIDTH}
-              height={BRAND_LOGO_HEIGHT}
-              className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]"
-            />
+            <BrandLogo className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]" />
           </Link>
           <p className="max-w-2xl text-sm leading-snug text-secondary md:pt-1">
             Job management, shop parts inventory, lead generation, and public employee job postings for motor repair
@@ -82,7 +75,7 @@ export default function Footer() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:gap-x-8 md:grid-cols-4 md:gap-x-5 lg:gap-x-8">
+        <div className="grid grid-cols-1 gap-x-6 gap-y-6 min-[400px]:grid-cols-2 sm:gap-x-8 md:grid-cols-4 md:gap-x-5 lg:gap-x-8">
           {Object.entries(footerLinks).map(([title, links]) => (
             <div key={title} className="min-w-0">
               <h3 className="text-sm font-semibold text-title">{title}</h3>
@@ -91,7 +84,7 @@ export default function Footer() {
                   <li key={label}>
                     <Link
                       href={href}
-                      className="text-sm leading-snug text-secondary transition-colors hover:text-primary"
+                      className="inline-block max-w-full break-words text-sm leading-snug text-secondary transition-colors hover:text-primary"
                     >
                       {label}
                     </Link>

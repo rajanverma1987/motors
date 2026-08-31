@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiShield, FiList, FiUsers, FiBarChart2 } from "react-icons/fi";
@@ -10,7 +9,7 @@ import Input from "@/components/ui/input";
 import Checkbox from "@/components/ui/checkbox";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
-import { BRAND_LOGO_HEIGHT, BRAND_LOGO_PUBLIC_PATH, BRAND_LOGO_WIDTH } from "@/lib/brand-logo";
+import BrandLogo from "@/components/marketing/brand-logo";
 
 const REMEMBER_ADMIN_LOGIN_KEY = "iqmotorbase.rememberAdminLogin";
 
@@ -59,13 +58,9 @@ function AdminLoginShell({ title, subtitle, children }) {
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <Link href="/" className="inline-block transition-opacity hover:opacity-90" aria-label="IQ Motorbase — home">
-            <Image
-              src={BRAND_LOGO_PUBLIC_PATH}
-              alt="IQ Motorbase"
-              width={BRAND_LOGO_WIDTH}
-              height={BRAND_LOGO_HEIGHT}
-              className="h-10 w-auto max-w-[min(100%,240px)] object-contain object-left sm:h-12 sm:max-w-[min(100%,280px)] md:h-14 md:max-w-[320px]"
+            <BrandLogo
               priority
+              className="h-10 w-auto max-w-[min(100%,240px)] object-contain object-left sm:h-12 sm:max-w-[min(100%,280px)] md:h-14 md:max-w-[320px]"
             />
           </Link>
           <h1 className="mt-6 text-3xl font-bold tracking-tight text-title sm:text-4xl">{title}</h1>

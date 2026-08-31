@@ -9,11 +9,11 @@ export const LISTINGS_WITH_FORM_LAYOUT =
   "grid gap-8 lg:grid-cols-[minmax(0,1fr)_352px]";
 
 /** Sticky repair form — self-start inside a stretched grid column. */
-export const LISTINGS_FORM_STICKY = "sticky top-6 z-10 self-start lg:top-8";
+export const LISTINGS_FORM_STICKY = "sticky top-6 z-10 self-start lg:top-28";
 
-/** Max height for sticky sidebar repair forms (fits below marketing nav). */
+/** Max height for sticky sidebar repair forms (fits below marketing nav + preferred-source stripe). */
 export const REPAIR_FORM_SIDEBAR_MAX_H =
-  "max-h-[calc(100dvh-5rem)] md:max-h-[calc(100dvh-6.5rem)]";
+  "max-h-[calc(100dvh-6.5rem)] md:max-h-[calc(100dvh-8rem)]";
 
 /** Centered prose column for industry vertical SEO pages (~700px). */
 export const INDUSTRY_PAGE_CONTAINER = "mx-auto max-w-[44rem] px-4 sm:px-6 py-8 sm:py-10";

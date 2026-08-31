@@ -63,9 +63,9 @@ export default function IndustryPageView({ page }) {
           <p className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
             {page.industry} specialists
           </p>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{page.h1}</h1>
-          <h2 className="mt-4 max-w-4xl text-xl font-semibold leading-snug text-title sm:text-2xl">{page.subheading}</h2>
-          <p className="mt-5 max-w-3xl text-base leading-relaxed text-secondary sm:text-lg">{page.contextParagraph}</p>
+          <h1 className="mt-4 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">{page.h1}</h1>
+          <h2 className="mt-4 max-w-4xl text-pretty text-xl font-semibold leading-snug text-title sm:text-2xl">{page.subheading}</h2>
+          <p className="mt-5 max-w-3xl text-pretty text-base leading-relaxed text-secondary sm:text-lg">{page.contextParagraph}</p>
         </div>
       </section>
 

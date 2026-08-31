@@ -75,10 +75,10 @@ function PreferredSourceCta({ className = "", label = "Add preferred source" }) 
       target="_blank"
       rel="noopener noreferrer"
       onClick={onActivate}
-      className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-[#1f1f1f] shadow-md transition-colors hover:bg-gray-50 active:bg-gray-100 ${className}`.trim()}
+      className={`inline-flex min-h-11 max-w-full cursor-pointer touch-manipulation items-center justify-center gap-2 rounded-md bg-white px-3 py-2.5 text-sm font-semibold text-[#1f1f1f] shadow-md transition-colors hover:bg-gray-50 active:bg-gray-100 ${className}`.trim()}
     >
       <GoogleLogoMark className="h-4 w-4 shrink-0" aria-hidden />
-      <span className="whitespace-nowrap">{label}</span>
+      <span className="min-w-0 truncate sm:whitespace-nowrap">{label}</span>
     </a>
   );
 }
@@ -113,8 +113,8 @@ export default function PreferredSourceButton({
         aria-label="Add IQMotorBase as a preferred source in Google Search"
       >
         {/* Mobile: single CTA button only */}
-        <div className="mx-auto flex max-w-[86.4rem] items-center justify-center px-4 py-1.5 sm:hidden">
-          <PreferredSourceCta className="min-h-9 w-full max-w-sm py-1.5" label="Add preferred source" />
+        <div className="mx-auto flex max-w-[86.4rem] items-center justify-center px-3 py-2 sm:hidden">
+          <PreferredSourceCta className="min-h-11 w-full max-w-sm" label="Add preferred source" />
           <NoscriptLink className="!bg-white !text-[#1f1f1f]" />
         </div>
         {/* sm+: one compact row */}

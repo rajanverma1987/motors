@@ -10,7 +10,10 @@ const GA_MEASUREMENT_ID = "G-RTSF7V6T7M";
 
 export default function MarketingLayout({ children }) {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    <div className="marketing-shell flex min-h-screen flex-col bg-bg pb-[env(safe-area-inset-bottom)]">
+      <a href="#main-content" className="marketing-skip-link">
+        Skip to main content
+      </a>
       <Script
         src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         strategy="afterInteractive"
@@ -38,7 +41,9 @@ gtag('config', '${GA_MEASUREMENT_ID}');
       <WebsiteClarity />
       <Navbar />
       <PreferredSourceButton variant="stripe" />
-      <main className="flex-1">{children}</main>
+      <main id="main-content" tabIndex={-1} className="min-w-0 flex-1 outline-none">
+        {children}
+      </main>
       <Footer />
       <ContextualAiWidget />
     </div>
