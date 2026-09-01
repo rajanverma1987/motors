@@ -45,7 +45,7 @@ function buildLocationSeoTitle(page, areaLabel) {
 function buildLocationSeoDescription(areaLabel) {
   return (
     `Find certified electric motor repair and rewinding shops in ${areaLabel}. ` +
-    `AC motor rewinding, DC armature rewinds, and emergency service. Submit a repair request — ` +
+    `AC motor rewinding, DC armature rewinds, and emergency service. Submit a repair request, ` +
     `matched to shops serving your area.`
   );
 }
@@ -53,7 +53,7 @@ function buildLocationSeoDescription(areaLabel) {
 function buildLocationOgDescription(areaLabel) {
   return (
     `Certified motor repair and rewinding shops in ${areaLabel}. ` +
-    `AC, DC, armature, and stator rewinding. Submit a request — shops respond same day.`
+    `AC, DC, armature, and stator rewinding. Submit a request; shops respond same day.`
   );
 }
 
@@ -66,7 +66,7 @@ export async function generateMetadata({ params, searchParams }) {
   const baseUrl = getPublicSiteUrl().replace(/\/$/, "");
   // Filtered/paginated views are the same city page with a narrower list. Google was
   // crawling every match x capability x page combination and reporting them as
-  // "Duplicate without user-selected canonical" — it ignored the canonical to the clean
+  // "Duplicate without user-selected canonical", it ignored the canonical to the clean
   // URL and picked arbitrary sibling facets instead. So these variants are noindexed with
   // a self-referencing canonical: noindex plus a canonical pointing at the clean URL risks
   // Google carrying the noindex over to the city page we actually want ranked.
@@ -97,7 +97,7 @@ export async function generateMetadata({ params, searchParams }) {
       title: seoTitle,
       description:
         page.metaDescription?.trim() ||
-        `Find certified motor repair and rewinding shops in ${areaLabel}. Submit a request — matched to shops in your area.`,
+        `Find certified motor repair and rewinding shops in ${areaLabel}. Submit a request, matched to shops in your area.`,
     },
     robots: { index: !filtered, follow: true },
   };
@@ -191,7 +191,7 @@ export default async function MotorRepairShopLocationPage({ params, searchParams
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
             {page.metaDescription ||
-              `Browse certified electric motor repair and rewinding centers in ${areaLabel}. Filter by capability — AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service. Open profiles to compare turnaround, testing standards, and certifications, then submit your repair or rewind requirement to be matched directly with shops serving your area.`}
+              `Browse certified electric motor repair and rewinding centers in ${areaLabel}. Filter by capability, AC motor rewinding, DC armature rewinding, stator rewinds, high-voltage, servo, and emergency service. Open profiles to compare turnaround, testing standards, and certifications, then submit your repair or rewind requirement to be matched directly with shops serving your area.`}
           </p>
           <LocationPageInsights insights={insights} />
         </div>

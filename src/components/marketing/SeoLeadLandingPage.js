@@ -123,7 +123,7 @@ export default function SeoLeadLandingPage({
             <section className="rounded-2xl border border-border bg-gradient-to-br from-primary/5 to-transparent p-6 sm:p-8">
               <h2 className="text-xl font-bold text-title sm:text-2xl">What you get with IQMotorBase.com</h2>
               <p className="mt-3 text-sm text-secondary leading-relaxed">
-                Benefits span the full journey from discovery to payment—so you&apos;re not paying for a directory badge and
+                Benefits span the full journey from discovery to payment, so you&apos;re not paying for a directory badge and
                 juggling the rest elsewhere.
               </p>
               {benefitGroups && benefitGroups.length > 0 ? (
@@ -153,7 +153,7 @@ export default function SeoLeadLandingPage({
                 </ul>
               )}
               <p className="mt-6 text-sm text-secondary">
-                We don&apos;t position this as a passive directory—you get a system to{" "}
+                We don&apos;t position this as a passive directory, you get a system to{" "}
                 <strong className="text-title">win repair jobs and run the workshop</strong> in one place. Explore{" "}
                 <Link href="/features" className="text-primary font-medium hover:underline">
                   Shop Management System features
@@ -211,7 +211,7 @@ export default function SeoLeadLandingPage({
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
               <h2 className="text-lg font-semibold text-title">Get more jobs + Shop Management System access</h2>
               <p className="mt-2 text-sm text-secondary">
-                Tell us who you are—we&apos;ll help you get listed and onboarded to manage quotes, jobs, and billing.
+                Tell us who you are, we&apos;ll help you get listed and onboarded to manage quotes, jobs, and billing.
               </p>
               <div className="mt-5 space-y-3">
                 <SeoLeadMiniForm

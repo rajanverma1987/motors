@@ -40,7 +40,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
   return (
     <BlogPageLayout
       title="Types of electric motor repair services"
-      description="Electric motor repair covers a wide range of work—from bearing changes and cleaning to full rewinds and specialty testing. Knowing the main service types helps you describe your need and choose the right shop."
+      description="Electric motor repair covers a wide range of work, from bearing changes and cleaning to full rewinds and specialty testing. Knowing the main service types helps you describe your need and choose the right shop."
       breadcrumbLink={{ href: "/electric-motor-repair-shops-listings", label: "Find repair shops" }}
       canonicalPath={path}
       sidebarUnwrapped
@@ -52,7 +52,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
             Repair vs. rewind: what’s the difference?
           </h2>
           <p className="mt-4 text-secondary">
-            <strong className="text-title">Repair</strong> usually means fixing the motor without replacing the windings—e.g., bearing replacement, seal replacement, cleaning, balancing, or fixing connections. <strong className="text-title">Rewind</strong> means removing the old windings and installing new ones, often with new insulation and varnish. Rewinds are done when the windings are burned, damaged, or degraded. Shops will inspect the motor and recommend repair or rewind based on condition.
+            <strong className="text-title">Repair</strong> usually means fixing the motor without replacing the windings, e.g., bearing replacement, seal replacement, cleaning, balancing, or fixing connections. <strong className="text-title">Rewind</strong> means removing the old windings and installing new ones, often with new insulation and varnish. Rewinds are done when the windings are burned, damaged, or degraded. Shops will inspect the motor and recommend repair or rewind based on condition.
           </p>
         </section>
 
@@ -88,7 +88,7 @@ export default function TypesOfElectricMotorRepairServicesPage() {
             Field service and emergency repair
           </h2>
           <p className="mt-4 text-secondary">
-            Some shops offer on-site troubleshooting, bearing replacement, or emergency call-out. That can reduce downtime when the motor can’t be easily removed or when you need a quick diagnosis.             Not every shop offers field service—check the directory or ask when requesting a quote. For urgent failures, start with{" "}
+            Some shops offer on-site troubleshooting, bearing replacement, or emergency call-out. That can reduce downtime when the motor can’t be easily removed or when you need a quick diagnosis.             Not every shop offers field service, check the directory or ask when requesting a quote. For urgent failures, start with{" "}
             <Link href="/emergency-motor-repair-what-to-do" className="text-primary font-medium hover:underline">
               emergency motor repair: what to do
             </Link>

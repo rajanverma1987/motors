@@ -67,7 +67,7 @@ export const metadata = {
   openGraph: {
     title: "CM Best Match Calculator for Motor Rewinding | IQMotorBase.com",
     description:
-      "Circular mils, targeted CM, and shop-wire combinations—explained for rewind technicians and shop owners.",
+      "Circular mils, targeted CM, and shop-wire combinations, explained for rewind technicians and shop owners.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -91,11 +91,11 @@ export default function BlogCmBestMatchGuidePage() {
       />
       <BlogPageLayout
         title="CM Best Match calculator for motor rewinding: what it is and how it works"
-        description="Circular mils (CM) drive slot fill and ampacity in rewinds. This guide explains the IQMotorBase CM Best Match tool—catalog-backed combinations, match bands, and where it fits between takeoff data and final engineering review."
+        description="Circular mils (CM) drive slot fill and ampacity in rewinds. This guide explains the IQMotorBase CM Best Match tool, catalog-backed combinations, match bands, and where it fits between takeoff data and final engineering review."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
         sidebarTitle="Calculators in your Shop Management System"
-        sidebarDescription="CM Best Match plus power, speed, torque, and bench tools—same place your jobs and quotes live."
+        sidebarDescription="CM Best Match plus power, speed, torque, and bench tools, same place your jobs and quotes live."
         sidebarCta={<ListYourShopCta />}
       >
         <article className="prose prose-neutral max-w-none dark:prose-invert">
@@ -113,11 +113,11 @@ export default function BlogCmBestMatchGuidePage() {
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">What “CM” means on the rewind bench</h2>
             <p className="mt-4 text-secondary leading-relaxed">
               <strong className="text-title">Circular mils (CM)</strong> describe conductor cross-sectional area for round wire. In practice, rewinders care about{" "}
-              <em>total CM per path</em>—parallel strands, hand bundles, and slot geometry all interact. When you change turns, voltage, or parallel count, you often need a{" "}
+              <em>total CM per path</em>, parallel strands, hand bundles, and slot geometry all interact. When you change turns, voltage, or parallel count, you often need a{" "}
               <strong className="text-title">new target CM</strong> that still respects ampacity and fill while using wire you can buy or strip from core.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              Search engines and AI assistants often surface questions like “how to match magnet wire sizes for a motor rewind”—the underlying need is the same:{" "}
+              Search engines and AI assistants often surface questions like “how to match magnet wire sizes for a motor rewind”, the underlying need is the same:{" "}
               <strong className="text-title">find a practical combination of real wire sizes</strong> that lands close to a target CM, not a textbook single-AWG fantasy.
             </p>
           </section>
@@ -125,10 +125,10 @@ export default function BlogCmBestMatchGuidePage() {
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">How CM Best Match works (in plain language)</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              You enter your <strong className="text-title">original wires in hand</strong>, <strong className="text-title">original wire size</strong>, and the tool derives context such as original CM. You set a <strong className="text-title">target CM</strong> and bounds on how many parallel wires you will consider. You then <strong className="text-title">select which catalog wire sizes</strong> the search is allowed to use—mirroring what your shop actually stocks or will order.
+              You enter your <strong className="text-title">original wires in hand</strong>, <strong className="text-title">original wire size</strong>, and the tool derives context such as original CM. You set a <strong className="text-title">target CM</strong> and bounds on how many parallel wires you will consider. You then <strong className="text-title">select which catalog wire sizes</strong> the search is allowed to use, mirroring what your shop actually stocks or will order.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              The engine evaluates combinations (up to three size slots in the results table) and reports <strong className="text-title">total CM</strong>, difference from target, and percent difference. Rows highlighted <strong className="text-title">green</strong> are within about <strong className="text-title">2%</strong> of the target; <strong className="text-title">yellow</strong> within about <strong className="text-title">10%</strong>—useful for quick triage before you commit to a build.
+              The engine evaluates combinations (up to three size slots in the results table) and reports <strong className="text-title">total CM</strong>, difference from target, and percent difference. Rows highlighted <strong className="text-title">green</strong> are within about <strong className="text-title">2%</strong> of the target; <strong className="text-title">yellow</strong> within about <strong className="text-title">10%</strong>, useful for quick triage before you commit to a build.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               You can <strong className="text-title">print</strong> the results for the shop floor; the layout is tuned for landscape print preview so technicians see variables plus the full table away from the screen.
@@ -153,7 +153,7 @@ export default function BlogCmBestMatchGuidePage() {
               <li className="flex gap-2">
                 <span className="text-primary">•</span>
                 <span>
-                  <strong className="text-title">Training junior winders</strong>—shows how small changes in parallel counts move total CM without hand spreadsheets.
+                  <strong className="text-title">Training junior winders</strong>, shows how small changes in parallel counts move total CM without hand spreadsheets.
                 </span>
               </li>
               <li className="flex gap-2">
@@ -289,7 +289,7 @@ export default function BlogCmBestMatchGuidePage() {
               <div>
                 <h3 className="text-lg font-semibold text-title">Is this a substitute for engineering sign-off?</h3>
                 <p className="mt-2 leading-relaxed">
-                  No—use it for estimation and planning; validate slot fill, temperature rise, and standards with qualified review.
+                  No, use it for estimation and planning; validate slot fill, temperature rise, and standards with qualified review.
                 </p>
               </div>
               <div>
@@ -306,7 +306,7 @@ export default function BlogCmBestMatchGuidePage() {
             <ul className="mt-4 space-y-2 text-secondary">
               <li>
                 <Link href="/iqwirecalculator" className="font-medium text-primary hover:underline">
-                  IQWireCalculator — circular mils &amp; wire substitution app
+                  IQWireCalculator, circular mils &amp; wire substitution app
                 </Link>
               </li>
               <li>

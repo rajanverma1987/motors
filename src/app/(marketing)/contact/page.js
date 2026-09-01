@@ -108,7 +108,7 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <span className="font-medium text-title">Schedule a demo</span>
-                      <p className="mt-0.5 text-sm text-secondary">See how IQMotorBase.com works for your shop—work orders, leads, and more.</p>
+                      <p className="mt-0.5 text-sm text-secondary">See how IQMotorBase.com works for your shop, work orders, leads, and more.</p>
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -117,7 +117,7 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <span className="font-medium text-title">Pricing & plans</span>
-                      <p className="mt-0.5 text-sm text-secondary">Starter, Professional, or Enterprise—we’ll match you with the right plan.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Starter, Professional, or Enterprise, we’ll match you with the right plan.</p>
                     </div>
                   </li>
                   <li className="flex gap-3">
@@ -126,7 +126,7 @@ export default function ContactPage() {
                     </span>
                     <div>
                       <span className="font-medium text-title">Support & questions</span>
-                      <p className="mt-0.5 text-sm text-secondary">Technical help, directory listing, or lead generation—we’re here to help.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Technical help, directory listing, or lead generation, we’re here to help.</p>
                     </div>
                   </li>
                 </ul>

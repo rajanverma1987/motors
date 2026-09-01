@@ -108,7 +108,7 @@ export async function generateMetadata({ params }) {
       siteName: "IQMotorBase.com",
       locale: "en_US",
       images: ogImage
-        ? [{ url: ogImage, alt: `${listing.companyName} — electric motor repair` }]
+        ? [{ url: ogImage, alt: `${listing.companyName}, electric motor repair` }]
         : undefined,
     },
     twitter: {
@@ -272,7 +272,7 @@ export default async function ListingDetailPage({ params }) {
                     <div className="shrink-0">
                       <ListingInlineLogo
                         src={logoUrl}
-                        alt={`${listing.companyName} logo — electric motor repair`}
+                        alt={`${listing.companyName} logo, electric motor repair`}
                       />
                     </div>
                   ) : null}
@@ -348,7 +348,7 @@ export default async function ListingDetailPage({ params }) {
                         </address>
                       ) : null}
 
-                      {/* Hidden contact data for Google crawlers — keep in HTML */}
+                      {/* Hidden contact data for Google crawlers, keep in HTML */}
                       <div className="contact-seo-hidden" aria-hidden="true">
                         {listing.phone ? (
                           <a
@@ -639,7 +639,7 @@ export default async function ListingDetailPage({ params }) {
                           </h3>
                           <ListingLogoImage
                             src={logoUrl}
-                            alt={`${listing.companyName} — electric motor repair logo`}
+                            alt={`${listing.companyName}, electric motor repair logo`}
                           />
                         </div>
                       )}
@@ -669,8 +669,8 @@ export default async function ListingDetailPage({ params }) {
             <div className="mt-6 rounded-lg border border-border bg-muted/25 px-4 py-3 sm:px-5">
               <p className="text-sm text-secondary">
                 <span className="font-medium text-title">Is this your business?</span> Sign in to
-                your IQMotorBase account to update this directory listing—services, service area,
-                photos, and contact details—whenever they change.{" "}
+                your IQMotorBase account to update this directory listing, services, service area,
+                photos, and contact details, whenever they change.{" "}
                 <Link
                   href={`/login?next=${encodeURIComponent("/dashboards/settings?section=directory-listing")}`}
                   className="font-medium text-primary underline-offset-2 hover:underline"

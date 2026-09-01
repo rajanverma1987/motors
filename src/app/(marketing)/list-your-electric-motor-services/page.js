@@ -207,7 +207,7 @@ export default function ListYourCenterPage() {
                 Get found by customers who need motor repair
               </h1>
               <p className="mt-4 text-lg text-secondary">
-                List your center on IQMotorBase.com and show up when people search for repair shops in your area. It’s free to list—you get more visibility and more leads.
+                List your center on IQMotorBase.com and show up when people search for repair shops in your area. It’s free to list, you get more visibility and more leads.
               </p>
               <Link
                 href="/electric-motor-repair-shops-listings"
@@ -239,7 +239,7 @@ export default function ListYourCenterPage() {
                     </span>
                     <div>
                       <span className="font-semibold text-title">Get found when customers search</span>
-                      <p className="mt-0.5 text-sm text-secondary">Your listing appears when people look for “motor repair near me” or “rewinding shop” in your region—so you reach buyers when they’re ready.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Your listing appears when people look for “motor repair near me” or “rewinding shop” in your region, so you reach buyers when they’re ready.</p>
                     </div>
                   </li>
                   <li className="flex gap-4">
@@ -250,7 +250,7 @@ export default function ListYourCenterPage() {
                     </span>
                     <div>
                       <span className="font-semibold text-title">Qualified repair leads</span>
-                      <p className="mt-0.5 text-sm text-secondary">Inquiries come from the IQMotorBase.com network and local search—people who need repair work, not random traffic.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Inquiries come from the IQMotorBase.com network and local search, people who need repair work, not random traffic.</p>
                     </div>
                   </li>
                   <li className="flex gap-4">
@@ -261,7 +261,7 @@ export default function ListYourCenterPage() {
                     </span>
                     <div>
                       <span className="font-semibold text-title">Show what you do best</span>
-                      <p className="mt-0.5 text-sm text-secondary">Add your services, capabilities, and photos so customers see why they should choose you—no extra cost to list.</p>
+                      <p className="mt-0.5 text-sm text-secondary">Add your services, capabilities, and photos so customers see why they should choose you, no extra cost to list.</p>
                     </div>
                   </li>
                   <li className="flex gap-4">
@@ -279,7 +279,7 @@ export default function ListYourCenterPage() {
               </div>
               <div>
                 <FormContainer>
-                  <FormSectionTitle as="h2">Get started — verify your email</FormSectionTitle>
+                  <FormSectionTitle as="h2">Get started, verify your email</FormSectionTitle>
                   <p className="mb-4 text-sm text-secondary">
                     We’ll send a 6-digit code to this address. Verify once and your listing can go live after you complete your profile.
                   </p>

@@ -41,7 +41,7 @@ function CalculatorPricingCard({ pricing }) {
         </li>
         <li className="flex gap-2">
           <FiCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
-          Access tied to your email—use on any device after you log in
+          Access tied to your email, use on any device after you log in
         </li>
       </ul>
       {!monthlyOk ? (
@@ -87,7 +87,7 @@ export default function CalculatorAccountGate({
               </Badge>
             </div>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-secondary">
-              This page is for a <strong className="text-title">calculators-only subscription</strong>—not the full
+              This page is for a <strong className="text-title">calculators-only subscription</strong>, not the full
               IQMotorBase repair-shop management system. You will only get the Calculators workspace after login, not customers, work
               orders, inventory, or other dashboard modules.
             </p>

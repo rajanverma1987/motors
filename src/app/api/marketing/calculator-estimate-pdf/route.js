@@ -156,7 +156,7 @@ export async function POST(request) {
 function formatUsdRange(low, high) {
   const lo = Number(low);
   const hi = Number(high);
-  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return "—";
+  if (!Number.isFinite(lo) || !Number.isFinite(hi)) return "-";
   const fmt = (n) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
   return `${fmt(lo)} – ${fmt(hi)}`;

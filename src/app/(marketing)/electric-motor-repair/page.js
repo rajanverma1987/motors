@@ -8,7 +8,7 @@ const path = "/electric-motor-repair";
 
 export const metadata = {
   title: {
-    absolute: "Electric Motor Repair & Rewinding — Find Certified Shops | IQMotorBase",
+    absolute: "Electric Motor Repair & Rewinding | Find Certified Shops | IQMotorBase",
   },
   description:
     "Find certified electric motor repair and rewinding shops near you. AC motor rewinding, DC armature and stator rewinds, servo, high-voltage, and emergency repair. Browse shops by state.",
@@ -45,7 +45,7 @@ export default function ElectricMotorRepairHubPage() {
   const hubJsonLd = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: "Electric motor repair & rewinding — buyer resources",
+    name: "Electric motor repair & rewinding | buyer resources",
     description:
       "Collection of practical guides for facilities and buyers who need electric motor repair, rewinding, quotes, and qualified shops.",
     url: `${siteUrl.replace(/\/$/, "")}${path}`,
@@ -74,7 +74,7 @@ export default function ElectricMotorRepairHubPage() {
           <p className="mt-4 text-lg text-secondary">
             IQMotorBase.com connects buyers with motor repair and rewinding shops and publishes{" "}
             <strong className="text-title">buyer-focused guides</strong> so you can budget, compare quotes, and act
-            quickly when equipment fails. Use this hub as your starting point—search engines favor clear structure and
+            quickly when equipment fails. Use this hub as your starting point, search engines favor clear structure and
             helpful internal links; we group everything you need below.
           </p>
         </div>
@@ -90,13 +90,13 @@ export default function ElectricMotorRepairHubPage() {
                   <Link href="/industrial-motor-repair" className="font-medium text-primary hover:underline">
                     Industrial motor repair
                   </Link>
-                  <span> — plant motors, rewinding, costs &amp; shop finder</span>
+                  <span>, plant motors, rewinding, costs &amp; shop finder</span>
                 </li>
                 <li>
                   <Link href="/cost-of-motor-repair-and-rewinding" className="font-medium text-primary hover:underline">
                     Motor repair &amp; rewinding cost guide
                   </Link>
-                  <span> — what drives price and typical US ranges</span>
+                  <span>, what drives price and typical US ranges</span>
                 </li>
                 <li>
                   <Link
@@ -105,7 +105,7 @@ export default function ElectricMotorRepairHubPage() {
                   >
                     How to choose a repair shop
                   </Link>
-                  <span> — scope, testing, certifications, turnaround</span>
+                  <span>, scope, testing, certifications, turnaround</span>
                 </li>
                 <li>
                   <Link
@@ -114,19 +114,19 @@ export default function ElectricMotorRepairHubPage() {
                   >
                     Repair vs. replace
                   </Link>
-                  <span> — decide with real quotes and downtime in mind</span>
+                  <span>, decide with real quotes and downtime in mind</span>
                 </li>
                 <li>
                   <Link href="/types-of-electric-motor-repair-services" className="font-medium text-primary hover:underline">
                     Types of repair services
                   </Link>
-                  <span> — rewind vs. repair, AC/DC, testing</span>
+                  <span>, rewind vs. repair, AC/DC, testing</span>
                 </li>
                 <li>
                   <Link href="/emergency-motor-repair-what-to-do" className="font-medium text-primary hover:underline">
                     Emergency motor failure
                   </Link>
-                  <span> — rush timelines and documentation</span>
+                  <span>, rush timelines and documentation</span>
                 </li>
               </ul>
             </section>
@@ -172,7 +172,7 @@ export default function ElectricMotorRepairHubPage() {
             <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-title">Get a quote</h2>
               <p className="mt-2 text-sm text-secondary">
-                Submit motor details—we connect you with repair shops that can inspect and quote.
+                Submit motor details, we connect you with repair shops that can inspect and quote.
               </p>
               <div className="mt-4 flex flex-col gap-3">
                 <GetQuoteCta />

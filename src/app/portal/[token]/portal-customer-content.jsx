@@ -18,7 +18,7 @@ function fmtMoney(value, currency) {
 function fmtDate(value, currency) {
   if (!value) return "";
   const formatted = formatDateForCurrency(value, currency || "USD");
-  return formatted === "—" ? "" : formatted;
+  return formatted === ", " ? "" : formatted;
 }
 
 function statusBadgeVariant(status) {
@@ -82,10 +82,10 @@ function LineTables({ doc, currency }) {
                 {doc.scopeLines.map((row, i) => (
                   <tr key={i} className="border-t border-border">
                     <td className="whitespace-pre-wrap px-2.5 py-1.5 align-top text-title">
-                      {row.description || "—"}
+                      {row.description || ", "}
                     </td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
-                      {row.price ? fmtMoney(row.price, currency) : "—"}
+                      {row.price ? fmtMoney(row.price, currency) : ", "}
                     </td>
                   </tr>
                 ))}
@@ -119,13 +119,13 @@ function LineTables({ doc, currency }) {
               <tbody>
                 {doc.otherLines.map((row, i) => (
                   <tr key={i} className="border-t border-border">
-                    <td className="px-2.5 py-1.5 text-title">{row.description || "—"}</td>
+                    <td className="px-2.5 py-1.5 text-title">{row.description || ", "}</td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
                       {row.qty || "1"}
                     </td>
-                    <td className="px-2.5 py-1.5 text-title">{row.uom || "—"}</td>
+                    <td className="px-2.5 py-1.5 text-title">{row.uom || ", "}</td>
                     <td className="px-2.5 py-1.5 text-right tabular-nums text-title">
-                      {row.price ? fmtMoney(row.price, currency) : "—"}
+                      {row.price ? fmtMoney(row.price, currency) : ", "}
                     </td>
                   </tr>
                 ))}
@@ -217,7 +217,7 @@ function ProposalCard({ doc, currency, onPrint, showOutcome, printBusy }) {
             ) : null}
           </div>
           <h3 className="mt-1.5 text-lg font-semibold tracking-tight text-title">
-            {doc.documentLabel} {doc.documentNumber || "—"}
+            {doc.documentLabel} {doc.documentNumber || ", "}
           </h3>
           {meta ? <p className="mt-0.5 text-xs text-secondary">{meta}</p> : null}
           {showOutcome && doc.outcomeLabel ? (
@@ -283,28 +283,28 @@ function MotorsPanel({ motors }) {
             <div>
               <dt className="text-[11px] font-medium text-secondary">Manufacturer / model</dt>
               <dd className="font-medium text-title">
-                {[m.manufacturer, m.modelNumber].filter(Boolean).join(" ") || "—"}
+                {[m.manufacturer, m.modelNumber].filter(Boolean).join(" ") || ", "}
               </dd>
             </div>
             <div>
               <dt className="text-[11px] font-medium text-secondary">HP / kW</dt>
-              <dd className="text-title">{m.hpKw || "—"}</dd>
+              <dd className="text-title">{m.hpKw || ", "}</dd>
             </div>
             <div>
               <dt className="text-[11px] font-medium text-secondary">Frame / type</dt>
-              <dd className="text-title">{m.frameType || "—"}</dd>
+              <dd className="text-title">{m.frameType || ", "}</dd>
             </div>
             <div>
               <dt className="text-[11px] font-medium text-secondary">Volts</dt>
-              <dd className="text-title">{m.volts || "—"}</dd>
+              <dd className="text-title">{m.volts || ", "}</dd>
             </div>
             <div>
               <dt className="text-[11px] font-medium text-secondary">Amps</dt>
-              <dd className="text-title">{m.amps || "—"}</dd>
+              <dd className="text-title">{m.amps || ", "}</dd>
             </div>
             <div>
               <dt className="text-[11px] font-medium text-secondary">RPM</dt>
-              <dd className="text-title">{m.rpm || "—"}</dd>
+              <dd className="text-title">{m.rpm || ", "}</dd>
             </div>
           </dl>
         </div>

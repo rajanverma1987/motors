@@ -1,4 +1,5 @@
 import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 import { HOME_FAQS } from "@/lib/home-faqs";
 import {
   HERO_DASHBOARD_TABLET_ALT,
@@ -30,9 +31,9 @@ export function HomePageJsonLd() {
     "@type": "WebPage",
     "@id": `${siteUrl}/#webpage`,
     url: siteUrl,
-    name: "Motor Repair Shop Software — Proposals, Work Orders, Invoices & Inventory in One Place | IQMotorBase",
+    name: "Motor Repair Shop Software | Proposals, Work Orders, Invoices & Inventory in One Place | IQMotorBase",
     description:
-      "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop — all in one platform.",
+      "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop, all in one platform.",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: siteUrl },
     primaryImageOfPage: {
       "@type": "ImageObject",
@@ -59,8 +60,67 @@ export function HomePageJsonLd() {
     })),
   };
 
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": ["Organization", "SoftwareApplication"],
+    name: "IQMotorBase",
+    alternateName: "IQ Motor Base",
+    url: siteUrl,
+    logo: `${siteUrl}${BRAND_LOGO_PUBLIC_PATH}`,
+    foundingDate: "2025",
+    description:
+      "IQMotorBase is a shop management platform and lead generation directory " +
+      "built exclusively for electric motor repair and rewinding businesses. " +
+      "The platform includes digital job write-ups with motor nameplate data, " +
+      "work order management, customer and motor history registry, shop inventory, " +
+      "invoicing, accounts receivable, vendor purchase orders, QuickBooks Online sync, " +
+      "and a public directory of certified motor repair shops across the United States. " +
+      "Pricing starts at $349 per month for unlimited users.",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    offers: {
+      "@type": "Offer",
+      price: "349.00",
+      priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "349.00",
+        priceCurrency: "USD",
+        unitCode: "MON",
+      },
+    },
+    knowsAbout: [
+      "Electric motor repair",
+      "Motor rewinding",
+      "AC motor rewinding",
+      "DC motor armature rewinding",
+      "High-voltage motor repair",
+      "Servo motor repair",
+      "Motor repair shop management software",
+      "EASA AR100 rewind standards",
+      "NEMA motor standards",
+      "Motor repair cost estimation",
+    ],
+    areaServed: {
+      "@type": "Country",
+      name: "United States",
+    },
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "Sales",
+      url: `${siteUrl}/contact`,
+      availableLanguage: "English",
+    },
+    sameAs: [],
+  };
+
   return (
     <>
+      <script
+        id="schema-jsonld-organization"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
       <script
         id="schema-jsonld-website"
         type="application/ld+json"

@@ -34,7 +34,7 @@ export async function generateMetadata({ params }) {
   const path = `/careers/${job.slug}`;
   const canonicalUrl = `${base}${path}`;
   const description = buildCareerMetaDescription(job);
-  const title = `${job.title} — ${job.shopName}`;
+  const title = `${job.title}, ${job.shopName}`;
   return {
     title,
     description,
@@ -52,7 +52,7 @@ export async function generateMetadata({ params }) {
           url: "/og-image.png",
           width: 1200,
           height: 630,
-          alt: `${job.title} — ${job.shopName}`,
+          alt: `${job.title}, ${job.shopName}`,
         },
       ],
     },

@@ -1,5 +1,5 @@
 /**
- * Emergency page FAQ — all items always expanded.
+ * Emergency page FAQ, all items always expanded.
  * @param {{ items: { question: string; answer: string }[] }} props
  */
 export default function EmergencyFaqAccordion({ items }) {

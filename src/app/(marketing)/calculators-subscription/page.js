@@ -4,7 +4,7 @@ import CalculatorsSubscriptionPageClient from "./calculators-subscription-page-c
 const path = "/calculators-subscription";
 
 export const metadata = {
-  title: "Calculator subscription — motor shop tools | IQMotorBase.com",
+  title: "Calculator subscription | motor shop tools | IQMotorBase.com",
   description:
     "Subscribe to IQMotorBase calculators: rewind cost ballpark, CM Best Match, FLA, torque, speed, and bench electrical tools for motor repair shops.",
   alternates: { canonical: path },

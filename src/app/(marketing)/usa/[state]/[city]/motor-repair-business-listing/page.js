@@ -65,7 +65,7 @@ function linkSections(state, city) {
     {
       title: "Up a level",
       links: [
-        { href: statePath, label: `${state.name} — statewide` },
+        { href: statePath, label: `${state.name}, statewide` },
         { href: SEO_USA_HUB_PATH, label: "USA hub" },
       ],
     },
@@ -92,7 +92,7 @@ export default async function CityMotorRepairBusinessListingPage({ params }) {
 
   return (
     <SeoLeadLandingPage
-      h1={`List Your Motor Repair Business in ${label} – Get More Customers`}
+      h1={`List Your Motor Repair Business in ${label} to Get More Customers`}
       canonicalPath={path}
       breadcrumbs={[
         { href: "/", label: "Home" },

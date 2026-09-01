@@ -97,7 +97,7 @@ export default function IndustryPageView({ page }) {
               Common failure modes in {page.industry.toLowerCase()} applications
             </h2>
             <p className="mt-2 text-sm text-secondary">
-              Failure patterns maintenance teams see most often — and what to address on reinstallation.
+              Failure patterns maintenance teams see most often, and what to address on reinstallation.
             </p>
             <ContentCards items={page.failureModes} titleKey="mode" bodyKey="cause" />
           </section>

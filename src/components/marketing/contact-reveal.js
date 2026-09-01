@@ -286,7 +286,7 @@ export default function ContactReveal({
                     {submitting ? "Revealing contact…" : "Reveal contact info"}
                   </Button>
                   <div className="border-t border-border pt-4 text-center">
-                    <p className="text-sm text-secondary">Have a motor repair need? Send your full requirements instead —</p>
+                    <p className="text-sm text-secondary">Have a motor repair need? Send your full requirements instead , </p>
                     <button
                       type="button"
                       className="mt-1 text-sm font-semibold text-primary underline underline-offset-2"
@@ -304,7 +304,7 @@ export default function ContactReveal({
               children: (
                 <div className="flex flex-col gap-4">
                   <p className="text-sm text-secondary">
-                    Describe your motor and failure — {shopName} will respond directly with a quote.
+                    Describe your motor and failure, {shopName} will respond directly with a quote.
                   </p>
                   <RepairRequestForm
                     mode="shop"

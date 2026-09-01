@@ -36,7 +36,7 @@ export default function BlogPageLayout({
   wideSidebar = false,
   /** When false, sidebar scrolls with the page (e.g. tall embedded calculators). */
   stickySidebar = true,
-  /** Skip the card wrapper — use for RepairRequestForm and other self-contained sidebar blocks. */
+  /** Skip the card wrapper, use for RepairRequestForm and other self-contained sidebar blocks. */
   sidebarUnwrapped = false,
   /**
    * Full-bleed / split hero product visual (e.g. "/images/hero-dashboard-tablet.jpg").
@@ -53,6 +53,8 @@ export default function BlogPageLayout({
   heroSecondaryCta = null,
   /** Optional short highlight chips under CTAs (image hero only). */
   heroHighlights = null,
+  /** Optional AI quick-answer block rendered before the H1 in the hero. */
+  quickAnswer = null,
   children,
 }) {
   const sidebarHasLeader = Boolean(sidebarTitle || sidebarDescription || sidebarCta);
@@ -158,10 +160,11 @@ export default function BlogPageLayout({
               wideSidebar ? "max-w-[96rem]" : "max-w-[86.4rem]"
             } lg:grid-cols-2 lg:items-stretch`}
           >
-            {/* Copy — solid panel, no blur over the photo */}
+            {/* Copy, solid panel, no blur over the photo */}
             <div className="order-2 flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:order-1 lg:px-8 lg:py-16 xl:px-10">
               <div className="mx-auto w-full max-w-xl lg:mx-0 lg:max-w-none">
                 {breadcrumbBlock}
+                {quickAnswer ? <div className="mt-4">{quickAnswer}</div> : null}
                 {heroEyebrow ? (
                   <span className="mt-4 inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wide text-primary sm:text-sm">
                     {heroEyebrow}
@@ -196,7 +199,7 @@ export default function BlogPageLayout({
               </div>
             </div>
 
-            {/* Product visual — sharp, no frosted overlay */}
+            {/* Product visual, sharp, no frosted overlay */}
             <div className="relative order-1 min-h-[16rem] w-full bg-bg sm:min-h-[20rem] lg:order-2 lg:min-h-[min(68vh,34rem)]">
               <Image
                 src={heroImage}
@@ -206,7 +209,7 @@ export default function BlogPageLayout({
                 sizes="(max-width: 1024px) 100vw, 50vw"
                 className="object-cover object-center"
               />
-              {/* Soft seam only — keeps left edge from looking cut-off without washing the UI */}
+              {/* Soft seam only, keeps left edge from looking cut-off without washing the UI */}
               <div
                 className="pointer-events-none absolute inset-y-0 left-0 hidden w-10 bg-gradient-to-r from-card/40 to-transparent lg:block"
                 aria-hidden
@@ -219,6 +222,7 @@ export default function BlogPageLayout({
           <HeroBackground />
           <div className="relative z-10 mx-auto max-w-[67.2rem] px-4 sm:px-6">
             {breadcrumbBlock}
+            {quickAnswer ? <div className="mt-4">{quickAnswer}</div> : null}
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
               {title}
             </h1>
@@ -239,7 +243,7 @@ export default function BlogPageLayout({
                 : "md:grid-cols-[minmax(0,13fr)_minmax(0,7fr)]"
           }`}
         >
-          {/* Mobile CTA / tools — above content, only on small screens */}
+          {/* Mobile CTA / tools, above content, only on small screens */}
           {sidebarHasAny ? (
             sidebarUnwrapped ? (
               <div className="md:hidden">{sidebarInner}</div>
@@ -254,7 +258,7 @@ export default function BlogPageLayout({
             {children}
           </div>
 
-          {/* Sidebar — optionally sticky on md+ so short CTAs stay in view while reading */}
+          {/* Sidebar, optionally sticky on md+ so short CTAs stay in view while reading */}
           <aside
             className={`hidden min-w-0 md:col-start-2 md:row-start-1 md:block ${
               stickySidebar ? "md:sticky md:top-24 md:self-start" : ""

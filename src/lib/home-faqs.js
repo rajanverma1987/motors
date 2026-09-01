@@ -1,10 +1,10 @@
-/** Homepage FAQ copy — shared by HomeFAQ component and FAQPage JSON-LD. */
+/** Homepage FAQ copy, shared by HomeFAQ component and FAQPage JSON-LD. */
 
 export const HOME_FAQS = [
   {
     question: "How much does motor repair shop software cost?",
     answer:
-      "IQMotorBase uses custom pricing tailored to your workflow — monthly, yearly, or one-time options are available. Contact us for a quote or book a demo.",
+      "IQMotorBase uses custom pricing tailored to your workflow, monthly, yearly, or one-time options are available. Contact us for a quote or book a demo.",
   },
   {
     question: "Can I import my existing customer and job data?",
@@ -14,7 +14,7 @@ export const HOME_FAQS = [
   {
     question: "Does IQMotorBase work on mobile for technicians?",
     answer:
-      "Yes. The technician mobile app lets floor staff scan job QR codes, update work order status, and log motor testing notes in real time — without going back to a desk.",
+      "Yes. The technician mobile app lets floor staff scan job QR codes, update work order status, and log motor testing notes in real time, without going back to a desk.",
   },
   {
     question: "How do repair leads work?",

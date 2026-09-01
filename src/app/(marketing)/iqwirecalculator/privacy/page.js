@@ -68,20 +68,20 @@ export default function IqwirecalculatorPrivacyPage() {
         <p className="mt-3 leading-relaxed text-secondary">We collect:</p>
         <ul className="mt-3 list-disc space-y-2 pl-6 text-secondary">
           <li>
-            <strong className="text-title">Account data</strong> — name, email, password (stored as a hash), phone, and
+            <strong className="text-title">Account data</strong>, name, email, password (stored as a hash), phone, and
             country you provide at registration or in Profile.
           </li>
           <li>
-            <strong className="text-title">App content</strong> — calculation inputs and results you save (including
+            <strong className="text-title">App content</strong>, calculation inputs and results you save (including
             wire sizes, circular mils, and named saves) and custom wire sizes you add to your catalog.
           </li>
           <li>
-            <strong className="text-title">Subscription and payment data</strong> — trial and subscription status,
+            <strong className="text-title">Subscription and payment data</strong>, trial and subscription status,
             period dates, and PayPal identifiers needed to bill and cancel. Card details are handled by PayPal, not
             stored in the app.
           </li>
           <li>
-            <strong className="text-title">Technical data</strong> — IP address, timestamps, and basic device/request
+            <strong className="text-title">Technical data</strong>, IP address, timestamps, and basic device/request
             information when the app talks to our servers (sign-in, saves, catalog sync, checkout). A session token is
             stored on the device.
           </li>

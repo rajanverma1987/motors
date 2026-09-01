@@ -3,7 +3,7 @@ import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Subscribe — IQWireCalculator",
+  title: "Subscribe | IQWireCalculator",
   robots: { index: false, follow: false },
 };
 

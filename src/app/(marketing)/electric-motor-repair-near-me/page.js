@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AiQuickAnswer from "@/components/marketing/ai-quick-answer";
 import { LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
@@ -16,6 +17,34 @@ const TRUST_CHIPS = [
 export default function NearMePage() {
   const site = getPublicSiteUrl().replace(/\/$/, "");
   const pageUrl = `${site}${NEAR_ME_PATH}`;
+  const dateModified = new Date().toISOString().split("T")[0];
+
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: "Electric Motor Repair and Rewinding Near Me | How to Find a Shop",
+    url: pageUrl,
+    datePublished: "2025-01-01",
+    dateModified,
+    author: {
+      "@type": "Organization",
+      name: "IQMotorBase",
+      url: site,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "IQMotorBase",
+      logo: { "@type": "ImageObject", url: `${site}/logo.png` },
+    },
+    description:
+      "How to find a certified electric motor repair and rewinding shop near you. " +
+      "Covers what to prepare, how to evaluate shops, EASA accreditation, " +
+      "turnaround times, and cost ranges.",
+    speakable: {
+      "@type": "SpeakableSpecification",
+      cssSelector: [".ai-quick-answer", "h1", "h2"],
+    },
+  };
 
   const pageSchema = {
     "@context": "https://schema.org",
@@ -53,7 +82,17 @@ export default function NearMePage() {
       <section className="relative overflow-hidden border-b border-border bg-card py-12 sm:py-16">
         <HeroBackground />
         <div className={`relative z-10 ${LISTINGS_PAGE_CONTAINER}`}>
-          <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-5xl">
+          <AiQuickAnswer>
+            <p>
+              <strong>Quick answer:</strong> To find an electric motor repair or rewinding shop near you, use the
+              IQMotorBase directory to browse certified shops by state and city. Most US cities have at least one
+              EASA-accredited repair center within a 50-mile radius. Standard motor repair turnaround is 5 to 10 business
+              days. Emergency repair is available at many shops within 24 to 72 hours at a 25 to 50% premium. AC motor
+              rewinding, DC armature rewinding, servo motor repair, high-voltage rewinding, pump repair, and generator
+              rewinding are all available through the IQMotorBase network.
+            </p>
+          </AiQuickAnswer>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-title sm:mt-4 sm:text-4xl lg:text-5xl">
             Electric motor repair and rewinding near me
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
@@ -99,6 +138,7 @@ export default function NearMePage() {
 
       <NearMeGuide />
 
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(pageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
     </>

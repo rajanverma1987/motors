@@ -8,10 +8,10 @@ const dateModified = "2026-07-04";
 
 export const metadata = {
   title: {
-    absolute: "Electric Motor Rewinding Cost Calculator — Free US Ballpark (2026)",
+    absolute: "Electric Motor Rewinding Cost Calculator | Free US Ballpark (2026)",
   },
   description:
-    "Free electric motor rewinding cost calculator. Enter HP, phase, and optional nameplate details for an instant US ballpark—see how each field affects your estimate.",
+    "Free electric motor rewinding cost calculator. Enter HP, phase, and optional nameplate details for an instant US ballpark, see how each field affects your estimate.",
   keywords: [
     "electric motor rewinding cost calculator",
     "motor rewinding cost calculator",
@@ -22,9 +22,9 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Electric Motor Rewinding Cost Calculator — Free US Ballpark | IQMotorBase.com",
+    title: "Electric Motor Rewinding Cost Calculator | Free US Ballpark | IQMotorBase.com",
     description:
-      "Instant US ballpark for electric motor rewinding cost. Enter HP, phase, and RPM—your estimate updates as you adjust the fields.",
+      "Instant US ballpark for electric motor rewinding cost. Enter HP, phase, and RPM, your estimate updates as you adjust the fields.",
     url: path,
     type: "website",
     siteName: "IQMotorBase.com",
@@ -49,17 +49,17 @@ const faqItems = [
   {
     question: "What does each field in the calculator do?",
     answer:
-      "Motor HP and phase drive the base labor and copper scaling. RPM adjusts winding complexity (leave blank for a typical 1800 RPM assumption). Advanced fields—voltage, slots, coil type, AWG, and optional copper weight—refine the material portion when you have nameplate or shop data.",
+      "Motor HP and phase drive the base labor and copper scaling. RPM adjusts winding complexity (leave blank for a typical 1800 RPM assumption). Advanced fields, voltage, slots, coil type, AWG, and optional copper weight, refine the material portion when you have nameplate or shop data.",
   },
   {
     question: "Is this calculator free to use?",
     answer:
-      "Yes. The ballpark range, on-screen recommendation, and PDF download are free. The result is planning guidance only—not a binding shop quote.",
+      "Yes. The ballpark range, on-screen recommendation, and PDF download are free. The result is planning guidance only, not a binding shop quote.",
   },
   {
     question: "What should I do after I get a ballpark from the calculator?",
     answer:
-      "Use the PDF if you need to share numbers internally, or Upload nameplate to request shop follow-up. For pricing tables, cost drivers, and longer FAQs, see the IQMotorBase.com motor rewinding cost guide—not this tool page.",
+      "Use the PDF if you need to share numbers internally, or Upload nameplate to request shop follow-up. For pricing tables, cost drivers, and longer FAQs, see the IQMotorBase.com motor rewinding cost guide, not this tool page.",
   },
 ];
 
@@ -109,7 +109,7 @@ function WebPageJsonLd({ pageUrl, site }) {
     url: pageUrl,
     name: "Electric motor rewinding cost calculator (US ballpark)",
     description:
-      "Free US ballpark calculator for electric motor rewinding cost—how to enter HP, phase, RPM, and optional winding details.",
+      "Free US ballpark calculator for electric motor rewinding cost, how to enter HP, phase, RPM, and optional winding details.",
     dateModified,
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
     about: { "@type": "Thing", name: "Electric motor rewinding cost calculator" },
@@ -178,7 +178,7 @@ function HowToJsonLd({ pageUrl }) {
         "@type": "HowToStep",
         position: 4,
         name: "Read the ballpark and download or share",
-        text: "Review the low–high range and on-screen notes. Download the free PDF or use Upload nameplate when specs are incomplete.",
+        text: "Review the low to high range and on-screen notes. Download the free PDF or use Upload nameplate when specs are incomplete.",
       },
     ],
     mainEntityOfPage: { "@type": "WebPage", "@id": `${pageUrl}#webpage` },
@@ -218,7 +218,7 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
             Electric motor rewinding cost calculator
           </h1>
           <p className="mt-3 max-w-3xl text-lg text-secondary">
-            Enter your motor specs below for an instant US ballpark. This page is the tool itself—pricing tables, cost
+            Enter your motor specs below for an instant US ballpark. This page is the tool itself, pricing tables, cost
             drivers, and shop-selection guides live on our{" "}
             <Link href="/cost-of-motor-repair-and-rewinding" className="font-medium text-primary hover:underline">
               motor rewinding cost guide
@@ -237,7 +237,7 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
             Get your ballpark rewinding cost
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-secondary">
-            Adjust the fields below—your estimate updates automatically. Not a shop quote; inspection may change scope
+            Adjust the fields below, your estimate updates automatically. Not a shop quote; inspection may change scope
             and price.
           </p>
           <div className="not-prose mt-6">
@@ -249,74 +249,74 @@ export default function ElectricMotorRewindingCostCalculatorPage() {
           <section id="calculator-how-to">
             <h2 className="text-2xl font-bold text-title sm:text-3xl">How to use this calculator</h2>
             <p className="text-secondary">
-              The estimate recalculates as you change inputs. You do not need every nameplate field to start—add detail
+              The estimate recalculates as you change inputs. You do not need every nameplate field to start, add detail
               when you have it.
             </p>
 
-            <h3 className="mt-8 text-lg font-semibold text-title">Step 1 — Motor HP and phase</h3>
+            <h3 className="mt-8 text-lg font-semibold text-title">Step 1| Motor HP and phase</h3>
             <p className="text-secondary">
               Choose <strong className="text-title">Motor HP</strong> from the dropdown to match your nameplate rating.
               Select <strong className="text-title">Phase</strong> (single-phase or three-phase). These two fields drive
               most of the labor and copper scaling in the model.
             </p>
 
-            <h3 className="mt-8 text-lg font-semibold text-title">Step 2 — RPM (optional)</h3>
+            <h3 className="mt-8 text-lg font-semibold text-title">Step 2, RPM (optional)</h3>
             <p className="text-secondary">
               If your nameplate lists speed, pick the matching <strong className="text-title">RPM</strong> (900, 1200,
               1800, 3600, etc.). If you leave RPM blank, the calculator assumes a typical{" "}
               <strong className="text-title">1800 RPM</strong> four-pole motor.
             </p>
 
-            <h3 className="mt-8 text-lg font-semibold text-title">Step 3 — Advanced details (optional)</h3>
+            <h3 className="mt-8 text-lg font-semibold text-title">Step 3, Advanced details (optional)</h3>
             <p className="text-secondary">
               Expand <strong className="text-title">Advanced details</strong> when you have more nameplate or shop
               data:
             </p>
             <ul className="mt-3 space-y-2 text-secondary">
               <li>
-                <strong className="text-title">Example presets</strong> — fills HP, RPM, slots, and wire for common
+                <strong className="text-title">Example presets</strong>, fills HP, RPM, slots, and wire for common
                 motor sizes (e.g. 3 HP · 1800 RPM · 36 slot).
               </li>
               <li>
-                <strong className="text-title">Voltage</strong> — nameplate voltage class (115 V through medium voltage).
+                <strong className="text-title">Voltage</strong>, nameplate voltage class (115 V through medium voltage).
               </li>
               <li>
-                <strong className="text-title">Stator slots</strong> — slot count from the nameplate or winding data.
+                <strong className="text-title">Stator slots</strong>, slot count from the nameplate or winding data.
               </li>
               <li>
-                <strong className="text-title">Coil type</strong> — lap, wave, or concentric when known.
+                <strong className="text-title">Coil type</strong>, lap, wave, or concentric when known.
               </li>
               <li>
-                <strong className="text-title">Magnet wire (AWG)</strong> — wire size when you have it from a prior
+                <strong className="text-title">Magnet wire (AWG)</strong>, wire size when you have it from a prior
                 rewind or takeoff.
               </li>
               <li>
-                <strong className="text-title">Copper weight</strong> — only if a shop or teardown already gave you
+                <strong className="text-title">Copper weight</strong>, only if a shop or teardown already gave you
                 approximate kg; otherwise leave blank and the model estimates from size.
               </li>
             </ul>
 
-            <h3 className="mt-8 text-lg font-semibold text-title">Step 4 — Read your ballpark</h3>
+            <h3 className="mt-8 text-lg font-semibold text-title">Step 4, Read your ballpark</h3>
             <p className="text-secondary">
-              The <strong className="text-title">Ballpark estimate (US)</strong> box shows a low–high range that updates
-              live. Below it you may see short notes—for example fractional-HP minimum fees, industrial custom-pricing
+              The <strong className="text-title">Ballpark estimate (US)</strong> box shows a low to high range that updates
+              live. Below it you may see short notes, for example fractional-HP minimum fees, industrial custom-pricing
               reminders, or a rewind-vs-new-motor hint. Expand{" "}
               <strong className="text-title">How this estimate is calculated</strong> inside the tool for methodology
               and data sources.
             </p>
 
-            <h3 className="mt-8 text-lg font-semibold text-title">Step 5 — Download, upload, or move on</h3>
+            <h3 className="mt-8 text-lg font-semibold text-title">Step 5, Download, upload, or move on</h3>
             <ul className="mt-3 space-y-2 text-secondary">
               <li>
-                <strong className="text-title">Download Detailed Estimate</strong> — free PDF with your inputs,
+                <strong className="text-title">Download Detailed Estimate</strong>, free PDF with your inputs,
                 ballpark range, and breakdown for internal sharing.
               </li>
               <li>
-                <strong className="text-title">Upload nameplate for an estimate</strong> — use when you do not know
+                <strong className="text-title">Upload nameplate for an estimate</strong>, use when you do not know
                 winding specs; we route photos so shops can advise or quote.
               </li>
               <li>
-                <strong className="text-title">Need pricing context?</strong> — HP tables, cost drivers, and FAQs are
+                <strong className="text-title">Need pricing context?</strong>, HP tables, cost drivers, and FAQs are
                 on the{" "}
                 <Link href="/cost-of-motor-repair-and-rewinding" className="font-medium text-primary hover:underline">
                   motor rewinding cost guide

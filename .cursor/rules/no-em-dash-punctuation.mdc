@@ -1,0 +1,37 @@
+---
+description: Use standard English punctuation instead of em dashes in all user-facing copy (STRICT)
+alwaysApply: true
+---
+
+# No em dash punctuation (STRICT)
+
+Do **not** use em dashes (`—`) or en dashes (`–`) in user-facing website copy, metadata, emails, or UI strings.
+
+## Use instead
+
+| Instead of em/en dash | Use |
+|------------------------|-----|
+| Independent clause break | Period (`.`) and capitalize the next sentence |
+| Introducing a list or explanation | Colon (`:`) |
+| Light parenthetical pause | Comma (`,`) |
+| Numeric or money ranges | **to** (e.g. `$400 to $900`, `5 to 10 business days`) |
+| Page title segment (metadata only) | Pipe (`\|`) when separating title parts, e.g. `Pricing \| Motor Repair Shop Software` |
+
+## Examples
+
+- Bad: `Request received — we'll be in touch`
+- Good: `Request received. We'll be in touch`
+
+- Bad: `Work orders — intake to delivery`
+- Good: `Work orders: intake to delivery` or `Work orders, from intake to delivery`
+
+- Bad: `$1,200–$3,500`
+- Good: `$1,200 to $3,500`
+
+## Scope
+
+Apply to marketing pages, navbar/footer, SEO metadata, customer emails, portal copy, and any new strings added to the public site. Dashboard internal labels should follow the same rule when they surface to customers (quotes, invoices, emails).
+
+## Code
+
+Avoid introducing `—` or `–` in JSX text, `title`/`description` metadata, FAQ answers, schema `description` fields, and email templates. Run `node scripts/normalize-em-dash.mjs` after bulk edits if needed.

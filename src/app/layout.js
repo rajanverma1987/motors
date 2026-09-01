@@ -40,11 +40,11 @@ export const metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "IQMotorBase",
   title: {
-    default: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
+    default: "Motor Repair Shop Software, Work Orders, Leads & Inventory | IQMotorBase",
     template: "%s | IQMotorBase",
   },
   description:
-    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+    "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
   keywords: [
     "motor repair center software",
     "motor rewinding center software",
@@ -72,23 +72,23 @@ export const metadata = {
     type: "website",
     locale: "en_US",
     siteName: "IQMotorBase.com",
-    title: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
+    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | IQMotorBase",
     description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "IQMotorBase.com – Motor Repair Center Software",
+        alt: "IQMotorBase.com to Motor Repair Center Software",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase",
+    title: "Motor Repair Shop Software | Work Orders, Leads & Inventory | IQMotorBase",
     description:
-      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop — all in one platform. Book a free demo today.",
+      "Manage work orders, leads, inventory, and invoicing for your electric motor repair shop, all in one platform. Book a free demo today.",
     images: ["/og-image.png"],
   },
   robots: {

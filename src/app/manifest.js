@@ -5,7 +5,7 @@ export default function manifest() {
     name: "IQMotorBase",
     short_name: "IQMotorBase",
     description:
-      "Motor repair shop software — work orders, leads, inventory, and invoicing.",
+      "Motor repair shop software: work orders, leads, inventory, and invoicing.",
     start_url: "/dashboards?source=pwa",
     scope: "/",
     display: "standalone",

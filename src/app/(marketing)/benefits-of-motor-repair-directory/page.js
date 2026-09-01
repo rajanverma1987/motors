@@ -9,7 +9,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Benefits of a Motor Repair Directory — Leads, Trust & Visibility for Electric Motor Shops | IQMotorBase.com";
+    "Benefits of a Motor Repair Directory, Leads, Trust & Visibility for Electric Motor Shops | IQMotorBase.com";
   const description =
     "Why electric motor repair and rewinding shops list in a dedicated directory: qualified buyer intent, niche SEO visibility, credibility, lower cost than broad ads, and reach beyond word-of-mouth. USA-focused guide for industrial motor service businesses.";
   return {
@@ -47,11 +47,11 @@ export async function generateMetadata() {
 const faqItems = [
   {
     q: "What is the main benefit of a motor repair directory vs. a general business directory?",
-    a: "Buyers filter by industry and service type. A motor-specific directory surfaces repair, rewinding, balancing, and related capabilities—so you compete with peer shops, not restaurants or retail stores. That usually means higher intent and fewer wasted calls.",
+    a: "Buyers filter by industry and service type. A motor-specific directory surfaces repair, rewinding, balancing, and related capabilities, so you compete with peer shops, not restaurants or retail stores. That usually means higher intent and fewer wasted calls.",
   },
   {
     q: "How do directory listings help with leads?",
-    a: "People searching for motor repair or rewinding often start with category and location keywords. A listing gives you a second indexed presence with structured business data and a clear contact path—so inquiries arrive while the need is active.",
+    a: "People searching for motor repair or rewinding often start with category and location keywords. A listing gives you a second indexed presence with structured business data and a clear contact path, so inquiries arrive while the need is active.",
   },
   {
     q: "Is a directory listing cheaper than paid search?",
@@ -67,7 +67,7 @@ const faqItems = [
   },
   {
     q: "Can I reach buyers outside my current customer list?",
-    a: "Yes. New facilities, maintenance contractors, and procurement teams search for vendors by region and capability. A directory helps you appear in those discovery moments—not only when someone already knows your name.",
+    a: "Yes. New facilities, maintenance contractors, and procurement teams search for vendors by region and capability. A directory helps you appear in those discovery moments, not only when someone already knows your name.",
   },
   {
     q: "How does this relate to selling parts on a marketplace?",
@@ -118,7 +118,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
       <ExtraJsonLd baseUrl={baseUrl} />
       <BlogPageLayout
         title="Benefits of listing in a motor repair directory"
-        description="A dedicated electric motor repair and rewinding directory connects your shop with buyers who are actively looking for repair, rewinding, and related services—so you spend less time chasing cold leads and more time winning jobs. Below are the practical benefits shops see when they invest in a niche directory alongside their website and local presence."
+        description="A dedicated electric motor repair and rewinding directory connects your shop with buyers who are actively looking for repair, rewinding, and related services, so you spend less time chasing cold leads and more time winning jobs. Below are the practical benefits shops see when they invest in a niche directory alongside their website and local presence."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={PAGE_PATH}
         sidebarTitle="List your center"
@@ -132,7 +132,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
               If you run an independent rewind shop or multi-service motor center, you compete on{" "}
               <strong className="text-title">speed, capability, and trust</strong>. A qualified directory amplifies those
               strengths by putting your shop in front of facility managers and maintenance teams who already know they
-              need motor work—not generic web traffic. For a deeper strategic angle, read{" "}
+              need motor work, not generic web traffic. For a deeper strategic angle, read{" "}
               <Link href="/why-list-your-motor-repair-shop" className="font-medium text-primary hover:underline">
                 why list your motor repair shop
               </Link>
@@ -147,7 +147,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Buyers who use a motor repair directory already know they need repair or rewinding. They&apos;re comparing
               shops, checking capabilities, and often requesting quotes. That means the leads you get are pre-qualified
-              by intent—unlike generic ads or broad directories where most visitors aren&apos;t looking for motor work.
+              by intent, unlike generic ads or broad directories where most visitors aren&apos;t looking for motor work.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               That intent difference matters for{" "}
@@ -171,7 +171,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
               <Link href="/usa/motor-repair-business-listing" className="font-medium text-primary hover:underline">
                 USA motor repair business listings
               </Link>{" "}
-              and state or city pages—many buyers search with geography plus service keywords.
+              and state or city pages, many buyers search with geography plus service keywords.
             </p>
           </section>
 
@@ -180,7 +180,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
               Credibility and trust
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              A complete, accurate profile—services, certifications, service area, contact info—helps buyers verify that
+              A complete, accurate profile, services, certifications, service area, contact info, helps buyers verify that
               you&apos;re a real shop with the right capabilities. Many use the directory as a first check before
               calling. Consistent information across the directory and your own site reinforces trust and supports your
               reputation.
@@ -188,7 +188,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Align your directory listing with your{" "}
               <strong className="text-title">website and Google Business Profile</strong> so name, address, and phone
-              match across the web—reducing doubt and confusion on the first contact.
+              match across the web, reducing doubt and confusion on the first contact.
             </p>
           </section>
 
@@ -198,11 +198,11 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Listing in a focused directory is usually a fraction of the cost of paid search or large-scale SEO. You
-              get a persistent listing that works for you over time. There&apos;s no per-click fee—you pay to be present,
+              get a persistent listing that works for you over time. There&apos;s no per-click fee, you pay to be present,
               and you receive leads as they come in. For many shops, that&apos;s a better return than one-off campaigns.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              That does not replace paid search when you need to dominate a narrow campaign—but it adds a{" "}
+              That does not replace paid search when you need to dominate a narrow campaign, but it adds a{" "}
               <strong className="text-title">baseline discovery channel</strong> that does not turn off when the ad
               budget runs out.
             </p>
@@ -215,7 +215,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
             <p className="mt-4 text-secondary leading-relaxed">
               New plants, new maintenance staff, and new projects don&apos;t always know your shop. A directory
               introduces you to buyers outside your current customer base. When they search by location, service type, or
-              industry, your listing can appear—so you&apos;re considered even when you&apos;re not the incumbent vendor.
+              industry, your listing can appear, so you&apos;re considered even when you&apos;re not the incumbent vendor.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Pair visibility with strong follow-up:{" "}
@@ -228,7 +228,7 @@ export default function BenefitsOfMotorRepairDirectoryPage() {
 
           <section className="not-prose mt-12 rounded-xl border border-border bg-gradient-to-br from-card to-bg p-6 sm:p-8">
             <h2 className="text-xl font-bold text-title sm:text-2xl">
-              Directory vs. marketplace—what you get from each
+              Directory vs. marketplace, what you get from each
             </h2>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 text-sm">
               <div className="rounded-lg border border-border bg-bg/80 p-4">

@@ -22,7 +22,7 @@ const MOTOR_TYPE_OPTIONS = [
 ];
 
 const CAN_SHIP_LABELS = {
-  yes: "Yes — can ship or drop off",
+  yes: "Yes, can ship or drop off",
   pickup: "Need pickup / field service",
   either: "Either works",
 };
@@ -160,10 +160,10 @@ export default function RepairRequestForm({
           : "Submit a repair requirement");
 
   const descriptionText = lockUrgency
-    ? "Motor down? Describe the failure — we match you to 24/7 shops in your area within minutes."
+    ? "Motor down? Describe the failure, we match you to 24/7 shops in your area within minutes."
     : mode === "shop"
-      ? "Describe your motor and failure — the shop will respond directly."
-      : "Describe your motor and failure — we'll match you with shops that serve this area.";
+      ? "Describe your motor and failure, the shop will respond directly."
+      : "Describe your motor and failure. We'll match you with shops that serve this area.";
 
   if (submitted) {
     return (
@@ -239,7 +239,7 @@ export default function RepairRequestForm({
             className="min-w-0 flex-1"
             onClick={() => setField("urgency", "emergency")}
           >
-            Emergency — motor is down
+            Emergency, motor is down
           </Button>
         </div>
       ) : null}

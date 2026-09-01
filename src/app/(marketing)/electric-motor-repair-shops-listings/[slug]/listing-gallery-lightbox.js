@@ -46,7 +46,7 @@ export default function ListingGalleryLightbox({
   const shop = String(companyName || "Repair center").trim() || "Gallery";
   const place = [city, state].filter(Boolean).join(" ");
   const thumbAlt = (i) =>
-    `${shop} — ${i === 0 ? "shop facility" : `photo ${i + 1}`}${place ? `, ${place}` : ""}`;
+    `${shop}, ${i === 0 ? "shop facility" : `photo ${i + 1}`}${place ? `, ${place}` : ""}`;
   const multi = list.length > 1;
 
   return (

@@ -53,7 +53,7 @@ export default function HowToChooseElectricMotorRepairShopPage() {
             Match the shop to your motor and application
           </h2>
           <p className="mt-4 text-secondary">
-            Not every shop handles every type of motor. Check whether they work on your voltage (low, medium, high), motor type (AC, DC, servo, pump, etc.), and size (HP and frame). Specialty work—explosion-proof, hazardous location, submersible, or OEM-authorized repair—may require a shop with specific experience and certifications. Confirm capabilities before sending the motor. For a refresher on service categories, see{" "}
+            Not every shop handles every type of motor. Check whether they work on your voltage (low, medium, high), motor type (AC, DC, servo, pump, etc.), and size (HP and frame). Specialty work, explosion-proof, hazardous location, submersible, or OEM-authorized repair, may require a shop with specific experience and certifications. Confirm capabilities before sending the motor. For a refresher on service categories, see{" "}
             <Link href="/types-of-electric-motor-repair-services" className="text-primary font-medium hover:underline">
               types of electric motor repair services
             </Link>
@@ -84,7 +84,7 @@ export default function HowToChooseElectricMotorRepairShopPage() {
             Turnaround and communication
           </h2>
           <p className="mt-4 text-secondary">
-            Downtime costs money. Ask about typical turnaround for your type and size of motor, and whether they offer rush or emergency service (often at a premium). Clear communication—when the motor arrived, inspection results, quote, and completion date—reduces surprises. Choose a shop that responds promptly and keeps you updated.
+            Downtime costs money. Ask about typical turnaround for your type and size of motor, and whether they offer rush or emergency service (often at a premium). Clear communication, when the motor arrived, inspection results, quote, and completion date, reduces surprises. Choose a shop that responds promptly and keeps you updated.
           </p>
         </section>
 

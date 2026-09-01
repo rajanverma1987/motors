@@ -40,7 +40,7 @@ export const LISTINGS_DIRECTORY_FAQ_ITEMS = [
   {
     question: "How long does electric motor repair take?",
     answer:
-      "Turnaround varies from same-day or 24–48 hours for simple bearing jobs on standard motors to two to four weeks (or longer) for large industrial rewinds, specialty materials, or backlog at busy shops. Emergency electric motor repair may be available for an expedite fee. Confirm lead time when you request a quote.",
+      "Turnaround varies from same-day or 24 to 48 hours for simple bearing jobs on standard motors to two to four weeks (or longer) for large industrial rewinds, specialty materials, or backlog at busy shops. Emergency electric motor repair may be available for an expedite fee. Confirm lead time when you request a quote.",
   },
   {
     question: "Does this directory list industrial electric motor repair shops?",

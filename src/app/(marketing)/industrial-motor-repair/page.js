@@ -17,7 +17,7 @@ export const metadata = {
     absolute: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase Directory",
   },
   description:
-    "Find industrial motor repair and rewinding shops near you. Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, and emergency service. Submit a requirement — matched to qualified shops.",
+    "Find industrial motor repair and rewinding shops near you. Large-frame AC rewinding, DC armature rewinds, high-voltage stator rewinding, and emergency service. Submit a requirement, matched to qualified shops.",
   keywords: [
     "industrial motor repair",
     "industrial motor repair near me",
@@ -40,7 +40,7 @@ export const metadata = {
   openGraph: {
     title: "Industrial Motor Rewinding & Repair Shops | IQMotorBase",
     description:
-      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement — matched to shops near you.",
+      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -50,7 +50,7 @@ export const metadata = {
     card: "summary_large_image",
     title: "Who Offers Industrial Motor Rewinding & Repair? | IQMotorBase",
     description:
-      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement — matched to shops near you.",
+      "Find industrial motor repair and rewinding shops. Large-frame, HV, AC/DC armature rewinding. Submit a requirement, matched to shops near you.",
   },
   alternates: { canonical: path },
   robots: { index: true, follow: true },
@@ -60,7 +60,7 @@ const faqItems = [
   {
     question: "What is industrial motor repair?",
     answer:
-      "Industrial motor repair is the inspection, mechanical rebuild, electrical rewind, testing, and re-commissioning of motors used in factories, utilities, water treatment, mining, HVAC plants, and other continuous-duty applications—typically from a few horsepower up to multi-megawatt units. Work is performed by specialized motor repair and rewinding shops with the cranes, ovens, VPI systems, and test equipment large jobs require.",
+      "Industrial motor repair is the inspection, mechanical rebuild, electrical rewind, testing, and re-commissioning of motors used in factories, utilities, water treatment, mining, HVAC plants, and other continuous-duty applications, typically from a few horsepower up to multi-megawatt units. Work is performed by specialized motor repair and rewinding shops with the cranes, ovens, VPI systems, and test equipment large jobs require.",
   },
   {
     question: "What types of industrial motors do repair shops work on?",
@@ -70,7 +70,7 @@ const faqItems = [
   {
     question: "How much does industrial motor repair cost?",
     answer:
-      "Cost scales with horsepower, voltage class, copper and insulation work, mechanical damage, and testing scope. Small industrial jobs may start in the low thousands; large rewinds and medium-voltage work often reach tens of thousands. Use IQMotorBase.com’s motor rewind cost calculator for a US ballpark range, then obtain written quotes after physical inspection—see the motor repair cost guide for pricing tables and line-item comparisons.",
+      "Cost scales with horsepower, voltage class, copper and insulation work, mechanical damage, and testing scope. Small industrial jobs may start in the low thousands; large rewinds and medium-voltage work often reach tens of thousands. Use IQMotorBase.com’s motor rewind cost calculator for a US ballpark range, then obtain written quotes after physical inspection, see the motor repair cost guide for pricing tables and line-item comparisons.",
   },
   {
     question: "Is rewinding or replacing better for an industrial motor?",
@@ -90,7 +90,7 @@ const faqItems = [
   {
     question: "What certifications matter for industrial motor repair?",
     answer:
-      "EASA membership, ISO quality systems, UL repair programs, and factory-authorized status signal documented processes—but they are not a substitute for application experience. For regulated or hazardous locations, confirm the shop’s history with your motor type and ask for references on similar HP and voltage class.",
+      "EASA membership, ISO quality systems, UL repair programs, and factory-authorized status signal documented processes, but they are not a substitute for application experience. For regulated or hazardous locations, confirm the shop’s history with your motor type and ask for references on similar HP and voltage class.",
   },
   {
     question: "Can I get a rush or emergency industrial motor repair?",
@@ -145,7 +145,7 @@ function IndustrialMotorRepairWebPageJsonLd({ pageUrl, site }) {
     url: pageUrl,
     name: "Who offers industrial motor rewinding and repair?",
     description:
-      "Find industrial motor repair and rewinding shops in your area. Submit a requirement — matched to shops near you.",
+      "Find industrial motor repair and rewinding shops in your area. Submit a requirement, matched to shops near you.",
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
     about: [
       { "@type": "Thing", name: "Industrial motor repair" },
@@ -183,7 +183,7 @@ export default function IndustrialMotorRepairPage() {
             Industrial motor rewind cost calculator
           </h2>
           <p className="mt-1 text-xs leading-relaxed text-secondary">
-            Ballpark US rewind pricing by HP—then compare with shop quotes after inspection.
+            Ballpark US rewind pricing by HP, then compare with shop quotes after inspection.
           </p>
         </div>
         <div className="bg-card/80 px-0 py-0 sm:px-3 sm:py-3">
@@ -224,11 +224,11 @@ export default function IndustrialMotorRepairPage() {
       <IndustrialMotorRepairWebPageJsonLd pageUrl={pageUrl} site={site} />
       <BlogPageLayout
         title="Who offers industrial motor rewinding and repair?"
-        description="Find industrial motor repair and rewinding shops for AC, DC, high-voltage, and large-frame work. Submit a requirement — matched to shops near you with the right capabilities."
+        description="Find industrial motor repair and rewinding shops for AC, DC, high-voltage, and large-frame work. Submit a requirement, matched to shops near you with the right capabilities."
         breadcrumbLink={{ href: "/electric-motor-repair", label: "Electric motor repair hub" }}
         canonicalPath={path}
         sidebarTitle="Get industrial motor repair quotes"
-        sidebarDescription="Submit nameplate details and failure notes—we connect you with repair shops that quote your HP, voltage, and application. Or browse shops by location."
+        sidebarDescription="Submit nameplate details and failure notes. We connect you with repair shops that quote your HP, voltage, and application. Or browse shops by location."
         sidebarCta={<GetQuoteCta />}
         sidebarBelowCta={calculatorSidebar}
         wideSidebar
@@ -256,7 +256,7 @@ export default function IndustrialMotorRepairPage() {
               Submit an industrial motor repair requirement
             </h2>
             <p className="mt-3 text-secondary">
-              Describe your motor and failure below — matched to industrial repair shops in your area with the right
+              Describe your motor and failure below, matched to industrial repair shops in your area with the right
               capabilities for your application.
             </p>
             <div className="mt-4 rounded-xl border border-primary/25 bg-primary/[0.06] p-4 sm:p-5">
@@ -274,7 +274,7 @@ export default function IndustrialMotorRepairPage() {
               Motor repair by industry
             </h2>
             <p className="mt-4 text-secondary">
-              Find shops with experience in your specific industry — capabilities, certifications, and documentation
+              Find shops with experience in your specific industry, capabilities, certifications, and documentation
               requirements vary significantly between sectors.
             </p>
             <ul className="mt-4 list-disc space-y-2 pl-6 text-secondary">
@@ -290,17 +290,17 @@ export default function IndustrialMotorRepairPage() {
               </li>
               <li>
                 <Link href="/electric-motor-repair-oil-gas" className="font-medium text-primary hover:underline">
-                  Motor repair for oil and gas — hazardous location specialists
+                  Motor repair for oil and gas, hazardous location specialists
                 </Link>
               </li>
               <li>
                 <Link href="/electric-motor-repair-food-processing" className="font-medium text-primary hover:underline">
-                  Motor repair for food processing — washdown and food-grade
+                  Motor repair for food processing, washdown and food-grade
                 </Link>
               </li>
               <li>
                 <Link href="/electric-motor-repair-mining" className="font-medium text-primary hover:underline">
-                  Motor repair for mining — large frame and HV specialists
+                  Motor repair for mining, large frame and HV specialists
                 </Link>
               </li>
             </ul>
@@ -324,7 +324,7 @@ export default function IndustrialMotorRepairPage() {
             </h2>
             <p className="mt-4 text-secondary">
               Industrial motor repair is any work that restores a production-critical motor to safe, reliable
-              operation—mechanical fits, electrical insulation, balancing, and acceptance testing. Shops may perform
+              operation, mechanical fits, electrical insulation, balancing, and acceptance testing. Shops may perform
               bearing and seal replacement, shaft repair, lamination treatment, full stator or armature rewinds,
               VPI (vacuum pressure impregnation), commutation work on DC machines, and field service for alignment or
               removal. The scope depends on failure mode: a grounded winding needs different work than a bent shaft or
@@ -345,27 +345,27 @@ export default function IndustrialMotorRepairPage() {
             </p>
             <ul className="mt-4 list-disc pl-6 text-secondary space-y-2">
               <li>
-                <strong className="text-title">Three-phase AC induction</strong> — pumps, fans, conveyors, compressors
+                <strong className="text-title">Three-phase AC induction</strong>, pumps, fans, conveyors, compressors
                 (TEFC, ODP, IEEE 841 / severe duty)
               </li>
               <li>
-                <strong className="text-title">Medium-voltage motors</strong> — higher insulation and test requirements;
+                <strong className="text-title">Medium-voltage motors</strong>, higher insulation and test requirements;
                 confirm shop capability before shipping
               </li>
               <li>
-                <strong className="text-title">DC &amp; mill-duty motors</strong> — armature, commutator, and field coil
+                <strong className="text-title">DC &amp; mill-duty motors</strong>, armature, commutator, and field coil
                 work; often longer lead times
               </li>
               <li>
-                <strong className="text-title">Synchronous &amp; wound-rotor</strong> — specialty rewinds and controls
+                <strong className="text-title">Synchronous &amp; wound-rotor</strong>, specialty rewinds and controls
                 integration
               </li>
               <li>
-                <strong className="text-title">Explosion-proof &amp; hazardous location</strong> — documentation and
+                <strong className="text-title">Explosion-proof &amp; hazardous location</strong>, documentation and
                 recertification matter for regulated sites
               </li>
               <li>
-                <strong className="text-title">Vertical hollow-shaft &amp; submersible</strong> — common in water /
+                <strong className="text-title">Vertical hollow-shaft &amp; submersible</strong>, common in water /
                 wastewater; shops need appropriate handling and test stands
               </li>
             </ul>
@@ -396,7 +396,7 @@ export default function IndustrialMotorRepairPage() {
             </ul>
             <p className="mt-4 text-secondary">
               Ask for a written quote that lists each line item so you can compare shops fairly. Rush and after-hours
-              work is often priced separately—see{" "}
+              work is often priced separately, see{" "}
               <Link href="/emergency-motor-repair-what-to-do" className="text-primary font-medium hover:underline">
                 emergency motor repair: what to do first
               </Link>{" "}
@@ -431,8 +431,8 @@ export default function IndustrialMotorRepairPage() {
             <p className="mt-4 text-secondary">
               For large or long-lead motors, rewinding often beats waiting months for a replacement. For smaller or
               heavily damaged units, a new premium-efficiency motor may pay back faster when run hours are high.
-              Compare total cost of ownership—repair quote, replacement price, installation, efficiency incentives, and
-              downtime—not just the lowest line item. The{" "}
+              Compare total cost of ownership, repair quote, replacement price, installation, efficiency incentives, and
+              downtime, not just the lowest line item. The{" "}
               <Link href="/when-to-repair-or-replace-electric-motor" className="text-primary font-medium hover:underline">
                 repair vs. replace guide
               </Link>{" "}
@@ -469,7 +469,7 @@ export default function IndustrialMotorRepairPage() {
             aria-labelledby="faq-heading"
           >
             <h2 id="faq-heading" className="text-xl font-bold text-title sm:text-2xl">
-              Industrial motor repair — frequently asked questions
+              Industrial motor repair, frequently asked questions
             </h2>
             <dl className="mt-6 space-y-6">
               {faqItems.map((item) => (
@@ -494,25 +494,25 @@ export default function IndustrialMotorRepairPage() {
                 <Link href="/contact" className="font-medium text-primary hover:underline">
                   Request a quote
                 </Link>
-                <span className="text-secondary"> — we route RFQs to capable shops</span>
+                <span className="text-secondary">: we route RFQs to capable shops</span>
               </li>
               <li>
                 <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
                   Find repair shops
                 </Link>
-                <span className="text-secondary"> — directory by location and services</span>
+                <span className="text-secondary">, directory by location and services</span>
               </li>
               <li>
                 <Link href="/electric-motor-rewinding-cost-calculator" className="font-medium text-primary hover:underline">
                   Motor rewind cost calculator
                 </Link>
-                <span className="text-secondary"> — free US ballpark by HP</span>
+                <span className="text-secondary">, free US ballpark by HP</span>
               </li>
               <li>
                 <Link href="/electric-motor-repair" className="font-medium text-primary hover:underline">
                   Electric motor repair hub
                 </Link>
-                <span className="text-secondary"> — all buyer guides in one place</span>
+                <span className="text-secondary">, all buyer guides in one place</span>
               </li>
             </ul>
           </section>

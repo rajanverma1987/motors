@@ -100,7 +100,7 @@ function NoscriptLink({ className = "" }) {
 
 export default function PreferredSourceButton({
   title = "Get IQMotorBase first in Google Search",
-  description = "Add us as a preferred source — see our repair guides & shop listings before generic results.",
+  description = "Add us as a preferred source, see our repair guides & shop listings before generic results.",
   variant = "prominent",
   className = "",
 }) {
@@ -131,7 +131,7 @@ export default function PreferredSourceButton({
             </span>
             <span className="truncate text-sm font-semibold leading-none text-white">{title}</span>
             <span className="hidden truncate text-xs leading-none text-white/85 md:inline">
-              — {description}
+             , {description}
             </span>
           </a>
           <div className="flex shrink-0 items-center gap-2">

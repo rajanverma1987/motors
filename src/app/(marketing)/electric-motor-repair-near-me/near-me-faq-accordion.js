@@ -1,5 +1,5 @@
 /**
- * Near-me guide FAQ — all items always expanded.
+ * Near-me guide FAQ, all items always expanded.
  * @param {{ items: { question: string; answer: string }[] }} props
  */
 export default function NearMeFaqAccordion({ items }) {

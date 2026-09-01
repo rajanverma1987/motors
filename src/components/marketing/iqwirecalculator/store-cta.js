@@ -31,7 +31,7 @@ function StoreBadge({ href, storeLabel, platform }) {
 }
 
 /**
- * App Store / Play badges. Links only when env URLs are set — never fake store listings.
+ * App Store / Play badges. Links only when env URLs are set, never fake store listings.
  */
 export default function IqwireStoreCta({
   align = "start",

@@ -141,7 +141,7 @@ function RegisterPageContent() {
     <div>
       <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-4 py-3 text-sm">
         <span className="font-semibold text-primary">One month free trial</span>
-        <span className="text-secondary"> — no credit card required. Full access to the portal.</span>
+        <span className="text-secondary">, no credit card required. Full access to the portal.</span>
       </div>
       <p className="mt-5 text-base text-secondary">
         Create your IQMotorBase.com account to log in to your portal, manage work orders,
@@ -186,13 +186,13 @@ function RegisterPageContent() {
         <HeroBackground />
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <span className="inline-flex items-center rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm">
-            One month free trial — no credit card required
+            One month free trial, no credit card required
           </span>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">
             Register your shop
           </h1>
           <p className="mt-4 max-w-[50.4rem] text-lg text-secondary">
-            Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal—work orders, quotes, customers, shop inventory, and repair leads in one place.
+            Create your account in a few steps. We&apos;ll verify your email first, then you&apos;ll add your center name and set a password. Once you&apos;re in, you get access to the portal, work orders, quotes, customers, shop inventory, and repair leads in one place.
           </p>
         </div>
       </section>

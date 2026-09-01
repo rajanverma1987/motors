@@ -13,9 +13,9 @@ import {
   FEATURES_WINDERS_TABLET_HEIGHT,
 } from "@/lib/hero-dashboard-seo";
 
-const HOME_TITLE = "Motor Repair Shop Software — Work Orders, Leads & Inventory | IQMotorBase";
+const HOME_TITLE = "Motor Repair Shop Software, Work Orders, Leads & Inventory | IQMotorBase";
 const HOME_DESCRIPTION =
-  "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop — all in one platform. Book a free demo today.";
+  "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop, all in one platform. Book a free demo today.";
 
 const heroOg = heroDashboardTabletOgImage();
 
@@ -53,7 +53,7 @@ const workflowFeatures = [
     detail: "Every repair runs as a Job Write-Up with its own job number: intake and inspections, preliminary and final quotes in the pipeline, customer send, job-level attachments, sales commission, and shop actions (print, work order, Tag QR) live together. The team works one continuous record instead of splitting context across disconnected screens.",
   },
   {
-    title: "Work orders tied to the job — and the approved RFQ",
+    title: "Work orders tied to the job | and the approved RFQ",
     detail: "Create work orders from the primary final Shop Management System quote on that job. Motor, customer, scope, and line items carry through; numbering stays aligned with the job so desk and floor share the same ID. Inventory reservations and consumption still follow the quote-backed path through delivery.",
   },
   {
@@ -62,7 +62,7 @@ const workflowFeatures = [
   },
   {
     title: "Motor job tags with QR codes (job number)",
-    detail: "Print a Tag QR from Job Write-Up; it encodes the repair job number. Technicians scan with the mobile app to open the assigned work order for that job—no walking back to a desk to look up an RFQ. Tap status updates and the job board stays current for everyone.",
+    detail: "Print a Tag QR from Job Write-Up; it encodes the repair job number. Technicians scan with the mobile app to open the assigned work order for that job, no walking back to a desk to look up an RFQ. Tap status updates and the job board stays current for everyone.",
   },
   {
     title: "Customer's motors registry",
@@ -86,7 +86,7 @@ const managementFeatures = [
   },
   {
     title: "Customer database and contacts",
-    detail: "Store company names, primary and secondary contacts, addresses, and billing details in one place. View full job history and motor records per customer so you can answer questions quickly, spot repeat work, and tailor service—without digging through spreadsheets or old paperwork.",
+    detail: "Store company names, primary and secondary contacts, addresses, and billing details in one place. View full job history and motor records per customer so you can answer questions quickly, spot repeat work, and tailor service, without digging through spreadsheets or old paperwork.",
   },
   {
     title: "Billing and invoice creation",
@@ -98,7 +98,7 @@ const managementFeatures = [
   },
   {
     title: "Vendor management and purchase orders",
-    detail: "Manage suppliers with contact and terms in one list. Create purchase orders for parts and materials, attach vendor invoices when they arrive, and track PO status (open, invoiced, paid). You always know what’s on order and what’s been paid—reducing duplicate orders and missed bills.",
+    detail: "Manage suppliers with contact and terms in one list. Create purchase orders for parts and materials, attach vendor invoices when they arrive, and track PO status (open, invoiced, paid). You always know what’s on order and what’s been paid, reducing duplicate orders and missed bills.",
   },
   {
     title: "Shop parts inventory and stock control",
@@ -110,21 +110,21 @@ const managementFeatures = [
   },
   {
     title: "Reports and productivity insights",
-    detail: "See revenue, completed jobs, technician workload, and top customers in one system. Use these views to run the business—spot bottlenecks, plan capacity, and understand which customers and job types drive the most value—without exporting to spreadsheets.",
+    detail: "See revenue, completed jobs, technician workload, and top customers in one system. Use these views to run the business, spot bottlenecks, plan capacity, and understand which customers and job types drive the most value, without exporting to spreadsheets.",
   },
   {
     title: "QuickBooks Online integration",
     detail:
-      "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders into QBO—so the shop floor and your books stay aligned without re-keying line items.",
+      "Connect QuickBooks Online from Settings → Accounts. When a job reaches your chosen closed status, IQMotorBase syncs customers, invoices, payments, and vendor purchase orders into QBO, so the shop floor and your books stay aligned without re-keying line items.",
   },
   {
     title: "API and Shop Management System integrations",
     detail:
-      "An API is available to integrate IQMotorBase.com with any other Shop Management System or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP—alongside the built-in QuickBooks Online sync—so you can keep one source of truth while using the apps your team already relies on.",
+      "An API is available to integrate IQMotorBase.com with any other Shop Management System or business system. Sync customers, work orders, and quotes with your existing tools, build custom workflows, or connect to accounting and ERP, alongside the built-in QuickBooks Online sync, so you can keep one source of truth while using the apps your team already relies on.",
   },
   {
     title: "Upload your existing data",
-    detail: "Bring your existing customers, motors, and job history into the platform. Upload your data so you can switch without starting from scratch—we support common formats and can help you migrate from spreadsheets or other systems so your records and history stay in one place.",
+    detail: "Bring your existing customers, motors, and job history into the platform. Upload your data so you can switch without starting from scratch. We support common formats and can help you migrate from spreadsheets or other systems so your records and history stay in one place.",
   },
   {
     title: "Public marketplace listings",
@@ -134,14 +134,14 @@ const managementFeatures = [
   {
     title: "Employee job postings (public careers)",
     detail:
-      "Post open roles for technicians, winders, and shop staff from your Shop Management System. Listings appear on the public Careers page with your shop name and location, and each job gets its own SEO-friendly URL. Candidates apply online; you review applications in the dashboard—so hiring stays in the same system as work orders and customers.",
+      "Post open roles for technicians, winders, and shop staff from your Shop Management System. Listings appear on the public Careers page with your shop name and location, and each job gets its own SEO-friendly URL. Candidates apply online; you review applications in the dashboard, so hiring stays in the same system as work orders and customers.",
   },
 ];
 
 const leadFeatures = [
   {
     title: "Lead capture from directory and local SEO",
-    detail: "Repair inquiries come from the IQMotorBase.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads—you see and respond from a single place.",
+    detail: "Repair inquiries come from the IQMotorBase.com directory and from local search pages (e.g. “electric motor repair Houston” or “emergency motor repair near me”). All leads land in one inbox so you don’t chase inquiries across multiple sites or email threads, you see and respond from a single place.",
   },
   {
     title: "Shared and exclusive lead distribution",
@@ -149,11 +149,11 @@ const leadFeatures = [
   },
   {
     title: "Lead credit balance and delivery",
-    detail: "Top up a lead credit balance; the system deducts credits when a lead is delivered to you. You control spend and budget predictably. When credits are available, you never miss a lead—so you can stay in the flow of new repair opportunities without overcommitting.",
+    detail: "Top up a lead credit balance; the system deducts credits when a lead is delivered to you. You control spend and budget predictably. When credits are available, you never miss a lead, so you can stay in the flow of new repair opportunities without overcommitting.",
   },
   {
     title: "Convert leads to customers and repair jobs",
-    detail: "When you win the job, convert the lead into a customer and continue in Job Write-Up (and work orders when you are ready). The inquiry, follow-up, and repair record stay in the same system—no re-entering motor details or customer info into a separate tool. Full history stays in one place for reporting and repeat business.",
+    detail: "When you win the job, convert the lead into a customer and continue in Job Write-Up (and work orders when you are ready). The inquiry, follow-up, and repair record stay in the same system, no re-entering motor details or customer info into a separate tool. Full history stays in one place for reporting and repeat business.",
   },
 ];
 
@@ -161,7 +161,7 @@ export default function HomePage() {
   return (
     <>
       <HomePageJsonLd />
-      {/* Hero — full-bleed product visual */}
+      {/* Hero, full-bleed product visual */}
       <section className="relative min-h-[min(92vh,52rem)] overflow-hidden border-b border-border">
         <Image
           src={HERO_DASHBOARD_TABLET_PATH}
@@ -171,7 +171,7 @@ export default function HomePage() {
           sizes="100vw"
           className="object-cover object-[center_30%] sm:object-center"
         />
-        {/* Readability wash — stronger on mobile so copy stays legible over the photo */}
+        {/* Readability wash, stronger on mobile so copy stays legible over the photo */}
         <div
           className="absolute inset-0 bg-card/85 sm:bg-transparent"
           aria-hidden
@@ -190,11 +190,11 @@ export default function HomePage() {
               Built for motor repair shops
             </span>
             <h1 className="mt-6 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[3.25rem] lg:leading-[1.15]">
-              Motor Repair Shop Software — Proposals, Work Orders, Invoices & Inventory in One Place
+              Motor Repair Shop Software, Proposals, Work Orders, Invoices & Inventory in One Place
             </h1>
             <p className="mt-6 text-pretty text-base text-secondary sm:text-lg lg:text-xl">
               From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
-              Online sync—one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
+              Online sync, one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
               inventory, invoicing, repair leads,{" "}
               <Link href="/careers" className="font-medium text-primary hover:underline">
                 hiring
@@ -275,7 +275,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">One place for every job</h3>
               <p className="mt-2 text-sm text-secondary">
-                From intake on Job Write-Up through quote approval and delivery you keep a single job record—no re-entering motor details, re-typing specs, or chasing paper between center and office. Everyone sees the same job number, status, and history, so handoffs are smooth and nothing falls through the cracks.
+                From intake on Job Write-Up through quote approval and delivery you keep a single job record, no re-entering motor details, re-typing specs, or chasing paper between center and office. Everyone sees the same job number, status, and history, so handoffs are smooth and nothing falls through the cracks.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
@@ -286,7 +286,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">Floor and office in sync</h3>
               <p className="mt-2 text-sm text-secondary">
-                Technicians update status from the floor using mobile app; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is—the system stays current so scheduling and customer updates are accurate.
+                Technicians update status from the floor using mobile app; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is, the system stays current so scheduling and customer updates are accurate.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
@@ -297,7 +297,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">Leads that fit your workflow</h3>
               <p className="mt-2 text-sm text-secondary">
-                New repair inquiries land in the same system you use for jobs and customers. You can convert a lead to a customer and work order without re-entering data in another tool—so new business flows into one place and stays trackable from first contact to delivery.
+                New repair inquiries land in the same system you use for jobs and customers. You can convert a lead to a customer and work order without re-entering data in another tool, so new business flows into one place and stays trackable from first contact to delivery.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">
@@ -326,7 +326,7 @@ export default function HomePage() {
               Features
             </h2>
             <p className="mt-4 text-lg text-secondary">
-              Everything you need to run and grow your motor repair center—workflow, operations,{" "}
+              Everything you need to run and grow your motor repair center, workflow, operations,{" "}
               <strong className="font-medium text-title">shop parts inventory</strong> (on-hand, reserved, locations,
               low-stock), leads,{" "}
               <Link href="/careers" className="font-medium text-primary hover:underline">
@@ -356,7 +356,7 @@ export default function HomePage() {
                   Motor repair workflow
                 </h3>
                 <p className="mt-3 text-secondary">
-                  Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status—so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
+                  Track every job from the moment it arrives to delivery. Job Write-Up holds intake, inspections, and pipeline quotes; formal RFQs and customer approval live on Quotes; work orders are created from the job’s primary final quote and stay linked to the same job number. Technicians scan job-based Tag QR codes on mobile to update status, so the board always reflects reality. Each capability below is designed to reduce re-entry, keep center and office aligned, and give you one source of truth for every repair.
                 </p>
               </div>
               <figure className="relative mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border bg-bg shadow-sm lg:max-w-none">
@@ -413,7 +413,7 @@ export default function HomePage() {
             <p className="mt-3 max-w-[50.4rem] text-secondary">
               One system for customers, Job Write-Up, Quotes, invoicing, vendors, shop inventory, logistics, and
               QuickBooks Online. Create invoices from completed work orders, track payments, manage parts on hand and
-              reservations, and push customers, invoices, payments, and vendor POs to QBO when a job closes—so you never
+              reservations, and push customers, invoices, payments, and vendor POs to QBO when a job closes, so you never
               re-key the shop floor into accounting. The items below cover how you keep financials, suppliers, stock,
               and physical flow in sync without leaving the platform.
             </p>
@@ -446,7 +446,7 @@ export default function HomePage() {
               Lead generation network
             </h3>
             <p className="mt-3 max-w-[50.4rem] text-secondary">
-              Get repair inquiries from the IQMotorBase.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up—so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
+              Get repair inquiries from the IQMotorBase.com directory and local SEO pages. Choose shared or exclusive leads, manage your lead credit balance, and convert won leads into customers and repair jobs in Job Write-Up, so new work flows into the same system you already use. Below is how capture, distribution, credits, and conversion work together to grow your pipeline without extra tools.
             </p>
             <ul className="mt-8 space-y-6">
               {leadFeatures.map((item) => (
@@ -493,7 +493,7 @@ export default function HomePage() {
                   <Link href="/marketplace" className="font-medium text-primary hover:underline">
                     the marketplace
                   </Link>
-                  , then send a request—no payment on our portal. You handle follow-up and fulfillment; orders stay in
+                  , then send a request, no payment on our portal. You handle follow-up and fulfillment; orders stay in
                   your dashboard.
                 </p>
               </div>
@@ -534,7 +534,7 @@ export default function HomePage() {
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     Careers
                   </Link>{" "}
-                  page—technicians, winders, and other roles with your business name, location, and an apply flow. You
+                  page, technicians, winders, and other roles with your business name, location, and an apply flow. You
                   manage listings and applications from the dashboard alongside work orders.
                 </p>
               </div>
@@ -593,7 +593,7 @@ export default function HomePage() {
                   List your repair company in the directory - Free to list
                 </h2>
                 <p className="mt-3 max-w-[43.2rem] text-secondary">
-                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list—submit your details and we’ll review and publish your listing. With Shop Management System access you can also{" "}
+                  Add your company to the IQMotorBase.com network. Get found by customers searching for motor repair and rewinding in your area. Free to list, submit your details and we’ll review and publish your listing. With Shop Management System access you can also{" "}
                   <Link href="/careers" className="font-medium text-primary hover:underline">
                     post employee job openings
                   </Link>{" "}

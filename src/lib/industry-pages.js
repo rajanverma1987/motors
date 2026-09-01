@@ -1,5 +1,5 @@
 /**
- * Industry vertical landing pages — buyer identity SEO (File 2 of 3).
+ * Industry vertical landing pages, buyer identity SEO (File 2 of 3).
  * @typedef {object} IndustryPage
  * @property {string} slug
  * @property {string} industry
@@ -39,12 +39,12 @@ export const industryPages = [
     industryTag: "manufacturing",
     title: "Electric Motor Repair for Manufacturing Facilities | IQMotorBase",
     metaDescription:
-      "Find electric motor repair shops experienced in manufacturing — conveyors, compressors, HVAC, and production line motors. Submit a repair request and get matched to shops in your area.",
+      "Find electric motor repair shops experienced in manufacturing, conveyors, compressors, HVAC, and production line motors. Submit a repair request and get matched to shops in your area.",
     h1: "Electric motor repair for manufacturing",
     subheading:
-      "Production line down? Find repair shops experienced in manufacturing motors — conveyors, compressors, pumps, blowers, and machine tool motors. Submit a request and get matched to shops in your area.",
+      "Production line down? Find repair shops experienced in manufacturing motors, conveyors, compressors, pumps, blowers, and machine tool motors. Submit a request and get matched to shops in your area.",
     contextParagraph:
-      "Manufacturing facilities run some of the most demanding motor applications in industry — continuous duty cycles, variable loads, harsh environments, and zero tolerance for unplanned downtime. A conveyor motor failure mid-shift can stop an entire production line. The shops best suited for manufacturing motor repair understand duty cycle requirements, application-specific winding specs, and the urgency of getting equipment back online fast.",
+      "Manufacturing facilities run some of the most demanding motor applications in industry, continuous duty cycles, variable loads, harsh environments, and zero tolerance for unplanned downtime. A conveyor motor failure mid-shift can stop an entire production line. The shops best suited for manufacturing motor repair understand duty cycle requirements, application-specific winding specs, and the urgency of getting equipment back online fast.",
     commonMotors: [
       {
         type: "Conveyor and material handling motors",
@@ -59,12 +59,12 @@ export const industryPages = [
       {
         type: "HVAC and fan motors",
         context:
-          "Single-phase and three-phase, ODP or TEFC. Typically lower HP but high volume. Many HVAC motors are ECM or PSC types — confirm the shop handles your specific motor type before shipping.",
+          "Single-phase and three-phase, ODP or TEFC. Typically lower HP but high volume. Many HVAC motors are ECM or PSC types, confirm the shop handles your specific motor type before shipping.",
       },
       {
         type: "Machine tool spindle motors",
         context:
-          "Precision balance, close tolerances, often inverter-fed. Spindle repair requires dynamic balancing to G1.0 or better and encoder replacement if equipped. Not all shops have spindle capability — confirm before sending.",
+          "Precision balance, close tolerances, often inverter-fed. Spindle repair requires dynamic balancing to G1.0 or better and encoder replacement if equipped. Not all shops have spindle capability, confirm before sending.",
       },
       {
         type: "Pump and hydraulic motors",
@@ -79,11 +79,11 @@ export const industryPages = [
       },
       {
         requirement: "Rush turnaround capability",
-        why: "Production downtime is costly. A shop that can commit to a 48–72 hour turnaround on standard rewinds is worth a premium over a shop with a 2-week queue.",
+        why: "Production downtime is costly. A shop that can commit to a 48 to 72 hour turnaround on standard rewinds is worth a premium over a shop with a 2-week queue.",
       },
       {
         requirement: "EASA AR100 compliance",
-        why: "EASA AR100 rewind standards include core loss testing before and after burnout — the step that protects motor efficiency. For motors running 24/7 in production, efficiency degradation compounds into significant annual energy cost.",
+        why: "EASA AR100 rewind standards include core loss testing before and after burnout, the step that protects motor efficiency. For motors running 24/7 in production, efficiency degradation compounds into significant annual energy cost.",
       },
       {
         requirement: "Dynamic balancing",
@@ -108,23 +108,23 @@ export const industryPages = [
       {
         question: "How do I find a motor repair shop experienced in manufacturing applications?",
         answer:
-          "Use the IQMotorBase directory and filter by the \"Manufacturing\" industry tag on shop profiles. You can also submit a repair request through this page — we tag your request with manufacturing industry context so shops with manufacturing experience are matched first.",
+          "Use the IQMotorBase directory and filter by the \"Manufacturing\" industry tag on shop profiles. You can also submit a repair request through this page, we tag your request with manufacturing industry context so shops with manufacturing experience are matched first.",
       },
       {
         question: "What is the typical turnaround for a manufacturing motor repair?",
         answer:
-          "Standard turnaround for most manufacturing motors under 100 HP is 5–10 business days. Emergency turnaround for production-critical motors is 24–72 hours at shops with 24/7 capability. Always confirm turnaround in writing before authorizing the repair.",
+          "Standard turnaround for most manufacturing motors under 100 HP is 5 to 10 business days. Emergency turnaround for production-critical motors is 24 to 72 hours at shops with 24/7 capability. Always confirm turnaround in writing before authorizing the repair.",
       },
       {
         question: "Can I get a loaner motor while mine is in repair?",
         answer:
-          "Many shops that serve manufacturing facilities maintain loaner inventory for common NEMA frame sizes. Ask specifically when you submit your request — if loaners are available, this is the fastest way to restore partial production while your motor is rewound.",
+          "Many shops that serve manufacturing facilities maintain loaner inventory for common NEMA frame sizes. Ask specifically when you submit your request, if loaners are available, this is the fastest way to restore partial production while your motor is rewound.",
       },
     ],
     relatedLinks: [
       { label: "Find motor repair shops near me", href: "/electric-motor-repair-near-me" },
-      { label: "Emergency motor repair — what to do", href: "/emergency-motor-repair-what-to-do" },
-      { label: "Motor repair vs. replace — decision guide", href: "/when-to-repair-or-replace-electric-motor" },
+      { label: "Emergency motor repair: what to do", href: "/emergency-motor-repair-what-to-do" },
+      { label: "Motor repair vs. replace: decision guide", href: "/when-to-repair-or-replace-electric-motor" },
       { label: "Motor repair cost guide", href: "/cost-of-motor-repair-and-rewinding" },
       { label: "Industrial motor repair", href: "/industrial-motor-repair" },
     ],
@@ -135,17 +135,17 @@ export const industryPages = [
     industryTag: "water-treatment",
     title: "Electric Motor Repair for Water Treatment Plants | IQMotorBase",
     metaDescription:
-      "Find electric motor repair shops experienced in water and wastewater treatment — pumps, blowers, aerators, and submersible motors. Submit a repair request matched to shops in your area.",
+      "Find electric motor repair shops experienced in water and wastewater treatment, pumps, blowers, aerators, and submersible motors. Submit a repair request matched to shops in your area.",
     h1: "Electric motor repair for water treatment",
     subheading:
-      "Pump or blower motor down at your water or wastewater facility? Find shops with water treatment experience — submersible motors, aeration blowers, and process pumps. Submit a request and get matched.",
+      "Pump or blower motor down at your water or wastewater facility? Find shops with water treatment experience, submersible motors, aeration blowers, and process pumps. Submit a request and get matched.",
     contextParagraph:
-      "Water and wastewater treatment facilities run motors in some of the harshest conditions in industry — wet environments, corrosive atmospheres, continuous duty, and strict regulatory requirements. Pump and blower motor failures directly affect treatment capacity and regulatory compliance. Shops with water treatment experience understand submersible motor repair, explosion-proof requirements for digester applications, and the documentation standards that regulated utilities require.",
+      "Water and wastewater treatment facilities run motors in some of the harshest conditions in industry, wet environments, corrosive atmospheres, continuous duty, and strict regulatory requirements. Pump and blower motor failures directly affect treatment capacity and regulatory compliance. Shops with water treatment experience understand submersible motor repair, explosion-proof requirements for digester applications, and the documentation standards that regulated utilities require.",
     commonMotors: [
       {
         type: "Submersible pump motors",
         context:
-          "Operate fully submerged in water or wastewater. Require specialized shaft seal and enclosure repair capability. Not all shops have submersible motor experience — confirm before sending. Stator rewinding requires appropriate insulation systems for wet environments.",
+          "Operate fully submerged in water or wastewater. Require specialized shaft seal and enclosure repair capability. Not all shops have submersible motor experience, confirm before sending. Stator rewinding requires appropriate insulation systems for wet environments.",
       },
       {
         type: "Aeration blower motors",
@@ -160,7 +160,7 @@ export const industryPages = [
       {
         type: "Explosion-proof motors (digester applications)",
         context:
-          "Class I Division 1 or 2 rated motors for biogas and digester areas. Repair of explosion-proof motors requires maintaining the integrity of the explosion-proof enclosure — only shops with experience in XP motor repair should handle these.",
+          "Class I Division 1 or 2 rated motors for biogas and digester areas. Repair of explosion-proof motors requires maintaining the integrity of the explosion-proof enclosure, only shops with experience in XP motor repair should handle these.",
       },
     ],
     shopRequirements: [
@@ -170,7 +170,7 @@ export const industryPages = [
       },
       {
         requirement: "Submersible motor capability",
-        why: "Submersible motor repair requires specific shaft seal expertise and insulation systems. A shop without submersible experience will typically send the motor to a subcontractor — adding time and cost.",
+        why: "Submersible motor repair requires specific shaft seal expertise and insulation systems. A shop without submersible experience will typically send the motor to a subcontractor, adding time and cost.",
       },
       {
         requirement: "Explosion-proof enclosure integrity",
@@ -188,7 +188,7 @@ export const industryPages = [
       },
       {
         mode: "Overheating on continuous-duty blower motors",
-        cause: "Aeration blowers run 24/7. Ambient temperature around blower enclosures is often 15–25°C above ambient. Class F or H insulation and adequate motor cooling are essential.",
+        cause: "Aeration blowers run 24/7. Ambient temperature around blower enclosures is often 15 to 25°C above ambient. Class F or H insulation and adequate motor cooling are essential.",
       },
       {
         mode: "Corrosion in wet well environments",
@@ -199,7 +199,7 @@ export const industryPages = [
       {
         question: "Who repairs submersible pump motors near me?",
         answer:
-          "Submit a repair request on this page — tag your motor type as submersible and we'll match you to shops in your area with confirmed submersible motor repair capability. Not all general motor repair shops handle submersibles, so the match matters.",
+          "Submit a repair request on this page, tag your motor type as submersible and we'll match you to shops in your area with confirmed submersible motor repair capability. Not all general motor repair shops handle submersibles, so the match matters.",
       },
       {
         question: "Do motor repair shops provide the documentation that utilities require?",
@@ -209,7 +209,7 @@ export const industryPages = [
       {
         question: "Can an explosion-proof motor be repaired without losing its XP rating?",
         answer:
-          "Yes — but only by shops that understand explosion-proof enclosure repair. The flame path dimensions, thread engagement, and surface finish of the enclosure must be maintained to the original UL or FM specifications. Ask the shop directly whether they have XP enclosure repair experience.",
+          "Yes, but only by shops that understand explosion-proof enclosure repair. The flame path dimensions, thread engagement, and surface finish of the enclosure must be maintained to the original UL or FM specifications. Ask the shop directly whether they have XP enclosure repair experience.",
       },
     ],
     relatedLinks: [
@@ -224,17 +224,17 @@ export const industryPages = [
     slug: "electric-motor-repair-oil-gas",
     industry: "Oil & Gas",
     industryTag: "oil-gas",
-    title: "Electric Motor Repair for Oil & Gas — Hazardous Location Specialists | IQMotorBase",
+    title: "Electric Motor Repair for Oil & Gas | Hazardous Location Specialists | IQMotorBase",
     metaDescription:
-      "Find motor repair shops experienced in oil and gas applications — hazardous location, explosion-proof, and high-voltage motors. Submit a repair request matched to qualified shops.",
+      "Find motor repair shops experienced in oil and gas applications, hazardous location, explosion-proof, and high-voltage motors. Submit a repair request matched to qualified shops.",
     h1: "Electric motor repair for oil and gas",
     subheading:
-      "Motor failure at an upstream, midstream, or downstream facility? Find shops qualified for hazardous location and explosion-proof motor repair. Submit a request — matched to shops with oil and gas experience.",
+      "Motor failure at an upstream, midstream, or downstream facility? Find shops qualified for hazardous location and explosion-proof motor repair. Submit a request, matched to shops with oil and gas experience.",
     contextParagraph:
-      "Oil and gas facilities operate motors in Class I hazardous locations, high-voltage applications, and remote environments where downtime is measured in tens of thousands of dollars per hour. Motor repair for this sector requires hazardous location compliance, high-voltage rewind capability, and often field service for motors that cannot be safely removed. The directory shops with oil and gas experience are qualified for these requirements — general repair shops typically are not.",
+      "Oil and gas facilities operate motors in Class I hazardous locations, high-voltage applications, and remote environments where downtime is measured in tens of thousands of dollars per hour. Motor repair for this sector requires hazardous location compliance, high-voltage rewind capability, and often field service for motors that cannot be safely removed. The directory shops with oil and gas experience are qualified for these requirements, general repair shops typically are not.",
     commonMotors: [
       {
-        type: "Explosion-proof (XP) motors — Class I Div 1 and Div 2",
+        type: "Explosion-proof (XP) motors, Class I Div 1 and Div 2",
         context:
           "Wellhead, compressor station, and processing plant applications. Repair must maintain explosion-proof enclosure integrity per UL 674 or FM standards. Only shops with demonstrated XP enclosure repair experience should handle these.",
       },
@@ -246,7 +246,7 @@ export const industryPages = [
       {
         type: "ESP (electric submersible pump) motors",
         context:
-          "Downhole pump motors for artificial lift applications. Highly specialized — only a small number of shops perform ESP motor repair. Contact us for specialist referrals.",
+          "Downhole pump motors for artificial lift applications. Highly specialized, only a small number of shops perform ESP motor repair. Contact us for specialist referrals.",
       },
       {
         type: "Large frame TEFC and WP-II motors",
@@ -290,7 +290,7 @@ export const industryPages = [
       {
         question: "Who can repair explosion-proof motors for oil and gas applications?",
         answer:
-          "Shops qualified to repair XP motors maintain the flame path integrity of the enclosure per the original UL or FM certification requirements. Submit your request on this page with \"explosion-proof\" specified in the motor type — we match to shops with confirmed XP capability.",
+          "Shops qualified to repair XP motors maintain the flame path integrity of the enclosure per the original UL or FM certification requirements. Submit your request on this page with \"explosion-proof\" specified in the motor type, we match to shops with confirmed XP capability.",
       },
       {
         question: "Can high-voltage motors above 4kV be rewound in the field?",
@@ -317,12 +317,12 @@ export const industryPages = [
     industryTag: "food-processing",
     title: "Electric Motor Repair for Food Processing Facilities | IQMotorBase",
     metaDescription:
-      "Find motor repair shops experienced in food processing — washdown-duty, stainless, and USDA/FDA-compliant motor repair. Submit a repair request matched to qualified shops near you.",
+      "Find motor repair shops experienced in food processing, washdown-duty, stainless, and USDA/FDA-compliant motor repair. Submit a repair request matched to qualified shops near you.",
     h1: "Electric motor repair for food processing",
     subheading:
-      "Motor down on a food processing line? Find shops with washdown-duty and food-grade motor repair experience. Submit a request — matched to shops that understand food facility requirements.",
+      "Motor down on a food processing line? Find shops with washdown-duty and food-grade motor repair experience. Submit a request, matched to shops that understand food facility requirements.",
     contextParagraph:
-      "Food processing facilities operate motors in environments that most general repair shops have never worked in — daily high-pressure washdowns, stainless steel requirements, food-grade lubricants, and USDA or FDA compliance obligations. A motor repair that returns a standard TEFC motor into a washdown environment will fail in weeks. The right shop understands washdown-duty enclosures, food-grade grease, and the hygiene requirements of your facility.",
+      "Food processing facilities operate motors in environments that most general repair shops have never worked in, daily high-pressure washdowns, stainless steel requirements, food-grade lubricants, and USDA or FDA compliance obligations. A motor repair that returns a standard TEFC motor into a washdown environment will fail in weeks. The right shop understands washdown-duty enclosures, food-grade grease, and the hygiene requirements of your facility.",
     commonMotors: [
       {
         type: "Washdown-duty motors",
@@ -332,7 +332,7 @@ export const industryPages = [
       {
         type: "Stainless steel enclosure motors",
         context:
-          "Used in sanitary processing areas requiring all-stainless wetted surfaces. Repair requires matching stainless components — standard carbon steel replacement hardware is a compliance failure.",
+          "Used in sanitary processing areas requiring all-stainless wetted surfaces. Repair requires matching stainless components, standard carbon steel replacement hardware is a compliance failure.",
       },
       {
         type: "Conveyor and packaging line motors",
@@ -342,7 +342,7 @@ export const industryPages = [
       {
         type: "Mixer and agitator motors",
         context:
-          "High-torque applications with frequent reversals. NEMA Design D characteristics common. Shaft seal integrity is critical — lubricant contamination of food product is a regulatory failure.",
+          "High-torque applications with frequent reversals. NEMA Design D characteristics common. Shaft seal integrity is critical, lubricant contamination of food product is a regulatory failure.",
       },
     ],
     shopRequirements: [
@@ -377,12 +377,12 @@ export const industryPages = [
       {
         question: "Can a standard motor repair shop work on washdown-duty motors?",
         answer:
-          "Electrically, yes — but most general shops do not restore the washdown-duty IP rating as part of the repair. Shaft seals, enclosure gaskets, and drain plugs must be replaced and tested for IP66/NEMA 4X integrity. Submit your request specifying washdown-duty — we match to shops that restore full enclosure integrity.",
+          "Electrically, yes, but most general shops do not restore the washdown-duty IP rating as part of the repair. Shaft seals, enclosure gaskets, and drain plugs must be replaced and tested for IP66/NEMA 4X integrity. Submit your request specifying washdown-duty, we match to shops that restore full enclosure integrity.",
       },
       {
         question: "Does the motor repair need to use food-grade grease?",
         answer:
-          "For motors in food-contact or splash zones, yes — NSF H1 approved lubricants are required for compliance. Specify this requirement when you submit your repair request and confirm with the shop before authorizing work.",
+          "For motors in food-contact or splash zones, yes, NSF H1 approved lubricants are required for compliance. Specify this requirement when you submit your repair request and confirm with the shop before authorizing work.",
       },
       {
         question: "What is inverter-duty motor repair and do I need it?",
@@ -404,17 +404,17 @@ export const industryPages = [
     industryTag: "mining",
     title: "Electric Motor Repair for Mining Operations | IQMotorBase",
     metaDescription:
-      "Find motor repair shops experienced in mining — large frame, high-voltage, explosion-proof, and severe-duty motor repair. Submit a repair request matched to qualified shops near you.",
+      "Find motor repair shops experienced in mining, large frame, high-voltage, explosion-proof, and severe-duty motor repair. Submit a repair request matched to qualified shops near you.",
     h1: "Electric motor repair for mining operations",
     subheading:
-      "Large frame or severe-duty motor down at your mine site? Find shops with mining experience — high-voltage, explosion-proof, and large frame rewind capability. Submit a request and get matched.",
+      "Large frame or severe-duty motor down at your mine site? Find shops with mining experience, high-voltage, explosion-proof, and large frame rewind capability. Submit a request and get matched.",
     contextParagraph:
-      "Mining operations run some of the largest and most demanding motors in industry — dragline motors, mill drives, conveyor systems, and hoists operating at extreme duty cycles in remote, harsh environments. Motor failures at mine sites involve enormous downtime costs and often complex logistics. Shops experienced in mining motor repair have large crane capacity, high-voltage rewind capability, and experience with the documentation and reliability requirements of mining operations.",
+      "Mining operations run some of the largest and most demanding motors in industry, dragline motors, mill drives, conveyor systems, and hoists operating at extreme duty cycles in remote, harsh environments. Motor failures at mine sites involve enormous downtime costs and often complex logistics. Shops experienced in mining motor repair have large crane capacity, high-voltage rewind capability, and experience with the documentation and reliability requirements of mining operations.",
     commonMotors: [
       {
         type: "Large frame conveyor motors (above 200 HP)",
         context:
-          "Belt conveyor drives are often the highest-consequence motor in a mine — a conveyor failure stops material flow entirely. Frame sizes from 447T through 5000-series. Rewinds require large crane capacity and high-voltage capability for MV conveyor drives.",
+          "Belt conveyor drives are often the highest-consequence motor in a mine, a conveyor failure stops material flow entirely. Frame sizes from 447T through 5000-series. Rewinds require large crane capacity and high-voltage capability for MV conveyor drives.",
       },
       {
         type: "Mill and crusher motors",
@@ -424,18 +424,18 @@ export const industryPages = [
       {
         type: "Explosion-proof motors (underground and surface coal)",
         context:
-          "MSHA-rated explosion-proof motors for underground mining require MSHA-specific flame path and enclosure standards — different from general XP ratings. Only shops with MSHA XP experience should handle these.",
+          "MSHA-rated explosion-proof motors for underground mining require MSHA-specific flame path and enclosure standards, different from general XP ratings. Only shops with MSHA XP experience should handle these.",
       },
       {
         type: "Hoist and crane motors",
         context:
-          "DC hoist motors and wound rotor AC motors for mine hoists and overhead cranes are safety-critical applications. Repair must meet the original design specifications — no substitutions on slip ring, brush gear, or armature winding without engineering review.",
+          "DC hoist motors and wound rotor AC motors for mine hoists and overhead cranes are safety-critical applications. Repair must meet the original design specifications, no substitutions on slip ring, brush gear, or armature winding without engineering review.",
       },
     ],
     shopRequirements: [
       {
         requirement: "Large crane capacity (10+ tons)",
-        why: "Mining motors above 500 HP often weigh 5,000–20,000 lbs. A shop without adequate crane capacity cannot safely handle these motors. Ask specifically about crane capacity and shop floor clearance.",
+        why: "Mining motors above 500 HP often weigh 5,000 to 20,000 lbs. A shop without adequate crane capacity cannot safely handle these motors. Ask specifically about crane capacity and shop floor clearance.",
       },
       {
         requirement: "High-voltage rewind capability",
@@ -464,12 +464,12 @@ export const industryPages = [
       {
         question: "Who repairs large frame mining motors near me?",
         answer:
-          "Submit your repair request specifying the motor HP, frame size, and voltage — we match to shops with confirmed large frame rewind capability and the crane capacity to handle your motor. Not all shops can handle motors above 500 HP.",
+          "Submit your repair request specifying the motor HP, frame size, and voltage, we match to shops with confirmed large frame rewind capability and the crane capacity to handle your motor. Not all shops can handle motors above 500 HP.",
       },
       {
         question: "Can a mine hoist motor be repaired or does it need to be replaced?",
         answer:
-          "Mine hoist motors are almost always candidates for repair — replacement lead times for large hoist motors can be 6–18 months. The key is finding a shop with the DC or wound rotor AC rewind experience specific to hoist applications. Submit your details and we will match to the right shop.",
+          "Mine hoist motors are almost always candidates for repair, replacement lead times for large hoist motors can be 6 to 18 months. The key is finding a shop with the DC or wound rotor AC rewind experience specific to hoist applications. Submit your details and we will match to the right shop.",
       },
       {
         question: "What is the typical cost of repairing a large frame mining motor?",

@@ -53,6 +53,29 @@ html.dark .brand-logo-img {
     drop-shadow(0 0 10px hsl(var(--primary) / 0.35));
 }
 
+/* Marketing nav: always light theme, even when html.dark */
+html.dark .marketing-navbar {
+  --bg: 32 22% 99%;
+  --card: 30 18% 98%;
+  --form-bg: 28 12% 96%;
+  --text: 25 35% 12%;
+  --title: 22 40% 9%;
+  --primary: 26 52% 38%;
+  --secondary: 24 14% 40%;
+  --border: 28 14% 91%;
+  --accent: 24 95% 53%;
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 0 72% 51%;
+  color-scheme: light;
+  background-color: hsl(var(--card));
+  color: hsl(var(--text));
+}
+
+html.dark .marketing-navbar .brand-logo-img {
+  filter: none;
+}
+
 /* Design system theme tokens (HSL values without hsl()) */
 :root {
   /* Warm paper / copper metal palette (replaces cool blue) */
@@ -721,4 +744,169 @@ html.dark .simple-portal .simple-settings-nav {
 
 .contact-reveal-blur-website {
   width: 10rem;
+}
+
+/* AI search optimization (AEO) */
+.ai-quick-answer {
+  background: #f0f7ff;
+  border-left: 4px solid #1d4ed8;
+  border-radius: 0 10px 10px 0;
+  padding: 16px 20px;
+  margin: 0 0 32px;
+  font-size: 15px;
+  color: #1e3a5f;
+  line-height: 1.7;
+  max-width: 760px;
+}
+
+html.dark .ai-quick-answer {
+  background: hsl(var(--primary) / 0.12);
+  border-left-color: hsl(var(--primary));
+  color: hsl(var(--text));
+}
+
+.ai-quick-answer strong {
+  color: #1d4ed8;
+}
+
+html.dark .ai-quick-answer strong {
+  color: hsl(var(--primary));
+}
+
+.ai-fact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 740px;
+  margin: 16px 0 32px;
+}
+
+.ai-fact-list > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+html.dark .ai-fact-list > div {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.ai-fact-list dt {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 6px;
+}
+
+html.dark .ai-fact-list dt {
+  color: hsl(var(--title));
+}
+
+.ai-fact-list dd {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+
+html.dark .ai-fact-list dd {
+  color: hsl(var(--secondary));
+}
+
+.about-two-sides {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 740px;
+  margin: 16px 0 32px;
+}
+
+.about-two-sides > div {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 18px 20px;
+}
+
+html.dark .about-two-sides > div {
+  background: hsl(var(--card));
+  border-color: hsl(var(--border));
+}
+
+.about-two-sides dt {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 8px;
+}
+
+html.dark .about-two-sides dt {
+  color: hsl(var(--title));
+}
+
+.about-two-sides dd {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+  margin: 0;
+}
+
+html.dark .about-two-sides dd {
+  color: hsl(var(--secondary));
+}
+
+.about-audiences,
+.about-standards,
+.about-related-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-left: 20px;
+  max-width: 700px;
+  margin: 12px 0 32px;
+}
+
+.about-audiences li,
+.about-standards li,
+.about-related-links li {
+  font-size: 14px;
+  color: #334155;
+  line-height: 1.7;
+}
+
+html.dark .about-audiences li,
+html.dark .about-standards li,
+html.dark .about-related-links li {
+  color: hsl(var(--secondary));
+}
+
+.cost-table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.cost-table th,
+.cost-table td {
+  border: 1px solid hsl(var(--border));
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.cost-table thead th {
+  background: hsl(var(--muted) / 0.5);
+  font-weight: 600;
+  color: hsl(var(--title));
+}
+
+.cost-table tbody td {
+  color: hsl(var(--secondary));
+}
+
+.cost-table tbody td:first-child {
+  font-weight: 500;
+  color: hsl(var(--title));
 }

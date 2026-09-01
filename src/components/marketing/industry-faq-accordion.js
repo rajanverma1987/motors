@@ -1,12 +1,12 @@
 /**
- * Industry FAQ — all items expanded for SEO and readability.
+ * Industry FAQ, all items expanded for SEO and readability.
  * @param {{ items: { question: string; answer: string }[]; slug: string; industry: string }} props
  */
 export default function IndustryFaqAccordion({ items, slug, industry }) {
   return (
     <section aria-labelledby="faq-heading" className="mt-12 sm:mt-14">
       <h2 id="faq-heading" className="text-xl font-bold text-title sm:text-2xl">
-        Motor repair questions — {industry.toLowerCase()} applications
+        Motor repair questions, {industry.toLowerCase()} applications
       </h2>
       <p className="mt-2 text-sm text-secondary">
         Answers to common buyer questions for {industry.toLowerCase()} motor repair.

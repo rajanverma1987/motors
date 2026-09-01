@@ -14,7 +14,7 @@ const path = SEO_SOFTWARE_INVOICING_PATH;
 
 const TITLE = "Motor Repair Invoicing & Quoting Software | IQMotorBase";
 const DESCRIPTION =
-  "Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions—and sync customers, invoices, payments, and vendor POs to QuickBooks Online.";
+  "Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions, and sync customers, invoices, payments, and vendor POs to QuickBooks Online.";
 
 export const metadata = {
   title: TITLE,
@@ -45,7 +45,7 @@ export const metadata = {
 const faqItems = [
   {
     q: "Can a quote turn into an invoice without retyping line items?",
-    a: "Yes. Invoices are generated from completed work orders and approved quote line items, so amounts match what was agreed. Extra charges or adjustments can be added after the fact and still link into accounts receivable—no rebuilding the bill from a paper quote or a separate spreadsheet.",
+    a: "Yes. Invoices are generated from completed work orders and approved quote line items, so amounts match what was agreed. Extra charges or adjustments can be added after the fact and still link into accounts receivable, no rebuilding the bill from a paper quote or a separate spreadsheet.",
   },
   {
     q: "Do quote line items show whether parts are actually available?",
@@ -67,7 +67,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Motor repair invoicing and quoting software"
-        description="Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions on the same job record—and sync to QuickBooks Online when a job closes."
+        description="Quotes that become invoices without re-keying line items. Track receivables, payments, and sales commissions on the same job record, and sync to QuickBooks Online when a job closes."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         sidebarTitle="Book a demo"
@@ -87,7 +87,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               IQMotorBase keeps quoting, invoicing, receivables, and job-level sales commission data on the same Job
               Write-Up path as intake and the work order. Formal RFQs start from that job, stay linked to the job
-              number, and convert into invoices from completed work orders and approved quote lines—without re-keying
+              number, and convert into invoices from completed work orders and approved quote lines, without re-keying
               what was already agreed. When you enable QuickBooks Online, that same commercial path can sync customers,
               invoices, payments, and vendor POs into QBO the moment a job hits your chosen closed status. This page
               walks that path for shops done babysitting disconnected estimate and billing tools. For the full system,
@@ -113,14 +113,14 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               That link matters when purchasing asks which job a bearing is for, or when a customer calls about revision
               two of an estimate. The office does not hunt for a quote number that never matched a job ticket. The RFQ
-              is editable after it is created—scope changes, parts swaps, labor adjustments—without inventing a second
+              is editable after it is created, scope changes, parts swaps, labor adjustments, without inventing a second
               “real” estimate elsewhere. Status is tracked on the quote itself, so you see where each RFQ sits in the
               pipeline instead of inferring status from email threads.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Line items can pull directly from the shop’s parts catalog. The catalog carries SKU, unit of measure,
               on-hand count, reserved count, and optional bin or aisle location. When you build a quote from catalog
-              parts, you see live stock posture—not last month’s printed inventory sheet. Available to promise is
+              parts, you see live stock posture, not last month’s printed inventory sheet. Available to promise is
               on-hand minus reserved, the number that matters when two jobs want the same sleeve bearing. How reservation
               locks on approval and how shortfalls open a vendor PO from the quote screen is on{" "}
               <Link href={SEO_SOFTWARE_INVENTORY_PATH} className="text-primary font-medium hover:underline">
@@ -133,7 +133,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               Preliminary and final quotes both live on the Job Write-Up pipeline. Shops that send a rough number after
               inspection and a tighter number after teardown are not maintaining two customer files. Customer send sits
               on the same record, so the RFQ that left the shop is tied to that job number. When the primary final quote
-              becomes floor work, the work order is created from that quote—motor details, customer, scope, and line
+              becomes floor work, the work order is created from that quote, motor details, customer, scope, and line
               items carry through, numbering aligned to the job. That handoff is covered on{" "}
               <Link href={SEO_SOFTWARE_WORK_ORDER_PATH} className="text-primary font-medium hover:underline">
                 work order software for motor repair shops
@@ -149,7 +149,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Invoices in IQMotorBase are generated from completed work orders and approved quote line items. Amounts
-              match what was agreed on the quote path—there is no manual re-entry of every labor and parts line into a
+              match what was agreed on the quote path, there is no manual re-entry of every labor and parts line into a
               separate billing tool. That fixes the common rewind-shop fight: the customer approved a number, the floor
               shipped the motor, and the invoice matches neither document because someone rebuilt it under deadline.
             </p>
@@ -161,15 +161,15 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               work-order side; invoicing does not need a second pass to invent parts used just to post a receivable.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              Extra charges and adjustments can still be added after the fact when reality differs from the quote—
+              Extra charges and adjustments can still be added after the fact when reality differs from the quote, 
               freight, rush, additional labor at assembly, a parts substitution the customer approved. Those adjustments
               link to accounts receivable with the rest of the invoice. You are not parking “extras” in a side notebook
               that never posts, or opening a blank invoice and hoping every add-on is remembered. Quote agreed, work
-              done, bill issued, AR open—same job story.
+              done, bill issued, AR open, same job story.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Shops that already run a dedicated accounting package are not forced to rip it out on day one. An API can
-              sync customers, work orders, and quotes with external Shop Management System, accounting, or ERP tools—one operational source
+              sync customers, work orders, and quotes with external Shop Management System, accounting, or ERP tools, one operational source
               of truth while the shop keeps apps the team already uses. The claim here is narrower: inside IQMotorBase,
               approved quote lines through completed work order to invoice do not require re-keying commercial detail
               that already lives on the job.
@@ -185,7 +185,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               reports for follow-up on past-due accounts. That sounds basic until you have watched a shop chase money
               from a folder of printed invoices and a bank deposit list that never quite reconciles to open jobs. Here
               the receivable stays connected to the invoice that came from the completed work order and approved quote
-              lines—so when collections asks “what job is this?” the answer is the same job number the floor used.
+              lines, so when collections asks “what job is this?” the answer is the same job number the floor used.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Aging reports are the practical tool for the office manager who starts the week by asking which accounts
@@ -198,7 +198,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               None of this replaces your judgment about credit terms. It replaces treating invoicing as a dead end after
               the motor ships. The customer registry already holds billing details and full job history; invoice and
               payment activity belong in that same commercial picture. When a repeat customer’s motor comes back, you
-              can see whether the last job paid cleanly before you extend the same terms again—quoted, billed, and
+              can see whether the last job paid cleanly before you extend the same terms again, quoted, billed, and
               collected on one job number.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -224,7 +224,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               IQMotorBase includes a built-in QuickBooks Online (QBO) integration. Connect your company under Settings
               → Accounts, choose which work-order status counts as “job closed,” and turn sync on. When a job reaches
-              that status—or when you save invoices, payments, customers, and vendor purchase orders—IQMotorBase can
+              that status, or when you save invoices, payments, customers, and vendor purchase orders, IQMotorBase can
               push the matching records into QuickBooks Online.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -249,13 +249,13 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Sales commissions at the job level</h2>
             <p className="mt-4 text-secondary leading-relaxed">
               The Job Write-Up carries sales commission data on the same continuous record as intake, quotes, and shop
-              actions. Commissions are tracked at the job level—not as a disconnected spreadsheet rebuilt from closed
+              actions. Commissions are tracked at the job level, not as a disconnected spreadsheet rebuilt from closed
               invoices at month-end. When the office looks at a job, commission information sits with the commercial
               path that produced the quote and the invoice, so you are not reverse-engineering who owned the sale from
               email or from a handwritten note on the traveler.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              [NEEDS INPUT: how commission percentage, splits, or rules are configured in-product—Section 1 confirms
+              [NEEDS INPUT: how commission percentage, splits, or rules are configured in-product, Section 1 confirms
               job-level sales commission data on the Job Write-Up but does not document the configuration UI, rate
               tables, or payout calculation mechanics.] Until that detail is confirmed, treat commissions as present on
               the job record and part of the quoting/invoicing story, not as a fully specified commission engine claim.
@@ -277,7 +277,7 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              There is no self-serve signup on a published rate card. Pricing is custom—monthly, yearly, or one-time—
+              There is no self-serve signup on a published rate card. Pricing is custom, monthly, yearly, or one-time, 
               matched to how your shop runs quotes, work orders, and collections. Use the form on this page to book a
               demo and get pricing. If you want the broader product map first, read{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">

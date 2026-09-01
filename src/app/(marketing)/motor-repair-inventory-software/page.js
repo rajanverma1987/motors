@@ -52,7 +52,7 @@ const faqItems = [
   },
   {
     q: "When does inventory actually deduct from on-hand?",
-    a: "When a work order ships, consumed quantities are deducted from inventory automatically. You do not re-enter the same line items in a separate stock sheet after delivery—the quote-backed reservation path carries through to shipment.",
+    a: "When a work order ships, consumed quantities are deducted from inventory automatically. You do not re-enter the same line items in a separate stock sheet after delivery, the quote-backed reservation path carries through to shipment.",
   },
   {
     q: "Do I have to use bin and aisle locations?",
@@ -66,7 +66,7 @@ export default function MotorRepairInventorySoftwarePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Motor repair shop inventory software: on-hand, reserved, and what ships"
-        description="Track on-hand and reserved parts, raise purchase orders from shortfalls, and let stock deduct when a work order ships—built for electric motor repair shops. Book a demo."
+        description="Track on-hand and reserved parts, raise purchase orders from shortfalls, and let stock deduct when a work order ships, built for electric motor repair shops. Book a demo."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         sidebarTitle="Book a demo"
@@ -78,7 +78,7 @@ export default function MotorRepairInventorySoftwarePage() {
             <p className="mt-2 text-secondary leading-relaxed">
               Most motor repair shops do not lose money on inventory because they lack a spreadsheet. They lose it in
               two opposite mistakes: over-ordering because nobody trusts the count, or sitting a job while the
-              customer waits for a bearing, seal, or lead wire that was already on the shelf—just not written down
+              customer waits for a bearing, seal, or lead wire that was already on the shelf, just not written down
               anywhere the counter can see. A whiteboard with “we have three” and a drawer that actually has one is
               how promised dates slip.
             </p>
@@ -90,7 +90,7 @@ export default function MotorRepairInventorySoftwarePage() {
               <Link href={SEO_SOFTWARE_WORK_ORDER_PATH} className="text-primary font-medium hover:underline">
                 work order
               </Link>{" "}
-              ships, consumed quantities deduct without a second manual entry. This page walks that mechanics—how
+              ships, consumed quantities deduct without a second manual entry. This page walks that mechanics, how
               available-to-promise is calculated, how purchasing folds into the quote, and how the books stay tied to
               what left the dock. For the full Job Write-Up through payment path, start at{" "}
               <Link href={SEO_SOFTWARE_PILLAR_PATH} className="text-primary font-medium hover:underline">
@@ -106,14 +106,14 @@ export default function MotorRepairInventorySoftwarePage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               On-hand is what is physically in the shop. Reserved is what is already spoken for by approved quotes.
-              Available to promise is the difference: on-hand minus reserved. That number—not the raw shelf count—is
+              Available to promise is the difference: on-hand minus reserved. That number, not the raw shelf count, is
               what you should use when you tell the next customer you can start their rewind next week with the parts
               you still have free.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Formal quotes (RFQs) start from the Job Write-Up and stay linked to the same job number. Quote line items
               can pull directly from the shop’s parts catalog, so the person writing the quote is looking at catalog
-              parts—not inventing a free-text description that never touches stock. When that quote is approved, the
+              parts, not inventing a free-text description that never touches stock. When that quote is approved, the
               parts on it get reserved against the job. The reservation is not a sticky note on a bin; it is a count
               change in the same system that will later generate the work order from the job’s primary final quote.
             </p>
@@ -121,7 +121,7 @@ export default function MotorRepairInventorySoftwarePage() {
               Without reservation, two estimators can both promise the last set of bearings on the same afternoon.
               One job gets the parts; the other discovers the shortfall when the motor is already torn down. With
               reservation, the second quote sees less available to promise because the first approval already claimed
-              quantity—preventing a double-promise against the same physical part before either work order hits the
+              quantity, preventing a double-promise against the same physical part before either work order hits the
               floor.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -152,11 +152,11 @@ export default function MotorRepairInventorySoftwarePage() {
               customer approved. The PO is tied to a vendor you already keep on file.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
-              Vendor management and purchasing live in this same shop system—there is no separate “vendor product”
+              Vendor management and purchasing live in this same shop system, there is no separate “vendor product”
               page in this cluster because the work happens on the quote and PO path. Per supplier you store contact
               and terms. Purchase orders are created for parts and materials the job needs. Vendor invoices attach to
               those POs. PO status is tracked as open, invoiced, or paid so the office can see whether the parts order
-              is still waiting, already billed by the supplier, or settled—without a parallel spreadsheet labeled
+              is still waiting, already billed by the supplier, or settled, without a parallel spreadsheet labeled
               “POs this month.”
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -164,7 +164,7 @@ export default function MotorRepairInventorySoftwarePage() {
               are logged with the same chain that tracks customer motors arriving and shipments back to customers.
               That gives a practical answer to “did that order come in?” and “where is it right now?” instead of
               checking email threads for packing slips. When the parts land and on-hand increases, you are still in
-              the same inventory and purchasing record set that started from the quote shortfall—not three systems
+              the same inventory and purchasing record set that started from the quote shortfall, not three systems
               that disagree by the end of the week.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -172,8 +172,8 @@ export default function MotorRepairInventorySoftwarePage() {
               parts house. You buy because an approved quote reserved more than you had free, or because the quote
               never had stock in the first place. Starting the PO from the quote screen keeps the purchase tied to
               that job’s need. Contacts and terms on the vendor record keep the counter from hunting for a phone
-              number every time the same supplier gets another rush order. Status on the PO—open, invoiced, or
-              paid—keeps purchasing and AP on one object instead of a folder of PDFs.
+              number every time the same supplier gets another rush order. Status on the PO, open, invoiced, or
+              paid, keeps purchasing and AP on one object instead of a folder of PDFs.
             </p>
           </section>
 
@@ -209,7 +209,7 @@ export default function MotorRepairInventorySoftwarePage() {
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Low-stock alerts surface on the dashboard so the office does not discover a problem only when the next
-              quote cannot be promised. You still run the shop from jobs and quotes—the alert is a visibility layer
+              quote cannot be promised. You still run the shop from jobs and quotes, the alert is a visibility layer
               on parts that need attention before another approval burns through what little available-to-promise
               remains. Combined with on-hand and reserved counts in the catalog, the dashboard answer is clearer than
               walking the aisle after a customer is already waiting on a date.
@@ -217,7 +217,7 @@ export default function MotorRepairInventorySoftwarePage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Alerts do not replace the shortfall-to-PO path from the quote screen. They catch the slow bleed:
               common consumables and high-turn items that drop while several jobs are open. When an alert fires, you
-              still use vendor contacts, terms, and purchase orders in the same purchasing flow described above—not a
+              still use vendor contacts, terms, and purchase orders in the same purchasing flow described above, not a
               separate “reorder app” that never sees the jobs.
             </p>
           </section>
@@ -248,7 +248,7 @@ export default function MotorRepairInventorySoftwarePage() {
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Pricing is custom—monthly, yearly, or one-time—matched to how your shop runs. There is no self-serve
+              Pricing is custom, monthly, yearly, or one-time, matched to how your shop runs. There is no self-serve
               signup on a public rate card. Use the form to book a demo and see on-hand, reserved, quote shortfalls,
               vendor POs, and shipment consumption on your own parts list. For the broader system around inventory,
               read{" "}

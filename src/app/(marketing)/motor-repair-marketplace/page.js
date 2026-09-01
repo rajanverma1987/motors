@@ -8,9 +8,9 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Motor Repair Marketplace for Shops — Sell Parts, Surplus Motors & Tools | IQMotorBase.com";
+    "Motor Repair Marketplace for Shops, Sell Parts, Surplus Motors & Tools | IQMotorBase.com";
   const description =
-    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your Shop Management System, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking—separate from job inventory. For industrial motor shops in the USA.";
+    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your Shop Management System, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking, separate from job inventory. For industrial motor shops in the USA.";
   return {
     title,
     description,
@@ -31,7 +31,7 @@ export async function generateMetadata() {
 const faqItems = [
   {
     q: "What is the IQMotorBase.com motor repair marketplace?",
-    a: "It is a public catalog where motor repair and rewinding shops list spare parts, surplus motors, tools, and related equipment. Visitors browse and submit a request with their contact details—you follow up, quote, and invoice the same way you already run your business. It is built into the same Shop Management System you use for work orders and quotes, not a separate storefront product.",
+    a: "It is a public catalog where motor repair and rewinding shops list spare parts, surplus motors, tools, and related equipment. Visitors browse and submit a request with their contact details, you follow up, quote, and invoice the same way you already run your business. It is built into the same Shop Management System you use for work orders and quotes, not a separate storefront product.",
   },
   {
     q: "Is the marketplace the same as my shop inventory for jobs?",
@@ -39,7 +39,7 @@ const faqItems = [
   },
   {
     q: "Do buyers pay on the website?",
-    a: "No. Buyers submit a request (lead-style order) with their information. You close payment and fulfillment on your terms—invoice, card-on-file, net terms, or pickup—without IQMotorBase.com acting as a payment processor for the transaction.",
+    a: "No. Buyers submit a request (lead-style order) with their information. You close payment and fulfillment on your terms, invoice, card-on-file, net terms, or pickup, without IQMotorBase.com acting as a payment processor for the transaction.",
   },
   {
     q: "Can my listings rank in Google?",
@@ -51,7 +51,7 @@ const faqItems = [
   },
   {
     q: "What can we list?",
-    a: "Typical categories include electric motor parts, surplus or take-out motors, shop tools, test equipment, and related items—subject to your policies and any platform rules. You control titles, descriptions, images, and when a listing is live.",
+    a: "Typical categories include electric motor parts, surplus or take-out motors, shop tools, test equipment, and related items, subject to your policies and any platform rules. You control titles, descriptions, images, and when a listing is live.",
   },
   {
     q: "How do we manage requests?",
@@ -72,7 +72,7 @@ function JsonLd({ baseUrl }) {
   const webPage = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    name: "Motor repair marketplace for shops — IQMotorBase.com",
+    name: "Motor repair marketplace for shops | IQMotorBase.com",
     description:
       "B2B-friendly marketplace for motor repair and rewinding shops to list parts, surplus motors, and tools from the Shop Management System with SEO-friendly pages and buyer requests.",
     url,
@@ -135,12 +135,12 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <span className="text-title">Motor repair marketplace</span>
           </nav>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-            Motor repair marketplace for electric motor shops — list surplus parts &amp; equipment from your Shop Management System
+            Motor repair marketplace for electric motor shops, list surplus parts &amp; equipment from your Shop Management System
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
             IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}
             designed for <strong className="font-semibold text-title">motor repair shops, rewind shops</strong>, and
-            industrial service teams. Publish listings from the same platform you use for quotes and work—buyers submit a{" "}
+            industrial service teams. Publish listings from the same platform you use for quotes and work, buyers submit a{" "}
             <strong className="font-semibold text-title">request</strong>, not a forced online checkout, so you keep
             control of pricing, credit, and fulfillment while still reaching new demand online.
           </p>
@@ -170,7 +170,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             What this marketplace solves for motor repair businesses
           </h2>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
-            Most independent shops do not need a full shopping cart for every spare part—but they do need a{" "}
+            Most independent shops do not need a full shopping cart for every spare part, but they do need a{" "}
             <strong className="text-title">credible, discoverable place</strong> to move surplus motors, take-out
             cores, specialty bearings, and tooling without listing fees eating margin on every SKU. This page describes
             how IQMotorBase.com combines{" "}
@@ -185,7 +185,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <Link href="/list-your-electric-motor-services" className="font-medium text-primary hover:underline">
               directory listing
             </Link>{" "}
-            so local and regional searchers find your services—not only individual SKUs.
+            so local and regional searchers find your services, not only individual SKUs.
           </p>
         </section>
 
@@ -195,28 +195,28 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <ul className="mt-6 space-y-5 text-secondary">
             <li className="leading-relaxed">
-              <strong className="text-title">Separate from job-stock inventory</strong> — Your{" "}
+              <strong className="text-title">Separate from job-stock inventory</strong>, Your{" "}
               <strong className="text-title">parts catalog</strong> for work orders, receiving, and reservations stays
               under <strong className="text-title">Inventory</strong> in the dashboard. The marketplace is for{" "}
-              <strong className="text-title">public listings</strong> you choose to promote—so you never confuse a
+              <strong className="text-title">public listings</strong> you choose to promote, so you never confuse a
               customer&apos;s job with a one-off sale.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">Publish from the Shop Management System</strong> — Add title, description, category, price
+              <strong className="text-title">Publish from the Shop Management System</strong>, Add title, description, category, price
               note, and images. Use drafts until you are ready; then flip to live when pricing and photos are final.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">SEO-friendly listing pages</strong> — Each item can have its own URL and
-              metadata for search and social previews—helpful when buyers search for OEM names, frame sizes, or part
+              <strong className="text-title">SEO-friendly listing pages</strong>, Each item can have its own URL and
+              metadata for search and social previews, helpful when buyers search for OEM names, frame sizes, or part
               numbers you stock.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">No payment friction on the public site</strong> — Buyers send a request
-              with contact details. You invoice, collect payment, and ship using the processes you already trust—no
+              <strong className="text-title">No payment friction on the public site</strong>, Buyers send a request
+              with contact details. You invoice, collect payment, and ship using the processes you already trust, no
               mandatory cart or processor on the marketing site.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-title">Requests in one place</strong> — Buyer inquiries flow into your Shop Management System under
+              <strong className="text-title">Requests in one place</strong>, Buyer inquiries flow into your Shop Management System under
               Marketplace so estimators and counter staff see the same thread without relying on scattered inbox
               screenshots.
             </li>
@@ -229,7 +229,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
             Exact categories evolve with your shop, but teams often use the marketplace for items that are easy to
-            describe with photos and a clear condition story—without needing full e-commerce tax and freight automation
+            describe with photos and a clear condition story, without needing full e-commerce tax and freight automation
             on day one.
           </p>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -243,7 +243,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <h3 className="font-semibold text-title">Surplus &amp; take-out motors</h3>
               <p className="mt-2 text-sm leading-relaxed text-secondary">
-                Units removed from service, shop rebuilds, or customer trade-ins—documented with nameplate data and
+                Units removed from service, shop rebuilds, or customer trade-ins, documented with nameplate data and
                 testing notes when available.
               </p>
             </div>
@@ -256,7 +256,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <div className="rounded-xl border border-border bg-card p-5">
               <h3 className="font-semibold text-title">Specialty or hard-to-find items</h3>
               <p className="mt-2 text-sm leading-relaxed text-secondary">
-                Odd lots that search traffic can find—ideal when buyers search for a manufacturer or frame size you
+                Odd lots that search traffic can find, ideal when buyers search for a manufacturer or frame size you
                 happen to have on the shelf.
               </p>
             </div>
@@ -269,26 +269,26 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <ol className="mt-6 list-decimal space-y-4 pl-5 text-secondary marker:font-semibold marker:text-primary">
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Activate your Shop Management System</strong> — Register for IQMotorBase.com and open the
+              <strong className="text-title">Activate your Shop Management System</strong>, Register for IQMotorBase.com and open the
               dashboard. Your team uses the same workspace for quotes, jobs, and marketplace listings.
             </li>
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Create a listing</strong> — Add product copy, category, condition, and
+              <strong className="text-title">Create a listing</strong>, Add product copy, category, condition, and
               images. Keep it in draft until pricing and compliance checks are done.
             </li>
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Publish</strong> — Go live when ready. The public{" "}
+              <strong className="text-title">Publish</strong>, Go live when ready. The public{" "}
               <Link href="/marketplace" className="font-medium text-primary hover:underline">
                 marketplace
               </Link>{" "}
               lets visitors filter and open individual listing pages.
             </li>
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Respond to requests</strong> — Buyers submit contact details and a short
+              <strong className="text-title">Respond to requests</strong>, Buyers submit contact details and a short
               message. Your team replies, converts to a quote or invoice, and coordinates pickup or shipping.
             </li>
             <li className="leading-relaxed pl-1">
-              <strong className="text-title">Measure and refine</strong> — Double down on titles and photos that
+              <strong className="text-title">Measure and refine</strong>, Double down on titles and photos that
               generate qualified requests; retire listings that no longer match your inventory strategy.
             </li>
           </ol>
@@ -309,7 +309,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             trust the source.
           </p>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
-            You still control pricing and payment—this is not a race-to-the-bottom auction. It is a{" "}
+            You still control pricing and payment, this is not a race-to-the-bottom auction. It is a{" "}
             <strong className="text-title">lead-generation channel</strong> aligned with how motor repair shops
             actually close work in the United States.
           </p>
@@ -321,7 +321,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
           </h2>
           <p className="mt-4 text-base leading-relaxed text-secondary sm:text-lg">
             IQMotorBase.com may also list or promote select items on your behalf. Those orders are coordinated through
-            admin workflows so we can align fulfillment with any commission structure you agree to—still without
+            admin workflows so we can align fulfillment with any commission structure you agree to, still without
             forcing a public checkout experience on the marketing site. Ask about availability when you{" "}
             <Link href="/contact" className="font-medium text-primary hover:underline">
               contact us

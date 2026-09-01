@@ -58,13 +58,13 @@ function linkSections(state) {
       title: `Cities in ${state.name}`,
       links: state.cities.map((c) => ({
         href: `/usa/${state.slug}/${c.slug}/motor-repair-business-listing`,
-        label: `${c.name} — motor repair business listing`,
+        label: `${c.name}, motor repair business listing`,
       })),
     },
     {
       title: "USA hub",
       links: [
-        { href: SEO_USA_HUB_PATH, label: "United States — motor repair business listing" },
+        { href: SEO_USA_HUB_PATH, label: "United States: motor repair business listing" },
         { href: "/register", label: "Create free Shop Management System account" },
         { href: "/list-your-electric-motor-services", label: "Submit your directory profile" },
       ],
@@ -96,7 +96,7 @@ export default async function StateMotorRepairBusinessListingPage({ params }) {
 
   return (
     <SeoLeadLandingPage
-      h1={`List Your Motor Repair Business in ${state.name} – Get More Customers`}
+      h1={`List Your Motor Repair Business in ${state.name} to Get More Customers`}
       canonicalPath={path}
       breadcrumbs={[
         { href: "/", label: "Home" },

@@ -57,13 +57,13 @@ export default function IqwirecalculatorPrivacyChoicesPage() {
         <h2 className="mt-10 text-xl font-semibold text-title">Choices in the app</h2>
         <ul className="mt-3 list-disc space-y-2 pl-6 text-secondary">
           <li>
-            <strong className="text-title">Profile</strong> — update your name and phone; cancel a subscription.
+            <strong className="text-title">Profile</strong>, update your name and phone; cancel a subscription.
           </li>
           <li>
-            <strong className="text-title">Saved calculations</strong> — delete named saves with the trash control.
+            <strong className="text-title">Saved calculations</strong>, delete named saves with the trash control.
           </li>
           <li>
-            <strong className="text-title">Custom wire sizes</strong> — remove sizes you added (default AWG sizes stay).
+            <strong className="text-title">Custom wire sizes</strong>, remove sizes you added (default AWG sizes stay).
           </li>
         </ul>
 

@@ -48,7 +48,7 @@ function logoBlock(logoSrc, signature, scale) {
   return `<p style="margin-top:20px;margin-bottom:8px"><img src="${escapeEmailHtml(src)}" alt="${signature}" height="${heightPx}" width="${maxWidthPx}" style="${style}" /></p>`;
 }
 
-/** Optional note from shop — plain text, newlines preserved. */
+/** Optional note from shop, plain text, newlines preserved. */
 export function formatCustomEmailMessageHtml(message) {
   const text = String(message ?? "").trim();
   if (!text) return "";
@@ -67,7 +67,7 @@ export function buildQuoteToCustomerEmailContent(opts) {
   const rfqNumber = opts.rfqNumber;
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
-  const subject = `Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${escapeEmailHtml(rfqNumber) || "is ready"} – ${signature}`;
+  const subject = `Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${escapeEmailHtml(rfqNumber) || "is ready"} to ${signature}`;
   const html = withDashboardOutboundEmailFooter(`
     <p>Hi${opts.customerName ? ` ${escapeEmailHtml(opts.customerName)}` : ""},</p>
     <p>Your ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} ${rfqNumber ? `(RFQ# ${escapeEmailHtml(rfqNumber)})` : ""} is ready for your review.</p>
@@ -77,7 +77,7 @@ export function buildQuoteToCustomerEmailContent(opts) {
     <p>You can also print or save the ${SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER} as PDF from that page.</p>
     ${typeof opts.accountsEmailBlock === "string" && opts.accountsEmailBlock.trim() ? opts.accountsEmailBlock : ""}
     ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
-    <p style="margin-top:16px">— ${signature}</p>
+    <p style="margin-top:16px">,  ${signature}</p>
   `);
   return { subject, html, shopName };
 }
@@ -85,10 +85,10 @@ export function buildQuoteToCustomerEmailContent(opts) {
 /** @param {{ customerName?: string, invoiceNumber?: string, shopCompanyName?: string, viewUrl?: string, totalFormatted?: string, summaryHtml?: string, logoSrc?: string, accountsEmailBlock?: string, customMessage?: string }} opts */
 export function buildInvoiceToCustomerEmailContent(opts) {
   const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
-  const invNo = escapeEmailHtml(opts.invoiceNumber) || "—";
+  const invNo = escapeEmailHtml(opts.invoiceNumber) || ", ";
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
-  const subject = `Invoice ${invNo} – ${signature}`;
+  const subject = `Invoice ${invNo} to ${signature}`;
   const accountsBlock =
     typeof opts.accountsEmailBlock === "string" && opts.accountsEmailBlock.trim() ? opts.accountsEmailBlock : "";
   const viewUrl = typeof opts.viewUrl === "string" ? opts.viewUrl.trim() : "";
@@ -104,7 +104,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
     ${accountsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
     ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
-    <p style="margin-top:16px">— ${signature}</p>
+    <p style="margin-top:16px">,  ${signature}</p>
   `);
     return { subject, html, shopName };
   }
@@ -124,7 +124,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
     ${accountsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email or contact us directly.</p>
     ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
-    <p style="margin-top:16px">— ${signature}</p>
+    <p style="margin-top:16px">,  ${signature}</p>
   `);
   return { subject, html, shopName };
 }
@@ -135,7 +135,7 @@ export function buildPoToVendorEmailContent(opts) {
   const poNumber = opts.poNumber;
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
-  const subject = `Purchase order ${escapeEmailHtml(poNumber) || ""} – ${shopName}`;
+  const subject = `Purchase order ${escapeEmailHtml(poNumber) || ""} to ${shopName}`;
   const html = withDashboardOutboundEmailFooter(`
     <p>Hi${opts.vendorName ? ` ${escapeEmailHtml(opts.vendorName)}` : ""},</p>
     <p>Please find your purchase order ${poNumber ? `(PO# ${escapeEmailHtml(poNumber)})` : ""} from ${signature}.</p>
@@ -145,7 +145,7 @@ export function buildPoToVendorEmailContent(opts) {
     <p>You can print the PO from that page and mark line items as Dispatch when shipped.</p>
     ${typeof opts.poVendorAddressesHtml === "string" && opts.poVendorAddressesHtml.trim() ? opts.poVendorAddressesHtml : ""}
     ${logoBlock(opts.logoSrc, signature, opts.logoDocumentScale)}
-    <p style="margin-top:16px">— ${signature}</p>
+    <p style="margin-top:16px">,  ${signature}</p>
   `);
   return { subject, html, shopName };
 }

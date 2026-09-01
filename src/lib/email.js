@@ -51,7 +51,7 @@ export async function sendListingApproved(to, companyName) {
     <p>Congratulations${companyName ? ` from ${companyName}` : ""}!</p>
     <p>Your repair center listing on IQMotorBase.com has been <strong>approved</strong> and is now live on our website. Your company is listed in the directory so customers in your area can find and contact you.</p>
     <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -63,13 +63,13 @@ export async function sendListingRejected(to, companyName, reason) {
     <p>Thank you for submitting your repair center to IQMotorBase.com. After review, we are unable to approve your listing at this time.</p>
     ${reason ? `<p><strong>Reason for rejection:</strong> ${reason}</p>` : "<p>No specific reason was provided.</p>"}
     <p>If you have questions or would like to resubmit with updates, please reply to this email or contact us.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 export async function sendNewReviewNotification(to, companyName, reviewerName, rating, reviewBody) {
-  const subject = `New customer review on IQMotorBase.com – ${companyName}`;
+  const subject = `New customer review on IQMotorBase.com to ${companyName}`;
   const stars = "★".repeat(Math.round(rating)) + "☆".repeat(5 - Math.round(rating));
   const html = `
     <p>Hi,</p>
@@ -78,12 +78,12 @@ export async function sendNewReviewNotification(to, companyName, reviewerName, r
     <p><strong>From:</strong> ${reviewerName}</p>
     <p><strong>Review:</strong></p>
     <p>${reviewBody.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br />")}</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
-/** Rewind calculator RFQ — override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
+/** Rewind calculator RFQ, override with REWIND_CALCULATOR_RFQ_EMAIL if needed. */
 const rewindCalculatorRfqEmail = () =>
   process.env.REWIND_CALCULATOR_RFQ_EMAIL?.trim() || "contact@IQMotorBase.com";
 
@@ -95,7 +95,7 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
   const to = rewindCalculatorRfqEmail();
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const subject = "Rewind calculator RFQ — IQMotorBase.com";
+  const subject = "Rewind calculator RFQ, IQMotorBase.com";
   const html = `
     <p>A visitor used the <strong>electric motor rewinding cost calculator</strong> and requested quotes from shops in their area.</p>
     <table style="border-collapse:collapse;margin-top:12px;">
@@ -110,7 +110,7 @@ export async function sendRewindCalculatorRfqToAdmin(params) {
     <p style="margin-top:16px;"><strong>Calculator summary</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
     ${params.problemDescription ? `<p style="margin-top:16px;"><strong>Message / notes</strong></p><p>${esc(params.problemDescription).replace(/\n/g, "<br/>")}</p>` : ""}
-    <p>— IQMotorBase.com (automated)</p>
+    <p>,  IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -149,7 +149,7 @@ export async function sendCalculatorPriceEnquiryToAdmin(params) {
     </table>
     <p style="margin-top:16px;"><strong>Calculator configuration &amp; estimate</strong></p>
     <table style="border-collapse:collapse;">${params.htmlRows}</table>
-    <p>— IQMotorBase.com (automated)</p>
+    <p>,  IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
     attachments: calculatorEstimatePdfAttachments(params.pdfBuffer, params.pdfFilename),
@@ -189,14 +189,14 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
     ? `<p>Your ballpark planning range: <strong>${esc(params.estimateRange)}</strong> (US typical rewind shop pricing).</p>`
     : "";
 
-  const subject = "Your motor rewind cost estimate – IQMotorBase.com";
+  const subject = "Your motor rewind cost estimate to IQMotorBase.com";
   const html = `
     <p>Hi ${name},</p>
     <p>Thank you for using the <strong>IQMotorBase.com motor rewind cost calculator</strong>. Your detailed estimate PDF is attached.</p>
     ${rangeLine}
-    <p>The PDF includes your motor configuration, ballpark range, cost breakdown, and how the estimate was calculated. This is planning guidance only—not a binding shop quote. Final pricing depends on inspection and shop scope.</p>
+    <p>The PDF includes your motor configuration, ballpark range, cost breakdown, and how the estimate was calculated. This is planning guidance only, not a binding shop quote. Final pricing depends on inspection and shop scope.</p>
     <p>When you are ready for written quotes from qualified repair shops, visit <a href="${esc(site)}">${esc(site)}</a>.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
 
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
@@ -207,7 +207,7 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
 /** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
 export async function sendNoListingsNearMeNotification(city, state, zip) {
   const to = "contact@IQMotorBase.com";
-  const subject = "IQMotorBase.com – No repair shops in this area (near-me page)";
+  const subject = "IQMotorBase.com to No repair shops in this area (near-me page)";
   const locationParts = [city, state, zip].filter(Boolean);
   const locationLine = locationParts.length ? locationParts.join(", ") : "Location not provided";
   const html = `
@@ -220,20 +220,20 @@ export async function sendNoListingsNearMeNotification(city, state, zip) {
     </ul>
     <p><strong>Summary:</strong> ${locationLine}</p>
     <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
-    <p>— IQMotorBase.com (automated)</p>
+    <p>,  IQMotorBase.com (automated)</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /** Notify a user who signed up for "notify me when there's a listing" that repair shops are now in their area. Links to our site only; no direct shop contact info in the email. */
 export async function sendAreaListedNotification(toEmail, locationLabel, shopListingsPageUrl) {
-  const subject = "repair shops are now in your area – IQMotorBase.com";
+  const subject = "repair shops are now in your area to IQMotorBase.com";
   const html = `
     <p>Good news!</p>
     <p>We've added repair shops near <strong>${locationLabel || "your area"}</strong> on IQMotorBase.com.</p>
     <p>You asked to be notified when new listings are available in your area. View the full list and details on our site:</p>
     <p><a href="${shopListingsPageUrl}">View repair shops in your area</a></p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
@@ -265,7 +265,7 @@ export async function sendDemoRequestToAdmin(fields) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">— IQMotorBase.com (contact form)</p>
+    <p style="margin-top:16px;">,  IQMotorBase.com (contact form)</p>
   `;
   return sendEmail("contact@IQMotorBase.com", "RFQ - IQMotorBase Shop Management System Demo.", wrapPlatformBrandedHtml(html));
 }
@@ -273,7 +273,7 @@ export async function sendDemoRequestToAdmin(fields) {
 /** Send thank-you email to client after demo request. */
 export async function sendDemoRequestThankYou(toName, toEmail, availability = {}) {
   const name = toName ? ` ${toName}` : "";
-  const subject = "We received your demo request – IQMotorBase.com";
+  const subject = "We received your demo request to IQMotorBase.com";
   const esc = (v) => (v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"));
   const preferDate = String(availability?.preferDate || "").trim();
   const preferTime = String(availability?.preferTime || "").trim();
@@ -289,7 +289,7 @@ export async function sendDemoRequestThankYou(toName, toEmail, availability = {}
     ${preferenceLine}
     <p>To schedule your meeting, please <strong>reply to this email</strong> with a few dates and times that work for you (include your timezone). We&apos;ll send a calendar invite for a slot that fits your schedule.</p>
     <p>In the meantime, feel free to explore our <a href="${getPublicSiteUrl()}/electric-motor-repair-shops-listings">repair center directory</a> or learn more about <a href="${getPublicSiteUrl()}/features">our features</a>.</p>
-    <p>— The IQMotorBase.com team</p>
+    <p>,  The IQMotorBase.com team</p>
   `;
   return sendEmail(toEmail, subject, wrapPlatformBrandedHtml(html));
 }
@@ -325,9 +325,9 @@ export async function sendNewListingSubmittedToAdmin(doc) {
     <table style="border-collapse:collapse;margin-top:12px;">
       <tbody>${rows}</tbody>
     </table>
-    <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
+    <p style="margin-top:16px;">,  IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "New listing submitted – IQMotorBase.com", wrapPlatformBrandedHtml(html));
+  return sendEmail(to, "New listing submitted to IQMotorBase.com", wrapPlatformBrandedHtml(html));
 }
 
 /** Notify admin when a listing is approved and the shop is now listed on the website. */
@@ -338,11 +338,11 @@ export async function sendShopListedNotificationToAdmin(doc) {
   const html = `
     <p>A repair center has been <strong>approved</strong> and is now listed on the website.</p>
     <p><strong>${(doc.companyName || "").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong><br />
-    Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || "—"}</p>
+    Email: ${(doc.email || "").replace(/</g, "&lt;")} | ${[doc.city, doc.state, doc.zipCode].filter(Boolean).join(", ") || ", "}</p>
     <p><a href="${siteUrl}/admin/listings">View in admin</a> | <a href="${siteUrl}/electric-motor-repair-shops-listings">Public directory</a></p>
-    <p style="margin-top:16px;">— IQMotorBase.com (automated)</p>
+    <p style="margin-top:16px;">,  IQMotorBase.com (automated)</p>
   `;
-  return sendEmail(to, "Shop listed on website – IQMotorBase.com", wrapPlatformBrandedHtml(html));
+  return sendEmail(to, "Shop listed on website to IQMotorBase.com", wrapPlatformBrandedHtml(html));
 }
 
 /**
@@ -361,7 +361,7 @@ export async function sendNewWebsiteLeadNotificationToShop({
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
   const fromLine = [esc(leadContactName || "Someone"), leadContactCompany ? ` (${esc(leadContactCompany)})` : ""].join("");
-  const subject = `New lead for ${listingCompanyName || "your shop"} – IQMotorBase.com`;
+  const subject = `New lead for ${listingCompanyName || "your shop"} to IQMotorBase.com`;
   const html = `
     <p>Hello,</p>
     <p>You received a new repair inquiry (RFQ) from your <strong>IQMotorBase.com</strong> directory listing.</p>
@@ -369,7 +369,7 @@ export async function sendNewWebsiteLeadNotificationToShop({
     <p>Log in to your shop dashboard to view full contact details and respond in your Shop Management System:</p>
     <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -389,15 +389,15 @@ export async function sendContactUnlockNotificationToShop({
   const leadsUrl = `${base}/dashboards?tab=customers`;
   const loginUrl = `${base}/login`;
   const fromLine = esc(leadContactName || "Someone");
-  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} – IQMotorBase.com`;
+  const subject = `Contact info viewed for ${listingCompanyName || "your shop"} to IQMotorBase.com`;
   const html = `
     <p>Hello,</p>
     <p><strong>${fromLine}</strong> viewed your contact information on your <strong>IQMotorBase.com</strong> directory listing.</p>
-    <p>This is a softer lead than a full repair request — they may follow up directly or submit an RFQ later.</p>
+    <p>This is a softer lead than a full repair request, they may follow up directly or submit an RFQ later.</p>
     <p>Log in to your shop dashboard to view their contact details:</p>
     <p><a href="${esc(leadsUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Open Leads in Shop Management System</a></p>
     <p style="font-size:13px;color:#555;">If you are not signed in, use <a href="${esc(loginUrl)}">Log in</a> first with your shop email, then open <strong>Leads</strong>.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -410,7 +410,7 @@ export async function sendVerificationCodeEmail(to, code) {
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
     <p>Enter this code on the website to continue. The code expires in 15 minutes.</p>
     <p>If you didn't request this, you can ignore this email.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -502,13 +502,13 @@ export async function sendListingFeaturedAccountEmail({
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
     <p><strong>Security:</strong> Change your password after you sign in under <strong>Settings</strong> → <strong>Account</strong>.</p>
     <p>To unlock the full Shop Management System (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
 /**
- * Admin outreach to active portal clients — feedback request and paid subscription interest.
+ * Admin outreach to active portal clients, feedback request and paid subscription interest.
  */
 export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, shopName }) {
   const site = getPublicSiteUrl().replace(/\/$/, "");
@@ -532,7 +532,7 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
       <li>What features or workflows would make IQMotorBase more useful?</li>
       <li>Is there anything confusing or missing from your day-to-day use?</li>
     </ul>
-    <p>Simply reply to this email with your thoughts — even a few sentences help us prioritize improvements.</p>
+    <p>Simply reply to this email with your thoughts, even a few sentences help us prioritize improvements.</p>
     <p><strong>Interested in a paid subscription?</strong> If you are on a free or trial plan and want full Shop Management System access, calculators, marketplace tools, and ongoing support, we would be happy to walk you through options:</p>
     <ul>
       <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
@@ -541,13 +541,13 @@ export async function sendActiveClientFeedbackOutreachEmail({ to, contactName, s
     </ul>
     <p>Reply here or reach out through the contact page if you would like to discuss a paid plan for your shop.</p>
     <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendMarketingEmail(to, subject, html);
 }
 
 /**
- * Admin outreach — listing page stats, free directory benefits, shop management software subscription.
+ * Admin outreach, listing page stats, free directory benefits, shop management software subscription.
  */
 export async function sendListingStatsOutreachEmail({
   to,
@@ -573,7 +573,7 @@ export async function sendListingStatsOutreachEmail({
   const pricingUrl = `${site}/pricing`;
   const subscriptionUrl = `${site}/dashboards/settings?section=subscription`;
   const contactUrl = `${site}/contact`;
-  const subject = `Your IQMotorBase listing stats — ${esc(companyName || "repair center")}`;
+  const subject = `Your IQMotorBase listing stats, ${esc(companyName || "repair center")}`;
   const html = `
     <p>Hello${companyName?.trim() ? ` from <strong>${esc(companyName.trim())}</strong>` : ""},</p>
     <p>Your repair center is listed on <strong>IQMotorBase.com</strong> and customers are finding you online. Here is a snapshot of your listing performance:</p>
@@ -590,10 +590,10 @@ export async function sendListingStatsOutreachEmail({
       <li>A searchable directory profile so buyers can find your shop by location and services</li>
       <li>Visibility on IQMotorBase.com when customers search for motor repair and rewinding</li>
       <li>Quote requests routed to your shop when visitors inquire from your listing page</li>
-      <li>Ongoing exposure as our directory and SEO content grow — at no listing fee</li>
+      <li>Ongoing exposure as our directory and SEO content grow, at no listing fee</li>
     </ul>
     <p><strong>Run your whole shop in one place</strong></p>
-    <p>Many shops start with a free directory listing, then move to <strong>IQMotorBase shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more — without juggling spreadsheets and disconnected tools.</p>
+    <p>Many shops start with a free directory listing, then move to <strong>IQMotorBase shop management software</strong> to handle work orders, quotes, inventory, job tracking, customer communication, and more, without juggling spreadsheets and disconnected tools.</p>
     <ul>
       <li><a href="${esc(softwareUrl)}">Motor repair shop management software</a></li>
       <li><a href="${esc(pricingUrl)}">View plans &amp; pricing</a></li>
@@ -602,7 +602,7 @@ export async function sendListingStatsOutreachEmail({
     </ul>
     <p>Reply to this email if you have questions about your stats or want help choosing a plan for your shop.</p>
     <p>Thank you for being part of IQMotorBase.com.</p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendMarketingEmail(to, subject, html);
 }
@@ -630,7 +630,7 @@ export async function sendSubscriptionPlanAttachedEmail({
       ? `${esc(currency || "USD")} ${Number(customPrice).toFixed(2)}`
       : "";
   const subject = isPaypal
-    ? `Subscription plan attached — ${esc(planName || "IQMotorBase")}`
+    ? `Subscription plan attached, ${esc(planName || "IQMotorBase")}`
     : `Your IQMotorBase.com plan: ${esc(planName || "Free Ultimate")}`;
   const approvalBlock =
     isPaypal && approvalUrl
@@ -642,15 +642,15 @@ export async function sendSubscriptionPlanAttachedEmail({
     <p>A subscription plan has been attached to your IQMotorBase.com account.</p>
     <table style="border-collapse:collapse;margin:16px 0;">
       <tbody>
-        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || "—")}</td></tr>
-        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planType || "—")}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Plan</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planName || ", ")}</td></tr>
+        <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Type</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(planType || ", ")}</td></tr>
         ${billingCycle ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Billing</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(billingCycle)}</td></tr>` : ""}
         ${priceLine ? `<tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Amount</td><td style="padding:8px 12px;border:1px solid #ddd;">${priceLine}</td></tr>` : ""}
       </tbody>
     </table>
     ${approvalBlock}
     <p>Manage subscription anytime: <a href="${esc(subUrl)}">${esc(subUrl)}</a></p>
-    <p>— IQMotorBase.com</p>
+    <p>,  IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
@@ -734,7 +734,7 @@ export async function sendQuoteToCustomer(
   return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
 }
 
-/** Email link for repair-flow preliminary quote — customer approves teardown, declines repair, or authorizes scrap. */
+/** Email link for repair-flow preliminary quote, customer approves teardown, declines repair, or authorizes scrap. */
 export async function sendRepairFlowPreliminaryToCustomer(
   toEmail,
   customerName,
@@ -748,7 +748,7 @@ export async function sendRepairFlowPreliminaryToCustomer(
   const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
   const signature = esc(shopName);
   const jobRef = esc(jobNumber) || "your repair job";
-  const subject = `Preliminary quote — Job ${jobRef} – ${shopName}`;
+  const subject = `Preliminary quote, Job ${jobRef} to ${shopName}`;
   const logoSrc = String(options.logoSrc || options.logoAbsoluteUrl || "").trim();
   const logoIsHttp = logoSrc.startsWith("http://") || logoSrc.startsWith("https://");
   const logoIsData = logoSrc.startsWith("data:image/");
@@ -768,14 +768,14 @@ export async function sendRepairFlowPreliminaryToCustomer(
     <p>You can print or save the quote as a PDF from that page.</p>
     ${typeof options.accountsEmailBlock === "string" && options.accountsEmailBlock.trim() ? options.accountsEmailBlock : ""}
     ${logoBlock}
-    <p style="margin-top:16px">— ${signature}</p>
+    <p style="margin-top:16px">,  ${signature}</p>
   `);
   const extraAttachments = Array.isArray(options.attachments) ? options.attachments : [];
   return sendEmail(toEmail, subject, html, extraAttachments.length ? { attachments: extraAttachments } : {});
 }
 
 /**
- * Invoice email to customer — primary CTA is link to view/print (same idea as quote respond link).
+ * Invoice email to customer, primary CTA is link to view/print (same idea as quote respond link).
  * Pass options.viewUrl (e.g. /invoice/view/{token}).
  */
 export async function sendInvoiceToCustomer(
@@ -831,8 +831,8 @@ export async function sendWorkOrderPdfToRecipient(
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const shopName = shopCompanyName && String(shopCompanyName).trim() ? shopCompanyName.trim() : "Motor Shop";
-  const woNo = esc(workOrderNumber) || "—";
-  const subject = `Work order ${woNo} – ${esc(shopName)}`;
+  const woNo = esc(workOrderNumber) || ", ";
+  const subject = `Work order ${woNo} to ${esc(shopName)}`;
   const instructions = String(options.instructions ?? "").trim();
   const instructionsBlock = instructions
     ? `<p style="margin-top:12px;padding:12px;background:#f5f5f4;border-radius:8px;font-size:14px;line-height:1.5;color:#374151"><strong>Message:</strong><br/>${esc(instructions).replace(/\n/g, "<br/>")}</p>`
@@ -842,7 +842,7 @@ export async function sendWorkOrderPdfToRecipient(
     <p>Please find the attached work order <strong>${woNo}</strong> from ${esc(shopName)}.</p>
     ${instructionsBlock}
     <p style="margin-top:16px">If you have questions, reply to this email.</p>
-    <p style="margin-top:16px">— ${esc(shopName)}</p>
+    <p style="margin-top:16px">,  ${esc(shopName)}</p>
   `);
   const safeFile = String(workOrderNumber || "work-order")
     .replace(/[^\w.-]+/g, "-")

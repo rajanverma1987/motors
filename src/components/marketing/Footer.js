@@ -4,10 +4,10 @@ import BrandLogo from "@/components/marketing/brand-logo";
 
 const footerLinks = {
   "For repair shops": [
-    { href: "/usa/motor-repair-business-listing", label: "USA — list + Shop Management System (SEO hub)" },
-    { href: "/careers", label: "Careers — hire technicians (public job posts)" },
-    { href: "/blog", label: "Blog — shop guides & calculators" },
-    { href: "/iqwirecalculator", label: "IQWireCalculator — CM Best Match app" },
+    { href: "/usa/motor-repair-business-listing", label: "USA: list + Shop Management System (SEO hub)" },
+    { href: "/careers", label: "Careers: hire technicians (public job posts)" },
+    { href: "/blog", label: "Blog: shop guides & calculators" },
+    { href: "/iqwirecalculator", label: "IQWireCalculator: CM Best Match app" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-crm-software", label: "Motor repair shop management system" },
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },
@@ -41,7 +41,7 @@ const footerLinks = {
     { href: "/blog", label: "Blog" },
     { href: "/motor-repair-shop-management-software", label: "Motor Shop Management Software" },
     { href: "/#features", label: "Features & inventory" },
-    { href: "/careers", label: "Careers & job postings" },
+    { href: "/careers", label: "Careers: job postings" },
     { href: "/pricing", label: "Pricing" },
     { href: "/contact", label: "Contact" },
     { href: "/about", label: "About" },
@@ -65,7 +65,7 @@ export default function Footer() {
           <Link
             href="/"
             className="inline-block shrink-0 transition-opacity hover:opacity-90"
-            aria-label="IQ Motorbase — home"
+            aria-label="IQ Motorbase, home"
           >
             <BrandLogo className="h-[2.4rem] w-auto max-w-[min(100%,200px)] object-contain object-left md:h-[2.7rem] md:max-w-[min(100%,216px)]" />
           </Link>

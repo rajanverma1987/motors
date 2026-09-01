@@ -221,7 +221,7 @@ export default function NearMeContent() {
           await runSearch(location, { notifyOnEmpty: true });
         }
       } catch {
-        /* silent — manual entry fallback */
+        /* silent, manual entry fallback */
       } finally {
         setPrefilling(false);
       }
@@ -241,7 +241,7 @@ export default function NearMeContent() {
       <div className="mt-8 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
         <p className="text-lg font-semibold text-title">Find repair shops in your area</p>
         <p className="mt-1 text-sm text-secondary">
-          We&apos;ll detect your area when possible — or enter city, state, and ZIP. Matching shops pre-fill your repair
+          We&apos;ll detect your area when possible, or enter city, state, and ZIP. Matching shops pre-fill your repair
           request.
         </p>
         <form
@@ -322,7 +322,7 @@ export default function NearMeContent() {
               <div className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center sm:px-10">
                 <p className="text-lg font-medium text-title">Enter your location above to see nearby shops</p>
                 <p className="mx-auto mt-2 max-w-md text-sm text-secondary">
-                  Search by city, state, or ZIP — or tap &ldquo;Use my location&rdquo;. Your repair request form will
+                  Search by city, state, or ZIP, or tap &ldquo;Use my location&rdquo;. Your repair request form will
                   match the same area.
                 </p>
               </div>

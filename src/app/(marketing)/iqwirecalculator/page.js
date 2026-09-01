@@ -58,7 +58,7 @@ const steps = [
   {
     n: "2",
     title: "Pick your wire sizes",
-    body: "Check the AWG you stock, or add custom and half sizes. The search only uses what you select—up to 10 sizes per run.",
+    body: "Check the AWG you stock, or add custom and half sizes. The search only uses what you select, up to 10 sizes per run.",
   },
   {
     n: "3",
@@ -97,7 +97,7 @@ const included = [
   "Green (about 2%) and yellow (about 10%) match ranking",
   "Save named calculations and reopen them later",
   "Print a landscape PDF or email results from the phone",
-  "Your stocked sizes only—no textbook AWG you cannot buy",
+  "Your stocked sizes only, no textbook AWG you cannot buy",
 ];
 
 function JsonLd() {
@@ -168,7 +168,7 @@ export default function IqwireCalculatorMarketingPage() {
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-secondary sm:text-lg">
               IQWireCalculator’s CM Best Match finds parallel wire combinations within 10% of your target circular mils,
-              ranked closest first—built for rewind shops, not electricians in general.
+              ranked closest first, built for rewind shops, not electricians in general.
             </p>
             <div className="mt-6">
               <IqwireStoreCta />
@@ -188,7 +188,7 @@ export default function IqwireCalculatorMarketingPage() {
       <section className="border-b border-border bg-bg py-12 sm:py-16" aria-labelledby="problem-heading">
         <div className="mx-auto max-w-[67.2rem] px-4 sm:px-6">
           <h2 id="problem-heading" className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-            Why circular mils—and why a calculator
+            Why circular mils, and why a calculator
           </h2>
           <p className="mt-4 max-w-3xl text-base leading-relaxed text-secondary">
             Total CM of a wound path is each wire size’s circular mils times how many strands you put in hand, added
@@ -285,7 +285,7 @@ export default function IqwireCalculatorMarketingPage() {
             Who it’s for
           </h2>
           <p className="mt-4 text-base leading-relaxed text-secondary">
-            Independent rewinders and small shops: full standalone tool—add your own sizes, save mixes, print from the
+            Independent rewinders and small shops: full standalone tool, add your own sizes, save mixes, print from the
             truck. Shops already on{" "}
             <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               IQMotorBase

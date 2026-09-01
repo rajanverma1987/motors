@@ -13,9 +13,9 @@ export default function SeoLeadMiniForm({
   sourcePage = "",
   defaultCity = "",
   defaultState = "",
-  /** Button label — software SEO pages use "Book a demo" per Seo.md. */
+  /** Button label, software SEO pages use "Book a demo" per Seo.md. */
   submitLabel = "Request info & Shop Management System access",
-  /** "prominent" — larger fields and submit button for demo panels. */
+  /** "prominent", larger fields and submit button for demo panels. */
   variant = "default",
   /** Prefix for input ids when multiple forms appear on one page. */
   idPrefix = "seo-lead",

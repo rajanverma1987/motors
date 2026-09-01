@@ -30,7 +30,7 @@ gtag('config', '${GA_MEASUREMENT_ID}');
           `.trim(),
         }}
       />
-      {/* Google Preferred Sources — one [google-add-preferred-source-btn] slot in the stripe below Navbar. */}
+      {/* Google Preferred Sources, one [google-add-preferred-source-btn] slot in the stripe below Navbar. */}
       <Script
         id="google-preferred-source"
         src="https://news.google.com/swg/js/v1/publisher.js"

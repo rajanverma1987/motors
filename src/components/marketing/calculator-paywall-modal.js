@@ -13,8 +13,8 @@ import { calculatorAuthUrls, CALCULATORS_SUBSCRIBE_PATH } from "@/lib/calculator
  * @param {boolean} props.open
  * @param {() => void} props.onClose
  * @param {string} [props.nextPath]
- * @param {boolean} [props.showSingleUse] — cost guide only; subscription page is monthly-only
- * @param {boolean} [props.allowGuestSingleUse] — cost guide: PayPal $5 without registration
+ * @param {boolean} [props.showSingleUse], cost guide only; subscription page is monthly-only
+ * @param {boolean} [props.allowGuestSingleUse], cost guide: PayPal $5 without registration
  * @param {{ singleUseUsd: number, monthlyUsd: number, monthlyPlanName?: string, loginUrl?: string, registerUrl?: string, paypalConfigured: boolean, monthlyPlanConfigured: boolean }} props.pricing
  */
 export default function CalculatorPaywallModal({
@@ -95,7 +95,7 @@ export default function CalculatorPaywallModal({
               No account required.
             </p>
             <div className="rounded-lg border border-border bg-muted/30 p-4 dark:bg-muted/15">
-              <p className="font-semibold text-title">Single use — ${singleUsd.toFixed(2)}</p>
+              <p className="font-semibold text-title">Single use, ${singleUsd.toFixed(2)}</p>
               <p className="mt-1 text-xs leading-relaxed">
                 One-time unlock for this configuration. After payment you will return here with prices visible.
               </p>
@@ -107,7 +107,7 @@ export default function CalculatorPaywallModal({
                 disabled={!!busy}
                 onClick={() => startCheckout("single")}
               >
-                {busy === "single" ? "Redirecting to PayPal…" : `Pay $${singleUsd.toFixed(2)} — unlock price`}
+                {busy === "single" ? "Redirecting to PayPal…" : `Pay $${singleUsd.toFixed(2)}, unlock price`}
               </Button>
             </div>
             <p className="text-xs">
@@ -148,12 +148,12 @@ export default function CalculatorPaywallModal({
             <p>
               {showSingleUse
                 ? "Ballpark rewind prices are computed on our servers. Choose how you want to unlock results:"
-                : "Monthly access includes all dashboard calculators—rewind cost, CM Best Match, FLA, torque, speed, and bench electrical tools."}
+                : "Monthly access includes all dashboard calculators, rewind cost, CM Best Match, FLA, torque, speed, and bench electrical tools."}
             </p>
 
             {showSingleUse ? (
               <div className="rounded-lg border border-border bg-muted/30 p-4 dark:bg-muted/15">
-                <p className="font-semibold text-title">Single use — ${singleUsd.toFixed(2)}</p>
+                <p className="font-semibold text-title">Single use, ${singleUsd.toFixed(2)}</p>
                 <p className="mt-1 text-xs leading-relaxed">
                   Pay once to reveal the exact price range for your current motor inputs on this page.
                 </p>
@@ -165,7 +165,7 @@ export default function CalculatorPaywallModal({
                   disabled={!!busy}
                   onClick={() => startCheckout("single")}
                 >
-                  {busy === "single" ? "Redirecting to PayPal…" : `Pay $${singleUsd.toFixed(2)} — unlock price`}
+                  {busy === "single" ? "Redirecting to PayPal…" : `Pay $${singleUsd.toFixed(2)}, unlock price`}
                 </Button>
               </div>
             ) : null}
@@ -173,7 +173,7 @@ export default function CalculatorPaywallModal({
             <div className="rounded-lg border border-primary/35 bg-primary/[0.06] p-4">
               <p className="font-semibold text-title">
                 {monthlyLabel}
-                {monthlyUsd > 0 ? ` — $${monthlyUsd.toFixed(2)}/mo` : ""}
+                {monthlyUsd > 0 ? `, $${monthlyUsd.toFixed(2)}/mo` : ""}
               </p>
               <p className="mt-1 text-xs leading-relaxed">
                 Unlimited calculator access in your dashboard, including rewind cost, CM Best Match, FLA, torque, speed,
@@ -187,7 +187,7 @@ export default function CalculatorPaywallModal({
                 disabled={!!busy || !monthlyOk || !paypalOk}
                 onClick={() => startCheckout("monthly")}
               >
-                {busy === "monthly" ? "Redirecting to PayPal…" : `Subscribe — $${monthlyUsd.toFixed(2)}/month`}
+                {busy === "monthly" ? "Redirecting to PayPal…" : `Subscribe, $${monthlyUsd.toFixed(2)}/month`}
               </Button>
               {!monthlyOk ? (
                 <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">

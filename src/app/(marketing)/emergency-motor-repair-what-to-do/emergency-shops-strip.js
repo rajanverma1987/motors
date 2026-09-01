@@ -42,7 +42,7 @@ export default function EmergencyShopsStrip({ shops = [] }) {
           24/7 emergency repair shops
         </h2>
         <p className="mt-3 text-sm text-secondary">
-          No shops with confirmed 24/7 intake are listed yet. Submit your request above — we&apos;ll match you as shops
+          No shops with confirmed 24/7 intake are listed yet. Submit your request above, we&apos;ll match you as shops
           are added. Or{" "}
           <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
             browse all repair centers
@@ -58,7 +58,7 @@ export default function EmergencyShopsStrip({ shops = [] }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 id="emergency-shops-heading" className="text-xl font-bold text-title sm:text-2xl">
-            24/7 emergency repair shops — call now
+            24/7 emergency repair shops, call now
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-secondary">
             Phone numbers for shops with confirmed emergency or rush capability. Filter by state, or call directly while

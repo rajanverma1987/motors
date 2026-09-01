@@ -29,7 +29,7 @@ export async function generateMetadata({ params }) {
     return { title: "Listing not found | Marketplace" };
   }
   const title = `${item.title} | Marketplace`;
-  const desc = (item.description || `${item.title} — ${categoryLabel(item.category)}. Request from seller on IQMotorBase.com.`).slice(
+  const desc = (item.description || `${item.title}, ${categoryLabel(item.category)}. Request from seller on IQMotorBase.com.`).slice(
     0,
     160
   );

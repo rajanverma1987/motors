@@ -14,7 +14,7 @@ export const SEO_USA_STATES = [
     industryBlurb:
       "Texas hosts massive petrochemical, LNG, power generation, and manufacturing corridors from the Gulf Coast to the Permian. Motor repair and rewinding shops that show up when plants search for emergency work and planned outages win the highest-value jobs.",
     stateIntroParagraphs: [
-      "From Gulf Coast refineries and chemical complexes to Permian-region drilling support and statewide power-generation assets, Texas runs on rotating equipment that fails loudly when it stops. Buyers often choose the shop that answers clearly about field service, voltage classes, and realistic lead times—not the one with the prettiest homepage.",
+      "From Gulf Coast refineries and chemical complexes to Permian-region drilling support and statewide power-generation assets, Texas runs on rotating equipment that fails loudly when it stops. Buyers often choose the shop that answers clearly about field service, voltage classes, and realistic lead times, not the one with the prettiest homepage.",
       "This Texas-focused page helps motor repair and rewinding owners turn search intent into work: list your capabilities for statewide visibility, then run quotes, job cards, and billing in the same Shop Management System your bench team actually uses.",
     ],
     cities: [
@@ -28,7 +28,7 @@ export const SEO_USA_STATES = [
         name: "Dallas",
         slug: "dallas",
         blurb:
-          "Dallas–Fort Worth blends aerospace, distribution, food production, and metal fabrication—each vertical depends on reliable motors and fast turnaround when production lines stop.",
+          "Dallas–Fort Worth blends aerospace, distribution, food production, and metal fabrication, each vertical depends on reliable motors and fast turnaround when production lines stop.",
       },
       {
         name: "Austin",
@@ -40,7 +40,7 @@ export const SEO_USA_STATES = [
         name: "San Antonio",
         slug: "san-antonio",
         blurb:
-          "San Antonio supports defense suppliers, aerospace machining, and regional food processing—operations that need documented repairs and predictable lead times.",
+          "San Antonio supports defense suppliers, aerospace machining, and regional food processing, operations that need documented repairs and predictable lead times.",
       },
     ],
   },
@@ -48,17 +48,17 @@ export const SEO_USA_STATES = [
     name: "California",
     slug: "california",
     industryBlurb:
-      "California’s mix of water infrastructure, food processing, semiconductor supply chains, and logistics hubs keeps demand for certified motor repair and energy-efficient rewinds steady—even as regulations push shops toward tighter documentation.",
+      "California’s mix of water infrastructure, food processing, semiconductor supply chains, and logistics hubs keeps demand for certified motor repair and energy-efficient rewinds steady, even as regulations push shops toward tighter documentation.",
     stateIntroParagraphs: [
       "California facilities juggle coastal logistics, Central Valley agriculture, advanced manufacturing, and some of the strictest documentation expectations in the country. Motor shops that spell out insulation systems, efficiency targets, and turnaround windows earn trust faster than shops that rely on word-of-mouth alone.",
-      "If you operate here, use this page to position your shop for California buyers: a complete listing for discovery, plus IQMotorBase.com workflows so every inquiry becomes a traceable quote and job—not a sticky note on a monitor.",
+      "If you operate here, use this page to position your shop for California buyers: a complete listing for discovery, plus IQMotorBase.com workflows so every inquiry becomes a traceable quote and job, not a sticky note on a monitor.",
     ],
     cities: [
       {
         name: "Los Angeles",
         slug: "los-angeles",
         blurb:
-          "Greater Los Angeles ties together port logistics, aerospace, entertainment infrastructure, and food production—each needing motors that survive heavy cycles and quick turn repairs.",
+          "Greater Los Angeles ties together port logistics, aerospace, entertainment infrastructure, and food production, each needing motors that survive heavy cycles and quick turn repairs.",
       },
       {
         name: "San Diego",
@@ -76,7 +76,7 @@ export const SEO_USA_STATES = [
         name: "Fresno",
         slug: "fresno",
         blurb:
-          "Central Valley agriculture and food processing runs on motors exposed to dust, moisture, and seasonal peaks—shops that communicate fast response times win seasonal contracts.",
+          "Central Valley agriculture and food processing runs on motors exposed to dust, moisture, and seasonal peaks, shops that communicate fast response times win seasonal contracts.",
       },
     ],
   },
@@ -84,9 +84,9 @@ export const SEO_USA_STATES = [
     name: "Ohio",
     slug: "ohio",
     industryBlurb:
-      "Ohio remains a backbone of automotive supply, steel, polymers, and general manufacturing—ideal territory for repair shops that can document quality and shorten customer downtime.",
+      "Ohio remains a backbone of automotive supply, steel, polymers, and general manufacturing, ideal territory for repair shops that can document quality and shorten customer downtime.",
     stateIntroParagraphs: [
-      "Ohio’s plant floors still hum with stamping, plastics, metals, and tiered automotive work—each line stoppage puts pressure on whoever can restore a motor without drama. Visibility matters: maintenance teams compare vendors on proof, repeatability, and how fast you return a call when a spindle or pump motor drops offline.",
+      "Ohio’s plant floors still hum with stamping, plastics, metals, and tiered automotive work, each line stoppage puts pressure on whoever can restore a motor without drama. Visibility matters: maintenance teams compare vendors on proof, repeatability, and how fast you return a call when a spindle or pump motor drops offline.",
       "This Ohio page is built for owners who want more qualified repair work without adding headcount: show up with a strong profile, then keep intake-to-invoice disciplined inside IQMotorBase.com.",
     ],
     cities: [
@@ -100,13 +100,13 @@ export const SEO_USA_STATES = [
         name: "Columbus",
         slug: "columbus",
         blurb:
-          "Columbus anchors logistics, food production, and advanced manufacturing across central Ohio—facilities that compare vendors on speed, transparency, and repeatability.",
+          "Columbus anchors logistics, food production, and advanced manufacturing across central Ohio, facilities that compare vendors on speed, transparency, and repeatability.",
       },
       {
         name: "Cincinnati",
         slug: "cincinnati",
         blurb:
-          "Greater Cincinnati blends consumer goods manufacturing, chemicals, and aerospace suppliers—each with tight tolerances and uptime expectations.",
+          "Greater Cincinnati blends consumer goods manufacturing, chemicals, and aerospace suppliers, each with tight tolerances and uptime expectations.",
       },
     ],
   },
@@ -114,9 +114,9 @@ export const SEO_USA_STATES = [
     name: "Illinois",
     slug: "illinois",
     industryBlurb:
-      "Illinois concentrates food processing, packaging machinery, metals, and heavy transport around Chicago and regional hubs—motor failures ripple fast through just-in-time schedules.",
+      "Illinois concentrates food processing, packaging machinery, metals, and heavy transport around Chicago and regional hubs, motor failures ripple fast through just-in-time schedules.",
     stateIntroParagraphs: [
-      "Chicago’s rail, food, and logistics ecosystem—and downstate manufacturing pockets—punish downtime harder than most regions. When a conveyor or mixer motor fails, buyers aren’t browsing for inspiration; they’re looking for a shop that can quote scope, stick to a date, and document what was done.",
+      "Chicago’s rail, food, and logistics ecosystem, and downstate manufacturing pockets, punish downtime harder than most regions. When a conveyor or mixer motor fails, buyers aren’t browsing for inspiration; they’re looking for a shop that can quote scope, stick to a date, and document what was done.",
       "Use this Illinois landing page to capture that intent: highlight your service footprint and specialties, then convert leads into structured work inside IQMotorBase.com so your shop floor and office stay aligned.",
     ],
     cities: [
@@ -124,7 +124,7 @@ export const SEO_USA_STATES = [
         name: "Chicago",
         slug: "chicago",
         blurb:
-          "Chicago’s rail, food, printing, and logistics ecosystem depends on motors running around the clock—emergency repair and predictable shop capacity are premium services.",
+          "Chicago’s rail, food, printing, and logistics ecosystem depends on motors running around the clock, emergency repair and predictable shop capacity are premium services.",
       },
       {
         name: "Aurora",
@@ -138,9 +138,9 @@ export const SEO_USA_STATES = [
     name: "Pennsylvania",
     slug: "pennsylvania",
     industryBlurb:
-      "Pennsylvania’s energy, manufacturing, and logistics mix spans Marcellus-region equipment, legacy steel and machining, and East Coast distribution—each segment needs trustworthy motor repair partners.",
+      "Pennsylvania’s energy, manufacturing, and logistics mix spans Marcellus-region equipment, legacy steel and machining, and East Coast distribution, each segment needs trustworthy motor repair partners.",
     stateIntroParagraphs: [
-      "Pennsylvania stretches from Philadelphia’s port and packaging corridors to Pittsburgh’s advanced materials and legacy machining—and energy-field equipment in between. Buyers evaluate motor partners on honesty about lead times, documentation, and whether you’ve handled similar loads before.",
+      "Pennsylvania stretches from Philadelphia’s port and packaging corridors to Pittsburgh’s advanced materials and legacy machining, and energy-field equipment in between. Buyers evaluate motor partners on honesty about lead times, documentation, and whether you’ve handled similar loads before.",
       "This page helps Pennsylvania repair shops compete on substance: a discoverable listing for the right searches, paired with Shop Management System tools for quotes, WIP, and billing so growth doesn’t turn into chaos.",
     ],
     cities: [
@@ -162,9 +162,9 @@ export const SEO_USA_STATES = [
     name: "Michigan",
     slug: "michigan",
     industryBlurb:
-      "Michigan’s automotive tiers, tool-and-die, and automation integrators keep spindle, pump, and conveyor motor repair in constant motion—especially around Detroit and West Michigan.",
+      "Michigan’s automotive tiers, tool-and-die, and automation integrators keep spindle, pump, and conveyor motor repair in constant motion, especially around Detroit and West Michigan.",
     stateIntroParagraphs: [
-      "Michigan shops live in a world of tight production windows, automation retrofits, and repeat motor failures on high-cycle equipment. Winning work isn’t about generic SEO—it’s about proving you can handle the horsepower, balancing, and testing expectations that automotive-adjacent plants demand.",
+      "Michigan shops live in a world of tight production windows, automation retrofits, and repeat motor failures on high-cycle equipment. Winning work isn’t about generic SEO, it’s about proving you can handle the horsepower, balancing, and testing expectations that automotive-adjacent plants demand.",
       "Start here to reach buyers across Michigan with a profile that reflects real capabilities, then run the business on IQMotorBase.com so quotes, jobs, and invoices stay tied to the same record.",
     ],
     cities: [
@@ -186,7 +186,7 @@ export const SEO_USA_STATES = [
     name: "Florida",
     slug: "florida",
     industryBlurb:
-      "Florida’s humidity, tourism infrastructure, and growing advanced manufacturing create unique motor stress—from coastal pump rooms to cold-chain distribution centers.",
+      "Florida’s humidity, tourism infrastructure, and growing advanced manufacturing create unique motor stress, from coastal pump rooms to cold-chain distribution centers.",
     stateIntroParagraphs: [
       "Salt air, heat, and constant HVAC and pump loads punish motors across Florida’s coasts and inland corridors. Facilities want vendors who understand corrosion-adjacent failure modes, rush timelines during peak season, and clear communication when a chiller or process pump motor is down.",
       "This Florida page connects repair owners with buyers searching for help: publish what you do and where you travel, then keep every lead moving through IQMotorBase.com instead of scattered inboxes.",
@@ -208,7 +208,7 @@ export const SEO_USA_STATES = [
         name: "Orlando",
         slug: "orlando",
         blurb:
-          "Central Florida blends hospitality infrastructure, distribution, and aerospace suppliers—each with motors that fail at the worst possible hour without a trusted shop.",
+          "Central Florida blends hospitality infrastructure, distribution, and aerospace suppliers, each with motors that fail at the worst possible hour without a trusted shop.",
       },
       {
         name: "Jacksonville",
@@ -222,7 +222,7 @@ export const SEO_USA_STATES = [
     name: "New York",
     slug: "new-york",
     industryBlurb:
-      "New York pairs dense urban infrastructure with upstate manufacturing and food processing—both need motor repair partners who can communicate urgency and compliance.",
+      "New York pairs dense urban infrastructure with upstate manufacturing and food processing, both need motor repair partners who can communicate urgency and compliance.",
     stateIntroParagraphs: [
       "New York’s mix of metro building systems, upstate process plants, and cross-border logistics leaves little patience for vague promises. Buyers often need documentation, tight access windows, and vendors who can coordinate rigging or freight without wasting a maintenance shift.",
       "Use this New York landing to stand out for the right reasons: a sharp listing for regional discovery, plus IQMotorBase.com to manage inquiries, scope changes, and billing with fewer mistakes.",
@@ -252,9 +252,9 @@ export const SEO_USA_STATES = [
     name: "Indiana",
     slug: "indiana",
     industryBlurb:
-      "Indiana’s automotive, RV, steel, and logistics footprint keeps motor repair and rewinding demand high—especially near Indianapolis and northeast manufacturing hubs.",
+      "Indiana’s automotive, RV, steel, and logistics footprint keeps motor repair and rewinding demand high, especially near Indianapolis and northeast manufacturing hubs.",
     stateIntroParagraphs: [
-      "The Crossroads of America still moves heavy freight, stamped metal, RV assemblies, and supplier plants that can’t afford long motor outages. Shops that respond fast—with clear quotes and realistic shop capacity—earn repeat work from procurement teams who compare three vendors on every failure.",
+      "The Crossroads of America still moves heavy freight, stamped metal, RV assemblies, and supplier plants that can’t afford long motor outages. Shops that respond fast, with clear quotes and realistic shop capacity, earn repeat work from procurement teams who compare three vendors on every failure.",
       "This Indiana page is for owners who want more of the right jobs: show your specialties and coverage area, then operationalize follow-through with IQMotorBase.com’s job and billing workflow.",
     ],
     cities: [
@@ -278,7 +278,7 @@ export const SEO_USA_STATES = [
     industryBlurb:
       "North Carolina’s growth in batteries, automotive, food, and pharma packaging creates a competitive landscape for motor repair shops that can differentiate on speed and service.",
     stateIntroParagraphs: [
-      "North Carolina’s manufacturing mix is expanding fast—new plants, tighter production schedules, and more competition for reliable vendors. Motor repair isn’t a commodity here; it’s who can document tests, keep promises on lead time, and communicate when parts slip a day.",
+      "North Carolina’s manufacturing mix is expanding fast, new plants, tighter production schedules, and more competition for reliable vendors. Motor repair isn’t a commodity here; it’s who can document tests, keep promises on lead time, and communicate when parts slip a day.",
       "Start on this page to attract buyers across the state: a detailed listing for search visibility, backed by IQMotorBase.com so leads become work orders and invoices without retyping data.",
     ],
     cities: [
@@ -306,11 +306,11 @@ export const SEO_USA_STATES = [
 
 export const SEO_USA_HUB_PATH = "/usa/motor-repair-business-listing";
 
-/** Shared benefit lines (documents/SEO.md — not “directory only”). */
+/** Shared benefit lines (documents/SEO.md, not “directory only”). */
 export const SEO_DEFAULT_BENEFITS = [
   "More qualified repair and rewinding leads from buyers actively searching in your service area.",
   "Job cards, scheduling, and shop workflow so nothing falls through the cracks after the phone rings.",
-  "Quotes, invoices, and payment tracking tuned for motor shops—not generic field service tools.",
+  "Quotes, invoices, and payment tracking tuned for motor shops, not generic field service tools.",
   "A free Ultimate tier to get started fast; upgrade when you want deeper automation.",
 ];
 
@@ -322,7 +322,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
   {
     title: "Leads & visibility",
     items: [
-      "Directory presence that reflects your real capabilities—voltages, motor types, industries served, certifications, and service region—so buyers self-match before they call.",
+      "Directory presence that reflects your real capabilities, voltages, motor types, industries served, certifications, and service region, so buyers self-match before they call.",
       "State and city landing pages across the USA that help you localize messaging for industrial-heavy regions without maintaining separate websites.",
       "Fewer wasted inquiries: when your profile is specific, procurement teams compare you on fit, not just price.",
       "Faster first response: inquiries land in the Shop Management System inbox instead of scattered email threads.",
@@ -332,7 +332,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
   {
     title: "Shop operations & workflow",
     items: [
-      "Quotes and work orders with labor and parts lines that match how motor shops actually work—not generic “tickets.”",
+      "Quotes and work orders with labor and parts lines that match how motor shops actually work, not generic “tickets.”",
       "Job board / floor visibility so everyone knows what’s in disassembly, rewind, balance, test, or ready to ship.",
       "Each customer's motors and history in one place so repeat failures are easier to diagnose and quote honestly.",
       "Parts catalog with reservations against jobs so you don’t promise dates you can’t hit.",
@@ -342,11 +342,11 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
   {
     title: "Billing, cash flow & trust",
     items: [
-      "Invoices generated from completed scope so labor and material match what was approved—fewer disputes, faster payment.",
+      "Invoices generated from completed scope so labor and material match what was approved, fewer disputes, faster payment.",
       "Accounts receivable and payment tracking so past-due work doesn’t hide in the shop floor noise.",
       "Customer-facing professionalism: consistent PDFs, terms, and follow-up history buyers expect from industrial vendors.",
       "Subscription and account options when you’re ready to grow; start with a strong free tier to prove value.",
-      "API access for integrations when you need to sync with accounting or another system—so IQMotorBase.com can stay your operational source of truth.",
+      "API access for integrations when you need to sync with accounting or another system, so IQMotorBase.com can stay your operational source of truth.",
     ],
   },
 ];
@@ -358,7 +358,7 @@ export function buildSeoLeadFaq(placeLabel) {
   return [
     {
       q: `What does IQMotorBase.com do for shops in ${placeLabel}?`,
-      a: "We combine lead generation with a motor-repair-focused Shop Management System: list your capabilities, capture inquiries, and run jobs with quotes, invoices, and inventory-aware workflows—so you’re not juggling spreadsheets and missed callbacks.",
+      a: "We combine lead generation with a motor-repair-focused Shop Management System: list your capabilities, capture inquiries, and run jobs with quotes, invoices, and inventory-aware workflows, so you’re not juggling spreadsheets and missed callbacks.",
     },
     {
       q: "Is there a free way to get started?",
@@ -366,7 +366,7 @@ export function buildSeoLeadFaq(placeLabel) {
     },
     {
       q: "How is this different from a plain business directory?",
-      a: "A directory alone doesn’t run your shop. IQMotorBase.com is positioned around winning repair jobs and managing the workshop—your listing is the front door; the Shop Management System is where work gets executed.",
+      a: "A directory alone doesn’t run your shop. IQMotorBase.com is positioned around winning repair jobs and managing the workshop, your listing is the front door; the Shop Management System is where work gets executed.",
     },
     {
       q: "Do you integrate payments or only leads?",

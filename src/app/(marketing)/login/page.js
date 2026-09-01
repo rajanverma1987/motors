@@ -106,7 +106,7 @@ export default function LoginPage() {
     }
   }, []);
 
-  // Never block the form on session check — tablet/LAN auth can hang.
+  // Never block the form on session check, tablet/LAN auth can hang.
   // Redirect only after we know there is a session.
   useEffect(() => {
     if (!mounted || !user || redirecting) return;
@@ -215,7 +215,7 @@ export default function LoginPage() {
             <div>
               {redirecting ? (
                 <p className="mb-3 text-sm text-secondary" role="status">
-                  Signed in — opening your portal…
+                  Signed in, opening your portal…
                 </p>
               ) : null}
               <Form

@@ -161,7 +161,7 @@ export default function MarketingRelatedGuides({
   const blurb =
     audience === "shop"
       ? "Internal links connect shop owners to software, listings, leads, and marketplace tools on IQMotorBase.com."
-      : "Explore more buyer resources on IQMotorBase.com—clear internal linking helps people and search engines discover related topics.";
+      : "Explore more buyer resources on IQMotorBase.com, clear internal linking helps people and search engines discover related topics.";
 
   return (
     <section
@@ -178,7 +178,7 @@ export default function MarketingRelatedGuides({
             <Link href={item.href} className="font-medium text-primary hover:underline">
               {item.label}
             </Link>
-            <span className="text-secondary"> — {item.hint}</span>
+            <span className="text-secondary">, {item.hint}</span>
           </li>
         ))}
       </ul>

@@ -8,7 +8,7 @@ const path = "/blog/how-to-get-more-customers-for-motor-repair-shop";
 export const metadata = {
   title: "How to Get More Customers for a Motor Repair Shop",
   description:
-    "Actionable ways electric motor repair and rewinding shops attract more industrial buyers: visibility, speed, proof, and follow-up—without gimmicks.",
+    "Actionable ways electric motor repair and rewinding shops attract more industrial buyers: visibility, speed, proof, and follow-up, without gimmicks.",
   keywords: ["motor repair shop customers", "motor rewinding leads", "industrial motor repair marketing"],
   openGraph: {
     title: "How to Get More Customers for a Motor Repair Shop | IQMotorBase.com",
@@ -26,7 +26,7 @@ export default function BlogMoreCustomersPage() {
   return (
     <BlogPageLayout
       title="How to get more customers for a motor repair shop"
-      description="You don’t need viral social posts—you need to show up when a plant searches, answer fast, and prove you can handle their voltage range and turnaround. Here’s a practical playbook for owners."
+      description="You don’t need viral social posts, you need to show up when a plant searches, answer fast, and prove you can handle their voltage range and turnaround. Here’s a practical playbook for owners."
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
       sidebarTitle="List where buyers search"
@@ -37,9 +37,9 @@ export default function BlogMoreCustomersPage() {
         <p className="text-secondary leading-relaxed">
           <strong className="text-title">Start here:</strong>{" "}
           <Link href={SEO_USA_HUB_PATH} className="text-primary font-medium hover:underline">
-            Motor repair business listing — USA
+            Motor repair business listing, USA
           </Link>{" "}
-          connects national intent to state and city pages where industrial density is highest—use them as landing companions to your shop profile.
+          connects national intent to state and city pages where industrial density is highest, use them as landing companions to your shop profile.
         </p>
 
         <section>
@@ -59,7 +59,7 @@ export default function BlogMoreCustomersPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">3. Publish proof: certs, tests, photos</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            EASA AR100 adherence, ISO programs, vibration/balance reports—whatever you actually do, make it visible (without dumping a 40-page PDF). Photos of your shop floor and test panel signal legitimacy to buyers who’ve been burned by brokers.
+            EASA AR100 adherence, ISO programs, vibration/balance reports, whatever you actually do, make it visible (without dumping a 40-page PDF). Photos of your shop floor and test panel signal legitimacy to buyers who’ve been burned by brokers.
           </p>
         </section>
 
@@ -81,7 +81,7 @@ export default function BlogMoreCustomersPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">5. Measure what matters</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Track lead source, quote-to-win rate, and average job age by stage. If you only measure top-line revenue, you’ll confuse busy-ness with profitability. Tighten the stages that age the longest—often parts delays or unclear approvals.
+            Track lead source, quote-to-win rate, and average job age by stage. If you only measure top-line revenue, you’ll confuse busy-ness with profitability. Tighten the stages that age the longest, often parts delays or unclear approvals.
           </p>
         </section>
 
@@ -159,13 +159,13 @@ export default function BlogMoreCustomersPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">11. 90-day execution plan for owners</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            <strong className="text-title">Days 1–30:</strong> tighten positioning, update profile/service language, and deploy
+            <strong className="text-title">Days 1 to 30:</strong> tighten positioning, update profile/service language, and deploy
             intake + response templates.
             <br />
-            <strong className="text-title">Days 31–60:</strong> publish proof assets, fix quote follow-up process, and measure
+            <strong className="text-title">Days 31 to 60:</strong> publish proof assets, fix quote follow-up process, and measure
             stage aging.
             <br />
-            <strong className="text-title">Days 61–90:</strong> optimize underperforming lead sources, adjust capacity promises,
+            <strong className="text-title">Days 61 to 90:</strong> optimize underperforming lead sources, adjust capacity promises,
             and run account reactivation on past customers.
           </p>
           <p className="mt-4 text-secondary leading-relaxed">
@@ -178,7 +178,7 @@ export default function BlogMoreCustomersPage() {
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">12. Reactivate old customers before buying new traffic</h2>
           <p className="mt-4 text-secondary leading-relaxed">
             Many shops focus only on net-new leads and ignore dormant accounts that already know their quality. Pull a list of
-            customers who have not sent work in 6–18 months and run a structured reactivation campaign. A simple message works:
+            customers who have not sent work in 6 to 18 months and run a structured reactivation campaign. A simple message works:
             “Here is our current turnaround profile, service updates, and emergency process if you need support this quarter.”
           </p>
           <p className="mt-4 text-secondary leading-relaxed">

@@ -8,7 +8,7 @@ export const revalidate = 300;
 
 export const metadata = marketingPageMetadata({
   path: "/careers",
-  title: "Motor Repair Shop Jobs — Technicians & Winders",
+  title: "Motor Repair Shop Jobs | Technicians & Winders",
   description:
     "Browse open roles at motor repair shops. Technician, winder, and field service jobs posted by shops on IQMotorBase.",
 });
@@ -23,7 +23,7 @@ export default async function CareersPage() {
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
           Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Shop owners create and manage
-          listings in the Shop Management System—each role appears here with an SEO-friendly page; candidates select a job to read details and
+          listings in the Shop Management System, each role appears here with an SEO-friendly page; candidates select a job to read details and
           apply with contact information and experience.
         </p>
       </div>

@@ -11,9 +11,9 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 export async function generateMetadata({ searchParams }) {
   const sp = await searchParams;
   const base = getPublicSiteUrl();
-  const title = "Motor repair marketplace — parts, motors & equipment";
+  const title = "Motor repair marketplace, parts, motors & equipment";
   const description =
-    "Browse listings from motor repair shops and IQMotorBase.com. Search parts, motors, tools, and surplus—request items with no online payment; sellers contact you directly.";
+    "Browse listings from motor repair shops and IQMotorBase.com. Search parts, motors, tools, and surplus, request items with no online payment; sellers contact you directly.";
   return {
     title,
     description,
@@ -56,7 +56,7 @@ export default async function MarketplaceBrowsePage({ searchParams }) {
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-title sm:text-4xl">Marketplace</h1>
           <p className="mt-3 max-w-[50.4rem] text-secondary">
             Parts, motors, tools, and surplus from repair shops and our team. Use search and filters to find what
-            you need. When you request an item, the seller contacts you—no checkout or payment on this site.
+            you need. When you request an item, the seller contacts you, no checkout or payment on this site.
           </p>
 
           <form method="get" className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">

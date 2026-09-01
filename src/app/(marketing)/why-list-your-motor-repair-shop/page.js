@@ -11,7 +11,7 @@ export async function generateMetadata() {
   const title =
     "Why List Your Motor Repair Shop in a Directory? Leads, Trust & Local SEO | IQMotorBase.com";
   const description =
-    "Qualified electric motor repair and rewinding directories put your shop in front of facility managers and maintenance buyers searching for repair near them. Learn benefits vs generic listings, what to put on your profile, and how to capture leads—USA-focused motor repair marketing.";
+    "Qualified electric motor repair and rewinding directories put your shop in front of facility managers and maintenance buyers searching for repair near them. Learn benefits vs generic listings, what to put on your profile, and how to capture leads, USA-focused motor repair marketing.";
   return {
     title,
     description,
@@ -47,11 +47,11 @@ export async function generateMetadata() {
 const faqItems = [
   {
     q: "Why should I list my motor repair shop in a directory instead of only using my website?",
-    a: "Your website is essential, but many buyers discover shops through category searches and comparison browsing. A motor-specific directory captures search intent for “electric motor repair,” “rewinding,” and location-based queries—and gives you a second indexed presence with structured business information that reinforces trust.",
+    a: "Your website is essential, but many buyers discover shops through category searches and comparison browsing. A motor-specific directory captures search intent for “electric motor repair,” “rewinding,” and location-based queries, and gives you a second indexed presence with structured business information that reinforces trust.",
   },
   {
     q: "How is a motor repair directory different from Google Business Profile?",
-    a: "Google Business Profile is critical for local maps and reviews. A qualified industry directory adds another trusted citation, niche keywords, and often richer service fields (e.g., AC/DC, VFD, pump motors) so you match buyers who search by capability—not only by city name.",
+    a: "Google Business Profile is critical for local maps and reviews. A qualified industry directory adds another trusted citation, niche keywords, and often richer service fields (e.g., AC/DC, VFD, pump motors) so you match buyers who search by capability, not only by city name.",
   },
   {
     q: "Will I get low-quality leads?",
@@ -67,11 +67,11 @@ const faqItems = [
   },
   {
     q: "Does a listing help SEO for my own domain?",
-    a: "Consistent name-address-phone (NAP) and reputable backlinks support local SEO. A legitimate directory listing can reinforce signals that your shop is a real, established operation—especially when paired with reviews and your own content.",
+    a: "Consistent name-address-phone (NAP) and reputable backlinks support local SEO. A legitimate directory listing can reinforce signals that your shop is a real, established operation, especially when paired with reviews and your own content.",
   },
   {
     q: "Can I manage leads in one place?",
-    a: "On IQMotorBase.com you can pair a directory presence with Shop Management System tools—quotes, work orders, and customer records—so inquiries do not die in a single inbox. See our features and registration paths for details.",
+    a: "On IQMotorBase.com you can pair a directory presence with Shop Management System tools, quotes, work orders, and customer records, so inquiries do not die in a single inbox. See our features and registration paths for details.",
   },
   {
     q: "How do I get started?",
@@ -118,7 +118,7 @@ export default function WhyListYourMotorRepairShopPage() {
       <ExtraJsonLd baseUrl={baseUrl} />
       <BlogPageLayout
         title="Why list your motor repair shop in a qualified directory?"
-        description="Getting listed in a dedicated electric motor repair and rewinding directory puts your shop in front of facility managers, maintenance teams, and procurement specialists who are actively searching for repair services—not random browsers. Combined with accurate local signals and a complete profile, it supports trust, SEO, and a steady pipeline of qualified inquiries."
+        description="Getting listed in a dedicated electric motor repair and rewinding directory puts your shop in front of facility managers, maintenance teams, and procurement specialists who are actively searching for repair services, not random browsers. Combined with accurate local signals and a complete profile, it supports trust, SEO, and a steady pipeline of qualified inquiries."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={PAGE_PATH}
         sidebarTitle="Get your shop in front of buyers"
@@ -131,7 +131,7 @@ export default function WhyListYourMotorRepairShopPage() {
             <p className="mt-3 text-base leading-relaxed text-secondary">
               Independent shops compete with national service brands, OEM affiliates, and word-of-mouth. A{" "}
               <strong className="text-title">niche directory</strong> helps you show up when buyers compare options and
-              validates that you repair and rewind the equipment they run—whether that is AC induction, DC, pump sets, or
+              validates that you repair and rewind the equipment they run, whether that is AC induction, DC, pump sets, or
               critical spares in{" "}
               <Link href="/usa/motor-repair-business-listing" className="font-medium text-primary hover:underline">
                 your region
@@ -148,7 +148,7 @@ export default function WhyListYourMotorRepairShopPage() {
               When a plant manager has a failed motor or a maintenance team needs a rewind quote, they don&apos;t always
               rely on a single vendor. They search for &quot;motor repair near me,&quot; &quot;electric motor
               rewinding,&quot; or &quot;industrial motor repair shop.&quot; A directory that focuses on electric motor
-              repair and rewinding captures that intent and sends those leads to listed shops—so you&apos;re in the
+              repair and rewinding captures that intent and sends those leads to listed shops, so you&apos;re in the
               consideration set from day one.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -164,8 +164,8 @@ export default function WhyListYourMotorRepairShopPage() {
               Stand out without competing with general listings
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Generic business directories mix every industry. A motor-repair–specific directory highlights your
-              capabilities—AC/DC repair, rewinding, VFD, pump, generator—and the industries you serve. That means
+              Generic business directories mix every industry. A motor-repair-specific directory highlights your
+              capabilities, AC/DC repair, rewinding, VFD, pump, generator, and the industries you serve. That means
               better-qualified leads: people who need what you do, not random inquiries. You also avoid competing with
               unrelated businesses for the same keywords.
             </p>
@@ -175,7 +175,7 @@ export default function WhyListYourMotorRepairShopPage() {
                 marketplace
               </Link>{" "}
               helps buyers find parts and equipment; the directory helps them find{" "}
-              <strong className="text-title">your shop as a service provider</strong>. Many teams use both—directory for
+              <strong className="text-title">your shop as a service provider</strong>. Many teams use both, directory for
               vendor selection, marketplace for surplus or specialty buys.
             </p>
           </section>
@@ -185,7 +185,7 @@ export default function WhyListYourMotorRepairShopPage() {
               Build credibility and local visibility
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              A complete profile—services, certifications, service area, and contact details—helps buyers compare shops
+              A complete profile, services, certifications, service area, and contact details, helps buyers compare shops
               and shortlist. Many use directories to verify that a shop exists, is legitimate, and offers the services
               they need. Being listed with consistent, accurate information supports both SEO and trust when buyers look
               you up later.
@@ -204,7 +204,7 @@ export default function WhyListYourMotorRepairShopPage() {
             <p className="mt-4 text-secondary leading-relaxed">
               Directories that allow quote requests or contact forms turn searchers into leads. When someone submits a
               request through the directory, you get the inquiry while the need is hot. That&apos;s often more effective
-              than waiting for cold traffic to find your website on its own—especially for emergency repair and
+              than waiting for cold traffic to find your website on its own, especially for emergency repair and
               time-sensitive jobs.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
@@ -222,7 +222,7 @@ export default function WhyListYourMotorRepairShopPage() {
               It is always free
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              Listing your shop in our directory is <strong className="text-title">always free</strong>—no listing
+              Listing your shop in our directory is <strong className="text-title">always free</strong>, no listing
               fees. You get a persistent presence that works for you over time, without the per-click cost of broad paid
               ads or heavy SEO spend. As the directory gains authority and ranks for terms like &quot;motor repair
               shops&quot; or &quot;rewinding services,&quot; your listing benefits from that visibility at no charge.
@@ -285,7 +285,7 @@ export default function WhyListYourMotorRepairShopPage() {
                   ✓
                 </span>
                 <span>
-                  <strong className="text-title">Photos</strong>: shop, test stand, winding room—builds trust fast
+                  <strong className="text-title">Photos</strong>: shop, test stand, winding room, builds trust fast
                 </span>
               </li>
             </ul>

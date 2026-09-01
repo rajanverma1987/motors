@@ -9,7 +9,7 @@ const path = "/job-card-system-for-repair-shop";
 export const metadata = {
   title: "Job Card System for Motor Repair Shops | Work Orders Done Right",
   description:
-    "How a proper job card system reduces rework, speeds billing, and protects your shop when scope changes—especially for electric motor repair and rewinding.",
+    "How a proper job card system reduces rework, speeds billing, and protects your shop when scope changes, especially for electric motor repair and rewinding.",
   keywords: [
     "job card system repair shop",
     "motor repair work order",
@@ -38,7 +38,7 @@ export default function JobCardSystemForRepairShopPage() {
   return (
     <BlogPageLayout
       title="Job card system for a motor repair shop (that techs will actually use)"
-      description="Paper isn’t evil—chaos is. Whether you’re on clipboards or tablets, the job card is the contract between what the customer authorized and what the floor delivered. Here’s how to structure it for motor work."
+      description="Paper isn’t evil, chaos is. Whether you’re on clipboards or tablets, the job card is the contract between what the customer authorized and what the floor delivered. Here’s how to structure it for motor work."
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
       sidebarTitle="Run jobs in one workspace"
@@ -51,7 +51,7 @@ export default function JobCardSystemForRepairShopPage() {
             What belongs on a motor repair job card
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            At minimum: customer, asset ID, horsepower/voltage, failure description, visual inspection notes, measured data (megger, hi-pot where applicable), customer approvals for extra work, parts used, labor hours by department, and final test results. Skipping any of these is how disputes start—“you didn’t tell me the bearing seat was damaged”—after the motor is already back in service.
+            At minimum: customer, asset ID, horsepower/voltage, failure description, visual inspection notes, measured data (megger, hi-pot where applicable), customer approvals for extra work, parts used, labor hours by department, and final test results. Skipping any of these is how disputes start, “you didn’t tell me the bearing seat was damaged”, after the motor is already back in service.
           </p>
         </section>
 
@@ -60,7 +60,7 @@ export default function JobCardSystemForRepairShopPage() {
             From verbal approval to documented change orders
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Emergency jobs love verbal OKs. Your job card system should make it painless to attach a change order before the coil is wound or the sleeve is cut. Digital systems win here because photos, signatures, and timestamps live next to the scope—not in someone’s text messages.
+            Emergency jobs love verbal OKs. Your job card system should make it painless to attach a change order before the coil is wound or the sleeve is cut. Digital systems win here because photos, signatures, and timestamps live next to the scope, not in someone’s text messages.
           </p>
           <p className="mt-4 text-secondary leading-relaxed">
             If you’re evaluating software, read{" "}
@@ -76,7 +76,7 @@ export default function JobCardSystemForRepairShopPage() {
             Bench discipline = predictable cash flow
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            When job cards flow cleanly to invoicing, finance stops chasing techs for hours. Tie labor lines to departments (mechanical vs. electrical vs. field) so you can see where you’re earning margin—and where you’re donating time.
+            When job cards flow cleanly to invoicing, finance stops chasing techs for hours. Tie labor lines to departments (mechanical vs. electrical vs. field) so you can see where you’re earning margin, and where you’re donating time.
           </p>
         </section>
 
@@ -87,7 +87,7 @@ export default function JobCardSystemForRepairShopPage() {
           <p className="mt-4 text-secondary leading-relaxed">
             Operational excellence doesn’t matter if the phone doesn’t ring. List your business where industrial buyers search, then convert inquiries into job cards without retyping:{" "}
             <Link href={SEO_USA_HUB_PATH} className="text-primary font-medium hover:underline">
-              Motor repair business listing — USA
+              Motor repair business listing, USA
             </Link>
             .
           </p>

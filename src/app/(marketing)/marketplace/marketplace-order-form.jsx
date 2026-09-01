@@ -51,7 +51,7 @@ export default function MarketplaceOrderForm({ itemSlug }) {
   if (done) {
     return (
       <div className="rounded-xl border border-success/30 bg-success/5 p-6 text-title">
-        <p className="font-medium">Thanks — your request was sent.</p>
+        <p className="font-medium">Thanks. Your request was sent.</p>
         <p className="mt-2 text-sm text-secondary">
           There is no payment on this site. The seller will reach out using the contact details you provided.
         </p>

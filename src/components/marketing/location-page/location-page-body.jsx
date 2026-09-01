@@ -106,7 +106,7 @@ export default function LocationPageBody({
 
       <section id="location-page-faq" className="mt-12" aria-labelledby="location-faq-heading">
         <h2 id="location-faq-heading" className="text-2xl font-bold text-title sm:text-3xl">
-          FAQ — finding shops in {areaLabel}
+          FAQ, finding shops in {areaLabel}
         </h2>
         <dl className="mt-6 space-y-6">
           {faqItems.map((item) => (
@@ -123,7 +123,7 @@ export default function LocationPageBody({
           Pricing &amp; shop selection (separate guides)
         </h2>
         <p className="mt-2 text-sm text-secondary">
-          This page helps you find shops in {areaLabel}. Use these guides for ballpark pricing and vetting—not duplicated
+          This page helps you find shops in {areaLabel}. Use these guides for ballpark pricing and vetting, not duplicated
           here.
         </p>
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">

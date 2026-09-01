@@ -40,7 +40,7 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
   return (
     <BlogPageLayout
       title="How motor repair shops get more customers online"
-      description="Electric motor repair and rewinding shops that show up where buyers search—directories, search engines, and industry sites—consistently win more quotes and repeat business. Here’s how to get in front of them."
+      description="Electric motor repair and rewinding shops that show up where buyers search, directories, search engines, and industry sites, consistently win more quotes and repeat business. Here’s how to get in front of them."
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
       sidebarTitle="Get in front of buyers today"
@@ -53,7 +53,7 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
             Be where buyers are already looking
           </h2>
           <p className="mt-4 text-secondary">
-            Facility managers, maintenance leads, and procurement teams search for &quot;motor repair,&quot; &quot;rewinding near me,&quot; and &quot;emergency motor repair&quot; when they have a failure or a planned outage. Shops that appear in dedicated repair-shop directories and on the first page of search results get the first call. The goal isn’t just to have a website—it’s to be visible at the moment of need.
+            Facility managers, maintenance leads, and procurement teams search for &quot;motor repair,&quot; &quot;rewinding near me,&quot; and &quot;emergency motor repair&quot; when they have a failure or a planned outage. Shops that appear in dedicated repair-shop directories and on the first page of search results get the first call. The goal isn’t just to have a website, it’s to be visible at the moment of need.
           </p>
         </section>
 
@@ -62,7 +62,7 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
             Use a directory built for motor repair and rewinding
           </h2>
           <p className="mt-4 text-secondary">
-            General business listings attract mixed traffic. A directory focused on electric motor repair, rewinding, and related services attracts buyers who already know they need your type of work. Listing your shop there puts your capabilities—AC/DC, VFD, pump, generator, field service—in front of people comparing shops and requesting quotes.
+            General business listings attract mixed traffic. A directory focused on electric motor repair, rewinding, and related services attracts buyers who already know they need your type of work. Listing your shop there puts your capabilities, AC/DC, VFD, pump, generator, field service, in front of people comparing shops and requesting quotes.
           </p>
         </section>
 
@@ -93,7 +93,7 @@ export default function HowMotorRepairShopsGetMoreCustomersPage() {
             <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
               motor repair cost guides
             </Link>{" "}
-            first—being findable when they search “motor repair near me” or “rewinding cost” matters.
+            first, being findable when they search “motor repair near me” or “rewinding cost” matters.
           </p>
         </section>
 

@@ -12,7 +12,7 @@ const path = SEO_USA_HUB_PATH;
 export const metadata = {
   title: "Motor Repair Business Listing in the USA | Free + Shop Management System",
   description:
-    "List your motor repair or rewinding business in the United States. Get more customers and manage jobs with our free system built for motor shops—not a passive directory.",
+    "List your motor repair or rewinding business in the United States. Get more customers and manage jobs with our free system built for motor shops, not a passive directory.",
   keywords: [
     "motor repair business listing USA",
     "electric motor repair leads",
@@ -44,7 +44,7 @@ function linkSections() {
       title: "Browse by state",
       links: SEO_USA_STATES.map((s) => ({
         href: `/usa/${s.slug}/motor-repair-business-listing`,
-        label: `${s.name} — list your motor repair business`,
+        label: `${s.name}: list your motor repair business`,
       })),
     },
     {
@@ -86,7 +86,7 @@ export default function UsaMotorRepairBusinessListingPage() {
   const copy = buildUsaLeadCopy();
   return (
     <SeoLeadLandingPage
-      h1="List Your Motor Repair Business in the USA – Get More Customers"
+      h1="List Your Motor Repair Business in the USA to Get More Customers"
       canonicalPath={path}
       breadcrumbs={[
         { href: "/", label: "Home" },

@@ -30,7 +30,7 @@ const RANGE_HIGH_FACTOR = 1.12;
 /** Above this HP, show industrial / formal-quote messaging. */
 const INDUSTRIAL_HP_THRESHOLD = 100;
 
-/** Below this midpoint ($), do not suggest replacement—small-job rewinds feel wrong vs “new motor” heuristic. */
+/** Below this midpoint ($), do not suggest replacement, small-job rewinds feel wrong vs “new motor” heuristic. */
 const REPLACEMENT_MIDPOINT_MIN_USD = 1500;
 
 const DEFAULT_LEAD_INTRO =
@@ -240,14 +240,14 @@ function defaultForm() {
 
 function money(n) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return "—";
+  if (!Number.isFinite(x)) return ", ";
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(x);
 }
 
-/** Whole dollars — used for rounded ballpark band display. */
+/** Whole dollars, used for rounded ballpark band display. */
 function moneyWhole(n) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return "—";
+  if (!Number.isFinite(x)) return ", ";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -295,12 +295,12 @@ export function buildRewindCalculatorLeadPrefill(form, breakdown, rangeOpts = {}
         ? "Wave"
         : form.coilType === "concentric"
           ? "Concentric"
-          : String(form.coilType || "—");
+          : String(form.coilType || ", ");
 
   const ratingLine =
     form.ratingUnit === "kw"
-      ? `${form.kw || "—"} kW on nameplate (calculator used ~${breakdown.motorHp} HP equivalent for the ballpark)`
-      : `${form.hp || "—"} HP on nameplate`;
+      ? `${form.kw || ", "} kW on nameplate (calculator used ~${breakdown.motorHp} HP equivalent for the ballpark)`
+      : `${form.hp || ", "} HP on nameplate`;
 
   const copperLine =
     form.manualCuKg && String(form.manualCuKg).trim()
@@ -314,7 +314,7 @@ export function buildRewindCalculatorLeadPrefill(form, breakdown, rangeOpts = {}
 
   const ballparkBlock =
     rough != null
-      ? `Calculator planning range about ${moneyWhole(rough.lowR)} – ${moneyWhole(rough.highR)} USD (rule-of-thumb band). Typical materials + labor; final price depends on inspection, damage, varnish/VPI, bearings, tests, and shop rates.`
+      ? `Calculator planning range about ${moneyWhole(rough.lowR)} to ${moneyWhole(rough.highR)} USD (rule-of-thumb band). Typical materials + labor; final price depends on inspection, damage, varnish/VPI, bearings, tests, and shop rates.`
       : `Calculator planning figure about ${money(breakdown.ballparkTotal)} USD (typical materials + labor band). Final price depends on inspection, core/slot damage, insulation class, varnish/VPI, bearings, balance, electrical tests, rush fees, and your shop rates.`;
 
   const recLine =
@@ -324,19 +324,19 @@ export function buildRewindCalculatorLeadPrefill(form, breakdown, rangeOpts = {}
         ? `• Recommendation (rule-of-thumb): rewinding looks cost-effective at this ballpark (typically under ~60% of a generic new-motor benchmark).\n`
         : "";
 
-  const problemDescription = `REQUEST — Motor rewinding quotes (IQMotorBase.com calculator)
+  const problemDescription = `REQUEST| Motor rewinding quotes (IQMotorBase.com calculator)
 
 WHAT I NEED
 Qualified rewind / motor repair shops: please reply with a quote or offer to inspect. Local service or inbound freight is fine if you accept shipped cores.
 
-MOTOR / WINDING (from calculator — verify against nameplate)
+MOTOR / WINDING (from calculator, verify against nameplate)
 • Rating: ${ratingLine}
 • Phase: ${phaseLabel}
-• Voltage: ${form.voltage || "—"} V | RPM (as entered / typical): ${rpmLabelForCopy(form)}
+• Voltage: ${form.voltage || ", "} V | RPM (as entered / typical): ${rpmLabelForCopy(form)}
 • Slots: ${form.slots} | AWG: ${form.wireGauge} | Coil type: ${coilLabel}
 ${copperLine}
 ${recLine}
-BALLPARK (WEBSITE ONLY — NOT A BINDING QUOTE)
+BALLPARK (WEBSITE ONLY, NOT A BINDING QUOTE)
 ${ballparkBlock}
 
 NAMEPLATE / DOCUMENTS
@@ -351,7 +351,7 @@ PLEASE FILL IN THE LINES BELOW (anything you already know helps)
 • Service area / willingness to accept shipped motor:
 • Special construction (vertical, explosion-proof, washdown, inverter-duty, etc.) if applicable:
 
-Thanks — I appreciate responses with clear scope, assumptions, and line items (labor, materials, testing, warranty).`;
+Thanks, I appreciate responses with clear scope, assumptions, and line items (labor, materials, testing, warranty).`;
 
   const motorHpShort =
     form.ratingUnit === "kw" ? `${form.kw || ""} kW (~${breakdown.motorHp} HP eq.)` : `${form.hp || ""} HP`;
@@ -377,7 +377,7 @@ export default function MotorRewindCostCalculator({
   showAllCalculatorsCta = false,
   /** Cost guide: $5 PayPal unlock without registration. */
   allowGuestSingleUse = false,
-  /** Parent spotlight provides card chrome on mobile — skip inner padding/border. */
+  /** Parent spotlight provides card chrome on mobile, skip inner padding/border. */
   flushMobilePadding = false,
 }) {
   const isEmbedded = variant === "embedded";
@@ -798,7 +798,7 @@ export default function MotorRewindCostCalculator({
             isCompact ? "text-xs leading-snug" : "text-sm"
           }`}
         >
-          Adjust HP, phase, and optionally RPM—your estimate updates instantly. Not a shop quote; inspection may change
+          Adjust HP, phase, and optionally RPM, your estimate updates instantly. Not a shop quote; inspection may change
           scope and price.
         </p>
         {!isDashboard ? (
@@ -922,7 +922,7 @@ export default function MotorRewindCostCalculator({
             {priceLocked ? (
               <div
                 className="relative mt-1 overflow-hidden rounded-md select-none"
-                aria-label="Ballpark price preview — unlock for exact range"
+                aria-label="Ballpark price preview, unlock for exact range"
               >
                 <p
                   className={`pointer-events-none font-bold tabular-nums tracking-tight text-title blur-[14px] brightness-90 contrast-[0.35] saturate-50 ${
@@ -930,7 +930,7 @@ export default function MotorRewindCostCalculator({
                   } ${teaserLoading && !teaserPreview ? "opacity-40" : ""}`}
                   style={{ WebkitFilter: "blur(14px)", filter: "blur(14px)" }}
                 >
-                  {teaserPreview || "$000 – $000"}
+                  {teaserPreview || "$000 to $000"}
                 </p>
                 <div
                   className="pointer-events-none absolute inset-0 bg-gradient-to-r from-card/55 via-card/25 to-card/55"
@@ -953,7 +953,7 @@ export default function MotorRewindCostCalculator({
               >
                 {estimateLoading
                   ? "Calculating…"
-                  : `${moneyWhole(displayDerived?.roughLow)} – ${moneyWhole(displayDerived?.roughHigh)}`}
+                  : `${moneyWhole(displayDerived?.roughLow)} to ${moneyWhole(displayDerived?.roughHigh)}`}
               </p>
             )}
           </div>
@@ -973,7 +973,7 @@ export default function MotorRewindCostCalculator({
 
         {priceLocked ? (
           <p className={`leading-snug text-secondary ${isCompact ? "mt-2 text-[10px]" : "mt-2 text-[11px]"}`}>
-            Preview is intentionally blurred—log in, then unlock for the exact ballpark range (${calcAccess.pricing.singleUseUsd.toFixed(2)}{" "}
+            Preview is intentionally blurred, log in, then unlock for the exact ballpark range (${calcAccess.pricing.singleUseUsd.toFixed(2)}{" "}
             single use or monthly subscription).
             {showAllCalculatorsCta ? (
               <>
@@ -996,7 +996,7 @@ export default function MotorRewindCostCalculator({
               isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
             }`}
           >
-            Many shops charge a <strong className="text-title">minimum bench fee</strong> on fractional-HP motors—the
+            Many shops charge a <strong className="text-title">minimum bench fee</strong> on fractional-HP motors, the
             total often reflects minimum labor more than copper alone.
           </p>
         ) : null}
@@ -1007,7 +1007,7 @@ export default function MotorRewindCostCalculator({
               isCompact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1.5 text-[11px]"
             }`}
           >
-            <strong className="text-title">Industrial motor:</strong> pricing is usually custom—use quote flow for scope
+            <strong className="text-title">Industrial motor:</strong> pricing is usually custom, use quote flow for scope
             after inspection.
           </p>
         ) : null}
@@ -1031,7 +1031,7 @@ export default function MotorRewindCostCalculator({
             </p>
             <p className={`font-normal leading-snug text-secondary ${isCompact ? "mt-0.5 text-[10px]" : "mt-1 text-[11px]"}`}>
               {displayDerived.replacementRecommended ? (
-                <>Use written quotes from shops—not online benchmarks alone—to decide.</>
+                <>Use written quotes from shops, not online benchmarks alone, to decide.</>
               ) : (
                 <>Typically under ~60% of a generic new-motor benchmark.</>
               )}
@@ -1086,7 +1086,7 @@ export default function MotorRewindCostCalculator({
               isCompact ? "px-2 py-2 text-xs sm:px-3" : "px-3 py-2.5 text-sm sm:px-4"
             }`}
           >
-            How this estimate is calculated — data sources & methodology
+            How this estimate is calculated, data sources & methodology
           </summary>
           <div
             className={`space-y-3 border-t border-border leading-snug text-secondary ${
@@ -1097,7 +1097,7 @@ export default function MotorRewindCostCalculator({
               This calculator uses periodically refreshed <strong className="font-medium text-title">public benchmarks</strong>{" "}
               (commodity copper and motor-industry producer prices) to tune material input and the generic &quot;new
               motor&quot; comparison. If live data isn&apos;t available for a given refresh (for example, a feed outage),
-              fixed reference values are used instead. Planning guidance only—not a shop quote.
+              fixed reference values are used instead. Planning guidance only, not a shop quote.
             </p>
 
             <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1 rounded-md border border-border/80 bg-card/60 px-2.5 py-2">

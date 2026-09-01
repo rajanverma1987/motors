@@ -56,25 +56,25 @@ export default function PrivacyPage() {
         <p className="mt-3 text-secondary leading-relaxed">Depending on how you use the site, we may collect:</p>
         <ul className="mt-3 list-disc space-y-2 pl-6 text-secondary">
           <li>
-            <strong className="text-title">Account and profile data</strong> — such as name, email address, business name,
+            <strong className="text-title">Account and profile data</strong>, such as name, email address, business name,
             phone number, and credentials you provide when you register or use the Shop Management System.
           </li>
           <li>
-            <strong className="text-title">Business and operational data</strong> — information you enter into the platform
+            <strong className="text-title">Business and operational data</strong>, information you enter into the platform
             (for example customers, work orders, motors, quotes, invoices, inventory, employees, job postings, and
             marketplace listings). This data is processed to provide the service you requested.
           </li>
           <li>
-            <strong className="text-title">Communications</strong> — messages you send through contact forms, demo
+            <strong className="text-title">Communications</strong>, messages you send through contact forms, demo
             requests, support tickets, lead submissions, career applications, and similar channels.
           </li>
           <li>
-            <strong className="text-title">Technical and usage data</strong> — such as IP address, browser type, device
+            <strong className="text-title">Technical and usage data</strong>, such as IP address, browser type, device
             information, general location derived from IP, pages viewed, and timestamps. We use this to operate, secure,
             and improve the service and to understand aggregate usage.
           </li>
           <li>
-            <strong className="text-title">Cookies and similar technologies</strong> — we and our analytics partners may
+            <strong className="text-title">Cookies and similar technologies.</strong> We and our analytics partners may
             use cookies, local storage, or similar technologies as described in our cookie and analytics practices (see
             below).
           </li>
@@ -102,16 +102,16 @@ export default function PrivacyPage() {
         <ul className="mt-3 list-disc space-y-2 pl-6 text-secondary">
           <li>
             With <strong className="text-title">service providers</strong> who host our infrastructure, send email,
-            process payments, or provide security and analytics—only as needed to perform services on our behalf and under
+            process payments, or provide security and analytics, only as needed to perform services on our behalf and under
             appropriate safeguards;
           </li>
           <li>
-            When <strong className="text-title">you direct us to share</strong> — for example, when your shop profile or
+            When <strong className="text-title">you direct us to share</strong>, for example, when your shop profile or
             listing is shown in a public directory, or when you submit a lead or application to another business through
             our platform;
           </li>
           <li>
-            For <strong className="text-title">legal reasons</strong> — if we believe disclosure is required by law,
+            For <strong className="text-title">legal reasons</strong>, if we believe disclosure is required by law,
             regulation, legal process, or to protect the rights, safety, or property of our users or the public.
           </li>
         </ul>

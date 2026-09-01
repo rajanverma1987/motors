@@ -8,7 +8,7 @@ const path = "/blog/how-to-manage-repair-jobs-efficiently";
 export const metadata = {
   title: "How to Manage Repair Jobs Efficiently (Motor Shop Playbook)",
   description:
-    "Reduce firefighting in electric motor repair shops: clear statuses, parts visibility, change orders, and customer updates—without extra headcount.",
+    "Reduce firefighting in electric motor repair shops: clear statuses, parts visibility, change orders, and customer updates, without extra headcount.",
   keywords: ["manage repair jobs", "motor shop efficiency", "repair shop workflow"],
   openGraph: {
     title: "How to Manage Repair Jobs Efficiently | IQMotorBase.com",
@@ -26,7 +26,7 @@ export default function BlogManageJobsEfficientlyPage() {
   return (
     <BlogPageLayout
       title="How to manage repair jobs efficiently"
-      description="Efficiency isn’t about working harder—it’s about removing ambiguity. When everyone agrees what stage a motor is in—and what’s blocking—you spend less time in meetings and more time on the bench."
+      description="Efficiency isn’t about working harder, it’s about removing ambiguity. When everyone agrees what stage a motor is in, and what’s blocking, you spend less time in meetings and more time on the bench."
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
       sidebarTitle="One system for pipeline + WIP"
@@ -43,7 +43,7 @@ export default function BlogManageJobsEfficientlyPage() {
         </p>
 
         <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Standardize stages—then enforce them</h2>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Standardize stages, then enforce them</h2>
           <p className="mt-4 text-secondary leading-relaxed">
             Pick stages that map to your floor: disassembly, quote pending, waiting on PO, in mechanical, in electrical, balance, test, ship. Train the team that a job doesn’t move backward without a documented reason. See{" "}
             <Link href="/track-motor-repair-jobs" className="text-primary font-medium hover:underline">
@@ -56,7 +56,7 @@ export default function BlogManageJobsEfficientlyPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Make blockers visible</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Most delays are parts, customer approvals, or vendor backlog. Tag jobs waiting on external inputs so sales can communicate proactively—before the customer calls angry.
+            Most delays are parts, customer approvals, or vendor backlog. Tag jobs waiting on external inputs so sales can communicate proactively, before the customer calls angry.
           </p>
         </section>
 
@@ -234,13 +234,13 @@ export default function BlogManageJobsEfficientlyPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">60-day improvement checklist</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Week 1–2: finalize stage entry criteria and daily huddle format.
+            Week 1 to 2: finalize stage entry criteria and daily huddle format.
             <br />
-            Week 3–4: implement WIP limits and blocker tags.
+            Week 3 to 4: implement WIP limits and blocker tags.
             <br />
-            Week 5–6: standardize change orders and closeout notes.
+            Week 5 to 6: standardize change orders and closeout notes.
             <br />
-            Week 7–8: launch KPI review and late-job root-cause loop.
+            Week 7 to 8: launch KPI review and late-job root-cause loop.
           </p>
           <p className="mt-4 text-secondary leading-relaxed">
             This cadence creates compounding gains without overwhelming your team. The key is consistency: small operational

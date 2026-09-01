@@ -4,8 +4,8 @@ import { useState } from "react";
 
 /**
  * Capture buyer requirements on the marketplace.
- * `variant="empty"` — no listings (full intro).
- * `variant="belowListings"` — under results (“didn’t find…” heading lives on the page).
+ * `variant="empty"`, no listings (full intro).
+ * `variant="belowListings"`, under results (“didn’t find…” heading lives on the page).
  */
 export default function MarketplaceEmptyWantForm({
   searchQuery = "",
@@ -58,7 +58,7 @@ export default function MarketplaceEmptyWantForm({
   if (done) {
     return (
       <div className="mx-auto max-w-[38.4rem] rounded-xl border border-border bg-card p-6 text-center shadow-sm">
-        <p className="font-semibold text-title">Thanks — we received your request</p>
+        <p className="font-semibold text-title">Thanks, we received your request</p>
         <p className="mt-2 text-sm text-secondary">
           Our team will review what you need and reach out by email. You can also try different search keywords or
           categories above.
@@ -74,7 +74,7 @@ export default function MarketplaceEmptyWantForm({
       {isBelowListings ? (
         <>
           <p className="text-sm text-secondary">
-            Tell us what you need and our team will try to help source parts, motors, or equipment—we&apos;ll reach out
+            Tell us what you need and our team will try to help source parts, motors, or equipment, we&apos;ll reach out
             by email.
           </p>
         </>

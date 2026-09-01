@@ -46,7 +46,7 @@ export function SoftwareAppSchema() {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
-          description: "Custom pricing — contact for a demo",
+          description: "Custom pricing. Contact for a demo",
         },
         featureList: [
           "Job Write-Up and work order management",

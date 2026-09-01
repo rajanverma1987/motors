@@ -63,15 +63,15 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
         </p>
         <ul className="mt-4 max-w-[57.6rem] list-disc space-y-2 pl-5 text-sm text-secondary sm:text-base">
           <li>
-            <strong className="text-title">Rewinding &amp; electrical repair</strong> — stator and armature rewinds,
+            <strong className="text-title">Rewinding &amp; electrical repair</strong>, stator and armature rewinds,
             coil replacement, insulation systems, and surge testing.
           </li>
           <li>
-            <strong className="text-title">Mechanical repair</strong> — bearings, housings, end bells, shafts, and
+            <strong className="text-title">Mechanical repair</strong>, bearings, housings, end bells, shafts, and
             coupling work.
           </li>
           <li>
-            <strong className="text-title">Field &amp; emergency service</strong> — expedited turnaround and on-site
+            <strong className="text-title">Field &amp; emergency service</strong>, expedited turnaround and on-site
             support when production is down; see{" "}
             <Link href="/emergency-motor-repair-what-to-do" className="font-medium text-primary hover:underline">
               emergency motor repair guidance

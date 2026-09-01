@@ -52,7 +52,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Start with a repair quote
           </h2>
           <p className="mt-4 text-secondary">
-            You don’t have to decide in a vacuum. Send the motor (or its nameplate and failure description) to a qualified repair shop for inspection and a written quote. The quote will tell you whether it’s a simple repair (bearings, cleaning, minor electrical) or a full rewind—and what it will cost. That number is the baseline for comparing against the cost and lead time of a new motor. See{" "}
+            You don’t have to decide in a vacuum. Send the motor (or its nameplate and failure description) to a qualified repair shop for inspection and a written quote. The quote will tell you whether it’s a simple repair (bearings, cleaning, minor electrical) or a full rewind, and what it will cost. That number is the baseline for comparing against the cost and lead time of a new motor. See{" "}
             <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
               what drives motor repair and rewinding cost
             </Link>{" "}
@@ -65,7 +65,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Compare repair cost to replacement cost
           </h2>
           <p className="mt-4 text-secondary">
-            As a rule of thumb, if repair (including rewind) is less than roughly 50–60% of the price of a new motor, repair is often the economical choice—especially for larger industrial motors where new units are expensive and lead times can be long. For small, off-the-shelf motors, replacement may be cheaper and faster. Always get actual quotes for both before deciding.
+            As a rule of thumb, if repair (including rewind) is less than roughly 50 to 60% of the price of a new motor, repair is often the economical choice, especially for larger industrial motors where new units are expensive and lead times can be long. For small, off-the-shelf motors, replacement may be cheaper and faster. Always get actual quotes for both before deciding.
           </p>
         </section>
 
@@ -74,7 +74,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Factor in lead time and downtime
           </h2>
           <p className="mt-4 text-secondary">
-            A repair shop may turn the motor around in days or a few weeks; a new motor might have a long delivery. For critical equipment, repair can get you back online sooner. If you have a spare motor, you can send the failed one for repair or rewind and rotate it back in as a spare when it’s ready—so lead time matters for planning.
+            A repair shop may turn the motor around in days or a few weeks; a new motor might have a long delivery. For critical equipment, repair can get you back online sooner. If you have a spare motor, you can send the failed one for repair or rewind and rotate it back in as a spare when it’s ready, so lead time matters for planning.
           </p>
         </section>
 
@@ -83,7 +83,7 @@ export default function WhenToRepairOrReplaceElectricMotorPage() {
             Consider age, efficiency, and future failures
           </h2>
           <p className="mt-4 text-secondary">
-            Very old motors may be less efficient than modern designs; rewinding doesn’t change the core design. If energy savings from a high-efficiency replacement would pay back quickly, replacement can make sense. If the motor has failed repeatedly (bearing issues, burnouts), look at root cause—sometimes repair is still right, but recurring failures may justify replacement.
+            Very old motors may be less efficient than modern designs; rewinding doesn’t change the core design. If energy savings from a high-efficiency replacement would pay back quickly, replacement can make sense. If the motor has failed repeatedly (bearing issues, burnouts), look at root cause, sometimes repair is still right, but recurring failures may justify replacement.
           </p>
         </section>
 

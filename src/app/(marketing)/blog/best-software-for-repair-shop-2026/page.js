@@ -46,7 +46,7 @@ export const metadata = {
 const faqItems = [
   {
     q: "What is the best software for an electric motor repair shop in 2026?",
-    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second Shop Management System. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition—both publicly positioned for electro-mechanical / apparatus repair shops.",
+    a: "There is no single best tool for every shop. IQMotorBase fits shops that want Job Write-Up → quote → work order → inventory → invoice on one job number, plus directory and local SEO leads that convert into customers without a second Shop Management System. Shops that want a larger ops ERP without a lead marketplace often evaluate Spring Point (MotorBase) or Aptean Service Repair Traverse Edition, both publicly positioned for electro-mechanical / apparatus repair shops.",
   },
   {
     q: "How is IQMotorBase different from auto repair shop software?",
@@ -64,7 +64,7 @@ export default function BlogBestSoftware2026Page() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Best software for electric motor repair shops (2026 comparison)"
-        description="Most “motor repair software” results are built for auto shops. Here is an honest look at the small set of options electric motor and rewind shops actually weigh—including when IQMotorBase is the right fit and when another tool might be."
+        description="Most “motor repair software” results are built for auto shops. Here is an honest look at the small set of options electric motor and rewind shops actually weigh, including when IQMotorBase is the right fit and when another tool might be."
         breadcrumbLink={{ href: "/blog", label: "Blog" }}
         canonicalPath={path}
         sidebarTitle="Book a demo"
@@ -75,7 +75,7 @@ export default function BlogBestSoftware2026Page() {
           <section>
             <p className="mt-2 text-secondary leading-relaxed">
               If you search for motor repair software in 2026, a large share of the results are still auto repair
-              platforms—built for cars, consumer ROs, and tire packages. Electric motor and rewind shops are a smaller
+              platforms, built for cars, consumer ROs, and tire packages. Electric motor and rewind shops are a smaller
               market. The real shortlist is usually a motor-focused shop system, a broader industrial/service ERP
               edition, or “make do” with spreadsheets plus a generic tool. This page compares IQMotorBase against that
               landscape without pretending every cell in a competitor column is verified.
@@ -83,7 +83,7 @@ export default function BlogBestSoftware2026Page() {
             <p className="mt-4 text-secondary leading-relaxed">
               Spring Point cells are based on public pages at springpt.com. Aptean Service Repair (Traverse Edition)
               cells are based on Aptean’s own Service Repair industry pages (electro-mechanical and electrical
-              apparatus repair), which describe shop management from estimate through invoice—not on third-party
+              apparatus repair), which describe shop management from estimate through invoice, not on third-party
               pricing blogs.
             </p>
           </section>
@@ -104,29 +104,29 @@ export default function BlogBestSoftware2026Page() {
                 <tbody>
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Built for electric motor repair</td>
-                    <td className="py-3 pr-3">Yes — Job Write-Up, motor registry, quote-backed work orders</td>
+                    <td className="py-3 pr-3">Yes, Job Write-Up, motor registry, quote-backed work orders</td>
                     <td className="py-3 pr-3">
-                      Yes — MotorBase / Spring Point Suite for industrial apparatus repair, sales, and service
+                      Yes, MotorBase / Spring Point Suite for industrial apparatus repair, sales, and service
                     </td>
                     <td className="py-3 pr-3">
-                      Yes — Service Repair Traverse Edition for electric motor (AC/DC/servo), generator, turbine, and
+                      Yes, Service Repair Traverse Edition for electric motor (AC/DC/servo), generator, turbine, and
                       electrical apparatus repair (rewinding, armatures/stators, etc.)
                     </td>
                     <td className="py-3">
-                      <span className="font-bold text-danger">No</span> — vehicle RO workflows
+                      <span className="font-bold text-danger">No</span>, vehicle RO workflows
                     </td>
                   </tr>
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Lead generation included</td>
                     <td className="py-3 pr-3">
-                      Yes — directory + local SEO pages; shared/exclusive credits; convert to customer + Job Write-Up
+                      Yes, directory + local SEO pages; shared/exclusive credits; convert to customer + Job Write-Up
                     </td>
                     <td className="py-3 pr-3">
-                      <span className="font-bold text-danger">No</span> — Shop Management System tracks opportunities/prospects; no public
+                      <span className="font-bold text-danger">No</span>| Shop Management System tracks opportunities/prospects; no public
                       claim of originating inbound repair leads for the shop
                     </td>
                     <td className="py-3 pr-3">
-                      <span className="font-bold text-danger">No</span> — no public claim of originating inbound repair
+                      <span className="font-bold text-danger">No</span>, no public claim of originating inbound repair
                       leads; sales/reporting inside the ERP, not a lead marketplace
                     </td>
                     <td className="py-3">
@@ -137,10 +137,10 @@ export default function BlogBestSoftware2026Page() {
                     <td className="py-3 pr-3 font-medium text-title">Mobile technician workflow</td>
                     <td className="py-3 pr-3">Tag QR from Job Write-Up; scan opens work order; status + test notes</td>
                     <td className="py-3 pr-3">
-                      Yes — Mobile Paperwork, QM Wizard (tablets/mobile), Time Clock, field-service mobile access
+                      Yes, Mobile Paperwork, QM Wizard (tablets/mobile), Time Clock, field-service mobile access
                     </td>
                     <td className="py-3 pr-3">
-                      Yes — mobile connectivity for jobs, inspections, photos, inventory; mobile QA checklists; mobile
+                      Yes, mobile connectivity for jobs, inspections, photos, inventory; mobile QA checklists; mobile
                       time clock (not Tag QR job-number scan)
                     </td>
                     <td className="py-3">Often mobile, but for auto RO contexts</td>
@@ -148,7 +148,7 @@ export default function BlogBestSoftware2026Page() {
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Inventory reservation</td>
                     <td className="py-3 pr-3">
-                      Yes — reserve on quote approval; ATP = on-hand − reserved; consume when work order ships
+                      Yes, reserve on quote approval; ATP = on-hand − reserved; consume when work order ships
                     </td>
                     <td className="py-3 pr-3">
                       Inventory control; available vs sold/allocated distinction (quote-approval “reserve” wording not
@@ -162,7 +162,7 @@ export default function BlogBestSoftware2026Page() {
                   </tr>
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Pricing model</td>
-                    <td className="py-3 pr-3">Custom — monthly, yearly, or one-time; book a demo</td>
+                    <td className="py-3 pr-3">Custom, monthly, yearly, or one-time; book a demo</td>
                     <td className="py-3 pr-3">
                       Monthly by concurrent user licenses + one-time setup/implementation fee (demo for numbers)
                     </td>
@@ -178,7 +178,7 @@ export default function BlogBestSoftware2026Page() {
                     </td>
                     <td className="py-3 pr-3">
                       Apparatus sales &amp; service centers wanting a full ERP suite (jobs, QM, accounting, Shop Management System,
-                      portal)—ops-first, not lead-marketplace
+                      portal), ops-first, not lead-marketplace
                     </td>
                     <td className="py-3 pr-3">
                       Electro-mechanical / apparatus repair shops wanting enterprise ERP (finance, HR, QA, inventory,
@@ -223,8 +223,8 @@ export default function BlogBestSoftware2026Page() {
             <p className="mt-4 text-secondary leading-relaxed">
               Start from your shop’s actual Tuesday, not from a feature checklist. Write down how a motor enters the
               building, who writes the first notes, where the quote lives, who reserves parts, how the floor learns
-              the job number, where test values are recorded, and who creates the invoice. Then ask each vendor—including
-              us—to walk that path on screen. If a demo skips reservation, Tag QR (or their equivalent floor open), or
+              the job number, where test values are recorded, and who creates the invoice. Then ask each vendor, including
+              us, to walk that path on screen. If a demo skips reservation, Tag QR (or their equivalent floor open), or
               quote-to-invoice continuity, mark it as a gap. Do not accept “we have notes fields” as a substitute for
               motor history and test data on the work order.
             </p>
@@ -257,7 +257,7 @@ export default function BlogBestSoftware2026Page() {
             <p className="mt-4 text-secondary leading-relaxed">
               It is also the right conversation when lead generation matters. Most shop-management tools stop at
               operations. IQMotorBase’s differentiator is originating shared and exclusive leads with a credit balance
-              that deducts on delivery—not promising a free unlimited inbox of work.
+              that deducts on delivery, not promising a free unlimited inbox of work.
             </p>
           </section>
 
@@ -266,7 +266,7 @@ export default function BlogBestSoftware2026Page() {
             <p className="mt-4 text-secondary leading-relaxed">
               Honesty matters here. A shop that is part of a larger multi-service auto or industrial group may already
               be standardized on a broader ERP or corporate system. In that case, forcing a second shop platform can
-              create more sync work than it removes—even if the motor-specific screens look better in a demo. Verify
+              create more sync work than it removes, even if the motor-specific screens look better in a demo. Verify
               Aptean (or whatever corporate standard you already run) against your winding and test data needs before
               you assume a rip-and-replace.
             </p>
@@ -279,7 +279,7 @@ export default function BlogBestSoftware2026Page() {
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Also be honest about change capacity. If the shop cannot staff onboarding or will not import customers
-              and motors from the current spreadsheet, any system—including IQMotorBase—will underperform. Migration
+              and motors from the current spreadsheet, any system, including IQMotorBase, will underperform. Migration
               support from spreadsheets or other systems is offered at onboarding; use it. A comparison that ignores
               data move-in is incomplete.
             </p>
@@ -300,7 +300,7 @@ export default function BlogBestSoftware2026Page() {
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Book a demo</h2>
             <p className="mt-4 text-secondary leading-relaxed">
-              IQMotorBase pricing is custom—monthly, yearly, or one-time—matched to the shop’s workflow. Use the form
+              IQMotorBase pricing is custom, monthly, yearly, or one-time, matched to the shop’s workflow. Use the form
               to book a demo, or see{" "}
               <Link href="/pricing" className="text-primary font-medium hover:underline">
                 pricing

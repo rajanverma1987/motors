@@ -8,7 +8,7 @@ const path = "/generator-rewinding-cost";
 export const metadata = {
   title: "Generator Rewinding Cost: What It Costs in 2026 | IQMotorBase",
   description:
-    "Generator rewinding typically costs $1,500–$15,000 depending on KW rating, winding type, and urgency. Get matched to certified generator rewind shops in your area.",
+    "Generator rewinding typically costs $1,500 to $15,000 depending on KW rating, winding type, and urgency. Get matched to certified generator rewind shops in your area.",
   keywords: [
     "generator rewinding cost",
     "how much does it cost to rewind a generator",
@@ -18,9 +18,9 @@ export const metadata = {
   ],
   authors: [{ name: "IQMotorBase.com" }],
   openGraph: {
-    title: "Generator Rewinding Cost — 2026 Price Guide | IQMotorBase",
+    title: "Generator Rewinding Cost | 2026 Price Guide | IQMotorBase",
     description:
-      "How much does it cost to rewind a generator? $1,500–$15,000 depending on KW and winding type. Find a certified shop near you.",
+      "How much does it cost to rewind a generator? $1,500 to $15,000 depending on KW and winding type. Find a certified shop near you.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -38,7 +38,7 @@ export const metadata = {
 const faqs = [
   {
     q: "How much does it cost to rewind a generator?",
-    a: "Generator rewinding typically costs $1,500–$15,000 depending on the generator's KW rating, winding configuration (stator only, rotor/armature, exciter), and whether emergency turnaround is needed. Small portable generators (5–25 KW) run $1,500–$4,000. Medium commercial generators (25–150 KW) run $3,000–$8,000. Large industrial generators above 150 KW are quoted individually and can exceed $15,000 for large alternators.",
+    a: "Generator rewinding typically costs $1,500 to $15,000 depending on the generator's KW rating, winding configuration (stator only, rotor/armature, exciter), and whether emergency turnaround is needed. Small portable generators (5 to 25 KW) run $1,500 to $4,000. Medium commercial generators (25 to 150 KW) run $3,000 to $8,000. Large industrial generators above 150 KW are quoted individually and can exceed $15,000 for large alternators.",
   },
   {
     q: "What parts of a generator can be rewound?",
@@ -46,15 +46,15 @@ const faqs = [
   },
   {
     q: "Is it worth rewinding a generator or should I replace it?",
-    a: "For generators above 25 KW, rewinding is almost always worth it — replacement costs and lead times for industrial generators far exceed the rewind cost. For small portable generators under 10 KW, replacement is often cheaper. For standby generators in critical applications, rewinding with a full test protocol provides a documented known condition that replacement with a used unit cannot.",
+    a: "For generators above 25 KW, rewinding is almost always worth it, replacement costs and lead times for industrial generators far exceed the rewind cost. For small portable generators under 10 KW, replacement is often cheaper. For standby generators in critical applications, rewinding with a full test protocol provides a documented known condition that replacement with a used unit cannot.",
   },
   {
     q: "How long does generator rewinding take?",
-    a: "Standard generator rewinds take 7–14 business days depending on size and parts availability. Large alternator rewinds requiring custom coils take 3–6 weeks. Emergency rewinds are available at many shops for smaller generators — turnaround of 3–5 days at a premium rate.",
+    a: "Standard generator rewinds take 7 to 14 business days depending on size and parts availability. Large alternator rewinds requiring custom coils take 3 to 6 weeks. Emergency rewinds are available at many shops for smaller generators, turnaround of 3 to 5 days at a premium rate.",
   },
   {
     q: "What testing is done after generator rewinding?",
-    a: "A proper generator rewind includes insulation resistance (megohm) testing, winding resistance measurement, high-potential (hi-pot) testing per IEEE standards, and a no-load run test at rated voltage and frequency. Output voltage regulation and waveform quality are verified before return. Request a written test report — professional shops provide this as standard.",
+    a: "A proper generator rewind includes insulation resistance (megohm) testing, winding resistance measurement, high-potential (hi-pot) testing per IEEE standards, and a no-load run test at rated voltage and frequency. Output voltage regulation and waveform quality are verified before return. Request a written test report, professional shops provide this as standard.",
   },
 ];
 
@@ -112,7 +112,7 @@ export default function GeneratorRewindingCostPage() {
       <PageJsonLd />
       <BlogPageLayout
         title="Generator rewinding cost"
-        description="What generator rewinding costs in 2026 — by KW rating, winding type, and urgency. Get a quote from a certified shop in your area."
+        description="What generator rewinding costs in 2026, by KW rating, winding type, and urgency. Get a quote from a certified shop in your area."
         breadcrumbLink={{ href: "/cost-of-motor-repair-and-rewinding", label: "Motor repair costs" }}
         canonicalPath={path}
         sidebarUnwrapped
@@ -152,28 +152,28 @@ export default function GeneratorRewindingCostPage() {
                 </thead>
                 <tbody className="text-secondary">
                   <tr className="border-b border-border">
-                    <td className="px-4 py-3 font-medium text-title">5–25 KW portable / small</td>
-                    <td className="px-4 py-3">$1,500–$2,800</td>
-                    <td className="px-4 py-3">$2,500–$4,000</td>
-                    <td className="px-4 py-3">+25–40%</td>
+                    <td className="px-4 py-3 font-medium text-title">5 to 25 KW portable / small</td>
+                    <td className="px-4 py-3">$1,500 to $2,800</td>
+                    <td className="px-4 py-3">$2,500 to $4,000</td>
+                    <td className="px-4 py-3">+25 to 40%</td>
                   </tr>
                   <tr className="border-b border-border bg-muted/30">
-                    <td className="px-4 py-3 font-medium text-title">25–75 KW commercial</td>
-                    <td className="px-4 py-3">$2,500–$5,000</td>
-                    <td className="px-4 py-3">$4,000–$7,000</td>
-                    <td className="px-4 py-3">+25–40%</td>
+                    <td className="px-4 py-3 font-medium text-title">25 to 75 KW commercial</td>
+                    <td className="px-4 py-3">$2,500 to $5,000</td>
+                    <td className="px-4 py-3">$4,000 to $7,000</td>
+                    <td className="px-4 py-3">+25 to 40%</td>
                   </tr>
                   <tr className="border-b border-border">
-                    <td className="px-4 py-3 font-medium text-title">75–150 KW commercial</td>
-                    <td className="px-4 py-3">$4,500–$7,500</td>
-                    <td className="px-4 py-3">$6,000–$10,000</td>
-                    <td className="px-4 py-3">+25–50%</td>
+                    <td className="px-4 py-3 font-medium text-title">75 to 150 KW commercial</td>
+                    <td className="px-4 py-3">$4,500 to $7,500</td>
+                    <td className="px-4 py-3">$6,000 to $10,000</td>
+                    <td className="px-4 py-3">+25 to 50%</td>
                   </tr>
                   <tr className="border-b border-border bg-muted/30">
-                    <td className="px-4 py-3 font-medium text-title">150–500 KW industrial</td>
-                    <td className="px-4 py-3">$7,000–$15,000</td>
+                    <td className="px-4 py-3 font-medium text-title">150 to 500 KW industrial</td>
+                    <td className="px-4 py-3">$7,000 to $15,000</td>
                     <td className="px-4 py-3">Quote individually</td>
-                    <td className="px-4 py-3">+25–50%</td>
+                    <td className="px-4 py-3">+25 to 50%</td>
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-medium text-title">500 KW+ large alternator</td>
@@ -186,7 +186,7 @@ export default function GeneratorRewindingCostPage() {
             </div>
             <p className="mt-2 text-xs text-secondary">
               Ranges are for US shops at standard turnaround. AC synchronous generator stators. DC generator armature
-              rewinding priced separately — submit your details for a quote.
+              rewinding priced separately, submit your details for a quote.
             </p>
           </section>
 
@@ -198,11 +198,11 @@ export default function GeneratorRewindingCostPage() {
               {[
                 {
                   t: "Winding scope",
-                  d: "Stator-only rewinds are the most common and least expensive. If the exciter or rotor also needs rewinding, add 40–80% to the stator cost.",
+                  d: "Stator-only rewinds are the most common and least expensive. If the exciter or rotor also needs rewinding, add 40 to 80% to the stator cost.",
                 },
                 {
                   t: "Voltage class",
-                  d: "Generators above 600V require form-wound coils, specialized insulation, and elevated hi-pot testing — significantly more than random-wound low-voltage stators.",
+                  d: "Generators above 600V require form-wound coils, specialized insulation, and elevated hi-pot testing, significantly more than random-wound low-voltage stators.",
                 },
                 {
                   t: "Manufacturer and parts availability",
@@ -210,7 +210,7 @@ export default function GeneratorRewindingCostPage() {
                 },
                 {
                   t: "Urgency",
-                  d: "Critical backup units (hospitals, data centers, utilities) often command a 25–50% premium for priority scheduling and overtime.",
+                  d: "Critical backup units (hospitals, data centers, utilities) often command a 25 to 50% premium for priority scheduling and overtime.",
                 },
               ].map((item) => (
                 <div key={item.t} className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -229,7 +229,7 @@ export default function GeneratorRewindingCostPage() {
             <ul className="mt-4 list-disc space-y-3 pl-6 text-secondary">
               <li>
                 <strong className="text-title">Output voltage testing.</strong> Generators must be tested at rated
-                output voltage and frequency — often with a load bank, not just a no-load spin.
+                output voltage and frequency, often with a load bank, not just a no-load spin.
               </li>
               <li>
                 <strong className="text-title">Exciter and AVR expertise.</strong> AC synchronous generators have an
@@ -251,7 +251,7 @@ export default function GeneratorRewindingCostPage() {
               Get a generator rewind quote
             </h2>
             <p className="mt-3 text-secondary">
-              Submit KW rating, manufacturer, failure symptoms, and urgency — matched to shops with generator rewind
+              Submit KW rating, manufacturer, failure symptoms, and urgency, matched to shops with generator rewind
               capability in your area.
             </p>
             <div className="mt-4 rounded-xl border border-primary/25 bg-primary/[0.06] p-4 sm:p-5 md:hidden">
@@ -285,12 +285,12 @@ export default function GeneratorRewindingCostPage() {
             <ul className="mt-4 list-disc space-y-2 pl-6 text-secondary">
               <li>
                 <Link href="/cost-of-motor-repair-and-rewinding" className="font-medium text-primary hover:underline">
-                  Motor repair and rewinding cost guide — full ranges
+                  Motor repair and rewinding cost guide, full ranges
                 </Link>
               </li>
               <li>
                 <Link href="/emergency-motor-repair-what-to-do" className="font-medium text-primary hover:underline">
-                  Emergency motor and generator repair — what to do now
+                  Emergency motor and generator repair, what to do now
                 </Link>
               </li>
               <li>
@@ -303,7 +303,7 @@ export default function GeneratorRewindingCostPage() {
                   href="/when-to-repair-or-replace-electric-motor"
                   className="font-medium text-primary hover:underline"
                 >
-                  Repair vs replace — decision framework
+                  Repair vs replace, decision framework
                 </Link>
               </li>
             </ul>

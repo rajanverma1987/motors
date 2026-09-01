@@ -8,7 +8,7 @@ const path = "/blog";
 
 export const metadata = marketingPageMetadata({
   path,
-  title: "Motor Repair Shop Blog — Guides & Calculators",
+  title: "Motor Repair Shop Blog | Guides & Calculators",
   description:
     "Guides, tools, and calculators for electric motor repair shop owners. Job management, lead generation, and business growth for repair shops.",
 });
@@ -18,7 +18,7 @@ const POSTS = [
     href: "/blog/electric-motor-calculators-fla-torque-speed-power",
     title: "Electric motor calculators: FLA, torque, speed & bench electrical",
     excerpt:
-      "What each dashboard tool does—HP↔kW, estimated FLA, synchronous speed, belt/pulley RPM, torque, Ohm’s law, Δ↔Y—and when shops use them.",
+      "What each dashboard tool does, HP↔kW, estimated FLA, synchronous speed, belt/pulley RPM, torque, Ohm’s law, Δ↔Y, and when shops use them.",
   },
   {
     href: "/blog/motor-rewinding-cm-best-match-calculator-guide",
@@ -29,7 +29,7 @@ const POSTS = [
   {
     href: "/blog/how-to-get-more-customers-for-motor-repair-shop",
     title: "How to get more customers for a motor repair shop",
-    excerpt: "Directory presence, response speed, and proof of capability—what actually moves the needle.",
+    excerpt: "Directory presence, response speed, and proof of capability, what actually moves the needle.",
   },
   {
     href: "/blog/motor-rewinding-business-marketing-usa",
@@ -44,7 +44,7 @@ const POSTS = [
   {
     href: "/blog/how-to-manage-repair-jobs-efficiently",
     title: "How to manage repair jobs efficiently",
-    excerpt: "Statuses, handoffs, and fewer status calls—without hiring a full-time coordinator.",
+    excerpt: "Statuses, handoffs, and fewer status calls, without hiring a full-time coordinator.",
   },
 ];
 
@@ -59,7 +59,7 @@ export default function BlogIndexPage() {
           </Link>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl">Blog for motor repair shop owners</h1>
           <p className="mt-4 text-lg text-secondary">
-            Practical articles on leads, marketing, and operations—aligned with our{" "}
+            Practical articles on leads, marketing, and operations, aligned with our{" "}
             <Link href={SEO_USA_HUB_PATH} className="text-primary font-medium hover:underline">
               USA motor repair business listing hub
             </Link>

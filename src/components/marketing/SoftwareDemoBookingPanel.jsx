@@ -5,7 +5,7 @@ import SeoLeadMiniForm from "@/components/marketing/SeoLeadMiniForm";
 
 const DEMO_BENEFITS = [
   "15-minute live walkthrough on your shop's terms",
-  "Custom pricing — monthly, yearly, or one-time",
+  "Custom pricing, monthly, yearly, or one-time",
   "Migration help for customers, motors, and job history",
   "See Job Write-Ups, work orders, inventory, and leads together",
 ];
@@ -25,7 +25,7 @@ function BenefitList({ className = "" }) {
 
 /**
  * Prominent demo booking block for software SEO pages.
- * @param {"sidebar"|"inline"} layout — sidebar card (sticky column) or full-width inline CTA
+ * @param {"sidebar"|"inline"} layout, sidebar card (sticky column) or full-width inline CTA
  */
 export default function SoftwareDemoBookingPanel({
   sourcePage,
@@ -59,7 +59,7 @@ export default function SoftwareDemoBookingPanel({
               Book a live demo
             </h2>
             <p className="mt-3 text-base leading-relaxed text-secondary sm:text-lg">
-              No self-serve signup or public rate card — pricing is matched to how your motor shop runs. Tell us who
+              No self-serve signup or public rate card: pricing is matched to how your motor shop runs. Tell us who
               you are and we&apos;ll show the Job Write-Up path on a call.
             </p>
             <BenefitList className="mt-6 sm:mt-8" />

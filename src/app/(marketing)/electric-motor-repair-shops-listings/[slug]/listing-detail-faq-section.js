@@ -1,5 +1,5 @@
 /**
- * Visible FAQ — answers must not expose gated contact info (phone/email/website).
+ * Visible FAQ, answers must not expose gated contact info (phone/email/website).
  * FAQPage JSON-LD uses the same public answers; NAP stays in LocalBusiness JSON-LD + SEO-hidden HTML.
  * @param {{
  *   items: { question: string, answer: string, contactCta?: boolean, contactCtaSuffix?: string }[],
