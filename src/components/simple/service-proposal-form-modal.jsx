@@ -234,7 +234,6 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
   const isOther = title.toLowerCase().includes("other");
   const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
-  const [seedEmpty] = useState(() => newEmptyLine());
   const lineContentOpts = { withUom: isOther, withQty: isOther };
 
   const ensureTrailingEmpty = (rows) => {
@@ -244,15 +243,18 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
       if (lineHasContent(list[i], lineContentOpts)) lastFilled = i;
     }
     const kept = lastFilled >= 0 ? list.slice(0, lastFilled + 1) : [];
-    const trailing = list.slice(lastFilled + 1).filter((row) => !lineHasContent(row, lineContentOpts));
-    const emptyRow = trailing[0] || seedEmpty;
+    const keptIds = new Set(kept.map((row) => row.id));
+    const trailingEmpty = list
+      .slice(lastFilled + 1)
+      .find((row) => !lineHasContent(row, lineContentOpts) && !keptIds.has(row.id));
+    const emptyRow = trailingEmpty || newEmptyLine();
     return [...kept, emptyRow];
   };
 
   const displayLines = useMemo(
     () => ensureTrailingEmpty(Array.isArray(lines) ? lines : []),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureTrailingEmpty closes over isOther/seedEmpty
-    [lines, isOther, seedEmpty]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- ensureTrailingEmpty closes over isOther
+    [lines, isOther]
   );
 
   const updateLine = (id, patch) => {
