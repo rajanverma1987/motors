@@ -32,6 +32,27 @@ export function effectiveWorkOrderNumberPrefix(mergedSettings) {
   return p.endsWith("-") ? p : `${p}-`;
 }
 
+/** Shop PO numbers: P-A0001 by default; {prefix}-A{0001} sequence. */
+export function effectiveShopPoNumberPrefix(mergedSettings) {
+  const p = sanitizeDocumentNumberPrefix(mergedSettings?.prefixShopPo);
+  const head = p || "P";
+  return head.replace(/-+$/, "");
+}
+
+/** Match shop PO numbers: {prefix}-A0001, {prefix}-A0002, … */
+export function shopPoNumberRegex(prefix) {
+  const p = String(prefix ?? "P").trim().replace(/-+$/, "") || "P";
+  return new RegExp(`^${escapeRegExp(p)}-A(\\d+)$`, "i");
+}
+
+/** Format a shop PO number: {prefix}-A0001 */
+export function formatShopPoNumber(prefix, sequence) {
+  const head = String(prefix ?? "P").trim().replace(/-+$/, "") || "P";
+  const n = Number(sequence);
+  const seq = Number.isFinite(n) && n > 0 ? n : 1;
+  return `${head}-A${String(seq).padStart(4, "0")}`;
+}
+
 /**
  * Prepend `prefix` to `body` only if `body` does not already start with `prefix` (after trim).
  * Used for invoice numbers: prefix + quote RFQ# when the RFQ is not already prefixed.

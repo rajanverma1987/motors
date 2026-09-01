@@ -1,5 +1,7 @@
 /** Simple portal purchase orders — MongoDB via /api/dashboard/simple-purchase-orders. */
 
+import { formatShopPoNumber, shopPoNumberRegex } from "@/lib/document-number-prefixes";
+
 export const SIMPLE_PO_TYPE_JOB = "job";
 export const SIMPLE_PO_TYPE_SHOP = "shop";
 
@@ -301,6 +303,26 @@ export function computeNextSimplePoNumber(jobNumber, existingPos = []) {
     if (Number.isFinite(n) && n > max) max = n;
   }
   return `${job}-${max + 1}`;
+}
+
+/**
+ * Preview next Shop PO number (e.g. P-A0001, CEMR-A0002) from existing shop PO rows.
+ * Does not persist — callers assign on save.
+ * @param {Array<{ poNumber?: string, poType?: string, serviceProposalId?: string, jobNumber?: string }>} existingPos
+ * @param {string} [prefix="P"]
+ */
+export function computeNextShopPoNumber(existingPos = [], prefix = "P") {
+  const head = String(prefix || "P").trim() || "P";
+  const pattern = shopPoNumberRegex(head);
+  let maxNum = 0;
+  for (const po of Array.isArray(existingPos) ? existingPos : []) {
+    if (resolveSimplePoType(po) !== SIMPLE_PO_TYPE_SHOP) continue;
+    const m = String(po?.poNumber || "").trim().match(pattern);
+    if (!m) continue;
+    const n = Number.parseInt(m[1], 10);
+    if (Number.isFinite(n) && n > maxNum) maxNum = n;
+  }
+  return formatShopPoNumber(head, maxNum + 1);
 }
 
 export function normalizeReceivingStatus(raw) {

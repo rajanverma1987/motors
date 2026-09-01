@@ -199,3 +199,9 @@ export async function listSimplePurchaseOrdersForJobApi(serviceProposalId, jobNu
     String(a.poNumber || "").localeCompare(String(b.poNumber || ""), undefined, { numeric: true })
   );
 }
+
+/** Preview next Shop PO number for this org (not reserved until save). */
+export async function fetchNextSimpleShopPoNumber() {
+  const data = await api(`${PO_API}/next-number`);
+  return String(data?.nextPoNumber || "").trim();
+}

@@ -56,6 +56,7 @@ import {
   fetchSimplePurchaseOrders,
   fetchSimpleServiceProposal,
   fetchSimpleServiceProposals,
+  fetchNextSimpleShopPoNumber,
   cancelSimplePurchaseOrderLines,
   returnSimplePurchaseOrderLines,
   listSimplePurchaseOrdersForJobApi,
@@ -351,13 +352,19 @@ export default function SimplePurchaseOrderFormModal({
     const type =
       defaultPoType === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
     if (type === SIMPLE_PO_TYPE_SHOP) {
+      let nextPoNumber = "";
+      try {
+        nextPoNumber = await fetchNextSimpleShopPoNumber();
+      } catch {
+        nextPoNumber = "";
+      }
       setJobPos([]);
       setForm(
         createEmptySimplePurchaseOrderForm({
           poType: SIMPLE_PO_TYPE_SHOP,
           serviceProposalId: "",
           jobNumber: "",
-          poNumber: "",
+          poNumber: nextPoNumber,
         })
       );
       return;
@@ -773,13 +780,19 @@ export default function SimplePurchaseOrderFormModal({
   const handlePoTypeChange = async (nextType) => {
     const type = nextType === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
     if (type === SIMPLE_PO_TYPE_SHOP) {
+      let nextPoNumber = "";
+      try {
+        nextPoNumber = await fetchNextSimpleShopPoNumber();
+      } catch {
+        nextPoNumber = "";
+      }
       setForm((f) =>
         createEmptySimplePurchaseOrderForm({
           ...f,
           poType: SIMPLE_PO_TYPE_SHOP,
           serviceProposalId: "",
           jobNumber: "",
-          poNumber: "",
+          poNumber: nextPoNumber,
         })
       );
       setJobPos([]);
@@ -906,12 +919,23 @@ export default function SimplePurchaseOrderFormModal({
     setSaving(true);
     try {
       const vendor = vendors.find((v) => String(v.id) === String(form.vendorId));
+      const isNewPo = !isViewMode && !String(form.id || "").trim();
       const forJob =
-        type === SIMPLE_PO_TYPE_JOB ? await listSimplePurchaseOrdersForJobApi(sid, job) : [];
+        type === SIMPLE_PO_TYPE_JOB && isNewPo ? await listSimplePurchaseOrdersForJobApi(sid, job) : [];
+      let shopFallback = "";
+      if (type === SIMPLE_PO_TYPE_SHOP && isNewPo && !poNumber) {
+        try {
+          shopFallback = await fetchNextSimpleShopPoNumber();
+        } catch {
+          shopFallback = "";
+        }
+      }
       const nextPoNumber =
-        type === SIMPLE_PO_TYPE_JOB && !isViewMode && !String(form.id || "").trim()
+        type === SIMPLE_PO_TYPE_JOB && isNewPo
           ? poNumber || computeNextSimplePoNumber(job, forJob)
-          : poNumber;
+          : type === SIMPLE_PO_TYPE_SHOP && isNewPo
+            ? poNumber || shopFallback
+            : poNumber;
       const row = formToSimplePurchaseOrderRow(
         {
           ...form,

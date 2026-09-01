@@ -634,8 +634,9 @@ export default function SettingsPageClient() {
             <FormContainer>
               <FormSectionTitle as="h2">Document number prefixes</FormSectionTitle>
               <p className="mb-4 max-w-[42rem] text-sm text-secondary">
-                Applied when creating new repair jobs, invoices (from a quote), and work orders. Letters, digits, hyphen,
-                and underscore only (max 16 characters). Hyphens are added automatically if you omit one (e.g.{" "}
+                Applied when creating new repair jobs, invoices (from a quote), work orders, and shop purchase orders.
+                Letters, digits, hyphen, and underscore only (max 16 characters). Hyphens are added automatically for
+                repair jobs and work orders if you omit one (e.g.{" "}
                 <span className="font-mono text-title">ACME</span> becomes <span className="font-mono text-title">ACME-</span>
                 ). If a quote RFQ# or work-order segment already starts with your prefix, it is not added again.
               </p>
@@ -670,6 +671,18 @@ export default function SettingsPageClient() {
                   maxLength={16}
                 />
                 <p className="-mt-2 text-xs text-secondary">Replaces the default W- before the RFQ or job segment (e.g. WO-A00001-1).</p>
+                <Input
+                  label="Shop PO prefix"
+                  value={draft.prefixShopPo ?? ""}
+                  onChange={(e) => updateDraft({ prefixShopPo: e.target.value })}
+                  placeholder="P"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <p className="-mt-2 text-xs text-secondary">
+                  Leave blank for default P-A0001 style. New Shop PO numbers use your prefix plus -A0001, -A0002, and so on
+                  (e.g. CEMR-A0001). The next number is shown when you create a Shop PO and saved when you click Save.
+                </p>
               </div>
             </FormContainer>
           </div>
@@ -861,6 +874,7 @@ export default function SettingsPageClient() {
       draft.prefixRepairJob,
       draft.prefixInvoice,
       draft.prefixWorkOrder,
+      draft.prefixShopPo,
       draft.smtpEnabled,
       draft.smtpHost,
       draft.smtpPort,

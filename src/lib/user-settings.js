@@ -54,6 +54,8 @@ export const USER_SETTINGS_DEFAULTS = {
   prefixInvoice: "",
   /** Optional prefix for new work order numbers before RFQ/job segment (blank = W-). */
   prefixWorkOrder: "",
+  /** Optional prefix for new Shop PO numbers (blank = P-A0001 style). */
+  prefixShopPo: "",
   /** Workspace SMTP for customer-facing quote & invoice emails */
   smtpEnabled: false,
   smtpHost: "",
@@ -120,6 +122,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "prefixRepairJob",
   "prefixInvoice",
   "prefixWorkOrder",
+  "prefixShopPo",
   "smtpEnabled",
   "smtpHost",
   "smtpPort",
@@ -252,6 +255,7 @@ export function mergeUserSettings(stored) {
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
   merged.prefixWorkOrder = sanitizeDocumentNumberPrefix(merged.prefixWorkOrder);
+  merged.prefixShopPo = sanitizeDocumentNumberPrefix(merged.prefixShopPo);
   merged.zoomLevel = normalizeZoomLevel(merged.zoomLevel);
   merged.fontSizeLevel = normalizeFontSizeLevel(merged.fontSizeLevel);
   merged.logoDocumentScale = normalizeLogoDocumentScale(merged.logoDocumentScale);
@@ -366,7 +370,7 @@ export function sanitizeUserSettingsPatch(body) {
       out.workOrderStatusTileColors = sanitizeWorkOrderStatusTileColorsPatch(body[key]);
       continue;
     }
-    if (key === "prefixRepairJob" || key === "prefixInvoice" || key === "prefixWorkOrder") {
+    if (key === "prefixRepairJob" || key === "prefixInvoice" || key === "prefixWorkOrder" || key === "prefixShopPo") {
       out[key] = sanitizeDocumentNumberPrefix(body[key]);
       continue;
     }
