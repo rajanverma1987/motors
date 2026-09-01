@@ -56,6 +56,32 @@ export async function sendListingApproved(to, companyName) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
 
+/**
+ * Congratulate a shop when their directory listing is upgraded to Premium Partner.
+ * @param {{ to: string, companyName?: string, publicListingUrl?: string }} params
+ */
+export async function sendListingPremiumPartnerEmail({ to, companyName, publicListingUrl }) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const company = (companyName && String(companyName).trim()) || "";
+  const greet = company ? ` ${esc(company)}` : "";
+  const subject = "Congratulations! You are a Premium Partner on IQMotorBase.com";
+  const html = `
+    <p>Congratulations${greet}!</p>
+    <p>Your repair center listing is now a <strong>Premium Partner</strong> on IQMotorBase.com.</p>
+    <p>That means your shop appears at the top of directory search and location results, with a Premium Partner badge on your listing card and detail page so buyers can spot you quickly.</p>
+    ${
+      publicListingUrl
+        ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>`
+        : ""
+    }
+    <p>Thank you for partnering with IQMotorBase.com. We are glad to help more industrial buyers find your shop.</p>
+    <p>If you have questions about your Premium Partner placement, reply to this email or contact us anytime.</p>
+    <p>The IQMotorBase.com team</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
 export async function sendListingRejected(to, companyName, reason) {
   const subject = "Update on your IQMotorBase.com listing submission";
   const html = `

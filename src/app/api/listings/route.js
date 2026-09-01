@@ -9,7 +9,7 @@ import { sendNewListingSubmittedToAdmin } from "@/lib/email";
 import { saveUploadedLogoFile, sanitizeListingLogoUrlForCreate } from "@/lib/logo-upload";
 import { parseAdminSortParams, mongoSortFromAdmin } from "@/lib/admin-table-sort";
 
-const LISTING_ADMIN_SORT_KEYS = ["companyName", "email", "city", "state", "status", "isSeed", "submittedAt"];
+const LISTING_ADMIN_SORT_KEYS = ["companyName", "email", "city", "state", "status", "isPremium", "isSeed", "submittedAt"];
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;

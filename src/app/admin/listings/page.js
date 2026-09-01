@@ -82,6 +82,7 @@ function buildListingsCsv(rows) {
     "yearsInBusiness",
     "status",
     "isSeed",
+    "isPremium",
     "urlSlug",
     "crmUserId",
     "crmOnboardedAt",
@@ -133,6 +134,7 @@ function buildListingsCsv(rows) {
       r.yearsInBusiness,
       r.status,
       r.isSeed ? "yes" : "no",
+      r.isPremium ? "yes" : "no",
       r.urlSlug,
       r.crmUserId != null && r.crmUserId !== "" ? String(r.crmUserId) : "",
       r.crmOnboardedAt ? new Date(r.crmOnboardedAt).toISOString() : "",
@@ -382,6 +384,19 @@ export default function AdminListingsPage() {
         render: (val) => (
           <Badge variant={val === "approved" ? "success" : val === "rejected" ? "danger" : "warning"}>{val}</Badge>
         ),
+      },
+      {
+        key: "isPremium",
+        label: "Premium",
+        sortable: true,
+        render: (val) =>
+          val ? (
+            <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+              Premium Partner
+            </Badge>
+          ) : (
+            <span className="text-secondary">—</span>
+          ),
       },
       {
         key: "isSeed",

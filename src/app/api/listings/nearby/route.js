@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getListingsFilteredByLocationPaginated } from "@/lib/listings-public";
 import { getListingLocationMatchType } from "@/lib/location-filter";
 import { normalizeLocationInput } from "@/lib/us-state-normalize";
+import { comparePublicListings } from "@/lib/listing-premium";
 
 const MAX_RESULTS = 100;
 
@@ -13,7 +14,7 @@ function matchRank(type) {
 
 /**
  * GET /api/listings/nearby?city=&state=&zip=
- * Location-aware listing search with based-in / serves ranking.
+ * Location-aware listing search with premium first, then based-in / serves ranking.
  */
 export async function GET(request) {
   try {
@@ -46,9 +47,12 @@ export async function GET(request) {
         return { ...listing, locationMatchType };
       })
       .sort((a, b) => {
+        const premA = a.isPremium ? 1 : 0;
+        const premB = b.isPremium ? 1 : 0;
+        if (premB !== premA) return premB - premA;
         const byMatch = matchRank(a.locationMatchType) - matchRank(b.locationMatchType);
         if (byMatch !== 0) return byMatch;
-        return (b.directoryScore || 0) - (a.directoryScore || 0);
+        return comparePublicListings(a, b);
       });
 
     return NextResponse.json(

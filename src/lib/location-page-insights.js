@@ -1,4 +1,5 @@
 import { getListingLocationMatchType, isListingBasedInArea } from "@/lib/location-filter";
+import { comparePublicListings } from "@/lib/listing-premium";
 
 function hasRewinding(listing) {
   const caps = [
@@ -81,6 +82,7 @@ export function filterListingsForLocationPage(listings, { match, capability, are
     out = out.filter((l) => !!l?.rushRepairAvailable);
   }
 
+  out.sort(comparePublicListings);
   return out;
 }
 

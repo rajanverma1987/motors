@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Badge from "@/components/ui/badge";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
+import { PREMIUM_LISTING_BADGE_LABEL } from "@/lib/listing-premium";
 import { ListingDirectoryCardLogo } from "@/components/listings/listing-optimized-images";
 
 /**
@@ -17,12 +18,15 @@ export default function PublicListingCard({ listing, imagePriority = false, loca
   const slug = getListingPublicPathSegment(listing);
   const company = listing.companyName || "Repair center";
   const initial = (company.trim().charAt(0) || "?").toUpperCase();
+  const isPremium = !!listing.isPremium;
 
   return (
     <Link
       href={`/electric-motor-repair-shops-listings/${slug}`}
       prefetch
-      className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:border-primary/30 hover:shadow-lg"
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:border-primary/30 hover:shadow-lg ${
+        isPremium ? "border-warning/40 ring-1 ring-warning/20" : "border-border"
+      }`}
     >
       <div className="flex min-h-0 flex-1 gap-5 p-5 sm:gap-6 sm:p-6">
         <div
@@ -38,6 +42,11 @@ export default function PublicListingCard({ listing, imagePriority = false, loca
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-start gap-2">
             <h2 className="min-w-0 flex-1 text-lg font-semibold leading-snug text-title sm:text-xl">{company}</h2>
+            {isPremium ? (
+              <Badge variant="warning" className="shrink-0 rounded-full px-2.5 py-0.5 text-xs">
+                {PREMIUM_LISTING_BADGE_LABEL}
+              </Badge>
+            ) : null}
             {locationMatchType === "based-in" ? (
               <Badge variant="success" className="shrink-0 rounded-full px-2 py-0.5 text-[10px]">
                 Based in area

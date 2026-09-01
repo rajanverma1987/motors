@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { filterListingsByLocation } from "@/lib/location-filter";
 import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
+import { PUBLIC_LISTING_SORT, comparePublicListings } from "@/lib/listing-premium";
 
 export async function GET(request) {
   try {
@@ -14,14 +15,14 @@ export async function GET(request) {
     await connectDB();
     await ensureApprovedListingsHaveUrlSlug();
     const list = await Listing.find({ status: "approved" })
-      .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+      .sort(PUBLIC_LISTING_SORT)
       .lean();
     const withId = list.map((l) => {
       const { isSeed, _id, ...rest } = l;
       return { ...rest, id: _id.toString() };
     });
 
-    const filtered = filterListingsByLocation(withId, { state, city, zip });
+    const filtered = filterListingsByLocation(withId, { state, city, zip }).sort(comparePublicListings);
 
     return NextResponse.json(filtered, {
       headers: {

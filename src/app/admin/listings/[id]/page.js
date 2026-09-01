@@ -231,6 +231,7 @@ export default function AdminListingDetailPage() {
         statesServed: current.statesServed ?? "",
         citiesOrMetrosServed: current.citiesOrMetrosServed ?? "",
         areaCoveredFrom: current.areaCoveredFrom ?? "",
+        isPremium: !!current.isPremium,
       };
       const res = await fetch(`/api/listings/${id}`, {
         method: "PATCH",
@@ -329,8 +330,29 @@ export default function AdminListingDetailPage() {
             </p>
           )}
         </div>
-        <Badge variant={STATUS_COLORS[listing.status] || "default"}>{statusLabel}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {listing.isPremium ? (
+            <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+              Premium Partner
+            </Badge>
+          ) : null}
+          <Badge variant={STATUS_COLORS[listing.status] || "default"}>{statusLabel}</Badge>
+        </div>
       </div>
+
+      <FormContainer className="mb-6">
+        <FormSectionTitle as="h2">Directory placement</FormSectionTitle>
+        <p className="mb-3 text-sm text-secondary">
+          Premium Partner listings appear at the top of public directory search and location results. Use this for
+          paying customers.
+        </p>
+        <Checkbox
+          name="isPremium"
+          label="Premium Partner (show at top of directory results)"
+          checked={!!listing.isPremium}
+          onChange={(e) => updateFieldBool("isPremium", e.target.checked)}
+        />
+      </FormContainer>
 
       {/* Company & contact */}
       <FormContainer className="mb-6">

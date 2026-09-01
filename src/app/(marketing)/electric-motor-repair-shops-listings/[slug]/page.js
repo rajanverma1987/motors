@@ -28,6 +28,8 @@ import ListingGalleryLightbox from "./listing-gallery-lightbox";
 import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
 import ContactReveal from "@/components/marketing/contact-reveal";
 import { ListingInlineLogo, ListingLogoImage } from "@/components/listings/listing-optimized-images";
+import Badge from "@/components/ui/badge";
+import { PREMIUM_LISTING_BADGE_LABEL } from "@/lib/listing-premium";
 
 /** Pre-render all approved listings at build; new ones (approved later) are generated on first visit */
 export async function generateStaticParams() {
@@ -277,9 +279,16 @@ export default async function ListingDetailPage({ params }) {
                     </div>
                   ) : null}
                   <div className="min-w-0">
-                    <h1 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-                      {h1}
-                    </h1>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h1 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
+                        {h1}
+                      </h1>
+                      {listing.isPremium ? (
+                        <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                          {PREMIUM_LISTING_BADGE_LABEL}
+                        </Badge>
+                      ) : null}
+                    </div>
                     {reviewStats.count > 0 && (
                       <p className="mt-1 flex items-center gap-1.5 text-sm text-secondary">
                         <span className="font-medium text-title">
@@ -295,6 +304,11 @@ export default async function ListingDetailPage({ params }) {
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2 rounded-lg border border-border bg-muted/25 px-3 py-2.5 text-xs text-secondary sm:gap-3 sm:px-4 sm:text-sm">
+                  {listing.isPremium ? (
+                    <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                      {PREMIUM_LISTING_BADGE_LABEL}
+                    </Badge>
+                  ) : null}
                   {location ? <span>{location}</span> : null}
                   {listing.yearsInBusiness ? (
                     <span>{listing.yearsInBusiness} years in business</span>

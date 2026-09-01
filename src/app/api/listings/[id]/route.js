@@ -5,7 +5,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { buildEmailToCrmUserIdMap, resolveListingCrmUserId } from "@/lib/listing-crm";
-import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin } from "@/lib/email";
+import { sendListingApproved, sendListingRejected, sendShopListedNotificationToAdmin, sendListingPremiumPartnerEmail } from "@/lib/email";
 import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { ensureLocationPageForArea } from "@/lib/location-pages-public";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
@@ -15,6 +15,8 @@ import {
   computeListingDirectoryScore,
   mergeListingForDirectoryScore,
 } from "@/lib/listing-directory-score";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { getListingPublicPathSegment } from "@/lib/listing-slug";
 
 export async function GET(request, context) {
   try {
@@ -133,7 +135,7 @@ export async function PATCH(request, context) {
       "pickupDeliveryAvailable", "craneCapacity", "forkliftCapacity", "rushRepairAvailable",
       "turnaroundTime", "certifications", "shopSizeSqft", "numTechnicians", "numEngineers",
       "yearsCombinedExperience", "galleryPhotoUrls", "serviceZipCode", "serviceRadiusMiles",
-      "statesServed", "citiesOrMetrosServed", "areaCoveredFrom",
+      "statesServed", "citiesOrMetrosServed", "areaCoveredFrom", "isPremium",
     ];
     const set = {};
     for (const key of allowed) {
@@ -154,6 +156,9 @@ export async function PATCH(request, context) {
       }
       set.email = e;
     }
+    if (Object.prototype.hasOwnProperty.call(set, "isPremium")) {
+      set.isPremium = !!set.isPremium;
+    }
     if (Object.keys(set).length === 0) {
       const current = await Listing.findById(id).lean();
       return NextResponse.json({
@@ -166,6 +171,7 @@ export async function PATCH(request, context) {
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
+    const wasPremium = !!existing.isPremium;
     const merged = mergeListingForDirectoryScore(existing, set);
     set.directoryScore = computeListingDirectoryScore(merged);
 
@@ -177,6 +183,24 @@ export async function PATCH(request, context) {
 
     if (!saved) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const becamePremium = !wasPremium && !!saved.isPremium;
+    if (becamePremium && saved.email) {
+      try {
+        const site = getPublicSiteUrl().replace(/\/$/, "");
+        const pathSlug = getListingPublicPathSegment(saved);
+        const publicListingUrl = pathSlug
+          ? `${site}/electric-motor-repair-shops-listings/${pathSlug}`
+          : "";
+        await sendListingPremiumPartnerEmail({
+          to: saved.email,
+          companyName: saved.companyName,
+          publicListingUrl,
+        });
+      } catch (e) {
+        console.warn("Premium Partner congratulation email failed:", e);
+      }
     }
 
     revalidatePath("/electric-motor-repair-shops-listings");

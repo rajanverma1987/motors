@@ -3,12 +3,13 @@ import Listing from "@/models/Listing";
 import { filterListingsByLocation } from "@/lib/location-filter";
 import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
 import { getIdFromSlugParam } from "@/lib/listing-slug";
+import { PUBLIC_LISTING_SORT } from "@/lib/listing-premium";
 
 export async function getPublicListings() {
   await connectDB();
   await ensureApprovedListingsHaveUrlSlug();
   const list = await Listing.find({ status: "approved" })
-    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .sort(PUBLIC_LISTING_SORT)
     .lean();
   return list.map((l) => ({
     ...l,
@@ -77,7 +78,7 @@ export async function getPublicListingsPaginated({
   const skip = (effectivePage - 1) * normalizedPageSize;
 
   const list = await Listing.find(query)
-    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .sort(PUBLIC_LISTING_SORT)
     .skip(skip)
     .limit(normalizedPageSize)
     .lean();
@@ -126,7 +127,7 @@ export async function getAllListingsForLocationArea({ state, city, zip }) {
 
   const query = orFilters.length > 0 ? { status: "approved", $or: orFilters } : { status: "approved" };
   const list = await Listing.find(query)
-    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .sort(PUBLIC_LISTING_SORT)
     .lean();
 
   return list.map((l) => ({
@@ -179,7 +180,7 @@ export async function getListingsFilteredByLocationPaginated({
   const skip = (effectivePage - 1) * normalizedPageSize;
 
   const list = await Listing.find(query)
-    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
+    .sort(PUBLIC_LISTING_SORT)
     .skip(skip)
     .limit(normalizedPageSize)
     .lean();
@@ -237,8 +238,8 @@ export async function getEmergencyRepairListings() {
     status: "approved",
     $or: [{ rushRepairAvailable: true }, { services: "emergencyRepair" }],
   })
-    .sort({ directoryScore: -1, updatedAt: -1, companyName: 1 })
-    .select("companyName phone city state urlSlug rushRepairAvailable services")
+    .sort(PUBLIC_LISTING_SORT)
+    .select("companyName phone city state urlSlug rushRepairAvailable services isPremium")
     .lean();
   return list.map((l) => ({
     ...l,

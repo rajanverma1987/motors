@@ -49,6 +49,11 @@ const listingSchema = new mongoose.Schema(
     reviewedBy: { type: String },
     rejectionReason: { type: String },
     isSeed: { type: Boolean, default: false },
+    /**
+     * Paying / promoted directory placement. Premium Partner listings sort above
+     * all other approved shops in public search and location results.
+     */
+    isPremium: { type: Boolean, default: false },
     /** Public directory URL segment (no Mongo id): e.g. clearwater-electric-motor-repair-llc */
     urlSlug: { type: String, default: "" },
     /** Profile completeness for directory sort (services, capacity, capabilities, coverage). */
@@ -80,6 +85,6 @@ listingSchema.index(
 listingSchema.index({ status: 1, submittedAt: -1 });
 listingSchema.index({ status: 1 });
 listingSchema.index({ companyName: 1 });
-listingSchema.index({ status: 1, directoryScore: -1, companyName: 1 });
+listingSchema.index({ status: 1, isPremium: -1, directoryScore: -1, companyName: 1 });
 
 export default mongoose.models.Listing || mongoose.model("Listing", listingSchema);
