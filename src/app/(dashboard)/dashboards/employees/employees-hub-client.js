@@ -237,7 +237,7 @@ export default function EmployeesHubClient() {
           "Could not read your location. Enter latitude and longitude manually, or allow location for this site in the browser address bar.";
         if (code === 1) {
           message =
-            "Location permission was denied or previously blocked. Open the lock/tune icon in the address bar, set Location to Allow, then try Use my location again.";
+            "Location was blocked for this site. Open the lock icon in the address bar, set Location to Allow, reload the page, then try Use my location again.";
         } else if (code === 2) {
           message =
             "Location is unavailable right now. Check that Location Services are on for your device, then try again.";
