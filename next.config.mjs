@@ -148,7 +148,7 @@ const nextConfig = {
             key: "Permissions-Policy",
             // geolocation=(self): Time Clock + shop geofence "Use my location" need GPS.
             // Empty geolocation=() blocks the API with PERMISSION_DENIED and no browser prompt.
-            value: "camera=(), microphone=(), geolocation=(self), payment=(self)",
+            value: "camera=(self), microphone=(), geolocation=(self), payment=(self)",
           },
           { key: "Content-Security-Policy", value: csp },
         ],

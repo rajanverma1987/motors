@@ -6,6 +6,7 @@ import {
   startAuthentication,
   browserSupportsWebAuthn,
 } from "@simplewebauthn/browser";
+import TimeClockQrScanner from "@/components/time-clock/time-clock-qr-scanner";
 
 function getPosition() {
   return new Promise((resolve, reject) => {
@@ -71,7 +72,7 @@ export default function TimeClockApp({ token }) {
   const [hours, setHours] = useState(null);
   const [installHint, setInstallHint] = useState(false);
   const [wallScanAuthorized, setWallScanAuthorized] = useState(false);
-  const [openedFromPwa, setOpenedFromPwa] = useState(false);
+  const [scanningQr, setScanningQr] = useState(false);
   const webauthnOk = useMemo(() => {
     try {
       return browserSupportsWebAuthn();
@@ -161,7 +162,6 @@ export default function TimeClockApp({ token }) {
       try {
         const params = new URLSearchParams(window.location.search);
         const fromPwa = params.get("source") === "pwa";
-        setOpenedFromPwa(fromPwa);
         await loadMeta();
         if (cancelled) return;
         if (fromPwa) {
@@ -281,9 +281,13 @@ export default function TimeClockApp({ token }) {
   };
 
   const handlePunch = async () => {
-    setBusy(true);
     setError("");
     setMessage("");
+    if (!wallScanAuthorized) {
+      setScanningQr(true);
+      return;
+    }
+    setBusy(true);
     try {
       const coords = await getPosition();
       const res = await fetch("/api/time-clock/me", {
@@ -313,11 +317,56 @@ export default function TimeClockApp({ token }) {
     }
   };
 
+  const handleQrMatched = useCallback(async () => {
+    setScanningQr(false);
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      await mintWallScanFromQr();
+      const coords = await getPosition();
+      const res = await fetch("/api/time-clock/me", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, ...coords }),
+      });
+      const data = await readJson(res);
+      if (!res.ok) throw new Error(data.error || "Punch failed");
+      setStatus(data);
+      setWallScanAuthorized(false);
+      setMessage(
+        data.punch?.type === "out"
+          ? "Punched out. Scan the shop QR again for your next punch."
+          : data.punch?.type === "in"
+            ? "Punched in. Scan the shop QR again when you punch out."
+            : "Punch recorded. Scan the shop QR again for your next punch."
+      );
+    } catch (err) {
+      setError(err?.message || "Punch failed");
+      setWallScanAuthorized(false);
+    } finally {
+      setBusy(false);
+    }
+  }, [mintWallScanFromQr, token]);
+
   if (loading) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#f3f1ef] p-6 text-sm text-neutral-600">
         Loading time clock…
       </div>
+    );
+  }
+
+  if (scanningQr) {
+    return (
+      <TimeClockQrScanner
+        expectedToken={token}
+        onMatched={() => {
+          void handleQrMatched();
+        }}
+        onCancel={() => setScanningQr(false)}
+      />
     );
   }
 
@@ -435,28 +484,30 @@ export default function TimeClockApp({ token }) {
             </div>
             {!wallScanAuthorized ? (
               <div className="border border-amber-300 bg-amber-50 px-3 py-3 text-sm text-amber-950">
-                <p className="font-semibold">Scan the shop QR to punch</p>
+                <p className="font-semibold">Scan required</p>
                 <p className="mt-1">
-                  {openedFromPwa
-                    ? "You opened Time Clock from Home Screen. Use your camera to scan the printed shop QR, then punch here."
-                    : "QR unlock expired or was already used. Scan the printed shop QR again to unlock your next punch."}
+                  Tap the button below to open the camera and scan the printed shop QR, then punch.
                 </p>
               </div>
             ) : (
               <div className="border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-                Shop QR unlocked. You can punch once (location required).
+                Shop QR unlocked. Confirm location to finish this punch.
               </div>
             )}
             <button
               type="button"
-              disabled={busy || !wallScanAuthorized}
-              onClick={handlePunch}
+              disabled={busy}
+              onClick={() => void handlePunch()}
               className="h-16 w-full bg-[#945c2e] text-lg font-bold text-white disabled:opacity-50"
             >
-              {busy ? "Working…" : status?.nextPunchLabel || "Punch"}
+              {busy
+                ? "Working…"
+                : wallScanAuthorized
+                  ? status?.nextPunchLabel || "Punch"
+                  : `Scan QR to ${status?.nextPunchLabel || "Punch"}`}
             </button>
             <p className="text-center text-xs text-neutral-600">
-              Each punch needs a fresh shop QR scan, plus location inside the shop geofence.
+              Each punch opens the camera for the shop QR, then requires location inside the geofence.
             </p>
           </div>
         ) : null}
