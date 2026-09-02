@@ -65,7 +65,7 @@ function printQrDataUrl(dataUrl, title) {
         </li>
         <li style="margin-bottom:6px;">Open the Home Screen icon. Enter your <strong>work email</strong> and tap <strong>Register passkey</strong>.</li>
         <li style="margin-bottom:6px;">Confirm with Face ID / fingerprint / screen lock when asked.</li>
-        <li style="margin-bottom:0;">Later punches: open the app → biometric sign-in → allow <strong>location</strong> while at the shop → Mark In / Out.</li>
+        <li style="margin-bottom:0;">Later punches: <strong>scan this QR every time</strong> → biometric sign-in → allow <strong>location</strong> at the shop → Mark In / Out. Home Screen alone does not unlock punching (use it for History / Hours).</li>
       </ol>
       <p style="margin:12px 0 0;font-size:12px;text-align:center;color:#444;">Location must be on and you must be at the shop to punch. History and Hours do not need location.</p>
     </div>`;

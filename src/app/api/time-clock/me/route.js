@@ -6,6 +6,11 @@ import { findShopByTimeClockToken } from "@/lib/time-clock-settings";
 import { evaluatePunchGeofence } from "@/lib/time-clock-geo";
 import { getTimeClockSessionFromRequest } from "@/lib/time-clock-session";
 import {
+  clearTimeClockWallScanCookieOptions,
+  getTimeClockWallScanCookieName,
+  hasValidWallScan,
+} from "@/lib/time-clock-wall-scan";
+import {
   computeHoursFromPunches,
   getOpenPunchState,
   lateEarlyFlags,
@@ -111,12 +116,14 @@ export async function GET(request) {
     }
 
     const state = await getOpenPunchState(shop.ownerEmail, session.employeeId);
+    const wallScanAuthorized = await hasValidWallScan(request, token);
     return NextResponse.json({
       employee: {
         id: session.employeeId,
         name: emp.name || session.employeeName,
       },
       geofenceConfigured: shop.lat != null && shop.lng != null,
+      wallScanAuthorized,
       ...state,
       nextPunchLabel: state.nextType === "out" ? "Punch Out" : "Punch In",
     });
@@ -137,6 +144,18 @@ export async function POST(request) {
     const auth = await requireEmployeeSession(request, token);
     if (auth.error) return auth.error;
     const { session, shop } = auth;
+
+    const wallOk = await hasValidWallScan(request, token);
+    if (!wallOk) {
+      return NextResponse.json(
+        {
+          error:
+            "Scan the shop Time Clock QR code to unlock punching. Opening the app from Home Screen is not enough.",
+          wallScanRequired: true,
+        },
+        { status: 403 }
+      );
+    }
 
     if (shop.lat == null || shop.lng == null) {
       return NextResponse.json(
@@ -185,12 +204,16 @@ export async function POST(request) {
     });
 
     const next = await getOpenPunchState(shop.ownerEmail, session.employeeId);
-    return NextResponse.json({
+    const res = NextResponse.json({
       ok: true,
       punch: serializePunch(doc),
+      wallScanAuthorized: false,
       ...next,
       nextPunchLabel: next.nextType === "out" ? "Punch Out" : "Punch In",
     });
+    // One scan unlocks one punch. Next punch needs another wall QR scan.
+    res.cookies.set(getTimeClockWallScanCookieName(), "", clearTimeClockWallScanCookieOptions());
+    return res;
   } catch (err) {
     console.error("Time clock punch error:", err);
     return NextResponse.json({ error: err.message || "Punch failed" }, { status: 500 });
