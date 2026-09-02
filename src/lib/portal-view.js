@@ -117,7 +117,7 @@ export function classicPathToSimpleRedirect(pathname, search = "") {
     return `${SIMPLE_PORTAL_PREFIX}/settings?section=${settingsSectionByPath[pathOnly]}`;
   }
   if (pathOnly === `${CLASSIC_PORTAL_PREFIX}/employees`) {
-    return `${SIMPLE_PORTAL_PREFIX}/settings?section=master&masterTab=employees`;
+    return `${SIMPLE_PORTAL_PREFIX}/employees`;
   }
   if (pathOnly === `${CLASSIC_PORTAL_PREFIX}/vendors`) {
     return `${SIMPLE_PORTAL_PREFIX}/settings?section=master&masterTab=vendors`;

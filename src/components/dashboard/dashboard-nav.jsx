@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FiLogOut, FiSearch, FiSettings } from "react-icons/fi";
+import { FiLogOut, FiSearch, FiSettings, FiUsers } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
@@ -18,6 +18,8 @@ export default function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [settingsMenuOpen, setSettingsMenuOpen] = useState(false);
+  const settingsMenuRef = useRef(null);
   const calculatorOnly = !!user?.calculatorOnlyAccount;
   const simplePortal = isSimplePortalPath(pathname);
   const onSimpleHub = simplePortal && pathname === SIMPLE_PORTAL_PATH && !calculatorOnly;
@@ -48,6 +50,23 @@ export default function DashboardNav() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
+
+  useEffect(() => {
+    if (!settingsMenuOpen) return undefined;
+    const onDoc = (e) => {
+      if (settingsMenuRef.current?.contains(e.target)) return;
+      setSettingsMenuOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === "Escape") setSettingsMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [settingsMenuOpen]);
 
   const handleLogout = () => {
     logout();
@@ -97,14 +116,55 @@ export default function DashboardNav() {
                 <FiSearch className="h-5 w-5" aria-hidden />
               </button>
               <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
-              <Link
-                href={settingsHref}
-                className={iconBtnClass}
-                title="Settings"
-                aria-label="Settings"
-              >
-                <FiSettings className="h-5 w-5" aria-hidden />
-              </Link>
+              {simplePortal ? (
+                <div className="relative" ref={settingsMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setSettingsMenuOpen((o) => !o)}
+                    className={iconBtnClass}
+                    title="Settings and Employees"
+                    aria-label="Settings and Employees"
+                    aria-haspopup="menu"
+                    aria-expanded={settingsMenuOpen}
+                  >
+                    <FiSettings className="h-5 w-5" aria-hidden />
+                  </button>
+                  {settingsMenuOpen ? (
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-50 mt-1 min-w-[10.5rem] border border-border bg-card py-1 shadow-lg"
+                    >
+                      <Link
+                        role="menuitem"
+                        href={settingsHref}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
+                        onClick={() => setSettingsMenuOpen(false)}
+                      >
+                        <FiSettings className="h-4 w-4 shrink-0" aria-hidden />
+                        Settings
+                      </Link>
+                      <Link
+                        role="menuitem"
+                        href="/dashboards/employees"
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
+                        onClick={() => setSettingsMenuOpen(false)}
+                      >
+                        <FiUsers className="h-4 w-4 shrink-0" aria-hidden />
+                        Employees
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <Link
+                  href={settingsHref}
+                  className={iconBtnClass}
+                  title="Settings"
+                  aria-label="Settings"
+                >
+                  <FiSettings className="h-5 w-5" aria-hidden />
+                </Link>
+              )}
             </>
           ) : null}
           <PwaInstallButton className="hidden sm:inline-flex" />

@@ -4,19 +4,7 @@ import Employee from "@/models/Employee";
 import { getPortalUserFromRequest, hashPassword } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { getPasswordPolicyError } from "@/lib/password-policy";
-
-function toEmployeeJson(e) {
-  const id = e._id;
-  return {
-    id: id != null ? id.toString() : undefined,
-    name: e.name ?? "",
-    email: e.email ?? "",
-    role: e.role ?? "",
-    phone: e.phone ?? "",
-    canLogin: Boolean(e.canLogin),
-    technicianAppAccess: Boolean(e.technicianAppAccess),
-  };
-}
+import { applyEmployeeBodyFields, toEmployeeJson } from "@/lib/employee-record";
 
 export async function GET(request) {
   try {
@@ -42,6 +30,9 @@ export async function GET(request) {
       phone: "phone",
       canLogin: "canLogin",
       technicianAppAccess: "technicianAppAccess",
+      department: "department",
+      employmentStatus: "employmentStatus",
+      employeeNumber: "employeeNumber",
       createdAt: "createdAt",
     };
     const sortField = sortFieldMap[sortBy] || "name";
@@ -49,7 +40,14 @@ export async function GET(request) {
     const q = { createdByEmail: email };
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-      q.$or = [{ name: rx }, { email: rx }, { role: rx }, { phone: rx }];
+      q.$or = [
+        { name: rx },
+        { email: rx },
+        { role: rx },
+        { phone: rx },
+        { department: rx },
+        { employeeNumber: rx },
+      ];
     }
     const [totalCount, list] = await Promise.all([
       Employee.countDocuments(q),
@@ -72,18 +70,26 @@ export async function POST(request) {
     }
     await connectDB();
     const body = await request.json();
-    const { name, email, role, phone, canLogin, technicianAppAccess, password } = body;
+    const { name, email, password } = body;
     if (!name?.trim()) {
       return NextResponse.json({ error: "Employee name is required" }, { status: 400 });
     }
     if (email?.trim() && !isValidEmail(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
+    if (body.timeClockEnabled !== false && !String(email || "").trim()) {
+      return NextResponse.json(
+        { error: "Email is required when time clock is enabled." },
+        { status: 400 }
+      );
+    }
     const rawPassword = typeof password === "string" ? password.trim() : "";
     if (rawPassword.length > 0) {
       if (rawPassword.length < LIMITS.password.min || rawPassword.length > LIMITS.password.max) {
         return NextResponse.json(
-          { error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.` },
+          {
+            error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.`,
+          },
           { status: 400 }
         );
       }
@@ -96,16 +102,13 @@ export async function POST(request) {
     if (rawPassword.length > 0) {
       passwordHash = await hashPassword(rawPassword);
     }
-    const doc = await Employee.create({
-      name: clampString(name, LIMITS.name.max),
-      email: email?.trim() ? email.trim().toLowerCase().slice(0, LIMITS.email.max) : "",
-      role: clampString(role ?? "", LIMITS.shortText.max),
-      phone: clampString(phone ?? "", 30),
-      canLogin: Boolean(canLogin),
-      technicianAppAccess: Boolean(technicianAppAccess),
-      passwordHash,
+    const doc = new Employee({
       createdByEmail: user.email.trim().toLowerCase(),
+      passwordHash,
+      name: clampString(name, LIMITS.name.max),
     });
+    applyEmployeeBodyFields(doc, body, { clampString, LIMITS });
+    await doc.save();
     return NextResponse.json({
       ok: true,
       employee: toEmployeeJson(doc),

@@ -38,7 +38,6 @@ export const SIMPLE_SETTINGS_DRAFT_SECTION_IDS = new Set([
 ]);
 
 export const SIMPLE_MASTER_TABS = [
-  { id: "employees", label: "Employees" },
   { id: "vendors", label: "Vendors" },
   { id: "sales-persons", label: "Sales Persons" },
 ];
@@ -59,7 +58,9 @@ export function resolveSimpleSettingsSection(section) {
  */
 export function resolveSimpleMasterTab(tab) {
   const id = String(tab || "").trim();
-  return SIMPLE_MASTER_TAB_IDS.includes(id) ? id : "employees";
+  // Legacy masterTab=employees moved to /dashboards/employees
+  if (id === "employees") return "vendors";
+  return SIMPLE_MASTER_TAB_IDS.includes(id) ? id : "vendors";
 }
 
 /**

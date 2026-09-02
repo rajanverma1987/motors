@@ -115,6 +115,15 @@ export default function SettingsPageClient() {
   const [smtpPasswordInput, setSmtpPasswordInput] = useState("");
   const [smtpTesting, setSmtpTesting] = useState(false);
 
+  useEffect(() => {
+    if (
+      searchParams.get("section") === "master" &&
+      searchParams.get("masterTab") === "employees"
+    ) {
+      router.replace("/dashboards/employees");
+    }
+  }, [router, searchParams]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {

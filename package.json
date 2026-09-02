@@ -17,6 +17,8 @@
     "backfill:simple-portal-dates": "node scripts/backfill-simple-portal-dates.js"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.0",
     "bcryptjs": "^3.0.3",
     "exceljs": "^4.4.0",
     "jose": "^6.2.1",

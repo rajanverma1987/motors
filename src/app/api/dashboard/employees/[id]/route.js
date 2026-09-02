@@ -4,27 +4,12 @@ import Employee from "@/models/Employee";
 import { getPortalUserFromRequest, hashPassword } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { getPasswordPolicyError } from "@/lib/password-policy";
+import { applyEmployeeBodyFields, toEmployeeJson } from "@/lib/employee-record";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
     : Promise.resolve(context.params || {});
-}
-
-function toEmployeeJson(doc) {
-  const e = doc && (doc.toObject ? doc.toObject() : doc);
-  if (!e) return null;
-  return {
-    id: e._id?.toString(),
-    name: e.name ?? "",
-    email: e.email ?? "",
-    role: e.role ?? "",
-    phone: e.phone ?? "",
-    canLogin: Boolean(e.canLogin),
-    technicianAppAccess: Boolean(e.technicianAppAccess),
-    createdAt: e.createdAt,
-    updatedAt: e.updatedAt,
-  };
 }
 
 export async function GET(request, context) {
@@ -73,28 +58,34 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const body = await request.json();
-    const { name, email, role, phone, canLogin, technicianAppAccess, password } = body;
-    if (name !== undefined) {
-      if (!String(name).trim()) {
-        return NextResponse.json({ error: "Employee name is required" }, { status: 400 });
-      }
-      doc.name = clampString(name, LIMITS.name.max);
+    if (body.name !== undefined && !String(body.name).trim()) {
+      return NextResponse.json({ error: "Employee name is required" }, { status: 400 });
     }
-    if (email !== undefined) {
-      if (email?.trim() && !isValidEmail(email)) {
-        return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
-      }
-      doc.email = email?.trim() ? email.trim().toLowerCase().slice(0, LIMITS.email.max) : "";
+    if (body.email !== undefined && body.email?.trim() && !isValidEmail(body.email)) {
+      return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
-    if (role !== undefined) doc.role = clampString(role, LIMITS.shortText.max);
-    if (phone !== undefined) doc.phone = clampString(phone, 30);
-    if (canLogin !== undefined) doc.canLogin = Boolean(canLogin);
-    if (technicianAppAccess !== undefined) doc.technicianAppAccess = Boolean(technicianAppAccess);
-    const rawPassword = typeof password === "string" ? password.trim() : "";
+    const nextTimeClock =
+      body.timeClockEnabled !== undefined ? Boolean(body.timeClockEnabled) : doc.timeClockEnabled !== false;
+    const nextEmail =
+      body.email !== undefined
+        ? body.email?.trim()
+          ? String(body.email).trim().toLowerCase()
+          : ""
+        : String(doc.email || "").trim();
+    if (nextTimeClock && !nextEmail) {
+      return NextResponse.json(
+        { error: "Email is required when time clock is enabled." },
+        { status: 400 }
+      );
+    }
+    applyEmployeeBodyFields(doc, body, { clampString, LIMITS });
+    const rawPassword = typeof body.password === "string" ? body.password.trim() : "";
     if (rawPassword.length > 0) {
       if (rawPassword.length < LIMITS.password.min || rawPassword.length > LIMITS.password.max) {
         return NextResponse.json(
-          { error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.` },
+          {
+            error: `Password must be between ${LIMITS.password.min} and ${LIMITS.password.max} characters.`,
+          },
           { status: 400 }
         );
       }

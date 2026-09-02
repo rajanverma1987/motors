@@ -64,7 +64,9 @@ export default function DashboardShell({ children }) {
           <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
             <div
               className={`relative flex min-h-0 min-w-0 flex-1 flex-col overscroll-y-contain ${
-                onSettingsPage ? "overflow-hidden p-0" : `overflow-y-auto ${simpleView ? "px-2 py-0 sm:px-3" : "p-[10px]"}`
+                onSettingsPage
+                  ? "overflow-hidden p-0"
+                  : `overflow-y-auto [scrollbar-gutter:stable] ${simpleView ? "px-2 py-0 sm:px-3" : "p-[10px]"}`
               }`}
             >
               {children}
