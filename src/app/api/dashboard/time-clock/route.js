@@ -26,25 +26,10 @@ export async function GET(request) {
     const settings = await ensureTimeClockSettings(auth.email);
     const userDoc = await User.findOne({ email: auth.email }).select("shopName").lean();
     const shopName = String(userDoc?.shopName || "").trim() || "Shop";
-    const baseUrl = getPublicSiteUrl(request).replace(/\/$/, "");
-    // Prefer request host for local QR testing when public URL is production-only
-    let clockBase = baseUrl;
-    try {
-      const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "")
-        .split(",")[0]
-        .trim();
-      if (host) {
-        let proto = (request.headers.get("x-forwarded-proto") || "").split(",")[0].trim();
-        const hostname = host.split(":")[0].toLowerCase();
-        if (hostname === "localhost" || hostname === "127.0.0.1") {
-          proto = proto || "http";
-          clockBase = `${proto}://${host}`;
-        }
-      }
-    } catch {
-      /* keep public */
-    }
-    const url = `${clockBase.replace(/\/$/, "")}/time-clock/${encodeURIComponent(settings.token)}`;
+    // Always use the public site origin for shop QR. Behind IIS/reverse proxies the
+    // Node Host header is often localhost, which must never be printed for phones.
+    const clockBase = getPublicSiteUrl(request).replace(/\/$/, "");
+    const url = `${clockBase}/time-clock/${encodeURIComponent(settings.token)}`;
 
     const employees = await Employee.find({ createdByEmail: auth.email })
       .select(
