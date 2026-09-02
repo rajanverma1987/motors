@@ -6,25 +6,63 @@ import {
 } from "@simplewebauthn/server";
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import TimeClockChallenge from "@/models/TimeClockChallenge";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
-function getRequestOrigin(request) {
+function isLocalHost(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  return h === "localhost" || h === "127.0.0.1" || h === "::1" || h.endsWith(".localhost");
+}
+
+function rpFromUrlString(raw) {
+  try {
+    const u = new URL(String(raw || "").trim());
+    if (!u.hostname) return null;
+    return {
+      origin: `${u.protocol}//${u.host}`,
+      rpID: u.hostname.toLowerCase(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve WebAuthn rpID + origin.
+ * Prefer the browser Origin header (what the employee actually opened).
+ * Never trust Node Host alone on production: IIS/proxies often report localhost.
+ */
+export function getWebAuthnRpFromRequest(request) {
+  const fromOrigin = rpFromUrlString(request.headers.get("origin") || "");
+  if (fromOrigin && !isLocalHost(fromOrigin.rpID)) return fromOrigin;
+
+  const referer = String(request.headers.get("referer") || "").trim();
+  if (referer) {
+    const fromReferer = rpFromUrlString(referer);
+    if (fromReferer && !isLocalHost(fromReferer.rpID)) return fromReferer;
+  }
+
+  const fromPublic = rpFromUrlString(getPublicSiteUrl(request));
+  if (fromPublic && !isLocalHost(fromPublic.rpID)) return fromPublic;
+
+  // Real local/dev only. Never emit localhost RP on a production Node process.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "Passkey setup could not resolve the public site domain. Set SITE_URL or NEXT_PUBLIC_SITE_URL on the server."
+    );
+  }
+
+  if (fromOrigin && isLocalHost(fromOrigin.rpID)) return fromOrigin;
+
   const host = (request.headers.get("x-forwarded-host") || request.headers.get("host") || "")
     .split(",")[0]
     .trim();
   if (!host) return null;
+  const hostname = host.split(":")[0].toLowerCase();
   let proto = (request.headers.get("x-forwarded-proto") || "").split(",")[0].trim().toLowerCase();
   if (proto !== "http" && proto !== "https") {
-    const hostname = host.split(":")[0].toLowerCase();
-    proto =
-      hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost")
-        ? "http"
-        : "https";
+    proto = isLocalHost(hostname) ? "http" : "https";
   }
-  return { origin: `${proto}://${host}`, rpID: host.split(":")[0] };
-}
-
-export function getWebAuthnRpFromRequest(request) {
-  return getRequestOrigin(request);
+  return { origin: `${proto}://${host}`, rpID: hostname };
 }
 
 export async function storeChallenge({ shopEmail, employeeId, challenge, kind }) {

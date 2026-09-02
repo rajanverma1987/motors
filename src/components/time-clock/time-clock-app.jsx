@@ -37,6 +37,21 @@ async function readJson(res) {
   return res.json().catch(() => ({}));
 }
 
+function assertPasskeyOptionsMatchPage(options) {
+  const rpId = String(options?.rp?.id || options?.rpId || "").toLowerCase();
+  if (!rpId || typeof window === "undefined") return;
+  const pageHost = String(window.location.hostname || "").toLowerCase();
+  const pageIsLocal =
+    pageHost === "localhost" || pageHost === "127.0.0.1" || pageHost.endsWith(".localhost");
+  const rpIsLocal =
+    rpId === "localhost" || rpId === "127.0.0.1" || rpId.endsWith(".localhost");
+  if (rpIsLocal && !pageIsLocal) {
+    throw new Error(
+      "Passkey setup returned localhost instead of this website. Redeploy the server fix, then try again."
+    );
+  }
+}
+
 /**
  * Employee Time Clock PWA client.
  * @param {{ token: string }} props
@@ -151,6 +166,7 @@ export default function TimeClockApp({ token }) {
       });
       const optData = await readJson(optRes);
       if (!optRes.ok) throw new Error(optData.error || "Could not start registration");
+      assertPasskeyOptionsMatchPage(optData.options);
       const attestation = await startRegistration({ optionsJSON: optData.options });
       const verifyRes = await fetch("/api/time-clock/register", {
         method: "PUT",
@@ -190,6 +206,7 @@ export default function TimeClockApp({ token }) {
       });
       const optData = await readJson(optRes);
       if (!optRes.ok) throw new Error(optData.error || "Could not start login");
+      assertPasskeyOptionsMatchPage(optData.options);
       const assertion = await startAuthentication({ optionsJSON: optData.options });
       const verifyRes = await fetch("/api/time-clock/login", {
         method: "PUT",

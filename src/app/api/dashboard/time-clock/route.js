@@ -30,6 +30,15 @@ export async function GET(request) {
     // Node Host header is often localhost, which must never be printed for phones.
     const clockBase = getPublicSiteUrl(request).replace(/\/$/, "");
     const url = `${clockBase}/time-clock/${encodeURIComponent(settings.token)}`;
+    if (/localhost|127\.0\.0\.1/i.test(url) && process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        {
+          error:
+            "Time clock URL resolved to localhost. Set SITE_URL or NEXT_PUBLIC_SITE_URL on the server.",
+        },
+        { status: 500 }
+      );
+    }
 
     const employees = await Employee.find({ createdByEmail: auth.email })
       .select(
