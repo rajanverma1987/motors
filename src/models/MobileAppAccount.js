@@ -40,6 +40,8 @@ const mobileAppAccountSchema = new mongoose.Schema(
           id: { type: String, required: true },
           size: { type: String, required: true, trim: true },
           circularMills: { type: Number, required: true },
+          /** Cir Mills unit this custom size belongs to: awg | metric */
+          wireUnit: { type: String, enum: ["awg", "metric"], default: "awg" },
         },
       ],
       default: [],

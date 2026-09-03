@@ -509,15 +509,14 @@ export async function sendListingFeaturedAccountEmail({
   const contactUrl = `${site}/contact`;
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const company = (shopName && String(shopName).trim()) || "";
-  const greet = company ? ` ${esc(company)}` : "";
-  const subject = "Your repair center is featured on IQMotorBase.com";
+  const company = (shopName && String(shopName).trim()) || "your business";
+  const subject = "Your Shop Is Live on IQMotorBase: Leads Coming Your Way";
   const html = `
-    <p>Hi${greet},</p>
-    <p>We have added <strong>${esc(shopName || "your business")}</strong> to the IQMotorBase.com public repair shop directory so customers can find you when they search for motor repair services.</p>
-    <p><strong>What you get:</strong> visibility in our directory, incoming leads from the website routed to your account, and a dashboard to review inquiries and manage how your listing appears.</p>
+    <p>Hi ${esc(company)},</p>
+    <p>We have added <strong>${esc(company)}</strong> to the IQMotorBase.com public repair shop directory. Customers searching for motor repair and rewinding services in your area will now find your listing and can contact you directly.</p>
+    <p><strong>What this means for you:</strong> IQMotorBase is already receiving motor repair service requests from industrial buyers in your region. Your shop will appear in those results and receive incoming leads routed directly to your account.</p>
     ${publicListingUrl ? `<p><strong>Your public listing:</strong> <a href="${esc(publicListingUrl)}">${esc(publicListingUrl)}</a></p>` : ""}
-    <p>Use the credentials below to log in to your shop dashboard. There you can view <a href="${esc(leadsUrl)}">Leads</a> and edit your profile on <a href="${esc(directoryUrl)}">Directory listing</a>.</p>
+    <p>Use the credentials below to log in to your shop dashboard. Once inside, review your <a href="${esc(leadsUrl)}"><strong>Leads</strong></a> and update your <a href="${esc(directoryUrl)}"><strong>Directory listing</strong></a> to make sure all information is accurate. Incomplete listings receive fewer leads. Take 5 minutes to verify your services, contact details, and service area.</p>
     <table style="border-collapse:collapse;margin:16px 0;">
       <tbody>
         <tr><td style="padding:8px 12px;border:1px solid #ddd;font-weight:600;">Login email</td><td style="padding:8px 12px;border:1px solid #ddd;">${esc(to)}</td></tr>
@@ -526,9 +525,9 @@ export async function sendListingFeaturedAccountEmail({
       </tbody>
     </table>
     <p><a href="${esc(loginUrl)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">Log in to your dashboard</a></p>
-    <p><strong>Security:</strong> Change your password after you sign in under <strong>Settings</strong> → <strong>Account</strong>.</p>
-    <p>To unlock the full Shop Management System (quotes, jobs, billing, and unlimited leads), <a href="${esc(contactUrl)}">contact us</a> about a paid plan.</p>
-    <p>,  IQMotorBase.com</p>
+    <p><strong>Security:</strong> Change your password after signing in under Settings &gt; Account.</p>
+    <p><strong>Want more leads?</strong> Unlock the full Shop Management System including quotes, job tracking, billing, inventory, and unlimited leads. <a href="${esc(contactUrl)}">Contact us</a> to learn about our paid plans.</p>
+    <p>IQMotorBase.com</p>
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }

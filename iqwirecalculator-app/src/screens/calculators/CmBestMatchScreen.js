@@ -21,6 +21,7 @@ import {
   CIR_MILLS_UNIT_METRIC,
   DEFAULT_CIR_MILLS_ROWS,
   DEFAULT_METRIC_CIR_MILLS_ROWS,
+  compareWireSizeDesc,
   formatOriginalWireSelection,
   normalizeCirMillsUnit,
 } from "../../lib/platform-cir-mills";
@@ -34,7 +35,12 @@ import { appFetch } from "../../api";
 const MAX_SELECT = 10;
 const MAX_WIRES_CAP = 200;
 const RESULTS_PAGE_SIZE = 200;
-const CUSTOM_WIRES_KEY = "motop_calcs_custom_wires";
+const CUSTOM_WIRES_KEY_PREFIX = "motop_calcs_custom_wires";
+
+function customWiresStorageKey(accountId) {
+  const id = String(accountId || "").trim();
+  return id ? `${CUSTOM_WIRES_KEY_PREFIX}:${id}` : null;
+}
 
 function platformId(unit, size) {
   return `${normalizeCirMillsUnit(unit)}-${String(size)}`;
@@ -43,14 +49,16 @@ function platformId(unit, size) {
 function buildPlatformRows(unit) {
   const u = normalizeCirMillsUnit(unit);
   const seed = u === CIR_MILLS_UNIT_METRIC ? DEFAULT_METRIC_CIR_MILLS_ROWS : DEFAULT_CIR_MILLS_ROWS;
-  return seed.map((w) => ({
-    id: platformId(u, w.size),
-    size: String(w.size),
-    circularMills: Number(w.circularMills) || 0,
-    source: "platform",
-    wireUnit: u,
-    custom: false,
-  }));
+  return seed
+    .map((w) => ({
+      id: platformId(u, w.size),
+      size: String(w.size),
+      circularMills: Number(w.circularMills) || 0,
+      source: "platform",
+      wireUnit: u,
+      custom: false,
+    }))
+    .sort(compareWireSizeDesc);
 }
 
 function resultRowBg(pct) {
@@ -67,7 +75,8 @@ function emptyDash(v) {
 
 export default function CmBestMatchScreen() {
   const insets = useSafeAreaInsets();
-  const { token } = useMobileAuth();
+  const { token, account } = useMobileAuth();
+  const accountId = account?.id ? String(account.id) : "";
   const [customWires, setCustomWires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [savingWire, setSavingWire] = useState(false);
@@ -105,7 +114,7 @@ export default function CmBestMatchScreen() {
     []
   );
 
-  const customRows = useMemo(
+  const allCustomRows = useMemo(
     () =>
       (Array.isArray(customWires) ? customWires : [])
         .filter((w) => w && w.id && w.size)
@@ -115,52 +124,85 @@ export default function CmBestMatchScreen() {
           circularMills: Number(w.circularMills) || 0,
           source: "custom",
           custom: true,
-        })),
+          wireUnit: normalizeCirMillsUnit(w.wireUnit),
+        }))
+        .sort(compareWireSizeDesc),
     [customWires]
   );
 
-  const catalogRows = useMemo(() => [...platformRows, ...customRows], [platformRows, customRows]);
-  const allSelectableRows = useMemo(
-    () => [...allPlatformRows, ...customRows],
-    [allPlatformRows, customRows]
+  const customRows = useMemo(
+    () => allCustomRows.filter((w) => w.wireUnit === catalogUnit),
+    [allCustomRows, catalogUnit]
   );
 
-  const persistCustom = useCallback(async (list) => {
-    setCustomWires(list);
-    try {
-      await SecureStore.setItemAsync(CUSTOM_WIRES_KEY, JSON.stringify(list));
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  /** Custom sizes for the active unit first, then platform table for that unit. */
+  const catalogRows = useMemo(() => [...customRows, ...platformRows], [platformRows, customRows]);
+  const allSelectableRows = useMemo(
+    () => [...allCustomRows, ...allPlatformRows],
+    [allPlatformRows, allCustomRows]
+  );
+
+  const persistCustom = useCallback(
+    async (list, forAccountId = accountId) => {
+      const next = Array.isArray(list) ? list : [];
+      setCustomWires(next);
+      const key = customWiresStorageKey(forAccountId);
+      if (!key) return;
+      try {
+        await SecureStore.setItemAsync(key, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+    },
+    [accountId]
+  );
 
   const loadWires = useCallback(async () => {
     setLoading(true);
     try {
-      const cached = await SecureStore.getItemAsync(CUSTOM_WIRES_KEY);
-      if (cached) {
+      if (!token || !accountId) {
+        setCustomWires([]);
+        return;
+      }
+      const key = customWiresStorageKey(accountId);
+      if (key) {
         try {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) setCustomWires(parsed);
+          const cached = await SecureStore.getItemAsync(key);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed)) setCustomWires(parsed);
+          } else {
+            setCustomWires([]);
+          }
         } catch {
-          /* ignore */
+          setCustomWires([]);
         }
       }
-      if (token) {
-        const data = await appFetch("/api/mobile-app/wire-catalog", { token });
-        const list = Array.isArray(data.customWires) ? data.customWires : [];
-        await persistCustom(list);
-      }
+      const data = await appFetch("/api/mobile-app/wire-catalog", { token });
+      const list = Array.isArray(data.customWires) ? data.customWires : [];
+      await persistCustom(list, accountId);
     } catch {
-      /* keep defaults + cache */
+      /* keep account-scoped cache if API fails */
     } finally {
       setLoading(false);
     }
-  }, [token, persistCustom]);
+  }, [token, accountId, persistCustom]);
 
   useEffect(() => {
     loadWires();
   }, [loadWires]);
+
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const next = new Set();
+      for (const id of prev) {
+        if (!String(id).startsWith("custom-")) next.add(id);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+    if (!accountId) setCustomWires([]);
+  }, [accountId]);
 
   const selectedList = useMemo(
     () => allSelectableRows.filter((w) => w.id && selected.has(w.id)),
@@ -176,12 +218,7 @@ export default function CmBestMatchScreen() {
     () =>
       selectedList
         .map((w) => {
-          const unitHint =
-            w.source === "platform"
-              ? w.wireUnit === CIR_MILLS_UNIT_METRIC
-                ? " mm"
-                : " AWG"
-              : "";
+          const unitHint = w.wireUnit === CIR_MILLS_UNIT_METRIC ? " mm" : " AWG";
           return {
             size: `${w.size}${unitHint}`,
             cm: Number(w.circularMills) || 0,
@@ -207,11 +244,11 @@ export default function CmBestMatchScreen() {
   };
 
   const clearCatalogCurrentUnit = () => {
-    const ids = new Set(platformRows.map((w) => w.id));
+    const ids = new Set(catalogRows.map((w) => w.id));
     if (ids.size === 0) return;
     const selectedCount = [...ids].filter((id) => selected.has(id)).length;
     if (selectedCount === 0) return;
-    Alert.alert("Clear selection", `Clear selected ${unitLabel} sizes? Custom sizes stay selected.`, [
+    Alert.alert("Clear selection", `Clear selected ${unitLabel} sizes (including custom)?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Clear",
@@ -261,8 +298,14 @@ export default function CmBestMatchScreen() {
       return;
     }
     const sizeKey = size.toLowerCase();
-    if (allSelectableRows.some((w) => String(w.size).trim().toLowerCase() === sizeKey && w.custom)) {
-      Alert.alert("Already listed", "That custom size is already in the catalog.");
+    if (
+      allCustomRows.some(
+        (w) =>
+          String(w.size).trim().toLowerCase() === sizeKey &&
+          w.wireUnit === catalogUnit
+      )
+    ) {
+      Alert.alert("Already listed", `That custom size is already in your ${unitLabel} catalog.`);
       return;
     }
     setSavingWire(true);
@@ -271,7 +314,7 @@ export default function CmBestMatchScreen() {
       const data = await appFetch("/api/mobile-app/wire-catalog", {
         token,
         method: "POST",
-        body: { size, circularMills: cm },
+        body: { size, circularMills: cm, wireUnit: catalogUnit },
       });
       const list = Array.isArray(data.customWires) ? data.customWires : [...customWires, data.wire];
       await persistCustom(list);
@@ -380,12 +423,7 @@ export default function CmBestMatchScreen() {
       maxWires: String(maxW),
       selectedCatalogSummary: selectedList
         .map((w) => {
-          const unitHint =
-            w.source === "platform"
-              ? w.wireUnit === CIR_MILLS_UNIT_METRIC
-                ? " mm"
-                : " AWG"
-              : "";
+          const unitHint = w.wireUnit === CIR_MILLS_UNIT_METRIC ? " mm" : " AWG";
           return `${w.size}${unitHint} (${w.circularMills} CM)`;
         })
         .join("; "),
@@ -497,7 +535,14 @@ export default function CmBestMatchScreen() {
   const endItem = Math.min(safePage * RESULTS_PAGE_SIZE, results.length);
 
   const pickerPlatformRows = useMemo(() => buildPlatformRows(pickerUnit), [pickerUnit]);
-  const pickerRows = useMemo(() => [...pickerPlatformRows, ...customRows], [pickerPlatformRows, customRows]);
+  const pickerCustomRows = useMemo(
+    () => allCustomRows.filter((w) => w.wireUnit === pickerUnit),
+    [allCustomRows, pickerUnit]
+  );
+  const pickerRows = useMemo(
+    () => [...pickerCustomRows, ...pickerPlatformRows],
+    [pickerPlatformRows, pickerCustomRows]
+  );
   const pickerUnitLabel = pickerUnit === CIR_MILLS_UNIT_METRIC ? "Metric" : "AWG";
 
   const setPickerQty = (id, value) => {
@@ -511,7 +556,7 @@ export default function CmBestMatchScreen() {
   };
 
   const clearPickerCurrentUnit = () => {
-    const ids = new Set(pickerPlatformRows.map((w) => w.id));
+    const ids = new Set(pickerRows.map((w) => w.id));
     setOriginalWireQtys((prev) => {
       const next = { ...prev };
       ids.forEach((id) => delete next[id]);
@@ -580,19 +625,6 @@ export default function CmBestMatchScreen() {
               value={catalogUnit}
               onChange={setCatalogUnit}
             />
-            <View style={styles.toolbarRow}>
-              <Text style={styles.selectedSummary} numberOfLines={2}>
-                {selected.size}/{MAX_SELECT} selected · {selectedOnCurrentList} on {unitLabel}
-              </Text>
-              <Pressable
-                style={[styles.clearBtn, selectedOnCurrentList === 0 && styles.btnDisabled]}
-                disabled={platformRows.every((w) => !selected.has(w.id))}
-                onPress={clearCatalogCurrentUnit}
-              >
-                <Text style={styles.clearBtnText}>Clear selection</Text>
-              </Pressable>
-            </View>
-            <Text style={styles.tableCaption}>{sizeColumnLabel} · Cir. Mills</Text>
           </View>
 
           {loading ? (
@@ -606,47 +638,65 @@ export default function CmBestMatchScreen() {
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={{ paddingBottom: insets.bottom + 120 }}
               ListHeaderComponent={
-                <View style={styles.catalogHeaderRow}>
-                  <Text style={[styles.thCell, styles.thCheck]} />
-                  <Text style={[styles.thCell, styles.thSize]}>Size</Text>
-                  <Text style={[styles.thCell, styles.thCm]}>Cir. Mills</Text>
-                  <Text style={[styles.thCell, styles.thAction]} />
+                <View>
+                  <View style={styles.addCustomBox}>
+                    <Text style={styles.subHead}>Add custom size</Text>
+                    <Text style={styles.addCustomHint}>
+                      Saved to your account under {unitLabel} only.
+                    </Text>
+                    <View style={styles.row}>
+                      <LabeledInput
+                        compact
+                        style={styles.col}
+                        label="New size"
+                        value={newSize}
+                        onChangeText={setNewSize}
+                        placeholder="e.g. 18.5"
+                      />
+                      <LabeledInput
+                        compact
+                        style={styles.col}
+                        label="Circular mils"
+                        value={newCm}
+                        onChangeText={setNewCm}
+                        placeholder="CM"
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <Pressable
+                      style={[styles.primaryBtn, savingWire && styles.btnDisabled]}
+                      disabled={savingWire}
+                      onPress={addWire}
+                    >
+                      <Text style={styles.primaryBtnText}>{savingWire ? "Adding…" : "Add to catalog"}</Text>
+                    </Pressable>
+                  </View>
+                  <View style={styles.selectionBar}>
+                    <Text style={styles.selectedSummary} numberOfLines={2}>
+                      {selected.size}/{MAX_SELECT} selected · {selectedOnCurrentList} on {unitLabel}
+                    </Text>
+                    <Pressable
+                      style={[styles.clearBtn, selectedOnCurrentList === 0 && styles.btnDisabled]}
+                      disabled={selectedOnCurrentList === 0}
+                      onPress={clearCatalogCurrentUnit}
+                    >
+                      <Text style={styles.clearBtnText}>Clear selection</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={styles.tableCaption}>{sizeColumnLabel} · Cir. Mills</Text>
+                  <View style={styles.catalogHeaderRow}>
+                    <Text style={[styles.thCell, styles.thCheck]} />
+                    <Text style={[styles.thCell, styles.thSize]}>Size</Text>
+                    <Text style={[styles.thCell, styles.thCm]}>Cir. Mills</Text>
+                    <Text style={[styles.thCell, styles.thAction]} />
+                  </View>
                 </View>
               }
               ListFooterComponent={
-                <View style={styles.addCustomBox}>
-                  <Text style={styles.subHead}>Add custom size</Text>
-                  <View style={styles.row}>
-                    <LabeledInput
-                      compact
-                      style={styles.col}
-                      label="New size"
-                      value={newSize}
-                      onChangeText={setNewSize}
-                      placeholder="e.g. 18.5"
-                    />
-                    <LabeledInput
-                      compact
-                      style={styles.col}
-                      label="Circular mils"
-                      value={newCm}
-                      onChangeText={setNewCm}
-                      placeholder="CM"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <Pressable
-                    style={[styles.primaryBtn, savingWire && styles.btnDisabled]}
-                    disabled={savingWire}
-                    onPress={addWire}
-                  >
-                    <Text style={styles.primaryBtnText}>{savingWire ? "Adding…" : "Add to catalog"}</Text>
-                  </Pressable>
-                  <Pressable style={styles.gotoFormBtn} onPress={() => setPageTab("original")}>
-                    <Text style={styles.gotoFormBtnText}>Continue to Original Wires</Text>
-                    <Ionicons name="arrow-forward" size={18} color={colors.primary} />
-                  </Pressable>
-                </View>
+                <Pressable style={styles.gotoFormBtn} onPress={() => setPageTab("original")}>
+                  <Text style={styles.gotoFormBtnText}>Continue to Original Wires</Text>
+                  <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+                </Pressable>
               }
             />
           )}
@@ -664,12 +714,7 @@ export default function CmBestMatchScreen() {
                 ? "No sizes selected. Open Wire Catalog and choose up to 10 sizes."
                 : selectedList
                     .map((w) => {
-                      const hint =
-                        w.source === "platform"
-                          ? w.wireUnit === CIR_MILLS_UNIT_METRIC
-                            ? " mm"
-                            : " AWG"
-                          : "";
+                      const hint = w.wireUnit === CIR_MILLS_UNIT_METRIC ? " mm" : " AWG";
                       return `${w.size}${hint}`;
                     })
                     .join(", ")}
@@ -1045,6 +1090,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: spacing.sm,
   },
+  selectionBar: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.sm,
+  },
   clearBtn: {
     backgroundColor: colors.formBg,
     borderWidth: 1,
@@ -1053,7 +1106,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   clearBtnText: { color: colors.danger, fontWeight: "800", fontSize: 12 },
-  tableCaption: { fontSize: 12, color: colors.secondary, fontWeight: "600" },
+  tableCaption: {
+    marginHorizontal: spacing.md,
+    marginBottom: 6,
+    fontSize: 12,
+    color: colors.secondary,
+    fontWeight: "600",
+  },
   catalogHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1069,15 +1128,19 @@ const styles = StyleSheet.create({
   thCm: { width: 88, textAlign: "right" },
   thAction: { width: 36 },
   addCustomBox: {
-    margin: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
     gap: spacing.sm,
   },
+  addCustomHint: { fontSize: 12, color: colors.secondary, lineHeight: 16 },
   gotoFormBtn: {
     marginTop: 8,
+    marginHorizontal: spacing.md,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
