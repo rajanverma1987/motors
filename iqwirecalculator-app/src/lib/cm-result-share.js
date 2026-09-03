@@ -13,7 +13,7 @@ function escapeHtml(value) {
 
 function fmt(n, digits = 0) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return "—";
+  if (!Number.isFinite(x)) return "-";
   return x.toLocaleString(undefined, { maximumFractionDigits: digits });
 }
 
@@ -41,10 +41,11 @@ export function wireCombinationLabel(row) {
   return parts.join("  |  ");
 }
 
+/** Match dashboards: green ≤2%, yellow ≤5%. */
 function rowTint(pct) {
   const a = Math.abs(Number(pct) || 0);
   if (a <= 2) return "#d1fae5";
-  if (a <= 10) return "#fde68a";
+  if (a <= 5) return "#fde68a";
   return "#f7f3ef";
 }
 
@@ -69,6 +70,7 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
         <td>${escapeHtml(row.wiresInHand)}</td>
         <td>${escapeHtml(pctLabel)}</td>
         <td>${escapeHtml(fmt(row.cmDifference, 0))}</td>
+        <td>${escapeHtml(row.noOfWires ?? "")}</td>
       </tr>`;
     })
     .join("");
@@ -95,22 +97,22 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
 </head>
 <body>
   <h1>${escapeHtml(title || "CM Best Match")}</h1>
-  <p class="meta">IQWireCalculator · Generated ${escapeHtml(generated)}</p>
+  <p class="meta">IQWireCalculator · Generated ${escapeHtml(generated)} · ${rows.length} match${rows.length === 1 ? "" : "es"}</p>
   <table class="vars">
     <tr>
-      <td><span class="label">Original Wires in hand</span><span class="value">${escapeHtml(ctx.originalWiredInHand || "—")}</span></td>
-      <td><span class="label">Original wire size</span><span class="value">${escapeHtml(ctx.originalWireSize || "—")}</span></td>
-      <td><span class="label">Original CM</span><span class="value">${escapeHtml(ctx.originalCMDisplay || "—")}</span></td>
+      <td><span class="label">Original Wires in Hand</span><span class="value">${escapeHtml(ctx.originalWiredInHand || "-")}</span></td>
+      <td><span class="label">Original Wire Size</span><span class="value">${escapeHtml(ctx.originalWireSize || "-")}</span></td>
+      <td><span class="label">Original CM</span><span class="value">${escapeHtml(ctx.originalCMDisplay || "-")}</span></td>
     </tr>
     <tr>
-      <td><span class="label">Targeted CM</span><span class="value">${escapeHtml(ctx.targetedCM || "—")}</span></td>
-      <td><span class="label">Min wires</span><span class="value">${escapeHtml(ctx.minWires || "—")}</span></td>
-      <td><span class="label">Max wires</span><span class="value">${escapeHtml(ctx.maxWires || "—")}</span></td>
+      <td><span class="label">Targeted CM</span><span class="value">${escapeHtml(ctx.targetedCM || "-")}</span></td>
+      <td><span class="label">Desired Min Wires</span><span class="value">${escapeHtml(ctx.minWires || "-")}</span></td>
+      <td><span class="label">Desired Max Wires</span><span class="value">${escapeHtml(ctx.maxWires || "-")}</span></td>
     </tr>
   </table>
   ${
     ctx.selectedCatalogSummary
-      ? `<p class="catalog"><span class="label">Catalog sizes used in search</span>${escapeHtml(ctx.selectedCatalogSummary)}</p>`
+      ? `<p class="catalog"><span class="label">Catalog sizes used in search</span> ${escapeHtml(ctx.selectedCatalogSummary)}</p>`
       : ""
   }
   <table class="results">
@@ -120,11 +122,11 @@ export function buildCmResultsHtml({ title, results, resultContext }) {
         <th>Wire Size 2</th><th># Wires 2</th>
         <th>Wire Size 3</th><th># Wires 3</th>
         <th>Total CM</th><th>Targeted CM</th>
-        <th>New wires in hand</th><th>% Difference</th>
-        <th>CM Difference</th>
+        <th>Wires In Hand</th><th>% Difference</th>
+        <th>CM Difference</th><th>No of Wires</th>
       </tr>
     </thead>
-    <tbody>${tableRows}</tbody>
+    <tbody>${tableRows || `<tr><td colspan="12">No results</td></tr>`}</tbody>
   </table>
 </body>
 </html>`;
@@ -136,7 +138,7 @@ function sharePayload({ title, results, resultContext }) {
   }
   return {
     html: buildCmResultsHtml({ title, results, resultContext }),
-    subject: `IQWireCalculator — ${title || "CM Best Match"}`,
+    subject: `IQWireCalculator | ${title || "CM Best Match"}`,
   };
 }
 

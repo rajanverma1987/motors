@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import Lead from "@/models/Lead";
+import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { sendNewWebsiteLeadNotificationToShop } from "@/lib/email";
+import { getListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
     ? context.params
     : Promise.resolve(context.params || {});
+}
+
+function normalizeListingId(id) {
+  return String(id || "").trim();
 }
 
 export async function PATCH(request, context) {
@@ -28,8 +37,36 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     if (Array.isArray(assignedListingIds)) {
-      doc.assignedListingIds = assignedListingIds.slice(0, 3);
+      const previousIds = new Set((doc.assignedListingIds || []).map(normalizeListingId).filter(Boolean));
+      const nextIds = assignedListingIds
+        .map(normalizeListingId)
+        .filter((lid) => lid && mongoose.isValidObjectId(lid))
+        .slice(0, 3);
+      doc.assignedListingIds = nextIds;
       await doc.save();
+
+      const newlyAssigned = nextIds.filter((lid) => !previousIds.has(lid));
+      if (newlyAssigned.length > 0) {
+        const listings = await Listing.find({ _id: { $in: newlyAssigned }, status: "approved" })
+          .select("email companyName notificationEmails")
+          .lean();
+        const siteUrl = getPublicSiteUrl(request);
+        for (const listing of listings) {
+          for (const to of getListingNotifyEmails(listing)) {
+            try {
+              await sendNewWebsiteLeadNotificationToShop({
+                to,
+                listingCompanyName: listing.companyName || "",
+                leadContactName: doc.name,
+                leadContactCompany: doc.company,
+                siteUrl,
+              });
+            } catch (e) {
+              console.warn("Notify newly assigned listing of lead failed:", e);
+            }
+          }
+        }
+      }
     }
     return NextResponse.json({
       ok: true,

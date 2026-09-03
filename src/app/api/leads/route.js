@@ -13,6 +13,7 @@ import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } 
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
+import { getListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
 
@@ -93,7 +94,7 @@ export async function POST(request) {
         return NextResponse.json({ error: "Invalid listing reference." }, { status: 400 });
       }
       const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-        .select("_id email companyName")
+        .select("_id email companyName notificationEmails")
         .lean();
       if (!listingDoc) {
         return NextResponse.json(
@@ -104,10 +105,7 @@ export async function POST(request) {
       sourceListingId = listingDoc._id.toString();
       /** Shop sees this lead in CRM; admin list shows it assigned to this listing company. */
       assignedListingIds = [sourceListingId];
-      listingNotifyTargets.push({
-        email: listingDoc.email ? String(listingDoc.email).trim() : "",
-        companyName: listingDoc.companyName || "",
-      });
+      listingNotifyTargets.push(listingDoc);
     } else {
       const matchCity = clampString(city, LIMITS.city.max);
       const matchState = clampString(state, LIMITS.city.max);
@@ -130,15 +128,7 @@ export async function POST(request) {
             : matches;
         const topMatches = sortedMatches.slice(0, 3);
         assignedListingIds = topMatches.map((listing) => listing.id);
-        for (const listing of topMatches) {
-          const email = listing.email ? String(listing.email).trim() : "";
-          if (email && isValidEmail(email)) {
-            listingNotifyTargets.push({
-              email,
-              companyName: listing.companyName || "",
-            });
-          }
-        }
+        listingNotifyTargets.push(...topMatches);
       }
     }
 
@@ -194,18 +184,20 @@ export async function POST(request) {
       leadSource: "website",
     });
 
-    for (const target of listingNotifyTargets) {
-      if (!target.email || !isValidEmail(target.email)) continue;
-      try {
-        await sendNewWebsiteLeadNotificationToShop({
-          to: target.email,
-          listingCompanyName: target.companyName,
-          leadContactName: doc.name,
-          leadContactCompany: doc.company,
-          siteUrl: getPublicSiteUrl(request),
-        });
-      } catch (e) {
-        console.warn("Notify listing shop of new lead email failed:", e);
+    for (const listing of listingNotifyTargets) {
+      const emails = getListingNotifyEmails(listing);
+      for (const to of emails) {
+        try {
+          await sendNewWebsiteLeadNotificationToShop({
+            to,
+            listingCompanyName: listing.companyName || "",
+            leadContactName: doc.name,
+            leadContactCompany: doc.company,
+            siteUrl: getPublicSiteUrl(request),
+          });
+        } catch (e) {
+          console.warn("Notify listing shop of new lead email failed:", e);
+        }
       }
     }
 

@@ -7,6 +7,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendContactUnlockNotificationToShop } from "@/lib/email";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 export async function POST(request) {
   const { allowed } = await checkRateLimit(request, "contact-unlock", 15);
@@ -54,7 +55,7 @@ export async function POST(request) {
     }
 
     const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-      .select("_id email companyName city state")
+      .select("_id email companyName city state notificationEmails")
       .lean();
 
     if (!listingDoc) {
@@ -84,18 +85,17 @@ export async function POST(request) {
       leadType: "contact_view",
     });
 
-    const shopEmail = listingDoc.email ? String(listingDoc.email).trim() : "";
-    if (shopEmail && isValidEmail(shopEmail)) {
-      try {
-        await sendContactUnlockNotificationToShop({
-          to: shopEmail,
+    try {
+      await sendToListingNotifyEmails(listingDoc, (to) =>
+        sendContactUnlockNotificationToShop({
+          to,
           listingCompanyName: listingDoc.companyName || shopName || "",
           leadContactName: doc.name,
           siteUrl: getPublicSiteUrl(request),
-        });
-      } catch (e) {
-        console.warn("Contact unlock shop notification email failed:", e);
-      }
+        })
+      );
+    } catch (e) {
+      console.warn("Contact unlock shop notification email failed:", e);
     }
 
     return NextResponse.json({ success: true, id: doc._id.toString() });

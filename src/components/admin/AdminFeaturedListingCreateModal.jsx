@@ -72,22 +72,25 @@ export default function AdminFeaturedListingCreateModal({
     setForm({
       ...base,
       ...fromJson,
-      email: String(fromJson.email || prefillEmail || "").trim(),
-      phone: String(fromJson.phone || prefillPhone || "").trim(),
-      password: String(fromJson.password || "").trim() || pwd,
-      country: String(fromJson.country || base.country || "United States").trim() || "United States",
-      services: Array.isArray(fromJson.services) ? fromJson.services : [],
-      motorCapabilities: Array.isArray(fromJson.motorCapabilities) ? fromJson.motorCapabilities : [],
-      equipmentTesting: Array.isArray(fromJson.equipmentTesting) ? fromJson.equipmentTesting : [],
-      rewindingCapabilities: Array.isArray(fromJson.rewindingCapabilities)
-        ? fromJson.rewindingCapabilities
-        : [],
-      industriesServed: Array.isArray(fromJson.industriesServed) ? fromJson.industriesServed : [],
-      certifications: Array.isArray(fromJson.certifications) ? fromJson.certifications : [],
-      galleryPhotoUrls: Array.isArray(fromJson.galleryPhotoUrls) ? fromJson.galleryPhotoUrls : [],
-      pickupDeliveryAvailable: !!fromJson.pickupDeliveryAvailable,
-      rushRepairAvailable: !!fromJson.rushRepairAvailable,
-    });
+          email: String(fromJson.email || prefillEmail || "").trim(),
+          notificationEmails: Array.isArray(fromJson.notificationEmails)
+            ? fromJson.notificationEmails.filter(Boolean).join(", ")
+            : String(fromJson.notificationEmails || "").trim(),
+          phone: String(fromJson.phone || prefillPhone || "").trim(),
+          password: String(fromJson.password || "").trim() || pwd,
+          country: String(fromJson.country || base.country || "United States").trim() || "United States",
+          services: Array.isArray(fromJson.services) ? fromJson.services : [],
+          motorCapabilities: Array.isArray(fromJson.motorCapabilities) ? fromJson.motorCapabilities : [],
+          equipmentTesting: Array.isArray(fromJson.equipmentTesting) ? fromJson.equipmentTesting : [],
+          rewindingCapabilities: Array.isArray(fromJson.rewindingCapabilities)
+            ? fromJson.rewindingCapabilities
+            : [],
+          industriesServed: Array.isArray(fromJson.industriesServed) ? fromJson.industriesServed : [],
+          certifications: Array.isArray(fromJson.certifications) ? fromJson.certifications : [],
+          galleryPhotoUrls: Array.isArray(fromJson.galleryPhotoUrls) ? fromJson.galleryPhotoUrls : [],
+          pickupDeliveryAvailable: !!fromJson.pickupDeliveryAvailable,
+          rushRepairAvailable: !!fromJson.rushRepairAvailable,
+        });
   }, [open, prefill, prefillEmail, prefillPhone, generatePassword]);
 
   const close = useCallback(() => {
@@ -119,6 +122,7 @@ export default function AdminFeaturedListingCreateModal({
         body: JSON.stringify({
           companyName: form.companyName,
           email: form.email,
+          notificationEmails: form.notificationEmails,
           phone: form.phone,
           primaryContactPerson: form.primaryContactPerson,
           shortDescription: form.shortDescription,
@@ -217,6 +221,16 @@ export default function AdminFeaturedListingCreateModal({
               value={form.primaryContactPerson}
               onChange={update}
               className="sm:col-span-2"
+            />
+            <Textarea
+              label="Notification emails"
+              name="notificationEmails"
+              value={form.notificationEmails || ""}
+              onChange={update}
+              rows={2}
+              className="sm:col-span-2"
+              placeholder="ops@shop.com, leads@shop.com"
+              help="Optional. Comma-separated. These addresses receive approval and lead emails along with the login email."
             />
             <Textarea
               label="Short description"

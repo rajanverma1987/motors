@@ -5,6 +5,8 @@ const listingSchema = new mongoose.Schema(
   {
     // Contact & company
     email: { type: String, required: true },
+    /** Extra addresses that receive approval / lead / review emails (login stays `email`). */
+    notificationEmails: { type: [String], default: [] },
     companyName: { type: String, required: true },
     logoUrl: { type: String, default: "" },
     shortDescription: { type: String, default: "" },

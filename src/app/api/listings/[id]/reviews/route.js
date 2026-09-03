@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import Review from "@/models/Review";
 import { sendNewReviewNotification } from "@/lib/email";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 const MAX_REVIEWS_PER_IP_PER_LISTING = 2;
@@ -111,7 +112,9 @@ export async function POST(request, context) {
       ipHash,
     });
 
-    await sendNewReviewNotification(listing.email, listing.companyName, trimmedName, numRating, trimmedBody);
+    await sendToListingNotifyEmails(listing, (to) =>
+      sendNewReviewNotification(to, listing.companyName, trimmedName, numRating, trimmedBody)
+    );
 
     return NextResponse.json({
       id: review._id.toString(),

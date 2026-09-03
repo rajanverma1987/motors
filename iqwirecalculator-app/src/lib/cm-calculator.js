@@ -1,6 +1,13 @@
 /**
  * CM “best match” combinations (±5% of target circular mils).
- * Kept in sync with motors/src/lib/cm-calculator.js
+ * Max 3 wire sizes per combination; respects min/max total conductor count.
+ * No persistence — compute only.
+ *
+ * @param {{ size: string, cm: number }[]} wires - selected wires with circular mils as `cm`
+ * @param {number} targetedCM
+ * @param {number} minWires
+ * @param {number} maxWires
+ * @returns {object[]} sorted by cmDifference ascending
  */
 export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
   const results = [];
@@ -15,6 +22,7 @@ export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
   const low = targetedCM * 0.95;
   const high = targetedCM * 1.05;
 
+  // One wire type
   for (let a = 0; a < wires.length; a++) {
     const w1 = wires[a];
     if (!w1?.cm || w1.cm <= 0) continue;
@@ -27,6 +35,7 @@ export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
     }
   }
 
+  // Two distinct wire types
   for (let a = 0; a < wires.length; a++) {
     for (let b = 0; b < wires.length; b++) {
       if (b === a) continue;
@@ -47,6 +56,7 @@ export function calculateCMBestMatch(wires, targetedCM, minWires, maxWires) {
     }
   }
 
+  // Three distinct wire types (original nested structure)
   if (wires.length >= 3) {
     for (let a = 0; a < wires.length; a++) {
       for (let b = 0; b < wires.length; b++) {
@@ -106,7 +116,13 @@ function push(results, seen, d) {
   seen.add(key);
 
   const wiresInHand = wires.reduce((s, w) => s + w.qty, 0);
+
   const percentDifference = ((d.total - d.targetedCM) / d.targetedCM) * 100;
+
+  let noOfWires = 1;
+  wires.forEach(() => {
+    noOfWires += 2;
+  });
 
   const row = {
     totalCM: d.total,
@@ -114,6 +130,7 @@ function push(results, seen, d) {
     wiresInHand,
     percentDifference: Number(percentDifference.toFixed(2)),
     cmDifference: Number(Math.abs(d.total - d.targetedCM).toFixed(3)),
+    noOfWires,
   };
 
   wires.forEach((w, idx) => {

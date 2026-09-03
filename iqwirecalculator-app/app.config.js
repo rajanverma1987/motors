@@ -23,7 +23,7 @@ module.exports = {
     },
     ios: {
       bundleIdentifier: "com.iqmotorbase.iqwirecalculator",
-      buildNumber: "4",
+      buildNumber: "5",
       appleTeamId: "5Y4532JU55",
       supportsTablet: true,
       infoPlist: {

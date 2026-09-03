@@ -25,6 +25,7 @@ const OPTION_KEYS = {
 const STRING_FIELDS = [
   "companyName",
   "email",
+  "notificationEmails",
   "phone",
   "primaryContactPerson",
   "shortDescription",
@@ -73,6 +74,7 @@ export function emptyAdminListingCreateForm() {
     ...base,
     password: "",
     logoUrl: "",
+    notificationEmails: "",
     galleryPhotoUrls: [],
     galleryPhotos: [],
   };
@@ -113,6 +115,7 @@ export function adminListingJsonSchemaExample() {
   return {
     companyName: "Acme Motor Repair",
     email: "shop@acmemotor.com",
+    notificationEmails: "ops@acmemotor.com, leads@acmemotor.com",
     phone: "7135550100",
     primaryContactPerson: "Jane Doe",
     shortDescription: "Industrial AC/DC motor repair and rewind.",
@@ -185,9 +188,12 @@ export function parseAdminListingJsonPrefill(raw) {
   const unknownKeys = Object.keys(parsed).filter((k) => !known.has(k));
 
   for (const key of STRING_FIELDS) {
-    if (Object.prototype.hasOwnProperty.call(parsed, key)) {
-      out[key] = asString(parsed[key]);
+    if (!Object.prototype.hasOwnProperty.call(parsed, key)) continue;
+    if (key === "notificationEmails" && Array.isArray(parsed[key])) {
+      out[key] = asStringArray(parsed[key]).join(", ");
+      continue;
     }
+    out[key] = asString(parsed[key]);
   }
   for (const key of BOOL_FIELDS) {
     if (Object.prototype.hasOwnProperty.call(parsed, key)) {

@@ -20,6 +20,7 @@ import {
   shouldMatchListingsByEmailDomain,
 } from "@/lib/listing-email-domain";
 import { verifyListingEmail } from "@/lib/prospectlens-email-verify";
+import { parseNotificationEmailsList } from "@/lib/listing-notify-emails";
 
 const STR = (v, max = LIMITS.shortText.max) => clampString(v, max);
 const URL_MAX = LIMITS.url.max;
@@ -46,6 +47,7 @@ export async function POST(request) {
 
     const {
       email,
+      notificationEmails: notificationEmailsRaw,
       companyName,
       logoUrl: logoUrlBody,
       shortDescription,
@@ -91,6 +93,12 @@ export async function POST(request) {
     if (!isValidEmail(emailNorm)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
+
+    const parsedNotify = parseNotificationEmailsList(notificationEmailsRaw);
+    if (parsedNotify.error) {
+      return NextResponse.json({ error: parsedNotify.error }, { status: 400 });
+    }
+    const notificationEmails = parsedNotify.emails.filter((e) => e !== emailNorm);
 
     const emailVerification = await verifyListingEmail(emailNorm);
     const skipEmailVerification = body?.skipEmailVerification === true;
@@ -180,6 +188,7 @@ export async function POST(request) {
     try {
       doc = await Listing.create({
       email: emailNorm,
+      notificationEmails,
       companyName: STR(companyName, LIMITS.companyName.max),
       logoUrl: STR(logoUrlBody || "", URL_MAX),
       shortDescription: STR(shortDescription, 500),

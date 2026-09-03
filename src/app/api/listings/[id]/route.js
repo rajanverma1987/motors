@@ -17,6 +17,7 @@ import {
 } from "@/lib/listing-directory-score";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getListingPublicPathSegment } from "@/lib/listing-slug";
+import { parseNotificationEmailsList, sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 export async function GET(request, context) {
   try {
@@ -84,7 +85,7 @@ export async function PATCH(request, context) {
       await doc.save();
 
       if (newStatus === "approved") {
-        await sendListingApproved(doc.email, doc.companyName);
+        await sendToListingNotifyEmails(doc, (to) => sendListingApproved(to, doc.companyName));
         try {
           await applyListingOnlySubscriptionToShop(doc.email);
         } catch (e) {
@@ -111,7 +112,9 @@ export async function PATCH(request, context) {
         revalidatePath("/sitemap.xml");
         if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
       } else {
-        await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
+        await sendToListingNotifyEmails(doc, (to) =>
+          sendListingRejected(to, doc.companyName, doc.rejectionReason)
+        );
         revalidatePath("/electric-motor-repair-shops-listings");
         revalidatePath("/sitemap.xml");
       }
@@ -128,7 +131,7 @@ export async function PATCH(request, context) {
 
     // General update (admin editing fields) – build $set from allowed keys present in body
     const allowed = [
-      "companyName", "email", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
+      "companyName", "email", "notificationEmails", "logoUrl", "shortDescription", "yearsInBusiness", "phone", "website",
       "primaryContactPerson", "address", "city", "state", "zipCode", "country",
       "services", "maxMotorSizeHP", "maxVoltage", "maxWeightHandled", "motorCapabilities",
       "equipmentTesting", "rewindingCapabilities", "industriesServed",
@@ -155,6 +158,16 @@ export async function PATCH(request, context) {
         return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
       }
       set.email = e;
+    }
+    if (Object.prototype.hasOwnProperty.call(set, "notificationEmails")) {
+      const parsedNotify = parseNotificationEmailsList(set.notificationEmails);
+      if (parsedNotify.error) {
+        return NextResponse.json({ error: parsedNotify.error }, { status: 400 });
+      }
+      const primaryEmail = Object.prototype.hasOwnProperty.call(set, "email")
+        ? set.email
+        : clampString(String(doc.email || ""), LIMITS.email.max).trim().toLowerCase();
+      set.notificationEmails = parsedNotify.emails.filter((e) => e !== primaryEmail);
     }
     if (Object.prototype.hasOwnProperty.call(set, "isPremium")) {
       set.isPremium = !!set.isPremium;
@@ -186,18 +199,20 @@ export async function PATCH(request, context) {
     }
 
     const becamePremium = !wasPremium && !!saved.isPremium;
-    if (becamePremium && saved.email) {
+    if (becamePremium) {
       try {
         const site = getPublicSiteUrl().replace(/\/$/, "");
         const pathSlug = getListingPublicPathSegment(saved);
         const publicListingUrl = pathSlug
           ? `${site}/electric-motor-repair-shops-listings/${pathSlug}`
           : "";
-        await sendListingPremiumPartnerEmail({
-          to: saved.email,
-          companyName: saved.companyName,
-          publicListingUrl,
-        });
+        await sendToListingNotifyEmails(saved, (to) =>
+          sendListingPremiumPartnerEmail({
+            to,
+            companyName: saved.companyName,
+            publicListingUrl,
+          })
+        );
       } catch (e) {
         console.warn("Premium Partner congratulation email failed:", e);
       }

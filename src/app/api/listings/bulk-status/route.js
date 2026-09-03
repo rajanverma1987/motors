@@ -7,6 +7,7 @@ import { sendListingApproved, sendListingRejected, sendShopListedNotificationToA
 import { generateUniqueListingUrlSlug } from "@/lib/listing-url-slug";
 import { notifyAreaRequestsForListing } from "@/lib/notify-area-when-listed";
 import { applyListingOnlySubscriptionToShop } from "@/lib/subscription-service";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 export async function POST(request) {
   try {
@@ -43,7 +44,7 @@ export async function POST(request) {
       }
       await doc.save();
       if (newStatus === "approved") {
-        await sendListingApproved(doc.email, doc.companyName);
+        await sendToListingNotifyEmails(doc, (to) => sendListingApproved(to, doc.companyName));
         try {
           await applyListingOnlySubscriptionToShop(doc.email);
         } catch (e) {
@@ -62,7 +63,9 @@ export async function POST(request) {
         const pathSlug = (doc.urlSlug || "").trim();
         if (pathSlug) revalidatePath(`/electric-motor-repair-shops-listings/${pathSlug}`);
       } else {
-        await sendListingRejected(doc.email, doc.companyName, doc.rejectionReason);
+        await sendToListingNotifyEmails(doc, (to) =>
+          sendListingRejected(to, doc.companyName, doc.rejectionReason)
+        );
       }
       updated += 1;
     }

@@ -196,6 +196,9 @@ export default function AdminListingDetailPage() {
       const payload = {
         companyName: current.companyName ?? "",
         email: (current.email ?? "").trim(),
+        notificationEmails: Array.isArray(current.notificationEmails)
+          ? current.notificationEmails.join(", ")
+          : String(current.notificationEmails ?? ""),
         logoUrl: current.logoUrl ?? "",
         shortDescription: current.shortDescription ?? "",
         yearsInBusiness: current.yearsInBusiness ?? "",
@@ -324,6 +327,11 @@ export default function AdminListingDetailPage() {
           </Link>
           <h1 className="mt-1 text-2xl font-bold text-title">{listing.companyName}</h1>
           <p className="text-sm text-secondary">{listing.email}</p>
+          {Array.isArray(listing.notificationEmails) && listing.notificationEmails.length > 0 ? (
+            <p className="mt-1 text-xs text-secondary">
+              Notify also: {listing.notificationEmails.join(", ")}
+            </p>
+          ) : null}
           {listing.submittedAt && (
             <p className="mt-1 text-xs text-secondary">
               Submitted {new Date(listing.submittedAt).toLocaleString()}
@@ -389,7 +397,16 @@ export default function AdminListingDetailPage() {
           </div>
           <Input label="Years in business" value={listing.yearsInBusiness ?? ""} onChange={(e) => updateField("yearsInBusiness", e.target.value)} />
           <Input label="Phone" value={listing.phone ?? ""} onChange={(e) => updateField("phone", e.target.value)} />
-          <Input label="Email" value={listing.email ?? ""} onChange={(e) => updateField("email", e.target.value)} />
+          <Input label="Email (login)" value={listing.email ?? ""} onChange={(e) => updateField("email", e.target.value)} />
+          <Textarea
+            label="Notification emails"
+            value={Array.isArray(listing.notificationEmails) ? listing.notificationEmails.join(", ") : (listing.notificationEmails ?? "")}
+            onChange={(e) => updateField("notificationEmails", e.target.value)}
+            rows={2}
+            className="sm:col-span-2"
+            placeholder="ops@shop.com, leads@shop.com"
+            help="Optional. Comma-separated. These addresses receive approval and lead emails along with the login email."
+          />
           <Input label="Website" value={listing.website ?? ""} onChange={(e) => updateField("website", e.target.value)} />
           <Input label="Primary contact" value={listing.primaryContactPerson ?? ""} onChange={(e) => updateField("primaryContactPerson", e.target.value)} className="sm:col-span-2" />
         </div>
