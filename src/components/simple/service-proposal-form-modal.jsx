@@ -10,6 +10,7 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
+import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
@@ -406,6 +407,7 @@ export default function ServiceProposalFormModal({
   const [copying, setCopying] = useState(false);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [diagramOpen, setDiagramOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
@@ -577,6 +579,7 @@ export default function ServiceProposalFormModal({
     }
     let cancelled = false;
     setAttachmentsOpen(false);
+    setDiagramOpen(false);
     setCommissionOpen(false);
     setDatasheetOpen(false);
     setPaymentModalOpen(false);
@@ -969,6 +972,14 @@ export default function ServiceProposalFormModal({
     if (recordId) onAttachmentsChange?.(recordId, nextAttachments);
   };
 
+  const handleDiagramSaved = (jobDiagram, item) => {
+    setForm((f) => ({
+      ...f,
+      jobDiagram: jobDiagram || null,
+      ...(item && typeof item === "object" ? {} : {}),
+    }));
+  };
+
   const handleCopyCreateNew = async () => {
     if (!form.customerId) {
       await alert({ title: "Error", message: "Select a customer before copying.", variant: "danger" });
@@ -1244,6 +1255,23 @@ export default function ServiceProposalFormModal({
                 onClick={() => setAttachmentsOpen(true)}
               >
                 Add Attachments
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={!canAttach}
+                title={
+                  canAttach
+                    ? form.jobDiagram?.url
+                      ? "View or edit job diagram"
+                      : "Draw or view diagram"
+                    : "Save the record before drawing a diagram"
+                }
+                onClick={() => setDiagramOpen(true)}
+              >
+                {form.jobDiagram?.url ? "View Diagram" : "Draw/View Diagram"}
               </Button>
               <Button
                 type="button"
@@ -1993,6 +2021,14 @@ export default function ServiceProposalFormModal({
         recordId={recordId || null}
         attachments={Array.isArray(form.attachments) ? form.attachments : []}
         onAttached={handleAttached}
+      />
+
+      <SimpleDiagramModal
+        open={diagramOpen}
+        onClose={() => setDiagramOpen(false)}
+        recordId={recordId || null}
+        jobDiagram={form.jobDiagram}
+        onSaved={handleDiagramSaved}
       />
 
       <SimpleServiceProposalPrintPreviewModal

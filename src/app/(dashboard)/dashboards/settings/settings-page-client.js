@@ -23,6 +23,7 @@ import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board
 import SimpleMarketplaceSection from "@/components/simple/settings/simple-marketplace-section";
 import SimpleJobPostingsSection from "@/components/simple/settings/simple-job-postings-section";
 import SimpleAccessControlSection from "@/components/simple/settings/simple-access-control-section";
+import SimpleDiagramDesignsSection from "@/components/simple/settings/simple-diagram-designs-section";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
 import SettingsProductDropdownsPanel from "@/components/dashboard/settings-product-dropdowns-panel";
 import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
@@ -931,6 +932,11 @@ export default function SettingsPageClient() {
             onMasterTabChange={(tab) => goSection("master", { masterTab: tab })}
           />
         ),
+      },
+      {
+        id: "diagrams",
+        label: "Diagrams",
+        children: <SimpleDiagramDesignsSection />,
       },
       {
         id: "job-board",

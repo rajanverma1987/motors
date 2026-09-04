@@ -12,6 +12,7 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "inventory", label: "Inventory" },
   { id: "smtp", label: "Email Settings" },
   { id: "master", label: "Master" },
+  { id: "diagrams", label: "Diagrams" },
   { id: "job-board", label: "Shop Floor Job Board" },
   { id: "directory-listing", label: "Directory Listing" },
   { id: "marketplace", label: "Marketplace" },

@@ -19,6 +19,7 @@ import {
   FiBarChart2,
   FiSmartphone,
   FiBriefcase,
+  FiEdit2,
 } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/admin/subscription-plans", label: "Subscriptions", icon: FiCreditCard },
   { href: "/admin/iqwirecalculator", label: "IQWireCalculator", icon: FiSmartphone },
   { href: "/admin/cir-mills", label: "Cir Mills", icon: FiBarChart2 },
+  { href: "/admin/diagram-templates", label: "Diagram designs", icon: FiEdit2 },
   { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },
   { href: "/admin/location-pages", label: "Location pages", icon: FiMapPin },
   { href: "/admin/marketing", label: "Marketing", icon: FiMail },

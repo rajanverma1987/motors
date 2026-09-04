@@ -279,6 +279,7 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     scopeDetails: [emptyScopeLine()],
     otherItems: [emptyOtherLine()],
     attachments: [],
+    jobDiagram: null,
     ...overrides,
   };
 }
@@ -325,6 +326,7 @@ export function cloneServiceProposalAsNewRfq(form) {
     invoicePaidDate: "",
     payments: [],
     attachments: [],
+    jobDiagram: null,
     motorReceiving: null,
     motorShipping: null,
     acDatasheet: source.acDatasheet && typeof source.acDatasheet === "object" ? { ...source.acDatasheet } : null,
@@ -642,6 +644,16 @@ export function simpleServiceProposalDocToForm(doc) {
       : [emptyOtherLine()];
 
   next.attachments = Array.isArray(d.attachments) ? d.attachments : [];
+  next.jobDiagram =
+    d.jobDiagram && typeof d.jobDiagram === "object" && String(d.jobDiagram.url || "").trim()
+      ? {
+          url: String(d.jobDiagram.url || "").trim(),
+          name: String(d.jobDiagram.name || "Job diagram").trim() || "Job diagram",
+          templateId: String(d.jobDiagram.templateId || "").trim(),
+          templateName: String(d.jobDiagram.templateName || "").trim(),
+          updatedAt: d.jobDiagram.updatedAt || null,
+        }
+      : null;
   next.payments = normalizeInvoicePayments(d.payments);
   next.acDatasheet = d.acDatasheet && typeof d.acDatasheet === "object" ? d.acDatasheet : null;
   next.dcDatasheet = d.dcDatasheet && typeof d.dcDatasheet === "object" ? d.dcDatasheet : null;
