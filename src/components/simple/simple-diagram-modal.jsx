@@ -42,6 +42,8 @@ export default function SimpleDiagramModal({
   const strokeStackRef = useRef([]);
   const currentStrokeRef = useRef(null);
   const bgImageRef = useRef(null);
+  /** True when canvas background is a previously saved job diagram (baked image). */
+  const editingSavedRef = useRef(false);
 
   const saved = normalizeJobDiagram(jobDiagram);
 
@@ -51,6 +53,7 @@ export default function SimpleDiagramModal({
     strokeStackRef.current = [];
     currentStrokeRef.current = null;
     bgImageRef.current = null;
+    editingSavedRef.current = false;
   }, []);
 
   const loadTemplates = useCallback(async () => {
@@ -116,6 +119,7 @@ export default function SimpleDiagramModal({
   const startDrawWithTemplate = useCallback(
     async (tpl) => {
       resetDrawState();
+      editingSavedRef.current = false;
       setSelected(tpl);
       setStep("draw");
       setEraser(false);
@@ -149,6 +153,7 @@ export default function SimpleDiagramModal({
   const startEditSaved = useCallback(async () => {
     if (!saved?.url) return;
     resetDrawState();
+    editingSavedRef.current = true;
     setSelected({
       id: saved.templateId || "",
       name: saved.templateName || "Saved diagram",
@@ -246,14 +251,24 @@ export default function SimpleDiagramModal({
   };
 
   const handleClear = async () => {
+    const editingSaved = editingSavedRef.current;
     const ok = await confirm({
       title: "Clear drawing?",
-      message: "This removes all pen strokes on the canvas.",
+      message: editingSaved
+        ? "This clears the entire saved diagram and leaves a blank page."
+        : "This removes all pen strokes on the canvas.",
       confirmLabel: "Clear",
       variant: "danger",
     });
     if (!ok) return;
     strokeStackRef.current = [];
+    currentStrokeRef.current = null;
+    if (editingSaved) {
+      // Saved diagram is painted as the background image, not as strokes.
+      bgImageRef.current = null;
+      editingSavedRef.current = false;
+      setSelected({ id: "", name: "Blank paper", imageUrl: "", blank: true });
+    }
     redraw();
   };
 
@@ -420,14 +435,15 @@ export default function SimpleDiagramModal({
       title={title}
       size="7xl"
       width="98vw"
-      height="min(96vh, 1100px)"
+      height="95vh"
+      className="!max-h-[95vh]"
       closeOnOutsideClick={false}
       actions={headerActions}
-      bodyClassName="!p-3 flex flex-col min-h-0"
+      bodyClassName="!flex !h-full !min-h-0 !flex-col !overflow-hidden !p-2 sm:!p-3"
     >
       {step === "pick" ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex h-full min-h-0 flex-1 flex-col gap-3">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -451,7 +467,7 @@ export default function SimpleDiagramModal({
               </Button>
             ) : null}
           </div>
-          <p className="text-sm text-secondary">
+          <p className="shrink-0 text-sm text-secondary">
             Choose a blank design from admin or your shop settings, or start on blank paper. Then draw with a stylus or mouse.
           </p>
           <div className="min-h-0 flex-1 overflow-auto">
@@ -490,19 +506,19 @@ export default function SimpleDiagramModal({
       ) : null}
 
       {step === "view" && saved?.url ? (
-        <div className="flex min-h-0 flex-1 flex-col items-center overflow-auto bg-muted/30 p-2">
+        <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-muted/30 p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={saved.url}
             alt={saved.name || "Job diagram"}
-            className="max-h-full max-w-full rounded border border-border bg-white object-contain shadow-sm"
+            className="h-full max-h-full w-auto max-w-full rounded border border-border bg-white object-contain shadow-sm"
           />
         </div>
       ) : null}
 
       {step === "draw" ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-2 border-b border-border pb-2">
+        <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border pb-2">
             <span className="text-xs font-medium text-secondary">Pen</span>
             {PEN_COLORS.map((c) => (
               <button
@@ -548,13 +564,20 @@ export default function SimpleDiagramModal({
               {selected?.name || "Diagram"} · stylus / mouse supported
             </span>
           </div>
-          <div className="min-h-0 flex-1 overflow-auto rounded border border-border bg-muted/40 p-2">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded border border-border bg-muted/40 p-1 sm:p-2">
             <canvas
               ref={canvasRef}
               width={CANVAS_W}
               height={CANVAS_H}
-              className="mx-auto block max-h-full max-w-full touch-none bg-white shadow-sm"
-              style={{ aspectRatio: `${CANVAS_W} / ${CANVAS_H}`, width: "100%", cursor: eraser ? "cell" : "crosshair" }}
+              className="touch-none bg-white shadow-sm"
+              style={{
+                maxWidth: "100%",
+                maxHeight: "100%",
+                width: "auto",
+                height: "100%",
+                aspectRatio: `${CANVAS_W} / ${CANVAS_H}`,
+                cursor: eraser ? "cell" : "crosshair",
+              }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
