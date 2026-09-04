@@ -693,6 +693,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
             setTableSort({ key, direction });
           }}
           onRefresh={() => loadAll({ showError: true })}
+          columnSettingsKey="simple-customers"
           toolbarBeforeSearch={
             <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
               <FiPlus className="h-4 w-4 shrink-0" aria-hidden />

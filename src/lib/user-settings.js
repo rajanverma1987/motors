@@ -8,6 +8,11 @@ export const USER_SETTINGS_DEFAULTS = {
   tablePageSize: 25,
   /** Denser table rows on dashboard list / summary tables */
   compactTables: false,
+  /**
+   * Per-table hidden column keys for hub Tables (keyed by columnSettingsKey).
+   * Example: { "simple-customers": ["phone", "email"] }
+   */
+  tableColumnVisibility: {},
   /** First day of week for date pickers: 0 = Sunday, 1 = Monday */
   weekStartsOn: 0,
   /** ISO 4217 — how amounts are shown across the dashboard */
@@ -103,6 +108,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "leadEmailAlerts",
   "tablePageSize",
   "compactTables",
+  "tableColumnVisibility",
   "weekStartsOn",
   "currency",
   "zoomLevel",
@@ -147,6 +153,51 @@ const ACCOUNTS_PAYMENT_TERMS = new Set([
 ]);
 
 const TABLE_PAGE_SIZES = new Set([10, 25, 50, 100]);
+
+const TABLE_COLUMN_VIS_ID_RE = /^[a-zA-Z0-9._:-]{1,80}$/;
+
+/**
+ * Normalize map of tableId → hidden column key arrays.
+ * @param {unknown} raw
+ * @returns {Record<string, string[]>}
+ */
+export function normalizeTableColumnVisibility(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [tableId, keys] of Object.entries(raw)) {
+    const id = String(tableId || "").trim();
+    if (!TABLE_COLUMN_VIS_ID_RE.test(id)) continue;
+    if (!Array.isArray(keys)) continue;
+    const cleaned = [
+      ...new Set(
+        keys
+          .map((k) => String(k ?? "").trim().slice(0, 80))
+          .filter(Boolean)
+      ),
+    ].slice(0, 80);
+    out[id] = cleaned;
+    if (Object.keys(out).length >= 40) break;
+  }
+  return out;
+}
+
+/**
+ * @param {unknown} settingsOrMap
+ * @param {string} tableId
+ * @returns {string[]}
+ */
+export function getHiddenColumnKeysForTable(settingsOrMap, tableId) {
+  const id = String(tableId || "").trim();
+  if (!id) return [];
+  const map =
+    settingsOrMap && typeof settingsOrMap === "object" && !Array.isArray(settingsOrMap)
+      ? settingsOrMap.tableColumnVisibility && typeof settingsOrMap.tableColumnVisibility === "object"
+        ? settingsOrMap.tableColumnVisibility
+        : settingsOrMap
+      : {};
+  const keys = map?.[id];
+  return Array.isArray(keys) ? keys.map((k) => String(k)).filter(Boolean) : [];
+}
 
 /** Allowed dashboard table page sizes (Settings → Display → Rows per page). */
 export const TABLE_PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
@@ -251,6 +302,7 @@ export function mergeUserSettings(stored) {
   );
 
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
+  merged.tableColumnVisibility = normalizeTableColumnVisibility(merged.tableColumnVisibility);
   merged.productDropdowns = normalizeProductDropdowns(merged.productDropdowns);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
   merged.prefixInvoice = sanitizeDocumentNumberPrefix(merged.prefixInvoice);
@@ -360,6 +412,10 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "inventoryLocations") {
       out.inventoryLocations = normalizeInventoryLocations(body[key]);
+      continue;
+    }
+    if (key === "tableColumnVisibility") {
+      out.tableColumnVisibility = normalizeTableColumnVisibility(body[key]);
       continue;
     }
     if (key === "productDropdowns") {

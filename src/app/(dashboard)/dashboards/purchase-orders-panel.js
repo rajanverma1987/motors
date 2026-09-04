@@ -606,6 +606,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             setTableSort({ key, direction });
           }}
           onRefresh={reload}
+          columnSettingsKey="simple-purchase-orders"
           toolbarBeforeSearch={
             <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
               <FiPlus className="h-4 w-4 shrink-0" aria-hidden />

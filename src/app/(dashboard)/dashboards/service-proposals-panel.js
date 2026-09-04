@@ -65,6 +65,7 @@ import {
   INVOICE_FILTER_TAX_COLLECTED,
   INVOICE_FILTER_TAX_TO_BE_COLLECTED,
 } from "@/lib/invoice-tax-collected";
+import { computeSpInvoiceMoney } from "@/lib/simple-reports/helpers";
 
 const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
 const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
@@ -785,6 +786,18 @@ export default function ServiceProposalsPanel({
         align: "right",
         render: (v) => formatSimpleMoney(Number(v) || 0),
       },
+      ...(isInvoices
+        ? [
+            {
+              key: "paidAmount",
+              label: "Paid Amount",
+              sortable: false,
+              align: "right",
+              render: (_, row) =>
+                formatSimpleMoney(computeSpInvoiceMoney(row).amountPaid || 0),
+            },
+          ]
+        : []),
       {
         key: "submitDate",
         label: isInvoices ? "Proposal Submit Date" : "Submit date",
@@ -1051,6 +1064,7 @@ export default function ServiceProposalsPanel({
             setTableSort({ key, direction });
           }}
           onRefresh={reload}
+          columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
           toolbarBeforeSearch={
             isInvoices ? null : (
               <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>

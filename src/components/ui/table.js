@@ -6,7 +6,7 @@ import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
 import Modal from "./modal";
-import { useUserSettings } from "@/contexts/user-settings-context";
+import { useUserSettings, useTableColumnVisibility } from "@/contexts/user-settings-context";
 import { formatDateForCurrency } from "@/lib/format-date";
 import { resolveTablePageSize } from "@/lib/user-settings";
 import {
@@ -184,6 +184,8 @@ export default function Table({
   responsive = false,
   // Optional: column visibility settings (icon opens modal to hide/show columns)
   columnSettings = false,
+  /** When set, loads/saves hidden columns from UserSettings.tableColumnVisibility[key]. */
+  columnSettingsKey = "",
   hiddenColumnKeys = [],
   onColumnVisibilityChange,
   // Optional: resizable columns (drag column border in header to resize)
@@ -227,7 +229,17 @@ export default function Table({
   const hasFilter = typeof onFilter === "function";
   const hasFooter = footer != null && (Array.isArray(footer) ? footer.length > 0 : true);
   const hasColumnWidths = columns.some((c) => c.width || c.minWidth || c.maxWidth);
-  const hasColumnSettings = columnSettings && typeof onColumnVisibilityChange === "function";
+
+  const persistedColumns = useTableColumnVisibility(columnSettingsKey || "");
+  const effectiveHiddenColumnKeys = columnSettingsKey
+    ? persistedColumns.hiddenColumnKeys
+    : hiddenColumnKeys;
+  const effectiveOnColumnVisibilityChange = columnSettingsKey
+    ? persistedColumns.onColumnVisibilityChange
+    : onColumnVisibilityChange;
+  const hasColumnSettings =
+    (Boolean(columnSettingsKey) || columnSettings) &&
+    typeof effectiveOnColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
   const hasToolbarBeforeSearch = toolbarBeforeSearch != null;
   const hasToolbarAfterRefresh = toolbarAfterRefresh != null;
@@ -477,7 +489,7 @@ export default function Table({
       ]
     : [];
 
-  const visibleDataColumns = columns.filter((c) => !hiddenColumnKeys.includes(c.key));
+  const visibleDataColumns = columns.filter((c) => !effectiveHiddenColumnKeys.includes(c.key));
   const displayColumns = [...selectColumn, ...visibleDataColumns, ...actionsColumn];
 
   const tableRef = useRef(null);
@@ -578,20 +590,41 @@ export default function Table({
     return `ui-table-sticky-col${last}`;
   };
 
+  const configurableColumns = columns.filter(
+    (col) =>
+      !col.isSelect &&
+      !col.isAction &&
+      col.hideable !== false &&
+      col.key !== "actions" &&
+      String(col.label ?? "").trim() !== ""
+  );
+
   const openSettingsModal = () => {
-    setDraftHiddenKeys([...hiddenColumnKeys]);
+    setDraftHiddenKeys([...effectiveHiddenColumnKeys]);
     setSettingsModalOpen(true);
   };
 
   const saveColumnVisibility = () => {
-    onColumnVisibilityChange(draftHiddenKeys);
+    const hideableKeys = new Set(configurableColumns.map((c) => c.key));
+    let next = draftHiddenKeys.filter((k) => hideableKeys.has(k));
+    const visibleCount = configurableColumns.filter((c) => !next.includes(c.key)).length;
+    if (visibleCount === 0 && configurableColumns.length > 0) {
+      next = next.filter((k) => k !== configurableColumns[0].key);
+    }
+    effectiveOnColumnVisibilityChange(next);
     setSettingsModalOpen(false);
   };
 
   const toggleColumnDraft = (key, visible) => {
-    setDraftHiddenKeys((prev) =>
-      visible ? prev.filter((k) => k !== key) : [...prev, key]
-    );
+    setDraftHiddenKeys((prev) => {
+      if (visible) return prev.filter((k) => k !== key);
+      const next = [...prev, key];
+      const wouldHideAll =
+        configurableColumns.length > 0 &&
+        configurableColumns.every((c) => next.includes(c.key));
+      if (wouldHideAll) return prev;
+      return next;
+    });
   };
 
   const renderCell = (col, row, i) => {
@@ -996,6 +1029,20 @@ export default function Table({
               <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
             </button>
           )}
+          {hasColumnSettings && (
+            <button
+              type="button"
+              onClick={openSettingsModal}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+              aria-label="Table column settings"
+              title="Column settings"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </button>
+          )}
           {hasToolbarAfterRefresh ? <div className="shrink-0">{toolbarAfterRefresh}</div> : null}
           {loading && !hasRefresh && (
             <span
@@ -1019,19 +1066,6 @@ export default function Table({
                 Export CSV
               </Button>
             ))}
-          {hasColumnSettings && (
-            <button
-              type="button"
-              onClick={openSettingsModal}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Table column settings"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          )}
         </div>
       )}
 
@@ -1041,11 +1075,23 @@ export default function Table({
           onClose={() => setSettingsModalOpen(false)}
           title="Column visibility"
           size="sm"
+          actions={
+            <>
+              <Button size="sm" variant="secondary" onClick={() => setSettingsModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" variant="primary" onClick={saveColumnVisibility}>
+                Save
+              </Button>
+            </>
+          }
         >
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-secondary">Show or hide columns in the table.</p>
-            <div className="flex flex-col gap-2">
-              {columns.map((col) => (
+            <p className="text-sm text-secondary">
+              Choose which columns to show. Saved for your account and applied whenever this table loads.
+            </p>
+            <div className="flex max-h-[min(60vh,28rem)] flex-col gap-2 overflow-y-auto">
+              {configurableColumns.map((col) => (
                 <Checkbox
                   key={col.key}
                   label={col.label ?? col.key}
@@ -1054,11 +1100,6 @@ export default function Table({
                   onChange={(e) => toggleColumnDraft(col.key, e.target.checked)}
                 />
               ))}
-            </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <Button variant="primary" onClick={saveColumnVisibility}>
-                Save
-              </Button>
             </div>
           </div>
         </Modal>

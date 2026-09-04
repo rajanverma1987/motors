@@ -356,6 +356,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
           setLoading(true);
           await load();
         }}
+        columnSettingsKey="simple-employees"
         sortState={tableSort}
         onSort={(key, direction) => {
           setPage(1);

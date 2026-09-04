@@ -6,6 +6,7 @@ import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
 import { resolveSimplePoType } from "@/lib/simple-purchase-order-form";
 import {
   agingBucketLabel,
@@ -41,7 +42,7 @@ const DEFAULT_SORT_COLUMN = {
   "vendor-spend": 2, // Ordered total
   "inventory-stock": 0, // Part
   "customers": 10, // Created
-  "sales-commissions": 7, // Created
+  "sales-commissions": 9, // Created
   "sales-tax": 3, // Invoice date
   "purchase-tax": 4, // PO date
   "ar-aging": 4, // Invoice date
@@ -290,9 +291,13 @@ export async function buildSimpleReportExport(opts) {
 }
 
 async function loadOwnerCurrency(ownerEmail) {
-  const settingsDoc = await UserSettings.findOne({ ownerEmail }).lean();
-  const merged = mergeUserSettings(settingsDoc?.settings);
+  const merged = await loadOwnerSettings(ownerEmail);
   return String(merged?.currency || "USD").toUpperCase().trim() || "USD";
+}
+
+async function loadOwnerSettings(ownerEmail) {
+  const settingsDoc = await UserSettings.findOne({ ownerEmail }).lean();
+  return mergeUserSettings(settingsDoc?.settings);
 }
 
 async function loadServiceProposals(ownerEmail) {
@@ -580,11 +585,12 @@ async function buildCustomers(ownerEmail, filters, reportOpts = {}) {
 }
 
 async function buildSalesCommissions(ownerEmail, from, to, currency, filters, reportOpts = {}) {
-  const [serviceProposals, salesPeople] = await Promise.all([
+  const [serviceProposals, salesPeople, mergedSettings] = await Promise.all([
     SimpleServiceProposal.find({ createdByEmail: ownerEmail })
-      .select("_id documentNumber quote companyName recordType status")
+      .select("_id documentNumber quote companyName recordType status payments invoicePaidDate")
       .lean(),
     SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),
+    loadOwnerSettings(ownerEmail),
   ]);
 
   const spById = new Map();
@@ -595,7 +601,18 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
   if (simpleQuoteIds.length === 0) {
     return finalizeReport(
       "Sales commissions",
-      ["Job #", "Customer", "Sales person", "Amount", "Status", "Paid date", "Notes", "Created"],
+      [
+        "Job #",
+        "Customer",
+        "Sales person",
+        "Amount",
+        "Status",
+        "Paid date",
+        "Invoice Paid Status",
+        "Invoice Paid Date",
+        "Notes",
+        "Created",
+      ],
       [],
       "sales-commissions",
       reportOpts
@@ -623,6 +640,8 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
     "Amount",
     "Status",
     "Paid date",
+    "Invoice Paid Status",
+    "Invoice Paid Date",
     "Notes",
     "Created",
   ];
@@ -643,6 +662,11 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
     const jobNumber =
       String(linkedSp.documentNumber || linkedSp.quote || "").trim() ||
       String(doc.jobNumber || doc.rfqNumber || "").trim();
+    const invoiceMoney = computeSpInvoiceMoney(linkedSp);
+    const invoiceStatusLabel = resolveQuoteInvoiceStatusDisplayLabel(
+      linkedSp.status,
+      mergedSettings
+    );
 
     pushReportRow(rows, sortKeys, doc.createdAt, [
       jobNumber,
@@ -651,6 +675,8 @@ async function buildSalesCommissions(ownerEmail, from, to, currency, filters, re
       moneyCell(Number(doc.amount) || 0),
       isPaid ? "Paid" : "Unpaid",
       formatReportDate(doc.paidAt, currency),
+      invoiceStatusLabel,
+      formatReportDate(invoiceMoney.latestPaymentDate || linkedSp.invoicePaidDate, currency),
       String(doc.notes || "").trim(),
       formatReportDate(doc.createdAt, currency),
     ]);

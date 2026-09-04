@@ -45,12 +45,12 @@ async function loadInvoiceFinanceSummary(baseMatch) {
     {
       $facet: {
         amountReceivable: [
-          { $match: { _spFullyPaid: false } },
+          { $match: { _spBalance: { $gt: 0.005 } } },
           {
             $group: {
               _id: null,
               count: { $sum: 1 },
-              amount: { $sum: "$_spTotal" },
+              amount: { $sum: "$_spBalance" },
             },
           },
         ],

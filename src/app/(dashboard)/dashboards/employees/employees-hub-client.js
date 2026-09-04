@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiPrinter, FiRefreshCw } from "react-icons/fi";
+import Link from "next/link";
+import { FiArrowLeft, FiPrinter, FiRefreshCw } from "react-icons/fi";
 import QRCode from "qrcode";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -15,6 +16,7 @@ import {
   TIME_CLOCK_RADIUS_MAX_M,
   TIME_CLOCK_RADIUS_MIN_M,
 } from "@/lib/time-clock-geo";
+import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import SimpleEmployeesPanel from "@/components/simple/simple-employees-panel";
 
 const TABS = [
@@ -392,6 +394,13 @@ export default function EmployeesHubClient() {
     <div className="mx-auto box-border w-full max-w-6xl px-4 py-8">
       <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
+          <Link
+            href={SIMPLE_PORTAL_PATH}
+            className="mb-3 inline-flex items-center gap-2 text-base font-semibold text-secondary transition-colors hover:text-primary sm:text-lg"
+          >
+            <FiArrowLeft className="h-5 w-5 shrink-0 sm:h-6 sm:w-6" aria-hidden />
+            Back to dashboard
+          </Link>
           <h1 className="text-2xl font-bold text-title">Employees</h1>
           <p className="text-sm text-secondary">
             Employee records, time clock, floor status, and attendance reports.

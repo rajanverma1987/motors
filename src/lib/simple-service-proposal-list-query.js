@@ -201,9 +201,22 @@ export function mongoNotFullyPaidClause(mergedSettings) {
 }
 
 /**
- * Aggregation stages: numeric tax/total + fully-paid flag for invoice finance cards.
+ * Aggregation stages: numeric tax/total, payments paid, remaining balance, fully-paid flag.
+ * Balance matches payment-modal / hub overview math (total − sum(payments.amount)).
+ * Legacy fully_paid with no payment rows → balance 0.
  */
 export function invoiceFinanceAddFieldsStages() {
+  const amountPaidExpr = {
+    $sum: {
+      $map: {
+        input: { $ifNull: ["$payments", []] },
+        as: "p",
+        in: {
+          $convert: { input: "$$p.amount", to: "double", onError: 0, onNull: 0 },
+        },
+      },
+    },
+  };
   return [
     {
       $addFields: {
@@ -218,6 +231,22 @@ export function invoiceFinanceAddFieldsStages() {
             input: { $toLower: { $ifNull: ["$status", ""] } },
             regex: "(^invoice:)?(.*[_\\s-])?fully[_\\s-]?paid$",
           },
+        },
+        _spAmountPaid: amountPaidExpr,
+      },
+    },
+    {
+      $addFields: {
+        _spBalance: {
+          $cond: [
+            {
+              $and: ["$_spFullyPaid", { $lte: ["$_spAmountPaid", 0.005] }],
+            },
+            0,
+            {
+              $max: [0, { $subtract: ["$_spTotal", "$_spAmountPaid"] }],
+            },
+          ],
         },
       },
     },

@@ -809,23 +809,6 @@ export default function CmBestMatchScreen() {
             </Pressable>
 
             <View style={styles.rowActions}>
-              <SaveCalculationButton
-                calculatorType="cm_best_match"
-                getPayload={() => ({
-                  inputs: {
-                    originalWiredInHand,
-                    originalWireSize,
-                    originalCM,
-                    targetedCM,
-                    minWires,
-                    maxWires,
-                    selectedIds: [...selected],
-                  },
-                  rows: results,
-                  context: resultContext,
-                })}
-                disabled={results.length === 0}
-              />
               <Pressable style={styles.outlineBtn} onPress={openSavedList}>
                 <Text style={styles.outlineBtnText}>View saved</Text>
               </Pressable>
@@ -896,6 +879,23 @@ export default function CmBestMatchScreen() {
             Print uses landscape
           </Text>
           <View style={styles.rowActions}>
+            <SaveCalculationButton
+              calculatorType="cm_best_match"
+              getPayload={() => ({
+                inputs: {
+                  originalWiredInHand,
+                  originalWireSize,
+                  originalCM,
+                  targetedCM,
+                  minWires,
+                  maxWires,
+                  selectedIds: [...selected],
+                },
+                rows: results,
+                context: resultContext,
+              })}
+              disabled={results.length === 0}
+            />
             <Pressable
               style={[styles.outlineBtn, sharing === "print" && styles.btnDisabled]}
               disabled={!!sharing}

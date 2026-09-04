@@ -8,7 +8,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import { USER_SETTINGS_DEFAULTS, mergeUserSettings, resolveTablePageSize } from "@/lib/user-settings";
+import {
+  USER_SETTINGS_DEFAULTS,
+  mergeUserSettings,
+  resolveTablePageSize,
+  getHiddenColumnKeysForTable,
+  normalizeTableColumnVisibility,
+} from "@/lib/user-settings";
 import { formatMoney, formatMoneyAbbreviated } from "@/lib/format-currency";
 import { formatDateForCurrency, formatDateTimeForCurrency } from "@/lib/format-date";
 
@@ -16,6 +22,7 @@ const UserSettingsContext = createContext({
   settings: USER_SETTINGS_DEFAULTS,
   loading: false,
   refresh: async () => {},
+  applyLocalSettings: () => {},
 });
 
 export function UserSettingsProvider({ children }) {
@@ -42,9 +49,14 @@ export function UserSettingsProvider({ children }) {
     refresh();
   }, [refresh]);
 
+  const applyLocalSettings = useCallback((patch) => {
+    if (!patch || typeof patch !== "object") return;
+    setSettings((prev) => mergeUserSettings({ ...prev, ...patch }));
+  }, []);
+
   const value = useMemo(
-    () => ({ settings, loading, refresh }),
-    [settings, loading, refresh]
+    () => ({ settings, loading, refresh, applyLocalSettings }),
+    [settings, loading, refresh, applyLocalSettings]
   );
 
   return (
@@ -68,12 +80,63 @@ export function UserSettingsValueProvider({ settings, children }) {
       settings: mergeUserSettings(settings),
       loading: false,
       refresh: async () => {},
+      applyLocalSettings: () => {},
     }),
     [settings]
   );
   return (
     <UserSettingsContext.Provider value={value}>{children}</UserSettingsContext.Provider>
   );
+}
+
+/**
+ * Persist / load per-table column visibility (UserSettings.tableColumnVisibility).
+ * @param {string} tableId Stable id e.g. "simple-customers"
+ */
+export function useTableColumnVisibility(tableId) {
+  const { settings, applyLocalSettings } = useUserSettings();
+  const id = String(tableId || "").trim();
+
+  const hiddenColumnKeys = useMemo(
+    () => (id ? getHiddenColumnKeysForTable(settings, id) : []),
+    [settings, id]
+  );
+
+  const onColumnVisibilityChange = useCallback(
+    async (hiddenKeys) => {
+      if (!id) return;
+      const cleaned = Array.isArray(hiddenKeys)
+        ? [...new Set(hiddenKeys.map((k) => String(k ?? "").trim()).filter(Boolean))]
+        : [];
+      const nextMap = normalizeTableColumnVisibility({
+        ...(settings?.tableColumnVisibility || {}),
+        [id]: cleaned,
+      });
+      applyLocalSettings({ tableColumnVisibility: nextMap });
+      try {
+        const r = await fetch("/api/dashboard/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ tableColumnVisibility: nextMap }),
+        });
+        if (!r.ok) return;
+        const d = await r.json().catch(() => ({}));
+        if (d.settings) {
+          applyLocalSettings(mergeUserSettings(d.settings));
+        }
+      } catch {
+        /* keep optimistic local state */
+      }
+    },
+    [id, settings?.tableColumnVisibility, applyLocalSettings]
+  );
+
+  return {
+    columnSettings: Boolean(id),
+    hiddenColumnKeys,
+    onColumnVisibilityChange,
+  };
 }
 
 export function useCompactTables() {

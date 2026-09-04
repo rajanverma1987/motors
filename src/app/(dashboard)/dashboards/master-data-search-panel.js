@@ -479,6 +479,7 @@ export default function MasterDataSearchPanel() {
                 dense
                 textSize="xs"
                 stickyColumns
+                columnSettingsKey="simple-master-data-search"
               />
             )}
           </div>

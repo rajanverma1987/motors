@@ -395,6 +395,7 @@ export default function InventoryPanel() {
           setTableSort({ key, direction });
         }}
         onRefresh={load}
+        columnSettingsKey="simple-inventory"
         toolbarBeforeSearch={
           <Button
             type="button"
