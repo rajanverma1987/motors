@@ -72,6 +72,17 @@ function bumpAging(map, bucket, unpaid) {
   map.set(key, prev);
 }
 
+/** Linked invoice is fully paid by payments and/or Fully Paid status. */
+function isLinkedInvoiceFullyPaid(sp) {
+  if (!sp) return false;
+  if (computeSpInvoiceMoney(sp).isPaid) return true;
+  const raw = String(sp.status || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  return raw === "fully_paid" || raw.endsWith("_fully_paid");
+}
+
 /**
  * Hub Dashboard overview aggregates for one shop owner.
  * @param {string} ownerEmail
@@ -119,6 +130,15 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
   let commissionUnpaidAmount = 0;
   let commissionPaidCount = 0;
   let commissionUnpaidCount = 0;
+  let unpaidCommInvoiceFullyPaidAmount = 0;
+  let unpaidCommInvoiceFullyPaidCount = 0;
+  let unpaidCommInvoiceNotFullyPaidAmount = 0;
+  let unpaidCommInvoiceNotFullyPaidCount = 0;
+
+  const spById = new Map();
+  for (const doc of proposals || []) {
+    spById.set(String(doc._id), doc);
+  }
 
   for (const doc of proposals || []) {
     const recordType = String(doc.recordType || RECORD_TYPE_RFQ).toUpperCase();
@@ -230,11 +250,21 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
     }
   }
 
-  // Snapshot unpaid commissions (all unpaid, not only in-range) for KPI clarity
+  // Outstanding unpaid commissions (all unpaid), split by linked invoice fully paid or not.
   unpaidCommissionAmount = 0;
   for (const doc of commissions || []) {
-    if (String(doc.status || "unpaid").toLowerCase() !== "paid") {
-      unpaidCommissionAmount += Number(doc.amount) || 0;
+    if (String(doc.status || "unpaid").toLowerCase() === "paid") continue;
+    const amount = Number(doc.amount) || 0;
+    unpaidCommissionAmount += amount;
+
+    const linkedSp = spById.get(String(doc.quoteId || "").trim());
+    const invoiceFullyPaid = isLinkedInvoiceFullyPaid(linkedSp);
+    if (invoiceFullyPaid) {
+      unpaidCommInvoiceFullyPaidAmount += amount;
+      unpaidCommInvoiceFullyPaidCount += 1;
+    } else {
+      unpaidCommInvoiceNotFullyPaidAmount += amount;
+      unpaidCommInvoiceNotFullyPaidCount += 1;
     }
   }
 
@@ -295,6 +325,20 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
       month: m,
       amount: round2(commissionsPaidByMonthMap[m]?.amount || 0),
     })),
+    unpaidCommissionsByInvoiceStatus: [
+      {
+        status: "invoice_fully_paid",
+        label: "Invoice fully paid",
+        amount: round2(unpaidCommInvoiceFullyPaidAmount),
+        count: unpaidCommInvoiceFullyPaidCount,
+      },
+      {
+        status: "invoice_not_fully_paid",
+        label: "Invoice not fully paid",
+        amount: round2(unpaidCommInvoiceNotFullyPaidAmount),
+        count: unpaidCommInvoiceNotFullyPaidCount,
+      },
+    ],
     arAging: AGING_ORDER.map((bucket) => {
       const row = arAgingMap.get(bucket) || {
         bucket,

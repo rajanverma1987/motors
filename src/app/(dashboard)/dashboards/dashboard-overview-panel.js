@@ -8,10 +8,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ComposedChart,
   LabelList,
-  Legend,
-  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -47,6 +44,8 @@ const PAYMENT_COLORS = {
   Paid: "hsl(142 45% 38%)",
   paid: "hsl(142 45% 38%)",
   unpaid: "hsl(0 55% 48%)",
+  invoice_fully_paid: "hsl(142 45% 38%)",
+  invoice_not_fully_paid: "hsl(32 80% 48%)",
 };
 
 function ymdUTC(d) {
@@ -99,7 +98,7 @@ function KpiCard({ label, value, loading }) {
 
 function ChartCard({ title, children, empty, loading }) {
   return (
-    <div className="flex min-h-[280px] flex-col rounded-lg border border-border bg-card p-4">
+    <div className="flex min-h-[360px] flex-col rounded-lg border border-border bg-card p-4">
       <h3 className="mb-3 text-sm font-semibold text-title">{title}</h3>
       {loading ? (
         <div
@@ -229,23 +228,6 @@ function MoneyBarEndLabel({ x, y, value, width, height, formatMoney }) {
   );
 }
 
-/** Stack total above the top of a stacked bar series. */
-function StackTotalLabel({ x, y, width, payload, formatMoney }) {
-  const total = (Number(payload?.paid) || 0) + (Number(payload?.unpaid) || 0);
-  const text = formatChartLabel(total, formatMoney);
-  if (!text) return null;
-  return (
-    <text
-      x={x + (width || 0) / 2}
-      y={y - 8}
-      textAnchor="middle"
-      style={CHART_LABEL_STYLE}
-    >
-      {text}
-    </text>
-  );
-}
-
 const PIE_RADIAN = Math.PI / 180;
 const PIE_LABEL_MIN_PCT = 0.04;
 
@@ -326,16 +308,16 @@ function LabeledDonut({
   );
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <PieChart margin={{ top: 20, right: 72, bottom: 20, left: 72 }}>
+    <ResponsiveContainer width="100%" height={320}>
+      <PieChart margin={{ top: 24, right: 80, bottom: 24, left: 80 }}>
         <Pie
           data={data}
           dataKey={dataKey}
           nameKey={nameKey}
           cx="50%"
           cy="50%"
-          innerRadius={40}
-          outerRadius={60}
+          innerRadius={52}
+          outerRadius={100}
           paddingAngle={2}
           label={renderLabel}
           labelLine={DonutLabelLine}
@@ -424,18 +406,7 @@ export default function DashboardOverviewPanel() {
   const invoicePay = data?.invoicesByPayment || [];
   const poPay = data?.posByPayment || [];
   const commissionStatus = data?.commissionsByStatus || [];
-  const commissionTrend = useMemo(() => {
-    const byCreated = data?.commissionsByMonth || [];
-    const byPaid = data?.commissionsPaidByMonth || [];
-    const paidMap = new Map(byPaid.map((r) => [r.month, Number(r.amount) || 0]));
-    return byCreated.map((r) => ({
-      month: r.month,
-      label: formatMonthLabel(r.month),
-      paid: Number(r.paid) || 0,
-      unpaid: Number(r.unpaid) || 0,
-      paidOut: paidMap.get(r.month) || 0,
-    }));
-  }, [data?.commissionsByMonth, data?.commissionsPaidByMonth]);
+  const unpaidCommByInvoice = data?.unpaidCommissionsByInvoiceStatus || [];
   const arAging = data?.arAging || [];
   const apAging = data?.apAging || [];
 
@@ -445,7 +416,7 @@ export default function DashboardOverviewPanel() {
   const hasInv = invoicePay.some((r) => r.count > 0);
   const hasPo = poPay.some((r) => r.count > 0);
   const hasComm = commissionStatus.some((r) => r.count > 0 || r.amount > 0);
-  const hasCommTrend = commissionTrend.some((r) => r.paid > 0 || r.unpaid > 0 || r.paidOut > 0);
+  const hasUnpaidCommByInvoice = unpaidCommByInvoice.some((r) => r.count > 0 || r.amount > 0);
   const hasAr = arAging.some((r) => r.amount > 0);
   const hasAp = apAging.some((r) => r.amount > 0);
 
@@ -553,6 +524,42 @@ export default function DashboardOverviewPanel() {
         </ChartCard>
       </div>
 
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard title="AR aging (unpaid)" loading={loading} empty={!loading && !hasAr}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={arAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
+              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => formatMoney(v)} />
+              <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))">
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="AP aging (unpaid)" loading={loading} empty={!loading && !hasAp}>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={apAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
+              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
+              <Tooltip formatter={(v) => formatMoney(v)} />
+              <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)">
+                <LabelList
+                  dataKey="amount"
+                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <ChartCard title="Jobs by status" loading={loading} empty={!loading && !hasJobs}>
           <LabeledDonut
@@ -587,8 +594,8 @@ export default function DashboardOverviewPanel() {
         </ChartCard>
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Commissions paid vs unpaid" loading={loading} empty={!loading && !hasComm}>
+      <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard title="Total Commission Paid Vs Unpaid" loading={loading} empty={!loading && !hasComm}>
           <LabeledDonut
             data={commissionStatus}
             dataKey="amount"
@@ -599,79 +606,19 @@ export default function DashboardOverviewPanel() {
           />
         </ChartCard>
 
-        <ChartCard title="Commission trend" loading={loading} empty={!loading && !hasCommTrend}>
-          <ResponsiveContainer width="100%" height={280}>
-            <ComposedChart data={commissionTrend} margin={{ top: 28, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
-              <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="unpaid" name="Unpaid (created)" stackId="a" fill="hsl(0 55% 48%)" />
-              <Bar dataKey="paid" name="Paid (created)" stackId="a" fill="hsl(142 45% 38%)">
-                <LabelList
-                  content={(props) => <StackTotalLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-              <Line
-                type="linear"
-                dataKey="paidOut"
-                name="Paid out"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={{ r: 3 }}
-              >
-                <LabelList
-                  dataKey="paidOut"
-                  content={(props) => (
-                    <MoneyValueLabel
-                      {...props}
-                      formatMoney={formatMoney}
-                      dy={-12}
-                      bg
-                      bgFill="hsl(var(--primary))"
-                    />
-                  )}
-                />
-              </Line>
-            </ComposedChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
-
-      <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="AR aging (unpaid)" loading={loading} empty={!loading && !hasAr}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={arAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
-              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))">
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        <ChartCard title="AP aging (unpaid)" loading={loading} empty={!loading && !hasAp}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={apAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
-              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)">
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard
+          title="Commission still to pay"
+          loading={loading}
+          empty={!loading && !hasUnpaidCommByInvoice}
+        >
+          <LabeledDonut
+            data={unpaidCommByInvoice}
+            dataKey="amount"
+            nameKey="label"
+            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+            tooltipFormatter={(v) => formatMoney(v)}
+            formatLabelValue={(v) => formatMoney(v)}
+          />
         </ChartCard>
       </div>
     </div>
