@@ -38,6 +38,56 @@ function round2(n) {
   return Math.round((Number(n) + Number.EPSILON) * 100) / 100 || 0;
 }
 
+/**
+ * Mongo expression: logistics charge-back amount for one receiving/shipping field path.
+ * Mirrors resolveChargeBackToClient + logisticsChargeBackAmount in simple-motor-logistics.
+ */
+function logisticsChargeBackMongoExpr(path) {
+  const charges = {
+    $convert: { input: `$${path}.charges`, to: "double", onError: 0, onNull: 0 },
+  };
+  const paidByCustomer = {
+    $eq: [
+      {
+        $toLower: {
+          $trim: { input: { $ifNull: [`$${path}.paidBy`, ""] } },
+        },
+      },
+      "customer",
+    ],
+  };
+  return {
+    $cond: [
+      {
+        $and: [
+          { $gt: [charges, 0] },
+          {
+            $or: [
+              { $eq: [`$${path}.chargeBackToClient`, true] },
+              {
+                $and: [
+                  { $ne: [`$${path}.chargeBackToClient`, true] },
+                  { $ne: [`$${path}.chargeBackToClient`, false] },
+                  paidByCustomer,
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      charges,
+      0,
+    ],
+  };
+}
+
+const LOGISTIC_CHARGES_TOTAL_EXPR = {
+  $add: [
+    logisticsChargeBackMongoExpr("motorReceiving"),
+    logisticsChargeBackMongoExpr("motorShipping"),
+  ],
+};
+
 async function loadInvoiceFinanceSummary(baseMatch) {
   const rows = await SimpleServiceProposal.aggregate([
     { $match: baseMatch },
@@ -186,6 +236,7 @@ export async function GET(request) {
           taxCollected: {
             $sum: { $convert: { input: "$taxCollected", to: "double", onError: 0, onNull: 0 } },
           },
+          logisticCharges: { $sum: LOGISTIC_CHARGES_TOTAL_EXPR },
           count: { $sum: 1 },
         },
       },
@@ -227,6 +278,7 @@ export async function GET(request) {
         totals: {
           total: Number(totalsRow.total) || 0,
           taxCollected: Number(totalsRow.taxCollected) || 0,
+          logisticCharges: Number(totalsRow.logisticCharges) || 0,
           count: Number(totalsRow.count) || totalCount,
         },
         statusBuckets: (summaryRows || []).map((r) => ({
@@ -259,6 +311,7 @@ export async function GET(request) {
       totals: {
         total: Number(totalsRow.total) || 0,
         taxCollected: Number(totalsRow.taxCollected) || 0,
+        logisticCharges: Number(totalsRow.logisticCharges) || 0,
         count: Number(totalsRow.count) || totalCount,
       },
       statusBuckets: (summaryRows || []).map((r) => ({

@@ -66,6 +66,7 @@ import {
   INVOICE_FILTER_TAX_TO_BE_COLLECTED,
 } from "@/lib/invoice-tax-collected";
 import { computeSpInvoiceMoney } from "@/lib/simple-reports/helpers";
+import { proposalLogisticsChargesTotal } from "@/lib/simple-motor-logistics";
 
 const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
 const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
@@ -191,7 +192,12 @@ export default function ServiceProposalsPanel({
   const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [statusBuckets, setStatusBuckets] = useState([]);
-  const [listTotals, setListTotals] = useState({ total: 0, taxCollected: 0, count: 0 });
+  const [listTotals, setListTotals] = useState({
+    total: 0,
+    taxCollected: 0,
+    logisticCharges: 0,
+    count: 0,
+  });
   const [invoiceFinance, setInvoiceFinance] = useState(EMPTY_INVOICE_FINANCE);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
@@ -304,7 +310,9 @@ export default function ServiceProposalsPanel({
       setRows(normalized);
       setTotalCount(Number(pageData.totalCount) || 0);
       setStatusBuckets(Array.isArray(pageData.statusBuckets) ? pageData.statusBuckets : []);
-      setListTotals(pageData.totals || { total: 0, taxCollected: 0, count: 0 });
+      setListTotals(
+        pageData.totals || { total: 0, taxCollected: 0, logisticCharges: 0, count: 0 }
+      );
       setInvoiceFinance(pageData.invoiceFinance || EMPTY_INVOICE_FINANCE);
       setCustomers(customersList);
       setEmployees(employeesList);
@@ -312,7 +320,7 @@ export default function ServiceProposalsPanel({
       setRows([]);
       setTotalCount(0);
       setStatusBuckets([]);
-      setListTotals({ total: 0, taxCollected: 0, count: 0 });
+      setListTotals({ total: 0, taxCollected: 0, logisticCharges: 0, count: 0 });
       setInvoiceFinance(EMPTY_INVOICE_FINANCE);
     } finally {
       setReady(true);
@@ -693,20 +701,18 @@ export default function ServiceProposalsPanel({
     () => ({
       total: Number(listTotals.total) || 0,
       taxCollected: Number(listTotals.taxCollected) || 0,
+      logisticCharges: Number(listTotals.logisticCharges) || 0,
     }),
     [listTotals]
   );
 
-  const currencyHeader = useCallback((title, amount) => {
+  const currencySubtotalBadge = useCallback((title, amount) => {
     return (
-      <span className="inline-flex flex-col items-end gap-1 text-right">
-        <span className="leading-none">{title}</span>
-        <span
-          className="inline-flex max-w-full items-center rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-none tabular-nums text-white shadow-sm"
-          title={`${title} subtotal`}
-        >
-          {formatSimpleMoney(amount)}
-        </span>
+      <span
+        className="inline-flex max-w-full items-center rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-none tabular-nums text-white shadow-sm"
+        title={`${title} subtotal`}
+      >
+        {formatSimpleMoney(amount)}
       </span>
     );
   }, []);
@@ -772,16 +778,30 @@ export default function ServiceProposalsPanel({
       { key: "quoteType", label: "Quote Type", sortable: true },
       {
         key: "total",
-        label: currencyHeader("Total", currencySubtotals.total),
+        label: "Total",
+        headerSubtotal: currencySubtotalBadge("Total", currencySubtotals.total),
         sortable: true,
         align: "right",
         render: (v) => formatSimpleMoney(Number(v) || 0),
       },
       {
+        key: "logisticCharges",
+        label: "Logistic Charges",
+        headerSubtotal: currencySubtotalBadge(
+          "Logistic Charges",
+          currencySubtotals.logisticCharges
+        ),
+        sortable: true,
+        align: "right",
+        render: (v, row) =>
+          formatSimpleMoney(
+            Number(v) || proposalLogisticsChargesTotal(row) || 0
+          ),
+      },
+      {
         key: "taxCollected",
-        label: isInvoices
-          ? "Tax"
-          : currencyHeader("Tax", currencySubtotals.taxCollected),
+        label: "Tax",
+        headerSubtotal: currencySubtotalBadge("Tax", currencySubtotals.taxCollected),
         sortable: true,
         align: "right",
         render: (v) => formatSimpleMoney(Number(v) || 0),
@@ -1014,9 +1034,10 @@ export default function ServiceProposalsPanel({
       invoiceOpts,
       statusOptions,
       jobStatusOptions,
-      currencyHeader,
+      currencySubtotalBadge,
       currencySubtotals.total,
       currencySubtotals.taxCollected,
+      currencySubtotals.logisticCharges,
       isInvoices,
       quoteStatusValues,
       formatDate,

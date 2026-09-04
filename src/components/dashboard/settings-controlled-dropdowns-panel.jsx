@@ -259,8 +259,8 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                 <>
                   {" "}
                   These are <span className="font-medium text-title">system filter cards</span> on Service Proposals /
-                  Invoices (All, Amount Receivable, Tax Collected, Tax To Be Collected). Change display labels and tile
-                  colors only — they cannot be added or removed.
+                  Invoices (All, Amount Receivable, Tax Collected, Tax To Be Collected) and Customers (All, Customers,
+                  Leads). Change display labels and tile colors only — they cannot be added or removed.
                 </>
               ) : (
                 <>

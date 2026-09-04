@@ -78,6 +78,8 @@ export function emptyMotorLogisticsRecord(kind, defaults = {}) {
     pickedBy: "",
     charges: "",
     paidBy: "",
+    /** When true, charges are billed to the client (Other Items + list Logistic Charges column). */
+    chargeBackToClient: false,
     notes: "",
     attachments: [],
     updatedAt: "",
@@ -121,10 +123,20 @@ export function normalizeMotorLogisticsRecord(raw, kind, defaults = {}) {
     pickedBy: String(raw.pickedBy || "").trim(),
     charges: String(raw.charges ?? "").trim(),
     paidBy: String(raw.paidBy || "").trim(),
+    chargeBackToClient: resolveChargeBackToClient(raw),
     notes: String(raw.notes || "").trim(),
     attachments: normalizeLogisticsAttachments(raw.attachments),
     updatedAt: String(raw.updatedAt || "").trim(),
   };
+}
+
+/** Prefer explicit flag; legacy rows used paidBy === "customer". */
+function resolveChargeBackToClient(raw) {
+  if (!raw || typeof raw !== "object") return false;
+  if (raw.chargeBackToClient === true || raw.chargeBackToClient === false) {
+    return Boolean(raw.chargeBackToClient);
+  }
+  return String(raw.paidBy || "").trim().toLowerCase() === "customer";
 }
 
 /** Map modal form fields to the object stored on SimpleServiceProposal. */
@@ -143,6 +155,7 @@ export function motorLogisticsFormToStored(form, kind) {
     pickedBy: !isReceiving ? String(src.pickedBy || "").trim() : "",
     charges: String(src.charges ?? "").trim(),
     paidBy: String(src.paidBy || "").trim(),
+    chargeBackToClient: Boolean(src.chargeBackToClient),
     notes: String(src.notes || "").trim(),
     attachments: normalizeLogisticsAttachments(src.attachments),
     updatedAt: new Date().toISOString(),
@@ -158,23 +171,53 @@ export function motorLogisticsRecordHasData(record) {
       String(record.pickedBy || "").trim() ||
       String(record.charges ?? "").trim() ||
       String(record.paidBy || "").trim() ||
+      record.chargeBackToClient === true ||
       String(record.notes || "").trim() ||
       (Array.isArray(record.attachments) && record.attachments.length > 0)
   );
 }
 
 /**
- * Upsert or remove Receiving/Shipping Charge in Other Items when paid by customer.
- * @param {Array<Record<string, unknown>>} otherItems
- * @param {{ kind: string, charges: string|number, paidBy: string }} options
+ * Charge-back amount for one receiving/shipping record (0 when not charged to client).
+ * @param {Record<string, unknown>|null|undefined} record
  */
-export function applyCustomerLogisticsChargeToOtherItems(otherItems, { kind, charges, paidBy }) {
+export function logisticsChargeBackAmount(record) {
+  if (!record || typeof record !== "object") return 0;
+  if (!resolveChargeBackToClient(record)) return 0;
+  return roundMoney(record.charges);
+}
+
+/**
+ * Total logistics charges billed to the client on a service proposal / invoice row.
+ * @param {Record<string, unknown>|null|undefined} doc
+ */
+export function proposalLogisticsChargesTotal(doc) {
+  if (!doc || typeof doc !== "object") return 0;
+  return roundMoney(
+    logisticsChargeBackAmount(doc.motorReceiving) + logisticsChargeBackAmount(doc.motorShipping)
+  );
+}
+
+/**
+ * Upsert or remove Receiving/Shipping Charge in Other Items when charged back to client.
+ * @param {Array<Record<string, unknown>>} otherItems
+ * @param {{ kind: string, charges: string|number, paidBy?: string, chargeBackToClient?: boolean }} options
+ */
+export function applyCustomerLogisticsChargeToOtherItems(
+  otherItems,
+  { kind, charges, paidBy, chargeBackToClient }
+) {
   const items = Array.isArray(otherItems) ? otherItems : [];
   const chargeKind = logisticsChargeKindFromKind(kind);
   const description = logisticsChargeDescription(kind);
   const amount = roundMoney(charges);
-  const isCustomerPaid =
-    String(paidBy || "").trim().toLowerCase() === "customer" && amount > 0;
+  const explicit =
+    chargeBackToClient === true || chargeBackToClient === false;
+  const shouldCharge =
+    amount > 0 &&
+    (explicit
+      ? chargeBackToClient === true
+      : String(paidBy || "").trim().toLowerCase() === "customer");
 
   const isLogisticsChargeLine = (line) => {
     const lk = String(line?.logisticsChargeKind || "").trim().toLowerCase();
@@ -184,7 +227,7 @@ export function applyCustomerLogisticsChargeToOtherItems(otherItems, { kind, cha
 
   const withoutCharge = items.filter((line) => !isLogisticsChargeLine(line));
 
-  if (!isCustomerPaid) {
+  if (!shouldCharge) {
     const filled = withoutCharge.filter(lineHasContent);
     return filled.length ? [...filled, emptyOtherLine()] : [emptyOtherLine()];
   }

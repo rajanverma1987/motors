@@ -18,6 +18,7 @@ import {
 } from "@/lib/time-clock-geo";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import SimpleEmployeesPanel from "@/components/simple/simple-employees-panel";
+import SimpleReleasePaymentPanel from "@/components/simple/simple-release-payment-panel";
 
 const TABS = [
   { id: "employees", label: "Employees" },
@@ -25,7 +26,7 @@ const TABS = [
   { id: "time-clock", label: "Time clock" },
   { id: "hours", label: "Hours" },
   { id: "punches", label: "Punches" },
-  { id: "payroll", label: "Payroll" },
+  { id: "release-payment", label: "Release Payment" },
   { id: "alerts", label: "Alerts" },
 ];
 
@@ -187,14 +188,14 @@ export default function EmployeesHubClient() {
   }, [punchPage, punchPageSize]);
 
   const refresh = useCallback(async () => {
-    if (tab === "employees") {
+    if (tab === "employees" || tab === "release-payment") {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
       await loadMeta();
-      if (tab === "hours" || tab === "payroll") await loadHours();
+      if (tab === "hours") await loadHours();
       if (tab === "punches") await loadPunches();
     } catch (err) {
       await alert({ title: "Error", message: err.message || "Failed to load", variant: "danger" });
@@ -332,33 +333,6 @@ export default function EmployeesHubClient() {
     await loadPunches();
   };
 
-  const exportPayrollCsv = () => {
-    const lines = [
-      ["Employee", "Emp #", "Department", "Pay type", "Hourly rate", "Hours", "Est. pay"].join(","),
-    ];
-    for (const row of hoursRows) {
-      const rate = Number.parseFloat(String(row.hourlyRate || "").replace(/[^0-9.]/g, "")) || 0;
-      const est = row.payType === "hourly" ? (rate * Number(row.totalHours || 0)).toFixed(2) : "";
-      lines.push(
-        [
-          JSON.stringify(row.name || ""),
-          JSON.stringify(row.employeeNumber || ""),
-          JSON.stringify(row.department || ""),
-          row.payType || "",
-          row.hourlyRate || "",
-          row.totalHours ?? 0,
-          est,
-        ].join(",")
-      );
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `payroll-${hoursFrom}-to-${hoursTo}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  };
-
   const alerts = useMemo(() => {
     const list = [];
     const now = Date.now();
@@ -442,7 +416,9 @@ export default function EmployeesHubClient() {
         <SimpleEmployeesPanel onChanged={() => void loadMeta().catch(() => {})} />
       ) : null}
 
-      {loading && !meta && tab !== "employees" ? (
+      {tab === "release-payment" ? <SimpleReleasePaymentPanel /> : null}
+
+      {loading && !meta && tab !== "employees" && tab !== "release-payment" ? (
         <p className="text-sm text-secondary">Loading…</p>
       ) : null}
 
@@ -561,7 +537,7 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {tab === "hours" || tab === "payroll" ? (
+      {tab === "hours" ? (
         <div className="w-full min-w-0 space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             <label className="text-xs font-bold text-title">
@@ -585,11 +561,6 @@ export default function EmployeesHubClient() {
             <Button type="button" size="sm" variant="outline" onClick={() => void loadHours()}>
               Apply
             </Button>
-            {tab === "payroll" ? (
-              <Button type="button" size="sm" variant="primary" onClick={exportPayrollCsv}>
-                Export CSV
-              </Button>
-            ) : null}
           </div>
           <Table
             columns={[
@@ -599,12 +570,6 @@ export default function EmployeesHubClient() {
               { key: "totalHours", label: "Hours" },
               { key: "lateCount", label: "Late" },
               { key: "earlyCount", label: "Early out" },
-              ...(tab === "payroll"
-                ? [
-                    { key: "payType", label: "Pay type" },
-                    { key: "hourlyRate", label: "Rate" },
-                  ]
-                : []),
             ]}
             data={hoursRows}
             rowKey="employeeId"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiChevronDown, FiChevronLeft, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -10,7 +10,6 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
-import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
@@ -92,7 +91,9 @@ import {
   buildAcDatasheetFromProposal,
   buildDcDatasheetFromProposal,
   datasheetHasData,
+  syncDatasheetJobNumber,
 } from "@/lib/simple-datasheet-form";
+import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import {
   fetchSimpleServiceProposal,
   listSimplePurchaseOrdersForJobApi,
@@ -407,7 +408,6 @@ export default function ServiceProposalFormModal({
   const [copying, setCopying] = useState(false);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
-  const [diagramOpen, setDiagramOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
@@ -425,6 +425,8 @@ export default function ServiceProposalFormModal({
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [datasheetOpen, setDatasheetOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  /** Skip one initialForm hydrate (Copy & Create New applies its own form snapshot). */
+  const skipHydrateFromInitialRef = useRef(false);
 
   const formatMoney = useCallback((n) => {
     const value = Number.isFinite(n) ? n : 0;
@@ -579,12 +581,17 @@ export default function ServiceProposalFormModal({
     }
     let cancelled = false;
     setAttachmentsOpen(false);
-    setDiagramOpen(false);
     setCommissionOpen(false);
     setDatasheetOpen(false);
     setPaymentModalOpen(false);
     loadCustomers();
     loadEmployees();
+
+    if (skipHydrateFromInitialRef.current) {
+      skipHydrateFromInitialRef.current = false;
+      setLoadingRecord(false);
+      return;
+    }
 
     const applyDoc = (doc) => {
       const next = simpleServiceProposalDocToForm(doc || {});
@@ -972,11 +979,10 @@ export default function ServiceProposalFormModal({
     if (recordId) onAttachmentsChange?.(recordId, nextAttachments);
   };
 
-  const handleDiagramSaved = (jobDiagram, item) => {
+  const handleDiagramsChange = (nextDiagrams) => {
     setForm((f) => ({
       ...f,
-      jobDiagram: jobDiagram || null,
-      ...(item && typeof item === "object" ? {} : {}),
+      jobDiagrams: Array.isArray(nextDiagrams) ? nextDiagrams : [],
     }));
   };
 
@@ -988,29 +994,124 @@ export default function ServiceProposalFormModal({
     const ok = await confirm({
       title: "Copy & create new?",
       message:
-        "This creates a new RFQ from the current record (new document number, no attachments). Continue?",
+        "This creates a new RFQ from the current record (new document number). Datasheet data and diagrams are copied to the new job. Attachments are not copied. Continue?",
       confirmLabel: "Copy & Create New",
       cancelLabel: "Cancel",
     });
     if (!ok) return;
 
     setCopying(true);
+    // Never leave Send/Print pointing at the previous job.
+    setPrintOpen(false);
+    setPrintBundle(null);
+    setPrintSendMeta(null);
+    setDatasheetOpen(false);
+    skipHydrateFromInitialRef.current = true;
+
+    const sourceDiagrams = normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram);
+
     try {
       const cloned = cloneServiceProposalAsNewRfq(form);
       const saved = await onSave?.(cloned, { forceNew: true });
       const savedId = String(saved?.id || "").trim();
       if (!savedId) throw new Error("Failed to create copied record");
-      setForm({
+
+      const newDocNumber = String(saved.documentNumber || saved.quote || "").trim();
+      let nextAc = syncDatasheetJobNumber(cloned.acDatasheet, newDocNumber);
+      let nextDc = syncDatasheetJobNumber(cloned.dcDatasheet, newDocNumber);
+      let nextDiagrams = [];
+
+      if (sourceDiagrams.length) {
+        try {
+          for (const sourceDiagram of sourceDiagrams) {
+            if (!sourceDiagram?.url) continue;
+            const imgRes = await fetch(sourceDiagram.url, { credentials: "include", cache: "no-store" });
+            if (!imgRes.ok) throw new Error("Could not read source diagram");
+            const blob = await imgRes.blob();
+            const fd = new FormData();
+            fd.append("file", blob, "job-diagram.png");
+            fd.append("documentName", sourceDiagram.name || "Job diagram");
+            fd.append("templateId", sourceDiagram.templateId || "");
+            fd.append("templateName", sourceDiagram.templateName || "");
+            const up = await fetch(`/api/dashboard/simple-service-proposals/${savedId}/diagrams`, {
+              method: "POST",
+              credentials: "include",
+              body: fd,
+            });
+            const upData = await up.json().catch(() => ({}));
+            if (!up.ok) throw new Error(upData.error || "Failed to copy diagram");
+            nextDiagrams = normalizeJobDiagrams(upData.jobDiagrams, upData.jobDiagram);
+          }
+        } catch (diagramErr) {
+          console.error("Copy diagram failed:", diagramErr);
+          await alert({
+            title: "Diagram not copied",
+            message: diagramErr?.message || "The new RFQ was created, but diagrams could not be copied.",
+            variant: "danger",
+          });
+        }
+      }
+
+      const syncedForm = {
         ...cloned,
         id: savedId,
-        documentNumber: saved.documentNumber || "",
+        documentNumber: newDocNumber,
+        quote: newDocNumber,
         recordType: RECORD_TYPE_RFQ,
         attachments: [],
-      });
+        jobDiagrams: nextDiagrams,
+        acDatasheet: nextAc,
+        dcDatasheet: nextDc,
+      };
+
+      let applied = syncedForm;
+      // Persist datasheet job # via parent save so the list row stays in sync.
+      try {
+        const persisted = await onSave?.(syncedForm, { forceNew: false });
+        if (persisted?.id) {
+          const persistedNum = String(persisted.documentNumber || persisted.quote || newDocNumber).trim();
+          applied = {
+            ...syncedForm,
+            ...persisted,
+            id: savedId,
+            documentNumber: persistedNum,
+            quote: persistedNum,
+            acDatasheet: syncDatasheetJobNumber(persisted.acDatasheet || nextAc, persistedNum),
+            dcDatasheet: syncDatasheetJobNumber(persisted.dcDatasheet || nextDc, persistedNum),
+            jobDiagrams: normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram).length
+              ? normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram)
+              : nextDiagrams,
+          };
+        }
+      } catch (persistErr) {
+        console.error("Copy persist datasheet job# failed:", persistErr);
+      }
+
+      try {
+        const fresh = await fetchSimpleServiceProposal(savedId);
+        if (fresh) {
+          const freshNum = String(fresh.documentNumber || fresh.quote || newDocNumber).trim();
+          applied = {
+            ...simpleServiceProposalDocToForm(fresh),
+            acDatasheet: syncDatasheetJobNumber(fresh.acDatasheet || nextAc, freshNum),
+            dcDatasheet: syncDatasheetJobNumber(fresh.dcDatasheet || nextDc, freshNum),
+            jobDiagrams: normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram).length
+              ? normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram)
+              : nextDiagrams,
+          };
+        }
+      } catch {
+        /* keep applied */
+      }
+
+      setForm(applied);
+      setPrintOpen(false);
+      setPrintBundle(null);
+      setPrintSendMeta(null);
       setAttachmentsOpen(false);
       await alert({
         title: "Copied",
-        message: `Copied as new RFQ${saved.documentNumber ? ` ${saved.documentNumber}` : ""}.`,
+        message: `Copied as new RFQ${newDocNumber ? ` ${newDocNumber}` : ""}. Datasheet and diagrams are on this new job.`,
       });
     } catch (err) {
       await alert({ title: "Error", message: err?.message || "Failed to copy record", variant: "danger" });
@@ -1024,6 +1125,9 @@ export default function ServiceProposalFormModal({
       await alert({ title: "Error", message: "Select a customer before printing.", variant: "danger" });
       return;
     }
+    // Always rebuild from the live form so Send/Print never reuse a prior job snapshot.
+    setPrintBundle(null);
+    setPrintSendMeta(null);
     const customer = customers.find((c) => c.id === form.customerId) || null;
     const bundle = buildSimpleServiceProposalPrintBundle({
       form,
@@ -1086,6 +1190,7 @@ export default function ServiceProposalFormModal({
       kind,
       charges: stored.charges,
       paidBy: stored.paidBy,
+      chargeBackToClient: stored.chargeBackToClient,
     });
     const nextForm = {
       ...form,
@@ -1255,23 +1360,6 @@ export default function ServiceProposalFormModal({
                 onClick={() => setAttachmentsOpen(true)}
               >
                 Add Attachments
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canAttach}
-                title={
-                  canAttach
-                    ? form.jobDiagram?.url
-                      ? "View or edit job diagram"
-                      : "Draw or view diagram"
-                    : "Save the record before drawing a diagram"
-                }
-                onClick={() => setDiagramOpen(true)}
-              >
-                {form.jobDiagram?.url ? "View Diagram" : "Draw/View Diagram"}
               </Button>
               <Button
                 type="button"
@@ -2023,14 +2111,6 @@ export default function ServiceProposalFormModal({
         onAttached={handleAttached}
       />
 
-      <SimpleDiagramModal
-        open={diagramOpen}
-        onClose={() => setDiagramOpen(false)}
-        recordId={recordId || null}
-        jobDiagram={form.jobDiagram}
-        onSaved={handleDiagramSaved}
-      />
-
       <SimpleServiceProposalPrintPreviewModal
         open={printOpen}
         onClose={() => {
@@ -2088,6 +2168,8 @@ export default function ServiceProposalFormModal({
         recordType={form.recordType}
         attachments={Array.isArray(form.attachments) ? form.attachments : []}
         onAttached={handleAttached}
+        jobDiagrams={normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram)}
+        onDiagramsChange={handleDiagramsChange}
         jobStatusOptions={jobStatusOptions}
         jobStatus={form.jobStatus}
         onJobStatusChange={(next) => patch("jobStatus", next)}

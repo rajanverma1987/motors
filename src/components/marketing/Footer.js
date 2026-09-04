@@ -13,6 +13,8 @@ const footerLinks = {
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },
     { href: "/motor-repair-inventory-software", label: "Inventory software" },
     { href: "/motor-repair-invoicing-and-quoting-software", label: "Invoicing & quoting" },
+    { href: "/motor-repair-work-order-template", label: "Work order template (free)" },
+    { href: "/repair-shop-invoice-template", label: "Invoice template (free)" },
     { href: "/blog/best-software-for-repair-shop-2026", label: "Best software comparison (2026)" },
     { href: "/motor-repair-marketplace", label: "Marketplace for shops" },
     { href: "/list-your-electric-motor-services", label: "List your center" },

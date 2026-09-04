@@ -8,6 +8,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
+import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
 import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
 import SimpleAcAssemblyFields from "@/components/simple/simple-ac-assembly-fields";
 import DatasheetFieldGrid, {
@@ -81,6 +82,8 @@ export default function SimpleDatasheetModal({
   recordId = null,
   attachments = [],
   onAttached,
+  jobDiagrams = [],
+  onDiagramsChange,
   /** Service Proposal job Status options + value (Disassembly Status section). */
   jobStatusOptions = [],
   jobStatus = "",
@@ -95,6 +98,7 @@ export default function SimpleDatasheetModal({
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [diagramOpen, setDiagramOpen] = useState(false);
   const wasOpenRef = useRef(false);
 
   const jobNumberLabel = useMemo(() => recordTypeJobNumberLabel(recordType), [recordType]);
@@ -117,6 +121,7 @@ export default function SimpleDatasheetModal({
       setForm(next);
       setPrinting(false);
       setAttachmentsOpen(false);
+      setDiagramOpen(false);
     }
     wasOpenRef.current = open;
   }, [open, isDc, initialDatasheet]);
@@ -315,6 +320,25 @@ export default function SimpleDatasheetModal({
             >
               Attachments
             </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!canAttach || saving || printing}
+              title={
+                canAttach
+                  ? Array.isArray(jobDiagrams) && jobDiagrams.length
+                    ? "View or add job diagrams"
+                    : "Draw or view diagrams"
+                  : "Save the record before drawing a diagram"
+              }
+              onClick={() => setDiagramOpen(true)}
+            >
+              {Array.isArray(jobDiagrams) && jobDiagrams.length
+                ? `Diagrams (${jobDiagrams.length})`
+                : "Draw/View Diagram"}
+            </Button>
           </div>
         </div>
 
@@ -491,6 +515,16 @@ export default function SimpleDatasheetModal({
       recordId={recordId || null}
       attachments={Array.isArray(attachments) ? attachments : []}
       onAttached={onAttached}
+    />
+
+    <SimpleDiagramModal
+      open={diagramOpen}
+      onClose={() => setDiagramOpen(false)}
+      recordId={recordId || null}
+      jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+      onSaved={(nextDiagrams) => {
+        onDiagramsChange?.(Array.isArray(nextDiagrams) ? nextDiagrams : []);
+      }}
     />
     </>
   );

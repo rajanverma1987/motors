@@ -663,7 +663,8 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
     technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
-    jobNumber: String(base.jobNumber || f.documentNumber || "").trim(),
+    // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
+    jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
     dataSheet,
     assembly,
@@ -697,9 +698,37 @@ export function buildDcDatasheetFromProposal(proposalForm, meta = {}) {
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
     technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
-    jobNumber: String(base.jobNumber || f.documentNumber || "").trim(),
+    // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
+    jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
     fieldFrame,
     armature,
   });
+}
+
+/**
+ * Deep-clone a datasheet for Copy & Create New (clear job # so it can bind to the new RFQ#).
+ * @param {Record<string, unknown>|null|undefined} sheet
+ */
+export function cloneDatasheetForNewJob(sheet) {
+  if (!sheet || typeof sheet !== "object") return null;
+  try {
+    const copy = JSON.parse(JSON.stringify(sheet));
+    copy.jobNumber = "";
+    return copy;
+  } catch {
+    return { ...sheet, jobNumber: "" };
+  }
+}
+
+/**
+ * Force datasheet jobNumber to match the proposal document number.
+ * @param {Record<string, unknown>|null|undefined} sheet
+ * @param {string} documentNumber
+ */
+export function syncDatasheetJobNumber(sheet, documentNumber) {
+  if (!sheet || typeof sheet !== "object") return null;
+  const num = String(documentNumber || "").trim();
+  if (String(sheet.jobNumber || "").trim() === num) return sheet;
+  return { ...sheet, jobNumber: num };
 }

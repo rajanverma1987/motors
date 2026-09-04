@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { FiDownload, FiEye, FiPrinter, FiSend, FiTrash2, FiUpload } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import Checkbox from "@/components/ui/checkbox";
 import SimpleSelect from "@/components/simple/simple-select";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import SimpleMotorShippingPrintSheet from "@/components/simple/simple-motor-shipping-print-sheet";
@@ -222,6 +223,16 @@ function LogisticsColumn({
             aria-label={`${title} paid by`}
           />
         </FieldRow>
+
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0" style={{ width: "7.25rem" }} aria-hidden />
+          <Checkbox
+            label="Charge Back to client"
+            checked={Boolean(form.chargeBackToClient)}
+            disabled={busy}
+            onChange={(e) => patch("chargeBackToClient", e.target.checked)}
+          />
+        </div>
 
         <div className="flex min-w-0 flex-col gap-1.5">
           <p className={SECTION_TITLE}>Notes</p>

@@ -56,11 +56,15 @@ export const PO_PAYMENT_STATUS_FALLBACK_TILE_INDEX = {
   "Partial Paid": 3,
 };
 
-/** System filter cards (Service Proposals / Invoices) — not user-extensible. */
+/** System filter cards (Service Proposals / Invoices / Customers) — not user-extensible. */
 export const OTHER_STATUS_ALL = "__all__";
+export const OTHER_STATUS_CUSTOMERS = "__customers__";
+export const OTHER_STATUS_LEADS = "__leads__";
 
 export const OTHER_STATUS_VALUES = [
   OTHER_STATUS_ALL,
+  OTHER_STATUS_CUSTOMERS,
+  OTHER_STATUS_LEADS,
   INVOICE_FILTER_AMOUNT_RECEIVABLE,
   INVOICE_FILTER_TAX_COLLECTED,
   INVOICE_FILTER_TAX_TO_BE_COLLECTED,
@@ -68,6 +72,8 @@ export const OTHER_STATUS_VALUES = [
 
 const DEFAULT_OTHER_STATUS_LABELS = {
   [OTHER_STATUS_ALL]: "All",
+  [OTHER_STATUS_CUSTOMERS]: "Customers",
+  [OTHER_STATUS_LEADS]: "Leads",
   [INVOICE_FILTER_AMOUNT_RECEIVABLE]: "Amount Receivable",
   [INVOICE_FILTER_TAX_COLLECTED]: "Tax Collected",
   [INVOICE_FILTER_TAX_TO_BE_COLLECTED]: "Tax To Be Collected",
@@ -75,6 +81,8 @@ const DEFAULT_OTHER_STATUS_LABELS = {
 
 export const OTHER_STATUS_FALLBACK_TILE_INDEX = {
   [OTHER_STATUS_ALL]: 0,
+  [OTHER_STATUS_CUSTOMERS]: 2,
+  [OTHER_STATUS_LEADS]: 4,
   [INVOICE_FILTER_AMOUNT_RECEIVABLE]: 3,
   [INVOICE_FILTER_TAX_COLLECTED]: 2,
   [INVOICE_FILTER_TAX_TO_BE_COLLECTED]: 4,
@@ -720,6 +728,16 @@ export function normalizeOtherStatusKey(value) {
   if (!s) return OTHER_STATUS_ALL;
   const lower = s.toLowerCase();
   if (lower === OTHER_STATUS_ALL || lower === "all") return OTHER_STATUS_ALL;
+  if (
+    lower === OTHER_STATUS_CUSTOMERS ||
+    lower === "customers" ||
+    lower === "customer"
+  ) {
+    return OTHER_STATUS_CUSTOMERS;
+  }
+  if (lower === OTHER_STATUS_LEADS || lower === "leads" || lower === "lead") {
+    return OTHER_STATUS_LEADS;
+  }
   if (lower === INVOICE_FILTER_TAX_TO_BE_COLLECTED_LEGACY) {
     return INVOICE_FILTER_TAX_TO_BE_COLLECTED;
   }

@@ -74,6 +74,10 @@ export async function GET(request) {
     const salesPersonId = clampString(searchParams.get("salesPersonId"), 200);
     const status = clampString(searchParams.get("status"), 20).toLowerCase();
     const statusFilter = status === "paid" || status === "unpaid" ? status : "";
+    const fromYmd = clampString(searchParams.get("from"), 20);
+    const toYmd = clampString(searchParams.get("to"), 20);
+    const dateFieldRaw = clampString(searchParams.get("dateField"), 20).toLowerCase();
+    const dateField = dateFieldRaw === "paidat" ? "paidAt" : "createdAt";
 
     await connectDB();
     const where = { createdByEmail: owner };
@@ -86,6 +90,15 @@ export async function GET(request) {
       where.salesPersonId = salesPersonId;
     }
     if (statusFilter) where.status = statusFilter;
+
+    const fromOk = /^\d{4}-\d{2}-\d{2}$/.test(fromYmd);
+    const toOk = /^\d{4}-\d{2}-\d{2}$/.test(toYmd);
+    if (fromOk || toOk) {
+      const range = {};
+      if (fromOk) range.$gte = new Date(`${fromYmd}T00:00:00.000Z`);
+      if (toOk) range.$lte = new Date(`${toYmd}T23:59:59.999Z`);
+      where[dateField] = range;
+    }
 
     const [rows, salesPeople] = await Promise.all([
       SalesCommission.find(where).sort({ createdAt: -1 }).lean(),

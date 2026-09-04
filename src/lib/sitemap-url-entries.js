@@ -158,6 +158,18 @@ export async function getSitemapEntries() {
       changeFrequency: "monthly",
       priority: 0.86,
     },
+    {
+      url: `${baseUrl}/motor-repair-work-order-template`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
+    {
+      url: `${baseUrl}/repair-shop-invoice-template`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.86,
+    },
     { url: `${baseUrl}/job-card-system-for-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
     { url: `${baseUrl}/track-motor-repair-jobs`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.84 },
     {

@@ -12,6 +12,9 @@ import {
   DIAGRAM_SCOPE_SHOP,
   serializeDiagramTemplate,
   normalizeJobDiagram,
+  normalizeJobDiagrams,
+  primaryJobDiagram,
+  newJobDiagramId,
 } from "@/lib/diagram-templates-shared";
 
 export {
@@ -19,6 +22,9 @@ export {
   DIAGRAM_SCOPE_SHOP,
   serializeDiagramTemplate,
   normalizeJobDiagram,
+  normalizeJobDiagrams,
+  primaryJobDiagram,
+  newJobDiagramId,
 };
 
 const MAX_IMAGE_MB = 8;

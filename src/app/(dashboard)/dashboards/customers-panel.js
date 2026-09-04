@@ -11,13 +11,20 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
 import {
   buildCustomerPayload,
   INITIAL_CUSTOMER_FORM,
   uploadCustomerDocumentFiles,
 } from "@/lib/customer-record-form";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
+import { mergeUserSettings } from "@/lib/user-settings";
+import {
+  otherStatusTileColorForValue,
+  OTHER_STATUS_ALL,
+  OTHER_STATUS_CUSTOMERS,
+  OTHER_STATUS_LEADS,
+} from "@/lib/dropdown-catalog";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { parseSimpleOpenParam } from "@/lib/simple-portal-open";
 import {
@@ -85,6 +92,8 @@ function customerToTableRow(customer) {
 export default function CustomersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const [customerRows, setCustomerRows] = useState([]);
   const [leadRows, setLeadRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -429,34 +438,42 @@ export default function CustomersPanel({ createNonce = 0 }) {
   };
 
   const typeFilterCards = useMemo(() => {
-    const tileFor = (index) => resolveStatusTileProps("", index);
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
+    const customersTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_CUSTOMERS, 2);
+    const leadsTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_LEADS, 4);
+    const appearance = (tile) =>
+      resolveStatusTileProps(tile.tileColor, tile.index, {
+        tileBgColor: tile.tileBgColor,
+        tileTextColor: tile.tileTextColor,
+        tileColor: tile.tileColor,
+      });
     return [
       {
         key: FILTER_ALL,
-        label: "All",
+        label: allTile.label || "All",
         count: customerTotalCount + leadTotalCount,
         amount: null,
-        tileAppearance: tileFor(0),
+        tileAppearance: appearance(allTile),
         icon: FiLayers,
       },
       {
         key: FILTER_CUSTOMERS,
-        label: "Customers",
+        label: customersTile.label || "Customers",
         count: customerTotalCount,
         amount: null,
-        tileAppearance: tileFor(2),
+        tileAppearance: appearance(customersTile),
         icon: FiUser,
       },
       {
         key: FILTER_LEADS,
-        label: "Leads",
+        label: leadsTile.label || "Leads",
         count: leadTotalCount,
         amount: null,
-        tileAppearance: tileFor(4),
+        tileAppearance: appearance(leadsTile),
         icon: FiUserPlus,
       },
     ];
-  }, [customerTotalCount, leadTotalCount]);
+  }, [customerTotalCount, leadTotalCount, mergedSettings]);
 
   const displayRows = showingLeads ? leadRows : customerRows;
 

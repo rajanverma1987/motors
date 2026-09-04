@@ -249,6 +249,8 @@ export default function Table({
   const [draftHiddenKeys, setDraftHiddenKeys] = useState([]);
   const [columnWidthOverrides, setColumnWidthOverrides] = useState({});
   const [resizing, setResizing] = useState({ key: null, startX: 0, startWidth: 0 });
+  const [headerSubtotalHeight, setHeaderSubtotalHeight] = useState(0);
+  const headerSubtotalRowRef = useRef(null);
   const resizingRef = useRef(resizing);
   useEffect(() => {
     resizingRef.current = resizing;
@@ -567,7 +569,7 @@ export default function Table({
       ? Math.min(stickyColumnCount, stickyLeftOffsets.length, displayColumns.length)
       : 0;
 
-  const mergeStickyCellStyle = (colIndex, baseStyle, { isHeader = false } = {}) => {
+  const mergeStickyCellStyle = (colIndex, baseStyle, { isHeader = false, stickyTop = 0 } = {}) => {
     if (colIndex < 0 || colIndex >= stickyColActiveCount) return baseStyle;
     const left = stickyLeftOffsets[colIndex] ?? 0;
     const sticky = {
@@ -577,7 +579,7 @@ export default function Table({
       zIndex: isHeader ? (effectiveStickyHeader ? 40 : 20) : 5,
     };
     if (isHeader && effectiveStickyHeader) {
-      sticky.top = 0;
+      sticky.top = stickyTop;
       sticky.backgroundColor = "hsl(var(--card))";
       sticky.boxShadow = "inset 0 -1px 0 hsl(var(--border))";
     }
@@ -748,6 +750,48 @@ export default function Table({
       }
     : undefined;
 
+  const hasHeaderSubtotals = displayColumns.some(
+    (col) => col.headerSubtotal != null && col.headerSubtotal !== false
+  );
+
+  useLayoutEffect(() => {
+    if (!hasHeaderSubtotals) {
+      setHeaderSubtotalHeight(0);
+      return undefined;
+    }
+    const el = headerSubtotalRowRef.current;
+    if (!el) return undefined;
+    const measure = () => {
+      const h = el.getBoundingClientRect().height;
+      setHeaderSubtotalHeight(Number.isFinite(h) ? h : 0);
+    };
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [hasHeaderSubtotals, displayColumns, isCompact, headerText]);
+
+  const headerLabelStickyTop = hasHeaderSubtotals ? headerSubtotalHeight : 0;
+  const thStickySubtotalStyle = effectiveStickyHeader
+    ? {
+        position: "sticky",
+        top: 0,
+        zIndex: 22,
+        backgroundColor: "hsl(var(--card))",
+        boxShadow: "inset 0 -1px 0 hsl(var(--border))",
+      }
+    : undefined;
+  const thStickyLabelStyle = effectiveStickyHeader
+    ? {
+        position: "sticky",
+        top: headerLabelStickyTop,
+        zIndex: 21,
+        backgroundColor: "hsl(var(--card))",
+        boxShadow: "inset 0 -1px 0 hsl(var(--border))",
+      }
+    : undefined;
+
   const colgroup = (
     <colgroup>
       {displayColumns.map((col, i) => (
@@ -760,9 +804,34 @@ export default function Table({
     <table ref={tableRef} className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
       <thead className="border-b-2 border-border bg-primary/[0.03] outline-none dark:bg-primary/5">
+        {hasHeaderSubtotals ? (
+          <tr ref={headerSubtotalRowRef} className="border-b border-border">
+            {displayColumns.map((col, i) => {
+              const style = getEffectiveColStyle(col);
+              const stickyCls = stickyColClassName(i);
+              const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
+              const thStyle = mergeStickyCellStyle(
+                i,
+                effectiveStickyHeader ? { ...thStickySubtotalStyle, ...style } : style,
+                { isHeader: true, stickyTop: 0 }
+              );
+              const hasValue = col.headerSubtotal != null && col.headerSubtotal !== false;
+              return (
+                <th
+                  key={`subtotal-${col.key ?? i}`}
+                  scope="col"
+                  className={`${cellPx(col)} py-1 ${headerText} leading-none text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}${stickyCls ? ` ${stickyCls}` : ""} transition-colors ${cellHoverClass(-1, i)}`}
+                  style={thStyle}
+                  onMouseEnter={() => setCellHover({ row: -1, col: i })}
+                >
+                  {hasValue ? col.headerSubtotal : <span className="sr-only"> </span>}
+                </th>
+              );
+            })}
+          </tr>
+        ) : null}
         <tr>
           {displayColumns.map((col, i) => {
-            const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
             const style = getEffectiveColStyle(col);
             const isSortable = col.sortable && hasSort;
             const isFilterable = col.filterable && hasFilter && !col.isSelect && !col.isAction;
@@ -770,8 +839,10 @@ export default function Table({
             const stickyCls = stickyColClassName(i);
             const thStyle = mergeStickyCellStyle(
               i,
-              effectiveStickyHeader ? { ...thStickyStyle, ...style } : style,
-              { isHeader: true }
+              effectiveStickyHeader
+                ? { ...(hasHeaderSubtotals ? thStickyLabelStyle : thStickyStyle), ...style }
+                : style,
+              { isHeader: true, stickyTop: headerLabelStickyTop }
             );
             return (
               <th

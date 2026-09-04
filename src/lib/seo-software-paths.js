@@ -9,6 +9,8 @@ export const SEO_SOFTWARE_INVENTORY_PATH = "/motor-repair-inventory-software";
 export const SEO_SOFTWARE_CRM_PATH = "/motor-repair-crm-software";
 export const SEO_SOFTWARE_INVOICING_PATH = "/motor-repair-invoicing-and-quoting-software";
 export const SEO_SOFTWARE_COMPARISON_PATH = "/blog/best-software-for-repair-shop-2026";
+export const SEO_WORK_ORDER_TEMPLATE_PATH = "/motor-repair-work-order-template";
+export const SEO_INVOICE_TEMPLATE_PATH = "/repair-shop-invoice-template";
 
 export const SEO_SOFTWARE_CLUSTER_PATHS = [
   SEO_SOFTWARE_PILLAR_PATH,
@@ -17,6 +19,8 @@ export const SEO_SOFTWARE_CLUSTER_PATHS = [
   SEO_SOFTWARE_CRM_PATH,
   SEO_SOFTWARE_INVOICING_PATH,
   SEO_SOFTWARE_COMPARISON_PATH,
+  SEO_WORK_ORDER_TEMPLATE_PATH,
+  SEO_INVOICE_TEMPLATE_PATH,
 ];
 
 export const SEO_SOFTWARE_CLUSTER_LINKS = [
@@ -26,4 +30,6 @@ export const SEO_SOFTWARE_CLUSTER_LINKS = [
   { href: SEO_SOFTWARE_CRM_PATH, label: "Motor repair shop management system" },
   { href: SEO_SOFTWARE_INVOICING_PATH, label: "Motor repair invoicing & quoting software" },
   { href: SEO_SOFTWARE_COMPARISON_PATH, label: "Best software for motor repair shops (2026)" },
+  { href: SEO_WORK_ORDER_TEMPLATE_PATH, label: "Motor repair work order template (free)" },
+  { href: SEO_INVOICE_TEMPLATE_PATH, label: "Repair shop invoice template (free)" },
 ];

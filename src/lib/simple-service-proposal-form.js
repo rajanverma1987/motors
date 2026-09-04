@@ -10,8 +10,10 @@ import {
   KIND_RECEIVING,
   KIND_SHIPPING,
   normalizeMotorLogisticsRecord,
+  proposalLogisticsChargesTotal,
   stripLogisticsChargeOtherItems,
 } from "@/lib/simple-motor-logistics";
+import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import { isMongoObjectIdString } from "@/lib/technician-select-options";
 
 export const RECORD_TYPE_RFQ = "RFQ";
@@ -279,7 +281,7 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     scopeDetails: [emptyScopeLine()],
     otherItems: [emptyOtherLine()],
     attachments: [],
-    jobDiagram: null,
+    jobDiagrams: [],
     ...overrides,
   };
 }
@@ -292,7 +294,8 @@ function newLineId(prefix) {
 
 /**
  * Deep-ish clone of a form for "Copy & Create New":
- * new RFQ with empty document # / id / attachments; line item ids regenerated.
+ * new RFQ with empty document # / id / attachments; datasheets kept with job # cleared;
+ * diagram(s) are copied separately after the new record is saved.
  * @param {Record<string, unknown>} form
  */
 export function cloneServiceProposalAsNewRfq(form) {
@@ -310,8 +313,28 @@ export function cloneServiceProposalAsNewRfq(form) {
     id: _id,
     quote: _quote,
     updatedAt: _updatedAt,
+    documentNumber: _documentNumber,
+    jobDiagram: _jobDiagram,
+    jobDiagrams: _jobDiagrams,
+    attachments: _attachments,
+    motorReceiving: _motorReceiving,
+    motorShipping: _motorShipping,
+    payments: _payments,
+    acDatasheet: _ac,
+    dcDatasheet: _dc,
     ...rest
   } = source;
+
+  const cloneSheet = (sheet) => {
+    if (!sheet || typeof sheet !== "object") return null;
+    try {
+      const copy = JSON.parse(JSON.stringify(sheet));
+      copy.jobNumber = "";
+      return copy;
+    } catch {
+      return { ...sheet, jobNumber: "" };
+    }
+  };
 
   return {
     ...createEmptyServiceProposalForm(),
@@ -326,11 +349,11 @@ export function cloneServiceProposalAsNewRfq(form) {
     invoicePaidDate: "",
     payments: [],
     attachments: [],
-    jobDiagram: null,
+    jobDiagrams: [],
     motorReceiving: null,
     motorShipping: null,
-    acDatasheet: source.acDatasheet && typeof source.acDatasheet === "object" ? { ...source.acDatasheet } : null,
-    dcDatasheet: source.dcDatasheet && typeof source.dcDatasheet === "object" ? { ...source.dcDatasheet } : null,
+    acDatasheet: cloneSheet(source.acDatasheet),
+    dcDatasheet: cloneSheet(source.dcDatasheet),
     scopeDetails,
     otherItems,
   };
@@ -535,6 +558,7 @@ export function toSimpleServiceProposalListRow(doc, meta = null) {
     total: totals.total,
     proposalTotal: totals.proposalTotal,
     taxCollected: totals.taxCollected,
+    logisticCharges: proposalLogisticsChargesTotal(form),
     submitDate: String(form.submitDate || form.proposalSubmitDate || "").trim(),
     acceptDate: String(form.acceptDate || form.proposalAcceptedDate || "").trim(),
     invoiceSubmitDate: String(form.invoiceSubmitDate || "").trim(),
@@ -644,19 +668,17 @@ export function simpleServiceProposalDocToForm(doc) {
       : [emptyOtherLine()];
 
   next.attachments = Array.isArray(d.attachments) ? d.attachments : [];
-  next.jobDiagram =
-    d.jobDiagram && typeof d.jobDiagram === "object" && String(d.jobDiagram.url || "").trim()
-      ? {
-          url: String(d.jobDiagram.url || "").trim(),
-          name: String(d.jobDiagram.name || "Job diagram").trim() || "Job diagram",
-          templateId: String(d.jobDiagram.templateId || "").trim(),
-          templateName: String(d.jobDiagram.templateName || "").trim(),
-          updatedAt: d.jobDiagram.updatedAt || null,
-        }
-      : null;
+  next.jobDiagrams = normalizeJobDiagrams(d.jobDiagrams, d.jobDiagram);
   next.payments = normalizeInvoicePayments(d.payments);
-  next.acDatasheet = d.acDatasheet && typeof d.acDatasheet === "object" ? d.acDatasheet : null;
-  next.dcDatasheet = d.dcDatasheet && typeof d.dcDatasheet === "object" ? d.dcDatasheet : null;
+  const docNumberForSheets = String(next.documentNumber || d.documentNumber || d.quote || "").trim();
+  next.acDatasheet =
+    d.acDatasheet && typeof d.acDatasheet === "object"
+      ? { ...d.acDatasheet, jobNumber: docNumberForSheets || String(d.acDatasheet.jobNumber || "").trim() }
+      : null;
+  next.dcDatasheet =
+    d.dcDatasheet && typeof d.dcDatasheet === "object"
+      ? { ...d.dcDatasheet, jobNumber: docNumberForSheets || String(d.dcDatasheet.jobNumber || "").trim() }
+      : null;
 
   const docNumber = next.documentNumber;
   next.motorReceiving = d.motorReceiving

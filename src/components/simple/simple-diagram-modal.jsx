@@ -1,31 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FiArrowLeft, FiDownload, FiTrash2 } from "react-icons/fi";
+import { FiArrowLeft, FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { normalizeJobDiagram } from "@/lib/diagram-templates-shared";
+import { normalizeJobDiagram, normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 
 const CANVAS_W = 1400;
 const CANVAS_H = 1000;
 const PEN_COLORS = ["#111827", "#dc2626", "#2563eb", "#16a34a", "#ca8a04"];
 
 /**
- * Full-height modal: pick a blank design (or paper), draw with stylus/mouse, save to the job.
+ * Full-height modal: list job diagrams, pick a blank design, draw, save (multiple per job).
  */
 export default function SimpleDiagramModal({
   open,
   onClose,
   recordId,
+  jobDiagrams,
+  /** @deprecated Prefer jobDiagrams */
   jobDiagram,
   onSaved,
 }) {
   const toast = useToast();
   const confirm = useConfirm();
-  const [step, setStep] = useState("pick"); // pick | draw | view
+  const [step, setStep] = useState("list"); // list | pick | draw | view
+  const [diagrams, setDiagrams] = useState([]);
+  const [activeId, setActiveId] = useState("");
   const [templates, setTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [q, setQ] = useState("");
@@ -35,6 +39,8 @@ export default function SimpleDiagramModal({
   const [penSize, setPenSize] = useState(3);
   const [eraser, setEraser] = useState(false);
   const [printRoot, setPrintRoot] = useState(null);
+  /** When set, save replaces this diagram id; empty string means create new. */
+  const [editingDiagramId, setEditingDiagramId] = useState("");
 
   const canvasRef = useRef(null);
   const drawingRef = useRef(false);
@@ -45,7 +51,13 @@ export default function SimpleDiagramModal({
   /** True when canvas background is a previously saved job diagram (baked image). */
   const editingSavedRef = useRef(false);
 
-  const saved = normalizeJobDiagram(jobDiagram);
+  const active = normalizeJobDiagram(diagrams.find((d) => d.id === activeId) || null);
+
+  const syncDiagramsFromProps = useCallback(() => {
+    const list = normalizeJobDiagrams(jobDiagrams, jobDiagram);
+    setDiagrams(list);
+    return list;
+  }, [jobDiagrams, jobDiagram]);
 
   const resetDrawState = useCallback(() => {
     drawingRef.current = false;
@@ -78,15 +90,24 @@ export default function SimpleDiagramModal({
   useEffect(() => {
     if (!open) return;
     resetDrawState();
-    if (saved?.url) {
-      setStep("view");
-      setSelected(null);
+    const list = syncDiagramsFromProps();
+    setActiveId("");
+    setEditingDiagramId("");
+    setSelected(null);
+    setQ("");
+    if (list.length) {
+      setStep("list");
     } else {
       setStep("pick");
-      setSelected(null);
       void loadTemplates();
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- init on open only
+
+  useEffect(() => {
+    if (!open) return;
+    const list = syncDiagramsFromProps();
+    setDiagrams(list);
+  }, [open, syncDiagramsFromProps]);
 
   useEffect(() => {
     if (!open || step !== "pick") return;
@@ -150,10 +171,29 @@ export default function SimpleDiagramModal({
     [redraw, resetDrawState, toast]
   );
 
+  const openAddDiagram = () => {
+    setEditingDiagramId("");
+    setActiveId("");
+    setSelected(null);
+    resetDrawState();
+    setStep("pick");
+    void loadTemplates();
+  };
+
+  const openViewDiagram = (diagram) => {
+    const d = normalizeJobDiagram(diagram);
+    if (!d?.url) return;
+    setActiveId(d.id);
+    setEditingDiagramId(d.id);
+    setStep("view");
+  };
+
   const startEditSaved = useCallback(async () => {
+    const saved = active;
     if (!saved?.url) return;
     resetDrawState();
     editingSavedRef.current = true;
+    setEditingDiagramId(saved.id);
     setSelected({
       id: saved.templateId || "",
       name: saved.templateName || "Saved diagram",
@@ -182,7 +222,7 @@ export default function SimpleDiagramModal({
       return;
     }
     redraw();
-  }, [redraw, resetDrawState, saved, toast]);
+  }, [active, redraw, resetDrawState, toast]);
 
   const canvasPoint = (e) => {
     const canvas = canvasRef.current;
@@ -264,12 +304,23 @@ export default function SimpleDiagramModal({
     strokeStackRef.current = [];
     currentStrokeRef.current = null;
     if (editingSaved) {
-      // Saved diagram is painted as the background image, not as strokes.
       bgImageRef.current = null;
       editingSavedRef.current = false;
       setSelected({ id: "", name: "Blank paper", imageUrl: "", blank: true });
     }
     redraw();
+  };
+
+  const applySavedResponse = (data) => {
+    const list = normalizeJobDiagrams(data.jobDiagrams, data.jobDiagram);
+    setDiagrams(list);
+    const savedOne = normalizeJobDiagram(data.diagram) || list.find((d) => d.id === editingDiagramId) || list[list.length - 1] || null;
+    if (savedOne?.id) {
+      setActiveId(savedOne.id);
+      setEditingDiagramId(savedOne.id);
+    }
+    onSaved?.(list, data.item, savedOne);
+    return { list, savedOne };
   };
 
   const handleSave = async () => {
@@ -287,15 +338,21 @@ export default function SimpleDiagramModal({
       fd.append("documentName", "Job diagram");
       fd.append("templateId", selected?.id || "");
       fd.append("templateName", selected?.name || (selected?.blank ? "Blank paper" : ""));
-      const res = await fetch(`/api/dashboard/simple-service-proposals/${recordId}/diagram`, {
+
+      const replaceId = String(editingDiagramId || "").trim();
+      const endpoint = replaceId
+        ? `/api/dashboard/simple-service-proposals/${recordId}/diagrams/${encodeURIComponent(replaceId)}`
+        : `/api/dashboard/simple-service-proposals/${recordId}/diagrams`;
+
+      const res = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         body: fd,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Save failed");
-      onSaved?.(data.jobDiagram, data.item);
-      toast.success("Diagram saved.");
+      applySavedResponse(data);
+      toast.success(replaceId ? "Diagram updated." : "Diagram saved.");
       setStep("view");
     } catch (err) {
       toast.error(err.message || "Could not save diagram");
@@ -304,33 +361,45 @@ export default function SimpleDiagramModal({
     }
   };
 
-  const handleDelete = async () => {
-    if (!recordId || !saved?.url) return;
+  const handleDelete = async (diagram = active) => {
+    const target = normalizeJobDiagram(diagram);
+    if (!recordId || !target?.id) return;
     const ok = await confirm({
       title: "Delete diagram?",
-      message: "Remove the saved diagram from this job?",
+      message: "Remove this diagram from the job? Other diagrams are kept.",
       confirmLabel: "Delete",
       variant: "danger",
     });
     if (!ok) return;
     try {
-      const res = await fetch(`/api/dashboard/simple-service-proposals/${recordId}/diagram`, {
-        method: "DELETE",
-        credentials: "include",
-      });
+      const res = await fetch(
+        `/api/dashboard/simple-service-proposals/${recordId}/diagrams/${encodeURIComponent(target.id)}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Delete failed");
-      onSaved?.(null, data.item);
+      const list = normalizeJobDiagrams(data.jobDiagrams, data.jobDiagram);
+      setDiagrams(list);
+      setActiveId("");
+      setEditingDiagramId("");
+      onSaved?.(list, data.item, null);
       toast.success("Diagram deleted.");
-      setStep("pick");
-      void loadTemplates();
+      if (list.length) {
+        setStep("list");
+      } else {
+        setStep("pick");
+        void loadTemplates();
+      }
     } catch (err) {
       toast.error(err.message || "Could not delete");
     }
   };
 
   const handlePrint = () => {
-    const url = step === "draw" ? canvasRef.current?.toDataURL("image/png") : saved?.url;
+    const url = step === "draw" ? canvasRef.current?.toDataURL("image/png") : active?.url;
     if (!url) return;
     const root = document.createElement("div");
     root.id = "simple-diagram-print-root";
@@ -388,19 +457,46 @@ export default function SimpleDiagramModal({
     step === "view"
       ? "View diagram"
       : step === "draw"
-        ? "Draw diagram"
-        : "Draw / View Diagram";
+        ? editingDiagramId
+          ? "Edit diagram"
+          : "Draw diagram"
+        : step === "list"
+          ? "Job diagrams"
+          : "Add diagram";
 
   const headerActions =
-    step === "view" ? (
+    step === "list" ? (
       <>
-        <Button type="button" size="sm" variant="outline" onClick={handlePrint} disabled={!saved?.url}>
+        <Button type="button" size="sm" variant="primary" onClick={openAddDiagram}>
+          <FiPlus className="h-4 w-4 shrink-0" />
+          Add diagram
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </>
+    ) : step === "view" ? (
+      <>
+        <Button type="button" size="sm" variant="outline" onClick={() => setStep("list")}>
+          <FiArrowLeft className="h-4 w-4 shrink-0" />
+          All diagrams
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={handlePrint} disabled={!active?.url}>
           Print
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={() => void startEditSaved()}>
           Edit
         </Button>
-        <Button type="button" size="sm" variant="primary" onClick={() => { setStep("pick"); void loadTemplates(); }}>
+        <Button
+          type="button"
+          size="sm"
+          variant="primary"
+          onClick={() => {
+            setEditingDiagramId(active?.id || "");
+            setStep("pick");
+            void loadTemplates();
+          }}
+        >
           Replace
         </Button>
         <Button type="button" size="sm" variant="danger" onClick={() => void handleDelete()}>
@@ -410,22 +506,43 @@ export default function SimpleDiagramModal({
       </>
     ) : step === "draw" ? (
       <>
-        <Button type="button" size="sm" variant="outline" onClick={() => setStep("pick")}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (editingDiagramId && active?.url) {
+              setStep("view");
+            } else if (diagrams.length) {
+              setStep("list");
+            } else {
+              setStep("pick");
+            }
+          }}
+        >
           <FiArrowLeft className="h-4 w-4 shrink-0" />
-          Designs
+          Back
         </Button>
         <Button type="button" size="sm" variant="outline" onClick={handlePrint}>
           Print
         </Button>
         <Button type="button" size="sm" variant="primary" disabled={saving} onClick={() => void handleSave()}>
           <FiDownload className="h-4 w-4 shrink-0" />
-          {saving ? "Saving…" : "Save to job"}
+          {saving ? "Saving…" : editingDiagramId ? "Update diagram" : "Save to job"}
         </Button>
       </>
     ) : (
-      <Button type="button" size="sm" variant="outline" onClick={onClose}>
-        Close
-      </Button>
+      <>
+        {diagrams.length ? (
+          <Button type="button" size="sm" variant="outline" onClick={() => setStep("list")}>
+            <FiArrowLeft className="h-4 w-4 shrink-0" />
+            All diagrams
+          </Button>
+        ) : null}
+        <Button type="button" size="sm" variant="outline" onClick={onClose}>
+          Close
+        </Button>
+      </>
     );
 
   return (
@@ -441,6 +558,43 @@ export default function SimpleDiagramModal({
       actions={headerActions}
       bodyClassName="!flex !h-full !min-h-0 !flex-col !overflow-hidden !p-2 sm:!p-3"
     >
+      {step === "list" ? (
+        <div className="flex h-full min-h-0 flex-1 flex-col gap-3">
+          <p className="shrink-0 text-sm text-secondary">
+            This job can have multiple diagrams. Open one to view or edit, or add another.
+          </p>
+          {diagrams.length === 0 ? (
+            <p className="py-8 text-center text-sm text-secondary">No diagrams yet.</p>
+          ) : (
+            <div className="min-h-0 flex-1 overflow-auto">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {diagrams.map((d, index) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => openViewDiagram(d)}
+                    className="flex flex-col overflow-hidden rounded-lg border border-border bg-card text-left transition hover:border-primary hover:shadow-sm"
+                  >
+                    <div className="flex h-36 items-center justify-center bg-white p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={d.url} alt="" className="max-h-full max-w-full object-contain" />
+                    </div>
+                    <div className="border-t border-border px-2 py-1.5">
+                      <div className="truncate text-sm font-medium text-title">
+                        {d.name || `Diagram ${index + 1}`}
+                      </div>
+                      <div className="truncate text-xs text-secondary">
+                        {d.templateName || "Custom"}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {step === "pick" ? (
         <div className="flex h-full min-h-0 flex-1 flex-col gap-3">
           <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -461,11 +615,6 @@ export default function SimpleDiagramModal({
             >
               Blank paper
             </Button>
-            {saved?.url ? (
-              <Button type="button" size="sm" variant="outline" onClick={() => setStep("view")}>
-                Back to saved
-              </Button>
-            ) : null}
           </div>
           <p className="shrink-0 text-sm text-secondary">
             Choose a blank design from admin or your shop settings, or start on blank paper. Then draw with a stylus or mouse.
@@ -505,12 +654,12 @@ export default function SimpleDiagramModal({
         </div>
       ) : null}
 
-      {step === "view" && saved?.url ? (
+      {step === "view" && active?.url ? (
         <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center overflow-auto bg-muted/30 p-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={saved.url}
-            alt={saved.name || "Job diagram"}
+            src={active.url}
+            alt={active.name || "Job diagram"}
             className="h-full max-h-full w-auto max-w-full rounded border border-border bg-white object-contain shadow-sm"
           />
         </div>
