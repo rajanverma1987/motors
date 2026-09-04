@@ -15,6 +15,12 @@ export const metadata = marketingPageMetadata({
 
 const POSTS = [
   {
+    href: "/blog/motor-repair-job-diagram-drawing-tool",
+    title: "Draw job diagrams where the work lives",
+    excerpt:
+      "Why paper pads and camera-roll photos fail rewind shops, how tablet-with-pen drawing on the job works, and how linked diagrams protect handoffs, warranties, and customer trust.",
+  },
+  {
     href: "/blog/electric-motor-calculators-fla-torque-speed-power",
     title: "Electric motor calculators: FLA, torque, speed & bench electrical",
     excerpt:
