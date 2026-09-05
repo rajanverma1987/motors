@@ -543,12 +543,14 @@ export default function CustomersPanel({ createNonce = 0 }) {
           const isLead = row.recordType === TYPE_LEAD;
           return (
             <div className="flex min-w-0 items-center gap-1.5">
-              <Badge
-                variant={isLead ? "warning" : "primary"}
-                className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
-              >
-                {isLead ? TYPE_LEAD : TYPE_CUSTOMER}
-              </Badge>
+              {isLead ? (
+                <Badge
+                  variant="warning"
+                  className="shrink-0 rounded-full px-1.5 py-0 text-[10px] font-medium leading-4"
+                >
+                  {TYPE_LEAD}
+                </Badge>
+              ) : null}
               <button
                 type="button"
                 className="min-w-0 truncate font-medium text-primary hover:underline"

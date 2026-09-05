@@ -59,10 +59,13 @@ export async function POST(request) {
     const periodMonth = clampString(body?.periodMonth, 7);
     const paidAtInput = clampString(body?.paidAt, 50);
     const notes = clampString(body?.notes, 2000);
+    const paymentMethod = clampString(body?.paymentMethod, 80);
     const hours = Number(body?.hours);
     const amount = Number(body?.amount);
     const payType = String(body?.payType || "").toLowerCase() === "salary" ? "salary" : "hourly";
     const hourlyRate = clampString(body?.hourlyRate, 40);
+    const periodFromInput = clampString(body?.periodFrom, 10);
+    const periodToInput = clampString(body?.periodTo, 10);
 
     if (!mongoose.isValidObjectId(employeeId)) {
       return NextResponse.json({ error: "Valid employee id required" }, { status: 400 });
@@ -75,6 +78,23 @@ export async function POST(request) {
     }
     if (!paidAtInput) {
       return NextResponse.json({ error: "Paid date is required" }, { status: 400 });
+    }
+    if (!paymentMethod) {
+      return NextResponse.json({ error: "Mode of payment is required" }, { status: 400 });
+    }
+    if (!periodFromInput || !periodToInput) {
+      return NextResponse.json({ error: "Pay period start and end dates are required" }, { status: 400 });
+    }
+    const periodFromDate = new Date(`${periodFromInput}T12:00:00.000Z`);
+    const periodToDate = new Date(`${periodToInput}T12:00:00.000Z`);
+    if (Number.isNaN(periodFromDate.getTime()) || Number.isNaN(periodToDate.getTime())) {
+      return NextResponse.json({ error: "Invalid pay period dates" }, { status: 400 });
+    }
+    if (periodFromDate.getTime() > periodToDate.getTime()) {
+      return NextResponse.json(
+        { error: "Pay period start date must be on or before the end date" },
+        { status: 400 }
+      );
     }
 
     const bounds = periodMonthBounds(periodMonth);
@@ -107,14 +127,15 @@ export async function POST(request) {
       employeeName: String(employee.name || "").trim(),
       employeeNumber: String(employee.employeeNumber || "").trim(),
       periodMonth,
-      periodFrom: bounds?.from || "",
-      periodTo: bounds?.to || "",
+      periodFrom: periodFromInput || bounds?.from || "",
+      periodTo: periodToInput || bounds?.to || "",
       payType,
       hourlyRate: hourlyRate || String(employee.hourlyRate || "").trim(),
       hours: Number.isFinite(hours) && hours >= 0 ? hours : 0,
       amount,
       status: "paid",
       paidAt,
+      paymentMethod,
       notes,
       attachments: [],
     });

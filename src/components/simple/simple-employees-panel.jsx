@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
 import { useAlert } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 
@@ -106,6 +107,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_EMPLOYEE_FORM);
+  const [historyEmployee, setHistoryEmployee] = useState(null);
 
   const roleOptions = useMemo(() => {
     const values = new Set(ROLE_OPTIONS.map((o) => o.value));
@@ -116,6 +118,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
   }, [form.role]);
 
   const load = useCallback(async () => {
+    setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
       if (searchQuery.trim()) params.set("q", searchQuery.trim());
@@ -252,7 +255,22 @@ export default function SimpleEmployeesPanel({ onChanged }) {
           </button>
         ),
       },
-      { key: "name", label: "Name", sortable: true },
+      { key: "name", label: "Name", sortable: true, render: (v, row) => (
+        <button
+          type="button"
+          className="font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+          onClick={() =>
+            setHistoryEmployee({
+              employeeId: String(row?.id || "").trim(),
+              name: String(v || row?.name || "").trim(),
+              employeeNumber: String(row?.employeeNumber || "").trim(),
+            })
+          }
+          title="View payment history"
+        >
+          {v || "-"}
+        </button>
+      ) },
       { key: "employeeNumber", label: "Emp #", sortable: true },
       { key: "role", label: "Role", sortable: true },
       { key: "department", label: "Dept", sortable: true },
@@ -583,6 +601,14 @@ export default function SimpleEmployeesPanel({ onChanged }) {
           </FieldRow>
         </Form>
       </Modal>
+
+      <SimpleEmployeePaymentHistoryModal
+        open={Boolean(historyEmployee?.employeeId)}
+        onClose={() => setHistoryEmployee(null)}
+        employeeId={historyEmployee?.employeeId}
+        employeeName={historyEmployee?.name}
+        employeeNumber={historyEmployee?.employeeNumber}
+      />
     </div>
   );
 }

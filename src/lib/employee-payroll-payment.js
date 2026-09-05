@@ -26,6 +26,7 @@ export function employeePayrollPaymentToJson(doc, { includeAttachments = false }
     amount: Number(row.amount) || 0,
     status: "paid",
     paidAt: row.paidAt || null,
+    paymentMethod: String(row.paymentMethod || "").trim(),
     notes: String(row.notes || "").trim(),
     attachmentCount: attachments.length,
     ...(includeAttachments ? { attachments } : {}),

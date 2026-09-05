@@ -20,6 +20,8 @@ const employeePayrollPaymentSchema = new mongoose.Schema(
     amount: { type: Number, required: true, default: 0 },
     status: { type: String, enum: ["paid"], default: "paid" },
     paidAt: { type: Date, default: null },
+    /** How the payroll was paid (Check, ACH, Cash, etc.) */
+    paymentMethod: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },
     attachments: {
       type: [{ url: { type: String, trim: true }, name: { type: String, trim: true } }],

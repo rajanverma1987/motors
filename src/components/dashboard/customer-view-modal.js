@@ -8,9 +8,12 @@ import { useToast } from "@/components/toast-provider";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerPayload, customerApiToForm, INITIAL_CUSTOMER_FORM } from "@/lib/customer-record-form";
-import { invoiceStatusLabel, invoiceStatusPillAppearance } from "@/lib/invoice-status";
+import { invoiceStatusLabel } from "@/lib/invoice-status";
 import {
+  OTHER_STATUS_ALL,
   invoiceStatusSelectOptionsFromMerged,
+  invoiceStatusTileColorForValue,
+  otherStatusTileColorForValue,
   quoteStatusSelectOptionsFromMerged,
   quoteStatusTileColorForValue,
   resolveConfiguredStatusSlug,
@@ -32,78 +35,25 @@ import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
 const CUSTOMER_VIEW_FORM_ID = "customer-view-edit-form";
 
 const SECTION_TITLE =
-  "text-sm font-bold uppercase tracking-wide text-title";
+  "text-xs font-semibold uppercase tracking-[0.06em] text-title";
 const TH_CLASS =
-  "sticky top-0 z-20 border-b border-border pl-[5px] pr-1 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary bg-card";
+  "sticky top-0 z-20 border-b border-border bg-muted/40 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary";
 const TD_CLASS =
-  "border-b border-border pl-[5px] pr-1 py-1.5 text-sm font-semibold text-title whitespace-nowrap";
+  "border-b border-border px-2 py-1.5 text-[12px] font-medium leading-snug text-title whitespace-nowrap";
+const TD_MUTED_CLASS =
+  "border-b border-border px-2 py-1.5 text-[11px] font-medium leading-snug text-secondary whitespace-nowrap";
+const TD_STATUS_INNER =
+  "block px-2 py-1.5 text-[12px] font-semibold leading-snug whitespace-nowrap";
 const TABLE_WRAP = "min-h-0 flex-1 overflow-auto rounded-sm border border-border";
-const TABLE_CLASS = "w-full min-w-[24rem] border-separate border-spacing-0 text-sm";
+const TABLE_CLASS = "w-full min-w-[28rem] border-separate border-spacing-0 text-[12px]";
 const THEAD_ROW = "";
 const ACTIVITY_PANEL =
   "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card";
 const ACTIVITY_PANEL_HEADER =
-  "flex shrink-0 items-center justify-between gap-2 border-b border-border bg-primary/[0.05] px-3 py-2 dark:bg-primary/10";
-const ACTIVITY_PANEL_BODY = "flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-2.5";
+  "flex shrink-0 items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-1.5 dark:bg-primary/10";
+const ACTIVITY_PANEL_BODY = "flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-2";
 
-const STATUS_PILL_CLASS =
-  "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-2.5 py-0.5 text-xs font-semibold";
-const STATUS_PILL_SUMMARY_CLASS =
-  "job-board-status-pill inline-flex max-w-full truncate rounded-full border border-border px-3 py-1 text-sm font-bold";
-
-/** Status totals strip — click a chip to filter the table (click again to clear). */
-function StatusTotalsBar({ totals, moneyLabel, renderPill, selectedStatus = null, onSelectStatus }) {
-  if (!Array.isArray(totals) || totals.length === 0) return null;
-  return (
-    <div className="rounded-sm border border-border/70 bg-muted/25 p-2 dark:bg-primary/[0.07]">
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-secondary">
-          Totals by status
-        </p>
-        {selectedStatus ? (
-          <button
-            type="button"
-            className="text-[10px] font-semibold text-primary hover:underline"
-            onClick={() => onSelectStatus?.(null)}
-          >
-            Clear filter
-          </button>
-        ) : (
-          <span className="text-[10px] text-secondary">Click to filter</span>
-        )}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {totals.map((s) => {
-          const active = selectedStatus === s.status;
-          return (
-            <button
-              key={s.status}
-              type="button"
-              onClick={() => onSelectStatus?.(active ? null : s.status)}
-              aria-pressed={active}
-              title={active ? "Clear status filter" : `Filter table by ${s.status}`}
-              className={`inline-flex items-center gap-2.5 rounded-sm border bg-card py-1.5 pl-1.5 pr-3 shadow-sm transition-[border-color,box-shadow,background-color] ${
-                active
-                  ? "border-primary ring-2 ring-primary/25"
-                  : "border-border hover:border-primary/50 hover:bg-primary/[0.04]"
-              }`}
-            >
-              <span className="min-w-0 shrink pointer-events-none">{renderPill(s.status)}</span>
-              <span
-                className="border-l border-border pl-3 text-base font-bold tabular-nums tracking-tight text-title"
-                title="Status total"
-              >
-                {moneyLabel(s.amount)}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/** Collapse CSV/label/slug variants so summary pills don't duplicate the same status. */
+/** Collapse CSV/label/slug variants so summary cards don't duplicate the same status. */
 function activityStatusGroupKey(raw, mergedSettings) {
   const resolved = resolveConfiguredStatusSlug(raw, mergedSettings);
   return (
@@ -114,50 +64,57 @@ function activityStatusGroupKey(raw, mergedSettings) {
   );
 }
 
-function InvoiceStatusPill({ status, mergedSettings, large = false }) {
-  const key = activityStatusGroupKey(status, mergedSettings);
-  const pill = invoiceStatusPillAppearance(key, mergedSettings);
-  const label = invoiceStatusLabel(key, mergedSettings);
-  return (
-    <span
-      className={`${large ? STATUS_PILL_SUMMARY_CLASS : STATUS_PILL_CLASS} ${pill.className}`}
-      style={pill.style}
-    >
-      {label}
-    </span>
-  );
-}
-
-function QuoteStatusPill({ status, mergedSettings, large = false }) {
-  const s = activityStatusGroupKey(status, mergedSettings);
+function resolveDocStatusAppearance(kind, status, mergedSettings) {
+  const bare = activityStatusGroupKey(status, mergedSettings);
+  if (kind === "invoice") {
+    const opts = invoiceStatusSelectOptionsFromMerged(mergedSettings);
+    const idx = opts.findIndex((o) => String(o.value).toLowerCase() === bare);
+    const { tileColor, tileBgColor, tileTextColor, index } = invoiceStatusTileColorForValue(
+      mergedSettings,
+      bare,
+      idx >= 0 ? idx : 0
+    );
+    return {
+      tileAppearance: resolveStatusTileProps(tileColor, index, {
+        tileBgColor,
+        tileTextColor,
+        tileColor,
+      }),
+      label: invoiceStatusLabel(bare, mergedSettings),
+    };
+  }
   const opts = quoteStatusSelectOptionsFromMerged(mergedSettings);
-  const optIdx = opts.findIndex((o) => String(o.value).toLowerCase() === s);
+  const optIdx = opts.findIndex((o) => String(o.value).toLowerCase() === bare);
   const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
     mergedSettings,
-    s,
+    bare,
     optIdx >= 0 ? optIdx : 0
   );
-  const pill = resolveStatusTileProps(tileColor, index, {
-    tileBgColor,
-    tileTextColor,
-    tileColor,
-  });
   const label =
-    opts.find((o) => String(o.value).toLowerCase() === s)?.label ??
-    (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
-  return (
-    <span
-      className={`${large ? STATUS_PILL_SUMMARY_CLASS : STATUS_PILL_CLASS} ${pill.className}`}
-      style={pill.style}
-    >
-      {label}
-    </span>
-  );
+    opts.find((o) => String(o.value).toLowerCase() === bare)?.label ??
+    (bare ? bare.charAt(0).toUpperCase() + bare.slice(1) : "Draft");
+  return {
+    tileAppearance: resolveStatusTileProps(tileColor, index, {
+      tileBgColor,
+      tileTextColor,
+      tileColor,
+    }),
+    label,
+  };
 }
 
-function JobStatusPill({ jobStatus, mergedSettings }) {
+function docStatusCellChrome(kind, status, mergedSettings) {
+  const { tileAppearance, label } = resolveDocStatusAppearance(kind, status, mergedSettings);
+  return {
+    style: tileAppearance.style || null,
+    className: `!p-0 ${tileAppearance.className || ""}`.trim(),
+    label,
+  };
+}
+
+function jobStatusCellChrome(jobStatus, mergedSettings) {
   const raw = String(jobStatus || "").trim();
-  if (!raw) return <span className="text-secondary">—</span>;
+  if (!raw) return { style: null, className: "!p-0", label: "-" };
   const opts = workOrderStatusSelectOptionsFromMerged(mergedSettings);
   const idx = opts.findIndex((o) => String(o.value).toLowerCase() === raw.toLowerCase());
   const pill = resolveWorkOrderStatusTileProps(
@@ -165,12 +122,11 @@ function JobStatusPill({ jobStatus, mergedSettings }) {
     idx >= 0 ? idx : 0,
     mergedSettings?.workOrderStatusTileColors || {}
   );
-  const label = resolveWorkOrderStatusDisplayLabel(raw, mergedSettings);
-  return (
-    <span className={`${STATUS_PILL_CLASS} ${pill.className || ""}`} style={pill.style || undefined}>
-      {label}
-    </span>
-  );
+  return {
+    style: pill.style || null,
+    className: `!p-0 ${pill.className || ""}`.trim(),
+    label: resolveWorkOrderStatusDisplayLabel(raw, mergedSettings),
+  };
 }
 
 function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children }) {
@@ -207,9 +163,14 @@ function statusAmountSummary(rows, getAmount, normalizeKey) {
     const status = typeof normalizeKey === "function" ? normalizeKey(raw) : raw.toLowerCase();
     const amount = Number.parseFloat(String(getAmount(row) ?? "0"));
     const safeAmount = Number.isFinite(amount) ? amount : 0;
-    totals.set(status, (totals.get(status) || 0) + safeAmount);
+    const prev = totals.get(status) || { amount: 0, count: 0 };
+    totals.set(status, { amount: prev.amount + safeAmount, count: prev.count + 1 });
   });
-  return Array.from(totals.entries()).map(([status, amount]) => ({ status, amount }));
+  return Array.from(totals.entries()).map(([status, { amount, count }]) => ({
+    status,
+    amount,
+    count,
+  }));
 }
 
 function activityRowAmount(row) {
@@ -257,15 +218,14 @@ export default function CustomerViewModal({
   formRef.current = form;
   const [activityLoading, setActivityLoading] = useState(false);
   const [activity, setActivity] = useState({ quotes: [], invoices: [] });
-  const [invoiceStatusFilter, setInvoiceStatusFilter] = useState(null);
-  const [quoteStatusFilter, setQuoteStatusFilter] = useState(null);
+  const [activityStatusFilter, setActivityStatusFilter] = useState(null);
 
   const [openInvoiceId, setOpenInvoiceId] = useState(null);
   const [openQuoteId, setOpenQuoteId] = useState(null);
-  const [openSimpleRecord, setOpenSimpleRecord] = useState(null);
+  const [openSimpleRecordId, setOpenSimpleRecordId] = useState(null);
 
   const openRecordBtnClass =
-    "font-mono text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
+    "font-mono text-[12px] font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
   const resolvedId = String(customerId || customer?.id || "").trim();
 
@@ -326,11 +286,10 @@ export default function CustomerViewModal({
       setLoadingCustomerId(null);
       setActivity({ quotes: [], invoices: [] });
       setActivityLoading(false);
-      setInvoiceStatusFilter(null);
-      setQuoteStatusFilter(null);
+      setActivityStatusFilter(null);
       setOpenInvoiceId(null);
       setOpenQuoteId(null);
-      setOpenSimpleRecord(null);
+      setOpenSimpleRecordId(null);
       return;
     }
     const id = String(customerId || "").trim();
@@ -338,8 +297,7 @@ export default function CustomerViewModal({
     let cancelled = false;
     setLoadingCustomerId(id);
     setCustomer(null);
-    setInvoiceStatusFilter(null);
-    setQuoteStatusFilter(null);
+    setActivityStatusFilter(null);
     (async () => {
       try {
         const res = await fetch(`/api/dashboard/customers/${id}`, {
@@ -379,31 +337,137 @@ export default function CustomerViewModal({
     return Number.isFinite(n) ? formatMoney(n) : "—";
   };
 
-  const invoiceStatusTotals = statusAmountSummary(activity.invoices, activityRowAmount, (raw) =>
-    activityStatusGroupKey(raw, mergedSettings)
-  );
-  const quoteStatusTotals = statusAmountSummary(activity.quotes, activityRowAmount, (raw) =>
-    activityStatusGroupKey(raw, mergedSettings)
-  );
+  const activityRows = useMemo(() => {
+    const invoiceRows = (Array.isArray(activity.invoices) ? activity.invoices : []).map((inv) => ({
+      kind: "invoice",
+      id: String(inv?.id || ""),
+      docNumber: isSimple
+        ? inv.documentNumber || inv.quote || inv.invoiceNumber || "—"
+        : inv.invoiceNumber || "—",
+      dateRaw: inv.date || inv.dateCreated || inv.invoiceSubmitDate,
+      status: inv.status,
+      jobStatus: inv.jobStatus || "",
+      amount: activityRowAmount(inv),
+      raw: inv,
+    }));
+    const quoteRows = (Array.isArray(activity.quotes) ? activity.quotes : []).map((q) => ({
+      kind: "quote",
+      id: String(q?.id || ""),
+      docNumber: isSimple
+        ? q.documentNumber || q.quote || q.rfqNumber || "—"
+        : q.rfqNumber || "—",
+      dateRaw: q.date || q.dateCreated,
+      status: q.status,
+      jobStatus: q.jobStatus || "",
+      amount: activityRowAmount(q),
+      raw: q,
+    }));
+    return [...invoiceRows, ...quoteRows].sort((a, b) => {
+      const ta = Date.parse(String(a.dateRaw || "")) || 0;
+      const tb = Date.parse(String(b.dateRaw || "")) || 0;
+      return tb - ta;
+    });
+  }, [activity.invoices, activity.quotes, isSimple]);
 
-  const filteredInvoices = useMemo(() => {
-    if (!invoiceStatusFilter) return activity.invoices;
-    return activity.invoices.filter(
-      (row) => activityStatusGroupKey(row?.status, mergedSettings) === invoiceStatusFilter
-    );
-  }, [activity.invoices, invoiceStatusFilter, mergedSettings]);
+  const combinedStatusTotals = useMemo(() => {
+    const invoiceTotals = statusAmountSummary(activity.invoices, activityRowAmount, (raw) =>
+      activityStatusGroupKey(raw, mergedSettings)
+    ).map((t) => ({
+      ...t,
+      kind: "invoice",
+      key: `invoice:${t.status}`,
+    }));
+    const quoteTotals = statusAmountSummary(activity.quotes, activityRowAmount, (raw) =>
+      activityStatusGroupKey(raw, mergedSettings)
+    ).map((t) => ({
+      ...t,
+      kind: "quote",
+      key: `quote:${t.status}`,
+    }));
+    return [...quoteTotals, ...invoiceTotals];
+  }, [activity.invoices, activity.quotes, mergedSettings]);
 
-  const filteredQuotes = useMemo(() => {
-    if (!quoteStatusFilter) return activity.quotes;
-    return activity.quotes.filter(
-      (row) => activityStatusGroupKey(row?.status, mergedSettings) === quoteStatusFilter
+  const statusFilterCards = useMemo(() => {
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
+    const cards = [
+      {
+        key: "",
+        label: allTile.label || "All",
+        tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+          tileBgColor: allTile.tileBgColor,
+          tileTextColor: allTile.tileTextColor,
+          tileColor: allTile.tileColor,
+        }),
+      },
+    ];
+    for (const t of combinedStatusTotals) {
+      const { tileAppearance, label } = resolveDocStatusAppearance(
+        t.kind,
+        t.status,
+        mergedSettings
+      );
+      cards.push({ key: t.key, label, tileAppearance });
+    }
+    return cards;
+  }, [combinedStatusTotals, mergedSettings]);
+
+  const filteredActivityRows = useMemo(() => {
+    if (!activityStatusFilter) return activityRows;
+    const sep = activityStatusFilter.indexOf(":");
+    if (sep < 0) return activityRows;
+    const kind = activityStatusFilter.slice(0, sep);
+    const statusKey = activityStatusFilter.slice(sep + 1);
+    return activityRows.filter(
+      (row) =>
+        row.kind === kind &&
+        activityStatusGroupKey(row.status, mergedSettings) === statusKey
     );
-  }, [activity.quotes, quoteStatusFilter, mergedSettings]);
+  }, [activityRows, activityStatusFilter, mergedSettings]);
+
+  const filteredSubtotal = useMemo(
+    () =>
+      filteredActivityRows.reduce((sum, row) => {
+        const n = Number(row?.amount);
+        return sum + (Number.isFinite(n) ? n : 0);
+      }, 0),
+    [filteredActivityRows]
+  );
 
   const openSimpleProposal = (row) => {
-    if (!row?.id) return;
-    setOpenSimpleRecord(row);
+    const id = String(row?.id || "").trim();
+    if (!id) return;
+    setOpenSimpleRecordId(id);
   };
+
+  const editingSimpleRecord = useMemo(
+    () => (openSimpleRecordId ? { id: openSimpleRecordId } : null),
+    [openSimpleRecordId]
+  );
+
+  /** Navigate within this customer's activity list (same pattern as Master Search). */
+  const clientRecordNavigation = useMemo(() => {
+    if (!openSimpleRecordId || activityRows.length < 2) return null;
+    const openIndex = activityRows.findIndex(
+      (r) => String(r.id) === String(openSimpleRecordId)
+    );
+    if (openIndex < 0) return null;
+    return {
+      currentIndex: openIndex,
+      total: activityRows.length,
+      canPrevious: openIndex > 0,
+      canNext: openIndex < activityRows.length - 1,
+      onPrevious: () => {
+        const prev = activityRows[openIndex - 1];
+        const id = String(prev?.id || "").trim();
+        if (id) setOpenSimpleRecordId(id);
+      },
+      onNext: () => {
+        const next = activityRows[openIndex + 1];
+        const id = String(next?.id || "").trim();
+        if (id) setOpenSimpleRecordId(id);
+      },
+    };
+  }, [openSimpleRecordId, activityRows]);
 
   const handleSimpleProposalSave = async (nextForm, options = {}) => {
     const companyName =
@@ -414,6 +478,8 @@ export default function CustomerViewModal({
       companyName,
     });
     const saved = await saveSimpleServiceProposal(row, { forceNew: Boolean(options.forceNew) });
+    const sid = String(saved?.id || nextForm?.id || "").trim();
+    if (sid) setOpenSimpleRecordId(sid);
     if (resolvedId) await refreshActivity(resolvedId);
     return saved;
   };
@@ -502,130 +568,68 @@ export default function CustomerViewModal({
             </div>
 
             <div className="flex min-h-0 min-w-0 flex-col gap-4 lg:overflow-hidden">
-              <div className={`${ACTIVITY_PANEL} max-h-[min(42vh,22rem)] lg:max-h-none`}>
+              <div className={`${ACTIVITY_PANEL} max-h-[min(70vh,40rem)] lg:max-h-none`}>
                 <div className={ACTIVITY_PANEL_HEADER}>
                   <h3 className={SECTION_TITLE}>
-                    Invoices (
+                    Invoices & Quotes (
                     {activityLoading
                       ? "…"
-                      : invoiceStatusFilter
-                        ? `${filteredInvoices.length}/${activity.invoices.length}`
-                        : activity.invoices.length}
+                      : activityStatusFilter
+                        ? `${filteredActivityRows.length}/${activityRows.length}`
+                        : activityRows.length}
                     )
                   </h3>
                 </div>
                 <div className={ACTIVITY_PANEL_BODY}>
-                  {!activityLoading ? (
-                    <div className="shrink-0">
-                      <StatusTotalsBar
-                        totals={invoiceStatusTotals}
-                        moneyLabel={moneyLabel}
-                        selectedStatus={invoiceStatusFilter}
-                        onSelectStatus={setInvoiceStatusFilter}
-                        renderPill={(status) => (
-                          <InvoiceStatusPill status={status} mergedSettings={mergedSettings} large />
-                        )}
-                      />
+                  {!activityLoading && statusFilterCards.length > 1 ? (
+                    <div className="flex shrink-0 flex-wrap gap-1.5">
+                      {statusFilterCards.map((card) => {
+                        const active = (activityStatusFilter || "") === (card.key || "");
+                        const tile = card.tileAppearance || {};
+                        return (
+                          <button
+                            key={card.key || "__all__"}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setActivityStatusFilter(card.key ? card.key : null)
+                            }
+                            className={`inline-flex max-w-full items-center border px-2.5 py-1 text-left text-xs font-semibold leading-snug whitespace-normal break-words transition-[box-shadow,border-color] ${
+                              active
+                                ? "border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]"
+                                : "border-black/10 hover:border-black/25 dark:border-white/15 dark:hover:border-white/30"
+                            } ${tile.className || ""}`}
+                            style={tile.style || undefined}
+                          >
+                            {card.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : null}
                   <CustomerActivityTableBody
                     loading={activityLoading}
-                    isEmpty={filteredInvoices.length === 0}
+                    isEmpty={filteredActivityRows.length === 0}
                     emptyMessage={
-                      invoiceStatusFilter
-                        ? "No invoices with this status."
-                        : "No invoices found."
+                      activityStatusFilter
+                        ? "No documents with this status."
+                        : "No invoices or quotes found."
                     }
                   >
-                    <div className={TABLE_WRAP}>
+                    <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                      <div className="flex shrink-0 items-baseline justify-end gap-2 px-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary">
+                          Subtotal
+                        </span>
+                        <span className="min-w-[5.5rem] text-right text-[12px] font-semibold tabular-nums text-title">
+                          {moneyLabel(filteredSubtotal)}
+                        </span>
+                      </div>
+                      <div className={TABLE_WRAP}>
                       <table className={TABLE_CLASS}>
                         <thead>
                           <tr className={THEAD_ROW}>
-                            <th className={TH_CLASS}>Invoice #</th>
-                            <th className={TH_CLASS}>Date</th>
-                            <th className={TH_CLASS}>Status</th>
-                            <th className={`${TH_CLASS} text-right`}>Total</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredInvoices.map((inv) => (
-                            <tr key={inv.id} className="last:[&>td]:border-b-0">
-                              <td className={TD_CLASS}>
-                                {inv?.id ? (
-                                  <button
-                                    type="button"
-                                    className={openRecordBtnClass}
-                                    onClick={() =>
-                                      isSimple ? openSimpleProposal(inv) : setOpenInvoiceId(inv.id)
-                                    }
-                                    title="Open invoice"
-                                  >
-                                    {isSimple
-                                      ? inv.documentNumber || inv.quote || inv.invoiceNumber || "—"
-                                      : inv.invoiceNumber || "—"}
-                                  </button>
-                                ) : (
-                                  (isSimple ? inv.documentNumber : inv.invoiceNumber) || "—"
-                                )}
-                              </td>
-                              <td className={TD_CLASS}>
-                                {formatDate(
-                                  inv.date || inv.dateCreated || inv.invoiceSubmitDate
-                                ) || "—"}
-                              </td>
-                              <td className={TD_CLASS}>
-                                <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
-                              </td>
-                              <td className={`${TD_CLASS} text-right`}>
-                                {moneyLabel(activityRowAmount(inv))}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CustomerActivityTableBody>
-                </div>
-              </div>
-
-              <div className={`${ACTIVITY_PANEL} max-h-[min(42vh,22rem)] lg:max-h-none`}>
-                <div className={ACTIVITY_PANEL_HEADER}>
-                  <h3 className={SECTION_TITLE}>
-                    Quotes (
-                    {activityLoading
-                      ? "…"
-                      : quoteStatusFilter
-                        ? `${filteredQuotes.length}/${activity.quotes.length}`
-                        : activity.quotes.length}
-                    )
-                  </h3>
-                </div>
-                <div className={ACTIVITY_PANEL_BODY}>
-                  {!activityLoading ? (
-                    <div className="shrink-0">
-                      <StatusTotalsBar
-                        totals={quoteStatusTotals}
-                        moneyLabel={moneyLabel}
-                        selectedStatus={quoteStatusFilter}
-                        onSelectStatus={setQuoteStatusFilter}
-                        renderPill={(status) => (
-                          <QuoteStatusPill status={status} mergedSettings={mergedSettings} large />
-                        )}
-                      />
-                    </div>
-                  ) : null}
-                  <CustomerActivityTableBody
-                    loading={activityLoading}
-                    isEmpty={filteredQuotes.length === 0}
-                    emptyMessage={
-                      quoteStatusFilter ? "No quotes with this status." : "No quotes found."
-                    }
-                  >
-                    <div className={TABLE_WRAP}>
-                      <table className={TABLE_CLASS}>
-                        <thead>
-                          <tr className={THEAD_ROW}>
-                            <th className={TH_CLASS}>RFQ #</th>
+                            <th className={TH_CLASS}>Job#/Invoice#</th>
                             <th className={TH_CLASS}>Date</th>
                             <th className={TH_CLASS}>Status</th>
                             <th className={TH_CLASS}>Job Status</th>
@@ -633,50 +637,77 @@ export default function CustomerViewModal({
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredQuotes.map((q) => (
-                            <tr key={q.id} className="last:[&>td]:border-b-0">
-                              <td className={TD_CLASS}>
-                                {q?.id ? (
-                                  <button
-                                    type="button"
-                                    className={openRecordBtnClass}
-                                    onClick={() =>
-                                      isSimple ? openSimpleProposal(q) : setOpenQuoteId(q.id)
-                                    }
-                                    title={isSimple ? "Open service proposal" : "Open RFQ"}
-                                  >
-                                    {isSimple
-                                      ? q.documentNumber || q.quote || q.rfqNumber || "—"
-                                      : q.rfqNumber || "—"}
-                                  </button>
-                                ) : (
-                                  (isSimple ? q.documentNumber || q.quote : q.rfqNumber) || "—"
-                                )}
-                              </td>
-                              <td className={TD_CLASS}>
-                                {formatDate(q.date || q.dateCreated) || "—"}
-                              </td>
-                              <td className={TD_CLASS}>
-                                <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
-                              </td>
-                              <td className={TD_CLASS}>
-                                <JobStatusPill
-                                  jobStatus={q.jobStatus}
-                                  mergedSettings={mergedSettings}
-                                />
-                              </td>
-                              <td className={`${TD_CLASS} text-right`}>
-                                {moneyLabel(activityRowAmount(q))}
-                              </td>
-                            </tr>
-                          ))}
+                          {filteredActivityRows.map((row) => {
+                            const isInvoice = row.kind === "invoice";
+                            const statusChrome = docStatusCellChrome(
+                              row.kind,
+                              row.status,
+                              mergedSettings
+                            );
+                            const jobChrome = jobStatusCellChrome(
+                              row.jobStatus,
+                              mergedSettings
+                            );
+                            return (
+                              <tr
+                                key={`${row.kind}-${row.id || row.docNumber}`}
+                                className="hover:bg-muted/25 last:[&>td]:border-b-0"
+                              >
+                                <td className={TD_CLASS}>
+                                  {row.id ? (
+                                    <button
+                                      type="button"
+                                      className={openRecordBtnClass}
+                                      onClick={() => {
+                                        if (isSimple) {
+                                          openSimpleProposal(row.raw);
+                                          return;
+                                        }
+                                        if (isInvoice) setOpenInvoiceId(row.id);
+                                        else setOpenQuoteId(row.id);
+                                      }}
+                                      title={
+                                        isInvoice
+                                          ? "Open invoice"
+                                          : isSimple
+                                            ? "Open service proposal"
+                                            : "Open RFQ"
+                                      }
+                                    >
+                                      {row.docNumber}
+                                    </button>
+                                  ) : (
+                                    <span className="font-mono text-[12px]">{row.docNumber}</span>
+                                  )}
+                                </td>
+                                <td className={TD_MUTED_CLASS}>
+                                  {formatDate(row.dateRaw) || "—"}
+                                </td>
+                                <td
+                                  className={`border-b border-border ${statusChrome.className}`}
+                                  style={statusChrome.style || undefined}
+                                >
+                                  <span className={TD_STATUS_INNER}>{statusChrome.label}</span>
+                                </td>
+                                <td
+                                  className={`border-b border-border ${jobChrome.className}`}
+                                  style={jobChrome.style || undefined}
+                                >
+                                  <span className={TD_STATUS_INNER}>{jobChrome.label}</span>
+                                </td>
+                                <td className={`${TD_CLASS} text-right tabular-nums`}>
+                                  {moneyLabel(row.amount)}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
+                      </div>
                     </div>
                   </CustomerActivityTableBody>
                 </div>
               </div>
-
             </div>
             </div>
           </div>
@@ -711,23 +742,21 @@ export default function CustomerViewModal({
 
       {isSimple ? (
         <ServiceProposalFormModal
-          open={!!openSimpleRecord}
-          onClose={() => setOpenSimpleRecord(null)}
-          initialForm={openSimpleRecord}
+          open={Boolean(openSimpleRecordId)}
+          onClose={() => setOpenSimpleRecordId(null)}
+          initialForm={editingSimpleRecord}
           onSave={handleSimpleProposalSave}
+          searchResultNavigation={clientRecordNavigation}
           onAttachmentsChange={async (recordId, attachments) => {
             const id = String(recordId || "").trim();
             if (!id) return;
             const current =
               activity.quotes.find((r) => String(r.id) === id) ||
               activity.invoices.find((r) => String(r.id) === id) ||
-              openSimpleRecord;
+              { id };
             if (!current) return;
             const nextRow = { ...current, attachments: Array.isArray(attachments) ? attachments : [] };
             await saveSimpleServiceProposal(nextRow);
-            setOpenSimpleRecord((prev) =>
-              prev && String(prev.id) === id ? { ...prev, attachments: nextRow.attachments } : prev
-            );
             if (resolvedId) await refreshActivity(resolvedId);
           }}
         />

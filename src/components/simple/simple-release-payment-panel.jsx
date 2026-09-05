@@ -1,15 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiDollarSign, FiEye } from "react-icons/fi";
+import { FiEye } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
+import SimpleSelect from "@/components/simple/simple-select";
+import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
 import { useAlert } from "@/components/confirm-provider";
-import { useFormatDate, useFormatMoney } from "@/contexts/user-settings-context";
+import {
+  useFormatDate,
+  useFormatMoney,
+  useUserSettings,
+} from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
+import { SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/lib/simple-service-proposal-form";
 import {
   estimateEmployeePeriodPay,
   periodMonthBounds,
@@ -22,6 +31,8 @@ const FIELD_INPUT =
 const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
+const NAME_LINK_CLASS =
+  "font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
 function FieldRow({ label, labelWidth = "6.75rem", children, className = "" }) {
   return (
@@ -57,15 +68,26 @@ export default function SimpleReleasePaymentPanel() {
   const alert = useAlert();
   const formatDate = useFormatDate();
   const formatMoney = useFormatMoney();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const paymentMethodOptions = useMemo(() => {
+    const fromSettings = productDropdownSelectOptions(mergedSettings, "payment_method", {
+      includeEmpty: false,
+    });
+    return fromSettings.length ? fromSettings : SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS;
+  }, [mergedSettings]);
 
   const [month, setMonth] = useState(currentMonthValue);
   const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payingRow, setPayingRow] = useState(null);
   const [payAmount, setPayAmount] = useState("");
   const [payPaidAt, setPayPaidAt] = useState(todayIsoDate);
+  const [payPeriodFrom, setPayPeriodFrom] = useState("");
+  const [payPeriodTo, setPayPeriodTo] = useState("");
+  const [payMethod, setPayMethod] = useState("");
   const [payNotes, setPayNotes] = useState("");
   const [payPendingFiles, setPayPendingFiles] = useState([]);
   const [paySaving, setPaySaving] = useState(false);
@@ -74,6 +96,8 @@ export default function SimpleReleasePaymentPanel() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewingPayment, setViewingPayment] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+
+  const [historyEmployee, setHistoryEmployee] = useState(null);
 
   const bounds = useMemo(() => periodMonthBounds(month), [month]);
 
@@ -141,9 +165,10 @@ export default function SimpleReleasePaymentPanel() {
         seen.add(id);
         const hoursRow = hoursByEmployee.get(id);
         const totalHours = Number(hoursRow?.totalHours) || 0;
-        const payType = String(emp.payType || hoursRow?.payType || "hourly").toLowerCase() === "salary"
-          ? "salary"
-          : "hourly";
+        const payType =
+          String(emp.payType || hoursRow?.payType || "hourly").toLowerCase() === "salary"
+            ? "salary"
+            : "hourly";
         const hourlyRate = String(emp.hourlyRate ?? hoursRow?.hourlyRate ?? "").trim();
         const amountDue = estimateEmployeePeriodPay({
           payType,
@@ -222,9 +247,13 @@ export default function SimpleReleasePaymentPanel() {
 
   const openPay = (row) => {
     if (!row || row.status === "paid") return;
+    const monthBounds = periodMonthBounds(month);
     setPayingRow(row);
     setPayAmount(String(Number(row.amountDue) || 0));
     setPayPaidAt(todayIsoDate());
+    setPayPeriodFrom(monthBounds?.from || "");
+    setPayPeriodTo(monthBounds?.to || "");
+    setPayMethod("");
     setPayNotes("");
     setPayPendingFiles([]);
     setPayModalOpen(true);
@@ -235,6 +264,16 @@ export default function SimpleReleasePaymentPanel() {
     setPayModalOpen(false);
     setPayingRow(null);
     setPayPendingFiles([]);
+  };
+
+  const openHistory = (row) => {
+    const id = String(row?.employeeId || "").trim();
+    if (!id) return;
+    setHistoryEmployee({
+      employeeId: id,
+      name: String(row?.name || "").trim(),
+      employeeNumber: String(row?.employeeNumber || "").trim(),
+    });
   };
 
   const openView = async (row) => {
@@ -276,6 +315,26 @@ export default function SimpleReleasePaymentPanel() {
       await alert({ title: "Error", message: "Paid date is required.", variant: "danger" });
       return;
     }
+    if (!String(payMethod || "").trim()) {
+      await alert({ title: "Error", message: "Mode of payment is required.", variant: "danger" });
+      return;
+    }
+    if (!payPeriodFrom.trim() || !payPeriodTo.trim()) {
+      await alert({
+        title: "Error",
+        message: "Pay period start and end dates are required.",
+        variant: "danger",
+      });
+      return;
+    }
+    if (payPeriodFrom.trim() > payPeriodTo.trim()) {
+      await alert({
+        title: "Error",
+        message: "Pay period start date must be on or before the end date.",
+        variant: "danger",
+      });
+      return;
+    }
 
     setPaySaving(true);
     try {
@@ -286,11 +345,14 @@ export default function SimpleReleasePaymentPanel() {
         body: JSON.stringify({
           employeeId: payingRow.employeeId,
           periodMonth: month,
+          periodFrom: payPeriodFrom.trim(),
+          periodTo: payPeriodTo.trim(),
           payType: payingRow.payType,
           hourlyRate: payingRow.hourlyRate,
           hours: payingRow.totalHours,
           amount,
           paidAt: payPaidAt.trim(),
+          paymentMethod: String(payMethod || "").trim(),
           notes: payNotes.trim(),
         }),
       });
@@ -348,18 +410,32 @@ export default function SimpleReleasePaymentPanel() {
             <FiEye className="h-4 w-4 shrink-0" aria-hidden />
           </button>
         ) : (
-          <button
+          <Button
             type="button"
-            className="inline-flex items-center p-1.5 text-primary hover:bg-primary/10"
-            title="Record payment"
-            aria-label={`Record payment for ${row.name}`}
+            variant="primary"
+            size="sm"
+            className="h-7 shrink-0 whitespace-nowrap px-2.5 text-xs"
             onClick={() => openPay(row)}
           >
-            <FiDollarSign className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
+            Pay
+          </Button>
         ),
     },
-    { key: "name", label: "Employee", sortable: true },
+    {
+      key: "name",
+      label: "Employee",
+      sortable: true,
+      render: (v, row) => (
+        <button
+          type="button"
+          className={NAME_LINK_CLASS}
+          onClick={() => openHistory(row)}
+          title="View payment history"
+        >
+          {v || "Employee"}
+        </button>
+      ),
+    },
     { key: "employeeNumber", label: "Emp #", sortable: true },
     { key: "department", label: "Dept", sortable: true },
     {
@@ -444,7 +520,7 @@ export default function SimpleReleasePaymentPanel() {
 
       <p className="text-sm text-secondary">
         Hourly pay uses clocked hours × rate for the month. Salary uses the employee salary amount.
-        Record payment per employee when you pay them.
+        Record payment per employee when you pay them. Click an employee name to view payment history.
       </p>
 
       <Table
@@ -491,6 +567,27 @@ export default function SimpleReleasePaymentPanel() {
               {" hrs"}
             </p>
           ) : null}
+          <FieldRow label="Pay period">
+            <div className="flex min-w-0 flex-nowrap items-center gap-2">
+              <input
+                type="date"
+                value={payPeriodFrom}
+                onChange={(e) => setPayPeriodFrom(e.target.value)}
+                required
+                className={`${FIELD_INPUT} !w-auto min-w-0 flex-1`}
+                aria-label="Pay period start date"
+              />
+              <span className="shrink-0 text-xs font-medium text-secondary">to</span>
+              <input
+                type="date"
+                value={payPeriodTo}
+                onChange={(e) => setPayPeriodTo(e.target.value)}
+                required
+                className={`${FIELD_INPUT} !w-auto min-w-0 flex-1`}
+                aria-label="Pay period end date"
+              />
+            </div>
+          </FieldRow>
           <FieldRow label="Amount">
             <input
               type="number"
@@ -509,6 +606,21 @@ export default function SimpleReleasePaymentPanel() {
               onChange={(e) => setPayPaidAt(e.target.value)}
               required
               className={FIELD_INPUT}
+            />
+          </FieldRow>
+          <FieldRow label="Mode of payment">
+            <SimpleSelect
+              options={[
+                { value: "", label: "Select mode of payment" },
+                ...paymentMethodOptions,
+              ]}
+              value={payMethod}
+              onChange={(e) => setPayMethod(e.target.value)}
+              className="w-full"
+              triggerClassName="h-7 w-full rounded-none"
+              placeholder="Select mode of payment"
+              searchable
+              aria-label="Mode of payment"
             />
           </FieldRow>
           <FieldRow label="Notes" className="items-start">
@@ -551,10 +663,19 @@ export default function SimpleReleasePaymentPanel() {
         ) : viewingPayment ? (
           <div className="flex flex-col gap-3">
             <FieldRow label="Employee">
-              <p className="text-sm text-title">{viewingPayment.employeeName || "—"}</p>
+              <p className="text-sm text-title">{viewingPayment.employeeName || "-"}</p>
             </FieldRow>
             <FieldRow label="Month">
               <p className="text-sm text-title">{monthLabel(viewingPayment.periodMonth)}</p>
+            </FieldRow>
+            <FieldRow label="Pay period">
+              <p className="text-sm text-title">
+                {viewingPayment.periodFrom || viewingPayment.periodTo
+                  ? `${formatDate(viewingPayment.periodFrom) || viewingPayment.periodFrom || "-"} to ${
+                      formatDate(viewingPayment.periodTo) || viewingPayment.periodTo || "-"
+                    }`
+                  : "-"}
+              </p>
             </FieldRow>
             <FieldRow label="Hours">
               <p className="text-sm tabular-nums text-title">
@@ -570,16 +691,29 @@ export default function SimpleReleasePaymentPanel() {
               </Badge>
             </FieldRow>
             <FieldRow label="Paid date">
-              <p className="text-sm text-title">{formatDate(viewingPayment.paidAt) || "—"}</p>
+              <p className="text-sm text-title">{formatDate(viewingPayment.paidAt) || "-"}</p>
+            </FieldRow>
+            <FieldRow label="Mode of payment">
+              <p className="text-sm text-title">
+                {String(viewingPayment.paymentMethod || "").trim() || "-"}
+              </p>
             </FieldRow>
             <FieldRow label="Notes" className="items-start">
               <p className="whitespace-pre-wrap text-sm text-title">
-                {String(viewingPayment.notes || "").trim() || "—"}
+                {String(viewingPayment.notes || "").trim() || "-"}
               </p>
             </FieldRow>
           </div>
         ) : null}
       </Modal>
+
+      <SimpleEmployeePaymentHistoryModal
+        open={Boolean(historyEmployee?.employeeId)}
+        onClose={() => setHistoryEmployee(null)}
+        employeeId={historyEmployee?.employeeId}
+        employeeName={historyEmployee?.name}
+        employeeNumber={historyEmployee?.employeeNumber}
+      />
     </div>
   );
 }

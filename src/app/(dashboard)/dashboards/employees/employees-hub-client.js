@@ -208,6 +208,16 @@ export default function EmployeesHubClient() {
     void refresh();
   }, [refresh]);
 
+  const switchTab = (nextTab) => {
+    if (nextTab === tab) return;
+    if (nextTab === "employees" || nextTab === "release-payment") {
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    setTab(nextTab);
+  };
+
   const [locating, setLocating] = useState(false);
 
   const useMyLocation = () => {
@@ -365,7 +375,7 @@ export default function EmployeesHubClient() {
   );
 
   return (
-    <div className="mx-auto box-border w-full max-w-6xl px-4 py-8">
+    <div className="box-border w-full px-4 py-8">
       <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
@@ -399,7 +409,7 @@ export default function EmployeesHubClient() {
             type="button"
             role="tab"
             aria-selected={tab === t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => switchTab(t.id)}
             className={`shrink-0 px-3.5 py-2 text-sm font-bold tracking-tight ${
               tab === t.id
                 ? "bg-primary text-white shadow-sm"
@@ -418,11 +428,22 @@ export default function EmployeesHubClient() {
 
       {tab === "release-payment" ? <SimpleReleasePaymentPanel /> : null}
 
-      {loading && !meta && tab !== "employees" && tab !== "release-payment" ? (
-        <p className="text-sm text-secondary">Loading…</p>
+      {loading && tab !== "employees" && tab !== "release-payment" ? (
+        <div
+          className="flex min-h-[16rem] flex-col items-center justify-center gap-3"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <span
+            className="inline-block h-8 w-8 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+            aria-hidden
+          />
+          <p className="text-sm text-secondary">Loading…</p>
+        </div>
       ) : null}
 
-      {tab === "floor" ? (
+      {!loading && tab === "floor" ? (
         <div className="w-full min-w-0 space-y-3">
           <p className="text-sm text-secondary">
             Currently clocked in: <strong>{meta?.floor?.length || 0}</strong>
@@ -463,7 +484,7 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {tab === "time-clock" ? (
+      {!loading && tab === "time-clock" ? (
         <div className="grid w-full min-w-0 gap-6 lg:grid-cols-2">
           <div className="space-y-3 border border-border bg-card p-4">
             <h2 className="text-sm font-bold uppercase tracking-wide text-title">Shop QR</h2>
@@ -537,7 +558,7 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {tab === "hours" ? (
+      {!loading && tab === "hours" ? (
         <div className="w-full min-w-0 space-y-3">
           <div className="flex flex-wrap items-end gap-2">
             <label className="text-xs font-bold text-title">
@@ -579,7 +600,7 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {tab === "punches" ? (
+      {!loading && tab === "punches" ? (
         <div className="w-full min-w-0 space-y-3">
           <div className="flex justify-end">
             <Button type="button" size="sm" variant="primary" onClick={() => setAddPunchOpen(true)}>
@@ -640,7 +661,7 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {tab === "alerts" ? (
+      {!loading && tab === "alerts" ? (
         <div className="w-full min-w-0">
         <Table
           columns={[
