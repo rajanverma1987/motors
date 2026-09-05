@@ -360,17 +360,23 @@ export default function HomePage() {
                 </p>
               </div>
               <figure className="relative mx-auto w-full max-w-lg overflow-hidden rounded-xl border border-border bg-bg shadow-sm lg:max-w-none">
-                <Image
-                  src={FEATURES_WINDERS_TABLET_PATH}
-                  alt={FEATURES_WINDERS_TABLET_ALT}
-                  width={FEATURES_WINDERS_TABLET_WIDTH}
-                  height={FEATURES_WINDERS_TABLET_HEIGHT}
-                  sizes="(max-width: 1024px) 90vw, 28rem"
-                  className="h-auto w-full object-cover object-center"
-                />
-                <figcaption className="border-t border-border bg-card/80 px-3 py-2 text-center text-xs text-secondary sm:text-sm">
-                  Draw diagrams on the job tablet.
-                </figcaption>
+                <Link
+                  href="/blog/motor-repair-job-diagram-drawing-tool"
+                  className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  aria-label="Read about drawing job diagrams on the tablet"
+                >
+                  <Image
+                    src={FEATURES_WINDERS_TABLET_PATH}
+                    alt={FEATURES_WINDERS_TABLET_ALT}
+                    width={FEATURES_WINDERS_TABLET_WIDTH}
+                    height={FEATURES_WINDERS_TABLET_HEIGHT}
+                    sizes="(max-width: 1024px) 90vw, 28rem"
+                    className="h-auto w-full object-cover object-center transition group-hover:opacity-95"
+                  />
+                  <figcaption className="border-t border-border bg-card/80 px-3 py-2 text-center text-xs text-secondary group-hover:text-primary sm:text-sm">
+                    Draw diagrams on the job tablet.
+                  </figcaption>
+                </Link>
               </figure>
             </div>
             <ul className="mt-8 space-y-6">
