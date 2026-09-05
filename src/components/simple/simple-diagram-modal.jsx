@@ -871,8 +871,8 @@ export default function SimpleDiagramModal({
     root.id = "simple-diagram-print-root";
     root.setAttribute("aria-hidden", "true");
     root.style.cssText =
-      "position:fixed;left:-100vw;top:0;opacity:0;pointer-events:none;z-index:-1;width:8.5in;";
-    root.innerHTML = `<img src="${url}" alt="Job diagram" style="width:100%;height:auto;" />`;
+      "position:fixed;left:-100vw;top:0;opacity:0;pointer-events:none;z-index:-1;width:8.5in;background:#ffffff;";
+    root.innerHTML = `<img src="${url}" alt="Job diagram" class="simple-diagram-print-image" style="display:block;width:100%;height:auto;max-height:10in;object-fit:contain;" />`;
     document.body.appendChild(root);
     setPrintRoot(root);
   };
@@ -883,27 +883,74 @@ export default function SimpleDiagramModal({
     style.setAttribute("data-simple-diagram-print", "1");
     style.textContent = `
       @media print {
-        body * { visibility: hidden !important; }
-        #simple-diagram-print-root, #simple-diagram-print-root * { visibility: visible !important; }
+        @page {
+          size: letter;
+          margin: 0.4in;
+        }
+        html, body {
+          height: auto !important;
+          overflow: visible !important;
+          background: #ffffff !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        /* Hide app chrome completely so it cannot create blank pages */
+        body > *:not(#simple-diagram-print-root) {
+          display: none !important;
+        }
         #simple-diagram-print-root {
-          position: fixed !important;
-          left: 0 !important;
-          top: 0 !important;
+          display: block !important;
+          position: static !important;
+          left: auto !important;
+          top: auto !important;
           opacity: 1 !important;
           width: 100% !important;
-          z-index: 99999 !important;
-          background: white !important;
+          max-width: 100% !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background: #ffffff !important;
+          z-index: auto !important;
+          overflow: visible !important;
+          box-shadow: none !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+        }
+        #simple-diagram-print-root img,
+        #simple-diagram-print-root .simple-diagram-print-image {
+          display: block !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          height: auto !important;
+          max-height: 10in !important;
+          object-fit: contain !important;
+          break-inside: avoid !important;
+          page-break-inside: avoid !important;
+          page-break-after: avoid !important;
         }
       }
     `;
     document.head.appendChild(style);
     let cancelled = false;
-    requestAnimationFrame(() => {
+    const img = printRoot.querySelector("img");
+
+    const runPrint = () => {
+      if (cancelled) return;
       requestAnimationFrame(() => {
-        if (cancelled) return;
-        window.print();
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          window.print();
+        });
       });
-    });
+    };
+
+    if (img && !img.complete) {
+      img.addEventListener("load", runPrint, { once: true });
+      img.addEventListener("error", runPrint, { once: true });
+    } else {
+      runPrint();
+    }
+
     const cleanup = () => {
       cancelled = true;
       style.remove();
@@ -1139,65 +1186,68 @@ export default function SimpleDiagramModal({
                 <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
                   Tools
                 </span>
-                <div className="flex flex-wrap items-center gap-1">
-                  <DiagramIconBtn
-                    active={tool === TOOL_PEN}
-                    onClick={() => chooseTool(TOOL_PEN)}
-                    title="Pen"
-                    label="Pen"
-                  >
-                    <FiEdit2 className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <DiagramIconBtn
-                    active={tool === TOOL_ERASER}
-                    onClick={() => chooseTool(TOOL_ERASER)}
-                    title="Eraser"
-                    label="Eraser"
-                  >
-                    <BiEraser className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <DiagramIconBtn
-                    active={tool === TOOL_SELECT}
-                    onClick={() => chooseTool(TOOL_SELECT)}
-                    title="Select area"
-                    label="Select"
-                  >
-                    <DashedSquareIcon className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <div className="mx-1 h-7 w-px bg-border" aria-hidden />
-                  <DiagramIconBtn
-                    danger
-                    disabled={!selectionHasArea(selection)}
-                    onClick={handleDeleteSelection}
-                    title="Delete selected area"
-                    label="Delete area"
-                  >
-                    <FiTrash2 className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <DiagramIconBtn
-                    onClick={handleUndo}
-                    title="Undo last change (Ctrl/Cmd+Z)"
-                    label="Undo"
-                    disabled={historyTick >= 0 && strokeStackRef.current.length === 0}
-                  >
-                    <FiRotateCcw className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <DiagramIconBtn
-                    onClick={handleRedo}
-                    title="Redo (Ctrl/Cmd+Y)"
-                    label="Redo"
-                    disabled={historyTick >= 0 && redoStackRef.current.length === 0}
-                  >
-                    <FiRotateCw className="h-4 w-4 shrink-0" />
-                  </DiagramIconBtn>
-                  <button
-                    type="button"
-                    onClick={() => void handleClear()}
-                    title="Clear entire drawing"
-                    className="inline-flex h-9 items-center gap-1.5 border border-border bg-background px-2.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
-                  >
-                    Clear
-                  </button>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <DiagramIconBtn
+                      active={tool === TOOL_PEN}
+                      onClick={() => chooseTool(TOOL_PEN)}
+                      title="Pen"
+                      label="Pen"
+                    >
+                      <FiEdit2 className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                    <DiagramIconBtn
+                      onClick={handleUndo}
+                      title="Undo last change (Ctrl/Cmd+Z)"
+                      label="Undo"
+                      disabled={historyTick >= 0 && strokeStackRef.current.length === 0}
+                    >
+                      <FiRotateCcw className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                    <DiagramIconBtn
+                      onClick={handleRedo}
+                      title="Redo (Ctrl/Cmd+Y)"
+                      label="Redo"
+                      disabled={historyTick >= 0 && redoStackRef.current.length === 0}
+                    >
+                      <FiRotateCw className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <DiagramIconBtn
+                      active={tool === TOOL_ERASER}
+                      onClick={() => chooseTool(TOOL_ERASER)}
+                      title="Eraser"
+                      label="Eraser"
+                    >
+                      <BiEraser className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                    <DiagramIconBtn
+                      active={tool === TOOL_SELECT}
+                      onClick={() => chooseTool(TOOL_SELECT)}
+                      title="Select area"
+                      label="Select"
+                    >
+                      <DashedSquareIcon className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                    <DiagramIconBtn
+                      danger
+                      disabled={!selectionHasArea(selection)}
+                      onClick={handleDeleteSelection}
+                      title="Delete selected area"
+                      label="Delete area"
+                    >
+                      <FiTrash2 className="h-4 w-4 shrink-0" />
+                    </DiagramIconBtn>
+                    <button
+                      type="button"
+                      onClick={() => void handleClear()}
+                      title="Clear entire drawing"
+                      className="inline-flex h-9 items-center gap-1.5 border border-border bg-background px-2.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
               </div>
 
