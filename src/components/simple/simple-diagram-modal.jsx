@@ -6,6 +6,7 @@ import {
   FiEdit2,
   FiPlus,
   FiRotateCcw,
+  FiRotateCw,
   FiSave,
   FiTrash2,
 } from "react-icons/fi";
@@ -86,6 +87,7 @@ export default function SimpleDiagramModal({
   const [penSize, setPenSize] = useState(3);
   const [tool, setTool] = useState(TOOL_PEN);
   const [selection, setSelection] = useState(null);
+  const [historyTick, setHistoryTick] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [fitSize, setFitSize] = useState({ w: CANVAS_W, h: CANVAS_H });
@@ -98,6 +100,7 @@ export default function SimpleDiagramModal({
   const drawingRef = useRef(false);
   const lastPtRef = useRef(null);
   const strokeStackRef = useRef([]);
+  const redoStackRef = useRef([]);
   const currentStrokeRef = useRef(null);
   const selectStartRef = useRef(null);
   const bgImageRef = useRef(null);
@@ -126,6 +129,7 @@ export default function SimpleDiagramModal({
     drawingRef.current = false;
     lastPtRef.current = null;
     strokeStackRef.current = [];
+    redoStackRef.current = [];
     currentStrokeRef.current = null;
     selectStartRef.current = null;
     bgImageRef.current = null;
@@ -136,6 +140,7 @@ export default function SimpleDiagramModal({
     panRef.current = { x: 0, y: 0 };
     setSelection(null);
     setTool(TOOL_PEN);
+    setHistoryTick(0);
     setZoom(1);
     setPan({ x: 0, y: 0 });
   }, []);
@@ -489,6 +494,8 @@ export default function SimpleDiagramModal({
       w: selection.w,
       h: selection.h,
     });
+    redoStackRef.current = [];
+    setHistoryTick((n) => n + 1);
     setSelection(null);
     selectStartRef.current = null;
     redraw();
@@ -506,6 +513,15 @@ export default function SimpleDiagramModal({
       if (e.key === "Escape") {
         setSelection(null);
         selectStartRef.current = null;
+      }
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && String(e.key || "").toLowerCase() === "z" && !e.shiftKey) {
+        e.preventDefault();
+        handleUndo();
+      }
+      if (mod && (String(e.key || "").toLowerCase() === "y" || (String(e.key || "").toLowerCase() === "z" && e.shiftKey))) {
+        e.preventDefault();
+        handleRedo();
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -604,6 +620,8 @@ export default function SimpleDiagramModal({
     };
     currentStrokeRef.current = stroke;
     strokeStackRef.current.push(stroke);
+    redoStackRef.current = [];
+    setHistoryTick((n) => n + 1);
     const ctx = canvas.getContext("2d");
     if (ctx) paintStroke(ctx, stroke);
   };
@@ -719,7 +737,18 @@ export default function SimpleDiagramModal({
   };
 
   const handleUndo = () => {
-    strokeStackRef.current.pop();
+    if (!strokeStackRef.current.length) return;
+    const op = strokeStackRef.current.pop();
+    if (op) redoStackRef.current.push(op);
+    setHistoryTick((n) => n + 1);
+    redraw();
+  };
+
+  const handleRedo = () => {
+    if (!redoStackRef.current.length) return;
+    const op = redoStackRef.current.pop();
+    if (op) strokeStackRef.current.push(op);
+    setHistoryTick((n) => n + 1);
     redraw();
   };
 
@@ -735,9 +764,11 @@ export default function SimpleDiagramModal({
     });
     if (!ok) return;
     strokeStackRef.current = [];
+    redoStackRef.current = [];
     currentStrokeRef.current = null;
     setSelection(null);
     selectStartRef.current = null;
+    setHistoryTick((n) => n + 1);
     if (editingSaved) {
       bgImageRef.current = null;
       editingSavedRef.current = false;
@@ -1143,8 +1174,21 @@ export default function SimpleDiagramModal({
                   >
                     <FiTrash2 className="h-4 w-4 shrink-0" />
                   </DiagramIconBtn>
-                  <DiagramIconBtn onClick={handleUndo} title="Undo last change" label="Undo">
+                  <DiagramIconBtn
+                    onClick={handleUndo}
+                    title="Undo last change (Ctrl/Cmd+Z)"
+                    label="Undo"
+                    disabled={historyTick >= 0 && strokeStackRef.current.length === 0}
+                  >
                     <FiRotateCcw className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <DiagramIconBtn
+                    onClick={handleRedo}
+                    title="Redo (Ctrl/Cmd+Y)"
+                    label="Redo"
+                    disabled={historyTick >= 0 && redoStackRef.current.length === 0}
+                  >
+                    <FiRotateCw className="h-4 w-4 shrink-0" />
                   </DiagramIconBtn>
                   <button
                     type="button"
