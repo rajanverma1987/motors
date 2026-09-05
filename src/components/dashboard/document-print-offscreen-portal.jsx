@@ -70,6 +70,17 @@ function injectDocumentPrintStyles() {
         break-inside: avoid !important;
         page-break-inside: avoid !important;
       }
+      .${PRINT_ROOT_CLASS} .datasheet-diagram-print-page {
+        break-before: page !important;
+        page-break-before: always !important;
+      }
+      .${PRINT_ROOT_CLASS} .datasheet-diagram-print-image {
+        max-width: 100% !important;
+        max-height: 8.6in !important;
+        width: auto !important;
+        height: auto !important;
+        object-fit: contain !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -93,13 +104,35 @@ const OFFSCREEN_STYLE = {
   colorScheme: "light",
 };
 
+function waitForPrintImages(root, timeoutMs = 5000) {
+  if (!root) return Promise.resolve();
+  const imgs = Array.from(root.querySelectorAll("img"));
+  if (!imgs.length) return Promise.resolve();
+  const loadOne = (img) => {
+    if (img.complete && img.naturalWidth > 0) {
+      return typeof img.decode === "function" ? img.decode().catch(() => {}) : Promise.resolve();
+    }
+    return new Promise((resolve) => {
+      const done = () => resolve();
+      img.addEventListener("load", done, { once: true });
+      img.addEventListener("error", done, { once: true });
+    });
+  };
+  return Promise.race([
+    Promise.all(imgs.map(loadOne)),
+    new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+  ]);
+}
+
 /**
  * Off-screen print portal — opens the system print dialog only (no full-screen overlay).
  * Always prints as a light document (ignores UI dark mode).
+ * Waits briefly for images (e.g. job diagrams) before calling window.print().
  */
 export default function DocumentPrintOffscreenPortal({ open, onClose, children }) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  const rootRef = useRef(null);
 
   useEffect(() => {
     if (!open) return;
@@ -107,17 +140,25 @@ export default function DocumentPrintOffscreenPortal({ open, onClose, children }
   }, [open]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) return undefined;
     const restoreTheme = beginPrintLightTheme();
+    let cancelled = false;
     const handleAfterPrint = () => {
       restoreTheme();
       onCloseRef.current?.();
     };
     window.addEventListener("afterprint", handleAfterPrint);
     const id = requestAnimationFrame(() => {
-      requestAnimationFrame(() => window.print());
+      requestAnimationFrame(() => {
+        void (async () => {
+          await waitForPrintImages(rootRef.current);
+          if (cancelled) return;
+          window.print();
+        })();
+      });
     });
     return () => {
+      cancelled = true;
       cancelAnimationFrame(id);
       window.removeEventListener("afterprint", handleAfterPrint);
       restoreTheme();
@@ -128,6 +169,7 @@ export default function DocumentPrintOffscreenPortal({ open, onClose, children }
 
   return createPortal(
     <div
+      ref={rootRef}
       className={`${PRINT_ROOT_CLASS} bg-white text-neutral-900`}
       style={OFFSCREEN_STYLE}
       aria-hidden="true"

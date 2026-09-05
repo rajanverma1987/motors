@@ -505,6 +505,7 @@ export default function SimpleDatasheetModal({
           datasheet={printDatasheet}
           printContext={resolvedPrintContext}
           technicianLabel={technicianLabel}
+          jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
         />
       </DocumentPrintOffscreenPortal>
     ) : null}

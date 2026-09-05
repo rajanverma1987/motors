@@ -288,6 +288,56 @@ function PrintTabPage({
   );
 }
 
+function PrintDiagramPages({ diagrams, headerProps }) {
+  const list = Array.isArray(diagrams) ? diagrams.filter((d) => String(d?.url || "").trim()) : [];
+  if (!list.length) return null;
+
+  return (
+    <>
+      {list.map((diagram, index) => {
+        const url = String(diagram.url || "").trim();
+        const name = String(diagram.name || "").trim() || `Diagram ${index + 1}`;
+        const templateName = String(diagram.templateName || "").trim();
+        const subtitle = templateName && templateName !== name ? templateName : `Diagram ${index + 1} of ${list.length}`;
+        return (
+          <div
+            key={diagram.id || url || index}
+            className="datasheet-diagram-print-page bg-white text-black"
+            style={{ pageBreakBefore: "always", breakBefore: "page" }}
+          >
+            <PrintDocumentHeader
+              title={name}
+              subtitle={subtitle}
+              {...headerProps}
+              compact
+            />
+            <div className="mt-2 flex min-h-[8.2in] items-center justify-center border border-black bg-white p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={name}
+                className="datasheet-diagram-print-image max-h-[8.2in] max-w-full object-contain"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[8pt] text-black/70">
+              <span>
+                <span className="font-semibold">{headerProps.documentLabel || "Job#"}:</span>{" "}
+                <span className="font-bold tabular-nums text-black">
+                  {cellValue(headerProps.documentNumber)}
+                </span>
+              </span>
+              <span className="max-w-[60%] truncate text-right">
+                <span className="font-semibold">Customer:</span>{" "}
+                <span className="font-semibold text-black">{cellValue(headerProps.customerName)}</span>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function HalfKv({ label, value, className = "" }) {
   return (
     <div className={`grid grid-cols-[38%_62%] items-stretch ${className}`.trim()}>
@@ -499,12 +549,14 @@ function AcAssemblyPrintBody({ values }) {
 
 /**
  * Printable datasheet — professional letter-size shop form (bordered field grid).
+ * Appends one page per saved job diagram with job # and customer header.
  */
 export default function SimpleDatasheetPrintSheet({
   motorType = "AC",
   datasheet,
   printContext = {},
   technicianLabel = "",
+  jobDiagrams = [],
 }) {
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
@@ -539,6 +591,8 @@ export default function SimpleDatasheetPrintSheet({
     customerPo,
     printedAt,
   };
+
+  const diagramPages = <PrintDiagramPages diagrams={jobDiagrams} headerProps={headerProps} />;
 
   if (!isDc) {
     const section = String(datasheet?.section || "Complete Motor").trim();
@@ -592,6 +646,7 @@ export default function SimpleDatasheetPrintSheet({
             </PrintTabPage>
           </>
         ) : null}
+        {diagramPages}
       </div>
     );
   }
@@ -638,6 +693,7 @@ export default function SimpleDatasheetPrintSheet({
           <PrintNotes notes={armature.notes} />
         </PrintTabPage>
       ) : null}
+      {diagramPages}
     </div>
   );
 }
