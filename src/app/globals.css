@@ -300,6 +300,12 @@ body.simple-dashboards-square-inputs [role="button"] {
   border-radius: 0 !important;
 }
 
+/* Diagram pen colors must stay circular despite square form chrome */
+body.simple-dashboards-square-inputs button.diagram-color-swatch,
+body.simple-dashboards-square-inputs .diagram-color-swatch {
+  border-radius: 9999px !important;
+}
+
 /*
  * Simple portal screen chrome — calmer hierarchy, same layout.
  * Scoped to .simple-portal so marketing / Classic leftovers are untouched.

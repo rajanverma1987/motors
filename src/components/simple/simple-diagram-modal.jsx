@@ -1,7 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { FiArrowLeft, FiDownload, FiPlus, FiTrash2 } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiDownload,
+  FiEdit2,
+  FiMaximize,
+  FiMove,
+  FiPlus,
+  FiRotateCcw,
+  FiSquare,
+  FiTrash2,
+  FiZoomIn,
+} from "react-icons/fi";
+import { BiEraser } from "react-icons/bi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
@@ -11,7 +23,48 @@ import { normalizeJobDiagram, normalizeJobDiagrams } from "@/lib/diagram-templat
 
 const CANVAS_W = 1400;
 const CANVAS_H = 1000;
-const PEN_COLORS = ["#111827", "#dc2626", "#2563eb", "#16a34a", "#ca8a04"];
+const PEN_COLORS = ["#111827", "#dc2626", "#2563eb", "#16a34a", "#ca8a04", "#7c3aed", "#ea580c"];
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 4;
+const TOOL_PEN = "pen";
+const TOOL_ERASER = "eraser";
+const TOOL_SELECT = "select";
+const MODE_DRAW = "draw";
+const MODE_ZOOM = "zoom";
+const MIN_SELECT_PX = 4;
+
+function clampZoom(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.round(n * 100) / 100));
+}
+
+function pointerDistance(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.hypot(dx, dy);
+}
+
+function pointerMidpoint(a, b) {
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function normalizeRect(a, b) {
+  const x1 = Math.min(a.x, b.x);
+  const y1 = Math.min(a.y, b.y);
+  const x2 = Math.max(a.x, b.x);
+  const y2 = Math.max(a.y, b.y);
+  return {
+    x: Math.max(0, Math.min(CANVAS_W, x1)),
+    y: Math.max(0, Math.min(CANVAS_H, y1)),
+    w: Math.max(0, Math.min(CANVAS_W, x2) - Math.max(0, Math.min(CANVAS_W, x1))),
+    h: Math.max(0, Math.min(CANVAS_H, y2) - Math.max(0, Math.min(CANVAS_H, y1))),
+  };
+}
+
+function selectionHasArea(sel) {
+  return Boolean(sel && sel.w >= MIN_SELECT_PX && sel.h >= MIN_SELECT_PX);
+}
 
 /**
  * Full-height modal: list job diagrams, pick a blank design, draw, save (multiple per job).
@@ -37,19 +90,31 @@ export default function SimpleDiagramModal({
   const [saving, setSaving] = useState(false);
   const [penColor, setPenColor] = useState(PEN_COLORS[0]);
   const [penSize, setPenSize] = useState(3);
-  const [eraser, setEraser] = useState(false);
+  const [tool, setTool] = useState(TOOL_PEN);
+  const [selection, setSelection] = useState(null);
+  const [canvasMode, setCanvasMode] = useState(MODE_DRAW);
+  const [zoom, setZoom] = useState(1);
+  const [fitSize, setFitSize] = useState({ w: CANVAS_W, h: CANVAS_H });
   const [printRoot, setPrintRoot] = useState(null);
   /** When set, save replaces this diagram id; empty string means create new. */
   const [editingDiagramId, setEditingDiagramId] = useState("");
 
   const canvasRef = useRef(null);
+  const viewportRef = useRef(null);
   const drawingRef = useRef(false);
   const lastPtRef = useRef(null);
   const strokeStackRef = useRef([]);
   const currentStrokeRef = useRef(null);
+  const selectStartRef = useRef(null);
   const bgImageRef = useRef(null);
   /** True when canvas background is a previously saved job diagram (baked image). */
   const editingSavedRef = useRef(false);
+  const zoomRef = useRef(1);
+  const fitSizeRef = useRef({ w: CANVAS_W, h: CANVAS_H });
+  const canvasModeRef = useRef(MODE_DRAW);
+  const activePointersRef = useRef(new Map());
+  const gestureRef = useRef(null);
+  const pendingScrollRef = useRef(null);
 
   const active = normalizeJobDiagram(diagrams.find((d) => d.id === activeId) || null);
 
@@ -64,8 +129,16 @@ export default function SimpleDiagramModal({
     lastPtRef.current = null;
     strokeStackRef.current = [];
     currentStrokeRef.current = null;
+    selectStartRef.current = null;
     bgImageRef.current = null;
     editingSavedRef.current = false;
+    activePointersRef.current.clear();
+    gestureRef.current = null;
+    pendingScrollRef.current = null;
+    setSelection(null);
+    setTool(TOOL_PEN);
+    setCanvasMode(MODE_DRAW);
+    setZoom(1);
   }, []);
 
   const loadTemplates = useCallback(async () => {
@@ -115,6 +188,111 @@ export default function SimpleDiagramModal({
     return () => clearTimeout(t);
   }, [q, open, step, loadTemplates]);
 
+  useEffect(() => {
+    if (step === "draw") {
+      setZoom(1);
+      setSelection(null);
+      setTool(TOOL_PEN);
+      setCanvasMode(MODE_DRAW);
+      activePointersRef.current.clear();
+      gestureRef.current = null;
+    }
+  }, [step]);
+
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+
+  useEffect(() => {
+    fitSizeRef.current = fitSize;
+  }, [fitSize]);
+
+  useEffect(() => {
+    canvasModeRef.current = canvasMode;
+  }, [canvasMode]);
+
+  const applyZoomAroundClientPoint = useCallback((clientX, clientY, nextZoom) => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      setZoom(clampZoom(nextZoom));
+      return;
+    }
+    const oldZoom = zoomRef.current || 1;
+    const fit = fitSizeRef.current;
+    const clamped = clampZoom(nextZoom);
+    if (clamped === oldZoom) return;
+
+    const rect = viewport.getBoundingClientRect();
+    const focalX = clientX - rect.left;
+    const focalY = clientY - rect.top;
+    const oldW = Math.max(1, fit.w * oldZoom);
+    const oldH = Math.max(1, fit.h * oldZoom);
+    const ratioX = (viewport.scrollLeft + focalX) / oldW;
+    const ratioY = (viewport.scrollTop + focalY) / oldH;
+
+    pendingScrollRef.current = { ratioX, ratioY, focalX, focalY };
+    zoomRef.current = clamped;
+    setZoom(clamped);
+  }, []);
+
+  useLayoutEffect(() => {
+    const pending = pendingScrollRef.current;
+    if (!pending) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const fit = fitSizeRef.current;
+    const z = zoomRef.current || 1;
+    const newW = Math.max(1, fit.w * z);
+    const newH = Math.max(1, fit.h * z);
+    viewport.scrollLeft = pending.ratioX * newW - pending.focalX;
+    viewport.scrollTop = pending.ratioY * newH - pending.focalY;
+    pendingScrollRef.current = null;
+  }, [zoom, fitSize]);
+
+  useLayoutEffect(() => {
+    if (!open || step !== "draw") return undefined;
+    const el = viewportRef.current;
+    if (!el) return undefined;
+    const updateFit = () => {
+      const pad = 8;
+      const availW = Math.max(el.clientWidth - pad, 80);
+      const availH = Math.max(el.clientHeight - pad, 80);
+      const scale = Math.min(availW / CANVAS_W, availH / CANVAS_H);
+      setFitSize({
+        w: Math.max(1, Math.floor(CANVAS_W * scale)),
+        h: Math.max(1, Math.floor(CANVAS_H * scale)),
+      });
+    };
+    updateFit();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateFit) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", updateFit);
+
+    const onWheel = (e) => {
+      if (canvasModeRef.current !== MODE_ZOOM) return;
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      const factor = direction > 0 ? 1.08 : 1 / 1.08;
+      applyZoomAroundClientPoint(e.clientX, e.clientY, (zoomRef.current || 1) * factor);
+    };
+
+    const onTouchMove = (e) => {
+      if (canvasModeRef.current === MODE_DRAW && e.touches && e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", updateFit);
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [open, step, applyZoomAroundClientPoint]);
+
   const redraw = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -132,8 +310,12 @@ export default function SimpleDiagramModal({
       const y = (CANVAS_H - h) / 2;
       ctx.drawImage(bg, x, y, w, h);
     }
-    for (const stroke of strokeStackRef.current) {
-      paintStroke(ctx, stroke);
+    for (const op of strokeStackRef.current) {
+      if (op?.type === "eraseRect") {
+        paintEraseRect(ctx, op);
+      } else {
+        paintStroke(ctx, op);
+      }
     }
   }, []);
 
@@ -143,7 +325,7 @@ export default function SimpleDiagramModal({
       editingSavedRef.current = false;
       setSelected(tpl);
       setStep("draw");
-      setEraser(false);
+      setTool(TOOL_PEN);
 
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       const canvas = canvasRef.current;
@@ -237,20 +419,186 @@ export default function SimpleDiagramModal({
     };
   };
 
+  const chooseTool = (nextTool) => {
+    setCanvasMode(MODE_DRAW);
+    setTool(nextTool);
+    if (nextTool !== TOOL_SELECT) setSelection(null);
+    selectStartRef.current = null;
+    drawingRef.current = false;
+    currentStrokeRef.current = null;
+    activePointersRef.current.clear();
+    gestureRef.current = null;
+  };
+
+  const chooseCanvasMode = (mode) => {
+    setCanvasMode(mode);
+    drawingRef.current = false;
+    currentStrokeRef.current = null;
+    selectStartRef.current = null;
+    activePointersRef.current.clear();
+    gestureRef.current = null;
+    if (mode === MODE_ZOOM) {
+      setSelection(null);
+    }
+  };
+
+  const handleFitView = () => {
+    pendingScrollRef.current = null;
+    setZoom(1);
+    const viewport = viewportRef.current;
+    if (viewport) {
+      viewport.scrollLeft = 0;
+      viewport.scrollTop = 0;
+    }
+  };
+
+  const handleDeleteSelection = useCallback(() => {
+    if (!selectionHasArea(selection)) return;
+    strokeStackRef.current.push({
+      type: "eraseRect",
+      x: selection.x,
+      y: selection.y,
+      w: selection.w,
+      h: selection.h,
+    });
+    setSelection(null);
+    selectStartRef.current = null;
+    redraw();
+  }, [redraw, selection]);
+
+  useEffect(() => {
+    if (step !== "draw") return undefined;
+    const onKeyDown = (e) => {
+      const tag = String(e.target?.tagName || "").toLowerCase();
+      if (tag === "input" || tag === "textarea" || e.target?.isContentEditable) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectionHasArea(selection)) {
+        e.preventDefault();
+        handleDeleteSelection();
+      }
+      if (e.key === "Escape") {
+        setSelection(null);
+        selectStartRef.current = null;
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [step, selection, handleDeleteSelection]);
+
+  const onZoomPointerDown = (e) => {
+    if (canvasMode !== MODE_ZOOM || step !== "draw") return;
+    e.preventDefault();
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    try {
+      viewport.setPointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = Array.from(activePointersRef.current.values());
+    if (pts.length >= 2) {
+      const [a, b] = pts;
+      gestureRef.current = {
+        type: "pinch",
+        startDist: Math.max(pointerDistance(a, b), 1),
+        startZoom: zoomRef.current || 1,
+      };
+    } else {
+      gestureRef.current = {
+        type: "pan",
+        lastX: e.clientX,
+        lastY: e.clientY,
+      };
+    }
+  };
+
+  const onZoomPointerMove = (e) => {
+    if (canvasMode !== MODE_ZOOM || step !== "draw") return;
+    if (!activePointersRef.current.has(e.pointerId)) return;
+    e.preventDefault();
+    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const pts = Array.from(activePointersRef.current.values());
+    const gesture = gestureRef.current;
+    const viewport = viewportRef.current;
+    if (!viewport || !gesture) return;
+
+    if (pts.length >= 2) {
+      const [a, b] = pts;
+      const mid = pointerMidpoint(a, b);
+      const dist = Math.max(pointerDistance(a, b), 1);
+      if (gesture.type !== "pinch") {
+        gestureRef.current = {
+          type: "pinch",
+          startDist: dist,
+          startZoom: zoomRef.current || 1,
+        };
+        return;
+      }
+      const nextZoom = gesture.startZoom * (dist / gesture.startDist);
+      applyZoomAroundClientPoint(mid.x, mid.y, nextZoom);
+      return;
+    }
+
+    if (gesture.type === "pan") {
+      const dx = e.clientX - gesture.lastX;
+      const dy = e.clientY - gesture.lastY;
+      viewport.scrollLeft -= dx;
+      viewport.scrollTop -= dy;
+      gesture.lastX = e.clientX;
+      gesture.lastY = e.clientY;
+    }
+  };
+
+  const onZoomPointerUp = (e) => {
+    if (!activePointersRef.current.has(e.pointerId)) return;
+    activePointersRef.current.delete(e.pointerId);
+    try {
+      viewportRef.current?.releasePointerCapture(e.pointerId);
+    } catch {
+      /* ignore */
+    }
+    const pts = Array.from(activePointersRef.current.values());
+    if (pts.length >= 2) {
+      const [a, b] = pts;
+      gestureRef.current = {
+        type: "pinch",
+        startDist: Math.max(pointerDistance(a, b), 1),
+        startZoom: zoomRef.current || 1,
+      };
+    } else if (pts.length === 1) {
+      gestureRef.current = {
+        type: "pan",
+        lastX: pts[0].x,
+        lastY: pts[0].y,
+      };
+    } else {
+      gestureRef.current = null;
+    }
+  };
+
   const onPointerDown = (e) => {
-    if (step !== "draw") return;
+    if (step !== "draw" || canvasMode !== MODE_DRAW) return;
     e.preventDefault();
     const canvas = canvasRef.current;
     if (!canvas) return;
     canvas.setPointerCapture(e.pointerId);
     const pt = canvasPoint(e);
     if (!pt) return;
+
+    if (tool === TOOL_SELECT) {
+      drawingRef.current = true;
+      selectStartRef.current = pt;
+      setSelection({ x: pt.x, y: pt.y, w: 0, h: 0 });
+      return;
+    }
+
     drawingRef.current = true;
     lastPtRef.current = pt;
+    const isEraser = tool === TOOL_ERASER;
     const stroke = {
-      color: eraser ? "#ffffff" : penColor,
-      size: eraser ? Math.max(penSize * 4, 12) : penSize,
-      eraser,
+      color: isEraser ? "#ffffff" : penColor,
+      size: isEraser ? Math.max(penSize * 4, 12) : penSize,
+      eraser: isEraser,
       points: [pt],
     };
     currentStrokeRef.current = stroke;
@@ -260,10 +608,18 @@ export default function SimpleDiagramModal({
   };
 
   const onPointerMove = (e) => {
-    if (!drawingRef.current || step !== "draw") return;
+    if (!drawingRef.current || step !== "draw" || canvasMode !== MODE_DRAW) return;
     e.preventDefault();
     const pt = canvasPoint(e);
     if (!pt) return;
+
+    if (tool === TOOL_SELECT) {
+      const start = selectStartRef.current;
+      if (!start) return;
+      setSelection(normalizeRect(start, pt));
+      return;
+    }
+
     const stroke = currentStrokeRef.current;
     if (!stroke) return;
     stroke.points.push(pt);
@@ -276,6 +632,24 @@ export default function SimpleDiagramModal({
   const onPointerUp = (e) => {
     if (!drawingRef.current) return;
     drawingRef.current = false;
+
+    if (tool === TOOL_SELECT) {
+      const start = selectStartRef.current;
+      const pt = canvasPoint(e) || lastPtRef.current;
+      selectStartRef.current = null;
+      if (start && pt) {
+        const rect = normalizeRect(start, pt);
+        setSelection(selectionHasArea(rect) ? rect : null);
+      }
+      lastPtRef.current = null;
+      try {
+        canvasRef.current?.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
+
     currentStrokeRef.current = null;
     lastPtRef.current = null;
     try {
@@ -303,6 +677,8 @@ export default function SimpleDiagramModal({
     if (!ok) return;
     strokeStackRef.current = [];
     currentStrokeRef.current = null;
+    setSelection(null);
+    selectStartRef.current = null;
     if (editingSaved) {
       bgImageRef.current = null;
       editingSavedRef.current = false;
@@ -667,76 +1043,346 @@ export default function SimpleDiagramModal({
 
       {step === "draw" ? (
         <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
-          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border pb-2">
-            <span className="text-xs font-medium text-secondary">Pen</span>
-            {PEN_COLORS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                title={c}
-                onClick={() => {
-                  setPenColor(c);
-                  setEraser(false);
-                }}
-                className={`h-7 w-7 rounded-full border-2 ${
-                  !eraser && penColor === c ? "border-primary ring-2 ring-primary/30" : "border-border"
+          <div className="shrink-0 border border-border bg-card shadow-sm">
+            <div className="flex flex-wrap items-stretch gap-0 divide-x divide-border">
+              {/* Mode */}
+              <div className="flex min-w-[11rem] flex-col gap-1.5 px-3 py-2.5">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
+                  Interaction
+                </span>
+                <div className="inline-flex overflow-hidden border border-border bg-muted/40">
+                  <DiagramSegBtn
+                    active={canvasMode === MODE_DRAW}
+                    onClick={() => chooseCanvasMode(MODE_DRAW)}
+                    title="Draw on the canvas"
+                    icon={<FiEdit2 className="h-3.5 w-3.5 shrink-0" />}
+                    label="Draw"
+                  />
+                  <DiagramSegBtn
+                    active={canvasMode === MODE_ZOOM}
+                    onClick={() => chooseCanvasMode(MODE_ZOOM)}
+                    title="Pinch zoom and pan"
+                    icon={<FiZoomIn className="h-3.5 w-3.5 shrink-0" />}
+                    label="Zoom"
+                  />
+                </div>
+                {canvasMode === MODE_ZOOM ? (
+                  <div className="flex items-center gap-1.5">
+                    <DiagramIconBtn
+                      onClick={handleFitView}
+                      title="Fit diagram to view"
+                      label="Fit"
+                    >
+                      <FiMaximize className="h-3.5 w-3.5 shrink-0" />
+                    </DiagramIconBtn>
+                    <span className="inline-flex min-w-[3rem] items-center justify-center border border-border bg-background px-2 py-1 text-xs font-semibold tabular-nums text-foreground">
+                      {Math.round(zoom * 100)}%
+                    </span>
+                    <span className="text-[11px] text-secondary">
+                      <FiMove className="mr-1 inline h-3 w-3" />
+                      Pinch / drag
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Tools */}
+              <div
+                className={`flex min-w-[12rem] flex-1 flex-col gap-1.5 px-3 py-2.5 ${
+                  canvasMode === MODE_ZOOM ? "opacity-45" : ""
                 }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-            <label className="ml-2 flex items-center gap-1 text-xs text-secondary">
-              Size
-              <input
-                type="range"
-                min={1}
-                max={16}
-                value={penSize}
-                onChange={(e) => setPenSize(Number(e.target.value) || 3)}
-                className="w-24"
-              />
-            </label>
-            <Button
-              type="button"
-              size="sm"
-              variant={eraser ? "primary" : "outline"}
-              onClick={() => setEraser((v) => !v)}
-            >
-              Eraser
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={handleUndo}>
-              Undo
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void handleClear()}>
-              Clear
-            </Button>
-            <span className="ml-auto truncate text-xs text-secondary">
-              {selected?.name || "Diagram"} · stylus / mouse supported
-            </span>
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
+                  Tools
+                </span>
+                <div className="flex flex-wrap items-center gap-1">
+                  <DiagramIconBtn
+                    active={canvasMode === MODE_DRAW && tool === TOOL_PEN}
+                    disabled={canvasMode === MODE_ZOOM}
+                    onClick={() => chooseTool(TOOL_PEN)}
+                    title="Pen"
+                    label="Pen"
+                  >
+                    <FiEdit2 className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <DiagramIconBtn
+                    active={canvasMode === MODE_DRAW && tool === TOOL_ERASER}
+                    disabled={canvasMode === MODE_ZOOM}
+                    onClick={() => chooseTool(TOOL_ERASER)}
+                    title="Eraser"
+                    label="Eraser"
+                  >
+                    <BiEraser className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <DiagramIconBtn
+                    active={canvasMode === MODE_DRAW && tool === TOOL_SELECT}
+                    disabled={canvasMode === MODE_ZOOM}
+                    onClick={() => chooseTool(TOOL_SELECT)}
+                    title="Select area"
+                    label="Select"
+                  >
+                    <FiSquare className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <div className="mx-1 h-7 w-px bg-border" aria-hidden />
+                  <DiagramIconBtn
+                    danger
+                    disabled={canvasMode === MODE_ZOOM || !selectionHasArea(selection)}
+                    onClick={handleDeleteSelection}
+                    title="Delete selected area"
+                    label="Delete area"
+                  >
+                    <FiTrash2 className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <DiagramIconBtn
+                    disabled={canvasMode === MODE_ZOOM}
+                    onClick={handleUndo}
+                    title="Undo last change"
+                    label="Undo"
+                  >
+                    <FiRotateCcw className="h-4 w-4 shrink-0" />
+                  </DiagramIconBtn>
+                  <button
+                    type="button"
+                    disabled={canvasMode === MODE_ZOOM}
+                    onClick={() => void handleClear()}
+                    title="Clear entire drawing"
+                    className="inline-flex h-9 items-center gap-1.5 border border-border bg-background px-2.5 text-xs font-semibold text-danger transition-colors hover:bg-danger/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              {/* Style */}
+              <div
+                className={`flex min-w-[16rem] flex-[1.2] flex-col gap-1.5 px-3 py-2.5 ${
+                  canvasMode === MODE_ZOOM ? "opacity-45" : ""
+                }`}
+              >
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
+                  Stroke
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-1.5">
+                    {PEN_COLORS.map((c) => {
+                      const selectedColor =
+                        canvasMode === MODE_DRAW && tool === TOOL_PEN && penColor === c;
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          title={c}
+                          disabled={canvasMode === MODE_ZOOM}
+                          onClick={() => {
+                            setPenColor(c);
+                            chooseTool(TOOL_PEN);
+                          }}
+                          className={`diagram-color-swatch h-5 w-5 shrink-0 rounded-full border transition-shadow disabled:cursor-not-allowed ${
+                            selectedColor
+                              ? "border-primary ring-2 ring-primary/35"
+                              : "border-black/20 hover:ring-2 hover:ring-border"
+                          }`}
+                          style={{ backgroundColor: c, borderRadius: "9999px" }}
+                          aria-label={`Pen color ${c}`}
+                        />
+                      );
+                    })}
+                    <label
+                      className={`diagram-color-swatch relative inline-flex h-5 w-5 shrink-0 overflow-hidden rounded-full border-2 border-white shadow-[0_0_0_1.5px_hsl(var(--foreground)/0.55)] ${
+                        canvasMode === MODE_ZOOM ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                      }`}
+                      style={{
+                        borderRadius: "9999px",
+                        backgroundImage:
+                          "conic-gradient(from 0deg, #ef4444, #f97316, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ef4444)",
+                      }}
+                      title="Custom color"
+                    >
+                      <input
+                        type="color"
+                        value={penColor}
+                        disabled={canvasMode === MODE_ZOOM}
+                        onChange={(e) => {
+                          setPenColor(e.target.value);
+                          chooseTool(TOOL_PEN);
+                        }}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                        aria-label="Custom pen color"
+                      />
+                    </label>
+                  </div>
+                  <div className="mx-0.5 hidden h-7 w-px bg-border sm:block" aria-hidden />
+                  <div className="flex min-w-[9rem] flex-1 items-center gap-2">
+                    <span className="shrink-0 text-[11px] font-medium text-secondary">Width</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={16}
+                      value={penSize}
+                      onChange={(e) => setPenSize(Number(e.target.value) || 3)}
+                      className="h-1.5 w-full min-w-[4.5rem] accent-primary"
+                      disabled={canvasMode === MODE_ZOOM}
+                      aria-label="Stroke width"
+                    />
+                    <span className="inline-flex min-w-[2.25rem] justify-end text-xs font-semibold tabular-nums text-foreground">
+                      {penSize}px
+                    </span>
+                    <span
+                      className="inline-block shrink-0 rounded-full bg-foreground"
+                      style={{
+                        width: Math.max(4, Math.min(14, penSize)),
+                        height: Math.max(4, Math.min(14, penSize)),
+                        backgroundColor: tool === TOOL_ERASER ? "#94a3b8" : penColor,
+                      }}
+                      aria-hidden
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Context */}
+              <div className="flex min-w-[10rem] flex-col justify-center gap-1 px-3 py-2.5 sm:max-w-[14rem]">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-secondary">
+                  Diagram
+                </span>
+                <p className="truncate text-sm font-semibold text-foreground" title={selected?.name || "Diagram"}>
+                  {selected?.name || "Diagram"}
+                </p>
+                <p className="text-[11px] leading-snug text-secondary">
+                  {canvasMode === MODE_ZOOM
+                    ? "Zoom mode: pinch to zoom around your fingers, drag to pan. Switch to Draw to mark up."
+                    : tool === TOOL_SELECT
+                      ? "Select mode: drag a box, then delete the area. Press Delete or Escape."
+                      : tool === TOOL_ERASER
+                        ? "Eraser mode: scrub to remove strokes."
+                        : "Draw mode: stylus and mouse supported."}
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded border border-border bg-muted/40 p-1 sm:p-2">
-            <canvas
-              ref={canvasRef}
-              width={CANVAS_W}
-              height={CANVAS_H}
-              className="touch-none bg-white shadow-sm"
+
+          <div
+            ref={viewportRef}
+            className={`flex min-h-0 flex-1 overflow-auto border border-border bg-muted/40 p-1 sm:p-2 ${
+              canvasMode === MODE_ZOOM ? "touch-none cursor-grab active:cursor-grabbing" : ""
+            }`}
+            onPointerDown={canvasMode === MODE_ZOOM ? onZoomPointerDown : undefined}
+            onPointerMove={canvasMode === MODE_ZOOM ? onZoomPointerMove : undefined}
+            onPointerUp={canvasMode === MODE_ZOOM ? onZoomPointerUp : undefined}
+            onPointerCancel={canvasMode === MODE_ZOOM ? onZoomPointerUp : undefined}
+          >
+            <div
+              className="relative m-auto shrink-0"
               style={{
-                maxWidth: "100%",
-                maxHeight: "100%",
-                width: "auto",
-                height: "100%",
-                aspectRatio: `${CANVAS_W} / ${CANVAS_H}`,
-                cursor: eraser ? "cell" : "crosshair",
+                width: Math.max(1, Math.round(fitSize.w * zoom)),
+                height: Math.max(1, Math.round(fitSize.h * zoom)),
               }}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={onPointerUp}
-            />
+            >
+              <canvas
+                ref={canvasRef}
+                width={CANVAS_W}
+                height={CANVAS_H}
+                className={`bg-white shadow-sm ${canvasMode === MODE_DRAW ? "touch-none" : "pointer-events-none"}`}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  display: "block",
+                  cursor:
+                    canvasMode === MODE_ZOOM
+                      ? "inherit"
+                      : tool === TOOL_SELECT
+                        ? "crosshair"
+                        : tool === TOOL_ERASER
+                          ? "cell"
+                          : "crosshair",
+                }}
+                onPointerDown={canvasMode === MODE_DRAW ? onPointerDown : undefined}
+                onPointerMove={canvasMode === MODE_DRAW ? onPointerMove : undefined}
+                onPointerUp={canvasMode === MODE_DRAW ? onPointerUp : undefined}
+                onPointerCancel={canvasMode === MODE_DRAW ? onPointerUp : undefined}
+              />
+              {selectionHasArea(selection) || (tool === TOOL_SELECT && selection) ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute border-2 border-dashed border-primary bg-primary/10"
+                  style={{
+                    left: `${((selection?.x || 0) / CANVAS_W) * 100}%`,
+                    top: `${((selection?.y || 0) / CANVAS_H) * 100}%`,
+                    width: `${((selection?.w || 0) / CANVAS_W) * 100}%`,
+                    height: `${((selection?.h || 0) / CANVAS_H) * 100}%`,
+                  }}
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
     </Modal>
   );
+}
+
+function DiagramSegBtn({ active, onClick, title, icon, label }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      onClick={onClick}
+      className={`inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 px-3 text-xs font-semibold transition-colors ${
+        active
+          ? "bg-primary text-white"
+          : "bg-transparent text-foreground hover:bg-background"
+      }`}
+    >
+      {icon}
+      <span className="whitespace-nowrap">{label}</span>
+    </button>
+  );
+}
+
+function DiagramIconBtn({
+  active = false,
+  danger = false,
+  disabled = false,
+  onClick,
+  title,
+  label,
+  children,
+}) {
+  return (
+    <button
+      type="button"
+      title={title || label}
+      aria-label={title || label}
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex h-9 min-w-9 items-center justify-center gap-1 border px-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+        active
+          ? "border-primary bg-primary text-white"
+          : danger
+            ? "border-border bg-background text-danger hover:bg-danger/10"
+            : "border-border bg-background text-foreground hover:bg-muted"
+      }`}
+    >
+      {children}
+      {label ? <span className="sr-only">{label}</span> : null}
+    </button>
+  );
+}
+
+function paintEraseRect(ctx, op) {
+  if (!op) return;
+  const x = Number(op.x) || 0;
+  const y = Number(op.y) || 0;
+  const w = Number(op.w) || 0;
+  const h = Number(op.h) || 0;
+  if (w <= 0 || h <= 0) return;
+  ctx.save();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
 }
 
 function paintStroke(ctx, stroke) {
