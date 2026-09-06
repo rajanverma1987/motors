@@ -17,6 +17,7 @@ export async function POST(request) {
     const preferTime = clampString(body?.preferTime, 20);
     const timezone = clampString(body?.timezone, 100);
     const businessName = clampString(body?.businessName, 200);
+    const website = clampString(body?.website, 300);
     const city = clampString(body?.city, 120);
     const state = clampString(body?.state, 80);
     const businessType = clampString(body?.businessType, 120);
@@ -34,6 +35,12 @@ export async function POST(request) {
     if (!isValidEmail(email)) {
       return NextResponse.json({ error: "Please enter a valid email address." }, { status: 400 });
     }
+    if (!businessName) {
+      return NextResponse.json(
+        { error: "Shop name is required so we can verify your motor repair shop." },
+        { status: 400 }
+      );
+    }
 
     const fields = {
       name,
@@ -43,6 +50,7 @@ export async function POST(request) {
       preferTime,
       timezone,
       businessName,
+      website,
       city,
       state,
       businessType,

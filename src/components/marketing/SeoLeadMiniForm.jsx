@@ -150,7 +150,7 @@ export default function SeoLeadMiniForm({
       <div className={`grid ${gridGap} sm:grid-cols-2`}>
         <div>
           <label htmlFor={`${idPrefix}-business`} className={labelClass}>
-            Business / shop name *
+            Business Name (we will verify) *
           </label>
           <Input
             id={`${idPrefix}-business`}
@@ -158,7 +158,8 @@ export default function SeoLeadMiniForm({
             value={form.businessName}
             onChange={handleChange}
             required
-            placeholder="Repair shop or company"
+            autoComplete="organization"
+            placeholder="Your business or company name"
             inputClassName={inputClassName}
           />
         </div>

@@ -22,6 +22,8 @@ export default function ContactPage() {
     name: "",
     email: "",
     phone: "",
+    businessName: "",
+    website: "",
     preferDate: "",
     preferTime: "",
     timezone: "",
@@ -37,6 +39,7 @@ export default function ContactPage() {
       name: prev.name || saved.name || "",
       email: prev.email || saved.email || "",
       phone: prev.phone || saved.phone || "",
+      businessName: prev.businessName || saved.company || "",
       timezone: tz || prev.timezone,
     }));
   }, []);
@@ -55,7 +58,10 @@ export default function ContactPage() {
       const res = await fetch("/api/contact-demo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          sourcePage: "/contact",
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Something went wrong");
@@ -63,6 +69,7 @@ export default function ContactPage() {
         name: form.name,
         email: form.email,
         phone: form.phone,
+        company: form.businessName,
       });
       router.push("/contact/thank-you");
     } catch (err) {
@@ -149,7 +156,7 @@ export default function ContactPage() {
               <Form onSubmit={handleSubmit} className="shadow-sm sm:p-8">
                 <h2 className="text-xl font-semibold text-title">Request a demo</h2>
                 <p className="mt-1 text-sm text-secondary">
-                  Tell us when works for you and we&apos;ll get back shortly.
+                  Tell us about your motor repair shop and when works for you. We&apos;ll get back shortly.
                 </p>
                 {error && (
                   <p className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -164,6 +171,24 @@ export default function ContactPage() {
                     onChange={handleChange}
                     placeholder="Your name"
                     required
+                  />
+                  <Input
+                    label="Business Name (we will verify)"
+                    name="businessName"
+                    value={form.businessName}
+                    onChange={handleChange}
+                    placeholder="Your business or company name"
+                    required
+                    autoComplete="organization"
+                  />
+                  <Input
+                    label="Business website (optional)"
+                    name="website"
+                    type="url"
+                    value={form.website}
+                    onChange={handleChange}
+                    placeholder="https://yourbusiness.com"
+                    autoComplete="url"
                   />
                   <Input
                     label="Email"

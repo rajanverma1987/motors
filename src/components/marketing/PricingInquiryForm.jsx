@@ -8,6 +8,7 @@ const INITIAL = {
   name: "",
   email: "",
   phone: "",
+  businessName: "",
   businessType: "",
   teamSize: "",
   currentTools: "",
@@ -27,7 +28,7 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
       name: prev.name || saved.name || "",
       email: prev.email || saved.email || "",
       phone: prev.phone || saved.phone || "",
-      businessType: prev.businessType || saved.company || "",
+      businessName: prev.businessName || saved.company || "",
     }));
   }, []);
 
@@ -50,7 +51,8 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
           name: form.name,
           email: form.email,
           phone: form.phone,
-          businessName: form.businessType,
+          businessName: form.businessName,
+          businessType: form.businessType,
           teamSize: form.teamSize,
           currentTools: form.currentTools,
           mainProblem: form.mainProblem,
@@ -68,7 +70,7 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
         name: form.name,
         email: form.email,
         phone: form.phone,
-        company: form.businessType,
+        company: form.businessName,
       });
       setSuccess(true);
       setForm((prev) => ({
@@ -76,7 +78,7 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
         name: prev.name,
         email: prev.email,
         phone: prev.phone,
-        businessType: prev.businessType,
+        businessName: prev.businessName,
       }));
     } catch (err) {
       setError(err.message || "Failed to submit inquiry");
@@ -114,6 +116,21 @@ export default function PricingInquiryForm({ sourcePage = "/pricing" }) {
           required
           className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-title outline-none focus:ring-2 focus:ring-primary/40"
           placeholder="name@company.com"
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <label htmlFor="pricing-shop" className="mb-1 block text-xs font-medium text-secondary">
+          Business Name (we will verify) *
+        </label>
+        <input
+          id="pricing-shop"
+          name="businessName"
+          value={form.businessName}
+          onChange={onChange}
+          required
+          autoComplete="organization"
+          className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-title outline-none focus:ring-2 focus:ring-primary/40"
+          placeholder="Your business or company name"
         />
       </div>
       <div>

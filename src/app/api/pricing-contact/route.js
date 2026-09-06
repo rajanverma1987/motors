@@ -17,6 +17,7 @@ export async function POST(request) {
     const name = clampString(body?.name, LIMITS.name.max);
     const email = (body?.email ?? "").trim().toLowerCase().slice(0, LIMITS.email.max);
     const phone = clampString(body?.phone, 30);
+    const businessName = clampString(body?.businessName, 200);
     const message = clampString(body?.message, 2000);
     const requestType = body?.requestType === "founder" ? "founder" : "general";
 
@@ -32,6 +33,15 @@ export async function POST(request) {
         { status: 400 }
       );
     }
+    if (!businessName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Shop name is required so we can verify your motor repair shop.",
+        },
+        { status: 400 }
+      );
+    }
 
     const sourcePage =
       requestType === "founder" ? "/pricing (founder pricing request)" : "/pricing (general inquiry)";
@@ -40,6 +50,7 @@ export async function POST(request) {
       name,
       email,
       phone,
+      businessName,
       mainProblem: message,
       sourcePage,
     });

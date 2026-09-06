@@ -39,6 +39,7 @@ const INITIAL_FORM = {
   name: "",
   email: "",
   phone: "",
+  businessName: "",
   message: "",
   requestType: "general",
 };
@@ -52,12 +53,13 @@ export default function PricingContactFaqClient() {
 
   useEffect(() => {
     const saved = loadLeadContact();
-    if (saved.name || saved.email || saved.phone) {
+    if (saved.name || saved.email || saved.phone || saved.company) {
       setContactForm((prev) => ({
         ...prev,
         name: prev.name || saved.name || "",
         email: prev.email || saved.email || "",
         phone: prev.phone || saved.phone || "",
+        businessName: prev.businessName || saved.company || "",
       }));
     }
   }, []);
@@ -77,7 +79,7 @@ export default function PricingContactFaqClient() {
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
-    if (!contactForm.name?.trim() || !contactForm.email?.trim()) return;
+    if (!contactForm.name?.trim() || !contactForm.email?.trim() || !contactForm.businessName?.trim()) return;
     setSubmitting(true);
     setSubmitError("");
 
@@ -95,6 +97,7 @@ export default function PricingContactFaqClient() {
         name: contactForm.name,
         email: contactForm.email,
         phone: contactForm.phone,
+        company: contactForm.businessName,
       });
       setSubmitted(true);
     } catch (err) {
@@ -170,6 +173,15 @@ export default function PricingContactFaqClient() {
               />
             </div>
             <Input
+              label="Business Name (we will verify) *"
+              name="businessName"
+              value={contactForm.businessName}
+              onChange={(e) => setField("businessName", e.target.value)}
+              placeholder="Your business or company name"
+              required
+              autoComplete="organization"
+            />
+            <Input
               label="Phone number"
               name="phone"
               type="tel"
@@ -190,7 +202,7 @@ export default function PricingContactFaqClient() {
               onChange={(e) => setField("message", e.target.value)}
               placeholder={
                 contactForm.requestType === "founder"
-                  ? "Shop name, location, how many jobs per month, anything that helps us understand your situation."
+                  ? "Location, how many jobs per month, anything that helps us understand your shop."
                   : "What would you like to know about IQMotorBase?"
               }
             />
@@ -203,7 +215,12 @@ export default function PricingContactFaqClient() {
               type="submit"
               variant="primary"
               size="lg"
-              disabled={!contactForm.name?.trim() || !contactForm.email?.trim() || submitting}
+              disabled={
+                !contactForm.name?.trim() ||
+                !contactForm.email?.trim() ||
+                !contactForm.businessName?.trim() ||
+                submitting
+              }
               className={contactForm.requestType === "founder" ? "bg-warning hover:opacity-90" : ""}
             >
               {submitting
