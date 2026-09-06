@@ -317,29 +317,13 @@ export default function SimplePurchaseOrderFormModal({
     };
   }, [open, form.serviceProposalId, serviceProposalId]);
 
-  const modalTitle = isEditMode
-    ? isShopPo
-      ? `Edit Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
-      : `Edit Purchase Order${
-          form.jobNumber || jobNumber ? ` — Job ${form.jobNumber || jobNumber}` : ""
-        }`
-    : isViewMode
-      ? isShopPo
-        ? `View Shop Purchase Order${form.poNumber ? ` — ${form.poNumber}` : ""}`
-        : `View Purchase Order${
-            jobNumber || form.jobNumber ? ` — Job ${jobNumber || form.jobNumber}` : ""
-          }`
-      : allowPoTypeChange
-        ? isShopPo
-          ? "New Shop Purchase Order"
-          : "New Job Purchase Order"
-        : isShopPo || defaultPoType === SIMPLE_PO_TYPE_SHOP
-          ? "New Shop Purchase Order"
-          : `New Purchase Order${
-              String(jobNumber || form.jobNumber || "").trim()
-                ? ` — Job ${jobNumber || form.jobNumber}`
-                : ""
-            }`;
+  const titleJob = String(form.jobNumber || jobNumber || "").trim();
+  const titlePo = String(form.poNumber || "").trim();
+  const modalTitle = isShopPo
+    ? titlePo || (isExistingPoMode ? "Shop PO" : "New Shop PO")
+    : titleJob
+      ? `PO-${titleJob}`
+      : titlePo || (isExistingPoMode ? "PO" : "New PO");
 
   const sentToVendorLabel = useMemo(() => {
     if (!poWasSentToVendor(form)) return null;
