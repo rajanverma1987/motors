@@ -245,29 +245,31 @@ export default function Modal({
             onMouseDown={handleHeaderMouseDown}
           >
             {headerCenter != null ? (
-              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+              <div className="flex w-full min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
                 {title != null ? (
                   <h2
                     id="modal-title"
-                    className="pointer-events-none min-w-0 justify-self-start truncate text-lg font-semibold leading-snug text-title"
+                    className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
                   >
                     {title}
                   </h2>
-                ) : (
-                  <span aria-hidden />
-                )}
+                ) : null}
                 <div
-                  className="pointer-events-auto flex justify-center"
+                  className="pointer-events-auto shrink-0"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   {headerCenter}
                 </div>
-                <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-1.5">
+                <div className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-1.5">
                   {actions != null ? (
-                    <div className="pointer-events-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:cursor-pointer [&_button]:items-center [&_button:disabled]:cursor-not-allowed">
-                      {actions}
+                    <div className="pointer-events-auto flex min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
+                      <div className="ml-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:shrink-0 [&_button]:cursor-pointer [&_button]:items-center [&_button]:whitespace-nowrap [&_button:disabled]:cursor-not-allowed">
+                        {actions}
+                      </div>
                     </div>
-                  ) : null}
+                  ) : (
+                    <span className="min-w-0 flex-1" aria-hidden />
+                  )}
                   {showClose && (
                     <button
                       type="button"

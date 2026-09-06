@@ -1068,7 +1068,7 @@ export default function SimplePurchaseOrderFormModal({
   const headerCenter =
     listNav && Number(listNav.total) > 1 ? (
       <div
-        className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
+        className="flex shrink-0 flex-nowrap items-center justify-center gap-1 sm:gap-1.5"
         role="navigation"
         aria-label="Purchase order list"
       >
@@ -1076,25 +1076,29 @@ export default function SimplePurchaseOrderFormModal({
           type="button"
           variant="outline"
           size="sm"
-          className="inline-flex items-center gap-1 text-xs"
+          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 text-xs sm:px-3"
           disabled={navBusy || !listNav.canPrevious}
           onClick={() => listNav.onPrevious?.()}
+          title="Previous"
+          aria-label="Previous"
         >
           <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Previous
+          <span className="hidden sm:inline">Previous</span>
         </Button>
         <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
-          {Number(listNav.currentIndex) + 1} of {Number(listNav.total)}
+          {Number(listNav.currentIndex) + 1}/{Number(listNav.total)}
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="inline-flex items-center gap-1 text-xs"
+          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 text-xs sm:px-3"
           disabled={navBusy || !listNav.canNext}
           onClick={() => listNav.onNext?.()}
+          title="Next"
+          aria-label="Next"
         >
-          Next
+          <span className="hidden sm:inline">Next</span>
           <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
         </Button>
       </div>
@@ -1292,7 +1296,7 @@ export default function SimplePurchaseOrderFormModal({
               ) : null}
             </div>
           ) : null}
-          <div className="flex w-full shrink-0 flex-nowrap items-end gap-3 overflow-x-auto pb-0.5">
+          <div className="flex w-full shrink-0 flex-wrap items-end gap-x-3 gap-y-2 pb-0.5">
             {showTypeSelect ? (
               <FieldRow
                 label="Type"
