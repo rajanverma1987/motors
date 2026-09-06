@@ -89,6 +89,14 @@ export async function GET(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const { searchParams } = new URL(request.url);
+    const serviceProposalId = String(searchParams.get("serviceProposalId") || "").trim();
+    const jobNumber = String(searchParams.get("jobNumber") || "").trim();
+    const vendorId = String(searchParams.get("vendorId") || "").trim();
+    const paymentStatus = String(searchParams.get("paymentStatus") || "").trim();
+    const from = String(searchParams.get("from") || "").trim().slice(0, 10);
+    const to = String(searchParams.get("to") || "").trim().slice(0, 10);
+    const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
+    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const includePagination =
       searchParams.has("page") ||
       searchParams.has("pageSize") ||
@@ -98,18 +106,12 @@ export async function GET(request) {
       searchParams.has("to") ||
       searchParams.has("paymentStatus") ||
       searchParams.has("serviceProposalId") ||
-      searchParams.has("jobNumber");
+      searchParams.has("jobNumber") ||
+      searchParams.has("vendorId");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
     const qText = String(searchParams.get("q") || "").trim();
-    const serviceProposalId = String(searchParams.get("serviceProposalId") || "").trim();
-    const jobNumber = String(searchParams.get("jobNumber") || "").trim();
-    const paymentStatus = String(searchParams.get("paymentStatus") || "").trim();
-    const from = String(searchParams.get("from") || "").trim().slice(0, 10);
-    const to = String(searchParams.get("to") || "").trim().slice(0, 10);
-    const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
-    const sortDir = String(searchParams.get("sortDir") || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const sortFieldMap = {
       poNumber: "poNumber",
       jobNumber: "jobNumber",
@@ -130,6 +132,9 @@ export async function GET(request) {
 
     const q = { createdByEmail: email };
     const andParts = [];
+    if (vendorId) {
+      andParts.push({ vendorId });
+    }
     if (serviceProposalId || jobNumber) {
       const ors = [];
       if (serviceProposalId) ors.push({ serviceProposalId });

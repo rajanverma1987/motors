@@ -24,6 +24,8 @@ const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
 const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
+const NAME_LINK_CLASS =
+  "font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
 const INITIAL_SALES_PERSON_FORM = {
   name: "",
@@ -148,26 +150,25 @@ function VendorsTab() {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
-        label: "",
-        render: (_, row) => (
+        key: "name",
+        label: "Name",
+        sortable: true,
+        render: (v, row) => (
           <button
             type="button"
+            className={NAME_LINK_CLASS}
             onClick={() => setEditVendorId(row.id)}
-            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="Edit"
-            title="Edit"
+            title="Open vendor details"
           >
-            <FiEdit2 className="h-4 w-4" />
+            {v || "-"}
           </button>
         ),
       },
-      { key: "name", label: "Name", sortable: true },
       {
         key: "contactName",
         label: "Contact",
         sortable: true,
-        render: (_, row) => row.contactName || "—",
+        render: (_, row) => row.contactName || "-",
       },
       { key: "phone", label: "Phone", sortable: true },
       { key: "email", label: "Email", sortable: true },
@@ -241,7 +242,6 @@ function VendorsTab() {
       <SimpleVendorFormModal
         open={Boolean(editVendorId)}
         vendorId={editVendorId}
-        relatedPos={[]}
         onClose={() => setEditVendorId(null)}
         onVendorUpdated={() => {
           void load();

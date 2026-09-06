@@ -6,31 +6,64 @@ import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
+import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import { useAlert } from "@/components/confirm-provider";
-import { useFormatDate } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
   buildVendorPayload,
   INITIAL_VENDOR_FORM,
   vendorApiToForm,
 } from "@/lib/vendor-record-form";
-import { resolvePoStatus } from "@/lib/simple-purchase-order-form";
+import { resolvePoStatus, SIMPLE_PO_TYPE_JOB } from "@/lib/simple-purchase-order-form";
+import { fetchSimplePurchaseOrders } from "@/lib/simple-portal-api";
+import {
+  OTHER_STATUS_ALL,
+  normalizePoPaymentStatusKey,
+  otherStatusTileColorForValue,
+  poPaymentStatusTileColorForValue,
+} from "@/lib/dropdown-catalog";
+import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 
 const VENDOR_FORM_ID = "simple-vendor-form-modal";
 
-const SECTION_TITLE = "mb-1.5 text-xs font-bold uppercase tracking-wide text-secondary";
+const SECTION_TITLE =
+  "text-xs font-semibold uppercase tracking-[0.06em] text-title";
 const TH_CLASS =
-  "pl-[5px] pr-1 py-1 text-left text-[11px] font-semibold uppercase tracking-wide text-secondary";
-const TD_CLASS = "pl-[5px] pr-1 py-1 text-sm text-title whitespace-nowrap";
-const TABLE_WRAP = "overflow-x-auto rounded-sm border border-border";
-const TABLE_CLASS = "w-full min-w-[18rem] border-collapse text-sm";
-const THEAD_ROW = "border-b border-border bg-primary/[0.06] dark:bg-primary/10";
+  "sticky top-0 z-20 border-b border-border bg-muted/40 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary";
+const TD_CLASS =
+  "border-b border-border px-2 py-1.5 text-[12px] font-medium leading-snug text-title whitespace-nowrap";
+const TD_MUTED_CLASS =
+  "border-b border-border px-2 py-1.5 text-[11px] font-medium leading-snug text-secondary whitespace-nowrap";
+const TABLE_WRAP = "min-h-0 flex-1 overflow-auto rounded-sm border border-border";
+const TABLE_CLASS = "w-full min-w-[28rem] border-separate border-spacing-0 text-[12px]";
+const THEAD_ROW = "";
+const OPEN_PO_BTN_CLASS =
+  "font-mono text-[12px] font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
+const STATUS_BADGE_CLASS = "rounded-full px-2.5 py-0.5 text-[10px] font-semibold leading-none";
 
 function poStatusBadgeVariant(status) {
   const s = String(status || "").trim().toLowerCase();
   if (s === "received") return "success";
   if (s.includes("partial")) return "warning";
   return "default";
+}
+
+function paymentStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "paid") return "success";
+  if (s.includes("partial")) return "warning";
+  return "default";
+}
+
+function poPaymentKey(po) {
+  return normalizePoPaymentStatusKey(po?.paymentStatus || "Unpaid");
+}
+
+function poAmount(po) {
+  const n = Number(po?.grandTotal);
+  return Number.isFinite(n) ? n : 0;
 }
 
 /**
@@ -40,16 +73,24 @@ export default function SimpleVendorFormModal({
   open,
   vendorId,
   onClose,
+  /** Optional seed list while full vendor PO list loads. */
   relatedPos = [],
   onVendorUpdated,
-  onOpenPo,
+  /** Called after a PO opened from this modal is saved (e.g. refresh parent list). */
+  onPoSaved,
   zIndex = 120,
 }) {
   const alert = useAlert();
   const formatDate = useFormatDate();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_VENDOR_FORM);
+  const [vendorPos, setVendorPos] = useState([]);
+  const [loadingPos, setLoadingPos] = useState(false);
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState(null);
+  const [openPoId, setOpenPoId] = useState(null);
   const resolvedId = String(vendorId || "").trim();
 
   const loadVendor = useCallback(async () => {
@@ -75,24 +116,145 @@ export default function SimpleVendorFormModal({
     }
   }, [resolvedId, alert, onClose]);
 
+  const loadVendorPos = useCallback(async () => {
+    if (!resolvedId) {
+      setVendorPos([]);
+      return;
+    }
+    setLoadingPos(true);
+    try {
+      const items = await fetchSimplePurchaseOrders({ vendorId: resolvedId });
+      setVendorPos(Array.isArray(items) ? items : []);
+    } catch {
+      setVendorPos([]);
+    } finally {
+      setLoadingPos(false);
+    }
+  }, [resolvedId]);
+
   useEffect(() => {
     if (!open) {
       setForm(INITIAL_VENDOR_FORM);
+      setVendorPos([]);
       setLoading(false);
       setSaving(false);
+      setLoadingPos(false);
+      setPaymentStatusFilter(null);
+      setOpenPoId(null);
       return;
     }
     if (!resolvedId) return;
-    void loadVendor();
-  }, [open, resolvedId, loadVendor]);
-
-  const vendorPos = useMemo(() => {
-    const vid = resolvedId;
-    if (!vid) return [];
-    return (Array.isArray(relatedPos) ? relatedPos : []).filter(
-      (po) => String(po?.vendorId || "").trim() === vid
+    setPaymentStatusFilter(null);
+    setOpenPoId(null);
+    const seeded = (Array.isArray(relatedPos) ? relatedPos : []).filter(
+      (po) => String(po?.vendorId || "").trim() === resolvedId
     );
-  }, [relatedPos, resolvedId]);
+    if (seeded.length) setVendorPos(seeded);
+    void loadVendor();
+    void loadVendorPos();
+    // relatedPos is open-time seed only; full list comes from loadVendorPos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, resolvedId, loadVendor, loadVendorPos]);
+
+  const paymentStatusTotals = useMemo(() => {
+    const totals = new Map();
+    for (const po of vendorPos) {
+      const key = poPaymentKey(po);
+      const prev = totals.get(key) || { status: key, amount: 0, count: 0 };
+      totals.set(key, {
+        status: key,
+        amount: prev.amount + poAmount(po),
+        count: prev.count + 1,
+      });
+    }
+    const order = ["Unpaid", "Partial Paid", "Paid"];
+    return [...totals.values()].sort((a, b) => {
+      const ia = order.indexOf(a.status);
+      const ib = order.indexOf(b.status);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return String(a.status).localeCompare(String(b.status));
+    });
+  }, [vendorPos]);
+
+  const paymentFilterCards = useMemo(() => {
+    const allTile = otherStatusTileColorForValue(mergedSettings, OTHER_STATUS_ALL, 0);
+    const cards = [
+      {
+        key: "",
+        label: allTile.label || "All",
+        tileAppearance: resolveStatusTileProps(allTile.tileColor, allTile.index, {
+          tileBgColor: allTile.tileBgColor,
+          tileTextColor: allTile.tileTextColor,
+          tileColor: allTile.tileColor,
+        }),
+      },
+    ];
+    for (const t of paymentStatusTotals) {
+      const { tileColor, tileBgColor, tileTextColor, index, label } =
+        poPaymentStatusTileColorForValue(mergedSettings, t.status);
+      cards.push({
+        key: t.status,
+        label: label || t.status,
+        tileAppearance: resolveStatusTileProps(tileColor, index, {
+          tileBgColor,
+          tileTextColor,
+          tileColor,
+        }),
+      });
+    }
+    return cards;
+  }, [paymentStatusTotals, mergedSettings]);
+
+  const filteredVendorPos = useMemo(() => {
+    if (!paymentStatusFilter) return vendorPos;
+    return vendorPos.filter((po) => poPaymentKey(po) === paymentStatusFilter);
+  }, [vendorPos, paymentStatusFilter]);
+
+  const filteredSubtotal = useMemo(
+    () => filteredVendorPos.reduce((sum, po) => sum + poAmount(po), 0),
+    [filteredVendorPos]
+  );
+
+  const openPoFromTable = useCallback((po) => {
+    const id = String(po?.id || "").trim();
+    if (id) setOpenPoId(id);
+  }, []);
+
+  /** Navigate within the visible PO table (same pattern as Customer Details → Job). */
+  const vendorPoNavigation = useMemo(() => {
+    if (!openPoId || filteredVendorPos.length < 2) return null;
+    const openIndex = filteredVendorPos.findIndex(
+      (r) => String(r.id) === String(openPoId)
+    );
+    if (openIndex < 0) return null;
+    return {
+      currentIndex: openIndex,
+      total: filteredVendorPos.length,
+      canPrevious: openIndex > 0,
+      canNext: openIndex < filteredVendorPos.length - 1,
+      onPrevious: () => {
+        const prev = filteredVendorPos[openIndex - 1];
+        const id = String(prev?.id || "").trim();
+        if (id) setOpenPoId(id);
+      },
+      onNext: () => {
+        const next = filteredVendorPos[openIndex + 1];
+        const id = String(next?.id || "").trim();
+        if (id) setOpenPoId(id);
+      },
+    };
+  }, [openPoId, filteredVendorPos]);
+
+  const editingPo = useMemo(() => {
+    if (!openPoId) return null;
+    return (
+      filteredVendorPos.find((p) => String(p.id) === String(openPoId)) ||
+      vendorPos.find((p) => String(p.id) === String(openPoId)) ||
+      { id: openPoId }
+    );
+  }, [openPoId, filteredVendorPos, vendorPos]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -128,6 +290,7 @@ export default function SimpleVendorFormModal({
   };
 
   return (
+    <>
     <Modal
       open={open}
       onClose={() => {
@@ -154,7 +317,7 @@ export default function SimpleVendorFormModal({
           <span className="text-sm text-secondary">Loading…</span>
         </div>
       ) : resolvedId ? (
-        <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div className="grid min-h-0 gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)]">
           <Form
             id={VENDOR_FORM_ID}
             onSubmit={handleSubmit}
@@ -163,66 +326,148 @@ export default function SimpleVendorFormModal({
             <SimpleVendorFormFields form={form} setForm={setForm} disabled={saving} />
           </Form>
 
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className={SECTION_TITLE}>Purchase orders ({vendorPos.length})</p>
-            {vendorPos.length === 0 ? (
-              <p className="text-xs text-secondary">No Simple purchase orders for this vendor.</p>
+          <div className="flex min-h-0 min-w-0 flex-col gap-2">
+            <p className={SECTION_TITLE}>
+              Purchase orders (
+              {loadingPos
+                ? "…"
+                : paymentStatusFilter
+                  ? `${filteredVendorPos.length}/${vendorPos.length}`
+                  : vendorPos.length}
+              )
+            </p>
+            {!loadingPos && paymentFilterCards.length > 1 ? (
+              <div className="flex shrink-0 flex-wrap gap-1.5">
+                {paymentFilterCards.map((card) => {
+                  const active = (paymentStatusFilter || "") === (card.key || "");
+                  const tile = card.tileAppearance || {};
+                  return (
+                    <button
+                      key={card.key || "__all__"}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setPaymentStatusFilter(card.key ? card.key : null)}
+                      className={`inline-flex max-w-full items-center border px-2.5 py-1 text-left text-xs font-semibold leading-snug whitespace-normal break-words transition-[box-shadow,border-color] ${
+                        active
+                          ? "border-primary shadow-[inset_0_0_0_1px_hsl(var(--primary)/0.35)]"
+                          : "border-black/10 hover:border-black/25 dark:border-white/15 dark:hover:border-white/30"
+                      } ${tile.className || ""}`}
+                      style={tile.style || undefined}
+                    >
+                      {card.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {loadingPos && vendorPos.length === 0 ? (
+              <p className="text-xs font-medium text-secondary">Loading purchase orders…</p>
+            ) : filteredVendorPos.length === 0 ? (
+              <p className="text-xs font-medium text-secondary">
+                {paymentStatusFilter
+                  ? "No purchase orders with this payment status."
+                  : "No Simple purchase orders for this vendor."}
+              </p>
             ) : (
-              <div className={TABLE_WRAP}>
-                <table className={TABLE_CLASS}>
-                  <thead>
-                    <tr className={THEAD_ROW}>
-                      <th className={TH_CLASS}>PO #</th>
-                      <th className={TH_CLASS}>Date</th>
-                      <th className={TH_CLASS}>Status</th>
-                      <th className={`${TH_CLASS} text-right`}>Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vendorPos.map((po) => {
-                      const status = resolvePoStatus(po.lineItems);
-                      return (
-                        <tr key={po.id} className="border-b border-border last:border-b-0">
-                          <td className={TD_CLASS}>
-                            {typeof onOpenPo === "function" && po.id ? (
-                              <button
-                                type="button"
-                                className="font-medium text-primary hover:underline"
-                                onClick={() => onOpenPo(po)}
-                                title="Open purchase order"
-                              >
-                                {po.poNumber || "—"}
-                              </button>
-                            ) : (
-                              po.poNumber || "—"
-                            )}
-                          </td>
-                          <td className={TD_CLASS}>{formatDate(po.poCutDate) || "—"}</td>
-                          <td className={TD_CLASS}>
-                            {status ? (
+              <div className="flex min-h-0 flex-1 flex-col gap-1.5">
+                <div className="flex shrink-0 items-baseline justify-end gap-2 px-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary">
+                    Subtotal
+                  </span>
+                  <span className="min-w-[5.5rem] text-right text-[12px] font-semibold tabular-nums text-title">
+                    {formatSimpleMoney(filteredSubtotal)}
+                  </span>
+                </div>
+                <div className={TABLE_WRAP}>
+                  <table className={TABLE_CLASS}>
+                    <thead>
+                      <tr className={THEAD_ROW}>
+                        <th className={TH_CLASS}>PO #</th>
+                        <th className={TH_CLASS}>Date</th>
+                        <th className={TH_CLASS}>Status</th>
+                        <th className={TH_CLASS}>Payment status</th>
+                        <th className={`${TH_CLASS} text-right`}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredVendorPos.map((po) => {
+                        const status = resolvePoStatus(po.lineItems);
+                        const paymentStatus = String(po.paymentStatus || "").trim() || "Unpaid";
+                        return (
+                          <tr
+                            key={po.id}
+                            className="hover:bg-muted/25 last:[&>td]:border-b-0"
+                          >
+                            <td className={TD_CLASS}>
+                              {po.id ? (
+                                <button
+                                  type="button"
+                                  className={OPEN_PO_BTN_CLASS}
+                                  onClick={() => openPoFromTable(po)}
+                                  title="Open purchase order"
+                                >
+                                  {po.poNumber || "-"}
+                                </button>
+                              ) : (
+                                <span className="font-mono text-[12px]">{po.poNumber || "-"}</span>
+                              )}
+                            </td>
+                            <td className={TD_MUTED_CLASS}>{formatDate(po.poCutDate) || "-"}</td>
+                            <td className={TD_CLASS}>
+                              {status ? (
+                                <Badge
+                                  variant={poStatusBadgeVariant(status)}
+                                  className={STATUS_BADGE_CLASS}
+                                >
+                                  {status}
+                                </Badge>
+                              ) : (
+                                <span className="text-secondary">-</span>
+                              )}
+                            </td>
+                            <td className={TD_CLASS}>
                               <Badge
-                                variant={poStatusBadgeVariant(status)}
-                                className="rounded-full px-2.5 py-0.5 text-xs"
+                                variant={paymentStatusBadgeVariant(paymentStatus)}
+                                className={STATUS_BADGE_CLASS}
                               >
-                                {status}
+                                {paymentStatus}
                               </Badge>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className={`${TD_CLASS} text-right`}>
-                            {formatSimpleMoney(Number(po.grandTotal) || 0)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className={`${TD_CLASS} text-right tabular-nums`}>
+                              {formatSimpleMoney(Number(po.grandTotal) || 0)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>
         </div>
       ) : null}
     </Modal>
+
+    <SimplePurchaseOrderFormModal
+      open={Boolean(openPoId)}
+      onClose={() => setOpenPoId(null)}
+      mode="edit"
+      initialPoId={String(openPoId || "").trim()}
+      serviceProposalId={String(editingPo?.serviceProposalId || "").trim()}
+      jobNumber={String(editingPo?.jobNumber || "").trim()}
+      defaultPoType={
+        String(editingPo?.poType || "").trim() || SIMPLE_PO_TYPE_JOB
+      }
+      allowPoTypeChange={false}
+      hideViewJobButton={false}
+      listNavigation={vendorPoNavigation}
+      zIndex={zIndex + 25}
+      onSaved={() => {
+        void loadVendorPos();
+        onPoSaved?.();
+      }}
+    />
+    </>
   );
 }

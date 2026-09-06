@@ -115,7 +115,14 @@ export function buildSimpleServiceProposalPrintBundle({
 }) {
   const isInvoice = String(form?.recordType || "").toUpperCase() === RECORD_TYPE_INVOICE;
   const documentType = isInvoice ? "invoice" : "quote";
-  const { toName: customerToName, billingAddress: customerBillingAddress } = customerInvoiceToBlock(customer);
+  const customerForTo = customer
+    ? {
+        ...customer,
+        email: String(customer.email || form?.customerEmail || "").trim(),
+      }
+    : null;
+  const { toName: customerToName, billingAddress: customerBillingAddress } =
+    customerInvoiceToBlock(customerForTo);
   const motor = motorLinesFromForm(form);
   const scopeLines = scopeLinesFromForm(form);
   const partsLines = partsLinesFromForm(form);

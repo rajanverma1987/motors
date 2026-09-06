@@ -677,10 +677,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             })
           );
         }}
-        onOpenPo={(po) => {
-          setOpenVendorId(null);
-          openEdit(po);
-        }}
+        onPoSaved={() => reload()}
       />
 
       <CustomerViewModal

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX } from "react-icons/fi";
+import { FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -53,7 +53,7 @@ import {
 } from "@/lib/simple-purchase-order-form";
 import { computeSimpleServiceProposalTotals } from "@/lib/simple-service-proposal-form";
 import {
-  fetchSimplePurchaseOrders,
+  fetchSimplePurchaseOrder,
   fetchSimpleServiceProposal,
   fetchSimpleServiceProposals,
   fetchNextSimpleShopPoNumber,
@@ -87,6 +87,21 @@ const FIELD_INPUT = SIMPLE_FIELD_INPUT;
 const FIELD_TEXTAREA = SIMPLE_FIELD_TEXTAREA;
 const FIELD_LABEL = SIMPLE_FIELD_LABEL;
 const CELL_INPUT = `${SIMPLE_CELL_INPUT} !h-7 !font-normal`;
+
+/** Session cache so reopening Create/Edit PO does not refetch all vendors/employees/jobs. */
+const META_CACHE_TTL_MS = 5 * 60 * 1000;
+const poFormMetaCache = {
+  vendors: null,
+  employees: null,
+  jobOptions: null,
+  vendorsLoadedAt: 0,
+  employeesLoadedAt: 0,
+  jobOptionsLoadedAt: 0,
+};
+
+function cacheIsFresh(loadedAt) {
+  return loadedAt > 0 && Date.now() - loadedAt < META_CACHE_TTL_MS;
+}
 const CELL_INPUT_MUTED = `${CELL_INPUT} !bg-muted/40`;
 
 function FieldRow({
@@ -153,6 +168,8 @@ function applyPaymentFields(formLike, payments) {
  *   allowPoTypeChange?: boolean,
  *   hideViewJobButton?: boolean,
  *   onSaved?: (row: object) => void,
+ *   listNavigation?: { currentIndex: number, total: number, canPrevious: boolean, canNext: boolean, onPrevious?: () => void, onNext?: () => void } | null,
+ *   zIndex?: number,
  * }} props
  */
 export default function SimplePurchaseOrderFormModal({
@@ -166,6 +183,9 @@ export default function SimplePurchaseOrderFormModal({
   allowPoTypeChange = false,
   hideViewJobButton = false,
   onSaved,
+  /** When opened from a vendor/job list — show Previous / Next in modal header center. */
+  listNavigation = null,
+  zIndex,
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
@@ -327,7 +347,11 @@ export default function SimplePurchaseOrderFormModal({
     return formatted ? `Sent to Vendor on ${formatted}` : "Sent to Vendor";
   }, [form.sentToVendorAt, formatDate]);
 
-  const loadJobOptionsFromApi = useCallback(async () => {
+  const loadJobOptionsFromApi = useCallback(async ({ force = false } = {}) => {
+    if (!force && cacheIsFresh(poFormMetaCache.jobOptionsLoadedAt) && Array.isArray(poFormMetaCache.jobOptions)) {
+      setJobOptions(poFormMetaCache.jobOptions);
+      return poFormMetaCache.jobOptions;
+    }
     try {
       const list = await fetchSimpleServiceProposals();
       const opts = [];
@@ -340,6 +364,8 @@ export default function SimplePurchaseOrderFormModal({
         opts.push({ value: id, label: num, jobNumber: num });
       }
       opts.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+      poFormMetaCache.jobOptions = opts;
+      poFormMetaCache.jobOptionsLoadedAt = Date.now();
       setJobOptions(opts);
       return opts;
     } catch {
@@ -389,9 +415,17 @@ export default function SimplePurchaseOrderFormModal({
     setForm(storedPoToForm(row));
   }, []);
 
-  const loadVendors = useCallback(async () => {
+  const loadVendors = useCallback(async ({ force = false } = {}) => {
+    if (!force && cacheIsFresh(poFormMetaCache.vendorsLoadedAt) && Array.isArray(poFormMetaCache.vendors)) {
+      setVendors(poFormMetaCache.vendors);
+      return poFormMetaCache.vendors;
+    }
     const vend = await fetchAllPaginatedDashboardItems("/api/dashboard/vendors");
-    setVendors(Array.isArray(vend) ? vend : []);
+    const list = Array.isArray(vend) ? vend : [];
+    poFormMetaCache.vendors = list;
+    poFormMetaCache.vendorsLoadedAt = Date.now();
+    setVendors(list);
+    return list;
   }, []);
 
   useEffect(() => {
@@ -410,23 +444,30 @@ export default function SimplePurchaseOrderFormModal({
     setForm(createEmptySimplePurchaseOrderForm());
     (async () => {
       try {
-        await loadJobOptionsFromApi();
-        if (cancelled) return;
         if (mode === "view" || mode === "edit") {
+          const preferred = String(initialPoId || "").trim();
           const sid = String(serviceProposalId || "").trim();
           const job = String(jobNumber || "").trim();
-          let scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
-          if (cancelled) return;
-          const preferred = String(initialPoId || "").trim();
+
+          const jobsPromise = loadJobOptionsFromApi();
+          let scoped = [];
+
           if (preferred) {
-            const all = await fetchSimplePurchaseOrders();
+            const hit = await fetchSimplePurchaseOrder(preferred);
             if (cancelled) return;
-            const hit = (Array.isArray(all) ? all : []).find((p) => String(p.id) === preferred);
             if (hit) {
-              scoped = await listSimplePurchaseOrdersForJobApi(hit.serviceProposalId, hit.jobNumber);
+              const hitSid = String(hit.serviceProposalId || "").trim();
+              const hitJob = String(hit.jobNumber || "").trim();
+              scoped = await listSimplePurchaseOrdersForJobApi(hitSid, hitJob);
               if (!scoped.length) scoped = [hit];
+            } else if (sid || job) {
+              scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
             }
+          } else {
+            scoped = await listSimplePurchaseOrdersForJobApi(sid, job);
           }
+          if (cancelled) return;
+          await jobsPromise;
           if (cancelled) return;
           setJobPos(scoped);
           if (scoped.length) {
@@ -437,7 +478,13 @@ export default function SimplePurchaseOrderFormModal({
             setForm(createEmptySimplePurchaseOrderForm());
           }
         } else {
+          // Create: open as soon as next number / job PO draft is ready.
+          // Job dropdown list loads in the background (was the main Create delay).
           await startCreate();
+          if (cancelled) return;
+          setLoadingForm(false);
+          void loadJobOptionsFromApi();
+          return;
         }
       } finally {
         if (!cancelled) setLoadingForm(false);
@@ -460,16 +507,40 @@ export default function SimplePurchaseOrderFormModal({
   useEffect(() => {
     if (!open) return undefined;
     let cancelled = false;
-    setLoadingMeta(true);
     (async () => {
+      const vendorsFresh =
+        cacheIsFresh(poFormMetaCache.vendorsLoadedAt) && Array.isArray(poFormMetaCache.vendors);
+      const employeesFresh =
+        cacheIsFresh(poFormMetaCache.employeesLoadedAt) && Array.isArray(poFormMetaCache.employees);
+      if (vendorsFresh) setVendors(poFormMetaCache.vendors);
+      if (employeesFresh) setEmployees(poFormMetaCache.employees);
+      if (vendorsFresh && employeesFresh) {
+        setLoadingMeta(false);
+        return;
+      }
+      setLoadingMeta(true);
       try {
         const [vend, emps] = await Promise.all([
-          fetchAllPaginatedDashboardItems("/api/dashboard/vendors"),
-          fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
+          vendorsFresh
+            ? Promise.resolve(poFormMetaCache.vendors)
+            : fetchAllPaginatedDashboardItems("/api/dashboard/vendors"),
+          employeesFresh
+            ? Promise.resolve(poFormMetaCache.employees)
+            : fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
         ]);
         if (cancelled) return;
-        setVendors(Array.isArray(vend) ? vend : []);
-        setEmployees(Array.isArray(emps) ? emps : []);
+        const vendorList = Array.isArray(vend) ? vend : [];
+        const employeeList = Array.isArray(emps) ? emps : [];
+        if (!vendorsFresh) {
+          poFormMetaCache.vendors = vendorList;
+          poFormMetaCache.vendorsLoadedAt = Date.now();
+        }
+        if (!employeesFresh) {
+          poFormMetaCache.employees = employeeList;
+          poFormMetaCache.employeesLoadedAt = Date.now();
+        }
+        setVendors(vendorList);
+        setEmployees(employeeList);
       } catch {
         if (!cancelled) {
           setVendors([]);
@@ -857,7 +928,7 @@ export default function SimplePurchaseOrderFormModal({
         return;
       }
       const newId = String(data?.vendor?.id || "").trim();
-      await loadVendors();
+      await loadVendors({ force: true });
       if (newId) patch("vendorId", newId);
       setAddVendorOpen(false);
       setVendorForm(INITIAL_VENDOR_FORM);
@@ -1008,6 +1079,43 @@ export default function SimplePurchaseOrderFormModal({
     setPrintOpen(true);
   };
 
+  const listNav = listNavigation;
+  const navBusy = saving || loadingForm || loadingMeta;
+  const headerCenter =
+    listNav && Number(listNav.total) > 1 ? (
+      <div
+        className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
+        role="navigation"
+        aria-label="Purchase order list"
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex items-center gap-1 text-xs"
+          disabled={navBusy || !listNav.canPrevious}
+          onClick={() => listNav.onPrevious?.()}
+        >
+          <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Previous
+        </Button>
+        <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
+          {Number(listNav.currentIndex) + 1} of {Number(listNav.total)}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="inline-flex items-center gap-1 text-xs"
+          disabled={navBusy || !listNav.canNext}
+          onClick={() => listNav.onNext?.()}
+        >
+          Next
+          <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        </Button>
+      </div>
+    ) : null;
+
   return (
     <>
       <Modal
@@ -1015,9 +1123,11 @@ export default function SimplePurchaseOrderFormModal({
         onClose={() => !saving && onClose?.()}
         title={modalTitle}
         size="6xl"
-        width="min(1200px, 98vw)"
+        width="min(1440px, 98vw)"
         height={PO_MODAL_HEIGHT}
+        zIndex={zIndex}
         showClose={!saving && !loadingForm}
+        headerCenter={headerCenter}
         actions={
           showViewEmptyState ? null : (
           <>
@@ -1038,7 +1148,7 @@ export default function SimplePurchaseOrderFormModal({
               type="button"
               variant="outline"
               size="sm"
-              className="inline-flex items-center gap-1.5"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
               disabled={saving || loadingForm || loadingMeta || !String(form.id || "").trim()}
               title={
                 String(form.id || "").trim()
@@ -1059,7 +1169,7 @@ export default function SimplePurchaseOrderFormModal({
               type="button"
               variant="outline"
               size="sm"
-              className="inline-flex items-center gap-1.5"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
               disabled={saving || loadingForm || loadingMeta || !form.id}
               title={!form.id ? "Save the purchase order first" : undefined}
               onClick={openPrintPreview}
@@ -1071,7 +1181,7 @@ export default function SimplePurchaseOrderFormModal({
               type="button"
               variant="outline"
               size="sm"
-              className="inline-flex items-center gap-1.5"
+              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
               disabled={saving || loadingForm || loadingMeta || !form.id}
               title={!form.id ? "Save the purchase order first" : undefined}
               onClick={openPrintPreview}
@@ -1084,6 +1194,7 @@ export default function SimplePurchaseOrderFormModal({
               form={FORM_ID}
               variant="primary"
               size="sm"
+              className="shrink-0 whitespace-nowrap"
               disabled={saving || loadingForm || loadingMeta || (isExistingPoMode && !form.id)}
             >
               {saving ? "Saving…" : "Save"}

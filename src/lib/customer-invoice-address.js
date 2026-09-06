@@ -1,5 +1,5 @@
 /**
- * "To" block on invoices: client name line(s) + billing address from Customer record.
+ * "To" block on invoices / service proposals: client name line(s) + billing address from Customer record.
  */
 export function customerInvoiceToBlock(customer) {
   if (!customer) {
@@ -7,9 +7,13 @@ export function customerInvoiceToBlock(customer) {
   }
   const comp = String(customer.companyName ?? "").trim();
   const contact = String(customer.primaryContactName ?? "").trim();
+  const email = String(customer.email ?? "").trim();
   let toName = "";
   if (comp && contact) toName = `${comp}\n${contact}`;
   else toName = comp || contact || "";
+  if (email) {
+    toName = toName ? `${toName}\n${email}` : email;
+  }
 
   const lines = [];
   const addr = String(customer.address ?? "").trim();

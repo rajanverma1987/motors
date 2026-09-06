@@ -119,6 +119,7 @@ export async function fetchSimplePurchaseOrders(query = {}) {
   const params = new URLSearchParams();
   if (query.serviceProposalId) params.set("serviceProposalId", query.serviceProposalId);
   if (query.jobNumber) params.set("jobNumber", query.jobNumber);
+  if (query.vendorId) params.set("vendorId", query.vendorId);
   if (query.q) params.set("q", query.q);
   const qs = params.toString();
   return fetchAllPaginatedDashboardItems(qs ? `${PO_API}?${qs}` : PO_API);
@@ -198,6 +199,14 @@ export async function listSimplePurchaseOrdersForJobApi(serviceProposalId, jobNu
   return (Array.isArray(items) ? items : []).sort((a, b) =>
     String(a.poNumber || "").localeCompare(String(b.poNumber || ""), undefined, { numeric: true })
   );
+}
+
+/** Load one Simple purchase order by id. */
+export async function fetchSimplePurchaseOrder(id) {
+  const sid = String(id || "").trim();
+  if (!sid) return null;
+  const data = await api(`${PO_API}/${encodeURIComponent(sid)}`);
+  return data?.item || null;
 }
 
 /** Preview next Shop PO number for this org (not reserved until save). */
