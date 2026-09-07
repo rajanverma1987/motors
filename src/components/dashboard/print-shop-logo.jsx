@@ -10,18 +10,29 @@ export const PRINT_SHOP_LOGO_IMG_CLASS =
   "w-auto shrink-0 object-contain object-left object-top print:block";
 
 /**
- * Prefer authenticated API for shop-settings logos in the dashboard so tablets
- * are not stuck on a year-long cached 404 for /uploads/.../logo.png.
- * Public / customer print URLs still use the stored path.
+ * Rewrite stored /uploads/shop-settings/… paths to the disk-backed API route.
+ * Branding preview already worked via API; documents on tablets were still hitting
+ * static /uploads (often a cached miss). PreferApi kept for compatibility.
  */
-export function resolveShopLogoDisplaySrc(logoUrl, { preferApi = false } = {}) {
-  const src = String(logoUrl || "").trim();
-  if (!src) return "";
-  if (preferApi && src.includes("/uploads/shop-settings/")) {
-    const rev = src.split("/").pop() || "1";
-    return `/api/dashboard/settings/logo?v=${encodeURIComponent(rev)}`;
+export function resolveShopLogoDisplaySrc(logoUrl, { preferApi = true } = {}) {
+  const raw = String(logoUrl || "").trim();
+  if (!raw) return "";
+  let pathname = raw;
+  try {
+    if (/^https?:\/\//i.test(raw)) {
+      pathname = new URL(raw).pathname || "";
+    }
+  } catch {
+    pathname = raw.split("?")[0].split("#")[0];
   }
-  return src;
+  pathname = pathname.split("?")[0].split("#")[0];
+  const match = pathname.match(
+    /^\/uploads\/shop-settings\/([a-f0-9]{24})\/(logo(?:-[a-zA-Z0-9]+)?\.(?:png|jpe?g|gif|webp))$/i
+  );
+  if (match && preferApi !== false) {
+    return `/api/shop-settings-logo/${match[1]}/${match[2]}`;
+  }
+  return raw;
 }
 
 /**
@@ -33,7 +44,7 @@ export function PrintShopLogo({
   className = "",
   scale,
   variant = "default",
-  preferApi = false,
+  preferApi = true,
 }) {
   const { settings } = useUserSettings();
   const src = resolveShopLogoDisplaySrc(logoUrl, { preferApi });

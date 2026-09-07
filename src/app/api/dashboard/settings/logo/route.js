@@ -21,7 +21,8 @@ const MIME_BY_EXT = {
 };
 
 /**
- * Stream the current shop logo for authenticated preview (bypasses stale /uploads cache on tablets).
+ * Prefer authenticated API for branding when needed; documents use the public
+ * /api/shop-settings-logo route via PrintShopLogo (preferApi default true).
  */
 export async function GET(request) {
   try {
