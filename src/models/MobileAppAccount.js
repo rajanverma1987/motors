@@ -10,6 +10,7 @@ const mobileAppAccountSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, trim: true, lowercase: true },
     passwordHash: { type: String, required: true },
     name: { type: String, default: "", trim: true },
+    companyName: { type: String, default: "", trim: true },
     phone: { type: String, default: "", trim: true },
     country: { type: String, default: "", trim: true },
     countryCode: { type: String, default: "", trim: true, uppercase: true },

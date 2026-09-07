@@ -1,4 +1,6 @@
-import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
+import { connectDB } from "@/lib/db";
+import MobileAppAccount from "@/models/MobileAppAccount";
+import { getMobileAppBillingPlans, resolvePlanDocForAccount } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -7,12 +9,30 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
+function priceLabelForPlan(planDoc, billing) {
+  const cycle = String(planDoc?.billingCycle || "monthly");
+  if (cycle === "yearly") {
+    const usd = Number(planDoc?.customPrice || billing.yearly.usd);
+    return `$${usd.toFixed(2)} / year`;
+  }
+  const usd = Number(planDoc?.customPrice || billing.monthly.usd);
+  return `$${usd.toFixed(2)} / month`;
+}
+
 export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
   const sp = await searchParams;
   const checkoutToken = String(sp?.token || "").trim();
-  const calcPlan = await getMobileAppSubscriptionPlan();
-  const price = Number(calcPlan.monthlyUsd);
-  const priceLabel = Number.isFinite(price) ? `$${price.toFixed(2)} / month` : "Monthly subscription";
+  const billing = await getMobileAppBillingPlans();
+  let priceLabel = `$${Number(billing.monthly.usd).toFixed(2)} / month`;
+
+  if (checkoutToken) {
+    await connectDB();
+    const account = await MobileAppAccount.findOne({ paypalCheckoutToken: checkoutToken });
+    if (account) {
+      const planDoc = await resolvePlanDocForAccount(account);
+      priceLabel = priceLabelForPlan(planDoc, billing);
+    }
+  }
 
   if (!checkoutToken) {
     return (
@@ -27,7 +47,7 @@ export default async function MobileAppPaypalCheckoutPage({ searchParams }) {
     <main className="mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center px-6 py-16 text-center">
       <h1 className="text-2xl font-bold text-title">Subscribe to IQWireCalculator</h1>
       <p className="mt-3 text-sm text-secondary">
-        {priceLabel}. You will continue on PayPal’s website to approve billing. After you finish, return to the app.
+        {priceLabel}. You will continue on PayPal to approve billing. After you finish, return to the app.
       </p>
       <a
         href={`/api/mobile-app/checkout/go?token=${encodeURIComponent(checkoutToken)}`}

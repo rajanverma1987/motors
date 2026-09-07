@@ -1,8 +1,13 @@
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
 import { getMobileAppAccountFromRequest, mobileAppUnauthorized } from "@/lib/mobile-app-auth";
-import { ensurePaypalBillingPlanActive, paypalCheckoutOrigin, paypalConfigured } from "@/lib/paypal-api";
-import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
+import {
+  ensurePaypalBillingPlanActive,
+  paypalCheckoutOrigin,
+  paypalConfigured,
+  paypalPublicClientId,
+} from "@/lib/paypal-api";
+import { resolveMobileAppPlanByBillingCycle } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -24,11 +29,13 @@ export async function POST(request) {
       );
     }
 
-    const calcPlan = await getMobileAppSubscriptionPlan();
+    const body = await request.json().catch(() => ({}));
+    const billingCycle = String(body?.billingCycle || "monthly").toLowerCase() === "yearly" ? "yearly" : "monthly";
+    const calcPlan = await resolveMobileAppPlanByBillingCycle(billingCycle);
     if (!calcPlan.paypalPlanId) {
       return NextResponse.json(
         {
-          error: `IQWireCalculator subscription (“${calcPlan.planSlug}”) is not linked to PayPal yet. Set the price in Admin → Subscription plans.`,
+          error: `IQWireCalculator ${billingCycle} subscription (“${calcPlan.planSlug}”) is not linked to PayPal yet. Set the price in Admin → Subscription plans.`,
         },
         { status: 503 }
       );
@@ -43,7 +50,18 @@ export async function POST(request) {
     await account.save();
 
     const approvalUrl = paypalPlanSubscribeUrl(calcPlan.paypalPlanId);
-    return NextResponse.json({ approvalUrl, checkoutUrl: approvalUrl });
+    const checkoutUrl = `/mobile-app/paypal-checkout?token=${encodeURIComponent(checkoutToken)}`;
+    return NextResponse.json({
+      approvalUrl,
+      checkoutUrl,
+      checkoutToken,
+      paypalPlanId: calcPlan.paypalPlanId,
+      paypalClientId: paypalPublicClientId(),
+      billingCycle,
+      usd: calcPlan.usd,
+      currency: calcPlan.currency,
+      planName: calcPlan.planName,
+    });
   } catch (err) {
     console.error("mobile-app checkout subscribe:", err);
     return NextResponse.json({ error: err.message || "Checkout failed" }, { status: 500 });

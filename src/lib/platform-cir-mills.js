@@ -12,6 +12,14 @@ export function normalizeCirMillsUnit(raw) {
   return u === CIR_MILLS_UNIT_METRIC ? CIR_MILLS_UNIT_METRIC : CIR_MILLS_UNIT_AWG;
 }
 
+/** Numeric wire size descending (same order as platform Cir Mills catalog). */
+export function compareWireSizeDesc(a, b) {
+  const na = Number.parseFloat(String(a?.size ?? "").replace(/,/g, ""));
+  const nb = Number.parseFloat(String(b?.size ?? "").replace(/,/g, ""));
+  if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return nb - na;
+  return String(b?.size ?? "").localeCompare(String(a?.size ?? ""), undefined, { numeric: true });
+}
+
 /** Default AWG / circular mils table. Used to seed PlatformCirMills when AWG unit is empty. */
 export const DEFAULT_CIR_MILLS_ROWS = [
   { size: "0.5", circularMills: 94000 },

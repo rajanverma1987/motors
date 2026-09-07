@@ -16,7 +16,7 @@ export const metadata = marketingPageMetadata({
   path: IQWIRECALCULATOR_PRIVACY_PATH,
   title: "IQWireCalculator Privacy Policy",
   description:
-    "Privacy policy for the IQWireCalculator iOS and Android app: what we collect, how we use it, and how to request deletion.",
+    "Privacy policy for the IQWireCalculator phone app: what we collect, how we use it, and how to request deletion.",
 });
 
 export default function IqwirecalculatorPrivacyPage() {

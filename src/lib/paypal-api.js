@@ -12,6 +12,11 @@ export function paypalConfigured() {
   return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
 }
 
+/** Public PayPal JS SDK client id (same as REST client id). Safe to send to the browser. */
+export function paypalPublicClientId() {
+  return String(process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || process.env.PAYPAL_CLIENT_ID || "").trim();
+}
+
 export async function getPaypalAccessToken() {
   if (!paypalConfigured()) {
     throw new Error("PayPal is not configured (PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET).");
@@ -46,6 +51,13 @@ function billingIntervalFromPlan(plan) {
   return { interval_unit: "MONTH", interval_count: 1 };
 }
 
+function paypalErrorMessage(payload, fallback) {
+  const details = Array.isArray(payload?.details)
+    ? payload.details.map((d) => d?.description || d?.issue).filter(Boolean).join("; ")
+    : "";
+  return details || payload?.message || payload?.name || fallback;
+}
+
 /**
  * Create catalog product + billing plan with fixed negotiated price.
  * @param {import("mongoose").Document} planDoc - SubscriptionPlan
@@ -59,28 +71,34 @@ export async function createPaypalProductAndPlan(planDoc) {
     Prefer: "return=representation",
   };
 
+  const price = Number(planDoc.customPrice || 0).toFixed(2);
+  const cycle = String(planDoc.billingCycle || "monthly");
+  const productName = String(planDoc.name || "IQWireCalculator").slice(0, 127);
+  const planName = `${productName} ${cycle} ${price}`.slice(0, 127);
+  const description = String(planDoc.description || planDoc.name || "IQWireCalculator").slice(0, 127);
+
   const productRes = await fetch(`${base}/v1/catalogs/products`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      name: planDoc.name,
-      description: (planDoc.description || planDoc.name).slice(0, 127),
+      name: productName,
+      description,
       type: "SERVICE",
     }),
   });
   const product = await productRes.json().catch(() => ({}));
   if (!productRes.ok) {
-    throw new Error(product.message || product.name || "PayPal product create failed");
+    throw new Error(paypalErrorMessage(product, "PayPal product create failed"));
   }
   const productId = product.id;
 
-  const price = Number(planDoc.customPrice || 0).toFixed(2);
   const { interval_unit, interval_count } = billingIntervalFromPlan(planDoc);
 
   const planBody = {
     product_id: productId,
-    name: planDoc.name,
-    description: (planDoc.description || "").slice(0, 127) || planDoc.name,
+    name: planName,
+    description,
+    status: "ACTIVE",
     billing_cycles: [
       {
         frequency: { interval_unit, interval_count },
@@ -108,11 +126,15 @@ export async function createPaypalProductAndPlan(planDoc) {
   });
   const planJson = await planRes.json().catch(() => ({}));
   if (!planRes.ok) {
-    throw new Error(planJson.message || planJson.name || "PayPal billing plan create failed");
+    throw new Error(paypalErrorMessage(planJson, "PayPal billing plan create failed"));
   }
 
   const paypalPlanId = planJson.id;
-  await activatePaypalBillingPlan(paypalPlanId, token);
+  try {
+    await activatePaypalBillingPlan(paypalPlanId, token);
+  } catch {
+    /* created with status ACTIVE */
+  }
 
   return {
     paypalProductId: productId,
@@ -236,7 +258,7 @@ export async function updatePaypalPlanPricing(paypalPlanId, { price, currency })
   });
   if (!res.ok && res.status !== 204) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.name || "PayPal plan price update failed");
+    throw new Error(paypalErrorMessage(err, "PayPal plan price update failed"));
   }
 }
 

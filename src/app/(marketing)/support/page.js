@@ -10,16 +10,18 @@ import {
   IQWIRECALCULATOR_SUPPORT_EMAIL,
   IQWIRECALCULATOR_SUPPORT_PATH,
   IQWIRECALCULATOR_TRIAL_DAYS,
+  IQWIRECALCULATOR_YEARLY_USD,
 } from "@/lib/iqwirecalculator-marketing";
 
 const mailto = `mailto:${IQWIRECALCULATOR_SUPPORT_EMAIL}?subject=${encodeURIComponent("IQWireCalculator support")}`;
 const price = IQWIRECALCULATOR_MONTHLY_USD.toFixed(2);
+const yearly = IQWIRECALCULATOR_YEARLY_USD.toFixed(2);
 
 export const metadata = marketingPageMetadata({
   path: IQWIRECALCULATOR_SUPPORT_PATH,
   title: "IQWireCalculator Support",
   description:
-    "Help for the IQWireCalculator iOS and Android app: contact us, manage your subscription, request account deletion, and get answers about CM Best Match.",
+    "Help for the IQWireCalculator phone app: install the PWA, contact us, manage your PayPal subscription, request account deletion, and get answers about CM Best Match.",
   keywords: [
     "IQWireCalculator support",
     "IQWireCalculator help",
@@ -31,19 +33,19 @@ export const metadata = marketingPageMetadata({
 const HELP_TOPICS = [
   {
     title: "Getting started",
-    body: "Download IQWireCalculator, create an account, and start the free trial. Open Calcs, enter original wires in hand, original size, original CM, and targeted CM, select catalog sizes, then tap Calculate Best Match.",
+    body: "Open IQWireCalculator in your phone browser (or the installed home-screen app), create an account, and start the free trial. Open Calculate, enter original wires in hand, original size, original CM, and targeted CM, select catalog sizes, then tap Calculate Best Match.",
   },
   {
     title: "Results, save, print, email",
-    body: "On the results screen you can print, email, or save a named calculation. Saved runs appear under View Result. Delete a save with the trash icon. Print uses the phone’s system print dialog.",
+    body: "On the results screen you can print, email, or save a named calculation. Saved runs appear on the Saved tab. Delete a save with the trash icon. Print uses the phone’s system print dialog.",
   },
   {
     title: "Custom wire sizes",
-    body: "Open Select catalog to add shop sizes (including half sizes) with circular mils. Default AWG sizes stay in the table. You can remove only sizes you added.",
+    body: "Open Catalog to add shop sizes (including half sizes) with circular mils. Default AWG sizes stay in the table. You can remove only sizes you added.",
   },
   {
     title: "Subscription and billing",
-    body: `After a ${IQWIRECALCULATOR_TRIAL_DAYS}-day trial, access is $${price} per month. Open Profile in the app to see status, subscribe, or cancel. Cancelled accounts keep access until the current period ends. Billing is handled through PayPal from the in-app checkout.`,
+    body: `After a ${IQWIRECALCULATOR_TRIAL_DAYS}-day trial, access is $${price} per month or $${yearly} per year. Open Profile in the app to see status, subscribe, or cancel. Cancelled accounts keep access until the current period ends. Billing is handled through PayPal.`,
   },
   {
     title: "Account deletion",
@@ -70,7 +72,7 @@ const SUPPORT_FAQS = [
   },
   {
     q: "Is this the same as IQMotorBase shop software?",
-    a: "No. IQWireCalculator is a standalone wire calculator app. IQMotorBase is the shop management system. Floor technicians on an IQMotorBase shop should use the technician app, not this listing.",
+    a: "No. IQWireCalculator is a standalone wire calculator app you install from the browser. IQMotorBase is the shop management system.",
   },
 ];
 
@@ -95,7 +97,7 @@ export default function SupportPage() {
               IQWireCalculator support
             </h1>
             <p className="mt-5 text-lg text-secondary sm:text-xl">
-              Help for the IQWireCalculator iOS and Android app from IQMotorBase. Email us and we will get back
+              Help for the IQWireCalculator phone app from IQMotorBase. Email us and we will get back
               within one business day.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -141,7 +143,7 @@ export default function SupportPage() {
                 </a>
               </p>
               <p className="mt-3 text-sm text-secondary">
-                Use this page as the App Store and Google Play support URL for IQWireCalculator.
+                Use this page as the support URL for IQWireCalculator.
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">

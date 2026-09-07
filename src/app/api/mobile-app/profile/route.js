@@ -18,6 +18,13 @@ export async function PATCH(request) {
       }
       account.name = name;
     }
+    if (body.companyName !== undefined) {
+      const companyName = clampString(body.companyName, LIMITS.companyName.max);
+      if (!companyName) {
+        return NextResponse.json({ error: "Company name is required." }, { status: 400 });
+      }
+      account.companyName = companyName;
+    }
     if (body.phone !== undefined) {
       account.phone = clampString(body.phone, 40);
     }

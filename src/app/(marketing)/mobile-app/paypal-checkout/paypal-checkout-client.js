@@ -55,7 +55,7 @@ function PaypalCheckoutInner({ clientId, paypalPlanId, checkoutToken, legacySid 
               .then(async (res) => {
                 const json = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(json.error || "Could not save subscription.");
-                window.location.assign("/mobile-app/paypal-complete?status=success");
+                window.location.assign("/iqwire?paypal=success");
               })
               .catch((err) => {
                 if (!cancelled) {

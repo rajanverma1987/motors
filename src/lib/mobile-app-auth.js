@@ -3,7 +3,10 @@ import MobileAppAccount from "@/models/MobileAppAccount";
 import { getBearerTokenFromRequest, verifyMobileAppToken } from "@/lib/auth-portal";
 import {
   describeMobileAppAccess,
+  getMobileAppBillingPlans,
   getMobileAppSubscriptionPlan,
+  getMobileAppYearlySubscriptionPlan,
+  resolvePlanDocForAccount,
   mobileAppAccountToJson,
 } from "@/lib/mobile-app-subscription";
 
@@ -24,7 +27,12 @@ export function mobileAppUnauthorized() {
 }
 
 export async function mobileAppSessionPayload(account) {
-  const plan = await getMobileAppSubscriptionPlan();
+  const billing = await getMobileAppBillingPlans();
+  const planDoc = await resolvePlanDocForAccount(account);
+  const current =
+    String(planDoc.billingCycle || "") === "yearly"
+      ? await getMobileAppYearlySubscriptionPlan()
+      : await getMobileAppSubscriptionPlan();
   const access = describeMobileAppAccess(account);
-  return mobileAppAccountToJson(account, access, plan);
+  return mobileAppAccountToJson(account, access, current, billing);
 }

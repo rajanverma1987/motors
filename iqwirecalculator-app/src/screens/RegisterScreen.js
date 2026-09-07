@@ -22,6 +22,7 @@ export default function RegisterScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const { register } = useMobileAuth();
   const [name, setName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,10 +36,15 @@ export default function RegisterScreen({ navigation }) {
       setError("Please select your country.");
       return;
     }
+    if (!companyName.trim()) {
+      setError("Please enter your company name.");
+      return;
+    }
     setBusy(true);
     try {
       await register({
         name: name.trim(),
+        companyName: companyName.trim(),
         phone: phone.trim(),
         email: email.trim(),
         password,
@@ -69,6 +75,7 @@ export default function RegisterScreen({ navigation }) {
         >
           <View style={styles.card}>
             <Field icon="person-outline" label="Name" value={name} onChangeText={setName} autoCapitalize="words" />
+            <Field icon="business-outline" label="Company name" value={companyName} onChangeText={setCompanyName} autoCapitalize="words" />
             <Field icon="call-outline" label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" />
             <CountryPickerField value={country} onChange={setCountry} />
             <Field

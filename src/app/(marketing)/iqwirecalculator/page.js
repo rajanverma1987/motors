@@ -1,6 +1,7 @@
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
 import IqwireStoreCta from "@/components/marketing/iqwirecalculator/store-cta";
+import IqwirePwaInstall from "@/components/marketing/iqwirecalculator/pwa-install";
 import {
   CatalogPhoneMock,
   InputsPhoneMock,
@@ -9,15 +10,19 @@ import {
 } from "@/components/marketing/iqwirecalculator/phone-mocks";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import {
+  IQWIRECALCULATOR_APP_PATH,
   IQWIRECALCULATOR_FAQS,
   IQWIRECALCULATOR_META_DESCRIPTION,
   IQWIRECALCULATOR_MONTHLY_USD,
   IQWIRECALCULATOR_PAGE_TITLE,
   IQWIRECALCULATOR_PATH,
   IQWIRECALCULATOR_TRIAL_DAYS,
+  IQWIRECALCULATOR_YEARLY_USD,
 } from "@/lib/iqwirecalculator-marketing";
 
 const path = IQWIRECALCULATOR_PATH;
+const monthly = IQWIRECALCULATOR_MONTHLY_USD.toFixed(2);
+const yearly = IQWIRECALCULATOR_YEARLY_USD.toFixed(2);
 
 export const metadata = {
   title: { absolute: IQWIRECALCULATOR_PAGE_TITLE },
@@ -31,6 +36,7 @@ export const metadata = {
     "motor rewind wire calculator app",
     "CM best match",
     "wire gauge substitution for motor rewind",
+    "PWA wire calculator",
   ],
   openGraph: {
     title: IQWIRECALCULATOR_PAGE_TITLE,
@@ -63,7 +69,7 @@ const steps = [
   {
     n: "3",
     title: "Get ranked results",
-    body: "Mixes within ±10% of target, closest first. Green is about 2% or tighter. Yellow is still in the 10% band. Up to three gauges in one mix.",
+    body: "Mixes within ±5% of target, closest first. Green is about 2% or tighter. Yellow is still in the 5% band. Up to three gauges in one mix.",
   },
   {
     n: "4",
@@ -94,29 +100,41 @@ const scenarios = [
 const included = [
   "Built-in copper AWG table, plus custom and half sizes (up to 100 extras)",
   "Search up to 10 selected sizes; up to 3 distinct sizes per mix",
-  "Green (about 2%) and yellow (about 10%) match ranking",
+  "Green (about 2%) and yellow (about 5%) match ranking",
   "Save named calculations and reopen them later",
-  "Print a landscape PDF or email results from the phone",
+  "Print a landscape sheet or email results from the phone",
   "Your stocked sizes only, no textbook AWG you cannot buy",
+  "Install on iPhone or Android from the browser. No App Store or Play listing",
+  "PayPal monthly or yearly billing, cancel anytime from Profile",
 ];
 
 function JsonLd() {
   const site = getPublicSiteUrl().replace(/\/$/, "");
   const pageUrl = `${site}${path}`;
+  const appUrl = `${site}${IQWIRECALCULATOR_APP_PATH}`;
   const software = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: "IQWireCalculator",
     url: pageUrl,
     applicationCategory: "UtilitiesApplication",
-    operatingSystem: "iOS, Android",
+    operatingSystem: "Web, iOS, Android",
+    installUrl: appUrl,
     description: IQWIRECALCULATOR_META_DESCRIPTION,
-    offers: {
-      "@type": "Offer",
-      price: IQWIRECALCULATOR_MONTHLY_USD.toFixed(2),
-      priceCurrency: "USD",
-      description: `${IQWIRECALCULATOR_TRIAL_DAYS}-day free trial, then $${IQWIRECALCULATOR_MONTHLY_USD.toFixed(2)} per month`,
-    },
+    offers: [
+      {
+        "@type": "Offer",
+        price: monthly,
+        priceCurrency: "USD",
+        description: `${IQWIRECALCULATOR_TRIAL_DAYS}-day free trial, then $${monthly} per month`,
+      },
+      {
+        "@type": "Offer",
+        price: yearly,
+        priceCurrency: "USD",
+        description: `${IQWIRECALCULATOR_TRIAL_DAYS}-day free trial, then $${yearly} per year`,
+      },
+    ],
     isPartOf: { "@type": "WebSite", name: "IQMotorBase.com", url: site },
   };
   const faq = {
@@ -150,8 +168,6 @@ function JsonLd() {
 }
 
 export default function IqwireCalculatorMarketingPage() {
-  const price = IQWIRECALCULATOR_MONTHLY_USD.toFixed(2);
-
   return (
     <>
       <JsonLd />
@@ -161,19 +177,24 @@ export default function IqwireCalculatorMarketingPage() {
         <div className="relative z-10 mx-auto grid max-w-[86.4rem] items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-              IQWireCalculator · iOS &amp; Android
+              IQWireCalculator · Phone app (PWA)
             </p>
             <h1 className="mt-3 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.75rem] lg:leading-tight">
               Stop Guessing Wire Substitutions on the Floor
             </h1>
             <p className="mt-4 max-w-xl text-base leading-relaxed text-secondary sm:text-lg">
-              IQWireCalculator’s CM Best Match finds parallel wire combinations within 10% of your target circular mils,
-              ranked closest first, built for rewind shops, not electricians in general.
+              IQWireCalculator’s CM Best Match finds parallel wire combinations within 5% of your target circular mils,
+              ranked closest first, built for rewind shops, not electricians in general. Install it on your phone from
+              the browser. No App Store or Google Play account required.
             </p>
             <div className="mt-6">
               <IqwireStoreCta />
             </div>
             <p className="mt-4">
+              <a href="#install" className="text-sm font-medium text-primary hover:underline">
+                Scan the QR code and install
+              </a>
+              {" · "}
               <a href="#how-it-works" className="text-sm font-medium text-primary hover:underline">
                 See how it works
               </a>
@@ -184,6 +205,10 @@ export default function IqwireCalculatorMarketingPage() {
           </div>
         </div>
       </section>
+
+      <div id="install">
+        <IqwirePwaInstall />
+      </div>
 
       <section className="border-b border-border bg-bg py-12 sm:py-16" aria-labelledby="problem-heading">
         <div className="mx-auto max-w-[67.2rem] px-4 sm:px-6">
@@ -203,7 +228,7 @@ export default function IqwireCalculatorMarketingPage() {
       <section id="how-it-works" className="border-b border-border bg-card py-12 sm:py-16" aria-labelledby="how-heading">
         <div className="mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <h2 id="how-heading" className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
-            How CM Best Match works
+            How IQWireCalculator works
           </h2>
           <p className="mt-3 max-w-2xl text-secondary">Four steps. Same math as the IQMotorBase shop tools.</p>
           <ol className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,14 +273,10 @@ export default function IqwireCalculatorMarketingPage() {
             ))}
           </ul>
           <p className="mt-6 text-sm text-secondary">
-            This is the standalone phone app. It does not sync a shop Shop Management System catalog. Shops on IQMotorBase keep CM Best
+            This is the standalone rewind calculator. It does not sync a shop catalog. Shops on IQMotorBase keep CM Best
             Match in the{" "}
             <Link href="/dashboards?tab=calculators" className="font-medium text-primary hover:underline">
               dashboard calculators
-            </Link>{" "}
-            and the{" "}
-            <Link href="/technician-mobile-app-shop-floor-first" className="font-medium text-primary hover:underline">
-              technician app
             </Link>
             .
           </p>
@@ -290,31 +311,44 @@ export default function IqwireCalculatorMarketingPage() {
             <Link href="/motor-repair-shop-management-software" className="font-medium text-primary hover:underline">
               IQMotorBase
             </Link>
-            : floor techs can use the technician app, which reads the shop wire catalog automatically. Same CM engine,
-            different catalog source.
+            can also run the same CM engine in the dashboard. IQWireCalculator is for people who need the calculator
+            without a full shop management login.
           </p>
         </div>
       </section>
 
       <section id="pricing" className="border-b border-border bg-bg py-12 sm:py-16" aria-labelledby="pricing-heading">
-        <div className="mx-auto max-w-[40rem] px-4 sm:px-6">
+        <div className="mx-auto max-w-[52rem] px-4 sm:px-6">
           <h2 id="pricing-heading" className="text-center text-2xl font-bold tracking-tight text-title sm:text-3xl">
             Pricing
           </h2>
-          <div className="mt-8 rounded-2xl border border-primary/30 bg-card p-6 sm:p-8">
-            <p className="text-center text-sm font-semibold uppercase tracking-wide text-primary">
-              {IQWIRECALCULATOR_TRIAL_DAYS}-day free trial
-            </p>
-            <p className="mt-2 text-center text-4xl font-bold tabular-nums text-title">${price}</p>
-            <p className="mt-1 text-center text-sm text-secondary">per month after trial · cancel anytime</p>
-            <ul className="mt-6 space-y-2 text-sm text-secondary">
-              <li>Full CM Best Match access</li>
-              <li>Unlimited named saves (while subscribed)</li>
-              <li>Print and email from the phone</li>
-            </ul>
-            <div className="mt-8 flex justify-center">
-              <IqwireStoreCta align="center" />
+          <p className="mt-3 text-center text-sm text-secondary">
+            {IQWIRECALCULATOR_TRIAL_DAYS}-day free trial. Then PayPal. Cancel anytime.
+          </p>
+          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Monthly</p>
+              <p className="mt-2 text-4xl font-bold tabular-nums text-title">${monthly}</p>
+              <p className="mt-1 text-sm text-secondary">per month after trial</p>
+              <ul className="mt-6 space-y-2 text-sm text-secondary">
+                <li>Full CM Best Match access</li>
+                <li>Unlimited named saves while subscribed</li>
+                <li>Print and email from the phone</li>
+              </ul>
             </div>
+            <div className="rounded-2xl border border-primary/30 bg-card p-6">
+              <p className="text-sm font-semibold uppercase tracking-wide text-primary">Yearly</p>
+              <p className="mt-2 text-4xl font-bold tabular-nums text-title">${yearly}</p>
+              <p className="mt-1 text-sm text-secondary">per year after trial</p>
+              <ul className="mt-6 space-y-2 text-sm text-secondary">
+                <li>Same features as monthly</li>
+                <li>Two months free versus paying monthly</li>
+                <li>Billed once a year through PayPal</li>
+              </ul>
+            </div>
+          </div>
+          <div className="mt-8 flex justify-center">
+            <IqwireStoreCta align="center" />
           </div>
         </div>
       </section>
@@ -357,7 +391,7 @@ export default function IqwireCalculatorMarketingPage() {
         <div className="mx-auto max-w-[40rem] px-4 text-center sm:px-6">
           <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">Get the mix off the napkin</h2>
           <p className="mt-3 text-secondary">
-            ${price}/mo after a {IQWIRECALCULATOR_TRIAL_DAYS}-day trial. Cancel anytime.
+            ${monthly}/mo or ${yearly}/year after a {IQWIRECALCULATOR_TRIAL_DAYS}-day trial. Cancel anytime.
           </p>
           <div className="mt-6 flex justify-center">
             <IqwireStoreCta align="center" />

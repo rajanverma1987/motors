@@ -1,17 +1,26 @@
 import { connectDB } from "@/lib/db";
 import SubscriptionPlan from "@/models/SubscriptionPlan";
 import MobileAppAccount from "@/models/MobileAppAccount";
-import { createPaypalProductAndPlan, paypalConfigured, cancelPaypalSubscription, getPaypalSubscription, activatePaypalSubscription } from "@/lib/paypal-api";
+import {
+  createPaypalProductAndPlan,
+  paypalConfigured,
+  cancelPaypalSubscription,
+  getPaypalSubscription,
+  activatePaypalSubscription,
+  updatePaypalPlanPricing,
+} from "@/lib/paypal-api";
 
-/** Admin → Subscription plans slug for IQWireCalculator (price editable any time). */
+/** Admin → Subscription plans slug for IQWireCalculator monthly. */
 export const MOBILE_APP_SUBSCRIPTION_PLAN_SLUG = "mobile-app";
+export const MOBILE_APP_YEARLY_PLAN_SLUG = "mobile-app-yearly";
 
 export const MOBILE_APP_IAP_PRODUCT_ID = "IQWireMonthly";
 export const MOBILE_APP_IAP_ANDROID_PACKAGE = "com.iqmotorbase.iqwirecalculator";
 export const MOBILE_APP_IAP_IOS_BUNDLE = "com.iqmotorbase.iqwirecalculator";
 export const MOBILE_APP_TRIAL_DAYS = 3;
 export const MOBILE_APP_GRACE_DAYS = 3;
-export const MOBILE_APP_DEFAULT_MONTHLY_USD = 9.99;
+export const MOBILE_APP_DEFAULT_MONTHLY_USD = 11.99;
+export const MOBILE_APP_DEFAULT_YEARLY_USD = 119;
 
 function planSlugFromEnv() {
   return String(process.env.MOBILE_APP_SUBSCRIPTION_PLAN_SLUG || MOBILE_APP_SUBSCRIPTION_PLAN_SLUG)
@@ -41,12 +50,17 @@ export function addBillingPeriod(fromDate, plan) {
   return d;
 }
 
+function pricesMatch(a, b) {
+  return Number(a).toFixed(2) === Number(b).toFixed(2);
+}
+
 async function ensurePaypalSynced(planDoc) {
   if (!paypalConfigured() || !planDoc) return planDoc;
   if (planDoc.planType !== "paypal") return planDoc;
-  if (String(planDoc.paypalPlanId || "").trim()) return planDoc;
   const price = Number(planDoc.customPrice);
   if (!Number.isFinite(price) || price <= 0) return planDoc;
+  const existingId = String(planDoc.paypalPlanId || "").trim();
+  if (existingId) return planDoc;
   try {
     const { paypalProductId, paypalPlanId } = await createPaypalProductAndPlan(planDoc);
     planDoc.paypalProductId = paypalProductId;
@@ -58,57 +72,166 @@ async function ensurePaypalSynced(planDoc) {
   return planDoc;
 }
 
-/**
- * Ensure the IQWireCalculator PayPal plan exists so Admin can change price on the fly.
- */
-export async function ensureMobileAppSubscriptionPlan() {
+async function alignPlanPrice(planDoc, targetPrice) {
+  const next = Number(targetPrice);
+  if (!planDoc || !Number.isFinite(next) || next <= 0) return planDoc;
+  if (pricesMatch(planDoc.customPrice, next)) return planDoc;
+  const paypalPlanId = String(planDoc.paypalPlanId || "").trim();
+  if (paypalPlanId && paypalConfigured()) {
+    try {
+      await updatePaypalPlanPricing(paypalPlanId, {
+        price: next,
+        currency: planDoc.currency || "USD",
+      });
+    } catch (err) {
+      console.warn("alignPlanPrice paypal:", err.message);
+      planDoc.paypalPlanId = "";
+      planDoc.paypalProductId = "";
+    }
+  }
+  planDoc.customPrice = next;
+  await planDoc.save();
+  return planDoc;
+}
+
+function serializePlan(planDoc, fallbackPrice, fallbackCycle) {
+  const usd = Number(planDoc?.customPrice);
+  const paypalPlanId = String(planDoc?.paypalPlanId || "").trim();
+  const billingCycle = planDoc?.billingCycle || fallbackCycle;
+  return {
+    configured: !!paypalPlanId && Number.isFinite(usd) && usd > 0,
+    paypalPlanId,
+    usd: Number.isFinite(usd) ? usd : fallbackPrice,
+    monthlyUsd: billingCycle === "yearly" ? MOBILE_APP_DEFAULT_MONTHLY_USD : Number.isFinite(usd) ? usd : fallbackPrice,
+    currency: String(planDoc?.currency || "USD").toUpperCase(),
+    planName: planDoc?.name || "IQWireCalculator",
+    planSlug: planDoc?.slug || "",
+    billingCycle,
+    billingIntervalCount: planDoc?.billingIntervalCount || 1,
+    planType: planDoc?.planType || "",
+    planId: planDoc?._id ? String(planDoc._id) : "",
+    paypalConfigured: paypalConfigured(),
+    trialDays: MOBILE_APP_TRIAL_DAYS,
+  };
+}
+
+async function upsertBillingPlan({ slug, name, description, customPrice, billingCycle }) {
   await connectDB();
-  const slug = planSlugFromEnv();
   let plan = await SubscriptionPlan.findOne({ slug });
   if (!plan) {
     plan = await SubscriptionPlan.create({
-      name: "IQWireCalculator",
+      name,
       slug,
       planType: "paypal",
-      description:
-        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop management system.",
-      customPrice: MOBILE_APP_DEFAULT_MONTHLY_USD,
+      description,
+      customPrice,
       currency: "USD",
-      billingCycle: "monthly",
+      billingCycle,
       billingIntervalCount: 1,
       active: true,
     });
-  } else if (plan.name === "Mobile App") {
-    plan.name = "IQWireCalculator";
-    if (!plan.description || /IQMotorBase Calculators mobile app/.test(plan.description)) {
-      plan.description =
-        "IQWireCalculator mobile app — motor and wire calculators, saved work, and upcoming video lessons. Not tied to shop management system.";
+  } else {
+    let dirty = false;
+    if (plan.name !== name) {
+      plan.name = name;
+      dirty = true;
     }
-    await plan.save();
+    if (plan.planType !== "paypal") {
+      plan.planType = "paypal";
+      dirty = true;
+    }
+    if (plan.billingCycle !== billingCycle) {
+      plan.billingCycle = billingCycle;
+      dirty = true;
+    }
+    if (plan.active !== true) {
+      plan.active = true;
+      dirty = true;
+    }
+    if (!plan.description || /IQMotorBase Calculators mobile app/.test(plan.description)) {
+      plan.description = description;
+      dirty = true;
+    }
+    if (dirty) await plan.save();
+    plan = await alignPlanPrice(plan, customPrice);
   }
   await ensurePaypalSynced(plan);
   return plan;
 }
 
-export async function getMobileAppSubscriptionPlan() {
+/**
+ * Ensure the IQWireCalculator monthly PayPal plan exists.
+ */
+export async function ensureMobileAppSubscriptionPlan() {
   const slug = planSlugFromEnv();
+  return upsertBillingPlan({
+    slug,
+    name: "IQWireCalculator",
+    description:
+      "IQWireCalculator PWA: CM Best Match wire calculator, named saves, and print. Not tied to shop management.",
+    customPrice: MOBILE_APP_DEFAULT_MONTHLY_USD,
+    billingCycle: "monthly",
+  });
+}
+
+export async function ensureMobileAppYearlySubscriptionPlan() {
+  const slug = String(process.env.MOBILE_APP_YEARLY_PLAN_SLUG || MOBILE_APP_YEARLY_PLAN_SLUG)
+    .trim()
+    .toLowerCase();
+  return upsertBillingPlan({
+    slug,
+    name: "IQWireCalculator Yearly",
+    description:
+      "IQWireCalculator PWA yearly subscription: CM Best Match wire calculator, named saves, and print.",
+    customPrice: MOBILE_APP_DEFAULT_YEARLY_USD,
+    billingCycle: "yearly",
+  });
+}
+
+export async function ensureMobileAppBillingPlans() {
+  const monthly = await ensureMobileAppSubscriptionPlan();
+  const yearly = await ensureMobileAppYearlySubscriptionPlan();
+  return { monthly, yearly };
+}
+
+export async function getMobileAppSubscriptionPlan() {
   const plan = await ensureMobileAppSubscriptionPlan();
-  const monthlyUsd = Number(plan.customPrice);
-  const paypalPlanId = String(plan.paypalPlanId || "").trim();
+  const payload = serializePlan(plan, MOBILE_APP_DEFAULT_MONTHLY_USD, "monthly");
+  return { ...payload, monthlyUsd: payload.usd };
+}
+
+export async function getMobileAppYearlySubscriptionPlan() {
+  const plan = await ensureMobileAppYearlySubscriptionPlan();
+  return serializePlan(plan, MOBILE_APP_DEFAULT_YEARLY_USD, "yearly");
+}
+
+export async function getMobileAppBillingPlans() {
+  const { monthly, yearly } = await ensureMobileAppBillingPlans();
+  const monthlyPayload = serializePlan(monthly, MOBILE_APP_DEFAULT_MONTHLY_USD, "monthly");
+  const yearlyPayload = serializePlan(yearly, MOBILE_APP_DEFAULT_YEARLY_USD, "yearly");
   return {
-    configured: !!paypalPlanId && Number.isFinite(monthlyUsd) && monthlyUsd > 0,
-    paypalPlanId,
-    monthlyUsd: Number.isFinite(monthlyUsd) ? monthlyUsd : MOBILE_APP_DEFAULT_MONTHLY_USD,
-    currency: String(plan.currency || "USD").toUpperCase(),
-    planName: plan.name || "IQWireCalculator",
-    planSlug: slug,
-    billingCycle: plan.billingCycle || "monthly",
-    billingIntervalCount: plan.billingIntervalCount || 1,
-    planType: plan.planType || "",
-    planId: String(plan._id),
-    paypalConfigured: paypalConfigured(),
     trialDays: MOBILE_APP_TRIAL_DAYS,
+    currency: "USD",
+    paypalConfigured: paypalConfigured(),
+    monthly: { ...monthlyPayload, monthlyUsd: monthlyPayload.usd },
+    yearly: yearlyPayload,
   };
+}
+
+export async function resolveMobileAppPlanByBillingCycle(cycle) {
+  const wanted = String(cycle || "monthly").toLowerCase() === "yearly" ? "yearly" : "monthly";
+  if (wanted === "yearly") return getMobileAppYearlySubscriptionPlan();
+  return getMobileAppSubscriptionPlan();
+}
+
+export async function resolvePlanDocForAccount(account) {
+  await connectDB();
+  const paypalPlanId = String(account?.paypalPlanId || "").trim();
+  if (paypalPlanId) {
+    const byPaypal = await SubscriptionPlan.findOne({ paypalPlanId });
+    if (byPaypal) return byPaypal;
+  }
+  return ensureMobileAppSubscriptionPlan();
 }
 
 export function describeMobileAppAccess(account) {
@@ -173,7 +296,7 @@ export async function findMobileAppAccountForPaypalEvent({
   return null;
 }
 
-export function mobileAppAccountToJson(account, access, planPayload) {
+export function mobileAppAccountToJson(account, access, planPayload, billingPlans) {
   const trialEnds = account?.trialEndsAt ? new Date(account.trialEndsAt).toISOString() : null;
   const periodEnds = account?.currentPeriodEndsAt
     ? new Date(account.currentPeriodEndsAt).toISOString()
@@ -182,6 +305,7 @@ export function mobileAppAccountToJson(account, access, planPayload) {
     id: String(account._id),
     email: account.email,
     name: account.name || "",
+    companyName: account.companyName || "",
     phone: account.phone || "",
     country: account.country || "",
     countryCode: account.countryCode || "",
@@ -198,11 +322,28 @@ export function mobileAppAccountToJson(account, access, planPayload) {
       ? {
           name: planPayload.planName,
           slug: planPayload.planSlug,
-          monthlyUsd: planPayload.monthlyUsd,
+          monthlyUsd: planPayload.monthlyUsd ?? planPayload.usd,
+          usd: planPayload.usd ?? planPayload.monthlyUsd,
           currency: planPayload.currency,
           billingCycle: planPayload.billingCycle,
           configured: planPayload.configured,
           paypalConfigured: planPayload.paypalConfigured,
+        }
+      : null,
+    plans: billingPlans
+      ? {
+          monthly: {
+            name: billingPlans.monthly.planName,
+            slug: billingPlans.monthly.planSlug,
+            usd: billingPlans.monthly.usd,
+            configured: billingPlans.monthly.configured,
+          },
+          yearly: {
+            name: billingPlans.yearly.planName,
+            slug: billingPlans.yearly.planSlug,
+            usd: billingPlans.yearly.usd,
+            configured: billingPlans.yearly.configured,
+          },
         }
       : null,
   };
@@ -222,7 +363,7 @@ export async function applyMobileAppSubscriptionActivated({ paypalSubscriptionId
   ) {
     return;
   }
-  const plan = await ensureMobileAppSubscriptionPlan();
+  const plan = await resolvePlanDocForAccount(account);
   const base =
     account.currentPeriodEndsAt && new Date(account.currentPeriodEndsAt).getTime() > Date.now()
       ? account.currentPeriodEndsAt
@@ -405,6 +546,7 @@ export function mobileAppAccountToAdminJson(account) {
     id: String(account._id),
     email: account.email,
     name: account.name || "",
+    companyName: account.companyName || "",
     phone: account.phone || "",
     country: account.country || "",
     countryCode: account.countryCode || "",

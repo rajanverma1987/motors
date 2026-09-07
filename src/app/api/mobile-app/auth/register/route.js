@@ -4,6 +4,7 @@ import MobileAppAccount from "@/models/MobileAppAccount";
 import { hashPassword, createMobileAppToken } from "@/lib/auth-portal";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getPasswordPolicyError } from "@/lib/password-policy";
+import { LIMITS, clampString, isValidEmail } from "@/lib/validation";
 import { trialEndsAtFrom } from "@/lib/mobile-app-subscription";
 import { mobileAppSessionPayload } from "@/lib/mobile-app-auth";
 
@@ -19,6 +20,7 @@ export async function POST(request) {
     const email = String(body?.email || "").trim().toLowerCase();
     const password = String(body?.password || "");
     const name = clampString(body?.name, LIMITS.name.max);
+    const companyName = clampString(body?.companyName, LIMITS.companyName.max);
     const phone = clampString(body?.phone, 40);
     const countryCode = String(body?.country || body?.countryCode || "").trim().toUpperCase();
     const country = clampString(body?.countryName || body?.countryLabel, 80);
@@ -42,6 +44,9 @@ export async function POST(request) {
     if (!name) {
       return NextResponse.json({ error: "Name is required." }, { status: 400 });
     }
+    if (!companyName) {
+      return NextResponse.json({ error: "Company name is required." }, { status: 400 });
+    }
     if (!/^[A-Z]{2}$/.test(countryCode) || !country) {
       return NextResponse.json({ error: "Please select a valid country." }, { status: 400 });
     }
@@ -57,6 +62,7 @@ export async function POST(request) {
       email,
       passwordHash: await hashPassword(password),
       name,
+      companyName,
       phone,
       countryCode,
       country,

@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db";
 import MobileAppAccount from "@/models/MobileAppAccount";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { ensurePaypalBillingPlanActive, paypalCheckoutOrigin, paypalConfigured } from "@/lib/paypal-api";
-import { getMobileAppSubscriptionPlan } from "@/lib/mobile-app-subscription";
+import { resolveMobileAppPlanByBillingCycle } from "@/lib/mobile-app-subscription";
 
 export const dynamic = "force-dynamic";
 
@@ -44,14 +44,17 @@ export async function GET(request) {
     const token = String(url.searchParams.get("token") || "").trim();
     const account = await accountFromCheckoutToken(token);
     if (!account) {
-      return NextResponse.redirect(new URL("/mobile-app/paypal-complete?status=cancel", getPublicSiteUrl(request)));
+      return NextResponse.redirect(new URL("/iqwire?paypal=cancel", getPublicSiteUrl(request)));
     }
 
     if (!paypalConfigured()) {
       return NextResponse.json({ error: "Payments are not configured." }, { status: 503 });
     }
 
-    const calcPlan = await getMobileAppSubscriptionPlan();
+    const storedPlanId = String(account.paypalPlanId || "").trim();
+    const calcPlan = storedPlanId
+      ? { paypalPlanId: storedPlanId }
+      : await resolveMobileAppPlanByBillingCycle("monthly");
     if (!calcPlan.paypalPlanId) {
       return NextResponse.json({ error: "PayPal plan is not linked." }, { status: 503 });
     }

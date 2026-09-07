@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 function PaypalCompleteContent() {
@@ -31,10 +32,15 @@ function PaypalCompleteContent() {
         {ok
           ? activated === false
             ? "PayPal has not finished billing yet. Return to the app and it will refresh access shortly."
-            : "You can return to the IQWireCalculator app. Access updates automatically."
+            : "You can return to IQWireCalculator. Access updates automatically."
           : "No charge was made. You can try again from the app when you are ready."}
       </p>
-      <p className="mt-6 text-xs text-secondary">You can close this window and go back to the app.</p>
+      <Link
+        href="/iqwire"
+        className="mt-8 inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90"
+      >
+        Return to app
+      </Link>
     </main>
   );
 }
