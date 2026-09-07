@@ -10,11 +10,33 @@ export const PRINT_SHOP_LOGO_IMG_CLASS =
   "w-auto shrink-0 object-contain object-left object-top print:block";
 
 /**
- * @param {{ logoUrl?: string|null, alt?: string, className?: string, scale?: number, variant?: "default" | "lg" }} props
+ * Prefer authenticated API for shop-settings logos in the dashboard so tablets
+ * are not stuck on a year-long cached 404 for /uploads/.../logo.png.
+ * Public / customer print URLs still use the stored path.
  */
-export function PrintShopLogo({ logoUrl, alt = "", className = "", scale, variant = "default" }) {
-  const { settings } = useUserSettings();
+export function resolveShopLogoDisplaySrc(logoUrl, { preferApi = false } = {}) {
   const src = String(logoUrl || "").trim();
+  if (!src) return "";
+  if (preferApi && src.includes("/uploads/shop-settings/")) {
+    const rev = src.split("/").pop() || "1";
+    return `/api/dashboard/settings/logo?v=${encodeURIComponent(rev)}`;
+  }
+  return src;
+}
+
+/**
+ * @param {{ logoUrl?: string|null, alt?: string, className?: string, scale?: number, variant?: "default" | "lg", preferApi?: boolean }} props
+ */
+export function PrintShopLogo({
+  logoUrl,
+  alt = "",
+  className = "",
+  scale,
+  variant = "default",
+  preferApi = false,
+}) {
+  const { settings } = useUserSettings();
+  const src = resolveShopLogoDisplaySrc(logoUrl, { preferApi });
   if (!src) return null;
   const resolvedScale = normalizeLogoDocumentScale(
     scale != null && scale !== "" ? scale : settings?.logoDocumentScale

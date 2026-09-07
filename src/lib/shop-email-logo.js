@@ -1,6 +1,6 @@
 import { readFileSync } from "fs";
 import path from "path";
-import { isValidShopSettingsLogoUrl } from "@/lib/shop-settings-logo";
+import { normalizeShopSettingsLogoPath, shopSettingsLogoAbsolutePath } from "@/lib/shop-settings-logo";
 
 export const SHOP_EMAIL_LOGO_CID = "shop-logo@motor-shop";
 
@@ -18,15 +18,14 @@ const MIME_BY_EXT = {
  * @param {string} logoUrl
  */
 export function readShopSettingsLogoFile(ownerEmail, logoUrl) {
-  const url = String(logoUrl || "").trim();
-  if (!url || !isValidShopSettingsLogoUrl(url, ownerEmail)) return null;
-  const filePath = path.join(process.cwd(), "public", url.replace(/^\//, ""));
+  const filePath = shopSettingsLogoAbsolutePath(ownerEmail, logoUrl);
+  if (!filePath) return null;
   try {
     const buffer = readFileSync(filePath);
     if (!buffer?.length) return null;
-    const ext = path.extname(url).toLowerCase();
+    const ext = path.extname(normalizeShopSettingsLogoPath(logoUrl)).toLowerCase();
     const contentType = MIME_BY_EXT[ext] || "image/png";
-    return { buffer, contentType, filename: path.basename(url) };
+    return { buffer, contentType, filename: path.basename(filePath) };
   } catch {
     return null;
   }
@@ -62,7 +61,7 @@ export function resolveShopEmailLogo({ ownerEmail, logoUrl, baseUrl = "", forPre
     };
   }
 
-  const logoPath = String(logoUrl || "").trim();
+  const logoPath = normalizeShopSettingsLogoPath(logoUrl);
   if (logoPath.startsWith("/uploads/shop-settings/") && baseUrl) {
     return {
       logoSrc: `${String(baseUrl).replace(/\/$/, "")}${logoPath}`,

@@ -104,7 +104,9 @@ const nextConfig = {
     return [
       {
         source: "/uploads/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+        // Do not use immutable year-long cache: logos are replaced in-place historically,
+        // and a cached 404 on tablets/phones would look like a broken preview forever.
+        headers: [{ key: "Cache-Control", value: "public, max-age=300, must-revalidate" }],
       },
       {
         source: "/sw.js",

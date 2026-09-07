@@ -546,6 +546,7 @@ export default function SettingsPageClient() {
                       logoUrl={draft.logoUrl}
                       alt="Your logo"
                       scale={normalizeLogoDocumentScale(draft.logoDocumentScale)}
+                      preferApi
                     />
                   ) : (
                     <span className="text-sm text-secondary">No logo</span>
