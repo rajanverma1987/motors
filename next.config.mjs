@@ -109,6 +109,10 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=300, must-revalidate" }],
       },
       {
+        source: "/videos/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      },
+      {
         source: "/sw.js",
         headers: [
           { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },

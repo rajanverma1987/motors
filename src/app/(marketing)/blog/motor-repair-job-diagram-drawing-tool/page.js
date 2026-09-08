@@ -10,6 +10,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const path = "/blog/motor-repair-job-diagram-drawing-tool";
 const OG_IMAGE_PATH = "/images/og-motor-repair-job-diagram-drawing-tool.png";
+const HERO_VIDEO_PATH = "/videos/job-diagram-drawing.mp4?v=720";
 const siteUrl = getPublicSiteUrl().replace(/\/$/, "");
 const ogImageUrl = `${siteUrl}${OG_IMAGE_PATH}`;
 
@@ -63,6 +64,7 @@ export default function BlogJobDiagramDrawingToolPage() {
       canonicalPath={path}
       heroImage={OG_IMAGE_PATH}
       heroImageAlt="Technician drawing a motor job diagram on a shop tablet with a stylus pen"
+      heroVideo={HERO_VIDEO_PATH}
       sidebarTitle="Book a demo"
       sidebarDescription="See datasheets, tablet pen drawing, and your shop workflow in one live walkthrough."
       sidebarCta={<SeoLeadMiniForm sourcePage={path} submitLabel="Book a demo" />}

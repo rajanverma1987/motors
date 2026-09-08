@@ -26,7 +26,6 @@ import SimpleAccessControlSection from "@/components/simple/settings/simple-acce
 import SimpleDiagramDesignsSection from "@/components/simple/settings/simple-diagram-designs-section";
 import SettingsControlledDropdownsPanel from "@/components/dashboard/settings-controlled-dropdowns-panel";
 import SettingsProductDropdownsPanel from "@/components/dashboard/settings-product-dropdowns-panel";
-import PortalUiSetting from "@/components/dashboard/portal-ui-setting";
 import QuickBooksSetting from "@/components/dashboard/quickbooks-setting";
 import {
   USER_SETTINGS_DEFAULTS,
@@ -371,35 +370,6 @@ export default function SettingsPageClient() {
                   Shop: <span className="text-title">{user.shopName}</span>
                 </p>
               )}
-            </FormContainer>
-            {!user?.calculatorOnlyAccount ? (
-              <PortalUiSetting
-                value={draft.portalUi}
-                onChange={(portalUi) => updateDraft({ portalUi })}
-                disabled={saving}
-              />
-            ) : null}
-            <FormContainer>
-              <FormSectionTitle as="h2">Notifications</FormSectionTitle>
-              <p className="mb-4 text-sm text-secondary">
-                Control what we email you about. Transactional emails (e.g. password reset) are always sent when needed.
-              </p>
-              <div className="flex flex-col gap-4">
-                <Checkbox
-                  name="marketingTips"
-                  label="Tips & product updates"
-                  help="Occasional ideas to get more from the directory and Shop Management System."
-                  checked={!!draft.marketingTips}
-                  onChange={(e) => updateDraft({ marketingTips: e.target.checked })}
-                />
-                <Checkbox
-                  name="leadEmailAlerts"
-                  label="New lead alerts (coming soon)"
-                  help="When enabled, we'll email you when a new lead is assigned or created for your shop."
-                  checked={!!draft.leadEmailAlerts}
-                  onChange={(e) => updateDraft({ leadEmailAlerts: e.target.checked })}
-                />
-              </div>
             </FormContainer>
             <FormContainer>
               <FormSectionTitle as="h2">Password</FormSectionTitle>

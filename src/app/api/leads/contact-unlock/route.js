@@ -55,7 +55,7 @@ export async function POST(request) {
     }
 
     const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-      .select("_id email companyName city state notificationEmails")
+      .select("_id email companyName city state notificationEmails crmUserId")
       .lean();
 
     if (!listingDoc) {

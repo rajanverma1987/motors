@@ -13,7 +13,7 @@ import { sendNewWebsiteLeadNotificationToShop, sendRewindCalculatorRfqToAdmin } 
 import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calculator-context";
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
-import { getListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
 
@@ -94,7 +94,7 @@ export async function POST(request) {
         return NextResponse.json({ error: "Invalid listing reference." }, { status: 400 });
       }
       const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-        .select("_id email companyName notificationEmails")
+        .select("_id email companyName notificationEmails crmUserId")
         .lean();
       if (!listingDoc) {
         return NextResponse.json(
@@ -184,21 +184,17 @@ export async function POST(request) {
       leadSource: "website",
     });
 
+    const siteUrl = getPublicSiteUrl(request);
     for (const listing of listingNotifyTargets) {
-      const emails = getListingNotifyEmails(listing);
-      for (const to of emails) {
-        try {
-          await sendNewWebsiteLeadNotificationToShop({
-            to,
-            listingCompanyName: listing.companyName || "",
-            leadContactName: doc.name,
-            leadContactCompany: doc.company,
-            siteUrl: getPublicSiteUrl(request),
-          });
-        } catch (e) {
-          console.warn("Notify listing shop of new lead email failed:", e);
-        }
-      }
+      await sendToListingNotifyEmails(listing, (to) =>
+        sendNewWebsiteLeadNotificationToShop({
+          to,
+          listingCompanyName: listing.companyName || "",
+          leadContactName: doc.name,
+          leadContactCompany: doc.company,
+          siteUrl,
+        })
+      );
     }
 
     if (sanitizedCalc && serverBreakdown) {

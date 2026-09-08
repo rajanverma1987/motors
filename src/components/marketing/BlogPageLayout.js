@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import BlogHeroVideo from "@/components/marketing/blog-hero-video";
 import { BRAND_LOGO_PUBLIC_PATH } from "@/lib/brand-logo";
 import { MARKETING_CONTENT_DATE } from "@/lib/marketing-content-date";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
@@ -45,6 +46,8 @@ export default function BlogPageLayout({
   heroImage = null,
   /** Alt text for heroImage (required for a11y when heroImage is set). */
   heroImageAlt = "",
+  /** Optional compressed MP4 shown in the hero; poster stays heroImage for fast first paint. */
+  heroVideo = null,
   /** Optional eyebrow above the H1 in the image hero. */
   heroEyebrow = null,
   /** Optional primary CTA under the hero description (image hero only). */
@@ -157,8 +160,8 @@ export default function BlogPageLayout({
         <section className="overflow-hidden border-b border-border bg-card">
           <div
             className={`mx-auto grid ${
-              wideSidebar ? "max-w-[96rem]" : "max-w-[86.4rem]"
-            } lg:grid-cols-2 lg:items-stretch`}
+              heroVideo ? "max-w-[96rem]" : wideSidebar ? "max-w-[96rem]" : "max-w-[86.4rem]"
+            } ${heroVideo ? "lg:grid-cols-[minmax(18rem,5fr)_minmax(0,9fr)]" : "lg:grid-cols-2"} lg:items-stretch`}
           >
             {/* Copy, solid panel, no blur over the photo */}
             <div className="order-2 flex flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:order-1 lg:px-8 lg:py-16 xl:px-10">
@@ -200,21 +203,25 @@ export default function BlogPageLayout({
             </div>
 
             {/* Product visual, sharp, no frosted overlay */}
-            <div className="relative order-1 min-h-[16rem] w-full bg-bg sm:min-h-[20rem] lg:order-2 lg:min-h-[min(68vh,34rem)]">
-              <Image
-                src={heroImage}
-                alt={heroImageAlt || title}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className="object-cover object-center"
-              />
-              {/* Soft seam only, keeps left edge from looking cut-off without washing the UI */}
-              <div
-                className="pointer-events-none absolute inset-y-0 left-0 hidden w-10 bg-gradient-to-r from-card/40 to-transparent lg:block"
-                aria-hidden
-              />
-            </div>
+            {heroVideo && heroImage ? (
+              <BlogHeroVideo src={heroVideo} poster={heroImage} alt={heroImageAlt || title} />
+            ) : (
+              <div className="relative order-1 min-h-[16rem] w-full bg-bg sm:min-h-[20rem] lg:order-2 lg:min-h-[min(68vh,34rem)]">
+                <Image
+                  src={heroImage}
+                  alt={heroImageAlt || title}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  className="object-cover object-center"
+                />
+                {/* Soft seam only, keeps left edge from looking cut-off without washing the UI */}
+                <div
+                  className="pointer-events-none absolute inset-y-0 left-0 hidden w-10 bg-gradient-to-r from-card/40 to-transparent lg:block"
+                  aria-hidden
+                />
+              </div>
+            )}
           </div>
         </section>
       ) : (

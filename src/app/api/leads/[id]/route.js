@@ -6,7 +6,7 @@ import Listing from "@/models/Listing";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendNewWebsiteLeadNotificationToShop } from "@/lib/email";
-import { getListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -48,23 +48,19 @@ export async function PATCH(request, context) {
       const newlyAssigned = nextIds.filter((lid) => !previousIds.has(lid));
       if (newlyAssigned.length > 0) {
         const listings = await Listing.find({ _id: { $in: newlyAssigned }, status: "approved" })
-          .select("email companyName notificationEmails")
+          .select("email companyName notificationEmails crmUserId")
           .lean();
         const siteUrl = getPublicSiteUrl(request);
         for (const listing of listings) {
-          for (const to of getListingNotifyEmails(listing)) {
-            try {
-              await sendNewWebsiteLeadNotificationToShop({
-                to,
-                listingCompanyName: listing.companyName || "",
-                leadContactName: doc.name,
-                leadContactCompany: doc.company,
-                siteUrl,
-              });
-            } catch (e) {
-              console.warn("Notify newly assigned listing of lead failed:", e);
-            }
-          }
+          await sendToListingNotifyEmails(listing, (to) =>
+            sendNewWebsiteLeadNotificationToShop({
+              to,
+              listingCompanyName: listing.companyName || "",
+              leadContactName: doc.name,
+              leadContactCompany: doc.company,
+              siteUrl,
+            })
+          );
         }
       }
     }
