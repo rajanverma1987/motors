@@ -7,6 +7,8 @@ import {
   browserSupportsWebAuthn,
 } from "@simplewebauthn/browser";
 import TimeClockQrScanner from "@/components/time-clock/time-clock-qr-scanner";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
 
 function getPosition() {
   return new Promise((resolve, reject) => {
@@ -57,8 +59,134 @@ function assertPasskeyOptionsMatchPage(options) {
  * Employee Time Clock PWA client.
  * @param {{ token: string }} props
  */
+function shopInitials(name) {
+  const parts = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length === 0) return "TC";
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+}
+
+function ShopMark({ logoUrl, shopName, size = "lg" }) {
+  const box = size === "lg" ? "h-24 w-24" : "h-11 w-11";
+  const text = size === "lg" ? "text-2xl" : "text-sm";
+  if (logoUrl) {
+    return (
+      <div className={`${box} overflow-hidden rounded-2xl border border-[#e6dfd6] bg-white shadow-sm`}>
+        <img src={logoUrl} alt={`${shopName} logo`} className="h-full w-full object-contain p-2" />
+      </div>
+    );
+  }
+  return (
+    <div
+      className={`${box} flex items-center justify-center rounded-2xl bg-[#945c2e] font-bold text-white shadow-sm ${text}`}
+      aria-hidden
+    >
+      {shopInitials(shopName)}
+    </div>
+  );
+}
+
+function TimeClockLogin({
+  shopName,
+  shopLogo,
+  busy,
+  webauthnOk,
+  needsRegister,
+  registerEmail,
+  setRegisterEmail,
+  setNeedsRegister,
+  onLogin,
+  onRegister,
+  error,
+  message,
+}) {
+  return (
+    <div className="flex min-h-[100dvh] flex-col bg-[#f3f1ef] text-neutral-900">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-5 py-8">
+        <div className="rounded-3xl border border-[#e6dfd6] bg-white px-6 py-8 shadow-sm">
+          <div className="flex flex-col items-center text-center">
+            <ShopMark logoUrl={shopLogo} shopName={shopName} />
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.18em] text-[#945c2e]">Time Clock</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight">{shopName}</h1>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-neutral-600">
+              Sign in with Face ID or fingerprint. Punching still requires a shop QR scan and your location.
+            </p>
+          </div>
+
+          {error ? (
+            <div className="mt-5 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{error}</div>
+          ) : null}
+          {message ? (
+            <div className="mt-5 border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+              {message}
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-col gap-3">
+            {!webauthnOk ? (
+              <p className="text-center text-sm text-red-700">Passkeys are not supported in this browser.</p>
+            ) : null}
+            <Button
+              type="button"
+              size="lg"
+              disabled={busy || !webauthnOk}
+              onClick={onLogin}
+              className="w-full rounded-xl bg-[#945c2e] hover:opacity-90"
+            >
+              {busy ? "Waiting…" : "Sign in with Face ID / fingerprint"}
+            </Button>
+            {!needsRegister ? (
+              <button
+                type="button"
+                className="text-sm font-semibold text-[#945c2e]"
+                onClick={() => setNeedsRegister(true)}
+              >
+                First time? Register a passkey
+              </button>
+            ) : (
+              <form onSubmit={onRegister} className="mt-1 flex flex-col gap-3 border-t border-[#efe8e1] pt-4">
+                <Input
+                  label="Work email"
+                  name="time-clock-email"
+                  type="email"
+                  required
+                  value={registerEmail}
+                  onChange={(e) => setRegisterEmail(e.target.value)}
+                  autoComplete="email"
+                  placeholder="you@shop.com"
+                />
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="w-full rounded-xl bg-neutral-900 hover:opacity-90"
+                >
+                  {busy ? "Registering…" : "Register passkey"}
+                </Button>
+                <button
+                  type="button"
+                  className="text-sm font-medium text-neutral-600"
+                  onClick={() => setNeedsRegister(false)}
+                >
+                  Back to sign in
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TimeClockApp({ token }) {
   const [shopName, setShopName] = useState("Shop");
+  const [shopLogo, setShopLogo] = useState("");
   const [tab, setTab] = useState("punch");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -111,6 +239,7 @@ export default function TimeClockApp({ token }) {
     const data = await readJson(res);
     if (!res.ok) throw new Error(data.error || "Invalid time clock link");
     setShopName(data.shopName || "Shop");
+    setShopLogo(String(data.logoUrl || "").trim());
     return data;
   }, [token]);
 
@@ -370,20 +499,37 @@ export default function TimeClockApp({ token }) {
     );
   }
 
+  if (!employee) {
+    return (
+      <TimeClockLogin
+        shopName={shopName}
+        shopLogo={shopLogo}
+        busy={busy}
+        webauthnOk={webauthnOk}
+        needsRegister={needsRegister}
+        registerEmail={registerEmail}
+        setRegisterEmail={setRegisterEmail}
+        setNeedsRegister={setNeedsRegister}
+        onLogin={handleLogin}
+        onRegister={handleRegister}
+        error={error}
+        message={message}
+      />
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-[#f3f1ef] text-neutral-900">
-      <header className="border-b border-neutral-300 bg-white px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#945c2e]">{shopName}</p>
-        <h1 className="text-xl font-bold">Time Clock</h1>
-        {employee ? (
-          <p className="mt-1 text-sm text-neutral-600">{employee.name}</p>
-        ) : (
-          <p className="mt-1 text-sm text-neutral-600">Scan at the shop. Location required to punch.</p>
-        )}
+      <header className="flex items-center gap-3 border-b border-neutral-300 bg-white px-4 py-4">
+        <ShopMark logoUrl={shopLogo} shopName={shopName} size="sm" />
+        <div className="min-w-0">
+          <p className="truncate text-xs font-semibold uppercase tracking-wide text-[#945c2e]">{shopName}</p>
+          <h1 className="text-xl font-bold">Time Clock</h1>
+          <p className="mt-0.5 truncate text-sm text-neutral-600">{employee.name}</p>
+        </div>
       </header>
 
-      {employee ? (
-        <nav className="flex border-b border-neutral-300 bg-white">
+      <nav className="flex border-b border-neutral-300 bg-white">
           {[
             { id: "punch", label: "Punch" },
             { id: "history", label: "History" },
@@ -400,8 +546,7 @@ export default function TimeClockApp({ token }) {
               {t.label}
             </button>
           ))}
-        </nav>
-      ) : null}
+      </nav>
 
       <main className="flex flex-1 flex-col gap-4 p-4">
         {error ? (
@@ -419,52 +564,7 @@ export default function TimeClockApp({ token }) {
           </div>
         ) : null}
 
-        {!employee ? (
-          <div className="flex flex-col gap-4">
-            {!webauthnOk ? (
-              <p className="text-sm text-red-700">Passkeys are not supported in this browser.</p>
-            ) : null}
-            <button
-              type="button"
-              disabled={busy || !webauthnOk}
-              onClick={handleLogin}
-              className="h-14 w-full bg-[#945c2e] text-base font-bold text-white disabled:opacity-50"
-            >
-              {busy ? "Waiting…" : "Sign in with Face ID / fingerprint"}
-            </button>
-            <button
-              type="button"
-              className="text-sm font-semibold text-[#945c2e] underline"
-              onClick={() => setNeedsRegister(true)}
-            >
-              First time? Register passkey
-            </button>
-            {needsRegister ? (
-              <form onSubmit={handleRegister} className="flex flex-col gap-3 border border-neutral-300 bg-white p-3">
-                <label className="text-sm font-semibold">
-                  Work email
-                  <input
-                    type="email"
-                    required
-                    value={registerEmail}
-                    onChange={(e) => setRegisterEmail(e.target.value)}
-                    className="mt-1 h-11 w-full border border-neutral-300 px-2"
-                    autoComplete="email"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="h-11 bg-neutral-900 font-semibold text-white disabled:opacity-50"
-                >
-                  {busy ? "Registering…" : "Register passkey"}
-                </button>
-              </form>
-            ) : null}
-          </div>
-        ) : null}
-
-        {employee && tab === "punch" ? (
+        {tab === "punch" ? (
           <div className="flex flex-col gap-4">
             <div className="border border-neutral-300 bg-white p-4 text-center">
               <p className="text-sm text-neutral-600">Status</p>
@@ -512,7 +612,7 @@ export default function TimeClockApp({ token }) {
           </div>
         ) : null}
 
-        {employee && tab === "history" ? (
+        {tab === "history" ? (
           <ul className="divide-y divide-neutral-200 border border-neutral-300 bg-white">
             {history.length === 0 ? (
               <li className="px-3 py-4 text-sm text-neutral-600">No punches yet.</li>
@@ -535,7 +635,7 @@ export default function TimeClockApp({ token }) {
           </ul>
         ) : null}
 
-        {employee && tab === "hours" ? (
+        {tab === "hours" ? (
           <div className="border border-neutral-300 bg-white p-4">
             <p className="text-sm text-neutral-600">Total (period)</p>
             <p className="text-3xl font-bold">{hours?.totalHours ?? 0} h</p>

@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
 import User from "@/models/User";
 import { findShopByTimeClockToken } from "@/lib/time-clock-settings";
+
+function publicLogoUrl(raw) {
+  const url = String(raw || "").trim();
+  if (!url) return "";
+  if (url.startsWith("/uploads/")) return url;
+  if (/^https:\/\//i.test(url)) return url;
+  return "";
+}
 
 export async function GET(request) {
   try {
@@ -16,8 +25,20 @@ export async function GET(request) {
       return NextResponse.json({ error: "Invalid time clock link" }, { status: 404 });
     }
     const userDoc = await User.findOne({ email: shop.ownerEmail }).select("shopName").lean();
+    let logoUrl = publicLogoUrl(shop.logoUrl);
+    if (!logoUrl) {
+      const email = shop.ownerEmail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const listing = await Listing.findOne({
+        status: "approved",
+        email: { $regex: `^${email}$`, $options: "i" },
+      })
+        .select("logoUrl")
+        .lean();
+      logoUrl = publicLogoUrl(listing?.logoUrl);
+    }
     return NextResponse.json({
       shopName: String(userDoc?.shopName || "").trim() || "Shop",
+      logoUrl,
       token,
       geofenceConfigured: shop.lat != null && shop.lng != null,
       radiusM: shop.radiusM,

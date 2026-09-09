@@ -78,6 +78,7 @@ export async function findShopByTimeClockToken(token) {
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     radiusM: normalizeTimeClockRadiusM(s.timeClockRadiusM),
+    logoUrl: String(s.logoUrl || "").trim(),
   };
 }
 
