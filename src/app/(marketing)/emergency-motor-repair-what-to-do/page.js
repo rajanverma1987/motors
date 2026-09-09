@@ -174,7 +174,7 @@ export default async function EmergencyMotorRepairWhatToDoPage() {
         <h1 className="mt-6 text-3xl font-bold tracking-tight text-title sm:text-4xl">Emergency motor repair</h1>
         <p className="mt-3 max-w-3xl text-base leading-relaxed text-secondary sm:text-lg">
           Motor down and production stopped? Submit your repair request below, matched to 24/7 shops in your area
-          within minutes. Or call a shop directly from the directory.
+          within minutes. Or use View Contact on a shop below to see the number and call.
         </p>
 
         <div className="mt-8 max-w-[53rem]">
