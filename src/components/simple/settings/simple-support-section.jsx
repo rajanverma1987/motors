@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiX, FiImage } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -8,6 +8,7 @@ import Textarea from "@/components/ui/textarea";
 import Select from "@/components/ui/select";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
+import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
 import { useAlert } from "@/components/confirm-provider";
 import { sortRowsClient } from "@/lib/client-table-sort";
 import { useFormatDateTime } from "@/contexts/user-settings-context";
@@ -72,7 +73,6 @@ export default function SimpleSupportSection() {
   const [newDescription, setNewDescription] = useState("");
   const [newAttachments, setNewAttachments] = useState([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const fileInputRef = useRef(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -130,9 +130,8 @@ export default function SimpleSupportSection() {
     setNewAttachments([]);
   };
 
-  const handlePhotoInput = async (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
+  const handlePhotoFiles = async (filesInput) => {
+    const files = Array.from(filesInput || []);
     if (!files.length) return;
     const room = MAX_TICKET_PHOTOS - newAttachments.length;
     if (room <= 0) {
@@ -341,25 +340,17 @@ export default function SimpleSupportSection() {
               Photos (optional)
             </span>
             <p className="mb-2 text-xs text-secondary">
-              Up to {MAX_TICKET_PHOTOS} images (JPG, PNG, WebP, GIF), 8MB each — e.g. screenshots of an error.
+              Up to {MAX_TICKET_PHOTOS} images (JPG, PNG, WebP, GIF), 8MB each. For example, screenshots of an error.
             </p>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+            <SimpleAttachmentFilePicker
               multiple
-              className="hidden"
-              onChange={handlePhotoInput}
-            />
-            <Button
-              type="button"
               variant="outline"
-              size="sm"
+              accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
               disabled={uploadingPhoto || newAttachments.length >= MAX_TICKET_PHOTOS}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              {uploadingPhoto ? "Uploading…" : "Add photos"}
-            </Button>
+              fileLabel={uploadingPhoto ? "Uploading…" : "Add photos"}
+              cameraLabel="Take photo"
+              onFiles={handlePhotoFiles}
+            />
             {newAttachments.length > 0 ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 {newAttachments.map((src) => (

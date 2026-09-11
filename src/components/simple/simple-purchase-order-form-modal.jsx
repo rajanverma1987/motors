@@ -11,6 +11,9 @@ import SimplePoLineCancellationModal from "@/components/simple/simple-po-line-ca
 import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-modal";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
 import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
@@ -224,6 +227,7 @@ export default function SimplePurchaseOrderFormModal({
   const [paymentDraft, setPaymentDraft] = useState(() => emptyPoPayment());
   const [editPayment, setEditPayment] = useState(null);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [attachmentPreview, setAttachmentPreview] = useState(null);
   const [jobContext, setJobContext] = useState(null);
   const [cancellationOpen, setCancellationOpen] = useState(false);
   const [cancellationInitialLineIds, setCancellationInitialLineIds] = useState([]);
@@ -1977,11 +1981,7 @@ export default function SimplePurchaseOrderFormModal({
                             </tr>
                           ) : (
                             (form.vendorDocuments || []).map((doc, i) => {
-                              const href = String(doc.url || "").startsWith("http")
-                                ? doc.url
-                                : doc.url?.startsWith("/")
-                                  ? doc.url
-                                  : `/${doc.url || ""}`;
+                              const href = resolveAttachmentHref(doc.url);
                               return (
                                 <tr key={`${doc.url}-${i}`} className="border-t border-border bg-card">
                                   <td className="px-1 py-0.5">
@@ -1991,7 +1991,9 @@ export default function SimplePurchaseOrderFormModal({
                                         className="rounded p-0.5 text-primary hover:bg-primary/10"
                                         title="View"
                                         aria-label="View"
-                                        onClick={() => href && window.open(href, "_blank", "noopener,noreferrer")}
+                                        onClick={() =>
+                                          href && setAttachmentPreview({ url: href, name: doc.name || "" })
+                                        }
                                       >
                                         <FiEye className="h-3.5 w-3.5" aria-hidden />
                                       </button>
@@ -2046,6 +2048,13 @@ export default function SimplePurchaseOrderFormModal({
         recordId={form.id}
         documents={form.vendorDocuments || []}
         onAttached={(_att, next) => setForm((f) => ({ ...f, vendorDocuments: next }))}
+      />
+
+      <SimpleAttachmentPreviewModal
+        open={Boolean(attachmentPreview)}
+        onClose={() => setAttachmentPreview(null)}
+        url={attachmentPreview?.url}
+        name={attachmentPreview?.name}
       />
 
       <Modal

@@ -1,7 +1,10 @@
 "use client";
 
-import { useId } from "react";
-import { FiTrash2, FiExternalLink, FiUpload } from "react-icons/fi";
+import { useId, useState } from "react";
+import { FiTrash2, FiExternalLink, FiUpload, FiCamera } from "react-icons/fi";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
 
 /**
  * @typedef {{ url: string, name: string }} VendorAttachment
@@ -43,6 +46,8 @@ export default function VendorAttachmentsPanel({
   onRemoveSavedRow,
 }) {
   const fileInputId = useId();
+  const cameraInputId = `${fileInputId}-camera`;
+  const [preview, setPreview] = useState(null);
   const savedResourceId = resourceId !== undefined ? resourceId : vendorId;
   const isCreate = !savedResourceId;
   const canUpload = !hideUpload && !readOnly;
@@ -76,14 +81,17 @@ export default function VendorAttachmentsPanel({
     onAttachmentsChange(attachments.filter((_, i) => i !== index));
   };
 
-  const viewUrl = (url) => {
-    const u = String(url || "").trim();
-    if (!u) return;
-    if (u.startsWith("http://") || u.startsWith("https://")) window.open(u, "_blank", "noopener,noreferrer");
-    else window.open(u.startsWith("/") ? u : `/${u}`, "_blank", "noopener,noreferrer");
+  const viewUrl = (row) => {
+    const href = resolveAttachmentHref(row?.url ?? row);
+    const name = typeof row === "object" && row ? row.name || "" : "";
+    if (!href) return;
+    setPreview({ url: href, name });
   };
 
   const hasRows = attachments.length > 0 || pendingFiles.length > 0;
+  const uploadBtnClass = `inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 py-1 text-sm text-text transition-opacity hover:bg-card hover:border-primary/20 ${
+    uploading ? "pointer-events-none cursor-not-allowed opacity-50" : ""
+  }`;
 
   return (
     <div className="w-full min-w-0">
@@ -101,7 +109,7 @@ export default function VendorAttachmentsPanel({
           </p>
         </div>
         {canUpload ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <input
               id={fileInputId}
               type="file"
@@ -112,14 +120,23 @@ export default function VendorAttachmentsPanel({
               accept="*/*"
               onChange={handleFileChange}
             />
-            <label
-              htmlFor={fileInputId}
-              className={`inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 py-1 text-sm text-text transition-opacity hover:bg-card hover:border-primary/20 ${
-                uploading ? "pointer-events-none cursor-not-allowed opacity-50" : ""
-              }`}
-            >
+            <input
+              id={cameraInputId}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={uploading}
+              aria-label="Take photo"
+              className="sr-only"
+              onChange={handleFileChange}
+            />
+            <label htmlFor={fileInputId} className={uploadBtnClass}>
               <FiUpload className="h-4 w-4 shrink-0" aria-hidden />
               {uploading ? "Uploading…" : "Add files"}
+            </label>
+            <label htmlFor={cameraInputId} className={uploadBtnClass} title="Open camera on tablet or phone">
+              <FiCamera className="h-4 w-4 shrink-0" aria-hidden />
+              Take photo
             </label>
           </div>
         ) : null}
@@ -151,7 +168,7 @@ export default function VendorAttachmentsPanel({
                         className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
                         aria-label="View document"
                         title="View"
-                        onClick={() => viewUrl(row.url)}
+                        onClick={() => viewUrl(row)}
                       >
                         <FiExternalLink className="h-4 w-4" aria-hidden />
                       </button>
@@ -196,6 +213,12 @@ export default function VendorAttachmentsPanel({
           </table>
         </div>
       )}
+      <SimpleAttachmentPreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        name={preview?.name}
+      />
     </div>
   );
 }

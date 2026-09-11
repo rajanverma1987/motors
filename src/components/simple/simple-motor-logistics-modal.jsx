@@ -1,11 +1,15 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import { FiDownload, FiEye, FiPrinter, FiSend, FiTrash2, FiUpload } from "react-icons/fi";
+import { FiDownload, FiEye, FiPrinter, FiSend, FiTrash2 } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import SimpleMotorShippingPrintSheet from "@/components/simple/simple-motor-shipping-print-sheet";
 import SimpleMotorShippingSendModal from "@/components/simple/simple-motor-shipping-send-modal";
@@ -40,13 +44,6 @@ function FieldRow({ label, labelWidth = "7.25rem", children }) {
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
-}
-
-function resolveAttachmentHref(url) {
-  const u = String(url || "").trim();
-  if (!u) return "";
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  return u.startsWith("/") ? u : `/${u}`;
 }
 
 function LogisticsColumn({
@@ -255,7 +252,7 @@ function LogisticsColumn({
           <div className="flex min-w-0 flex-col gap-2">
             <div>
               <label className="mb-1 block text-xs font-bold text-title" htmlFor={`${fileInputId}-name`}>
-                Document name
+                Document name *
               </label>
               <input
                 id={`${fileInputId}-name`}
@@ -266,39 +263,28 @@ function LogisticsColumn({
                 placeholder="e.g. BOL scan"
                 disabled={busy || !recordId}
                 autoComplete="off"
+                required
               />
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <input
-                id={fileInputId}
-                type="file"
-                className="sr-only"
+              <SimpleAttachmentFilePicker
                 disabled={busy || !recordId}
-                onChange={(e) => {
-                  const next = e.target.files?.[0] || null;
+                showSelectedName
+                selectedName={file?.name || ""}
+                className="min-w-0 flex-1"
+                onFiles={(files) => {
+                  const next = files[0] || null;
                   setFile(next);
                   if (next && !documentName.trim()) {
                     setDocumentName(next.name.replace(/\.[^.]+$/, "") || next.name);
                   }
                 }}
               />
-              <label
-                htmlFor={fileInputId}
-                className={`${FIELD_INPUT} inline-flex cursor-pointer items-center justify-center gap-1.5 !w-auto shrink-0 px-2 ${
-                  busy || !recordId ? "pointer-events-none opacity-50" : ""
-                }`}
-              >
-                <FiUpload className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                Choose file…
-              </label>
-              <span className="min-w-0 flex-1 truncate text-xs text-secondary">
-                {file?.name || "No file selected"}
-              </span>
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
-                disabled={busy || !file || !recordId}
+                disabled={busy || !file || !documentName.trim() || !recordId}
                 onClick={onUpload}
                 className="shrink-0"
               >
@@ -337,7 +323,7 @@ function LogisticsColumn({
                               aria-label={`View ${row.name || "document"}`}
                               disabled={busy}
                               className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
-                              onClick={() => onView(row.url)}
+                              onClick={() => onView(row)}
                             >
                               <FiEye className="h-4 w-4 shrink-0" aria-hidden />
                             </button>
@@ -435,6 +421,7 @@ export default function SimpleMotorLogisticsModal({
     })
   );
   const [savingKind, setSavingKind] = useState("");
+  const [preview, setPreview] = useState(null);
   const [printing, setPrinting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [receivingDocName, setReceivingDocName] = useState("");
@@ -587,12 +574,16 @@ export default function SimpleMotorLogisticsModal({
       await alert({ title: "Error", message: "Choose a file to attach.", variant: "danger" });
       return;
     }
+    if (!documentName.trim()) {
+      await alert({ title: "Error", message: "Document name is required.", variant: "danger" });
+      return;
+    }
     setUploadingKind(kind);
     try {
       const body = new FormData();
       body.append("file", file);
       body.append("kind", kind);
-      body.append("documentName", documentName.trim() || file.name || "Attachment");
+      body.append("documentName", documentName.trim());
       const res = await fetch(
         `/api/dashboard/simple-service-proposals/${encodeURIComponent(recordId)}/logistics-attachments`,
         { method: "POST", credentials: "include", body }
@@ -615,13 +606,14 @@ export default function SimpleMotorLogisticsModal({
     }
   };
 
-  const openAttachment = (url) => {
-    const href = resolveAttachmentHref(url);
+  const openAttachment = (row) => {
+    const href = resolveAttachmentHref(row?.url ?? row);
+    const name = typeof row === "object" && row ? row.name || "" : "";
     if (!href) {
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    window.open(href, "_blank", "noopener,noreferrer");
+    setPreview({ url: href, name });
   };
 
   const downloadAttachment = (row) => {
@@ -811,6 +803,12 @@ export default function SimpleMotorLogisticsModal({
         sendMeta={shippingSendMeta}
         paidByLabel={paidByLabel}
         zIndex={zIndex + 10}
+      />
+      <SimpleAttachmentPreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        name={preview?.name}
       />
     </>
   );

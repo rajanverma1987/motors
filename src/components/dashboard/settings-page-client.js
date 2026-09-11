@@ -363,7 +363,7 @@ export default function SettingsPageClient() {
               />
             </FormContainer>
             <FormContainer>
-              <FormSectionTitle as="h2">Payment terms (NET 30)</FormSectionTitle>
+              <FormSectionTitle as="h2">Payment terms</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
                 Default payment terms for your shop. Use for invoices, quotes, and vendor expectations. You
                 can still override per document later when that is supported.
@@ -479,12 +479,11 @@ export default function SettingsPageClient() {
                   max={LOGO_DOCUMENT_SCALE_MAX}
                   step={LOGO_DOCUMENT_SCALE_STEP}
                   value={normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}
-                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${
-                    normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
-                    LOGO_DOCUMENT_SCALE_DEFAULT
+                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
+                      LOGO_DOCUMENT_SCALE_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ logoDocumentScale: normalizeLogoDocumentScale(e.target.value) })
                   }
@@ -517,11 +516,10 @@ export default function SettingsPageClient() {
                   max={DISPLAY_ZOOM_MAX}
                   step={DISPLAY_ZOOM_STEP}
                   value={normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}
-                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${
-                    normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
+                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ zoomLevel: normalizeZoomLevel(e.target.value) })
                   }
@@ -533,12 +531,11 @@ export default function SettingsPageClient() {
                   max={DISPLAY_FONT_SIZE_MAX}
                   step={DISPLAY_FONT_SIZE_STEP}
                   value={normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}
-                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${
-                    normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
-                    DISPLAY_FONT_SIZE_DEFAULT
+                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
+                      DISPLAY_FONT_SIZE_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ fontSizeLevel: normalizeFontSizeLevel(e.target.value) })
                   }

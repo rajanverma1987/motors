@@ -445,10 +445,9 @@ export default function SettingsPageClient() {
               />
             </FormContainer>
             <FormContainer>
-              <FormSectionTitle as="h2">Payment terms (NET 30)</FormSectionTitle>
+              <FormSectionTitle as="h2">Payment terms</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
-                Default payment terms for your shop. Use for invoices, quotes, and vendor expectations. You
-                can still override per document later when that is supported.
+                Default payment terms for your shop. Use for invoices, quotes, and vendor expectations.
               </p>
               <div className="max-w-[33.6rem]">
                 <Select
@@ -562,12 +561,11 @@ export default function SettingsPageClient() {
                   max={LOGO_DOCUMENT_SCALE_MAX}
                   step={LOGO_DOCUMENT_SCALE_STEP}
                   value={normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}
-                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${
-                    normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
-                    LOGO_DOCUMENT_SCALE_DEFAULT
+                  valueDisplay={`${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT)}%${normalizeLogoDocumentScale(draft.logoDocumentScale ?? LOGO_DOCUMENT_SCALE_DEFAULT) ===
+                      LOGO_DOCUMENT_SCALE_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ logoDocumentScale: normalizeLogoDocumentScale(e.target.value) })
                   }
@@ -600,11 +598,10 @@ export default function SettingsPageClient() {
                   max={DISPLAY_ZOOM_MAX}
                   step={DISPLAY_ZOOM_STEP}
                   value={normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}
-                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${
-                    normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
+                  valueDisplay={`${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT)}%${normalizeZoomLevel(draft.zoomLevel ?? DISPLAY_ZOOM_DEFAULT) === DISPLAY_ZOOM_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ zoomLevel: normalizeZoomLevel(e.target.value) })
                   }
@@ -616,12 +613,11 @@ export default function SettingsPageClient() {
                   max={DISPLAY_FONT_SIZE_MAX}
                   step={DISPLAY_FONT_SIZE_STEP}
                   value={normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}
-                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${
-                    normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
-                    DISPLAY_FONT_SIZE_DEFAULT
+                  valueDisplay={`${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT)}%${normalizeFontSizeLevel(draft.fontSizeLevel ?? DISPLAY_FONT_SIZE_DEFAULT) ===
+                      DISPLAY_FONT_SIZE_DEFAULT
                       ? " (default)"
                       : ""
-                  }`}
+                    }`}
                   onChange={(e) =>
                     updateDraft({ fontSizeLevel: normalizeFontSizeLevel(e.target.value) })
                   }
@@ -1081,11 +1077,10 @@ export default function SettingsPageClient() {
                       e.preventDefault();
                       goSection(item.id, item.id === "master" ? { masterTab } : {});
                     }}
-                    className={`block w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm touch-manipulation ${
-                      active
+                    className={`block w-full whitespace-nowrap rounded-none px-2.5 py-1.5 text-left text-sm touch-manipulation ${active
                         ? "font-semibold text-primary"
                         : "text-secondary hover:bg-card hover:text-title"
-                    }`}
+                      }`}
                   >
                     {item.label}
                   </Link>

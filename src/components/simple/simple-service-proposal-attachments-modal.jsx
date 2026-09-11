@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiDownload, FiEye, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
+import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 
 const FORM_ID = "simple-sp-attachments-form";
@@ -22,13 +26,6 @@ function FieldRow({ label, labelWidth = "7.5rem", children }) {
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
-}
-
-function resolveAttachmentHref(url) {
-  const u = String(url || "").trim();
-  if (!u) return "";
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  return u.startsWith("/") ? u : `/${u}`;
 }
 
 /**
@@ -50,11 +47,11 @@ export default function SimpleServiceProposalAttachmentsModal({
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
-  const fileInputId = useId();
   const [documentName, setDocumentName] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState("");
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -75,11 +72,15 @@ export default function SimpleServiceProposalAttachmentsModal({
       await alert({ title: "Error", message: "Choose a file to attach.", variant: "danger" });
       return;
     }
+    if (!documentName.trim()) {
+      await alert({ title: "Error", message: "Document name is required.", variant: "danger" });
+      return;
+    }
     setUploading(true);
     try {
       const body = new FormData();
       body.append("file", file);
-      body.append("documentName", documentName.trim() || file.name || "Attachment");
+      body.append("documentName", documentName.trim());
       const res = await fetch(`/api/dashboard/simple-service-proposals/${encodeURIComponent(id)}/attachments`, {
         method: "POST",
         credentials: "include",
@@ -101,13 +102,13 @@ export default function SimpleServiceProposalAttachmentsModal({
     }
   };
 
-  const openAttachment = (url) => {
-    const href = resolveAttachmentHref(url);
+  const openAttachment = (row) => {
+    const href = resolveAttachmentHref(row?.url);
     if (!href) {
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    window.open(href, "_blank", "noopener,noreferrer");
+    setPreview({ url: href, name: row?.name || "" });
   };
 
   const downloadAttachment = (row) => {
@@ -164,7 +165,13 @@ export default function SimpleServiceProposalAttachmentsModal({
   const busy = uploading || Boolean(deletingUrl);
 
   const headerActions = (
-    <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={busy || !file || !recordId}>
+    <Button
+      type="submit"
+      form={FORM_ID}
+      variant="primary"
+      size="sm"
+      disabled={busy || !file || !documentName.trim() || !recordId}
+    >
       {uploading ? "Uploading…" : "Attach"}
     </Button>
   );
@@ -172,22 +179,23 @@ export default function SimpleServiceProposalAttachmentsModal({
   const list = Array.isArray(attachments) ? attachments : [];
 
   return (
-    <Modal
-      open={open}
-      onClose={() => !busy && onClose?.()}
-      title="Add Attachments"
-      size="md"
-      width="min(520px, 96vw)"
-      showClose={!busy}
-      closeOnOutsideClick={false}
-      actions={headerActions}
-    >
-      <Form
-        id={FORM_ID}
-        onSubmit={handleSubmit}
-        className="!space-y-3 !border-0 !bg-transparent !p-0 !shadow-none"
+    <>
+      <Modal
+        open={open}
+        onClose={() => !busy && onClose?.()}
+        title="Add Attachments"
+        size="md"
+        width="min(520px, 96vw)"
+        showClose={!busy}
+        closeOnOutsideClick={false}
+        actions={headerActions}
       >
-        <FieldRow label="Document name">
+        <Form
+          id={FORM_ID}
+          onSubmit={handleSubmit}
+          className="!space-y-3 !border-0 !bg-transparent !p-0 !shadow-none"
+        >
+        <FieldRow label="Document name *">
           <input
             type="text"
             value={documentName}
@@ -196,35 +204,22 @@ export default function SimpleServiceProposalAttachmentsModal({
             placeholder="e.g. Nameplate photo"
             disabled={busy}
             autoComplete="off"
+            required
           />
         </FieldRow>
         <FieldRow label="Attachment">
-          <div className="flex min-w-0 items-center gap-2">
-            <input
-              id={fileInputId}
-              type="file"
-              className="sr-only"
-              disabled={busy}
-              onChange={(e) => {
-                const next = e.target.files?.[0] || null;
-                setFile(next);
-                if (next && !documentName.trim()) {
-                  setDocumentName(next.name.replace(/\.[^.]+$/, "") || next.name);
-                }
-              }}
-            />
-            <label
-              htmlFor={fileInputId}
-              className={`${FIELD_INPUT} inline-flex cursor-pointer items-center justify-center !w-auto shrink-0 px-2 ${
-                busy ? "pointer-events-none opacity-50" : ""
-              }`}
-            >
-              Choose file…
-            </label>
-            <span className="min-w-0 truncate text-xs text-secondary">
-              {file?.name || "No file selected"}
-            </span>
-          </div>
+          <SimpleAttachmentFilePicker
+            disabled={busy}
+            showSelectedName
+            selectedName={file?.name || ""}
+            onFiles={(files) => {
+              const next = files[0] || null;
+              setFile(next);
+              if (next && !documentName.trim()) {
+                setDocumentName(next.name.replace(/\.[^.]+$/, "") || next.name);
+              }
+            }}
+          />
         </FieldRow>
         {!recordId ? (
           <p className="text-xs text-secondary">Save the service proposal first, then attach documents.</p>
@@ -258,7 +253,7 @@ export default function SimpleServiceProposalAttachmentsModal({
                               aria-label={`View ${row.name || "document"}`}
                               disabled={busy}
                               className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
-                              onClick={() => openAttachment(row.url)}
+                              onClick={() => openAttachment(row)}
                             >
                               <FiEye className="h-4 w-4 shrink-0" aria-hidden />
                             </button>
@@ -299,7 +294,14 @@ export default function SimpleServiceProposalAttachmentsModal({
             </div>
           </div>
         ) : null}
-      </Form>
-    </Modal>
+        </Form>
+      </Modal>
+      <SimpleAttachmentPreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        name={preview?.name}
+      />
+    </>
   );
 }

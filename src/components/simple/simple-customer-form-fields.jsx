@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { FiEye, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
+import SimpleAttachmentPreviewModal from "@/components/simple/simple-attachment-preview-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import {
   CUSTOMER_TYPE_OPTIONS,
@@ -62,9 +64,9 @@ function PairRow({ leftLabel, rightLabel, left, right, labelWidth = "6.5rem" }) 
 export default function SimpleCustomerFormFields({ form, setForm, layout = "grid", customerId = "" }) {
   const alert = useAlert();
   const confirm = useConfirm();
-  const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [deletingKey, setDeletingKey] = useState("");
+  const [preview, setPreview] = useState(null);
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   const isStacked = layout === "stacked";
   const columnsClass = isStacked ? "grid-cols-1" : "grid-cols-1 lg:grid-cols-3";
@@ -97,14 +99,8 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
     }));
   };
 
-  const openFilePicker = () => {
-    if (docsBusy) return;
-    fileInputRef.current?.click();
-  };
-
-  const handleFilesSelected = async (e) => {
-    const files = Array.from(e.target.files || []).filter((f) => f && typeof f === "object");
-    e.target.value = "";
+  const handleFilesSelected = async (filesInput) => {
+    const files = Array.from(filesInput || []).filter((f) => f && typeof f === "object");
     if (files.length === 0) return;
 
     if (!resolvedCustomerId) {
@@ -195,7 +191,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       void alert({ title: "Error", message: "File is not available yet.", variant: "danger" });
       return;
     }
-    window.open(href, "_blank", "noopener,noreferrer");
+    setPreview({ url: href, name: doc?.name || "" });
   };
 
   const copyBillingToShipping = () => {
@@ -210,6 +206,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
   };
 
   return (
+    <>
     <div className="flex flex-col gap-4">
       <div className={`grid gap-4 ${columnsClass}`}>
         <div className="flex min-w-0 flex-col gap-2">
@@ -724,27 +721,15 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       <div className="flex min-w-0 flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
           <p className={`${SECTION_TITLE} mb-0`}>Documents</p>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className={TOOLBAR_BTN}
-            onClick={openFilePicker}
+          <SimpleAttachmentFilePicker
+            multiple
             disabled={docsBusy}
-          >
-            <FiPlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            {uploading ? "Uploading…" : "Add document"}
-          </Button>
+            variant="outline"
+            fileLabel={uploading ? "Uploading…" : "Add document"}
+            cameraLabel="Take photo"
+            onFiles={handleFilesSelected}
+          />
         </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={handleFilesSelected}
-          aria-hidden
-          tabIndex={-1}
-        />
         <p className="text-xs text-secondary">
           {resolvedCustomerId
             ? "Upload files (e.g. tax exempt certificate). Files are saved immediately."
@@ -831,5 +816,12 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
         )}
       </div>
     </div>
+    <SimpleAttachmentPreviewModal
+      open={Boolean(preview)}
+      onClose={() => setPreview(null)}
+      url={preview?.url}
+      name={preview?.name}
+    />
+    </>
   );
 }

@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import { FiDownload, FiEye, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
+import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
+import SimpleAttachmentPreviewModal, {
+  resolveAttachmentHref,
+} from "@/components/simple/simple-attachment-preview-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 
 const FORM_ID = "simple-po-attachments-form";
@@ -24,13 +28,6 @@ function FieldRow({ label, labelWidth = "7.5rem", children }) {
   );
 }
 
-function resolveAttachmentHref(url) {
-  const u = String(url || "").trim();
-  if (!u) return "";
-  if (u.startsWith("http://") || u.startsWith("https://")) return u;
-  return u.startsWith("/") ? u : `/${u}`;
-}
-
 /**
  * Attach vendor invoices / documents for a saved Simple purchase order.
  */
@@ -43,11 +40,11 @@ export default function SimplePurchaseOrderAttachmentsModal({
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
-  const fileInputId = useId();
   const [documentName, setDocumentName] = useState("");
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [deletingUrl, setDeletingUrl] = useState("");
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     if (!open) return;
@@ -68,11 +65,15 @@ export default function SimplePurchaseOrderAttachmentsModal({
       await alert({ title: "Error", message: "Choose a file to attach.", variant: "danger" });
       return;
     }
+    if (!documentName.trim()) {
+      await alert({ title: "Error", message: "Document name is required.", variant: "danger" });
+      return;
+    }
     setUploading(true);
     try {
       const body = new FormData();
       body.append("file", file);
-      body.append("documentName", documentName.trim() || file.name || "Attachment");
+      body.append("documentName", documentName.trim());
       const res = await fetch(`/api/dashboard/simple-purchase-orders/${encodeURIComponent(id)}/attachments`, {
         method: "POST",
         credentials: "include",
@@ -94,13 +95,13 @@ export default function SimplePurchaseOrderAttachmentsModal({
     }
   };
 
-  const openAttachment = (url) => {
-    const href = resolveAttachmentHref(url);
+  const openAttachment = (row) => {
+    const href = resolveAttachmentHref(row?.url);
     if (!href) {
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    window.open(href, "_blank", "noopener,noreferrer");
+    setPreview({ url: href, name: row?.name || "" });
   };
 
   const downloadAttachment = (row) => {
@@ -157,24 +158,31 @@ export default function SimplePurchaseOrderAttachmentsModal({
   const busy = uploading || Boolean(deletingUrl);
 
   return (
-    <Modal
-      open={open}
-      onClose={() => !busy && onClose?.()}
-      title="Vendor invoices & documents"
-      size="md"
-      showClose={!busy}
-      actions={
-        <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={busy || !file}>
-          {uploading ? "Uploading…" : "Attach"}
-        </Button>
-      }
-    >
+    <>
+      <Modal
+        open={open}
+        onClose={() => !busy && onClose?.()}
+        title="Vendor invoices & documents"
+        size="md"
+        showClose={!busy}
+        actions={
+          <Button
+            type="submit"
+            form={FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={busy || !file || !documentName.trim()}
+          >
+            {uploading ? "Uploading…" : "Attach"}
+          </Button>
+        }
+      >
       <Form
         id={FORM_ID}
         onSubmit={handleSubmit}
         className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
       >
-        <FieldRow label="Document name">
+        <FieldRow label="Document name *">
           <input
             type="text"
             value={documentName}
@@ -182,15 +190,21 @@ export default function SimplePurchaseOrderAttachmentsModal({
             className={FIELD_INPUT}
             placeholder="Vendor invoice #…"
             disabled={busy}
+            required
           />
         </FieldRow>
         <FieldRow label="File">
-          <input
-            id={fileInputId}
-            type="file"
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="block w-full min-w-0 text-xs text-title file:mr-2 file:rounded-sm file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:font-semibold file:text-white"
+          <SimpleAttachmentFilePicker
             disabled={busy}
+            showSelectedName
+            selectedName={file?.name || ""}
+            onFiles={(files) => {
+              const next = files[0] || null;
+              setFile(next);
+              if (next && !documentName.trim()) {
+                setDocumentName(next.name.replace(/\.[^.]+$/, "") || next.name);
+              }
+            }}
           />
         </FieldRow>
       </Form>
@@ -215,7 +229,7 @@ export default function SimplePurchaseOrderAttachmentsModal({
                         className="rounded p-0.5 text-primary hover:bg-primary/10"
                         title="View"
                         aria-label="View"
-                        onClick={() => openAttachment(row.url)}
+                        onClick={() => openAttachment(row)}
                         disabled={busy}
                       >
                         <FiEye className="h-3.5 w-3.5" aria-hidden />
@@ -253,6 +267,13 @@ export default function SimplePurchaseOrderAttachmentsModal({
       ) : (
         <p className="mt-4 text-xs text-secondary">No vendor documents attached yet.</p>
       )}
-    </Modal>
+      </Modal>
+      <SimpleAttachmentPreviewModal
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        url={preview?.url}
+        name={preview?.name}
+      />
+    </>
   );
 }
