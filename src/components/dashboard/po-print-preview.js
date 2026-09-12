@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import PoPrintSheetBody from "@/components/dashboard/po-print-sheet-body";
 
 const STYLE_ID = "po-print-preview-styles";
@@ -62,6 +63,7 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
   const fmt = useFormatMoney();
   const toast = useToast();
   const { settings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const [po, setPo] = useState(null);
   const [vendor, setVendor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,13 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
+    if (!canViewFinancials) {
+      setLoading(false);
+      setError("Printing purchase orders is restricted for your employee role.");
+      setPo(null);
+      setVendor(null);
+      return;
+    }
     if (!purchaseOrderId) {
       setLoading(false);
       setError("Purchase order ID required");
@@ -128,7 +137,7 @@ export default function PoPrintPreview({ purchaseOrderId, open, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [purchaseOrderId, open]);
+  }, [purchaseOrderId, open, canViewFinancials]);
 
   useEffect(() => {
     if (!open) return;

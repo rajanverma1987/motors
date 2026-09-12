@@ -18,6 +18,7 @@ import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import RepairFlowNewJobForm from "@/components/dashboard/repair-flow-new-job-form";
 import RepairFlowJobDetailClient from "./[id]/repair-flow-job-detail-client";
 import RepairFlowFlowQuotePrintPreview from "@/components/dashboard/repair-flow-flow-quote-print-preview";
@@ -37,6 +38,7 @@ const MENU_IC = "h-4 w-4 shrink-0 text-secondary";
 export default function RepairFlowPageClient() {
   const toast = useToast();
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const [jobs, setJobs] = useState([]);
   const [openCustomerId, setOpenCustomerId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,33 +165,37 @@ export default function RepairFlowPageClient() {
           }
         },
       },
-      {
-        key: "printFlow",
-        label: flowQuotePrintPreparing ? "Preparing…" : "Print job quotes",
-        icon: <FiPrinter className={MENU_IC} aria-hidden />,
-        disabled: flowQuotePrintPreparing,
-        title: !viewJobHasFlowQuotes ? "Add a preliminary or final flow quote first" : undefined,
-        onClick: () => {
-          if (!viewJobHasFlowQuotes) {
-            toast.error("Add a preliminary or final flow quote before printing job quotes.");
-            return;
-          }
-          setFlowQuotePrintOpen(true);
-        },
-      },
-      {
-        key: "printRfq",
-        label: "Print RFQ sheet",
-        icon: <FiPrinter className={MENU_IC} aria-hidden />,
-        title: !crmId ? "Set a primary final RFQ on this job first" : undefined,
-        onClick: () => {
-          if (!crmId) {
-            toast.error("Set a primary final RFQ on this job first.");
-            return;
-          }
-          setModalQuotePrintId(crmId);
-        },
-      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "printFlow",
+              label: flowQuotePrintPreparing ? "Preparing…" : "Print job quotes",
+              icon: <FiPrinter className={MENU_IC} aria-hidden />,
+              disabled: flowQuotePrintPreparing,
+              title: !viewJobHasFlowQuotes ? "Add a preliminary or final flow quote first" : undefined,
+              onClick: () => {
+                if (!viewJobHasFlowQuotes) {
+                  toast.error("Add a preliminary or final flow quote before printing job quotes.");
+                  return;
+                }
+                setFlowQuotePrintOpen(true);
+              },
+            },
+            {
+              key: "printRfq",
+              label: "Print RFQ sheet",
+              icon: <FiPrinter className={MENU_IC} aria-hidden />,
+              title: !crmId ? "Set a primary final RFQ on this job first" : undefined,
+              onClick: () => {
+                if (!crmId) {
+                  toast.error("Set a primary final RFQ on this job first.");
+                  return;
+                }
+                setModalQuotePrintId(crmId);
+              },
+            },
+          ]
+        : []),
       {
         key: "tagQr",
         label: "Tag QR",
@@ -264,6 +270,7 @@ export default function RepairFlowPageClient() {
     listWoLookupLoading,
     viewJobHeader,
     viewJobId,
+    canViewFinancials,
   ]);
 
   const onFlowQuotesChange = useCallback((list) => {

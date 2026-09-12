@@ -4,6 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import RepairFlowFlowQuotePrintContent from "@/components/dashboard/repair-flow-flow-quote-print-content";
 
 /**
@@ -13,6 +14,7 @@ import RepairFlowFlowQuotePrintContent from "@/components/dashboard/repair-flow-
 export default function RepairFlowFlowQuotePrintPreview({ open, jobId, onClose, onPrepareStateChange }) {
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const toast = useToast();
   const toastRef = useRef(toast);
   toastRef.current = toast;
@@ -34,6 +36,12 @@ export default function RepairFlowFlowQuotePrintPreview({ open, jobId, onClose, 
       setJob(null);
       setQuotes([]);
       setLoading(false);
+      return;
+    }
+    if (!canViewFinancials) {
+      onPrepareRef.current?.(false);
+      toastRef.current.error("Printing quotes is restricted for your employee role.");
+      onCloseRef.current?.();
       return;
     }
     let cancelled = false;
@@ -82,7 +90,7 @@ export default function RepairFlowFlowQuotePrintPreview({ open, jobId, onClose, 
     return () => {
       cancelled = true;
     };
-  }, [open, jobId]);
+  }, [open, jobId, canViewFinancials]);
 
   useEffect(() => {
     if (!open) return;

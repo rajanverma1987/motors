@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, resolveUserFinancialAccess } from "@/lib/auth-portal";
 import { buildSimpleReportExport } from "@/lib/simple-reports/builders";
-import { isValidSimpleReportId, parseReportFilters } from "@/lib/simple-reports/catalog";
+import { isFinancialSimpleReportId, isValidSimpleReportId, parseReportFilters } from "@/lib/simple-reports/catalog";
 
 /**
  * GET — full-report PDF (all rows, same filters as Excel export).
@@ -25,6 +25,16 @@ export async function GET(request) {
 
     if (!isValidSimpleReportId(report)) {
       return NextResponse.json({ error: "Unknown report" }, { status: 400 });
+    }
+
+    if (isFinancialSimpleReportId(report)) {
+      const financialAccess = await resolveUserFinancialAccess(user);
+      if (!financialAccess.canViewFinancials) {
+        return NextResponse.json(
+          { error: "Access denied. Financial report printing/export is restricted for your employee role." },
+          { status: 403 }
+        );
+      }
     }
 
     const filters = parseReportFilters(report, searchParams);

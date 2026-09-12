@@ -2,12 +2,14 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import RepairFlowFlowQuotePrintContent from "@/components/dashboard/repair-flow-flow-quote-print-content";
 
 function FlowQuotePrintInner() {
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const searchParams = useSearchParams();
   const jobId = searchParams.get("jobId");
 
@@ -30,6 +32,11 @@ function FlowQuotePrintInner() {
     if (!jobId) {
       setLoading(false);
       setError("Job ID required");
+      return;
+    }
+    if (!canViewFinancials) {
+      setLoading(false);
+      setError("Printing quotes is restricted for your employee role.");
       return;
     }
     let cancelled = false;
@@ -62,13 +69,13 @@ function FlowQuotePrintInner() {
     return () => {
       cancelled = true;
     };
-  }, [jobId]);
+  }, [jobId, canViewFinancials]);
 
   useEffect(() => {
-    if (loading || error || !quotes.length) return;
+    if (loading || error || !quotes.length || !canViewFinancials) return;
     const t = setTimeout(() => window.print(), 300);
     return () => clearTimeout(t);
-  }, [loading, error, quotes]);
+  }, [loading, error, quotes, canViewFinancials]);
 
   if (loading) {
     return (

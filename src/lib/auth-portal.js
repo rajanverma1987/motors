@@ -2,6 +2,11 @@ import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Employee from "@/models/Employee";
+import Policy from "@/models/Policy";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
 import { normalizePortalUi, PORTAL_UI_COOKIE, PORTAL_UI_SIMPLE } from "@/lib/portal-view";
 
 let _portalSecret = null;
@@ -258,3 +263,44 @@ export function getBearerTokenFromRequest(request) {
   const m = auth.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : "";
 }
+
+/**
+ * Resolve effective financial access for an authenticated portal user on the server.
+ * @param {Record<string, unknown> | null} portalUser
+ */
+export async function resolveUserFinancialAccess(portalUser) {
+  if (!portalUser?.email) {
+    return { canViewFinancials: false, isRestricted: true, reason: "Unauthenticated" };
+  }
+  const email = String(portalUser.email).trim().toLowerCase();
+  const isEmployee = Boolean(
+    portalUser.isEmployee ||
+      portalUser.authType === "employee" ||
+      (portalUser.employeeId && String(portalUser.employeeId).trim())
+  );
+
+  await connectDB();
+  const userSettingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+  const userSettings = mergeUserSettings(userSettingsDoc?.settings);
+
+  let employeeDoc = null;
+  let policies = [];
+
+  if (isEmployee && portalUser.employeeId) {
+    employeeDoc = await Employee.findById(portalUser.employeeId).lean();
+    policies = await Policy.find({
+      createdByEmail: email,
+      effect: "allow",
+      subjectType: "employee",
+      subjectIds: String(portalUser.employeeId),
+    }).lean();
+  }
+
+  return computeEffectiveFinancialAccess({
+    isOwner: !isEmployee,
+    employee: employeeDoc,
+    policies,
+    userSettings,
+  });
+}
+

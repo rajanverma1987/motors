@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildCustomerPayload, customerApiToForm, INITIAL_CUSTOMER_FORM } from "@/lib/customer-record-form";
 import { invoiceStatusLabel } from "@/lib/invoice-status";
@@ -197,6 +198,7 @@ export default function CustomerViewModal({
   const toast = useToast();
   const formatMoney = useFormatMoney();
   const formatDate = useFormatDate();
+  const { canViewFinancials } = useFinancialAccess();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const isSimple = portal === "simple";
@@ -617,14 +619,16 @@ export default function CustomerViewModal({
                     }
                   >
                     <div className="flex min-h-0 flex-1 flex-col gap-1.5">
-                      <div className="flex shrink-0 items-baseline justify-end gap-2 px-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary">
-                          Subtotal
-                        </span>
-                        <span className="min-w-[5.5rem] text-right text-[12px] font-semibold tabular-nums text-title">
-                          {moneyLabel(filteredSubtotal)}
-                        </span>
-                      </div>
+                      {canViewFinancials ? (
+                        <div className="flex shrink-0 items-baseline justify-end gap-2 px-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.05em] text-secondary">
+                            Subtotal
+                          </span>
+                          <span className="min-w-[5.5rem] text-right text-[12px] font-semibold tabular-nums text-title">
+                            {moneyLabel(filteredSubtotal)}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className={TABLE_WRAP}>
                       <table className={TABLE_CLASS}>
                         <thead>
@@ -633,7 +637,7 @@ export default function CustomerViewModal({
                             <th className={TH_CLASS}>Date</th>
                             <th className={TH_CLASS}>Status</th>
                             <th className={TH_CLASS}>Job Status</th>
-                            <th className={`${TH_CLASS} text-right`}>Total</th>
+                            {canViewFinancials ? <th className={`${TH_CLASS} text-right`}>Total</th> : null}
                           </tr>
                         </thead>
                         <tbody>
@@ -655,27 +659,36 @@ export default function CustomerViewModal({
                               >
                                 <td className={TD_CLASS}>
                                   {row.id ? (
-                                    <button
-                                      type="button"
-                                      className={openRecordBtnClass}
-                                      onClick={() => {
-                                        if (isSimple) {
-                                          openSimpleProposal(row.raw);
-                                          return;
+                                    !isSimple && isInvoice && !canViewFinancials ? (
+                                      <span className="font-mono text-[12px] text-secondary">
+                                        {row.docNumber}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        className={openRecordBtnClass}
+                                        onClick={() => {
+                                          if (isSimple) {
+                                            openSimpleProposal(row.raw);
+                                            return;
+                                          }
+                                          if (isInvoice) {
+                                            if (canViewFinancials) setOpenInvoiceId(row.id);
+                                          } else {
+                                            setOpenQuoteId(row.id);
+                                          }
+                                        }}
+                                        title={
+                                          isInvoice
+                                            ? canViewFinancials ? "Open invoice" : "Restricted"
+                                            : isSimple
+                                              ? "Open service proposal"
+                                              : "Open RFQ"
                                         }
-                                        if (isInvoice) setOpenInvoiceId(row.id);
-                                        else setOpenQuoteId(row.id);
-                                      }}
-                                      title={
-                                        isInvoice
-                                          ? "Open invoice"
-                                          : isSimple
-                                            ? "Open service proposal"
-                                            : "Open RFQ"
-                                      }
-                                    >
-                                      {row.docNumber}
-                                    </button>
+                                      >
+                                        {row.docNumber}
+                                      </button>
+                                    )
                                   ) : (
                                     <span className="font-mono text-[12px]">{row.docNumber}</span>
                                   )}
@@ -695,9 +708,11 @@ export default function CustomerViewModal({
                                 >
                                   <span className={TD_STATUS_INNER}>{jobChrome.label}</span>
                                 </td>
-                                <td className={`${TD_CLASS} text-right tabular-nums`}>
-                                  {moneyLabel(row.amount)}
-                                </td>
+                                {canViewFinancials ? (
+                                  <td className={`${TD_CLASS} text-right tabular-nums`}>
+                                    {moneyLabel(row.amount)}
+                                  </td>
+                                ) : null}
                               </tr>
                             );
                           })}
@@ -714,7 +729,7 @@ export default function CustomerViewModal({
         ) : null}
       </Modal>
 
-      {!isSimple ? (
+      {!isSimple && canViewFinancials ? (
         <InvoiceFormModal
           open={!!openInvoiceId}
           invoiceId={openInvoiceId}
@@ -745,6 +760,7 @@ export default function CustomerViewModal({
           open={Boolean(openSimpleRecordId)}
           onClose={() => setOpenSimpleRecordId(null)}
           initialForm={editingSimpleRecord}
+          hidePrices={!canViewFinancials}
           onSave={handleSimpleProposalSave}
           searchResultNavigation={clientRecordNavigation}
           onAttachmentsChange={async (recordId, attachments) => {

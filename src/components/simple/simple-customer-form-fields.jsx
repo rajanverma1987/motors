@@ -7,6 +7,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
 import SimpleAttachmentPreviewModal from "@/components/simple/simple-attachment-preview-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
   CUSTOMER_TYPE_OPTIONS,
   deleteCustomerDocumentFile,
@@ -64,6 +65,7 @@ function PairRow({ leftLabel, rightLabel, left, right, labelWidth = "6.5rem" }) 
 export default function SimpleCustomerFormFields({ form, setForm, layout = "grid", customerId = "" }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const [uploading, setUploading] = useState(false);
   const [deletingKey, setDeletingKey] = useState("");
   const [preview, setPreview] = useState(null);
@@ -431,9 +433,10 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               right={
                 <input
                   type="text"
-                  value={form.creditLimit}
+                  value={canViewFinancials ? form.creditLimit : "Restricted"}
+                  disabled={!canViewFinancials}
                   onChange={(e) => patch("creditLimit", e.target.value)}
-                  className={FIELD_INPUT}
+                  className={`${FIELD_INPUT} ${!canViewFinancials ? "!bg-muted cursor-not-allowed text-secondary" : ""}`}
                   aria-label="Credit limit"
                 />
               }
@@ -451,9 +454,10 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
               <FieldRow label="Credit limit" labelWidth={labelW}>
                 <input
                   type="text"
-                  value={form.creditLimit}
+                  value={canViewFinancials ? form.creditLimit : "Restricted"}
+                  disabled={!canViewFinancials}
                   onChange={(e) => patch("creditLimit", e.target.value)}
-                  className={FIELD_INPUT}
+                  className={`${FIELD_INPUT} ${!canViewFinancials ? "!bg-muted cursor-not-allowed text-secondary" : ""}`}
                 />
               </FieldRow>
             </>

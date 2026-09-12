@@ -14,6 +14,7 @@ import Badge from "@/components/ui/badge";
 import { Form, FormSection, FORM_SECTIONS_STACK_CLASS } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import PoVendorAccountsSection from "@/components/dashboard/po-vendor-accounts-section";
 import DocumentPrintPreviewModal from "@/components/dashboard/document-print-preview-modal";
@@ -240,7 +241,7 @@ function lineItemStatusMeta(row) {
   return { itemStatus, itemBadgeVariant };
 }
 
-function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt }) {
+function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt, canViewFinancials = true }) {
   const rows = Array.isArray(lineItems) ? lineItems : [];
   const orderSubtotal = sumPoLineExtendedPreTax(rows);
   const totalTax = sumPoLineTaxAmount(rows);
@@ -266,10 +267,14 @@ function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt }) {
             <th className={`${thClass} min-w-[12rem]`}>Description</th>
             <th className={`${thClass} text-right`}>Qty</th>
             <th className={thClass}>UOM</th>
-            <th className={`${thClass} text-right`}>Unit price</th>
-            <th className={`${thClass} text-right`}>Tax %</th>
-            <th className={`${thClass} text-right`}>Tax</th>
-            <th className={`${thClass} text-right`}>Total</th>
+            {canViewFinancials ? (
+              <>
+                <th className={`${thClass} text-right`}>Unit price</th>
+                <th className={`${thClass} text-right`}>Tax %</th>
+                <th className={`${thClass} text-right`}>Tax</th>
+                <th className={`${thClass} text-right`}>Total</th>
+              </>
+            ) : null}
             <th className={thClass}>Status</th>
           </tr>
         </thead>
@@ -286,16 +291,20 @@ function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt }) {
                 <td className="px-3 py-2.5 font-medium text-title">{row?.description || "—"}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums text-title">{row?.qty ?? "—"}</td>
                 <td className="px-3 py-2.5 text-title">{row?.uom || "—"}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums text-title">
-                  {row?.unitPrice ? fmt(row.unitPrice) : "—"}
-                </td>
-                <td className="px-3 py-2.5 text-right tabular-nums text-secondary">{`${taxPct || 0}%`}</td>
-                <td className="px-3 py-2.5 text-right tabular-nums text-title">
-                  {taxAmt != null && Number.isFinite(taxAmt) ? fmt(taxAmt) : "—"}
-                </td>
-                <td className="px-3 py-2.5 text-right font-medium tabular-nums text-title">
-                  {total !== "—" ? fmt(parseFloat(total)) : "—"}
-                </td>
+                {canViewFinancials ? (
+                  <>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-title">
+                      {row?.unitPrice ? fmt(row.unitPrice) : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-secondary">{`${taxPct || 0}%`}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-title">
+                      {taxAmt != null && Number.isFinite(taxAmt) ? fmt(taxAmt) : "—"}
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums text-title">
+                      {total !== "—" ? fmt(parseFloat(total)) : "—"}
+                    </td>
+                  </>
+                ) : null}
                 <td className="px-3 py-2.5">
                   <Badge variant={itemBadgeVariant} className="rounded-full px-2.5 py-0.5 text-xs">
                     {itemStatus}
@@ -305,42 +314,44 @@ function PoViewLineItemsTable({ lineItems, otherCharges = [], fmt }) {
             );
           })}
         </tbody>
-        <tfoot className="border-t-2 border-border bg-muted/25">
-          <tr>
-            <td colSpan={6} className="px-3 py-2 text-right text-secondary">
-              Order total
-            </td>
-            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(orderSubtotal)}</td>
-            <td />
-          </tr>
-          <tr>
-            <td colSpan={6} className="px-3 py-2 text-right text-secondary">
-              Total tax
-            </td>
-            <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
-            <td />
-          </tr>
-          {otherChargesList.map((row, i) => (
-            <tr key={row.logisticsEntryId || `other-${i}`}>
+        {canViewFinancials ? (
+          <tfoot className="border-t-2 border-border bg-muted/25">
+            <tr>
               <td colSpan={6} className="px-3 py-2 text-right text-secondary">
-                Other charges
+                Order total
               </td>
-              <td className="px-3 py-2 text-right font-medium tabular-nums text-title">
-                {row?.amount ? fmt(row.amount) : "—"}
+              <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(orderSubtotal)}</td>
+              <td />
+            </tr>
+            <tr>
+              <td colSpan={6} className="px-3 py-2 text-right text-secondary">
+                Total tax
+              </td>
+              <td className="px-3 py-2 text-right font-medium tabular-nums text-title">{fmt(totalTax)}</td>
+              <td />
+            </tr>
+            {otherChargesList.map((row, i) => (
+              <tr key={row.logisticsEntryId || `other-${i}`}>
+                <td colSpan={6} className="px-3 py-2 text-right text-secondary">
+                  Other charges
+                </td>
+                <td className="px-3 py-2 text-right font-medium tabular-nums text-title">
+                  {row?.amount ? fmt(row.amount) : "—"}
+                </td>
+                <td />
+              </tr>
+            ))}
+            <tr className="bg-muted/40">
+              <td colSpan={6} className="px-3 py-2.5 text-right font-semibold text-title">
+                Grand total
+              </td>
+              <td className="px-3 py-2.5 text-right text-base font-bold tabular-nums text-title">
+                {fmt(grandTotal)}
               </td>
               <td />
             </tr>
-          ))}
-          <tr className="bg-muted/40">
-            <td colSpan={6} className="px-3 py-2.5 text-right font-semibold text-title">
-              Grand total
-            </td>
-            <td className="px-3 py-2.5 text-right text-base font-bold tabular-nums text-title">
-              {fmt(grandTotal)}
-            </td>
-            <td />
-          </tr>
-        </tfoot>
+          </tfoot>
+        ) : null}
       </table>
     </div>
   );
@@ -397,6 +408,7 @@ function PoViewDetailBody({
   onOpenJobLink,
   fmt,
   accountSettings,
+  canViewFinancials = true,
 }) {
   const poStatusVariant = STATUS_VARIANT[viewingPo.status] || "default";
 
@@ -483,10 +495,12 @@ function PoViewDetailBody({
         </header>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:max-w-md sm:gap-3">
-        <PoViewAmountCard label="Vendor invoiced" amount={viewingPo.totalInvoiced || 0} fmt={fmt} />
-        <PoViewAmountCard label="Paid" amount={viewingPo.totalPaid || 0} fmt={fmt} emphasis />
-      </div>
+      {canViewFinancials ? (
+        <div className="grid grid-cols-2 gap-2 sm:max-w-md sm:gap-3">
+          <PoViewAmountCard label="Vendor invoiced" amount={viewingPo.totalInvoiced || 0} fmt={fmt} />
+          <PoViewAmountCard label="Paid" amount={viewingPo.totalPaid || 0} fmt={fmt} emphasis />
+        </div>
+      ) : null}
 
       {(accountSettings?.accountsBillingAddress || accountSettings?.accountsShippingAddress) && (
         <div className={`${poViewPanel} p-4 sm:p-5`}>
@@ -506,6 +520,7 @@ function PoViewDetailBody({
           lineItems={viewingPo.lineItems}
           otherCharges={viewingPo.otherCharges}
           fmt={fmt}
+          canViewFinancials={canViewFinancials}
         />
       </div>
     </div>
@@ -518,6 +533,7 @@ export default function DashboardPurchaseOrdersPage() {
   const searchParams = useSearchParams();
   const openPoId = searchParams.get("open");
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
   const [pos, setPos] = useState([]);
@@ -1624,37 +1640,41 @@ export default function DashboardPurchaseOrdersPage() {
           </Badge>
         ),
       },
-      {
-        key: "totalOrder",
-        label: "Order total",
-        sortable: true,
-        align: "right",
-        render: (_, row) => (
-          <span className="tabular-nums">
-            {row.grandTotal || row.totalOrder ? fmt(row.grandTotal || row.totalOrder) : "—"}
-          </span>
-        ),
-      },
-      {
-        key: "totalInvoiced",
-        label: "Vendor invoiced",
-        sortable: true,
-        align: "right",
-        render: (_, row) => (
-          <span className="tabular-nums">{row.totalInvoiced ? fmt(row.totalInvoiced) : "—"}</span>
-        ),
-      },
-      {
-        key: "totalPaid",
-        label: "Paid",
-        sortable: true,
-        align: "right",
-        render: (_, row) => (
-          <span className="tabular-nums">{row.totalPaid ? fmt(row.totalPaid) : "—"}</span>
-        ),
-      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "totalOrder",
+              label: "Order total",
+              sortable: true,
+              align: "right",
+              render: (_, row) => (
+                <span className="tabular-nums">
+                  {row.grandTotal || row.totalOrder ? fmt(row.grandTotal || row.totalOrder) : "—"}
+                </span>
+              ),
+            },
+            {
+              key: "totalInvoiced",
+              label: "Vendor invoiced",
+              sortable: true,
+              align: "right",
+              render: (_, row) => (
+                <span className="tabular-nums">{row.totalInvoiced ? fmt(row.totalInvoiced) : "—"}</span>
+              ),
+            },
+            {
+              key: "totalPaid",
+              label: "Paid",
+              sortable: true,
+              align: "right",
+              render: (_, row) => (
+                <span className="tabular-nums">{row.totalPaid ? fmt(row.totalPaid) : "—"}</span>
+              ),
+            },
+          ]
+        : []),
     ],
-    [vendorNameMap, fmt, handleDeletePo, openEditModal, openViewModal, openPoJobLink]
+    [vendorNameMap, fmt, handleDeletePo, openEditModal, openViewModal, openPoJobLink, canViewFinancials]
   );
 
   return (
@@ -1682,7 +1702,7 @@ export default function DashboardPurchaseOrdersPage() {
                 setPage(1);
                 setPoTypeFilter(card.key || "");
               }}
-              formatAmount={fmt}
+              formatAmount={canViewFinancials ? fmt : () => ""}
             />
           ))}
         </div>
@@ -1791,7 +1811,9 @@ export default function DashboardPurchaseOrdersPage() {
               striped
               headerClassName="px-3 py-2.5 text-left text-sm font-semibold text-title"
             />
-            <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
+            {canViewFinancials ? (
+              <PoLineItemsTotalsTable lines={form.lineItems} fmt={fmt} />
+            ) : null}
           </FormSection>
           <FormSection title="Notes">
             <Textarea
@@ -1965,16 +1987,18 @@ export default function DashboardPurchaseOrdersPage() {
                 <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
                 Documents
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="inline-flex shrink-0 items-center gap-1.5"
-                onClick={() => setPrintPoId(viewingPo.id)}
-              >
-                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                Print
-              </Button>
+              {canViewFinancials ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex shrink-0 items-center gap-1.5"
+                  onClick={() => setPrintPoId(viewingPo.id)}
+                >
+                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                  Print
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -2018,6 +2042,7 @@ export default function DashboardPurchaseOrdersPage() {
               })()}
               fmt={fmt}
               accountSettings={accountSettings}
+              canViewFinancials={canViewFinancials}
             />
             {(Number(viewingPo.attachmentCount) > 0 ||
               (Array.isArray(viewingPo.attachments) && viewingPo.attachments.length > 0)) && (
@@ -2444,12 +2469,14 @@ export default function DashboardPurchaseOrdersPage() {
         )}
       </Modal>
 
-      <DocumentPrintPreviewModal
-        documentType="po"
-        documentId={printPoId}
-        open={!!printPoId}
-        onClose={() => setPrintPoId(null)}
-      />
+      {canViewFinancials ? (
+        <DocumentPrintPreviewModal
+          documentType="po"
+          documentId={printPoId}
+          open={!!printPoId}
+          onClose={() => setPrintPoId(null)}
+        />
+      ) : null}
 
       <VendorQuickViewModal
         open={!!openVendorId}

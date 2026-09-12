@@ -330,6 +330,16 @@ export function isValidSimpleReportId(id) {
 }
 
 /**
+ * Check if a report contains financial/accounting data restricted to authorized staff.
+ * @param {string} id
+ */
+export function isFinancialSimpleReportId(id) {
+  const rep = SIMPLE_REPORT_CATALOG.find((r) => r.id === String(id || "").trim());
+  if (!rep) return false;
+  return rep.category === "Accounting" || rep.id === "sales-commissions";
+}
+
+/**
  * Parse allowed filter query params for a report.
  * @param {string} reportId
  * @param {URLSearchParams | Record<string, string>} params

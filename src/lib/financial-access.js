@@ -139,3 +139,4 @@ export function computeEffectiveFinancialAccess({
       : `Role restricted (${role || "Technician / Floor staff"})`,
   };
 }
+

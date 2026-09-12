@@ -14,6 +14,7 @@ import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
   REPAIR_FLOW_PHASE_LABELS,
   phaseBadgeVariant,
@@ -92,6 +93,7 @@ export default function RepairFlowJobDetailClient({
   onOpenWorkOrderDraft,
 }) {
   const toast = useToast();
+  const { canViewFinancials } = useFinancialAccess();
   const params = useParams();
   const id = jobIdProp ?? params?.id;
   const isModal = variant === "modal";
@@ -535,33 +537,37 @@ export default function RepairFlowJobDetailClient({
           }
         },
       },
-      {
-        key: "printFlow",
-        label: flowQuotePrintPreparing ? "Preparing…" : "Print job quotes",
-        icon: <FiPrinter className={PAGE_MENU_IC} aria-hidden />,
-        disabled: flowQuotePrintPreparing,
-        title: !hasQuotes ? "Add a preliminary or final quote first" : undefined,
-        onClick: () => {
-          if (!hasQuotes) {
-            toast.error("Add a preliminary or final flow quote before printing job quotes.");
-            return;
-          }
-          setFlowQuotePrintOpen(true);
-        },
-      },
-      {
-        key: "printRfq",
-        label: "Print RFQ sheet",
-        icon: <FiPrinter className={PAGE_MENU_IC} aria-hidden />,
-        title: !cid ? "Set a primary final RFQ on this job first" : undefined,
-        onClick: () => {
-          if (!cid) {
-            toast.error("Set a primary final RFQ on this job first.");
-            return;
-          }
-          setQuotePrintId(cid);
-        },
-      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "printFlow",
+              label: flowQuotePrintPreparing ? "Preparing…" : "Print job quotes",
+              icon: <FiPrinter className={PAGE_MENU_IC} aria-hidden />,
+              disabled: flowQuotePrintPreparing,
+              title: !hasQuotes ? "Add a preliminary or final quote first" : undefined,
+              onClick: () => {
+                if (!hasQuotes) {
+                  toast.error("Add a preliminary or final flow quote before printing job quotes.");
+                  return;
+                }
+                setFlowQuotePrintOpen(true);
+              },
+            },
+            {
+              key: "printRfq",
+              label: "Print RFQ sheet",
+              icon: <FiPrinter className={PAGE_MENU_IC} aria-hidden />,
+              title: !cid ? "Set a primary final RFQ on this job first" : undefined,
+              onClick: () => {
+                if (!cid) {
+                  toast.error("Set a primary final RFQ on this job first.");
+                  return;
+                }
+                setQuotePrintId(cid);
+              },
+            },
+          ]
+        : []),
       {
         key: "tagQr",
         label: "Tag QR",
@@ -599,6 +605,7 @@ export default function RepairFlowJobDetailClient({
     handleViewWorkOrderFromRepairFlow,
     handlePrintMotorTagQr,
     openCommissionModal,
+    canViewFinancials,
   ]);
 
   if (loading && !job) {
@@ -1122,14 +1129,14 @@ export default function RepairFlowJobDetailClient({
             }}
             onPrepareStateChange={setFlowQuotePrintPreparing}
           />
-          {quotePrintId ? (
-            <DocumentPrintPreviewModal
-              documentType="quote"
-              documentId={quotePrintId}
-              open
-              onClose={() => setQuotePrintId(null)}
-            />
-          ) : null}
+      {quotePrintId && canViewFinancials ? (
+        <DocumentPrintPreviewModal
+          documentType="quote"
+          documentId={quotePrintId}
+          open
+          onClose={() => setQuotePrintId(null)}
+        />
+      ) : null}
           <SalesCommissionModal
             open={commissionModalOpen}
             onClose={() => setCommissionModalOpen(false)}

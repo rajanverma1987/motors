@@ -5,6 +5,7 @@ import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import DocumentPreviewSheet from "@/components/dashboard/document-preview-sheet";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
@@ -30,6 +31,7 @@ export default function SimpleServiceProposalPrintPreviewModal({
   title = "Print preview",
 }) {
   const fmt = useFormatMoney();
+  const { canViewFinancials } = useFinancialAccess();
   const { settings: accountSettings } = useUserSettings();
   const [printing, setPrinting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
@@ -66,7 +68,7 @@ export default function SimpleServiceProposalPrintPreviewModal({
   }, [bundle, documentType, quote, invoicePayload]);
 
   const handlePrint = () => {
-    if (!documentReady) return;
+    if (!canViewFinancials || !documentReady) return;
     setPrinting(true);
   };
 
@@ -97,21 +99,30 @@ export default function SimpleServiceProposalPrintPreviewModal({
               <FiSend className="h-4 w-4 shrink-0" aria-hidden />
               Send To Customer
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              disabled={!documentReady}
-              className="inline-flex items-center gap-1.5"
-              onClick={handlePrint}
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
+            {canViewFinancials ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!documentReady}
+                className="inline-flex items-center gap-1.5"
+                onClick={handlePrint}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+            ) : null}
           </>
         }
       >
-        {documentReady ? (
+        {!canViewFinancials ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <p className="text-sm font-semibold text-danger">Access Restricted</p>
+            <p className="text-xs text-secondary">
+              Printing proposals and invoices is restricted for your employee role.
+            </p>
+          </div>
+        ) : documentReady ? (
           <DocumentPreviewSheet
             documentType={documentType}
             quote={quote}
@@ -124,13 +135,13 @@ export default function SimpleServiceProposalPrintPreviewModal({
         )}
       </Modal>
 
-      {printing && documentType === "quote" && quote ? (
+      {printing && canViewFinancials && documentType === "quote" && quote ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <QuotePrintSheetBody quote={quote} fmt={fmt} />
         </DocumentPrintOffscreenPortal>
       ) : null}
 
-      {printing && documentType === "invoice" && invoicePayload ? (
+      {printing && canViewFinancials && documentType === "invoice" && invoicePayload ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <InvoicePrintPreview
             invoice={invoicePayload.invoice}

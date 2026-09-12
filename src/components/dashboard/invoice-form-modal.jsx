@@ -99,7 +99,7 @@ export default function InvoiceFormModal({
 }) {
   const toast = useToast();
   const confirm = useConfirm();
-  const { user } = useAuth();
+  const { user, canViewFinancials } = useAuth();
   const { settings: accountSettings } = useUserSettings();
   const mergedAccountSettings = useMemo(() => mergeUserSettings(accountSettings), [accountSettings]);
   const invoiceStatusOptions = useMemo(
@@ -291,7 +291,7 @@ export default function InvoiceFormModal({
   };
 
   const handleHeaderPrint = () => {
-    if (!persistedId) return;
+    if (!persistedId || !canViewFinancials) return;
     setPrintPreviewOpen(true);
   };
 
@@ -431,17 +431,19 @@ export default function InvoiceFormModal({
           ) : null}
           {canUseRecordActions ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={headerDisabled}
-                className="inline-flex shrink-0 items-center gap-1.5"
-                onClick={handleHeaderPrint}
-              >
-                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                Print
-              </Button>
+              {canViewFinancials ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={headerDisabled}
+                  className="inline-flex shrink-0 items-center gap-1.5"
+                  onClick={handleHeaderPrint}
+                >
+                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                  Print
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"

@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { beginPrintLightTheme } from "@/lib/print-light-theme";
 
 const STYLE_ID = "invoice-print-preview-styles";
@@ -94,15 +95,16 @@ const OFFSCREEN_STYLE = {
  * Always prints as a light document (ignores UI dark mode).
  */
 export default function InvoicePrintOffscreen({ open, payload, onClose }) {
+  const { canViewFinancials } = useFinancialAccess();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !canViewFinancials) return;
     return injectInvoicePrintStyles();
-  }, [open]);
+  }, [open, canViewFinancials]);
 
-  const ready = open && !!payload;
+  const ready = open && !!payload && canViewFinancials;
 
   useLayoutEffect(() => {
     if (!ready) return;

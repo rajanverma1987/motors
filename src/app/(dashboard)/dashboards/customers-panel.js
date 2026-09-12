@@ -12,6 +12,7 @@ import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-f
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
   buildCustomerPayload,
   INITIAL_CUSTOMER_FORM,
@@ -92,6 +93,7 @@ function customerToTableRow(customer) {
 export default function CustomersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const [customerRows, setCustomerRows] = useState([]);
@@ -598,12 +600,16 @@ export default function CustomersPanel({ createNonce = 0 }) {
         sortable: true,
         render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
       },
-      {
-        key: "creditLimit",
-        label: "Credit Limit",
-        sortable: true,
-        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
-      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "creditLimit",
+              label: "Credit Limit",
+              sortable: true,
+              render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
+            },
+          ]
+        : []),
       {
         key: "taxExempt",
         label: "Tax Exempted",
@@ -659,7 +665,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
         },
       },
     ],
-    [copyingPortalId, handleCopyPortalLink, handleDelete, openRow]
+    [copyingPortalId, handleCopyPortalLink, handleDelete, openRow, canViewFinancials]
   );
 
   const emptyMessage = (() => {

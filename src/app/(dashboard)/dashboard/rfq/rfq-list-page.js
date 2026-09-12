@@ -237,7 +237,7 @@ function buildQuotePayload(form) {
 export default function DashboardRfqListPage({ embedded = false, actionsRef = null }) {
   const listPath = allJobsListPath(embedded, "rfq", "/dashboard/rfq");
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, canViewFinancials } = useAuth();
   const { showTrialUpgradeModal } = useTrialUpgrade();
   const confirm = useConfirm();
   const router = useRouter();
@@ -884,10 +884,14 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
   );
 
   const handlePrintQuote = useCallback((quoteFromTable) => {
+    if (!canViewFinancials) {
+      toast.error("Printing proposals is restricted for your employee role.");
+      return;
+    }
     const q = quoteFromTable ?? viewingQuote;
     if (!q?.id) return;
     setQuotePrintId(q.id);
-  }, [viewingQuote]);
+  }, [viewingQuote, canViewFinancials, toast]);
 
   const handlePrintTagQr = useCallback(
     async (quoteFromTable) => {
@@ -1322,16 +1326,18 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
               Edit
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="inline-flex shrink-0 items-center gap-1.5"
-            onClick={() => handlePrintQuote(vq)}
-          >
-            <FiPrinter className={HEADER_BTN_IC} aria-hidden />
-            Print
-          </Button>
+          {canViewFinancials ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex shrink-0 items-center gap-1.5"
+              onClick={() => handlePrintQuote(vq)}
+            >
+              <FiPrinter className={HEADER_BTN_IC} aria-hidden />
+              Print
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"
@@ -2194,7 +2200,7 @@ export default function DashboardRfqListPage({ embedded = false, actionsRef = nu
         </Form>
       </Modal>
 
-      {quotePrintId ? (
+      {quotePrintId && canViewFinancials ? (
         <DocumentPrintPreviewModal
           documentType="quote"
           documentId={quotePrintId}

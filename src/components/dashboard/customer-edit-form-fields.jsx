@@ -11,11 +11,13 @@ import {
   PREFERRED_CONTACT_METHOD_OPTIONS,
   PREFERRED_PAYMENT_METHOD_OPTIONS,
 } from "@/lib/customer-record-form";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 
 /**
  * Editable customer fields — shared by CustomerFormModal and CustomerViewModal.
  */
 export default function CustomerEditFormFields({ form, setForm }) {
+  const { canViewFinancials } = useFinancialAccess();
   const addAdditionalContact = () => {
     setForm((f) => ({
       ...f,
@@ -150,7 +152,8 @@ export default function CustomerEditFormFields({ form, setForm }) {
           <Input label="EIN" value={form.ein} onChange={(e) => setForm((f) => ({ ...f, ein: e.target.value }))} />
           <Input
             label="Credit limit"
-            value={form.creditLimit}
+            value={canViewFinancials ? form.creditLimit : "Restricted"}
+            disabled={!canViewFinancials}
             onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
           />
           <Select

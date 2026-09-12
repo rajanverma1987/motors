@@ -1048,6 +1048,14 @@ export default function SimplePurchaseOrderFormModal({
   };
 
   const openPrintPreview = async () => {
+    if (!canViewFinancials) {
+      await alert({
+        title: "Access Restricted",
+        message: "Printing purchase orders is restricted for your employee role.",
+        variant: "danger",
+      });
+      return;
+    }
     if (!String(form.vendorId || "").trim()) {
       await alert({ title: "Vendor required", message: "Select a vendor before printing.", variant: "danger" });
       return;
@@ -1168,30 +1176,34 @@ export default function SimplePurchaseOrderFormModal({
                 </Badge>
               ) : null}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              disabled={saving || loadingForm || loadingMeta || !form.id}
-              title={!form.id ? "Save the purchase order first" : undefined}
-              onClick={openPrintPreview}
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              disabled={saving || loadingForm || loadingMeta || !form.id}
-              title={!form.id ? "Save the purchase order first" : undefined}
-              onClick={openPrintPreview}
-            >
-              <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-              Send To Vendor
-            </Button>
+            {canViewFinancials ? (
+              <>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+                  disabled={saving || loadingForm || loadingMeta || !form.id}
+                  title={!form.id ? "Save the purchase order first" : undefined}
+                  onClick={openPrintPreview}
+                >
+                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                  Print
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+                  disabled={saving || loadingForm || loadingMeta || !form.id}
+                  title={!form.id ? "Save the purchase order first" : undefined}
+                  onClick={openPrintPreview}
+                >
+                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
+                  Send To Vendor
+                </Button>
+              </>
+            ) : null}
             <Button
               type="submit"
               form={FORM_ID}
@@ -1255,26 +1267,28 @@ export default function SimplePurchaseOrderFormModal({
                   aria-label="Customer Name"
                 />
               </FieldRow>
-              <FieldRow
-                label="Proposal Amount"
-                labelWidth="100%"
-                labelClassName="!text-left !text-sm"
-                className="w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
-                controlClassName="w-full min-w-0"
-              >
-                <input
-                  type="text"
-                  readOnly
-                  tabIndex={-1}
-                  value={
-                    jobContext && Number.isFinite(jobContext.amount)
-                      ? formatMoney(jobContext.amount)
-                      : "—"
-                  }
-                  className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
-                  aria-label="Proposal Amount"
-                />
-              </FieldRow>
+              {canViewFinancials ? (
+                <FieldRow
+                  label="Proposal Amount"
+                  labelWidth="100%"
+                  labelClassName="!text-left !text-sm"
+                  className="w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+                  controlClassName="w-full min-w-0"
+                >
+                  <input
+                    type="text"
+                    readOnly
+                    tabIndex={-1}
+                    value={
+                      jobContext && Number.isFinite(jobContext.amount)
+                        ? formatMoney(jobContext.amount)
+                        : "—"
+                    }
+                    className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
+                    aria-label="Proposal Amount"
+                  />
+                </FieldRow>
+              ) : null}
               {sentToVendorLabel || !hideViewJobButton ? (
                 <div className="ml-auto flex shrink-0 items-end gap-3 self-end">
                   {sentToVendorLabel ? (

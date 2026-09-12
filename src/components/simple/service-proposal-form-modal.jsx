@@ -1195,6 +1195,14 @@ export default function ServiceProposalFormModal({
   };
 
   const openPrintPreview = async (notesMode) => {
+    if (!canViewFinancials) {
+      await alert({
+        title: "Access Restricted",
+        message: "Printing proposals and invoices is restricted for your employee role.",
+        variant: "danger",
+      });
+      return;
+    }
     if (!form.customerId) {
       await alert({ title: "Error", message: "Select a customer before printing.", variant: "danger" });
       return;
@@ -1439,37 +1447,30 @@ export default function ServiceProposalFormModal({
                   ? `Attachments (${form.attachments.length})`
                   : "Add Attachments"}
               </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={saving || copying}
-                onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
-              >
-                Internal Print
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={saving || copying}
-                onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
-              >
-                Customer Print
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={saving || copying}
-                title={`Email ${form.motorPower === "DC" ? "DC" : "AC"} test & inspection report to customer`}
-                onClick={() => setEmailDatasheetOpen(true)}
-              >
-                Email Datasheet
-              </Button>
+              {canViewFinancials ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
+                  >
+                    Internal Print
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
+                  >
+                    Customer Print
+                  </Button>
+                </>
+              ) : null}
             </div>
             <div className="flex flex-wrap justify-end gap-1">
               <Button

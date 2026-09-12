@@ -213,7 +213,7 @@ function CustomerActivityTableBody({ loading, isEmpty, emptyMessage, children })
 }
 
 export default function DashboardCustomersPage() {
-  const { user } = useAuth();
+  const { user, canViewFinancials } = useAuth();
   const { showTrialUpgradeModal } = useTrialUpgrade();
   const toast = useToast();
   const formatMoney = useFormatMoney();
@@ -667,7 +667,11 @@ export default function DashboardCustomersPage() {
       { key: "phone", label: "Phone", sortable: true },
       { key: "email", label: "Email", sortable: true },
       { key: "ein", label: "EIN", sortable: true, render: (_, row) => row.ein || "—" },
-      { key: "creditLimit", label: "Credit Limit", sortable: true, render: (_, row) => row.creditLimit || "—" },
+      ...(canViewFinancials
+        ? [
+            { key: "creditLimit", label: "Credit Limit", sortable: true, render: (_, row) => row.creditLimit || "—" },
+          ]
+        : []),
       {
         key: "taxExempt",
         label: "Tax Exempted",
@@ -682,7 +686,7 @@ export default function DashboardCustomersPage() {
       },
       { key: "city", label: "City", sortable: true },
     ],
-    []
+    [canViewFinancials]
   );
 
   const moneyLabel = (v) => {
@@ -854,9 +858,10 @@ export default function DashboardCustomersPage() {
               <Input
                 label="Credit limit"
                 name="creditLimit"
-                value={form.creditLimit}
+                value={canViewFinancials ? form.creditLimit : "Restricted"}
+                disabled={!canViewFinancials}
                 onChange={(e) => setForm((f) => ({ ...f, creditLimit: e.target.value }))}
-                placeholder="e.g. 10000"
+                placeholder={canViewFinancials ? "e.g. 10000" : "Restricted"}
               />
               <Select
                 label="Tax exempted"
@@ -1124,7 +1129,7 @@ export default function DashboardCustomersPage() {
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Invoices ({customerActivityLoading ? "…" : customerActivity.invoices.length})
                 </h3>
-                {!customerActivityLoading && invoiceStatusTotals.length > 0 && (
+                {!customerActivityLoading && invoiceStatusTotals.length > 0 && canViewFinancials && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {invoiceStatusTotals.map((s) => (
                       <span key={`inv-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
@@ -1146,7 +1151,9 @@ export default function DashboardCustomersPage() {
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Invoice #</th>
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Date</th>
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Status</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                          {canViewFinancials ? (
+                            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                          ) : null}
                         </tr>
                       </thead>
                       <tbody className="text-title">
@@ -1170,7 +1177,9 @@ export default function DashboardCustomersPage() {
                             <td className="px-3 py-2">
                               <InvoiceStatusPill status={inv.status} mergedSettings={mergedSettings} />
                             </td>
-                            <td className="px-3 py-2 text-right">{moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}</td>
+                            {canViewFinancials ? (
+                              <td className="px-3 py-2 text-right">{moneyLabel(Number(inv.laborTotal || 0) + Number(inv.partsTotal || 0))}</td>
+                            ) : null}
                           </tr>
                         ))}
                       </tbody>
@@ -1183,7 +1192,7 @@ export default function DashboardCustomersPage() {
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wide text-title">
                   Quotes ({customerActivityLoading ? "…" : customerActivity.quotes.length})
                 </h3>
-                {!customerActivityLoading && quoteStatusTotals.length > 0 && (
+                {!customerActivityLoading && quoteStatusTotals.length > 0 && canViewFinancials && (
                   <div className="mb-3 flex flex-wrap gap-2">
                     {quoteStatusTotals.map((s) => (
                       <span key={`quote-s-${s.status}`} className="inline-flex flex-wrap items-center gap-1.5">
@@ -1205,7 +1214,9 @@ export default function DashboardCustomersPage() {
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">RFQ #</th>
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Date</th>
                           <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-secondary">Status</th>
-                          <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                          {canViewFinancials ? (
+                            <th className="px-3 py-2 text-right text-xs font-medium uppercase tracking-wide text-secondary">Total</th>
+                          ) : null}
                         </tr>
                       </thead>
                       <tbody className="text-title">
@@ -1229,7 +1240,9 @@ export default function DashboardCustomersPage() {
                             <td className="px-3 py-2">
                               <QuoteStatusPill status={q.status} mergedSettings={mergedSettings} />
                             </td>
-                            <td className="px-3 py-2 text-right">{moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}</td>
+                            {canViewFinancials ? (
+                              <td className="px-3 py-2 text-right">{moneyLabel(Number(q.laborTotal || 0) + Number(q.partsTotal || 0))}</td>
+                            ) : null}
                           </tr>
                         ))}
                       </tbody>

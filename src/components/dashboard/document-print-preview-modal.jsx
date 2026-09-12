@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { FiPrinter } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import DocumentPreviewSheet from "@/components/dashboard/document-preview-sheet";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
@@ -29,6 +30,7 @@ export default function DocumentPrintPreviewModal({
 }) {
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [quote, setQuote] = useState(null);
@@ -41,6 +43,17 @@ export default function DocumentPrintPreviewModal({
     if (!open || !documentId || !documentType) {
       setLoadError("");
       setLoading(false);
+      setQuote(null);
+      setInvoicePayload(null);
+      setPo(null);
+      setVendor(null);
+      setPrinting(false);
+      return;
+    }
+
+    if (!canViewFinancials) {
+      setLoading(false);
+      setLoadError("Printing financial documents is restricted for your employee role.");
       setQuote(null);
       setInvoicePayload(null);
       setPo(null);
@@ -92,6 +105,7 @@ export default function DocumentPrintPreviewModal({
     accountSettings?.accountsPaymentTerms,
     accountSettings?.invoicePaymentOptions,
     accountSettings?.invoiceThankYouNote,
+    canViewFinancials,
   ]);
 
   const documentReady =
@@ -100,7 +114,7 @@ export default function DocumentPrintPreviewModal({
     (documentType === "po" && po);
 
   const handlePrint = () => {
-    if (!documentReady || loadError) return;
+    if (!canViewFinancials || !documentReady || loadError) return;
     setPrinting(true);
   };
 
@@ -119,17 +133,19 @@ export default function DocumentPrintPreviewModal({
         width="min(960px, 96vw)"
         zIndex={zIndex}
         actions={
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            disabled={loading || !documentReady || !!loadError}
-            className="inline-flex items-center gap-1.5"
-            onClick={handlePrint}
-          >
-            <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-            Print
-          </Button>
+          canViewFinancials ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={loading || !documentReady || !!loadError}
+              className="inline-flex items-center gap-1.5"
+              onClick={handlePrint}
+            >
+              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+              Print
+            </Button>
+          ) : null
         }
       >
         {loading ? (
@@ -155,13 +171,13 @@ export default function DocumentPrintPreviewModal({
         ) : null}
       </Modal>
 
-      {printing && documentType === "quote" && quote ? (
+      {printing && canViewFinancials && documentType === "quote" && quote ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <QuotePrintSheetBody quote={quote} fmt={fmt} />
         </DocumentPrintOffscreenPortal>
       ) : null}
 
-      {printing && documentType === "invoice" && invoicePayload ? (
+      {printing && canViewFinancials && documentType === "invoice" && invoicePayload ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <InvoicePrintPreview
             invoice={invoicePayload.invoice}
@@ -182,7 +198,7 @@ export default function DocumentPrintPreviewModal({
         </DocumentPrintOffscreenPortal>
       ) : null}
 
-      {printing && documentType === "po" && po ? (
+      {printing && canViewFinancials && documentType === "po" && po ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <PoPrintSheetBody po={po} vendor={vendor} settings={accountSettings} fmt={fmt} />
         </DocumentPrintOffscreenPortal>

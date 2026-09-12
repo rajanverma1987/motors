@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { useToast } from "@/components/toast-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import Button from "@/components/ui/button";
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
@@ -17,6 +18,7 @@ import { SERVICE_PROPOSAL_DOCUMENT_TITLE, SERVICE_PROPOSAL_DOCUMENT_TITLE_LOWER 
 export default function QuotePrintPreview({ quoteId, open, onClose, standalone = false }) {
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const toast = useToast();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -39,6 +41,12 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
 
   useEffect(() => {
     if (!active) return;
+    if (!canViewFinancials) {
+      setLoading(false);
+      setError("Printing proposals is restricted for your employee role.");
+      setQuote(null);
+      return;
+    }
     if (!quoteId) {
       setLoading(false);
       setError(`${SERVICE_PROPOSAL_DOCUMENT_TITLE} ID required`);
@@ -63,7 +71,7 @@ export default function QuotePrintPreview({ quoteId, open, onClose, standalone =
     return () => {
       cancelled = true;
     };
-  }, [quoteId, active, accountSettings?.accountsBillingAddress, accountSettings?.accountsShippingAddress]);
+  }, [quoteId, active, canViewFinancials, accountSettings?.accountsBillingAddress, accountSettings?.accountsShippingAddress]);
 
   useEffect(() => {
     if (standalone || !open) return;

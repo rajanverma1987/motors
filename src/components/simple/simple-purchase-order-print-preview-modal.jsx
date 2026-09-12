@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import DocumentPreviewSheet from "@/components/dashboard/document-preview-sheet";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
@@ -33,13 +34,14 @@ export default function SimplePurchaseOrderPrintPreviewModal({
 }) {
   const fmt = useFormatMoney();
   const { settings: accountSettings } = useUserSettings();
+  const { canViewFinancials } = useFinancialAccess();
   const [printing, setPrinting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
 
   const documentReady = Boolean(po);
 
   const handlePrint = () => {
-    if (!documentReady) return;
+    if (!canViewFinancials || !documentReady) return;
     setPrinting(true);
   };
 
@@ -63,28 +65,37 @@ export default function SimplePurchaseOrderPrintPreviewModal({
               type="button"
               variant="primary"
               size="sm"
-                  disabled={!documentReady}
+              disabled={!documentReady}
               className="inline-flex items-center gap-1.5"
               onClick={() => setSendOpen(true)}
             >
               <FiSend className="h-4 w-4 shrink-0" aria-hidden />
               Send To Vendor
             </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              disabled={!documentReady}
-              className="inline-flex items-center gap-1.5"
-              onClick={handlePrint}
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Print
-            </Button>
+            {canViewFinancials ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={!documentReady}
+                className="inline-flex items-center gap-1.5"
+                onClick={handlePrint}
+              >
+                <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                Print
+              </Button>
+            ) : null}
           </>
         }
       >
-        {documentReady ? (
+        {!canViewFinancials ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <p className="text-sm font-semibold text-danger">Access Restricted</p>
+            <p className="text-xs text-secondary">
+              Printing purchase orders is restricted for your employee role.
+            </p>
+          </div>
+        ) : documentReady ? (
           <DocumentPreviewSheet
             documentType="po"
             po={po}
@@ -97,7 +108,7 @@ export default function SimplePurchaseOrderPrintPreviewModal({
         )}
       </Modal>
 
-      {printing && po ? (
+      {printing && canViewFinancials && po ? (
         <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
           <PoPrintSheetBody po={po} vendor={vendor} settings={accountSettings} fmt={fmt} />
         </DocumentPrintOffscreenPortal>
