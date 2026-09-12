@@ -13,6 +13,7 @@ import {
 } from "@/lib/po-line-item-totals";
 
 const sectionLabel = "mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-600";
+const addressTitleLabel = "mb-1 text-[10px] font-bold uppercase tracking-wide text-neutral-900";
 const tableWrap = "overflow-hidden rounded border border-neutral-300 text-xs print:text-[11px]";
 const thRow = "bg-neutral-900 text-left text-[10px] font-semibold uppercase tracking-wide text-white";
 const thCell = "px-2 py-1.5";
@@ -38,7 +39,7 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
   const fromShopContact = String(po.fromShopContact || "").trim();
   const billing = String(po.fromAccountsBillingAddress || settings?.accountsBillingAddress || "").trim();
   const shipping = String(po.fromAccountsShippingAddress || settings?.accountsShippingAddress || "").trim();
-  const showShipTo = shipping && shipping !== billing;
+  const showShipTo = Boolean(shipping);
   const vendorNetTerm = String(v.paymentTerms || po.vendorPaymentTerms || "").trim();
 
   const vendorToLines = [v.name || po.vendorName || "", v.contactName || "", addrLine, contactLine]
@@ -79,11 +80,16 @@ export default function PoPrintSheetBody({ po, vendor, settings, fmt, vendorLine
 
       <div className="mb-2 grid gap-2 border-b border-neutral-200 pb-2 sm:grid-cols-2 print:grid-cols-2">
         <div className="min-w-0">
-          {billing ? <p className="whitespace-pre-wrap text-xs text-neutral-800">{billing}</p> : null}
+          {billing ? (
+            <div>
+              <p className={addressTitleLabel}>Billing Address</p>
+              <p className="whitespace-pre-wrap text-xs text-neutral-800">{billing}</p>
+            </div>
+          ) : null}
           {showShipTo ? (
-            <div className="mt-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-neutral-600">Ship to</p>
-              <p className="mt-0.5 whitespace-pre-wrap text-xs text-neutral-800">{shipping}</p>
+            <div className={billing ? "mt-2" : ""}>
+              <p className={addressTitleLabel}>Shipping Address</p>
+              <p className="whitespace-pre-wrap text-xs text-neutral-800">{shipping}</p>
             </div>
           ) : null}
         </div>

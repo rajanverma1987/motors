@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FiArrowLeft } from "react-icons/fi";
+import { FiArrowLeft, FiLock } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import Select from "@/components/ui/select";
@@ -92,7 +92,10 @@ export default function SettingsPageClient() {
   const alert = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, mounted, isEmployee } = useAuth();
+  const effectiveIsEmployee = isEmployee ?? Boolean(
+    user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
+  );
   const { settings: savedSettings, refresh: refreshContext } = useUserSettings();
   const savedZoomRef = useRef(savedSettings?.zoomLevel);
   savedZoomRef.current = savedSettings?.zoomLevel;
@@ -114,6 +117,13 @@ export default function SettingsPageClient() {
   const [pwSaving, setPwSaving] = useState(false);
   const [smtpPasswordInput, setSmtpPasswordInput] = useState("");
   const [smtpTesting, setSmtpTesting] = useState(false);
+  const [poDueTesting, setPoDueTesting] = useState(false);
+
+  useEffect(() => {
+    if (mounted && effectiveIsEmployee) {
+      router.replace("/dashboards");
+    }
+  }, [mounted, effectiveIsEmployee, router]);
 
   useEffect(() => {
     if (
@@ -125,6 +135,10 @@ export default function SettingsPageClient() {
   }, [router, searchParams]);
 
   const load = useCallback(async () => {
+    if (effectiveIsEmployee) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const r = await fetch("/api/dashboard/settings", {
@@ -138,7 +152,7 @@ export default function SettingsPageClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [effectiveIsEmployee]);
 
   useEffect(() => {
     load();
@@ -305,6 +319,44 @@ export default function SettingsPageClient() {
     }
   }
 
+  async function handleTestPoDueNotifications() {
+    if (!draft.smtpEnabled) {
+      await alert({
+        title: "SMTP Disabled",
+        message: "Enable and configure Workspace SMTP above before testing purchase order notifications.",
+        variant: "warning",
+      });
+      return;
+    }
+    setPoDueTesting(true);
+    try {
+      const res = await fetch("/api/dashboard/simple-purchase-orders/due-notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ force: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send due notification");
+      }
+      await alert({
+        title: "Notification Sent",
+        message:
+          data.message ||
+          "Purchase order delivery due notification was processed and sent successfully via shop SMTP.",
+      });
+    } catch (err) {
+      await alert({
+        title: "Notification Failed",
+        message: err.message || "Could not send notification via shop SMTP.",
+        variant: "danger",
+      });
+    } finally {
+      setPoDueTesting(false);
+    }
+  }
+
   async function handleLogoFile(e) {
     const file = e.target.files?.[0];
     e.target.value = "";
@@ -374,7 +426,7 @@ export default function SettingsPageClient() {
             <FormContainer>
               <FormSectionTitle as="h2">Password</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
-                If your account was created by our team, you received a temporary password by email—change it here
+                If your account was created by our team, you received a temporary password by email: change it here
                 after you sign in. This does not affect the sticky <strong className="text-title">Save changes</strong>{" "}
                 bar for other settings (save those separately).
               </p>
@@ -849,6 +901,74 @@ export default function SettingsPageClient() {
                 </div>
               </div>
             </FormContainer>
+
+            <FormContainer>
+              <FormSectionTitle as="h2">Purchase order delivery due notifications</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Notify the right people when a purchase order is approaching or past its expected delivery date using your shop SMTP.
+              </p>
+              <div className="flex flex-col gap-4">
+                <Checkbox
+                  name="poDueNotificationEnabled"
+                  label="Enable purchase order due date notifications"
+                  help="Alerts purchasing staff and managers about orders awaiting vendor delivery."
+                  checked={draft.poDueNotificationEnabled !== false}
+                  onChange={(e) => updateDraft({ poDueNotificationEnabled: e.target.checked })}
+                />
+                <Input
+                  label="Notification recipient emails"
+                  value={draft.poDueNotificationEmails ?? ""}
+                  onChange={(e) => updateDraft({ poDueNotificationEmails: e.target.value })}
+                  placeholder="purchasing@yourshop.com, manager@yourshop.com"
+                  help="Comma-separated email addresses. If left blank, notifications are sent to your shop login email."
+                />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Input
+                    label="Alert days before due date"
+                    type="number"
+                    min="0"
+                    max="30"
+                    value={draft.poDueNotificationDaysBefore ?? 2}
+                    onChange={(e) =>
+                      updateDraft({
+                        poDueNotificationDaysBefore: Math.max(0, Math.min(30, Number(e.target.value) || 0)),
+                      })
+                    }
+                    help="Notify when due date is within this number of days (default 2 days)."
+                  />
+                  <div className="flex items-center pt-2 sm:pt-6">
+                    <Checkbox
+                      name="poDueNotificationIncludeOverdue"
+                      label="Include overdue purchase orders"
+                      help="Continue alerting when orders are past their expected delivery date."
+                      checked={draft.poDueNotificationIncludeOverdue !== false}
+                      onChange={(e) => updateDraft({ poDueNotificationIncludeOverdue: e.target.checked })}
+                    />
+                  </div>
+                </div>
+                <Checkbox
+                  name="poDueNotificationAutoSend"
+                  label="Check and send automatic notifications daily"
+                  help="Runs an automated check once per day when purchasing staff view the dashboard."
+                  checked={draft.poDueNotificationAutoSend !== false}
+                  onChange={(e) => updateDraft({ poDueNotificationAutoSend: e.target.checked })}
+                />
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={poDueTesting}
+                    onClick={handleTestPoDueNotifications}
+                  >
+                    {poDueTesting ? "Sending…" : "Send test due notification"}
+                  </Button>
+                  <span className="text-xs text-secondary">
+                    Uses shop workspace SMTP to send an alert for active due orders.
+                  </span>
+                </div>
+              </div>
+            </FormContainer>
           </div>
         ),
       },
@@ -1022,6 +1142,32 @@ export default function SettingsPageClient() {
       activeEl.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
     }
   }, [activeSection]);
+
+  if (mounted && effectiveIsEmployee) {
+    return (
+      <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 items-center justify-center p-6`}>
+        <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger">
+            <FiLock className="h-6 w-6" aria-hidden />
+          </div>
+          <h2 className="text-lg font-semibold text-title">Access Restricted</h2>
+          <p className="mt-2 text-sm text-secondary">
+            Settings are only available to the main shop login.
+          </p>
+          <div className="mt-5">
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => router.replace("/dashboards")}
+            >
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

@@ -9,6 +9,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import { Form } from "@/components/ui/form-layout";
 import SimpleCustomerFormFields from "@/components/simple/simple-customer-form-fields";
 import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
+import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
@@ -232,7 +233,15 @@ function lineHasContent(line, { withUom = false, withQty = false } = {}) {
   );
 }
 
-function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, headerAction = null }) {
+function LineItemsTable({
+  title,
+  lines,
+  onChange,
+  totalLabel,
+  formatMoney,
+  headerAction = null,
+  hidePrices = false,
+}) {
   const isOther = title.toLowerCase().includes("other");
   const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
@@ -291,7 +300,11 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
               <th className={LINE_HEAD}>Description</th>
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
               {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
-              <th className={`w-36 ${LINE_HEAD}`}>Price</th>
+              {!hidePrices ? (
+                <th className={`w-36 ${LINE_HEAD}`}>Price</th>
+              ) : (
+                <th className={`w-12 text-center ${LINE_HEAD}`}>Action</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -331,15 +344,33 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                       />
                     </td>
                   ) : null}
-                  <td className={LINE_CELL}>
-                    <div className="flex min-w-0 items-center">
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={line.price}
-                        onChange={(e) => updateLine(line.id, { price: e.target.value })}
-                        className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
-                      />
+                  {!hidePrices ? (
+                    <td className={LINE_CELL}>
+                      <div className="flex min-w-0 items-center">
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={line.price}
+                          onChange={(e) => updateLine(line.id, { price: e.target.value })}
+                          className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                        />
+                        {!isBlankTrail ? (
+                          <button
+                            type="button"
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                            title="Remove line"
+                            aria-label="Remove line"
+                            onClick={() => removeLine(line.id)}
+                          >
+                            <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                          </button>
+                        ) : (
+                          <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                        )}
+                      </div>
+                    </td>
+                  ) : (
+                    <td className={`${LINE_CELL} text-center`}>
                       {!isBlankTrail ? (
                         <button
                           type="button"
@@ -353,22 +384,28 @@ function LineItemsTable({ title, lines, onChange, totalLabel, formatMoney, heade
                       ) : (
                         <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
                       )}
-                    </div>
-                  </td>
+                    </td>
+                  )}
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-sm font-semibold dark:border-[hsl(var(--title)/0.4)]">
-        <span className="font-bold text-title">{totalLabel}</span>
-        <input
-          readOnly
-          value={formatMoney(total)}
-          className={`${CELL_INPUT_MUTED} !h-8 !w-32 text-right font-semibold tabular-nums`}
-        />
-      </div>
+      {!hidePrices ? (
+        <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-1 py-0.5 text-sm font-semibold dark:border-[hsl(var(--title)/0.4)]">
+          <span className="font-bold text-title">{totalLabel}</span>
+          <input
+            readOnly
+            value={formatMoney(total)}
+            className={`${CELL_INPUT_MUTED} !h-8 !w-32 text-right font-semibold tabular-nums`}
+          />
+        </div>
+      ) : (
+        <div className="flex items-center justify-end gap-2 border-t border-solid border-[hsl(var(--title)/0.35)] bg-muted/40 px-2 py-1 text-xs text-secondary dark:border-[hsl(var(--title)/0.4)]">
+          <span>Pricing hidden for employee role</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -387,7 +424,7 @@ export default function ServiceProposalFormModal({
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
-  const { user } = useAuth();
+  const { user, canViewFinancials } = useAuth();
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
@@ -424,6 +461,7 @@ export default function ServiceProposalFormModal({
   const [newCustomerForm, setNewCustomerForm] = useState(INITIAL_CUSTOMER_FORM);
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [datasheetOpen, setDatasheetOpen] = useState(false);
+  const [emailDatasheetOpen, setEmailDatasheetOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   /** Skip one initialForm hydrate (Copy & Create New applies its own form snapshot). */
   const skipHydrateFromInitialRef = useRef(false);
@@ -879,6 +917,42 @@ export default function ServiceProposalFormModal({
     return buildAcDatasheetFromProposal(form, meta);
   }, [form, selectedCustomer, employeeDisplayLabel]);
 
+  const datasheetPrintContext = useMemo(
+    () => ({
+      customerName:
+        selectedCustomer?.companyName ||
+        form.companyName ||
+        "",
+      contactName:
+        selectedCustomer?.primaryContactName ||
+        "",
+      companyName:
+        selectedCustomer?.companyName ||
+        form.companyName ||
+        "",
+      customerPhone: String(form.customerPhone || selectedCustomer?.phone || "").trim(),
+      customerEmail: String(form.customerEmail || selectedCustomer?.email || "").trim(),
+      customerPo: String(form.customerPo || "").trim(),
+      documentNumber: String(form.documentNumber || "").trim(),
+      documentLabel: recordTypeJobNumberLabel(form.recordType),
+      jobStatus: form.jobStatus,
+      jobStatusLabel: form.jobStatus,
+    }),
+    [
+      selectedCustomer?.companyName,
+      selectedCustomer?.primaryContactName,
+      selectedCustomer?.phone,
+      selectedCustomer?.email,
+      form.companyName,
+      form.customerPhone,
+      form.customerEmail,
+      form.customerPo,
+      form.documentNumber,
+      form.recordType,
+      form.jobStatus,
+    ]
+  );
+
   const commissionPreset = useMemo(() => {
     if (!recordId) return null;
     const rfqNumber = String(form.documentNumber || "").trim() || recordId;
@@ -1317,19 +1391,21 @@ export default function ServiceProposalFormModal({
           {/* Toolbar (title lives in modal header) */}
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
             <div className="flex min-w-0 flex-wrap justify-start gap-1">
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canAddCommission || saving || copying}
-                title={
-                  canAddCommission ? "Add sales commission" : "Save the record before adding commission"
-                }
-                onClick={() => setCommissionOpen(true)}
-              >
-                Add Commission
-              </Button>
+              {canViewFinancials ? (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className={TOOLBAR_BTN}
+                  disabled={!canAddCommission || saving || copying}
+                  title={
+                    canAddCommission ? "Add sales commission" : "Save the record before adding commission"
+                  }
+                  onClick={() => setCommissionOpen(true)}
+                >
+                  Add Commission
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="primary"
@@ -1359,7 +1435,9 @@ export default function ServiceProposalFormModal({
                 title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
                 onClick={() => setAttachmentsOpen(true)}
               >
-                Add Attachments
+                {Array.isArray(form.attachments) && form.attachments.length
+                  ? `Attachments (${form.attachments.length})`
+                  : "Add Attachments"}
               </Button>
               <Button
                 type="button"
@@ -1380,6 +1458,17 @@ export default function ServiceProposalFormModal({
                 onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
               >
                 Customer Print
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={saving || copying}
+                title={`Email ${form.motorPower === "DC" ? "DC" : "AC"} test & inspection report to customer`}
+                onClick={() => setEmailDatasheetOpen(true)}
+              >
+                Email Datasheet
               </Button>
             </div>
             <div className="flex flex-wrap justify-end gap-1">
@@ -1467,16 +1556,29 @@ export default function ServiceProposalFormModal({
                 </div>
               </FieldRow>
               <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className={`${TOOLBAR_BTN} w-full justify-center !px-3`}
-                  title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
-                  onClick={openDatasheet}
-                >
-                  View Datasheet
-                </Button>
+                <div className="flex gap-1.5">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
+                    title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
+                    onClick={openDatasheet}
+                  >
+                    View Datasheet
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={`${TOOLBAR_BTN} justify-center !px-3`}
+                    disabled={saving || copying}
+                    title={`Email ${form.motorPower === "DC" ? "DC" : "AC"} report to customer`}
+                    onClick={() => setEmailDatasheetOpen(true)}
+                  >
+                    Email Report
+                  </Button>
+                </div>
               </FieldRow>
               <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
@@ -1559,10 +1661,10 @@ export default function ServiceProposalFormModal({
                   <input
                     type="text"
                     readOnly
-                    value={String(selectedCustomer?.paymentTerms || "").trim() || "—"}
+                    value={canViewFinancials ? (String(selectedCustomer?.paymentTerms || "").trim() || "-") : "Restricted"}
                     className={`${FIELD_INPUT} !bg-muted/40`}
                     aria-label="Customer payment terms"
-                    title="From customer record"
+                    title={canViewFinancials ? "From customer record" : "Restricted for employee role"}
                   />
                 </FieldRow>
               ) : null}
@@ -1707,7 +1809,7 @@ export default function ServiceProposalFormModal({
                   />
                 </div>
               </FieldRow>
-              {form.recordType === RECORD_TYPE_INVOICE ? (
+              {form.recordType === RECORD_TYPE_INVOICE && canViewFinancials ? (
                 <FieldRow
                   label=""
                   labelWidth="9.5rem"
@@ -1793,14 +1895,14 @@ export default function ServiceProposalFormModal({
                 ) : (
                   <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border border-border">
                     <div
-                      className={`sticky top-0 z-[1] ${PROPOSAL_PO_HEADER_GRID} border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
+                      className={`sticky top-0 z-[1] ${canViewFinancials ? PROPOSAL_PO_HEADER_GRID : "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)] gap-x-2"} border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
                     >
                       <span aria-hidden />
                       <span>PO#</span>
                       <span>Vendor</span>
                       <span>PO Date</span>
                       <span>PO Status</span>
-                      <span>PO Payment</span>
+                      {canViewFinancials ? <span>PO Payment</span> : null}
                     </div>
                     {proposalPoTableGroups.map((group) => {
                       const poExpanded = expandedPoIds.has(group.poId);
@@ -1810,7 +1912,7 @@ export default function ServiceProposalFormModal({
                         className="border-b border-border last:border-b-0"
                       >
                         <div
-                          className={`${PROPOSAL_PO_HEADER_GRID} items-center gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
+                          className={`${canViewFinancials ? PROPOSAL_PO_HEADER_GRID : "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)] gap-x-2"} items-center gap-y-1 border-b border-border border-l-[3px] border-l-primary/50 bg-form-bg px-2 py-1.5 dark:border-l-primary/60 dark:bg-form-bg ${SIMPLE_TABLE_TEXT}`}
                         >
                           <button
                             type="button"
@@ -1848,7 +1950,7 @@ export default function ServiceProposalFormModal({
                           <div className="min-w-0 whitespace-nowrap tabular-nums text-title">
                             {group.poDateRaw
                               ? formatDate(group.poDateRaw)
-                              : "—"}
+                              : "-"}
                           </div>
                           <div className="min-w-0">
                             <Badge
@@ -1859,15 +1961,17 @@ export default function ServiceProposalFormModal({
                               {group.poStatus}
                             </Badge>
                           </div>
-                          <div className="min-w-0">
-                            <Badge
-                              variant={poPaymentStatusBadgeVariant(group.poPaymentStatus)}
-                              className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
-                              title={group.poPaymentStatus}
-                            >
-                              {group.poPaymentStatus}
-                            </Badge>
-                          </div>
+                          {canViewFinancials ? (
+                            <div className="min-w-0">
+                              <Badge
+                                variant={poPaymentStatusBadgeVariant(group.poPaymentStatus)}
+                                className="max-w-full truncate rounded-full px-2 py-0.5 text-[10px]"
+                                title={group.poPaymentStatus}
+                              >
+                                {group.poPaymentStatus}
+                              </Badge>
+                            </div>
+                          ) : null}
                         </div>
                         {poExpanded ? (
                         group.items.length === 0 ? (
@@ -1876,10 +1980,20 @@ export default function ServiceProposalFormModal({
                           <div className="w-full min-w-0 border-l-2 border-border/50 pl-3 pr-1">
                           <table className={`w-full table-fixed border-collapse ${SIMPLE_TABLE_TEXT}`}>
                             <colgroup>
-                              <col className="w-auto" style={{ width: "52%" }} />
-                              <col style={{ width: "10%" }} />
-                              <col style={{ width: "16%" }} />
-                              <col style={{ width: "22%" }} />
+                              {canViewFinancials ? (
+                                <>
+                                  <col className="w-auto" style={{ width: "52%" }} />
+                                  <col style={{ width: "10%" }} />
+                                  <col style={{ width: "16%" }} />
+                                  <col style={{ width: "22%" }} />
+                                </>
+                              ) : (
+                                <>
+                                  <col className="w-auto" style={{ width: "65%" }} />
+                                  <col style={{ width: "15%" }} />
+                                  <col style={{ width: "20%" }} />
+                                </>
+                              )}
                             </colgroup>
                             <thead>
                               <tr className="border-b border-border bg-primary/[0.04] dark:bg-primary/10">
@@ -1889,9 +2003,11 @@ export default function ServiceProposalFormModal({
                                 <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
                                   Qty
                                 </th>
-                                <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
-                                  Price
-                                </th>
+                                {canViewFinancials ? (
+                                  <th className={`border-r border-border px-2 py-1 text-right ${SIMPLE_TABLE_HEAD}`}>
+                                    Price
+                                  </th>
+                                ) : null}
                                 <th className={`px-2 py-1 text-left ${SIMPLE_TABLE_HEAD}`}>
                                   Item Status
                                 </th>
@@ -1916,12 +2032,14 @@ export default function ServiceProposalFormModal({
                                   <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
                                     {row.qty}
                                   </td>
-                                  <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
-                                    {row.price == null ? "—" : formatMoney(row.price)}
-                                  </td>
+                                  {canViewFinancials ? (
+                                    <td className="whitespace-nowrap border-r border-border px-2 py-1 text-right tabular-nums text-title">
+                                      {row.price == null ? "-" : formatMoney(row.price)}
+                                    </td>
+                                  ) : null}
                                   <td className="whitespace-nowrap px-2 py-1">
-                                    {row.itemStatus === "—" ? (
-                                      "—"
+                                    {row.itemStatus === "—" || row.itemStatus === "-" ? (
+                                      "-"
                                     ) : (
                                       <Badge
                                         variant={poReceivingBadgeVariant(row.itemStatus)}
@@ -1939,7 +2057,7 @@ export default function ServiceProposalFormModal({
                         )
                         ) : null}
                       </div>
-                      );
+                    );
                     })}
                   </div>
                 )}
@@ -1955,6 +2073,7 @@ export default function ServiceProposalFormModal({
               onChange={(scopeDetails) => patch("scopeDetails", scopeDetails)}
               totalLabel="Total For Proposal:"
               formatMoney={formatMoney}
+              hidePrices={!canViewFinancials}
             />
             <div className="flex min-w-0 flex-col gap-2">
               <LineItemsTable
@@ -1963,6 +2082,7 @@ export default function ServiceProposalFormModal({
                 onChange={(otherItems) => patch("otherItems", otherItems)}
                 totalLabel="Total:"
                 formatMoney={formatMoney}
+                hidePrices={!canViewFinancials}
                 headerAction={
                   <Button
                     type="button"
@@ -1976,58 +2096,69 @@ export default function ServiceProposalFormModal({
                   </Button>
                 }
               />
-              <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
-                <FieldRow
-                  label="Total Amount"
-                  labelWidth="9rem"
-                  labelClassName={SIMPLE_TOTAL_LABEL}
-                >
-                  <input
-                    readOnly
-                    value={formatMoney(totalAmount)}
-                    className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                  />
-                </FieldRow>
-                {showTax ? (
-                  <>
-                    <FieldRow
-                      label="Tax%"
-                      labelWidth="9rem"
-                      labelClassName={SIMPLE_TOTAL_LABEL}
-                    >
-                      <input
-                        type="text"
-                        inputMode="decimal"
-                        value={form.taxPercent}
-                        onChange={(e) => patch("taxPercent", e.target.value)}
-                        className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                      />
-                    </FieldRow>
-                    <FieldRow
-                      label="Tax Amount"
-                      labelWidth="9rem"
-                      labelClassName={SIMPLE_TOTAL_LABEL}
-                    >
-                      <input
-                        readOnly
-                        value={formatMoney(taxAmount)}
-                        className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
-                      />
-                    </FieldRow>
-                  </>
-                ) : null}
-                <FieldRow
-                  label="Total For Billing"
-                  labelWidth="9rem"
-                  labelClassName={SIMPLE_TOTAL_LABEL}
-                >
-                  <input
-                    readOnly
-                    value={formatMoney(billingTotal)}
-                    className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
-                  />
-                </FieldRow>
-              </div>
+              {canViewFinancials ? (
+                <div className="ml-auto w-full max-w-xs space-y-1 border border-border bg-card p-2">
+                  <FieldRow
+                    label="Total Amount"
+                    labelWidth="9rem"
+                    labelClassName={SIMPLE_TOTAL_LABEL}
+                  >
+                    <input
+                      readOnly
+                      value={formatMoney(totalAmount)}
+                      className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                    />
+                  </FieldRow>
+                  {showTax ? (
+                    <>
+                      <FieldRow
+                        label="Tax%"
+                        labelWidth="9rem"
+                        labelClassName={SIMPLE_TOTAL_LABEL}
+                      >
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={form.taxPercent}
+                          onChange={(e) => patch("taxPercent", e.target.value)}
+                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                        />
+                      </FieldRow>
+                      <FieldRow
+                        label="Tax Amount"
+                        labelWidth="9rem"
+                        labelClassName={SIMPLE_TOTAL_LABEL}
+                      >
+                        <input
+                          readOnly
+                          value={formatMoney(taxAmount)}
+                          className={`${FIELD_INPUT} !h-8 text-right ${SIMPLE_TOTAL_INPUT}`}
+                        />
+                      </FieldRow>
+                    </>
+                  ) : null}
+                  <FieldRow
+                    label="Total For Billing"
+                    labelWidth="9rem"
+                    labelClassName={SIMPLE_TOTAL_LABEL}
+                  >
+                    <input
+                      readOnly
+                      value={formatMoney(billingTotal)}
+                      className={`${FIELD_INPUT} !h-8 !bg-muted text-right ${SIMPLE_TOTAL_INPUT} dark:!bg-card`}
+                    />
+                  </FieldRow>
+                </div>
+              ) : (
+                <div className="ml-auto flex w-full max-w-xs flex-col items-center justify-center gap-1 border border-border bg-card p-4 text-center">
+                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                    Financial Totals Restricted
+                  </Badge>
+                  <p className="text-xs text-secondary">
+                    Pricing, taxes, and billing totals are hidden for this employee role.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </Form>
@@ -2204,6 +2335,17 @@ export default function ServiceProposalFormModal({
         onChange={(applied) => {
           void handleInvoicePaymentsChange(applied);
         }}
+      />
+
+      <SimpleSendDatasheetModal
+        open={emailDatasheetOpen}
+        onClose={() => setEmailDatasheetOpen(false)}
+        motorType={form.motorPower === "DC" ? "DC" : "AC"}
+        datasheet={datasheetInitial}
+        printContext={datasheetPrintContext}
+        technicianLabel={employeeDisplayLabel(form.preparedBy) || ""}
+        jobDiagrams={normalizeJobDiagrams(form.jobDiagrams, form.jobDiagram)}
+        attachments={Array.isArray(form.attachments) ? form.attachments : []}
       />
     </>
   );

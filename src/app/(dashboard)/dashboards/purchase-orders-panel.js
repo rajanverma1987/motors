@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
+  FiBell,
   FiCheckCircle,
   FiClipboard,
   FiEdit2,
@@ -15,10 +16,12 @@ import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import SimplePoDueNotificationsModal from "@/components/simple/simple-po-due-notifications-modal";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
@@ -88,6 +91,7 @@ function paymentFilterIcon(label) {
 export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const { settings: mergedSettings } = useUserSettings();
   const searchParams = useSearchParams();
@@ -109,7 +113,31 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [editingPo, setEditingPo] = useState(null);
   const [openVendorId, setOpenVendorId] = useState(null);
   const [openCustomerId, setOpenCustomerId] = useState(null);
+  const [dueNotificationData, setDueNotificationData] = useState(null);
+  const [dueNotificationLoading, setDueNotificationLoading] = useState(false);
+  const [dueNotificationModalOpen, setDueNotificationModalOpen] = useState(false);
   const lastHandledCreateNonceRef = useRef(createNonce);
+
+  const fetchDueNotifications = useCallback(async (autoCheck = false) => {
+    try {
+      setDueNotificationLoading(true);
+      const res = await fetch(
+        `/api/dashboard/simple-purchase-orders/due-notifications${autoCheck ? "?autoCheck=1" : ""}`
+      );
+      const data = await res.json();
+      if (data?.ok) {
+        setDueNotificationData(data);
+      }
+    } catch (e) {
+      console.warn("Failed to check due notifications:", e);
+    } finally {
+      setDueNotificationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchDueNotifications(true);
+  }, [fetchDueNotifications]);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -511,36 +539,40 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           );
         },
       },
-      {
-        key: "grandTotal",
-        label: "Grand Total",
-        sortable: true,
-        align: "right",
-        render: (v) => formatSimpleMoney(Number(v) || 0),
-      },
-      {
-        key: "paidAmount",
-        label: "Paid Amount",
-        sortable: true,
-        align: "right",
-        render: (v) => formatSimpleMoney(Number(v) || 0),
-      },
-      {
-        key: "unpaidAmount",
-        label: "Unpaid Amount",
-        sortable: true,
-        align: "right",
-        render: (v) => formatSimpleMoney(Number(v) || 0),
-      },
-      {
-        key: "lastPaymentDate",
-        label: "Last Payment Date",
-        sortable: true,
-        render: (v) => {
-          const text = formatDate(v);
-          return text && text !== "-" ? text : "—";
-        },
-      },
+      ...(canViewFinancials
+        ? [
+            {
+              key: "grandTotal",
+              label: "Grand Total",
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "paidAmount",
+              label: "Paid Amount",
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "unpaidAmount",
+              label: "Unpaid Amount",
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "lastPaymentDate",
+              label: "Last Payment Date",
+              sortable: true,
+              render: (v) => {
+                const text = formatDate(v);
+                return text && text !== "-" ? text : "—";
+              },
+            },
+          ]
+        : []),
       {
         key: "actions",
         label: "",
@@ -562,7 +594,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ),
       },
     ],
-    [formatDate, handleDelete, jobView, mergedSettings]
+    [formatDate, handleDelete, jobView, mergedSettings, canViewFinancials]
   );
 
   const isCreate = modalMode === "create";
@@ -579,10 +611,13 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
               setPage(1);
               setPaymentFilter(card.key || FILTER_ALL);
             }}
-            formatAmount={(n) =>
-              `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
-                maximumFractionDigits: 0,
-              })}`
+            formatAmount={
+              canViewFinancials
+                ? (n) =>
+                    `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
+                      maximumFractionDigits: 0,
+                    })}`
+                : () => ""
             }
           />
         ))}
@@ -608,10 +643,34 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           onRefresh={reload}
           columnSettingsKey="simple-purchase-orders"
           toolbarBeforeSearch={
-            <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
-              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-              Add New
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Add New
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-9 !rounded-none px-2.5 inline-flex items-center gap-1.5"
+                onClick={() => {
+                  setDueNotificationModalOpen(true);
+                  void fetchDueNotifications(false);
+                }}
+                title="Purchase order expected delivery due notifications"
+              >
+                <FiBell className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
+                <span>Due Alerts</span>
+                {dueNotificationData?.totalCount > 0 ? (
+                  <Badge
+                    variant={dueNotificationData?.overdueCount > 0 ? "danger" : "warning"}
+                    className="ml-0.5 rounded-full px-1.5 py-0 text-[10px] font-bold"
+                  >
+                    {dueNotificationData.totalCount}
+                  </Badge>
+                ) : null}
+              </Button>
+            </div>
           }
           emptyMessage={
             totalCount === 0
@@ -699,6 +758,18 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
               return { ...r, customerName: nextName };
             })
           );
+        }}
+      />
+
+      <SimplePoDueNotificationsModal
+        open={dueNotificationModalOpen}
+        onClose={() => setDueNotificationModalOpen(false)}
+        data={dueNotificationData}
+        loading={dueNotificationLoading}
+        onRefresh={() => fetchDueNotifications(false)}
+        onOpenPo={(po) => {
+          const found = rows.find((r) => String(r.id) === String(po.id));
+          openEdit(found || po);
         }}
       />
     </div>

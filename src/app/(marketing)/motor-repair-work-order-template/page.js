@@ -50,11 +50,11 @@ export const metadata = {
 const faqItems = [
   {
     q: "What should a motor repair work order include?",
-    a: "At minimum: job number, customer and PO, full motor nameplate data, incoming test readings, the authorized scope with a dollar limit, parts and materials used, labor hours by technician, final test results, and a customer sign-off line. The nameplate block and the incoming readings are what separate a motor repair work order from a generic repair order — without them you cannot prove what condition the motor arrived in.",
+    a: "At minimum: job number, customer and PO, full motor nameplate data, incoming test readings, the authorized scope with a dollar limit, parts and materials used, labor hours by technician, final test results, and a customer sign-off line. The nameplate block and the incoming readings are what separate a motor repair work order from a generic repair order, without them you cannot prove what condition the motor arrived in.",
   },
   {
     q: "What is the difference between a work order and a job card?",
-    a: "A work order authorizes the work and carries the commercial terms — scope, approval limit, customer PO. A job card travels with the motor through the shop and records what each department actually did. Small shops often combine them into one printed sheet; larger shops keep the work order at the counter and the job card on the bench.",
+    a: "A work order authorizes the work and carries the commercial terms, scope, approval limit, customer PO. A job card travels with the motor through the shop and records what each department actually did. Small shops often combine them into one printed sheet; larger shops keep the work order at the counter and the job card on the bench.",
   },
   {
     q: "Do I need a signed work order before starting a rewind?",
@@ -62,18 +62,18 @@ const faqItems = [
   },
   {
     q: "Is this work order template free?",
-    a: "Yes. Copy the plain-text version and use it however you like — there is no download gate and no sign-up. If retyping it onto paper for every job becomes the bottleneck, that is the point at which shops move to work order software instead.",
+    a: "Yes. Copy the plain-text version and use it however you like, there is no download gate and no sign-up. If retyping it onto paper for every job becomes the bottleneck, that is the point at which shops move to work order software instead.",
   },
 ];
 
 const groups = [
   {
-    name: "1. Header — who, what, when",
+    name: "1. Header | who, what, when",
     intro: "This block is what everyone quotes back at you on the phone. Keep the job number the same across the quote, the work order, and the invoice.",
     fields: [
       { field: "Job / WO number", holds: "One number that follows this motor from intake to invoice. Do not issue a separate quote number and WO number.", required: true },
       { field: "Date received", holds: "The day the motor physically arrived, not the day paperwork was opened. Lead-time promises are measured from here.", required: true },
-      { field: "Customer", holds: "Company, site, and the person who can approve money — not just the driver who dropped it off.", required: true },
+      { field: "Customer", holds: "Company, site, and the person who can approve money, not just the driver who dropped it off.", required: true },
       { field: "Customer PO number", holds: "Many plants will not pay an invoice without it. Capture it at intake or you will chase it at billing.", required: true },
       { field: "Promised / target date", holds: "The date you told the customer. Keep it visible on the floor copy so it drives sequencing.", required: true },
       { field: "Priority", holds: "Standard, rush, or emergency/breakdown. Drives overtime and outside-service decisions.", required: false },
@@ -92,7 +92,7 @@ const groups = [
       { field: "Enclosure", holds: "TEFC, ODP, TENV, explosion-proof. Explosion-proof changes what repairs are legal.", required: true },
       { field: "Insulation class & service factor", holds: "Determines materials and acceptable temperature rise.", required: false },
       { field: "Bearing numbers (DE / ODE)", holds: "Drive-end and opposite-drive-end. Record even if you are not replacing them.", required: true },
-      { field: "Accessories", holds: "Encoder, brake, blower, RTDs, thermistors, space heaters — anything that comes back on the motor.", required: false },
+      { field: "Accessories", holds: "Encoder, brake, blower, RTDs, thermistors, space heaters, anything that comes back on the motor.", required: false },
     ],
   },
   {
@@ -115,7 +115,7 @@ const groups = [
       { field: "Teardown & inspect authorized", holds: "Dollar limit and who approved it, with date. This is the only work permitted before the repair quote.", required: true },
       { field: "Repair scope quoted", holds: "The line items you priced: rewind, bearings, machining, balance, paint, testing.", required: true },
       { field: "Not-to-exceed amount", holds: "The ceiling. Work beyond it needs a fresh approval line, not a phone call nobody wrote down.", required: true },
-      { field: "Approved by / date / method", holds: "Name, date, and how — email, PO, verbal. Verbal approvals need a second initial.", required: true },
+      { field: "Approved by / date / method", holds: "Name, date, and how, email, PO, verbal. Verbal approvals need a second initial.", required: true },
       { field: "Scrap / return decision", holds: "If the motor is uneconomical, what the customer wants done with the core.", required: false },
     ],
   },
@@ -126,7 +126,7 @@ const groups = [
       { field: "Operation", holds: "Strip, burnout, rewind, VPI/dip-and-bake, machining, bearing fit, balance, assembly, paint.", required: true },
       { field: "Technician", holds: "Who did it. Needed for both quality trace and labor costing.", required: true },
       { field: "Date & hours", holds: "Hours by operation, not one lump at the end. This is where your real job cost lives.", required: true },
-      { field: "Coil / winding data", holds: "Turns, wire size, connection, slot count, pitch. Record it — the next rewind of this motor depends on it.", required: false },
+      { field: "Coil / winding data", holds: "Turns, wire size, connection, slot count, pitch. Record it, the next rewind of this motor depends on it.", required: false },
       { field: "Outside services", holds: "Vendor, what they did, their cost, and their return date. Outside work is the top cause of blown lead times.", required: false },
     ],
   },
@@ -153,7 +153,7 @@ const groups = [
   },
 ];
 
-const plainText = `ELECTRIC MOTOR REPAIR — WORK ORDER
+const plainText = `ELECTRIC MOTOR REPAIR, WORK ORDER
 
 Job / WO No: ______________     Date received: ____________
 Customer: _________________________________________________
@@ -215,7 +215,7 @@ export default function MotorRepairWorkOrderTemplatePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Motor repair work order template"
-        description="A work order built for electric motor and rewind shops — nameplate data, incoming test readings, and a two-stage approval line, because you cannot price a rewind before the core is open. Free to copy, no sign-up."
+        description="A work order built for electric motor and rewind shops, nameplate data, incoming test readings, and a two-stage approval line, because you cannot price a rewind before the core is open. Free to copy, no sign-up."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         sidebarTitle="Tired of retyping this?"
@@ -296,7 +296,7 @@ export default function MotorRepairWorkOrderTemplatePage() {
                 shop management system
               </Link>{" "}
               covers quoting, inventory, and billing on the same job record. Keep using the template until the
-              retyping is the bottleneck — that is the honest signal to switch.
+              retyping is the bottleneck, that is the honest signal to switch.
             </p>
           </section>
 

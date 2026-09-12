@@ -13,6 +13,10 @@ import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier"
 import { recordPortalLogin } from "@/lib/portal-login-audit";
 import { recordSecurityEvent } from "@/lib/security-audit";
 import { loadShopPortalUi } from "@/lib/shop-portal-ui";
+import Policy from "@/models/Policy";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
 
 export async function POST(request) {
   const { allowed } = await checkRateLimit(request, "portal-login", 10);
@@ -127,6 +131,28 @@ export async function POST(request) {
       rememberMe,
     });
 
+    let employeeDoc = null;
+    let policies = [];
+    const userSettingsDoc = await UserSettings.findOne({ ownerEmail }).lean();
+    const userSettings = mergeUserSettings(userSettingsDoc?.settings);
+
+    if (actingEmployee?.id) {
+      employeeDoc = await Employee.findById(actingEmployee.id).lean();
+      policies = await Policy.find({
+        createdByEmail: ownerEmail,
+        effect: "allow",
+        subjectType: "employee",
+        subjectIds: String(actingEmployee.id),
+      }).lean();
+    }
+
+    const financialAccess = computeEffectiveFinancialAccess({
+      isOwner: !actingEmployee,
+      employee: employeeDoc,
+      policies,
+      userSettings,
+    });
+
     return NextResponse.json({
       ok: true,
       user: {
@@ -138,7 +164,17 @@ export async function POST(request) {
         calculatorOnlyAccount,
         portalUi,
         isEmployeeSession: Boolean(actingEmployee),
+        isEmployee: Boolean(actingEmployee),
+        isOwner: !actingEmployee,
         employee: actingEmployee,
+        authType: actingEmployee ? "employee" : "owner",
+        employeeId: actingEmployee?.id || "",
+        employeeName: employeeDoc?.name || "",
+        employeeRole: employeeDoc?.role || "",
+        canViewFinancials: financialAccess.canViewFinancials,
+        isFinancialRestricted: financialAccess.isRestricted,
+        financialAccessReason: financialAccess.reason,
+        isSimulatedFinancialRestriction: financialAccess.isSimulated || false,
       },
     });
   } catch (err) {

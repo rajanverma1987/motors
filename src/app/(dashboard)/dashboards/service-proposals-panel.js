@@ -28,6 +28,7 @@ import {
 } from "@/lib/simple-screen-ui";
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
 import {
   invoiceStatusSelectOptionsFromMerged,
@@ -170,6 +171,7 @@ export default function ServiceProposalsPanel({
   const isInvoices = variant === SIMPLE_LIST_VARIANT_INVOICES;
   const alert = useAlert();
   const confirm = useConfirm();
+  const { canViewFinancials } = useFinancialAccess();
   const searchParams = useSearchParams();
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
@@ -637,7 +639,7 @@ export default function ServiceProposalsPanel({
       icon: statusCardIcon(allTile.label || "All"),
     });
 
-    if (isInvoices) {
+    if (isInvoices && canViewFinancials) {
       const ar = invoiceFinance?.amountReceivable || { count: 0, amount: 0 };
       const taxPaid = invoiceFinance?.taxCollected || { count: 0, amount: 0 };
       const taxDue = invoiceFinance?.taxToCollect || { count: 0, amount: 0 };
@@ -776,37 +778,41 @@ export default function ServiceProposalsPanel({
           resolveEmployeeDisplayName(employees, v || row?.preparedBy) || "—",
       },
       { key: "quoteType", label: "Quote Type", sortable: true },
-      {
-        key: "total",
-        label: "Total",
-        headerSubtotal: currencySubtotalBadge("Total", currencySubtotals.total),
-        sortable: true,
-        align: "right",
-        render: (v) => formatSimpleMoney(Number(v) || 0),
-      },
-      {
-        key: "logisticCharges",
-        label: "Logistic Charges",
-        headerSubtotal: currencySubtotalBadge(
-          "Logistic Charges",
-          currencySubtotals.logisticCharges
-        ),
-        sortable: true,
-        align: "right",
-        render: (v, row) =>
-          formatSimpleMoney(
-            Number(v) || proposalLogisticsChargesTotal(row) || 0
-          ),
-      },
-      {
-        key: "taxCollected",
-        label: "Tax",
-        headerSubtotal: currencySubtotalBadge("Tax", currencySubtotals.taxCollected),
-        sortable: true,
-        align: "right",
-        render: (v) => formatSimpleMoney(Number(v) || 0),
-      },
-      ...(isInvoices
+      ...(canViewFinancials
+        ? [
+            {
+              key: "total",
+              label: "Total",
+              headerSubtotal: currencySubtotalBadge("Total", currencySubtotals.total),
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+            {
+              key: "logisticCharges",
+              label: "Logistic Charges",
+              headerSubtotal: currencySubtotalBadge(
+                "Logistic Charges",
+                currencySubtotals.logisticCharges
+              ),
+              sortable: true,
+              align: "right",
+              render: (v, row) =>
+                formatSimpleMoney(
+                  Number(v) || proposalLogisticsChargesTotal(row) || 0
+                ),
+            },
+            {
+              key: "taxCollected",
+              label: "Tax",
+              headerSubtotal: currencySubtotalBadge("Tax", currencySubtotals.taxCollected),
+              sortable: true,
+              align: "right",
+              render: (v) => formatSimpleMoney(Number(v) || 0),
+            },
+          ]
+        : []),
+      ...(isInvoices && canViewFinancials
         ? [
             {
               key: "paidAmount",
@@ -1041,6 +1047,7 @@ export default function ServiceProposalsPanel({
       isInvoices,
       quoteStatusValues,
       formatDate,
+      canViewFinancials,
     ]
   );
 
@@ -1053,10 +1060,13 @@ export default function ServiceProposalsPanel({
         setPage(1);
         setStatusFilter(card.key || "");
       }}
-      formatAmount={(n) =>
-        `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
-          maximumFractionDigits: 0,
-        })}`
+      formatAmount={
+        canViewFinancials
+          ? (n) =>
+              `$${(Number.isFinite(n) ? n : 0).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              })}`
+          : () => ""
       }
     />
   );

@@ -424,7 +424,12 @@ export async function buildPurchaseOrderPdfBuffer({ po, vendor = {}, shopName = 
   ]
     .filter(Boolean)
     .join("\n");
-  const fromBody = [billing, shipping && shipping !== billing ? `Ship to:\n${shipping}` : ""].filter(Boolean).join("\n\n");
+  const fromBody = [
+    billing ? `Billing Address:\n${billing}` : "",
+    shipping ? `Shipping Address:\n${shipping}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   y = drawTwoCol(pdf, y, "From", fromBody || "—", "Vendor", vendorLines || "—");
 
   y = drawSectionTitle(pdf, y, "Purchase order info");
@@ -524,3 +529,6 @@ export async function buildMotorShippingPdfBuffer({
   drawNotes(pdf, y, "Notes", e.notes);
   return finishPdf(pdf, done);
 }
+
+export { buildDatasheetPdfBuffer } from "@/lib/simple-datasheet-pdf";
+

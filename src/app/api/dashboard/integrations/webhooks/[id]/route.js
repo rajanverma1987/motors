@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import IntegrationWebhook from "@/models/IntegrationWebhook";
 
 export async function PATCH(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) return NextResponse.json({ error: "Access denied." }, { status: 403 });
     const email = user.email.trim().toLowerCase();
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const id = params?.id;
@@ -34,6 +35,7 @@ export async function DELETE(request, context) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) return NextResponse.json({ error: "Access denied." }, { status: 403 });
     const email = user.email.trim().toLowerCase();
     const params = typeof context.params?.then === "function" ? await context.params : context.params;
     const id = params?.id;

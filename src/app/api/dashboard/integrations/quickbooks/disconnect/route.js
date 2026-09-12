@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import QuickBooksConnection from "@/models/QuickBooksConnection";
 import UserSettings from "@/models/UserSettings";
 import { revokeToken } from "@/lib/quickbooks/oauth";
@@ -10,6 +10,9 @@ export async function POST(request) {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
     }
     const email = user.email.trim().toLowerCase();
     await connectDB();

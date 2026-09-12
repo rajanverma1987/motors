@@ -775,7 +775,6 @@ export default function CustomersPanel({ createNonce = 0 }) {
         title="Lead"
         size="md"
         showClose
-        closeOnOutsideClick
         actions={
           leadDetail ? (
             <Button

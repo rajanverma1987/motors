@@ -110,6 +110,7 @@ export function emptyPoLine() {
     receivedQty: "0",
     receivingStatus: SIMPLE_PO_RECEIVING_STATUS_ORDERED,
     receivedDate: "",
+    vendorInvoiceNumber: "",
     /** Optional — when set and line becomes Received, on-hand increases */
     inventoryItemId: "",
     cancelled: false,
@@ -387,6 +388,7 @@ export function storedPoToForm(row) {
               ? SIMPLE_PO_RECEIVING_STATUS_RETURNED
               : normalizeReceivingStatus(merged.receivingStatus),
           receivedDate: String(merged.receivedDate || "").slice(0, 10),
+          vendorInvoiceNumber: String(merged.vendorInvoiceNumber || "").trim(),
         };
       })
     : [];
@@ -444,7 +446,8 @@ function lineHasContentForEdit(line) {
       String(line?.uom ?? "").trim() ||
       parsePoMoney(line?.quantity) ||
       parsePoMoney(line?.price) ||
-      parsePoMoney(line?.taxPercent)
+      parsePoMoney(line?.taxPercent) ||
+      String(line?.vendorInvoiceNumber ?? "").trim()
   );
 }
 
@@ -495,6 +498,7 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         receivedQty,
         receivingStatus,
         receivedDate: String(line.receivedDate || "").slice(0, 10),
+        vendorInvoiceNumber: String(line.vendorInvoiceNumber || "").trim(),
         total: t.total,
         taxAmount: t.taxAmount,
         grandTotal: t.grandTotal,
@@ -505,7 +509,8 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         String(line.itemName || "").trim() ||
         parsePoMoney(line.quantity) ||
         parsePoMoney(line.price) ||
-        parsePoMoney(line.taxPercent)
+        parsePoMoney(line.taxPercent) ||
+        String(line.vendorInvoiceNumber || "").trim()
     );
 
   const payments = (Array.isArray(form.payments) ? form.payments : [])

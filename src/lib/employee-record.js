@@ -11,6 +11,7 @@ export function toEmployeeJson(e) {
     role: e.role ?? "",
     phone: e.phone ?? "",
     canLogin: Boolean(e.canLogin),
+    financialAccess: e.financialAccess || "role",
     technicianAppAccess: Boolean(e.technicianAppAccess),
     timeClockEnabled: e.timeClockEnabled !== false,
     employeeNumber: e.employeeNumber ?? "",
@@ -41,6 +42,10 @@ export function applyEmployeeBodyFields(doc, body, { clampString, LIMITS }) {
   if (body.role !== undefined) doc.role = clampString(body.role ?? "", LIMITS.shortText.max);
   if (body.phone !== undefined) doc.phone = clampString(body.phone ?? "", 30);
   if (body.canLogin !== undefined) doc.canLogin = Boolean(body.canLogin);
+  if (body.financialAccess !== undefined) {
+    const fa = String(body.financialAccess || "").trim().toLowerCase();
+    doc.financialAccess = ["role", "allowed", "restricted"].includes(fa) ? fa : "role";
+  }
   if (body.technicianAppAccess !== undefined) {
     doc.technicianAppAccess = Boolean(body.technicianAppAccess);
   }

@@ -27,6 +27,7 @@ export const PAGES = [
   { id: "job-postings", label: "Job postings" },
   { id: "employees-hub", label: "Employees (hub)" },
   { id: "employees", label: "Employees" },
+  { id: "financials", label: "Financial information (Costs, margins, pricing, AP / AR, rates)" },
   { id: "vendors", label: "Vendors (Master)" },
   { id: "sales-person", label: "Sales persons (Master)" },
   { id: "access-control", label: "Access controls" },

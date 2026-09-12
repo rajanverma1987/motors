@@ -192,7 +192,7 @@ export default function SimplePurchaseOrderFormModal({
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
-  const { user } = useAuth();
+  const { user, canViewFinancials } = useAuth();
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
@@ -584,6 +584,16 @@ export default function SimplePurchaseOrderFormModal({
       setCancellationOpen(true);
       return;
     }
+    const itemName = String(line.itemName || "").trim();
+    const ok = await confirm({
+      title: "Remove line item",
+      message: itemName
+        ? `Remove "${itemName}" from this purchase order?`
+        : "Remove this line item from this purchase order?",
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
     removeLine(lineId);
   };
 
@@ -1119,6 +1129,7 @@ export default function SimplePurchaseOrderFormModal({
         height={PO_MODAL_HEIGHT}
         zIndex={zIndex}
         showClose={!saving && !loadingForm}
+        closeOnOutsideClick={false}
         headerCenter={headerCenter}
         actions={
           showViewEmptyState ? null : (
@@ -1459,7 +1470,7 @@ export default function SimplePurchaseOrderFormModal({
           </div>
 
           <Tabs
-            value={isExistingPoMode ? activeTab : TAB_PO}
+            value={isExistingPoMode ? (!canViewFinancials && activeTab === TAB_PAYMENT ? TAB_PO : activeTab) : TAB_PO}
             onChange={setActiveTab}
             className="flex min-h-0 flex-1 flex-col"
             listClassName={isExistingPoMode ? "shrink-0" : "hidden"}
@@ -1472,17 +1483,21 @@ export default function SimplePurchaseOrderFormModal({
                 children: (
                   <>
                     <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                      <table className="w-full min-w-[52rem] border-collapse border-spacing-0 text-xs">
+                      <table className={`w-full ${canViewFinancials ? "min-w-[52rem]" : "min-w-[20rem]"} border-collapse border-spacing-0 text-xs`}>
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                           <tr className="border-b-2 border-border">
                             <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
                             <th className="w-20 border-r border-border px-1 py-1 text-left font-semibold">UOM</th>
                             <th className="w-20 border-r border-border px-1 py-1 text-right font-semibold">Quantity</th>
-                            <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Price</th>
-                            <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Total</th>
-                            <th className="w-16 border-r border-border px-1 py-1 text-right font-semibold">Tax%</th>
-                            <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Tax Amount</th>
-                            <th className="w-28 border-r border-border px-1 py-1 text-right font-semibold">Grand Total</th>
+                            {canViewFinancials ? (
+                              <>
+                                <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Price</th>
+                                <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Total</th>
+                                <th className="w-16 border-r border-border px-1 py-1 text-right font-semibold">Tax%</th>
+                                <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Tax Amount</th>
+                                <th className="w-28 border-r border-border px-1 py-1 text-right font-semibold">Grand Total</th>
+                              </>
+                            ) : null}
                             <th className="w-7 p-0.5 text-left font-semibold" />
                           </tr>
                         </thead>
@@ -1537,52 +1552,56 @@ export default function SimplePurchaseOrderFormModal({
                                     readOnly={inactive}
                                   />
                                 </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={line.price}
-                                    onChange={(e) => patchLine(line.id, "price", e.target.value)}
-                                    className={`${cellInputClass} text-right tabular-nums`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={formatMoney(t.total)}
-                                    className={cellMutedClass}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={line.taxPercent}
-                                    onChange={(e) => patchLine(line.id, "taxPercent", e.target.value)}
-                                    className={`${cellInputClass} text-right tabular-nums`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={formatMoney(t.taxAmount)}
-                                    className={cellMutedClass}
-                                  />
-                                </td>
-                                <td className="border-r border-border p-0">
-                                  <input
-                                    type="text"
-                                    readOnly
-                                    value={formatMoney(t.grandTotal)}
-                                    className={`${cellMutedClass} font-semibold`}
-                                  />
-                                </td>
+                                {canViewFinancials ? (
+                                  <>
+                                    <td className="border-r border-border p-0">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={line.price}
+                                        onChange={(e) => patchLine(line.id, "price", e.target.value)}
+                                        className={`${cellInputClass} text-right tabular-nums`}
+                                        disabled={saving || inactive}
+                                        readOnly={inactive}
+                                      />
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      <input
+                                        type="text"
+                                        readOnly
+                                        value={formatMoney(t.total)}
+                                        className={cellMutedClass}
+                                      />
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={line.taxPercent}
+                                        onChange={(e) => patchLine(line.id, "taxPercent", e.target.value)}
+                                        className={`${cellInputClass} text-right tabular-nums`}
+                                        disabled={saving || inactive}
+                                        readOnly={inactive}
+                                      />
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      <input
+                                        type="text"
+                                        readOnly
+                                        value={formatMoney(t.taxAmount)}
+                                        className={cellMutedClass}
+                                      />
+                                    </td>
+                                    <td className="border-r border-border p-0">
+                                      <input
+                                        type="text"
+                                        readOnly
+                                        value={formatMoney(t.grandTotal)}
+                                        className={`${cellMutedClass} font-semibold`}
+                                      />
+                                    </td>
+                                  </>
+                                ) : null}
                                 <td className="p-0 text-center">
                                   {canRemove ? (
                                     <button
@@ -1615,7 +1634,7 @@ export default function SimplePurchaseOrderFormModal({
                               <p className="min-w-0">
                                 <span className="text-secondary">Term: </span>
                                 <span className="font-semibold text-title">
-                                  {selectedVendor.paymentTerms || "-"}
+                                  {canViewFinancials ? (selectedVendor.paymentTerms || "-") : "Restricted"}
                                 </span>
                               </p>
                               <p className="min-w-0">
@@ -1641,44 +1660,55 @@ export default function SimplePurchaseOrderFormModal({
                             <p className="text-sm text-secondary">Select a vendor to view details.</p>
                           )}
                         </div>
-                        <div className="grid w-full grid-cols-1 gap-2 sm:max-w-sm sm:shrink-0">
-                          <FieldRow label="Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                            <input
-                              type="text"
-                              readOnly
-                              value={formatMoney(totals.total)}
-                              className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
-                            />
-                          </FieldRow>
-                          <FieldRow label="Total Tax Amount" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                            <input
-                              type="text"
-                              readOnly
-                              value={formatMoney(totals.totalTax)}
-                              className={`${FIELD_INPUT} !bg-muted text-right tabular-nums`}
-                            />
-                          </FieldRow>
-                          <FieldRow label="Shipping Charge" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={form.shippingCharge}
-                              onChange={(e) => patch("shippingCharge", sanitizePoNumericInput(e.target.value))}
-                              className={`${FIELD_INPUT} text-right tabular-nums`}
-                              placeholder="0.00"
-                              disabled={saving}
-                              aria-label="Shipping Charge"
-                            />
-                          </FieldRow>
-                          <FieldRow label="Grand Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
-                            <input
-                              type="text"
-                              readOnly
-                              value={formatMoney(totals.grandTotal)}
-                              className={`${FIELD_INPUT} !bg-muted text-right font-bold tabular-nums`}
-                            />
-                          </FieldRow>
-                        </div>
+                        {canViewFinancials ? (
+                          <div className="grid w-full grid-cols-1 gap-2 sm:max-w-sm sm:shrink-0">
+                            <FieldRow label="Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                              <input
+                                type="text"
+                                readOnly
+                                value={formatMoney(totals.total)}
+                                className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
+                              />
+                            </FieldRow>
+                            <FieldRow label="Total Tax Amount" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                              <input
+                                type="text"
+                                readOnly
+                                value={formatMoney(totals.totalTax)}
+                                className={`${FIELD_INPUT} !bg-muted text-right tabular-nums`}
+                              />
+                            </FieldRow>
+                            <FieldRow label="Shipping Charge" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={form.shippingCharge}
+                                onChange={(e) => patch("shippingCharge", sanitizePoNumericInput(e.target.value))}
+                                className={`${FIELD_INPUT} text-right tabular-nums`}
+                                placeholder="0.00"
+                                disabled={saving}
+                                aria-label="Shipping Charge"
+                              />
+                            </FieldRow>
+                            <FieldRow label="Grand Total" labelWidth="7.5rem" controlClassName="min-w-0 flex-1">
+                              <input
+                                type="text"
+                                readOnly
+                                value={formatMoney(totals.grandTotal)}
+                                className={`${FIELD_INPUT} !bg-muted text-right font-bold tabular-nums`}
+                              />
+                            </FieldRow>
+                          </div>
+                        ) : (
+                          <div className="flex w-full flex-col items-center justify-center border border-border bg-card p-4 text-center sm:max-w-sm sm:shrink-0">
+                            <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                              Financial Totals Restricted
+                            </Badge>
+                            <p className="mt-1 text-xs text-secondary">
+                              Costs, shipping, and PO totals are hidden for this employee role.
+                            </p>
+                          </div>
+                        )}
                       </div>
                       <div className="flex min-w-0 flex-col gap-1">
                         <span className="text-xs font-bold text-title">Comments</span>
@@ -1703,7 +1733,7 @@ export default function SimplePurchaseOrderFormModal({
                       <p className="text-sm text-secondary">Add line items on the Purchase Order tab first.</p>
                     ) : (
                       <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                        <table className="w-full min-w-[48rem] border-collapse border-spacing-0 text-xs">
+                        <table className="w-full min-w-[56rem] border-collapse border-spacing-0 text-xs">
                           <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                             <tr className="border-b-2 border-border">
                               <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
@@ -1712,6 +1742,7 @@ export default function SimplePurchaseOrderFormModal({
                               <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Received Qty</th>
                               <th className="w-40 border-r border-border px-1 py-1 text-left font-semibold">Receiving Status</th>
                               <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Received Date</th>
+                              <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Vendor Invoice#</th>
                               <th className="w-16 px-1 py-1 text-center font-semibold">Return</th>
                             </tr>
                           </thead>
@@ -1763,6 +1794,17 @@ export default function SimplePurchaseOrderFormModal({
                                     readOnly={inactive}
                                   />
                                 </td>
+                                <td className="border-r border-border p-0">
+                                  <input
+                                    type="text"
+                                    value={line.vendorInvoiceNumber || ""}
+                                    onChange={(e) => patchLine(line.id, "vendorInvoiceNumber", e.target.value)}
+                                    className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
+                                    aria-label={`Vendor Invoice# for ${line.itemName || "line"}`}
+                                  />
+                                </td>
                                 <td className="p-0 text-center">
                                   {canReturn ? (
                                     <button
@@ -1787,11 +1829,13 @@ export default function SimplePurchaseOrderFormModal({
                   </>
                 ),
               },
-              {
-                id: TAB_PAYMENT,
-                label: "Payment",
-                children: (
-                  <div className="flex flex-col gap-4">
+              ...(canViewFinancials
+                ? [
+                    {
+                      id: TAB_PAYMENT,
+                      label: "Payment",
+                      children: (
+                        <div className="flex flex-col gap-4">
                     <div className="flex flex-wrap items-center gap-4">
                       <div className="text-sm text-secondary">
                         Grand Total:{" "}
@@ -2034,6 +2078,8 @@ export default function SimplePurchaseOrderFormModal({
                   </div>
                 ),
               },
+            ]
+          : []),
             ]}
           />
           </>

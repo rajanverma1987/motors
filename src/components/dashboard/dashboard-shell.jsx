@@ -28,12 +28,20 @@ export default function DashboardShell({ children }) {
       pathname.startsWith("/dashboards/settings/") ||
       pathname === "/dashboard/settings" ||
       pathname.startsWith("/dashboard/settings/"));
-
+  const isEmployee = Boolean(
+    user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
+  );
 
   useEffect(() => {
-    if (!mounted || !calcOnly || onCalculatorsRoute) return;
-    router.replace(CALCULATOR_ONLY_DASHBOARD_HREF);
-  }, [mounted, calcOnly, onCalculatorsRoute, router]);
+    if (!mounted) return;
+    if (calcOnly && !onCalculatorsRoute) {
+      router.replace(CALCULATOR_ONLY_DASHBOARD_HREF);
+      return;
+    }
+    if (isEmployee && onSettingsPage) {
+      router.replace(simpleView ? "/dashboards" : "/dashboard");
+    }
+  }, [mounted, calcOnly, onCalculatorsRoute, isEmployee, onSettingsPage, simpleView, router]);
 
   if (!mounted) {
     return (
@@ -47,6 +55,14 @@ export default function DashboardShell({ children }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-bg text-sm text-secondary">
         Redirecting to calculators…
+      </div>
+    );
+  }
+
+  if (isEmployee && onSettingsPage) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg text-sm text-secondary">
+        Redirecting to dashboard…
       </div>
     );
   }

@@ -14,7 +14,10 @@ import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switche
 import PwaInstallButton from "@/components/pwa-install-button";
 
 export default function DashboardNav() {
-  const { user, logout } = useAuth();
+  const { user, logout, isOwner, isEmployee } = useAuth();
+  const effectiveIsOwner =
+    isOwner ??
+    Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
   const pathname = usePathname();
   const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -117,45 +120,56 @@ export default function DashboardNav() {
               </button>
               <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
               {simplePortal ? (
-                <div className="relative" ref={settingsMenuRef}>
-                  <button
-                    type="button"
-                    onClick={() => setSettingsMenuOpen((o) => !o)}
-                    className={iconBtnClass}
-                    title="Settings and Employees"
-                    aria-label="Settings and Employees"
-                    aria-haspopup="menu"
-                    aria-expanded={settingsMenuOpen}
-                  >
-                    <FiSettings className="h-5 w-5" aria-hidden />
-                  </button>
-                  {settingsMenuOpen ? (
-                    <div
-                      role="menu"
-                      className="absolute right-0 z-50 mt-1 min-w-[10.5rem] border border-border bg-card py-1 shadow-lg"
+                effectiveIsOwner ? (
+                  <div className="relative" ref={settingsMenuRef}>
+                    <button
+                      type="button"
+                      onClick={() => setSettingsMenuOpen((o) => !o)}
+                      className={iconBtnClass}
+                      title="Settings and Employees"
+                      aria-label="Settings and Employees"
+                      aria-haspopup="menu"
+                      aria-expanded={settingsMenuOpen}
                     >
-                      <Link
-                        role="menuitem"
-                        href={settingsHref}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
-                        onClick={() => setSettingsMenuOpen(false)}
+                      <FiSettings className="h-5 w-5" aria-hidden />
+                    </button>
+                    {settingsMenuOpen ? (
+                      <div
+                        role="menu"
+                        className="absolute right-0 z-50 mt-1 min-w-[10.5rem] border border-border bg-card py-1 shadow-lg"
                       >
-                        <FiSettings className="h-4 w-4 shrink-0" aria-hidden />
-                        Settings
-                      </Link>
-                      <Link
-                        role="menuitem"
-                        href="/dashboards/employees"
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
-                        onClick={() => setSettingsMenuOpen(false)}
-                      >
-                        <FiUsers className="h-4 w-4 shrink-0" aria-hidden />
-                        Employees
-                      </Link>
-                    </div>
-                  ) : null}
-                </div>
-              ) : (
+                        <Link
+                          role="menuitem"
+                          href={settingsHref}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
+                          onClick={() => setSettingsMenuOpen(false)}
+                        >
+                          <FiSettings className="h-4 w-4 shrink-0" aria-hidden />
+                          Settings
+                        </Link>
+                        <Link
+                          role="menuitem"
+                          href="/dashboards/employees"
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-title hover:bg-primary/10"
+                          onClick={() => setSettingsMenuOpen(false)}
+                        >
+                          <FiUsers className="h-4 w-4 shrink-0" aria-hidden />
+                          Employees
+                        </Link>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <Link
+                    href="/dashboards/employees"
+                    className={iconBtnClass}
+                    title="Employees"
+                    aria-label="Employees"
+                  >
+                    <FiUsers className="h-5 w-5" aria-hidden />
+                  </Link>
+                )
+              ) : effectiveIsOwner ? (
                 <Link
                   href={settingsHref}
                   className={iconBtnClass}
@@ -164,7 +178,7 @@ export default function DashboardNav() {
                 >
                   <FiSettings className="h-5 w-5" aria-hidden />
                 </Link>
-              )}
+              ) : null}
             </>
           ) : null}
           <PwaInstallButton className="hidden sm:inline-flex" />

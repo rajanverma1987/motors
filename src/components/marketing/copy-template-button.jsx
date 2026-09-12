@@ -5,7 +5,7 @@ import { useState } from "react";
 /**
  * Copies a plain-text template to the clipboard so a shop can paste it straight
  * into Word, Sheets, or their own form. Falls back silently when the Clipboard
- * API is unavailable (older browsers, non-secure origins) — the <pre> block on
+ * API is unavailable (older browsers, non-secure origins), the <pre> block on
  * the page is still selectable by hand.
  */
 export default function CopyTemplateButton({ text, label = "Copy template" }) {

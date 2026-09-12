@@ -70,14 +70,19 @@ function TabLabel({ icon: Icon, children }) {
 export default function DashboardsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, isOwner, canViewFinancials, isSimulatedFinancialRestriction } = useAuth();
+  const effectiveIsOwner =
+    isOwner ??
+    Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
   const calcOnly = !!user?.calculatorOnlyAccount;
   const tabParam = searchParams.get("tab");
   const urlTab = calcOnly
     ? SIMPLE_TAB_CALCULATORS
-    : SIMPLE_TAB_IDS.includes(tabParam)
-      ? tabParam
-      : SIMPLE_TAB_SERVICE_PROPOSALS;
+    : !canViewFinancials && tabParam === SIMPLE_TAB_INVOICES
+      ? SIMPLE_TAB_SERVICE_PROPOSALS
+      : SIMPLE_TAB_IDS.includes(tabParam)
+        ? tabParam
+        : SIMPLE_TAB_SERVICE_PROPOSALS;
   /** Immediate UI feedback — URL sync via router.replace can lag and feel like dead clicks. */
   const [pendingTab, setPendingTab] = useState(null);
   const activeTab =
@@ -163,14 +168,37 @@ export default function DashboardsPageClient() {
         children: <CalculatorsPanel />,
       },
     ];
-    return calcOnly ? all.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : all;
-  }, [calcOnly]);
+    const allowed = canViewFinancials
+      ? all
+      : all.filter((t) => t.id !== SIMPLE_TAB_INVOICES);
+    return calcOnly ? allowed.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : allowed;
+  }, [calcOnly, canViewFinancials]);
 
   return (
     <SimpleJobViewProvider>
     <div
       className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS}`}
     >
+      {isSimulatedFinancialRestriction ? (
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-title">
+          <div className="flex items-center gap-2">
+            <span className="inline-block h-2 w-2 rounded-full bg-warning" aria-hidden />
+            <span>
+              <strong>Restricted financial simulation active:</strong> Costs, pricing, margins,
+              invoices, and AP / AR are hidden as viewed by restricted floor staff.
+            </span>
+          </div>
+          {effectiveIsOwner ? (
+            <button
+              type="button"
+              onClick={() => router.push("/dashboards/settings?section=access-controls")}
+              className="shrink-0 font-bold text-primary hover:underline"
+            >
+              Manage in Settings
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <Tabs
         className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         listClassName={DASHBOARDS_TAB_LIST_CLASS}

@@ -22,17 +22,11 @@ Support scanning barcodes or QR codes to find, receive, issue, or count inventor
 
 Track consumables (tape, solder, packaging, shop supplies, and similar) with clear check-in and check-out (or issue) so usage and remaining stock stay visible.
 
-### Purchase order due notification
-
-Notify the right people when a purchase order is approaching or past its expected due / delivery date.
-
 ### Future inventory receiving follow-up
 
 If inventory is expected to arrive later (for example about three months out), send a follow-up notification so the shop can check status with the vendor before it is overdue.
 
 ## Job work and reports
-
-
 
 ### Email AC / DC report to customer
 
@@ -46,9 +40,9 @@ Include photos or documents attached to the job in the printed report, so the cu
 
 Record and report time each employee spends on a specific job number, for labor cost, payroll, and job profitability.
 
-### Overdue status report
+### Overdue status report (Implemented)
 
-A report (or dashboard view) of overdue work: jobs, POs, or other items past due, with status so the shop can chase and prioritize.
+A report (or dashboard view) of overdue work: jobs, POs, or other items past due, with status so the shop can chase and prioritize. Includes dedicated Operations report with Excel/PDF export and an actionable Dashboard tracker card with direct chase links.
 
 ### Connection drawing
 
@@ -56,8 +50,6 @@ Support connection drawings on the job (create, attach, or print), similar to ho
 
 ## Access control
 
+### Employee-level restriction of financials (Implemented)
 
-
-### Employee-level restriction of financials
-
-Restrict financial information on screens and data (costs, margins, pricing, AP / AR, and similar) by employee role or permission, so only authorized staff see financial information.
+Restrict financial information on screens and data (costs, margins, pricing, AP / AR, and similar) by employee role or permission, so only authorized staff see financial information. Includes shop-wide setting, role defaults (Manager, Office, Supervisor allowed; floor roles restricted), per-employee override controls, simulation preview mode, and UI masking across quotes, proposals, invoices, POs, dashboard KPIs, financial charts, and accounting reports.

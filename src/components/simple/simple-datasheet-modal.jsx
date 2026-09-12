@@ -7,6 +7,7 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
+import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
 import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
@@ -97,6 +98,8 @@ export default function SimpleDatasheetModal({
   );
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [diagramOpen, setDiagramOpen] = useState(false);
   const wasOpenRef = useRef(false);
@@ -120,6 +123,7 @@ export default function SimpleDatasheetModal({
       }
       setForm(next);
       setPrinting(false);
+      setEmailOpen(false);
       setAttachmentsOpen(false);
       setDiagramOpen(false);
     }
@@ -160,6 +164,47 @@ export default function SimpleDatasheetModal({
 
   const handlePrintDone = () => {
     setPrinting(false);
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      const res = await fetch("/api/dashboard/simple-service-proposals/datasheet/pdf", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          motorType: isDc ? "DC" : "AC",
+          datasheet: printDatasheet,
+          printContext: resolvedPrintContext,
+          technicianLabel,
+          jobDiagrams: Array.isArray(jobDiagrams) ? jobDiagrams : [],
+          attachments: Array.isArray(attachments) ? attachments : [],
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to generate PDF");
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const num = resolvedPrintContext.documentNumber || "Report";
+      a.download = `${isDc ? "DC" : "AC"}-Datasheet-Report-${num}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      void alert({
+        title: "Error",
+        message: err?.message || "Failed to download PDF",
+        variant: "danger",
+      });
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -314,11 +359,33 @@ export default function SimpleDatasheetModal({
               variant="primary"
               size="sm"
               className={TOOLBAR_BTN}
+              disabled={downloadingPdf || saving || printing}
+              title={`Download ${isDc ? "DC" : "AC"} report PDF with attached images`}
+              onClick={handleDownloadPdf}
+            >
+              {downloadingPdf ? "Generating PDF…" : "Download PDF"}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || printing}
+              title={`Email ${isDc ? "DC" : "AC"} test & inspection report to customer`}
+              onClick={() => setEmailOpen(true)}
+            >
+              Email Report
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
               disabled={!canAttach || saving || printing}
               title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
               onClick={() => setAttachmentsOpen(true)}
             >
-              Attachments
+              Attachments{Array.isArray(attachments) && attachments.length ? ` (${attachments.length})` : ""}
             </Button>
             <Button
               type="button"
@@ -506,6 +573,7 @@ export default function SimpleDatasheetModal({
           printContext={resolvedPrintContext}
           technicianLabel={technicianLabel}
           jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+          attachments={Array.isArray(attachments) ? attachments : []}
         />
       </DocumentPrintOffscreenPortal>
     ) : null}
@@ -526,6 +594,17 @@ export default function SimpleDatasheetModal({
       onSaved={(nextDiagrams) => {
         onDiagramsChange?.(Array.isArray(nextDiagrams) ? nextDiagrams : []);
       }}
+    />
+
+    <SimpleSendDatasheetModal
+      open={emailOpen}
+      onClose={() => setEmailOpen(false)}
+      motorType={isDc ? "DC" : "AC"}
+      datasheet={printDatasheet}
+      printContext={resolvedPrintContext}
+      technicianLabel={technicianLabel}
+      jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+      attachments={Array.isArray(attachments) ? attachments : []}
     />
     </>
   );

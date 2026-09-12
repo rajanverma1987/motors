@@ -1376,6 +1376,7 @@ const IMPORT_COLLECTIONS = {
           receivedQty,
           receivingStatus,
           receivedDate: csvCalendarDateToMongo(r.received_date),
+          vendorInvoiceNumber: s(r.vendor_invoice_number || r.vendor_invoice || r.vendor_invoice_no),
           inventoryItemId,
         },
       };

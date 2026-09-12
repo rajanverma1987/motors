@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
@@ -135,9 +135,23 @@ function NavItemLink({ href, label, icon: Icon, isActive, collapsed }) {
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, isEmployee } = useAuth();
+  const effectiveIsEmployee =
+    isEmployee ??
+    Boolean(user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId)));
   const calculatorOnly = !!user?.calculatorOnlyAccount;
-  const navGroups = calculatorOnly ? [{ title: "Calculators", items: CALCULATOR_ONLY_NAV }] : NAV_GROUPS;
+  const navGroups = useMemo(() => {
+    if (calculatorOnly) {
+      return [{ title: "Calculators", items: CALCULATOR_ONLY_NAV }];
+    }
+    if (!effectiveIsEmployee) {
+      return NAV_GROUPS;
+    }
+    return NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.href.includes("/settings")),
+    })).filter((group) => group.items.length > 0);
+  }, [calculatorOnly, effectiveIsEmployee]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(() => new Set(navGroups.map((g) => g.title)));

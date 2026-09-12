@@ -33,8 +33,8 @@ export default function Modal({
   title,
   children,
   showClose = true,
-  /** When false, clicking the backdrop does not call onClose. */
-  closeOnOutsideClick = true,
+  /** When false, clicking the backdrop does not call onClose. Defaults to false so modals/forms do not accidentally close on outside click. */
+  closeOnOutsideClick = false,
   size = "md",
   width,
   height,

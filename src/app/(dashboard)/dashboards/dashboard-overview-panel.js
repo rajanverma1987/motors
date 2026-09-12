@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Area,
   AreaChart,
@@ -16,8 +17,12 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { FiEye, FiFileText } from "react-icons/fi";
 import Button from "@/components/ui/button";
-import { useFormatMoneyAbbreviated } from "@/contexts/user-settings-context";
+import Badge from "@/components/ui/badge";
+import { useFormatDate, useFormatMoneyAbbreviated } from "@/contexts/user-settings-context";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
+import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { listMonthKeys } from "@/lib/simple-hub-overview-dates";
 
 const PERIOD_PRESETS = [
@@ -349,11 +354,310 @@ function collapseStatuses(rows, max = 7) {
   return [...head, other];
 }
 
+function getStatusBadgeVariant(status) {
+  const s = String(status || "").toLowerCase();
+  if (/paid|delivered|closed|completed|complete|accepted/.test(s)) return "success";
+  if (/partial|ordered|in progress|rfq/.test(s)) return "warning";
+  if (/unpaid|overdue|danger|rejected|lost|void|cancelled|canceled/.test(s)) return "danger";
+  return "default";
+}
+
+function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFinancials = true }) {
+  const router = useRouter();
+  const formatDate = useFormatDate();
+  const { openJob } = useSimpleJobView();
+  const [filterType, setFilterType] = useState("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const summary = overdueWork?.summary || {
+    jobsCount: 0,
+    jobsAmount: 0,
+    posCount: 0,
+    posAmount: 0,
+    invoicesCount: 0,
+    invoicesAmount: 0,
+    totalCount: 0,
+    totalAmount: 0,
+  };
+
+  const allItems = overdueWork?.items || [];
+  const filteredItems = useMemo(() => {
+    if (filterType === "all") return allItems;
+    return allItems.filter((item) => item.itemType === filterType);
+  }, [allItems, filterType]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredItems.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedItems = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredItems.slice(start, start + pageSize);
+  }, [filteredItems, currentPage, pageSize]);
+
+  const handleOpenItem = useCallback(
+    (item) => {
+      if (!item?.id) return;
+      if (item.itemType === "job" || item.itemType === "invoice") {
+        openJob(item.id);
+      } else if (item.itemType === "po") {
+        router.push(`/dashboards?tab=purchase-orders&open=${item.id}`);
+      }
+    },
+    [openJob, router]
+  );
+
+  const handleOpenFullReport = useCallback(() => {
+    router.push("/dashboards?tab=reports&report=overdue-status");
+  }, [router]);
+
+  return (
+    <div className="mb-6 rounded-lg border border-border bg-card p-4 shadow-sm">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-title">Overdue work and priorities</h2>
+            {summary.totalCount > 0 ? (
+              <Badge variant="danger" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                {summary.totalCount} past due
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-0.5 text-xs text-secondary">
+            Jobs past promised date, pending PO vendor deliveries, and overdue invoices to chase.
+          </p>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleOpenFullReport}
+          className="shrink-0 self-start sm:self-center"
+        >
+          <FiFileText className="mr-1.5 h-4 w-4 shrink-0 text-primary" aria-hidden />
+          View full overdue report
+        </Button>
+      </div>
+
+      {/* Summary Filter Pills */}
+      <div className="mt-4 flex flex-wrap items-center gap-2 border-b border-border pb-3">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterType("all");
+            setPage(1);
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            filterType === "all"
+              ? "bg-primary text-white"
+              : "bg-muted text-secondary hover:bg-muted/80"
+          }`}
+        >
+          <span>All overdue</span>
+          <span className="font-bold">{summary.totalCount}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterType("job");
+            setPage(1);
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            filterType === "job"
+              ? "bg-primary text-white"
+              : "bg-muted text-secondary hover:bg-muted/80"
+          }`}
+        >
+          <span>Jobs</span>
+          <span className="font-bold">
+            {summary.jobsCount} ({formatMoney(summary.jobsAmount)})
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterType("po");
+            setPage(1);
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            filterType === "po"
+              ? "bg-primary text-white"
+              : "bg-muted text-secondary hover:bg-muted/80"
+          }`}
+        >
+          <span>PO deliveries</span>
+          <span className="font-bold">
+            {summary.posCount} ({formatMoney(summary.posAmount)})
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setFilterType("invoice");
+            setPage(1);
+          }}
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+            filterType === "invoice"
+              ? "bg-primary text-white"
+              : "bg-muted text-secondary hover:bg-muted/80"
+          }`}
+        >
+          <span>Invoices</span>
+          <span className="font-bold">
+            {summary.invoicesCount} ({formatMoney(summary.invoicesAmount)})
+          </span>
+        </button>
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex h-36 items-center justify-center gap-2 text-sm text-secondary">
+          <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-border border-t-primary" />
+          <span>Loading overdue items...</span>
+        </div>
+      ) : filteredItems.length === 0 ? (
+        <div className="py-8 text-center text-sm text-secondary">
+          No overdue items in this category. All work is currently on schedule.
+        </div>
+      ) : (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-border text-secondary">
+                <th className="py-2 pr-3 pl-1 font-semibold">Action</th>
+                <th className="py-2 px-3 font-semibold">Overdue</th>
+                <th className="py-2 px-3 font-semibold">Doc #</th>
+                <th className="py-2 px-3 font-semibold">Type</th>
+                <th className="py-2 px-3 font-semibold">Customer / Vendor</th>
+                <th className="py-2 px-3 font-semibold">Status</th>
+                <th className="py-2 px-3 font-semibold">Due date</th>
+                {canViewFinancials ? (
+                  <th className="py-2 px-3 text-right font-semibold">Amount / Balance</th>
+                ) : null}
+                <th className="py-2 pl-3 font-semibold">Details and contact</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {pagedItems.map((item) => (
+                <tr key={`${item.itemType}-${item.id}`} className="hover:bg-muted/40">
+                  <td className="py-2 pr-3 pl-1">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenItem(item)}
+                      title={`Open ${item.itemTypeLabel}`}
+                      className="inline-flex h-7 w-7 items-center justify-center rounded text-primary transition-colors hover:bg-primary/10"
+                    >
+                      <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+                    </button>
+                  </td>
+                  <td className="py-2 px-3 whitespace-nowrap">
+                    <Badge
+                      variant={item.daysOverdue > 30 ? "danger" : "warning"}
+                      className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold"
+                    >
+                      {item.daysOverdue} {item.daysOverdue === 1 ? "day" : "days"} overdue
+                    </Badge>
+                  </td>
+                  <td className="py-2 px-3 font-medium whitespace-nowrap">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenItem(item)}
+                      className="text-primary hover:underline"
+                    >
+                      {item.docNumber || "-"}
+                    </button>
+                  </td>
+                  <td className="py-2 px-3 whitespace-nowrap">
+                    <Badge
+                      variant={
+                        item.itemType === "job"
+                          ? "primary"
+                          : item.itemType === "invoice"
+                            ? "success"
+                            : "default"
+                      }
+                      className="rounded-full px-2 py-0.5 text-[11px]"
+                    >
+                      {item.itemTypeLabel}
+                    </Badge>
+                  </td>
+                  <td className="py-2 px-3 font-medium text-title max-w-[180px] truncate">
+                    {item.entityName}
+                  </td>
+                  <td className="py-2 px-3 whitespace-nowrap">
+                    <Badge
+                      variant={getStatusBadgeVariant(item.status)}
+                      className="rounded-full px-2.5 py-0.5 text-[11px]"
+                    >
+                      {item.status}
+                    </Badge>
+                  </td>
+                  <td className="py-2 px-3 text-secondary whitespace-nowrap">
+                    {formatDate(item.dueDate) || item.dueDate}
+                  </td>
+                  {canViewFinancials ? (
+                    <td className="py-2 px-3 text-right font-medium tabular-nums whitespace-nowrap">
+                      ${Number(item.amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </td>
+                  ) : null}
+                  <td className="py-2 pl-3 text-secondary max-w-[240px]">
+                    <div className="truncate text-title font-normal">{item.details}</div>
+                    {item.contact ? (
+                      <div className="truncate text-[11px] text-secondary">{item.contact}</div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {totalPages > 1 ? (
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs text-secondary">
+              <div>
+                Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                {Math.min(currentPage * pageSize, filteredItems.length)} of {filteredItems.length} items
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  Previous
+                </Button>
+                <span className="px-1 font-medium">
+                  {currentPage} of {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Hub Dashboard — KPIs and charts for revenue, jobs, invoices, POs, commissions.
  */
 export default function DashboardOverviewPanel() {
   const formatMoney = useFormatMoneyAbbreviated();
+  const { canViewFinancials } = useFinancialAccess();
   const [period, setPeriod] = useState("12m");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -461,106 +765,126 @@ export default function DashboardOverviewPanel() {
         </div>
       ) : null}
 
-      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <KpiCard label="Revenue" value={formatMoney(kpis.revenue || 0)} loading={loading} />
-        <KpiCard label="Cash received" value={formatMoney(kpis.cashReceived || 0)} loading={loading} />
-        <KpiCard label="Amount receivable" value={formatMoney(kpis.amountReceivable || 0)} loading={loading} />
+      <div className={`mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 ${canViewFinancials ? "xl:grid-cols-3 2xl:grid-cols-6" : "xl:grid-cols-2 2xl:grid-cols-2"}`}>
+        {canViewFinancials ? (
+          <>
+            <KpiCard label="Revenue" value={formatMoney(kpis.revenue || 0)} loading={loading} />
+            <KpiCard label="Cash received" value={formatMoney(kpis.cashReceived || 0)} loading={loading} />
+            <KpiCard label="Amount receivable" value={formatMoney(kpis.amountReceivable || 0)} loading={loading} />
+          </>
+        ) : null}
         <KpiCard label="Open jobs" value={String(kpis.openJobsCount || 0)} loading={loading} />
-        <KpiCard label="Unpaid POs" value={formatMoney(kpis.unpaidPoAmount || 0)} loading={loading} />
-        <KpiCard
-          label="Unpaid commissions"
-          value={formatMoney(kpis.unpaidCommissionAmount || 0)}
-          loading={loading}
-        />
+        {canViewFinancials ? (
+          <>
+            <KpiCard label="Unpaid POs" value={formatMoney(kpis.unpaidPoAmount || 0)} loading={loading} />
+            <KpiCard
+              label="Unpaid commissions"
+              value={formatMoney(kpis.unpaidCommissionAmount || 0)}
+              loading={loading}
+            />
+          </>
+        ) : null}
       </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Revenue trend" loading={loading} empty={!loading && !hasRevenue}>
-          <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={revenueSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
-              <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
-              <Area
-                type="linear"
-                dataKey="amount"
-                name="Revenue"
-                stroke="hsl(var(--primary))"
-                fill="hsl(var(--primary) / 0.2)"
-                strokeWidth={2}
-              >
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => (
-                    <MoneyValueLabel
-                      {...props}
-                      formatMoney={formatMoney}
-                      bg
-                      bgFill="hsl(var(--primary))"
+      {/* Overdue Work & Action Tracker */}
+      <OverdueWorkTrackerCard
+        overdueWork={data?.overdueWork}
+        loading={loading}
+        formatMoney={formatMoney}
+        canViewFinancials={canViewFinancials}
+      />
+
+      {canViewFinancials ? (
+        <>
+          <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ChartCard title="Revenue trend" loading={loading} empty={!loading && !hasRevenue}>
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={revenueSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
+                  <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
+                  <Area
+                    type="linear"
+                    dataKey="amount"
+                    name="Revenue"
+                    stroke="hsl(var(--primary))"
+                    fill="hsl(var(--primary) / 0.2)"
+                    strokeWidth={2}
+                  >
+                    <LabelList
+                      dataKey="amount"
+                      content={(props) => (
+                        <MoneyValueLabel
+                          {...props}
+                          formatMoney={formatMoney}
+                          bg
+                          bgFill="hsl(var(--primary))"
+                        />
+                      )}
                     />
-                  )}
-                />
-              </Area>
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
+                  </Area>
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartCard>
 
-        <ChartCard title="Cash received" loading={loading} empty={!loading && !hasCash}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={cashSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
-              <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
-              <Bar dataKey="amount" name="Cash" fill="hsl(142 45% 38%)">
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => <MoneyValueLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
+            <ChartCard title="Cash received" loading={loading} empty={!loading && !hasCash}>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={cashSeries} margin={{ top: 24, right: 12, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} width={64} tickFormatter={(v) => formatMoney(v)} />
+                  <Tooltip content={<MoneyTooltip formatMoney={formatMoney} />} />
+                  <Bar dataKey="amount" name="Cash" fill="hsl(142 45% 38%)">
+                    <LabelList
+                      dataKey="amount"
+                      content={(props) => <MoneyValueLabel {...props} formatMoney={formatMoney} />}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="AR aging (unpaid)" loading={loading} empty={!loading && !hasAr}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={arAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
-              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))">
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
+          <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <ChartCard title="AR aging (unpaid)" loading={loading} empty={!loading && !hasAr}>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={arAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
+                  <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v) => formatMoney(v)} />
+                  <Bar dataKey="amount" name="Unpaid" fill="hsl(var(--primary))">
+                    <LabelList
+                      dataKey="amount"
+                      content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
 
-        <ChartCard title="AP aging (unpaid)" loading={loading} empty={!loading && !hasAp}>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={apAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
-              <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => formatMoney(v)} />
-              <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)">
-                <LabelList
-                  dataKey="amount"
-                  content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
-                />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </ChartCard>
-      </div>
+            <ChartCard title="AP aging (unpaid)" loading={loading} empty={!loading && !hasAp}>
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={apAging} layout="vertical" margin={{ left: 16, right: 56, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => formatMoney(v)} />
+                  <YAxis type="category" dataKey="label" width={88} tick={{ fontSize: 11 }} />
+                  <Tooltip formatter={(v) => formatMoney(v)} />
+                  <Bar dataKey="amount" name="Unpaid" fill="hsl(32 80% 48%)">
+                    <LabelList
+                      dataKey="amount"
+                      content={(props) => <MoneyBarEndLabel {...props} formatMoney={formatMoney} />}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartCard>
+          </div>
+        </>
+      ) : null}
 
-      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className={`mb-6 grid grid-cols-1 gap-4 ${canViewFinancials ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
         <ChartCard title="Jobs by status" loading={loading} empty={!loading && !hasJobs}>
           <LabeledDonut
             data={jobsStatus}
@@ -571,56 +895,62 @@ export default function DashboardOverviewPanel() {
           />
         </ChartCard>
 
-        <ChartCard title="Invoices by payment" loading={loading} empty={!loading && !hasInv}>
-          <LabeledDonut
-            data={invoicePay}
-            dataKey="amount"
-            nameKey="status"
-            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-            tooltipFormatter={(v) => formatMoney(v)}
-            formatLabelValue={(v) => formatMoney(v)}
-          />
-        </ChartCard>
+        {canViewFinancials ? (
+          <>
+            <ChartCard title="Invoices by payment" loading={loading} empty={!loading && !hasInv}>
+              <LabeledDonut
+                data={invoicePay}
+                dataKey="amount"
+                nameKey="status"
+                cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+                tooltipFormatter={(v) => formatMoney(v)}
+                formatLabelValue={(v) => formatMoney(v)}
+              />
+            </ChartCard>
 
-        <ChartCard title="POs by payment" loading={loading} empty={!loading && !hasPo}>
-          <LabeledDonut
-            data={poPay}
-            dataKey="amount"
-            nameKey="status"
-            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-            tooltipFormatter={(v) => formatMoney(v)}
-            formatLabelValue={(v) => formatMoney(v)}
-          />
-        </ChartCard>
+            <ChartCard title="POs by payment" loading={loading} empty={!loading && !hasPo}>
+              <LabeledDonut
+                data={poPay}
+                dataKey="amount"
+                nameKey="status"
+                cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+                tooltipFormatter={(v) => formatMoney(v)}
+                formatLabelValue={(v) => formatMoney(v)}
+              />
+            </ChartCard>
+          </>
+        ) : null}
       </div>
 
-      <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <ChartCard title="Total Commission Paid Vs Unpaid" loading={loading} empty={!loading && !hasComm}>
-          <LabeledDonut
-            data={commissionStatus}
-            dataKey="amount"
-            nameKey="label"
-            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-            tooltipFormatter={(v) => formatMoney(v)}
-            formatLabelValue={(v) => formatMoney(v)}
-          />
-        </ChartCard>
+      {canViewFinancials ? (
+        <div className="mb-2 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ChartCard title="Total Commission Paid Vs Unpaid" loading={loading} empty={!loading && !hasComm}>
+            <LabeledDonut
+              data={commissionStatus}
+              dataKey="amount"
+              nameKey="label"
+              cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+              tooltipFormatter={(v) => formatMoney(v)}
+              formatLabelValue={(v) => formatMoney(v)}
+            />
+          </ChartCard>
 
-        <ChartCard
-          title="Commission still to pay"
-          loading={loading}
-          empty={!loading && !hasUnpaidCommByInvoice}
-        >
-          <LabeledDonut
-            data={unpaidCommByInvoice}
-            dataKey="amount"
-            nameKey="label"
-            cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
-            tooltipFormatter={(v) => formatMoney(v)}
-            formatLabelValue={(v) => formatMoney(v)}
-          />
-        </ChartCard>
-      </div>
+          <ChartCard
+            title="Commission still to pay"
+            loading={loading}
+            empty={!loading && !hasUnpaidCommByInvoice}
+          >
+            <LabeledDonut
+              data={unpaidCommByInvoice}
+              dataKey="amount"
+              nameKey="label"
+              cellFill={(entry) => PAYMENT_COLORS[entry.status] || CHART_COLORS[0]}
+              tooltipFormatter={(v) => formatMoney(v)}
+              formatLabelValue={(v) => formatMoney(v)}
+            />
+          </ChartCard>
+        </div>
+      ) : null}
     </div>
   );
 }

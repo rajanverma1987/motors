@@ -187,11 +187,11 @@ export function agingBucketLabel(bucket) {
     case "current":
       return "Current";
     case "1-30":
-      return "1–30 days";
+      return "1 to 30 days";
     case "31-60":
-      return "31–60 days";
+      return "31 to 60 days";
     case "61-90":
-      return "61–90 days";
+      return "61 to 90 days";
     case "90+":
       return "90+ days";
     case "no-due":
@@ -199,6 +199,11 @@ export function agingBucketLabel(bucket) {
     default:
       return String(bucket || "");
   }
+}
+
+export function isTerminalJobStatus(status, jobStatus) {
+  const s = `${status || ""} ${jobStatus || ""}`.toLowerCase();
+  return /closed|cancelled|canceled|delivered|complete|completed|void/.test(s);
 }
 
 export function isSpInvoicePaid(doc) {

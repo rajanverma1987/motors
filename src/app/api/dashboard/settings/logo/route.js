@@ -3,7 +3,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
   saveShopSettingsLogo,
@@ -71,6 +71,12 @@ export async function POST(request) {
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json(
+        { error: "Access denied. Settings can only be modified by the main shop login." },
+        { status: 403 }
+      );
+    }
     const formData = await request.formData();
     const file = formData.get("file");
     if (!file || typeof file.arrayBuffer !== "function") {
@@ -100,6 +106,12 @@ export async function DELETE(request) {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json(
+        { error: "Access denied. Settings can only be modified by the main shop login." },
+        { status: 403 }
+      );
     }
     const email = user.email.trim().toLowerCase();
     removeShopSettingsLogoFiles(email);

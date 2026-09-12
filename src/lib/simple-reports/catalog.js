@@ -2,6 +2,7 @@
 
 export const SIMPLE_REPORT_IDS = [
   "jobs-pipeline",
+  "overdue-status",
   "invoices-ar",
   "purchase-ap",
   "vendor-spend",
@@ -158,6 +159,28 @@ export const SIMPLE_REPORT_FILTERS = {
       ],
     },
   ],
+  "overdue-status": [
+    {
+      key: "itemType",
+      label: "Item type",
+      options: [
+        { value: "", label: "All items" },
+        { value: "job", label: "Jobs" },
+        { value: "po", label: "Purchase orders" },
+        { value: "invoice", label: "Invoices" },
+      ],
+    },
+    {
+      key: "overdueBucket",
+      label: "Aging bucket",
+      options: [
+        { value: "", label: "All overdue" },
+        { value: "1-30", label: "1 to 30 days" },
+        { value: "31-60", label: "31 to 60 days" },
+        { value: "61+", label: "61+ days" },
+      ],
+    },
+  ],
   "ar-aging": [
     {
       key: "bucket",
@@ -165,9 +188,9 @@ export const SIMPLE_REPORT_FILTERS = {
       options: [
         { value: "", label: "All unpaid" },
         { value: "current", label: "Current (not past due)" },
-        { value: "1-30", label: "1–30 days" },
-        { value: "31-60", label: "31–60 days" },
-        { value: "61-90", label: "61–90 days" },
+        { value: "1-30", label: "1 to 30 days" },
+        { value: "31-60", label: "31 to 60 days" },
+        { value: "61-90", label: "61 to 90 days" },
         { value: "90+", label: "90+ days" },
         { value: "no-due", label: "No due date" },
       ],
@@ -180,9 +203,9 @@ export const SIMPLE_REPORT_FILTERS = {
       options: [
         { value: "", label: "All unpaid" },
         { value: "current", label: "Current (not past due)" },
-        { value: "1-30", label: "1–30 days" },
-        { value: "31-60", label: "31–60 days" },
-        { value: "61-90", label: "61–90 days" },
+        { value: "1-30", label: "1 to 30 days" },
+        { value: "31-60", label: "31 to 60 days" },
+        { value: "61-90", label: "61 to 90 days" },
         { value: "90+", label: "90+ days" },
         { value: "no-due", label: "No due date" },
       ],
@@ -192,6 +215,14 @@ export const SIMPLE_REPORT_FILTERS = {
 };
 
 export const SIMPLE_REPORT_CATALOG = [
+  {
+    id: "overdue-status",
+    category: "Operations",
+    title: "Overdue status",
+    description: "Prioritized tracker of overdue jobs past promised date, pending PO vendor deliveries, and overdue invoices.",
+    usesDateRange: false,
+    filters: SIMPLE_REPORT_FILTERS["overdue-status"],
+  },
   {
     id: "jobs-pipeline",
     category: "Operations",
@@ -229,7 +260,7 @@ export const SIMPLE_REPORT_CATALOG = [
     category: "Accounting",
     title: "Sales tax",
     description:
-      "Sales tax on invoices — rate, tax amount, and whether tax is collected (paid) or still outstanding.",
+      "Sales tax on invoices: rate, tax amount, and whether tax is collected (paid) or still outstanding.",
     usesDateRange: true,
     filters: SIMPLE_REPORT_FILTERS["sales-tax"],
   },
@@ -245,7 +276,7 @@ export const SIMPLE_REPORT_CATALOG = [
     id: "ar-aging",
     category: "Accounting",
     title: "AR aging",
-    description: "Unpaid invoices by days past due (current, 1–30, 31–60, 61–90, 90+).",
+    description: "Unpaid invoices by days past due (current, 1 to 30, 31 to 60, 61 to 90, 90+).",
     usesDateRange: false,
     filters: SIMPLE_REPORT_FILTERS["ar-aging"],
   },

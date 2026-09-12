@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
 import { useFormatDate } from "@/contexts/user-settings-context";
 import { SEND_DOCUMENT_CUSTOM_MESSAGE_MAX, SEND_DOCUMENT_CC_MAX_LENGTH, SEND_DOCUMENT_TO_EMAIL_MAX, isSendToEmail } from "@/lib/send-document-custom-message";
 
@@ -35,6 +36,7 @@ export default function SimpleMotorShippingSendModal({
   onSent,
 }) {
   const toast = useToast();
+  const { isOwner } = useAuth();
   const formatDate = useFormatDate();
   const [sending, setSending] = useState(false);
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
@@ -140,13 +142,19 @@ export default function SimpleMotorShippingSendModal({
               role="status"
             >
               <p>{sendMeta.smtp.message}</p>
-              <Link
-                href="/dashboards/settings?section=smtp"
-                className="mt-2 inline-block font-medium underline underline-offset-2"
-                onClick={() => onClose?.()}
-              >
-                Open Email Settings
-              </Link>
+              {isOwner ? (
+                <Link
+                  href="/dashboards/settings?section=smtp"
+                  className="mt-2 inline-block font-medium underline underline-offset-2"
+                  onClick={() => onClose?.()}
+                >
+                  Open Email Settings
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs opacity-90">
+                  Please contact the main shop administrator to configure email settings.
+                </p>
+              )}
             </div>
           ) : null}
 

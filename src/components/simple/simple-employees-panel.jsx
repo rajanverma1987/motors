@@ -11,6 +11,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
 import { useAlert } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -45,6 +46,7 @@ const INITIAL_EMPLOYEE_FORM = {
   phone: "",
   password: "",
   canLogin: false,
+  financialAccess: "role",
   technicianAppAccess: false,
   timeClockEnabled: true,
   employeeNumber: "",
@@ -79,6 +81,7 @@ function buildEmployeePayload(form) {
     role: f.role ?? "",
     phone: f.phone ?? "",
     canLogin: Boolean(f.canLogin),
+    financialAccess: f.financialAccess ?? "role",
     technicianAppAccess: Boolean(f.technicianAppAccess),
     password: f.password ?? "",
     timeClockEnabled: f.timeClockEnabled !== false,
@@ -96,6 +99,7 @@ function buildEmployeePayload(form) {
 
 export default function SimpleEmployeesPanel({ onChanged }) {
   const alert = useAlert();
+  const { canViewFinancials } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -174,6 +178,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
       phone: dataToUse.phone ?? "",
       password: "",
       canLogin: Boolean(dataToUse.canLogin),
+      financialAccess: dataToUse.financialAccess || "role",
       technicianAppAccess: Boolean(dataToUse.technicianAppAccess),
       timeClockEnabled: dataToUse.timeClockEnabled !== false,
       employeeNumber: dataToUse.employeeNumber ?? "",
@@ -256,20 +261,24 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         ),
       },
       { key: "name", label: "Name", sortable: true, render: (v, row) => (
-        <button
-          type="button"
-          className="font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-          onClick={() =>
-            setHistoryEmployee({
-              employeeId: String(row?.id || "").trim(),
-              name: String(v || row?.name || "").trim(),
-              employeeNumber: String(row?.employeeNumber || "").trim(),
-            })
-          }
-          title="View payment history"
-        >
-          {v || "-"}
-        </button>
+        canViewFinancials ? (
+          <button
+            type="button"
+            className="font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+            onClick={() =>
+              setHistoryEmployee({
+                employeeId: String(row?.id || "").trim(),
+                name: String(v || row?.name || "").trim(),
+                employeeNumber: String(row?.employeeNumber || "").trim(),
+              })
+            }
+            title="View payment history"
+          >
+            {v || "-"}
+          </button>
+        ) : (
+          <span className="font-medium text-title">{v || "-"}</span>
+        )
       ) },
       { key: "employeeNumber", label: "Emp #", sortable: true },
       { key: "role", label: "Role", sortable: true },
@@ -331,6 +340,26 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         ),
       },
       {
+        key: "financialAccess",
+        label: "Financial access",
+        sortable: true,
+        render: (_, row) => {
+          const val = row.financialAccess || "role";
+          const label =
+            val === "allowed"
+              ? "Always allowed"
+              : val === "restricted"
+                ? "Always restricted"
+                : "Role default";
+          const variant = val === "allowed" ? "success" : val === "restricted" ? "danger" : "default";
+          return (
+            <Badge variant={variant} className="rounded-full px-2.5 py-0.5 text-xs">
+              {label}
+            </Badge>
+          );
+        },
+      },
+      {
         key: "technicianAppAccess",
         label: "Technician app",
         sortable: true,
@@ -344,7 +373,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         ),
       },
     ],
-    []
+    [canViewFinancials]
   );
 
   return (
@@ -535,16 +564,20 @@ export default function SimpleEmployeesPanel({ onChanged }) {
             />
           </FieldRow>
           <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"}>
-            <input
-              type="text"
-              inputMode="decimal"
-              disabled={saving}
-              value={form.hourlyRate || ""}
-              onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
-              placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
-            />
+            {canViewFinancials ? (
+              <input
+                type="text"
+                inputMode="decimal"
+                disabled={saving}
+                value={form.hourlyRate || ""}
+                onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+                className={FIELD_INPUT}
+                aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
+                placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
+              />
+            ) : (
+              <span className="text-xs text-secondary italic">Restricted (financial data)</span>
+            )}
           </FieldRow>
           <FieldRow label="Password">
             <input
@@ -554,7 +587,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
               onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
               className={FIELD_INPUT}
               autoComplete="new-password"
-              placeholder={editingId ? "Leave blank to keep current" : "Optional (6–128 characters)"}
+              placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
               aria-label="Password"
             />
           </FieldRow>
@@ -597,6 +630,25 @@ export default function SimpleEmployeesPanel({ onChanged }) {
                 />
                 Technician App access
               </label>
+
+              <div className="pt-2 border-t border-border mt-1">
+                <label className="block text-xs font-bold text-title">
+                  Financial information access
+                </label>
+                <p className="text-[11px] text-secondary mt-0.5">
+                  Controls whether this employee can see costs, pricing, margins, invoices, and AP / AR data.
+                </p>
+                <select
+                  disabled={saving}
+                  value={form.financialAccess || "role"}
+                  onChange={(e) => setForm((f) => ({ ...f, financialAccess: e.target.value }))}
+                  className="mt-1 h-7 w-full rounded-none border border-border bg-card px-2 text-xs text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+                >
+                  <option value="role">Default by role (e.g. Office/Manager allowed, Technician restricted)</option>
+                  <option value="allowed">Always allowed (Can view costs, pricing, margins, AP / AR)</option>
+                  <option value="restricted">Always restricted (Hide all costs, pricing, margins, AP / AR)</option>
+                </select>
+              </div>
             </div>
           </FieldRow>
         </Form>

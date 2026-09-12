@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { FiLock } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Checkbox from "@/components/ui/checkbox";
 import Select from "@/components/ui/select";
@@ -66,8 +68,12 @@ const ACCOUNTS_PAYMENT_TERMS_OPTIONS = [
 ];
 
 export default function SettingsPageClient() {
+  const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, mounted, isEmployee } = useAuth();
+  const effectiveIsEmployee = isEmployee ?? Boolean(
+    user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
+  );
   const { settings: savedSettings, refresh: refreshContext } = useUserSettings();
   const savedZoomRef = useRef(savedSettings?.zoomLevel);
   savedZoomRef.current = savedSettings?.zoomLevel;
@@ -86,7 +92,17 @@ export default function SettingsPageClient() {
   const [smtpPasswordInput, setSmtpPasswordInput] = useState("");
   const [smtpTesting, setSmtpTesting] = useState(false);
 
+  useEffect(() => {
+    if (mounted && effectiveIsEmployee) {
+      router.replace("/dashboard");
+    }
+  }, [mounted, effectiveIsEmployee, router]);
+
   const load = useCallback(async () => {
+    if (effectiveIsEmployee) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const r = await fetch("/api/dashboard/settings", {
@@ -100,7 +116,7 @@ export default function SettingsPageClient() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [effectiveIsEmployee]);
 
   useEffect(() => {
     load();
@@ -868,6 +884,32 @@ export default function SettingsPageClient() {
       pwSaving,
     ]
   );
+
+  if (mounted && effectiveIsEmployee) {
+    return (
+      <div className="flex flex-1 items-center justify-center py-16">
+        <div className="max-w-md rounded-xl border border-border bg-card p-6 text-center shadow-sm">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger">
+            <FiLock className="h-6 w-6" aria-hidden />
+          </div>
+          <h2 className="text-lg font-semibold text-title">Access Restricted</h2>
+          <p className="mt-2 text-sm text-secondary">
+            Settings are only available to the main shop login.
+          </p>
+          <div className="mt-5">
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => router.replace("/dashboard")}
+            >
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (

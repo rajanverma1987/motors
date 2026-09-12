@@ -83,6 +83,17 @@ export const USER_SETTINGS_DEFAULTS = {
   quickBooksDefaultIncomeAccountId: "",
   /** QBO Chart of Accounts Id used for vendor bill expense lines. */
   quickBooksDefaultExpenseAccountId: "",
+  /** Purchase order expected delivery / due date notifications */
+  poDueNotificationEnabled: true,
+  poDueNotificationEmails: "",
+  poDueNotificationDaysBefore: 2,
+  poDueNotificationIncludeOverdue: true,
+  poDueNotificationAutoSend: true,
+  poDueNotificationLastAutoRunAt: "",
+  /** Financial access restrictions for employees (costs, margins, pricing, AP / AR) */
+  financialAccessRestrictionEnabled: true,
+  financialAllowedRoles: ["Manager", "Office", "Supervisor"],
+  simulateFinancialRestriction: false,
 };
 
 import { DISPLAY_ZOOM_DEFAULT, normalizeZoomLevel } from "@/lib/display-zoom";
@@ -142,6 +153,15 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "quickBooksJobClosedStatuses",
   "quickBooksDefaultIncomeAccountId",
   "quickBooksDefaultExpenseAccountId",
+  "poDueNotificationEnabled",
+  "poDueNotificationEmails",
+  "poDueNotificationDaysBefore",
+  "poDueNotificationIncludeOverdue",
+  "poDueNotificationAutoSend",
+  "poDueNotificationLastAutoRunAt",
+  "financialAccessRestrictionEnabled",
+  "financialAllowedRoles",
+  "simulateFinancialRestriction",
 ]);
 
 const ACCOUNTS_PAYMENT_TERMS = new Set([
@@ -331,6 +351,23 @@ export function mergeUserSettings(stored) {
   )
     .trim()
     .slice(0, 64);
+  merged.poDueNotificationEnabled = merged.poDueNotificationEnabled !== false;
+  merged.poDueNotificationEmails = String(merged.poDueNotificationEmails || "")
+    .trim()
+    .slice(0, 1000);
+  const poDays = Number(merged.poDueNotificationDaysBefore);
+  merged.poDueNotificationDaysBefore =
+    Number.isFinite(poDays) && poDays >= 0 && poDays <= 30 ? Math.round(poDays) : 2;
+  merged.poDueNotificationIncludeOverdue = merged.poDueNotificationIncludeOverdue !== false;
+  merged.poDueNotificationAutoSend = merged.poDueNotificationAutoSend !== false;
+  merged.poDueNotificationLastAutoRunAt = String(merged.poDueNotificationLastAutoRunAt || "")
+    .trim()
+    .slice(0, 50);
+  merged.financialAccessRestrictionEnabled = merged.financialAccessRestrictionEnabled !== false;
+  merged.financialAllowedRoles = Array.isArray(merged.financialAllowedRoles)
+    ? merged.financialAllowedRoles.map((s) => String(s || "").trim()).filter(Boolean)
+    : ["Manager", "Office", "Supervisor"];
+  merged.simulateFinancialRestriction = !!merged.simulateFinancialRestriction;
   const smtp = normalizeWorkspaceSmtpFields(merged);
   Object.assign(merged, smtp);
   return merged;
@@ -474,6 +511,39 @@ export function sanitizeUserSettingsPatch(body) {
       out[key] = String(body[key] ?? "")
         .trim()
         .slice(0, 64);
+      continue;
+    }
+    if (
+      key === "poDueNotificationEnabled" ||
+      key === "poDueNotificationIncludeOverdue" ||
+      key === "poDueNotificationAutoSend"
+    ) {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "poDueNotificationEmails") {
+      out[key] = String(body[key] ?? "").slice(0, 1000);
+      continue;
+    }
+    if (key === "poDueNotificationDaysBefore") {
+      const n = Math.round(Number(body[key]));
+      if (Number.isFinite(n) && n >= 0 && n <= 30) out[key] = n;
+      continue;
+    }
+    if (key === "poDueNotificationLastAutoRunAt") {
+      out[key] = String(body[key] ?? "").slice(0, 50);
+      continue;
+    }
+    if (key === "financialAccessRestrictionEnabled" || key === "simulateFinancialRestriction") {
+      if (typeof body[key] === "boolean") out[key] = body[key];
+      continue;
+    }
+    if (key === "financialAllowedRoles") {
+      const arr = Array.isArray(body[key]) ? body[key] : [];
+      out.financialAllowedRoles = arr
+        .map((s) => String(s ?? "").trim().slice(0, 50))
+        .filter(Boolean)
+        .slice(0, 20);
       continue;
     }
     if (key === "controlledDropdowns") {

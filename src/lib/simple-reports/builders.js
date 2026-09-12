@@ -7,7 +7,7 @@ import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
-import { resolveSimplePoType } from "@/lib/simple-purchase-order-form";
+import { resolvePoStatus, resolveSimplePoType } from "@/lib/simple-purchase-order-form";
 import {
   agingBucketLabel,
   agingFromDueDate,
@@ -20,6 +20,7 @@ import {
   isInvoiceSp,
   isPipelineSp,
   isSpInvoicePaid,
+  isTerminalJobStatus,
   matchPipelineStatusBucket,
   moneyCell,
   resolveDocDay,
@@ -36,6 +37,7 @@ const VIEW_MAX_PAGE_SIZE = 200;
 
 /** Default sort column (0-based) — prefer primary date, else meaningful amount/name. */
 const DEFAULT_SORT_COLUMN = {
+  "overdue-status": 5, // Days overdue
   "jobs-pipeline": 6, // Date created
   "invoices-ar": 4, // Date created
   "purchase-ap": 6, // PO date
@@ -51,6 +53,7 @@ const DEFAULT_SORT_COLUMN = {
 };
 
 const DEFAULT_SORT_DIR = {
+  "overdue-status": "desc",
   "inventory-stock": "asc",
 };
 
@@ -261,6 +264,8 @@ export async function buildSimpleReportExport(opts) {
   };
 
   switch (report) {
+    case "overdue-status":
+      return buildOverdueStatus(ownerEmail, currency, filters, reportOpts);
     case "jobs-pipeline":
       return buildJobsPipeline(ownerEmail, from, to, currency, filters, reportOpts);
     case "invoices-ar":
@@ -312,6 +317,176 @@ async function loadPurchaseOrders(ownerEmail) {
     .sort({ updatedAt: -1 })
     .limit(FETCH_LIMIT)
     .lean();
+}
+
+async function buildOverdueStatus(ownerEmail, currency, filters, reportOpts = {}) {
+  const itemTypeFilter = String(filters.itemType || "").trim().toLowerCase();
+  const bucketFilter = String(filters.overdueBucket || "").trim().toLowerCase();
+
+  const [proposals, purchaseOrders] = await Promise.all([
+    itemTypeFilter === "po" ? [] : loadServiceProposals(ownerEmail),
+    itemTypeFilter === "job" || itemTypeFilter === "invoice" ? [] : loadPurchaseOrders(ownerEmail),
+  ]);
+
+  const headers = [
+    "Item type",
+    "Doc #",
+    "Customer / Vendor",
+    "Status",
+    "Due date",
+    "Days overdue",
+    "Aging bucket",
+    "Amount / Balance",
+    "Details",
+    "Contact",
+  ];
+
+  const rows = [];
+
+  // Overdue Jobs
+  if (!itemTypeFilter || itemTypeFilter === "job") {
+    for (const doc of proposals) {
+      if (!isPipelineSp(doc)) continue;
+      if (isTerminalJobStatus(doc.status, doc.jobStatus)) continue;
+      if (!doc.dueDate) continue;
+      const aging = agingFromDueDate(doc.dueDate);
+      if (aging.daysPastDue == null || aging.daysPastDue <= 0) continue;
+
+      let bucketKey = "";
+      let bucketDisplay = "";
+      if (aging.daysPastDue <= 30) {
+        bucketKey = "1-30";
+        bucketDisplay = "1 to 30 days";
+      } else if (aging.daysPastDue <= 60) {
+        bucketKey = "31-60";
+        bucketDisplay = "31 to 60 days";
+      } else {
+        bucketKey = "61+";
+        bucketDisplay = "61+ days";
+      }
+
+      if (bucketFilter && bucketFilter !== bucketKey) continue;
+
+      const money = computeSpMoney(doc);
+      const docNo = String(doc.documentNumber || doc.quote || "").trim();
+      const entity = String(doc.companyName || "").trim();
+      const st = String(doc.jobStatus || doc.status || "In Progress").trim();
+      const details =
+        [doc.motorPower, doc.hp ? `${doc.hp} HP` : "", doc.rpm ? `${doc.rpm} RPM` : ""]
+          .filter(Boolean)
+          .join(" · ") || "Motor repair work order";
+      const contact = String(doc.customerPhone || doc.customerEmail || "").trim();
+
+      rows.push([
+        "Job",
+        docNo,
+        entity,
+        st,
+        formatReportDate(doc.dueDate, currency),
+        aging.daysPastDue,
+        bucketDisplay,
+        moneyCell(money.grandTotal),
+        details,
+        contact,
+      ]);
+    }
+  }
+
+  // Overdue POs awaiting vendor delivery
+  if (!itemTypeFilter || itemTypeFilter === "po") {
+    for (const doc of purchaseOrders) {
+      const poStatus = resolvePoStatus(doc.lineItems);
+      if (poStatus === "Received" || poStatus === "Cancelled") continue;
+      if (!doc.dueDate) continue;
+      const aging = agingFromDueDate(doc.dueDate);
+      if (aging.daysPastDue == null || aging.daysPastDue <= 0) continue;
+
+      let bucketKey = "";
+      let bucketDisplay = "";
+      if (aging.daysPastDue <= 30) {
+        bucketKey = "1-30";
+        bucketDisplay = "1 to 30 days";
+      } else if (aging.daysPastDue <= 60) {
+        bucketKey = "31-60";
+        bucketDisplay = "31 to 60 days";
+      } else {
+        bucketKey = "61+";
+        bucketDisplay = "61+ days";
+      }
+
+      if (bucketFilter && bucketFilter !== bucketKey) continue;
+
+      const money = computePoMoney(doc);
+      const docNo = String(doc.poNumber || "").trim();
+      const entity = String(doc.vendorName || "").trim();
+      const details = `Job: ${doc.jobNumber || "Shop"} | Expected delivery past due`;
+      const contact = String(doc.vendorPhone || doc.vendorEmail || "").trim();
+
+      rows.push([
+        "Purchase order",
+        docNo,
+        entity,
+        poStatus || "Ordered",
+        formatReportDate(doc.dueDate, currency),
+        aging.daysPastDue,
+        bucketDisplay,
+        moneyCell(money.grandTotal),
+        details,
+        contact,
+      ]);
+    }
+  }
+
+  // Overdue Invoices
+  if (!itemTypeFilter || itemTypeFilter === "invoice") {
+    for (const doc of proposals) {
+      if (!isInvoiceSp(doc)) continue;
+      const money = computeSpInvoiceMoney(doc);
+      if (money.unpaid <= 0) continue;
+      if (!doc.dueDate) continue;
+      const aging = agingFromDueDate(doc.dueDate);
+      if (aging.daysPastDue == null || aging.daysPastDue <= 0) continue;
+
+      let bucketKey = "";
+      let bucketDisplay = "";
+      if (aging.daysPastDue <= 30) {
+        bucketKey = "1-30";
+        bucketDisplay = "1 to 30 days";
+      } else if (aging.daysPastDue <= 60) {
+        bucketKey = "31-60";
+        bucketDisplay = "31 to 60 days";
+      } else {
+        bucketKey = "61+";
+        bucketDisplay = "61+ days";
+      }
+
+      if (bucketFilter && bucketFilter !== bucketKey) continue;
+
+      const docNo = String(doc.documentNumber || doc.invoiceNumber || doc.quote || "").trim();
+      const entity = String(doc.companyName || "").trim();
+      const details = `Billed: $${money.grandTotal.toFixed(2)} | Balance: $${money.unpaid.toFixed(2)}`;
+      const contact = String(doc.customerPhone || doc.customerEmail || "").trim();
+
+      rows.push([
+        "Invoice",
+        docNo,
+        entity,
+        money.paymentStatus || "Unpaid",
+        formatReportDate(doc.dueDate, currency),
+        aging.daysPastDue,
+        bucketDisplay,
+        moneyCell(money.unpaid),
+        details,
+        contact,
+      ]);
+    }
+  }
+
+  return finalizeReport("Overdue status", headers, rows, "overdue-status", {
+    ...reportOpts,
+    amountColumns: [7],
+    defaultSortColumn: 5,
+  });
 }
 
 async function buildJobsPipeline(ownerEmail, from, to, currency, filters, reportOpts = {}) {

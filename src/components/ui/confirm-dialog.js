@@ -14,6 +14,8 @@ export default function ConfirmDialog({
   variant = "warning",
   onConfirm,
   onCancel,
+  /** When false, clicking the backdrop does not close/cancel the dialog. */
+  closeOnOutsideClick = false,
 }) {
   useEffect(() => {
     if (!open) return;
@@ -38,7 +40,10 @@ export default function ConfirmDialog({
       aria-modal="true"
       aria-labelledby="confirm-title"
     >
-      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
+      <div
+        className="absolute inset-0 bg-black/50"
+        onClick={closeOnOutsideClick ? onCancel : undefined}
+      />
       <div className="relative w-full max-w-[33.6rem] rounded-lg border border-border bg-card p-6 shadow-xl">
         <h2 id="confirm-title" className="mb-2 text-lg font-semibold text-title">
           {title}

@@ -625,7 +625,7 @@ export default function AdminLeadsPage() {
         size="4xl"
         width="min(920px, 96vw)"
         showClose={!mailSending && !mailDraftLoading}
-        closeOnOutsideClick={!mailSending && !mailDraftLoading}
+        closeOnOutsideClick={false}
         actions={
           <>
             <Button

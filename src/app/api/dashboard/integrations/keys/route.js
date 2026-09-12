@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import IntegrationApiKey from "@/models/IntegrationApiKey";
 import { generatePlainIntegrationKey } from "@/lib/integration-auth";
 
@@ -8,6 +8,9 @@ export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) {
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    }
     const email = user.email.trim().toLowerCase();
     await connectDB();
     const list = await IntegrationApiKey.find({ ownerEmail: email }).sort({ createdAt: -1 }).lean();
@@ -33,6 +36,9 @@ export async function POST(request) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) {
+      return NextResponse.json({ error: "Access denied." }, { status: 403 });
+    }
     const body = await request.json().catch(() => ({}));
     const name = String(body.name || "API key").trim().slice(0, 120);
     const scopes = Array.isArray(body.scopes) && body.scopes.length ? body.scopes : ["*"];

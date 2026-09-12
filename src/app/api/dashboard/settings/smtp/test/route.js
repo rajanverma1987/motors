@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { mergeWorkspaceSmtpPatch } from "@/lib/workspace-smtp-fields";
 import { verifyWorkspaceSmtpConnection } from "@/lib/workspace-smtp";
@@ -11,6 +11,12 @@ export async function POST(request) {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json(
+        { error: "Access denied. Only the main shop login can test SMTP settings." },
+        { status: 403 }
+      );
     }
     const body = await request.json().catch(() => ({}));
     await connectDB();

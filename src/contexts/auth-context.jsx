@@ -144,7 +144,28 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
-  const value = { user, login, register, logout, mounted };
+  const canViewFinancials = user?.canViewFinancials !== false;
+  const isFinancialRestricted = !canViewFinancials;
+  const isEmployee = Boolean(
+    user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
+  );
+  const isOwner = Boolean(user && !isEmployee);
+
+  const value = {
+    user,
+    isOwner,
+    isEmployee,
+    canViewFinancials,
+    isFinancialRestricted,
+    employeeRole: user?.employeeRole || "",
+    financialAccessReason: user?.financialAccessReason || "",
+    isSimulatedFinancialRestriction: Boolean(user?.isSimulatedFinancialRestriction),
+    login,
+    register,
+    logout,
+    refreshUser: loadUser,
+    mounted,
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -153,4 +174,21 @@ export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
+}
+
+export function useFinancialAccess() {
+  const {
+    canViewFinancials,
+    isFinancialRestricted,
+    employeeRole,
+    financialAccessReason,
+    isSimulatedFinancialRestriction,
+  } = useAuth();
+  return {
+    canViewFinancials,
+    isRestricted: isFinancialRestricted,
+    role: employeeRole,
+    reason: financialAccessReason,
+    isSimulated: isSimulatedFinancialRestriction,
+  };
 }

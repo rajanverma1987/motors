@@ -6,6 +6,7 @@ import {
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
 } from "@/lib/simple-service-proposal-form";
+import { resolvePoStatus } from "@/lib/simple-purchase-order-form";
 import {
   agingBucketLabel,
   agingFromDueDate,
@@ -14,6 +15,7 @@ import {
   computeSpMoney,
   dayInRange,
   isInvoiceSp,
+  isTerminalJobStatus,
   resolveDocDay,
   toYmd,
 } from "@/lib/simple-reports/helpers";
@@ -41,11 +43,6 @@ function emptyMonthMap(monthKeys, fields) {
     for (const f of fields) map[key][f] = 0;
   }
   return map;
-}
-
-function isTerminalJobStatus(status, jobStatus) {
-  const s = `${status || ""} ${jobStatus || ""}`.toLowerCase();
-  return /closed|cancelled|canceled|delivered|complete|completed|void/.test(s);
 }
 
 function bumpStatus(map, label, amount) {
@@ -268,6 +265,114 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
     }
   }
 
+  const overdueItems = [];
+  let overdueJobsCount = 0;
+  let overdueJobsAmount = 0;
+  let overduePosCount = 0;
+  let overduePosAmount = 0;
+  let overdueInvoicesCount = 0;
+  let overdueInvoicesAmount = 0;
+
+  for (const doc of proposals || []) {
+    const recordType = String(doc.recordType || RECORD_TYPE_RFQ).toUpperCase();
+    if (recordType === RECORD_TYPE_JOB || recordType === RECORD_TYPE_RFQ) {
+      if (isTerminalJobStatus(doc.status, doc.jobStatus)) continue;
+      if (!doc.dueDate) continue;
+      const aging = agingFromDueDate(doc.dueDate);
+      if (aging.daysPastDue != null && aging.daysPastDue > 0) {
+        const money = computeSpMoney(doc);
+        overdueJobsCount += 1;
+        overdueJobsAmount += money.grandTotal;
+        overdueItems.push({
+          id: String(doc._id),
+          itemType: "job",
+          itemTypeLabel: "Job",
+          docNumber: String(doc.documentNumber || doc.quote || "").trim(),
+          entityName: String(doc.companyName || "").trim() || "Customer",
+          status: String(doc.jobStatus || doc.status || "In Progress").trim(),
+          dueDate: toYmd(doc.dueDate),
+          daysOverdue: aging.daysPastDue,
+          overdueBucket:
+            aging.daysPastDue <= 30
+              ? "1 to 30 days"
+              : aging.daysPastDue <= 60
+                ? "31 to 60 days"
+                : "61+ days",
+          amount: round2(money.grandTotal),
+          details:
+            [doc.motorPower, doc.hp ? `${doc.hp} HP` : "", doc.rpm ? `${doc.rpm} RPM` : ""]
+              .filter(Boolean)
+              .join(" · ") || "Motor repair work order",
+          contact: String(doc.customerPhone || doc.customerEmail || "").trim(),
+          linkTab: "service-proposals",
+        });
+      }
+    } else if (isInvoiceSp(doc) || recordType === RECORD_TYPE_INVOICE) {
+      const money = computeSpInvoiceMoney(doc);
+      if (money.unpaid <= 0) continue;
+      if (!doc.dueDate) continue;
+      const aging = agingFromDueDate(doc.dueDate);
+      if (aging.daysPastDue != null && aging.daysPastDue > 0) {
+        overdueInvoicesCount += 1;
+        overdueInvoicesAmount += money.unpaid;
+        overdueItems.push({
+          id: String(doc._id),
+          itemType: "invoice",
+          itemTypeLabel: "Invoice",
+          docNumber: String(doc.documentNumber || doc.invoiceNumber || doc.quote || "").trim(),
+          entityName: String(doc.companyName || "").trim() || "Customer",
+          status: money.paymentStatus || "Unpaid",
+          dueDate: toYmd(doc.dueDate),
+          daysOverdue: aging.daysPastDue,
+          overdueBucket:
+            aging.daysPastDue <= 30
+              ? "1 to 30 days"
+              : aging.daysPastDue <= 60
+                ? "31 to 60 days"
+                : "61+ days",
+          amount: round2(money.unpaid),
+          details: `Billed: $${money.grandTotal.toFixed(2)} | Balance: $${money.unpaid.toFixed(2)}`,
+          contact: String(doc.customerPhone || doc.customerEmail || "").trim(),
+          linkTab: "invoices",
+        });
+      }
+    }
+  }
+
+  for (const doc of purchaseOrders || []) {
+    const poStatus = resolvePoStatus(doc.lineItems);
+    if (poStatus === "Received" || poStatus === "Cancelled") continue;
+    if (!doc.dueDate) continue;
+    const aging = agingFromDueDate(doc.dueDate);
+    if (aging.daysPastDue != null && aging.daysPastDue > 0) {
+      const money = computePoMoney(doc);
+      overduePosCount += 1;
+      overduePosAmount += money.grandTotal;
+      overdueItems.push({
+        id: String(doc._id),
+        itemType: "po",
+        itemTypeLabel: "Purchase Order",
+        docNumber: String(doc.poNumber || "").trim(),
+        entityName: String(doc.vendorName || "").trim() || "Vendor",
+        status: poStatus || "Ordered",
+        dueDate: toYmd(doc.dueDate),
+        daysOverdue: aging.daysPastDue,
+        overdueBucket:
+          aging.daysPastDue <= 30
+            ? "1 to 30 days"
+            : aging.daysPastDue <= 60
+              ? "31 to 60 days"
+              : "61+ days",
+        amount: round2(money.grandTotal),
+        details: `Job: ${doc.jobNumber || "Shop"} | Expected delivery past due`,
+        contact: String(doc.vendorPhone || doc.vendorEmail || "").trim(),
+        linkTab: "purchase-orders",
+      });
+    }
+  }
+
+  overdueItems.sort((a, b) => b.daysOverdue - a.daysOverdue);
+
   const sortPayment = (a, b) => {
     const order = { Unpaid: 0, "Partial Paid": 1, Paid: 2 };
     return (order[a.status] ?? 9) - (order[b.status] ?? 9);
@@ -284,6 +389,19 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
       openJobsCount,
       unpaidPoAmount: round2(unpaidPoAmount),
       unpaidCommissionAmount: round2(unpaidCommissionAmount),
+    },
+    overdueWork: {
+      summary: {
+        jobsCount: overdueJobsCount,
+        jobsAmount: round2(overdueJobsAmount),
+        posCount: overduePosCount,
+        posAmount: round2(overduePosAmount),
+        invoicesCount: overdueInvoicesCount,
+        invoicesAmount: round2(overdueInvoicesAmount),
+        totalCount: overdueJobsCount + overduePosCount + overdueInvoicesCount,
+        totalAmount: round2(overdueJobsAmount + overduePosAmount + overdueInvoicesAmount),
+      },
+      items: overdueItems.slice(0, 100),
     },
     revenueByMonth: monthKeys.map((m) => ({
       month: m,

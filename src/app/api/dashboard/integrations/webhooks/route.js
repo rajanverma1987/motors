@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { connectDB } from "@/lib/db";
-import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee } from "@/lib/auth-portal";
 import IntegrationWebhook from "@/models/IntegrationWebhook";
 import IntegrationWebhookDelivery from "@/models/IntegrationWebhookDelivery";
 
@@ -9,6 +9,7 @@ export async function GET(request) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) return NextResponse.json({ error: "Access denied." }, { status: 403 });
     const email = user.email.trim().toLowerCase();
     await connectDB();
     const hooks = await IntegrationWebhook.find({ ownerEmail: email }).sort({ createdAt: -1 }).lean();
@@ -45,6 +46,7 @@ export async function POST(request) {
   try {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (isPortalEmployee(user)) return NextResponse.json({ error: "Access denied." }, { status: 403 });
     const body = await request.json().catch(() => ({}));
     const name = String(body.name || "Webhook").trim().slice(0, 120);
     const endpointUrl = String(body.endpointUrl || "").trim();

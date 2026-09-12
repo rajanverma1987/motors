@@ -117,14 +117,41 @@ export function clearPortalSessionCookies(cookieStore) {
   cookieStore.delete(PORTAL_UI_COOKIE);
 }
 
+export function isPortalEmployee(userOrPayload) {
+  if (!userOrPayload) return false;
+  return (
+    userOrPayload.authType === "employee" ||
+    Boolean(userOrPayload.employeeId && String(userOrPayload.employeeId).trim())
+  );
+}
+
+export function isPortalOwner(userOrPayload) {
+  if (!userOrPayload || !userOrPayload.email) return false;
+  return !isPortalEmployee(userOrPayload);
+}
+
+export async function getPortalPayloadFromCookies(cookieStore) {
+  if (!cookieStore) return null;
+  const cookieObj = typeof cookieStore.get === "function" ? cookieStore.get(getPortalCookieName()) : null;
+  const token = cookieObj?.value || null;
+  if (!token) return null;
+  return verifyPortalToken(token);
+}
+
 export async function getPortalUserFromRequest(request) {
   const payload = await getPortalPayloadFromRequest(request);
   if (!payload || !payload.email) return null;
+  const isEmployee = isPortalEmployee(payload);
   return {
     email: payload.email,
     shopName: payload.shopName || "",
     contactName: payload.contactName || "",
     calculatorOnlyPortal: payload.calculatorOnlyPortal === true,
+    authType: payload.authType || (isEmployee ? "employee" : "owner"),
+    employeeId: payload.employeeId || "",
+    employeeEmail: payload.employeeEmail || "",
+    isEmployee,
+    isOwner: !isEmployee,
   };
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { FiDownload, FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleReportViewModal from "@/components/simple/simple-report-view-modal";
 import { useAlert } from "@/components/confirm-provider";
+import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { SIMPLE_REPORT_CATALOG } from "@/lib/simple-reports/catalog";
 import {
   ALL_JOBS_DATE_FROM_PARAM,
@@ -36,6 +37,7 @@ function emptyFiltersForCatalog() {
  */
 export default function ReportsPanel() {
   const alert = useAlert();
+  const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const searchParams = useSearchParams();
   const { from, to } = parseAllJobsDateRange(searchParams);
@@ -231,6 +233,15 @@ export default function ReportsPanel() {
     [busyId, loadViewPage]
   );
 
+  useEffect(() => {
+    const reportParam = searchParams.get("report");
+    if (reportParam && SIMPLE_REPORT_CATALOG.some((r) => r.id === reportParam)) {
+      if (!viewOpen && viewReportId !== reportParam && !busyId) {
+        viewReport(reportParam);
+      }
+    }
+  }, [searchParams, viewOpen, viewReportId, busyId, viewReport]);
+
   const closeView = useCallback(() => {
     setViewOpen(false);
     setViewReportId("");
@@ -280,7 +291,13 @@ export default function ReportsPanel() {
   const groupedReports = useMemo(() => {
     /** @type {Map<string, typeof SIMPLE_REPORT_CATALOG>} */
     const map = new Map();
-    for (const report of SIMPLE_REPORT_CATALOG) {
+    const allowedCatalog = SIMPLE_REPORT_CATALOG.filter((report) => {
+      if (!canViewFinancials && (report.category === "Accounting" || report.id === "commissions")) {
+        return false;
+      }
+      return true;
+    });
+    for (const report of allowedCatalog) {
       const cat = String(report.category || "Other").trim() || "Other";
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat).push(report);
@@ -290,7 +307,7 @@ export default function ReportsPanel() {
       ...[...map.keys()].filter((c) => !CATEGORY_ORDER.includes(c)).sort(),
     ];
     return keys.map((category) => ({ category, reports: map.get(category) || [] }));
-  }, []);
+  }, [canViewFinancials]);
 
   const viewCatalog = useMemo(
     () => SIMPLE_REPORT_CATALOG.find((r) => r.id === viewReportId) || null,

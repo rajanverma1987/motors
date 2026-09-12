@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
+import Employee from "@/models/Employee";
+import Policy from "@/models/Policy";
+import UserSettings from "@/models/UserSettings";
 import { getPortalPayloadFromRequest, getPortalTierCookieName, setPortalUiCookie } from "@/lib/auth-portal";
 import { userIsListingOnlyAccount } from "@/lib/listing-account-restrictions";
 import { userIsTrialAccount } from "@/lib/trial-account-restrictions";
 import { userIsCalculatorOnlyPortalAccount } from "@/lib/calculator-portal-tier";
 import { loadShopPortalUi } from "@/lib/shop-portal-ui";
 import { PORTAL_UI_SIMPLE } from "@/lib/portal-view";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
 
 export async function GET(request) {
   const payload = await getPortalPayloadFromRequest(request);
@@ -33,6 +38,30 @@ export async function GET(request) {
   });
   setPortalUiCookie(cookieStore, portalUi);
 
+  const isEmployee = payload.authType === "employee" && Boolean(payload.employeeId);
+  let employeeDoc = null;
+  let policies = [];
+
+  const userSettingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+  const userSettings = mergeUserSettings(userSettingsDoc?.settings);
+
+  if (isEmployee) {
+    employeeDoc = await Employee.findById(payload.employeeId).lean();
+    policies = await Policy.find({
+      createdByEmail: email,
+      effect: "allow",
+      subjectType: "employee",
+      subjectIds: String(payload.employeeId),
+    }).lean();
+  }
+
+  const financialAccess = computeEffectiveFinancialAccess({
+    isOwner: !isEmployee,
+    employee: employeeDoc,
+    policies,
+    userSettings,
+  });
+
   return NextResponse.json({
     user: {
       email,
@@ -42,6 +71,16 @@ export async function GET(request) {
       trialAccount,
       calculatorOnlyAccount,
       portalUi,
+      authType: payload.authType || (isEmployee ? "employee" : "owner"),
+      employeeId: payload.employeeId || "",
+      employeeName: employeeDoc?.name || "",
+      employeeRole: employeeDoc?.role || "",
+      isEmployee: Boolean(isEmployee),
+      isOwner: !isEmployee,
+      canViewFinancials: financialAccess.canViewFinancials,
+      isFinancialRestricted: financialAccess.isRestricted,
+      financialAccessReason: financialAccess.reason,
+      isSimulatedFinancialRestriction: financialAccess.isSimulated || false,
     },
   });
 }

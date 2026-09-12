@@ -12,7 +12,7 @@ import {
 
 function cellValue(v) {
   const s = String(v ?? "").trim();
-  return s || "—";
+  return s || "-";
 }
 
 function displayOrBlank(v) {
@@ -22,7 +22,7 @@ function displayOrBlank(v) {
 
 function boolYes(v) {
   const s = String(v ?? "").trim().toLowerCase();
-  return s === "true" || s === "1" || s === "yes" || s === "on" ? "Yes" : "—";
+  return s === "true" || s === "1" || s === "yes" || s === "on" ? "Yes" : "-";
 }
 
 function passFailLabel(v) {
@@ -338,6 +338,123 @@ function PrintDiagramPages({ diagrams, headerProps }) {
   );
 }
 
+function extensionOfFile(value) {
+  const s = String(value || "").trim().toLowerCase();
+  if (!s) return "";
+  const clean = s.split(/[?#]/)[0];
+  const base = clean.includes("/") ? clean.slice(clean.lastIndexOf("/") + 1) : clean;
+  const dot = base.lastIndexOf(".");
+  if (dot < 0) return "";
+  return base.slice(dot + 1);
+}
+
+function isImageFile(url, name = "") {
+  const ext = extensionOfFile(url) || extensionOfFile(name);
+  return ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg", "heic", "heif", "tiff"].includes(ext);
+}
+
+function PrintAttachmentPages({ attachments, headerProps }) {
+  const list = Array.isArray(attachments) ? attachments.filter((a) => String(a?.url || "").trim()) : [];
+  if (!list.length) return null;
+
+  const imageAttachments = list.filter((a) => isImageFile(a.url, a.name));
+  const docAttachments = list.filter((a) => !isImageFile(a.url, a.name));
+
+  return (
+    <>
+      {imageAttachments.map((att, index) => {
+        const rawUrl = String(att.url || "").trim();
+        const url =
+          rawUrl.startsWith("http://") ||
+          rawUrl.startsWith("https://") ||
+          rawUrl.startsWith("data:") ||
+          rawUrl.startsWith("blob:") ||
+          rawUrl.startsWith("/")
+            ? rawUrl
+            : `/${rawUrl}`;
+        const name = String(att.name || "").trim() || `Attached Photo ${index + 1}`;
+        const subtitle = `Attached Job Photo ${index + 1} of ${imageAttachments.length}`;
+        return (
+          <div
+            key={att.url || index}
+            className="datasheet-diagram-print-page bg-white text-black"
+            style={{ pageBreakBefore: "always", breakBefore: "page" }}
+          >
+            <PrintDocumentHeader
+              title={name}
+              subtitle={subtitle}
+              {...headerProps}
+              compact
+            />
+            <div className="mt-2 flex min-h-[8.2in] items-center justify-center border border-black bg-white p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={url}
+                alt={name}
+                className="datasheet-diagram-print-image max-h-[8.2in] max-w-full object-contain"
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[8pt] text-black/70">
+              <span>
+                <span className="font-semibold">{headerProps.documentLabel || "Job#"}:</span>{" "}
+                <span className="font-bold tabular-nums text-black">
+                  {cellValue(headerProps.documentNumber)}
+                </span>
+              </span>
+              <span className="max-w-[60%] truncate text-right">
+                <span className="font-semibold">Customer:</span>{" "}
+                <span className="font-semibold text-black">{cellValue(headerProps.customerName)}</span>
+              </span>
+            </div>
+          </div>
+        );
+      })}
+
+      {docAttachments.length > 0 ? (
+        <div
+          className="datasheet-diagram-print-page bg-white text-black"
+          style={{ pageBreakBefore: "always", breakBefore: "page" }}
+        >
+          <PrintDocumentHeader
+            title="Attached Job Documents"
+            subtitle={`Job Documentation (${docAttachments.length} ${docAttachments.length === 1 ? "file" : "files"})`}
+            {...headerProps}
+            compact
+          />
+          <div className="mt-3 border border-black">
+            <div className="border-b border-black bg-black px-2 py-1 text-[8.5pt] font-bold uppercase tracking-wide text-white">
+              Job documentation and attached records
+            </div>
+            <table className="w-full border-collapse table-fixed text-[8.5pt]">
+              <thead>
+                <tr className="border-b border-black bg-black/[0.04]">
+                  <th className="w-12 border-r border-black px-2 py-1.5 text-center font-bold">#</th>
+                  <th className="border-r border-black px-2 py-1.5 text-left font-bold">Document Name</th>
+                  <th className="w-28 border-r border-black px-2 py-1.5 text-left font-bold">File Type</th>
+                  <th className="px-2 py-1.5 text-left font-bold">Attached Reference</th>
+                </tr>
+              </thead>
+              <tbody>
+                {docAttachments.map((doc, idx) => {
+                  const ext = extensionOfFile(doc.url) || extensionOfFile(doc.name) || "document";
+                  return (
+                    <tr key={doc.url || idx} className="border-b border-black last:border-0">
+                      <td className="border-r border-black px-2 py-1.5 text-center font-semibold">{idx + 1}</td>
+                      <td className="border-r border-black px-2 py-1.5 font-bold">{cellValue(doc.name)}</td>
+                      <td className="border-r border-black px-2 py-1.5 uppercase font-medium">{ext}</td>
+                      <td className="px-2 py-1.5 text-[8pt] text-black/70 truncate">{doc.url}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function HalfKv({ label, value, className = "" }) {
   return (
     <div className={`grid grid-cols-[38%_62%] items-stretch ${className}`.trim()}>
@@ -548,8 +665,8 @@ function AcAssemblyPrintBody({ values }) {
 }
 
 /**
- * Printable datasheet — professional letter-size shop form (bordered field grid).
- * Appends one page per saved job diagram with job # and customer header.
+ * Printable datasheet: professional letter-size shop form (bordered field grid).
+ * Appends one page per saved job diagram and attached photos / documents.
  */
 export default function SimpleDatasheetPrintSheet({
   motorType = "AC",
@@ -557,6 +674,7 @@ export default function SimpleDatasheetPrintSheet({
   printContext = {},
   technicianLabel = "",
   jobDiagrams = [],
+  attachments = [],
 }) {
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
@@ -574,7 +692,7 @@ export default function SimpleDatasheetPrintSheet({
   const customerEmail = String(printContext.customerEmail || "").trim();
   const customerPo = String(printContext.customerPo || "").trim();
   const dateRaw = String(datasheet?.date || "").trim();
-  const date = dateRaw ? formatDate(dateRaw) : "—";
+  const date = dateRaw ? formatDate(dateRaw) : "-";
   const technician = String(technicianLabel || datasheet?.technician || "").trim();
   const printedAt = formatDate(new Date());
 
@@ -593,6 +711,7 @@ export default function SimpleDatasheetPrintSheet({
   };
 
   const diagramPages = <PrintDiagramPages diagrams={jobDiagrams} headerProps={headerProps} />;
+  const attachmentPages = <PrintAttachmentPages attachments={attachments} headerProps={headerProps} />;
 
   if (!isDc) {
     const section = String(datasheet?.section || "Complete Motor").trim();
@@ -647,6 +766,7 @@ export default function SimpleDatasheetPrintSheet({
           </>
         ) : null}
         {diagramPages}
+        {attachmentPages}
       </div>
     );
   }
@@ -694,6 +814,7 @@ export default function SimpleDatasheetPrintSheet({
         </PrintTabPage>
       ) : null}
       {diagramPages}
+      {attachmentPages}
     </div>
   );
 }

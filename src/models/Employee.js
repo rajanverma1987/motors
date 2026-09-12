@@ -21,6 +21,13 @@ const employeeSchema = new mongoose.Schema(
     phone: { type: String, default: "", trim: true },
     /** If true, employee can be granted login access to the CRM (full dashboard access) */
     canLogin: { type: Boolean, default: false },
+    /** Financial information access: "role" (follows role default), "allowed" (always granted), "restricted" (always restricted) */
+    financialAccess: {
+      type: String,
+      default: "role",
+      enum: ["role", "allowed", "restricted"],
+      trim: true,
+    },
     /** If true, employee may sign in to the Technician App (mobile); independent from full CRM login */
     technicianAppAccess: { type: Boolean, default: false },
     /** Bcrypt hash of password for employee login; never store plain text */

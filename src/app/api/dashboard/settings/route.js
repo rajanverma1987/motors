@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { connectDB } from "@/lib/db";
 import UserSettings from "@/models/UserSettings";
-import { getPortalUserFromRequest, setPortalUiCookie } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, isPortalEmployee, setPortalUiCookie } from "@/lib/auth-portal";
 import {
   mergeUserSettings,
   sanitizeUserSettingsPatch,
@@ -34,6 +34,12 @@ export async function PATCH(request) {
     const user = await getPortalUserFromRequest(request);
     if (!user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(user)) {
+      return NextResponse.json(
+        { error: "Access denied. Settings can only be modified by the main shop login." },
+        { status: 403 }
+      );
     }
     const body = await request.json().catch(() => ({}));
     const patch = sanitizeUserSettingsPatch(body);

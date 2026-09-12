@@ -54,11 +54,11 @@ const faqItems = [
   },
   {
     q: "Should I itemize labor and parts separately on a repair invoice?",
-    a: "Yes for industrial customers — most plants require itemization to process the payment at all, and a lump sum invites a call from purchasing that delays payment by weeks. The exception is a fixed-price quote the customer already approved, where you invoice the agreed total and attach the itemized detail as backup.",
+    a: "Yes for industrial customers, most plants require itemization to process the payment at all, and a lump sum invites a call from purchasing that delays payment by weeks. The exception is a fixed-price quote the customer already approved, where you invoice the agreed total and attach the itemized detail as backup.",
   },
   {
     q: "What payment terms do motor repair shops normally use?",
-    a: "Net 30 is the industrial default. Shops commonly use 50% deposit on rewinds over a threshold amount, net 15 or COD for new accounts, and a stated late-fee percentage. The important part is that the terms appear on the quote, the work order, and the invoice — terms that first appear at billing are the ones that get argued about.",
+    a: "Net 30 is the industrial default. Shops commonly use 50% deposit on rewinds over a threshold amount, net 15 or COD for new accounts, and a stated late-fee percentage. The important part is that the terms appear on the quote, the work order, and the invoice, terms that first appear at billing are the ones that get argued about.",
   },
   {
     q: "Why do repair invoices get short-paid?",
@@ -82,7 +82,7 @@ const groups = [
     name: "2. Customer & job reference",
     intro: "This block is what a plant's AP clerk matches against their system. Every missing field here is a week of delay.",
     fields: [
-      { field: "Bill-to entity", holds: "The legal entity that issued the PO — often a different company than the plant that shipped you the motor.", required: true },
+      { field: "Bill-to entity", holds: "The legal entity that issued the PO, often a different company than the plant that shipped you the motor.", required: true },
       { field: "Ship-to / site", holds: "Where the repaired unit went, if different from bill-to.", required: true },
       { field: "Customer PO number", holds: "The single most common reason industrial invoices are rejected. Get it at intake.", required: true },
       { field: "Job / work order number", holds: "The same number as your work order, so the customer can tie the invoice to what they approved.", required: true },
@@ -92,7 +92,7 @@ const groups = [
   {
     name: "3. Labor",
     fields: [
-      { field: "Operation description", holds: "Strip and clean, rewind, machining, bearing replacement, balance, assembly, testing — one line each.", required: true },
+      { field: "Operation description", holds: "Strip and clean, rewind, machining, bearing replacement, balance, assembly, testing, one line each.", required: true },
       { field: "Hours", holds: "Actual hours by operation, from the work order.", required: true },
       { field: "Rate", holds: "Your shop rate. Show straight-time and overtime or field-service rates separately if they differ.", required: true },
       { field: "Line total", holds: "Hours multiplied by rate, per operation.", required: true },
@@ -194,7 +194,7 @@ export default function RepairShopInvoiceTemplatePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Repair shop invoice template"
-        description="An invoice built for motor and rewind work — itemized labor, parts, outside services, core credits, and the reference fields that stop industrial customers from short-paying you. Free to copy, no sign-up."
+        description="An invoice built for motor and rewind work, itemized labor, parts, outside services, core credits, and the reference fields that stop industrial customers from short-paying you. Free to copy, no sign-up."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         sidebarTitle="Getting paid faster"

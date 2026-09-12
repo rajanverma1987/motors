@@ -8,6 +8,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
+import { useAuth } from "@/contexts/auth-context";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import DocumentPreviewSheet from "@/components/dashboard/document-preview-sheet";
 import {
@@ -53,6 +54,7 @@ export default function SendDocumentPreviewModal({
 }) {
   const toast = useToast();
   const fmt = useFormatMoney();
+  const { isOwner } = useAuth();
   const { settings: accountSettings } = useUserSettings();
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
@@ -280,13 +282,19 @@ export default function SendDocumentPreviewModal({
               role="status"
             >
               <p>{sendMeta.smtp.message}</p>
-              <Link
-                href="/dashboards/settings?section=smtp"
-                className="mt-2 inline-block font-medium underline underline-offset-2"
-                onClick={() => onClose?.()}
-              >
-                Open Email Settings
-              </Link>
+              {isOwner ? (
+                <Link
+                  href="/dashboards/settings?section=smtp"
+                  className="mt-2 inline-block font-medium underline underline-offset-2"
+                  onClick={() => onClose?.()}
+                >
+                  Open Email Settings
+                </Link>
+              ) : (
+                <p className="mt-2 text-xs opacity-90">
+                  Please contact the main shop administrator to configure email settings.
+                </p>
+              )}
             </div>
           ) : null}
 

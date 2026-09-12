@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/models/User";
-import { getPortalUserFromRequest, hashPassword, verifyPassword } from "@/lib/auth-portal";
+import { getPortalUserFromRequest, hashPassword, isPortalEmployee, verifyPassword } from "@/lib/auth-portal";
 import { LIMITS } from "@/lib/validation";
 import { getPasswordPolicyError } from "@/lib/password-policy";
 
@@ -14,6 +14,12 @@ export async function POST(request) {
     const portal = await getPortalUserFromRequest(request);
     if (!portal?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (isPortalEmployee(portal)) {
+      return NextResponse.json(
+        { error: "Access denied. Employee accounts cannot change shop credentials." },
+        { status: 403 }
+      );
     }
     const body = await request.json().catch(() => ({}));
     const currentPassword = typeof body?.currentPassword === "string" ? body.currentPassword : "";
