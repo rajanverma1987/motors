@@ -1,10 +1,12 @@
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SalesCommission from "@/models/SalesCommission";
+import UserSettings from "@/models/UserSettings";
 import {
   RECORD_TYPE_INVOICE,
   RECORD_TYPE_JOB,
   RECORD_TYPE_RFQ,
+  isSimpleInvoiceRecord,
 } from "@/lib/simple-service-proposal-form";
 import { resolvePoStatus } from "@/lib/simple-purchase-order-form";
 import {
@@ -19,6 +21,12 @@ import {
   resolveDocDay,
   toYmd,
 } from "@/lib/simple-reports/helpers";
+import {
+  invoiceStatusAllowedSlugs,
+  quoteStatusSelectOptionsFromMerged,
+  workOrderClosedStatusesFromMerged,
+} from "@/lib/dropdown-catalog";
+import { mergeUserSettings } from "@/lib/user-settings";
 import { listMonthKeys } from "@/lib/simple-hub-overview-dates";
 
 export { listMonthKeys } from "@/lib/simple-hub-overview-dates";
@@ -91,10 +99,17 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
   const to = String(options.to || "").trim().slice(0, 10);
   const monthKeys = listMonthKeys(from, to);
 
-  const [proposals, purchaseOrders] = await Promise.all([
+  const [proposals, purchaseOrders, settingsDoc] = await Promise.all([
     SimpleServiceProposal.find({ createdByEmail: email }).limit(FETCH_LIMIT).lean(),
     SimplePurchaseOrder.find({ createdByEmail: email }).limit(FETCH_LIMIT).lean(),
+    UserSettings.findOne({ ownerEmail: email }).lean(),
   ]);
+  const mergedSettings = mergeUserSettings(settingsDoc?.settings);
+  const closedJobStatuses = workOrderClosedStatusesFromMerged(mergedSettings);
+  const invoiceStatusValues = invoiceStatusAllowedSlugs(mergedSettings);
+  const quoteStatusValues = quoteStatusSelectOptionsFromMerged(mergedSettings).map((o) =>
+    String(o.value || "").trim()
+  );
 
   const simpleQuoteIds = (proposals || []).map((d) => String(d._id));
   const commissions =
@@ -121,6 +136,9 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
   let cashReceived = 0;
   let amountReceivable = 0;
   let openJobsCount = 0;
+  let closedJobsCount = 0;
+  const openJobs = [];
+  const closedJobs = [];
   let unpaidPoAmount = 0;
   let unpaidCommissionAmount = 0;
   let commissionPaidAmount = 0;
@@ -140,24 +158,50 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
   for (const doc of proposals || []) {
     const recordType = String(doc.recordType || RECORD_TYPE_RFQ).toUpperCase();
 
-    if (recordType === RECORD_TYPE_JOB || recordType === RECORD_TYPE_RFQ) {
+    const isInvoicedRecord =
+      recordType === RECORD_TYPE_INVOICE ||
+      isInvoiceSp(doc) ||
+      isSimpleInvoiceRecord(doc, invoiceStatusValues, quoteStatusValues);
+
+    if (recordType === RECORD_TYPE_JOB || isInvoicedRecord) {
       const day = resolveDocDay(doc, ["dateCreated", "date", "createdAt"]);
-      const money = computeSpMoney(doc);
-      if (dayInRange(day, from, to)) {
-        const label =
-          recordType === RECORD_TYPE_JOB
-            ? String(doc.jobStatus || doc.status || "Job").trim() || "Job"
-            : String(doc.status || "RFQ").trim() || "RFQ";
-        bumpStatus(jobsByStatusMap, `${recordType}: ${label}`, money.grandTotal);
-      }
-      if (recordType === RECORD_TYPE_JOB && !isTerminalJobStatus(doc.status, doc.jobStatus)) {
-        openJobsCount += 1;
+      const jobMoney = computeSpMoney(doc);
+      const jobRow = {
+        id: String(doc._id),
+        documentNumber: String(doc.documentNumber || doc.quote || "").trim(),
+        companyName: String(doc.companyName || "").trim() || "Customer",
+        jobStatus: String(doc.jobStatus || "").trim() || "No work order status",
+        dueDate: toYmd(doc.dueDate),
+        dateCreated: day,
+        amount: round2(jobMoney.grandTotal),
+      };
+
+      if (recordType === RECORD_TYPE_JOB) {
+        const isClosed = isTerminalJobStatus(doc.status, doc.jobStatus, closedJobStatuses);
+        if (dayInRange(day, from, to) && !isClosed) {
+          const label = String(doc.jobStatus || "").trim() || "No work order status";
+          bumpStatus(jobsByStatusMap, label, jobMoney.grandTotal);
+        }
+        if (isClosed) {
+          closedJobsCount += 1;
+          if (closedJobs.length < 500) closedJobs.push(jobRow);
+        } else {
+          openJobsCount += 1;
+          if (openJobs.length < 500) openJobs.push(jobRow);
+        }
+      } else if (
+        String(doc.jobStatus || "").trim() &&
+        isTerminalJobStatus(doc.status, doc.jobStatus, closedJobStatuses)
+      ) {
+        // Invoiced jobs whose work-order status marks the job closed.
+        closedJobsCount += 1;
+        if (closedJobs.length < 500) closedJobs.push(jobRow);
       }
     }
 
     if (!isInvoiceSp(doc) && recordType !== RECORD_TYPE_INVOICE) continue;
 
-    const money = computeSpInvoiceMoney(doc);
+    const invoiceMoney = computeSpInvoiceMoney(doc);
     const invoiceDay = resolveDocDay(doc, [
       "invoiceSubmitDate",
       "dateCreated",
@@ -166,18 +210,18 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
     ]);
 
     if (dayInRange(invoiceDay, from, to)) {
-      revenue += money.grandTotal;
-      bumpPayment(invoicesByPaymentMap, money.paymentStatus, money.grandTotal);
+      revenue += invoiceMoney.grandTotal;
+      bumpPayment(invoicesByPaymentMap, invoiceMoney.paymentStatus, invoiceMoney.grandTotal);
       const mk = monthKeyFromDay(invoiceDay);
       if (mk && revenueByMonthMap[mk]) {
-        revenueByMonthMap[mk].amount += money.grandTotal;
+        revenueByMonthMap[mk].amount += invoiceMoney.grandTotal;
       }
     }
 
-    if (money.unpaid > 0) {
-      amountReceivable += money.unpaid;
+    if (invoiceMoney.unpaid > 0) {
+      amountReceivable += invoiceMoney.unpaid;
       const aging = agingFromDueDate(doc.dueDate);
-      bumpAging(arAgingMap, aging.bucket, money.unpaid);
+      bumpAging(arAgingMap, aging.bucket, invoiceMoney.unpaid);
     }
 
     const payments = Array.isArray(doc.payments) ? doc.payments : [];
@@ -190,14 +234,14 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
         const mk = monthKeyFromDay(paidDay);
         if (mk && cashByMonthMap[mk]) cashByMonthMap[mk].amount += amt;
       }
-    } else if (money.isPaid && money.grandTotal > 0) {
+    } else if (invoiceMoney.isPaid && invoiceMoney.grandTotal > 0) {
       const paidDay =
         toYmd(doc.invoicePaidDate) ||
         resolveDocDay(doc, ["invoicePaidDate", "updatedAt", "createdAt"]);
       if (dayInRange(paidDay, from, to)) {
-        cashReceived += money.grandTotal;
+        cashReceived += invoiceMoney.grandTotal;
         const mk = monthKeyFromDay(paidDay);
-        if (mk && cashByMonthMap[mk]) cashByMonthMap[mk].amount += money.grandTotal;
+        if (mk && cashByMonthMap[mk]) cashByMonthMap[mk].amount += invoiceMoney.grandTotal;
       }
     }
   }
@@ -275,8 +319,8 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
 
   for (const doc of proposals || []) {
     const recordType = String(doc.recordType || RECORD_TYPE_RFQ).toUpperCase();
-    if (recordType === RECORD_TYPE_JOB || recordType === RECORD_TYPE_RFQ) {
-      if (isTerminalJobStatus(doc.status, doc.jobStatus)) continue;
+    if (recordType === RECORD_TYPE_JOB) {
+      if (isTerminalJobStatus(doc.status, doc.jobStatus, closedJobStatuses)) continue;
       if (!doc.dueDate) continue;
       const aging = agingFromDueDate(doc.dueDate);
       if (aging.daysPastDue != null && aging.daysPastDue > 0) {
@@ -387,9 +431,14 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
       cashReceived: round2(cashReceived),
       amountReceivable: round2(amountReceivable),
       openJobsCount,
+      closedJobsCount,
       unpaidPoAmount: round2(unpaidPoAmount),
       unpaidCommissionAmount: round2(unpaidCommissionAmount),
     },
+    openJobs: openJobs.sort((a, b) => String(b.dateCreated || "").localeCompare(String(a.dateCreated || ""))),
+    closedJobs: closedJobs.sort((a, b) =>
+      String(b.dateCreated || "").localeCompare(String(a.dateCreated || ""))
+    ),
     overdueWork: {
       summary: {
         jobsCount: overdueJobsCount,

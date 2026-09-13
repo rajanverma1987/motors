@@ -6,7 +6,10 @@ import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
-import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
+import {
+  resolveQuoteInvoiceStatusDisplayLabel,
+  workOrderClosedStatusesFromMerged,
+} from "@/lib/dropdown-catalog";
 import { resolvePoStatus, resolveSimplePoType } from "@/lib/simple-purchase-order-form";
 import {
   agingBucketLabel,
@@ -323,10 +326,12 @@ async function buildOverdueStatus(ownerEmail, currency, filters, reportOpts = {}
   const itemTypeFilter = String(filters.itemType || "").trim().toLowerCase();
   const bucketFilter = String(filters.overdueBucket || "").trim().toLowerCase();
 
-  const [proposals, purchaseOrders] = await Promise.all([
+  const [proposals, purchaseOrders, mergedSettings] = await Promise.all([
     itemTypeFilter === "po" ? [] : loadServiceProposals(ownerEmail),
     itemTypeFilter === "job" || itemTypeFilter === "invoice" ? [] : loadPurchaseOrders(ownerEmail),
+    loadOwnerSettings(ownerEmail),
   ]);
+  const closedJobStatuses = workOrderClosedStatusesFromMerged(mergedSettings);
 
   const headers = [
     "Item type",
@@ -343,11 +348,11 @@ async function buildOverdueStatus(ownerEmail, currency, filters, reportOpts = {}
 
   const rows = [];
 
-  // Overdue Jobs
+  // Overdue Jobs (Converted to Job only; RFQs are excluded)
   if (!itemTypeFilter || itemTypeFilter === "job") {
     for (const doc of proposals) {
-      if (!isPipelineSp(doc)) continue;
-      if (isTerminalJobStatus(doc.status, doc.jobStatus)) continue;
+      if (String(doc?.recordType || "").toUpperCase() !== "JOB") continue;
+      if (isTerminalJobStatus(doc.status, doc.jobStatus, closedJobStatuses)) continue;
       if (!doc.dueDate) continue;
       const aging = agingFromDueDate(doc.dueDate);
       if (aging.daysPastDue == null || aging.daysPastDue <= 0) continue;

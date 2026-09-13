@@ -20,10 +20,16 @@ import {
 import { FiEye, FiFileText } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
+import Modal from "@/components/ui/modal";
+import SimpleReportViewModal from "@/components/simple/simple-report-view-modal";
+import { useAlert } from "@/components/confirm-provider";
 import { useFormatDate, useFormatMoneyAbbreviated } from "@/contexts/user-settings-context";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { listMonthKeys } from "@/lib/simple-hub-overview-dates";
+import { nativeShareFile } from "@/lib/mobile-native-share";
+
+const OVERDUE_STATUS_REPORT_ID = "overdue-status";
 
 const PERIOD_PRESETS = [
   { id: "30d", label: "Last 30 days" },
@@ -85,9 +91,10 @@ function formatMonthLabel(month) {
   return d.toLocaleString("en-US", { month: "short", year: "2-digit", timeZone: "UTC" });
 }
 
-function KpiCard({ label, value, loading }) {
-  return (
-    <div className="rounded-lg border border-border bg-card px-4 py-3">
+function KpiCard({ label, value, loading, onClick = null }) {
+  const clickable = typeof onClick === "function" && !loading;
+  const body = (
+    <>
       <p className="text-xs font-medium uppercase tracking-wide text-secondary">{label}</p>
       {loading ? (
         <div
@@ -95,9 +102,152 @@ function KpiCard({ label, value, loading }) {
           aria-hidden
         />
       ) : (
-        <p className="mt-1 text-xl font-bold tabular-nums text-title sm:text-2xl">{value}</p>
+        <p
+          className={`mt-1 text-xl font-bold tabular-nums sm:text-2xl ${
+            clickable ? "text-primary" : "text-title"
+          }`}
+        >
+          {value}
+        </p>
       )}
-    </div>
+    </>
+  );
+  if (clickable) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        {body}
+      </button>
+    );
+  }
+  return <div className="rounded-lg border border-border bg-card px-4 py-3">{body}</div>;
+}
+
+function DashboardJobsListModal({
+  open,
+  onClose,
+  title,
+  jobs,
+  formatMoney,
+  canViewFinancials,
+  onOpenJob,
+}) {
+  const formatDate = useFormatDate();
+  const [page, setPage] = useState(1);
+  const pageSize = 15;
+  const list = Array.isArray(jobs) ? jobs : [];
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return list.slice(start, start + pageSize);
+  }, [list, currentPage, pageSize]);
+
+  useEffect(() => {
+    if (open) setPage(1);
+  }, [open, title]);
+
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={title}
+      size="5xl"
+      width="min(960px, 96vw)"
+      height="min(80vh, 720px)"
+      closeOnOutsideClick={false}
+    >
+      {list.length === 0 ? (
+        <p className="py-10 text-center text-sm text-secondary">No jobs in this list.</p>
+      ) : (
+        <div className="flex min-h-0 flex-col">
+          <div className="min-h-0 flex-1 overflow-auto">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="sticky top-0 border-b border-border bg-card text-xs uppercase tracking-wide text-secondary">
+                <tr>
+                  <th className="py-2 pr-3 font-semibold">Job #</th>
+                  <th className="py-2 px-3 font-semibold">Customer</th>
+                  <th className="py-2 px-3 font-semibold">Work order status</th>
+                  <th className="py-2 px-3 font-semibold">Due</th>
+                  {canViewFinancials ? (
+                    <th className="py-2 px-3 text-right font-semibold">Amount</th>
+                  ) : null}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paged.map((job) => (
+                  <tr key={job.id} className="hover:bg-muted/20">
+                    <td className="py-2 pr-3">
+                      <button
+                        type="button"
+                        onClick={() => onOpenJob?.(job)}
+                        className="font-mono font-semibold text-primary hover:underline"
+                      >
+                        {job.documentNumber || "—"}
+                      </button>
+                    </td>
+                    <td className="py-2 px-3 font-medium text-title">{job.companyName || "—"}</td>
+                    <td className="py-2 px-3">
+                      <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                        {job.jobStatus || "—"}
+                      </Badge>
+                    </td>
+                    <td className="py-2 px-3 tabular-nums text-secondary">
+                      {job.dueDate ? formatDate(job.dueDate) : "—"}
+                    </td>
+                    {canViewFinancials ? (
+                      <td className="py-2 px-3 text-right font-medium tabular-nums text-title">
+                        {formatMoney(job.amount || 0)}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {totalPages > 1 ? (
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-2 text-xs text-secondary">
+              <div>
+                Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                {Math.min(currentPage * pageSize, list.length)} of {list.length}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  Previous
+                </Button>
+                <span>
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-7 px-2 text-xs"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="mt-3 border-t border-border pt-2 text-xs text-secondary">
+              {list.length} job{list.length === 1 ? "" : "s"}
+            </p>
+          )}
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -364,11 +514,22 @@ function getStatusBadgeVariant(status) {
 
 function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFinancials = true }) {
   const router = useRouter();
+  const alert = useAlert();
   const formatDate = useFormatDate();
   const { openJob } = useSimpleJobView();
   const [filterType, setFilterType] = useState("all");
   const [page, setPage] = useState(1);
   const pageSize = 10;
+
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+  const [reportData, setReportData] = useState(null);
+  const [reportPage, setReportPage] = useState(1);
+  const [reportPageSize, setReportPageSize] = useState(50);
+  const [reportSortBy, setReportSortBy] = useState(null);
+  const [reportSortDir, setReportSortDir] = useState("desc");
+  const [reportBusyAction, setReportBusyAction] = useState("");
 
   const summary = overdueWork?.summary || {
     jobsCount: 0,
@@ -394,6 +555,152 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
     return filteredItems.slice(start, start + pageSize);
   }, [filteredItems, currentPage, pageSize]);
 
+  const buildOverdueReportParams = useCallback(() => {
+    const params = new URLSearchParams({ report: OVERDUE_STATUS_REPORT_ID });
+    if (filterType && filterType !== "all") {
+      params.set("itemType", filterType);
+    }
+    return params;
+  }, [filterType]);
+
+  const loadOverdueReportPage = useCallback(
+    async ({ page: nextPage, pageSize: nextPageSize, sortBy, sortDir, showBusy = true } = {}) => {
+      if (showBusy) setReportBusyAction("view");
+      setReportLoading(true);
+      setReportError("");
+      try {
+        const params = buildOverdueReportParams();
+        params.set("page", String(Math.max(1, Number(nextPage) || 1)));
+        params.set("pageSize", String(Math.min(200, Math.max(1, Number(nextPageSize) || 50))));
+        if (sortBy != null && Number.isFinite(Number(sortBy))) {
+          params.set("sortBy", String(Number(sortBy)));
+        }
+        if (sortDir === "asc" || sortDir === "desc") {
+          params.set("sortDir", sortDir);
+        }
+        const res = await fetch(`/api/dashboard/simple-reports/view?${params.toString()}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to load report");
+        setReportData(data);
+        setReportPage(Number(data.page) || 1);
+        setReportPageSize(Number(data.pageSize) || 50);
+        setReportSortBy(Number.isFinite(Number(data.sortBy)) ? Number(data.sortBy) : null);
+        setReportSortDir(data.sortDir === "asc" ? "asc" : "desc");
+      } catch (err) {
+        setReportError(err?.message || "Failed to load report.");
+      } finally {
+        setReportLoading(false);
+        if (showBusy) setReportBusyAction("");
+      }
+    },
+    [buildOverdueReportParams]
+  );
+
+  const handleOpenFullReport = useCallback(async () => {
+    setReportOpen(true);
+    setReportData(null);
+    setReportPage(1);
+    setReportPageSize(50);
+    setReportSortBy(null);
+    setReportSortDir("desc");
+    await loadOverdueReportPage({
+      page: 1,
+      pageSize: 50,
+      sortBy: null,
+      sortDir: "desc",
+      showBusy: true,
+    });
+  }, [loadOverdueReportPage]);
+
+  const handleCloseFullReport = useCallback(() => {
+    setReportOpen(false);
+    setReportError("");
+    setReportData(null);
+    setReportLoading(false);
+    setReportPage(1);
+    setReportSortBy(null);
+    setReportSortDir("desc");
+    setReportBusyAction("");
+  }, []);
+
+  const downloadOverdueReport = useCallback(async () => {
+    if (reportBusyAction) return;
+    setReportBusyAction("download");
+    try {
+      const params = buildOverdueReportParams();
+      const res = await fetch(`/api/dashboard/simple-reports/export?${params.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Download failed");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(disposition);
+      const filename = match?.[1] || `${OVERDUE_STATUS_REPORT_ID}.xlsx`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to download report.",
+        variant: "danger",
+      });
+    } finally {
+      setReportBusyAction("");
+    }
+  }, [alert, buildOverdueReportParams, reportBusyAction]);
+
+  const shareOverdueReportPdf = useCallback(async () => {
+    if (reportBusyAction) return;
+    setReportBusyAction("share");
+    try {
+      const params = buildOverdueReportParams();
+      if (reportSortBy != null && Number.isFinite(Number(reportSortBy))) {
+        params.set("sortBy", String(Number(reportSortBy)));
+      }
+      if (reportSortDir === "asc" || reportSortDir === "desc") {
+        params.set("sortDir", reportSortDir);
+      }
+      const res = await fetch(`/api/dashboard/simple-reports/pdf?${params.toString()}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to build PDF");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") || "";
+      const match = /filename="([^"]+)"/i.exec(disposition);
+      const filename = match?.[1] || `${OVERDUE_STATUS_REPORT_ID}.pdf`;
+      await nativeShareFile({
+        blob,
+        filename,
+        title: "Overdue status",
+        text: "Overdue status PDF from IQMotorBase",
+      });
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+      await alert({
+        title: "Share failed",
+        message: err?.message || "Could not share this report.",
+        variant: "danger",
+      });
+    } finally {
+      setReportBusyAction("");
+    }
+  }, [alert, buildOverdueReportParams, reportBusyAction, reportSortBy, reportSortDir]);
+
   const handleOpenItem = useCallback(
     (item) => {
       if (!item?.id) return;
@@ -405,10 +712,6 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
     },
     [openJob, router]
   );
-
-  const handleOpenFullReport = useCallback(() => {
-    router.push("/dashboards?tab=reports&report=overdue-status");
-  }, [router]);
 
   return (
     <div className="mb-6 rounded-lg border border-border bg-card p-4 shadow-sm">
@@ -438,77 +741,64 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
         </Button>
       </div>
 
-      {/* Summary Filter Pills */}
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-b border-border pb-3">
-        <button
-          type="button"
-          onClick={() => {
-            setFilterType("all");
-            setPage(1);
-          }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            filterType === "all"
-              ? "bg-primary text-white"
-              : "bg-muted text-secondary hover:bg-muted/80"
-          }`}
-        >
-          <span>All overdue</span>
-          <span className="font-bold">{summary.totalCount}</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setFilterType("job");
-            setPage(1);
-          }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            filterType === "job"
-              ? "bg-primary text-white"
-              : "bg-muted text-secondary hover:bg-muted/80"
-          }`}
-        >
-          <span>Jobs</span>
-          <span className="font-bold">
-            {summary.jobsCount} ({formatMoney(summary.jobsAmount)})
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setFilterType("po");
-            setPage(1);
-          }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            filterType === "po"
-              ? "bg-primary text-white"
-              : "bg-muted text-secondary hover:bg-muted/80"
-          }`}
-        >
-          <span>PO deliveries</span>
-          <span className="font-bold">
-            {summary.posCount} ({formatMoney(summary.posAmount)})
-          </span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setFilterType("invoice");
-            setPage(1);
-          }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-            filterType === "invoice"
-              ? "bg-primary text-white"
-              : "bg-muted text-secondary hover:bg-muted/80"
-          }`}
-        >
-          <span>Invoices</span>
-          <span className="font-bold">
-            {summary.invoicesCount} ({formatMoney(summary.invoicesAmount)})
-          </span>
-        </button>
+      {/* Summary filter tabs */}
+      <div
+        role="tablist"
+        aria-label="Overdue work filters"
+        className="mt-4 flex w-full max-w-full flex-wrap gap-1 rounded-lg border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
+      >
+        {[
+          {
+            id: "all",
+            label: "All overdue",
+            count: summary.totalCount,
+            amount: null,
+          },
+          {
+            id: "job",
+            label: "Jobs",
+            count: summary.jobsCount,
+            amount: summary.jobsAmount,
+          },
+          {
+            id: "po",
+            label: "PO deliveries",
+            count: summary.posCount,
+            amount: summary.posAmount,
+          },
+          {
+            id: "invoice",
+            label: "Invoices",
+            count: summary.invoicesCount,
+            amount: summary.invoicesAmount,
+          },
+        ].map((tab) => {
+          const isActive = filterType === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => {
+                setFilterType(tab.id);
+                setPage(1);
+              }}
+              className={`relative inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-md px-3.5 py-2 text-xs font-bold tracking-tight transition-[color,background-color,box-shadow] duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:text-sm ${
+                isActive
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-primary/10 text-primary hover:bg-primary/15"
+              }`}
+            >
+              <span>{tab.label}</span>
+              <span className={isActive ? "opacity-95" : "opacity-90"}>
+                {tab.amount == null
+                  ? tab.count
+                  : `${tab.count} (${formatMoney(tab.amount)})`}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Content */}
@@ -648,6 +938,47 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
           ) : null}
         </div>
       )}
+
+      <SimpleReportViewModal
+        open={reportOpen}
+        onClose={handleCloseFullReport}
+        title="Overdue status: Full snapshot"
+        loading={reportLoading}
+        error={reportError}
+        sheetName={reportData?.sheetName || ""}
+        headers={reportData?.headers || []}
+        rows={reportData?.rows || []}
+        amountColumns={canViewFinancials ? reportData?.amountColumns || [] : []}
+        amountTotals={canViewFinancials ? reportData?.amountTotals || [] : []}
+        rowCount={reportData?.rowCount || 0}
+        page={reportPage}
+        pageSize={reportPageSize}
+        totalPages={reportData?.totalPages || 1}
+        sortBy={reportSortBy ?? reportData?.sortBy ?? 0}
+        sortDir={reportSortDir}
+        onPageChange={(nextPage, nextPageSize) => {
+          void loadOverdueReportPage({
+            page: nextPage,
+            pageSize: nextPageSize,
+            sortBy: reportSortBy,
+            sortDir: reportSortDir,
+            showBusy: false,
+          });
+        }}
+        onSortChange={(colIdx, dir) => {
+          void loadOverdueReportPage({
+            page: 1,
+            pageSize: reportPageSize,
+            sortBy: colIdx,
+            sortDir: dir,
+            showBusy: false,
+          });
+        }}
+        downloading={reportBusyAction === "download"}
+        sharing={reportBusyAction === "share"}
+        onDownload={canViewFinancials ? downloadOverdueReport : undefined}
+        onShare={shareOverdueReportPdf}
+      />
     </div>
   );
 }
@@ -658,10 +989,12 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
 export default function DashboardOverviewPanel() {
   const formatMoney = useFormatMoneyAbbreviated();
   const { canViewFinancials } = useFinancialAccess();
+  const jobView = useSimpleJobView();
   const [period, setPeriod] = useState("12m");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
+  const [jobsListKind, setJobsListKind] = useState(null);
 
   const range = useMemo(() => rangeForPreset(period), [period]);
 
@@ -717,12 +1050,34 @@ export default function DashboardOverviewPanel() {
   const hasRevenue = revenueSeries.some((r) => r.amount > 0);
   const hasCash = cashSeries.some((r) => r.amount > 0);
   const hasJobs = jobsStatus.some((r) => r.count > 0);
+  const openJobsByStatusTotal = useMemo(
+    () => jobsStatus.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
+    [jobsStatus]
+  );
   const hasInv = invoicePay.some((r) => r.count > 0);
   const hasPo = poPay.some((r) => r.count > 0);
   const hasComm = commissionStatus.some((r) => r.count > 0 || r.amount > 0);
   const hasUnpaidCommByInvoice = unpaidCommByInvoice.some((r) => r.count > 0 || r.amount > 0);
   const hasAr = arAging.some((r) => r.amount > 0);
   const hasAp = apAging.some((r) => r.amount > 0);
+
+  const jobsListJobs =
+    jobsListKind === "closed"
+      ? data?.closedJobs || []
+      : jobsListKind === "open"
+        ? data?.openJobs || []
+        : [];
+  const jobsListTitle = jobsListKind === "closed" ? "Closed jobs" : "Open jobs";
+
+  const handleOpenListedJob = useCallback(
+    (job) => {
+      const id = String(job?.id || "").trim();
+      if (!id || !jobView?.openJob) return;
+      const listIds = jobsListJobs.map((row) => String(row.id || "").trim()).filter(Boolean);
+      jobView.openJob(id, { listIds });
+    },
+    [jobView, jobsListJobs]
+  );
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col overflow-auto px-4 py-8">
@@ -765,7 +1120,7 @@ export default function DashboardOverviewPanel() {
         </div>
       ) : null}
 
-      <div className={`mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 ${canViewFinancials ? "xl:grid-cols-3 2xl:grid-cols-6" : "xl:grid-cols-2 2xl:grid-cols-2"}`}>
+      <div className={`mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 ${canViewFinancials ? "xl:grid-cols-3 2xl:grid-cols-4" : "xl:grid-cols-2"}`}>
         {canViewFinancials ? (
           <>
             <KpiCard label="Revenue" value={formatMoney(kpis.revenue || 0)} loading={loading} />
@@ -773,7 +1128,18 @@ export default function DashboardOverviewPanel() {
             <KpiCard label="Amount receivable" value={formatMoney(kpis.amountReceivable || 0)} loading={loading} />
           </>
         ) : null}
-        <KpiCard label="Open jobs" value={String(kpis.openJobsCount || 0)} loading={loading} />
+        <KpiCard
+          label="Open jobs"
+          value={String(kpis.openJobsCount || 0)}
+          loading={loading}
+          onClick={() => setJobsListKind("open")}
+        />
+        <KpiCard
+          label="Closed jobs"
+          value={String(kpis.closedJobsCount || 0)}
+          loading={loading}
+          onClick={() => setJobsListKind("closed")}
+        />
         {canViewFinancials ? (
           <>
             <KpiCard label="Unpaid POs" value={formatMoney(kpis.unpaidPoAmount || 0)} loading={loading} />
@@ -785,6 +1151,16 @@ export default function DashboardOverviewPanel() {
           </>
         ) : null}
       </div>
+
+      <DashboardJobsListModal
+        open={Boolean(jobsListKind)}
+        onClose={() => setJobsListKind(null)}
+        title={jobsListTitle}
+        jobs={jobsListJobs}
+        formatMoney={formatMoney}
+        canViewFinancials={canViewFinancials}
+        onOpenJob={handleOpenListedJob}
+      />
 
       {/* Overdue Work & Action Tracker */}
       <OverdueWorkTrackerCard
@@ -885,7 +1261,11 @@ export default function DashboardOverviewPanel() {
       ) : null}
 
       <div className={`mb-6 grid grid-cols-1 gap-4 ${canViewFinancials ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}>
-        <ChartCard title="Jobs by status" loading={loading} empty={!loading && !hasJobs}>
+        <ChartCard
+          title={`Open Jobs By Status (${openJobsByStatusTotal})`}
+          loading={loading}
+          empty={!loading && !hasJobs}
+        >
           <LabeledDonut
             data={jobsStatus}
             dataKey="count"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FiDownload, FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
@@ -37,6 +37,7 @@ function emptyFiltersForCatalog() {
  */
 export default function ReportsPanel() {
   const alert = useAlert();
+  const router = useRouter();
   const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const searchParams = useSearchParams();
@@ -235,23 +236,37 @@ export default function ReportsPanel() {
 
   useEffect(() => {
     const reportParam = searchParams.get("report");
-    if (reportParam && SIMPLE_REPORT_CATALOG.some((r) => r.id === reportParam)) {
-      if (!viewOpen && viewReportId !== reportParam && !busyId) {
-        viewReport(reportParam);
+    if (!reportParam) {
+      if (viewReportId && !viewOpen) {
+        setViewReportId("");
       }
+      return;
+    }
+    if (!SIMPLE_REPORT_CATALOG.some((r) => r.id === reportParam)) return;
+    // Keep viewReportId while closing so we do not reopen before the URL updates.
+    if (!viewOpen && viewReportId !== reportParam && !busyId) {
+      viewReport(reportParam);
     }
   }, [searchParams, viewOpen, viewReportId, busyId, viewReport]);
 
   const closeView = useCallback(() => {
     setViewOpen(false);
-    setViewReportId("");
     setViewError("");
     setViewData(null);
     setViewLoading(false);
     setViewPage(1);
     setViewSortBy(null);
     setViewSortDir("desc");
-  }, []);
+    if (searchParams.get("report")) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("report");
+      const qs = params.toString();
+      router.replace(qs ? `/dashboards?${qs}` : "/dashboards", { scroll: false });
+      // viewReportId cleared after URL loses `report` (see effect above)
+    } else {
+      setViewReportId("");
+    }
+  }, [router, searchParams]);
 
   const handleViewPageChange = useCallback(
     (nextPage, nextPageSize) => {

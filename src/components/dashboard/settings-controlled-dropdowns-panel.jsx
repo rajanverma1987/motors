@@ -34,6 +34,7 @@ function syncWorkOrderLegacy(setDraft, woEntries) {
     workOrderStatuses: woEntries.map((e) => e.value).filter(Boolean).slice(0, MAX_OPTIONS),
     workOrderStatusTileColors: tc,
     shopFloorBoardOrder: woEntries.filter((e) => e.showOnShopFloor !== false).map((e) => e.value),
+    workOrderClosedStatuses: woEntries.filter((e) => e.marksJobClosed).map((e) => e.value),
   }));
 }
 
@@ -161,6 +162,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         tileTextColor: "",
         tileColor: "",
         showOnShopFloor: true,
+        marksJobClosed: false,
       },
     ]);
     setDrafts((p) => ({ ...p, [selectedKey]: "" }));
@@ -225,6 +227,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
         tileTextColor: prev?.tileTextColor ?? "",
         tileColor: prev?.tileColor || "",
         showOnShopFloor: prev?.showOnShopFloor !== false,
+        marksJobClosed: prev?.marksJobClosed === true,
       };
     });
     setBulkSaving(true);
@@ -274,8 +277,10 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
             {showShopFloorColumn ? (
               <>
                 {" "}
-                Use <span className="font-medium text-title">Shop floor</span> to show or hide each status as a column on
-                the shop floor job board (work orders in hidden statuses are not listed there).
+                Use <span className="font-medium text-title">Show on shop floor</span> to show or hide each status as a
+                column on the shop floor job board (work orders in hidden statuses are not listed there). Use{" "}
+                <span className="font-medium text-title">Marks the Job Closed</span> so jobs with that work order status
+                are treated as closed on the Dashboard (excluded from Open jobs and Due / overdue lists).
               </>
             ) : null}
             {showQuoteFilterGroupColumns ? (
@@ -460,7 +465,7 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                       </>
                     ) : null}
                     {showShopFloorColumn ? (
-                      <div className="flex items-end pb-1">
+                      <div className="flex flex-col gap-2 pb-1 sm:col-span-2">
                         <Checkbox
                           checked={row.showOnShopFloor !== false}
                           onChange={(e) => {
@@ -470,6 +475,16 @@ export default function SettingsControlledDropdownsPanel({ draft, setDraft }) {
                           }}
                           label="Show on shop floor"
                           aria-label={`Show ${row.value} on shop floor job board`}
+                        />
+                        <Checkbox
+                          checked={row.marksJobClosed === true}
+                          onChange={(e) => {
+                            const next = [...entries];
+                            next[idx] = { ...next[idx], marksJobClosed: e.target.checked };
+                            patchEntries(next);
+                          }}
+                          label="Marks the Job Closed"
+                          aria-label={`Marks job closed when status is ${row.value}`}
                         />
                       </div>
                     ) : null}

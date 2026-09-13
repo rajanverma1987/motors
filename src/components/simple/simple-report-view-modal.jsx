@@ -110,9 +110,6 @@ export default function SimpleReportViewModal({
           {sharing ? "…" : "Share"}
         </Button>
       ) : null}
-      <Button type="button" variant="outline" size="sm" className="text-xs shrink-0" onClick={onClose}>
-        Close
-      </Button>
     </div>
   );
 

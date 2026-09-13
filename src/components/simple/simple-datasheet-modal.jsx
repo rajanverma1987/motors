@@ -209,10 +209,10 @@ export default function SimpleDatasheetModal({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setSaving(true);
     try {
       await onSave?.(isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form));
-      onClose?.();
     } catch (err) {
       await alert({
         title: "Error",

@@ -737,12 +737,19 @@ export default function ServiceProposalFormModal({
     setDatasheetOpen(true);
   };
 
-  const handleDatasheetSave = (sheet) => {
+  const handleDatasheetSave = async (sheet) => {
     const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
-    setForm((f) => ({
-      ...f,
+    const nextForm = {
+      ...form,
       ...(isDc ? { dcDatasheet: { ...sheet } } : { acDatasheet: { ...sheet } }),
-    }));
+    };
+    // Persist like Receiving / Shipping: keep datasheet modal open after save.
+    const saved = await saveForm(nextForm, {
+      successMessage: "Datasheet saved.",
+    });
+    if (!saved) {
+      throw new Error("Failed to save datasheet");
+    }
   };
 
   const handleCustomerChange = (customerId) => {

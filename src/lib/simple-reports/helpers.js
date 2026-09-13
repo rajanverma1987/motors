@@ -201,7 +201,19 @@ export function agingBucketLabel(bucket) {
   }
 }
 
-export function isTerminalJobStatus(status, jobStatus) {
+export function isTerminalJobStatus(status, jobStatus, closedStatuses = null) {
+  const jobKey = String(jobStatus || "")
+    .trim()
+    .toLowerCase();
+  const configured = Array.isArray(closedStatuses)
+    ? closedStatuses.map((s) => String(s || "").trim().toLowerCase()).filter(Boolean)
+    : [];
+  if (configured.length > 0) {
+    if (jobKey && configured.includes(jobKey)) return true;
+    // Job has a work-order status that is not marked closed.
+    if (jobKey) return false;
+  }
+  // Fallback when no closed statuses are configured, or job has no work-order status yet.
   const s = `${status || ""} ${jobStatus || ""}`.toLowerCase();
   return /closed|cancelled|canceled|delivered|complete|completed|void/.test(s);
 }

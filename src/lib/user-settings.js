@@ -32,6 +32,11 @@ export const USER_SETTINGS_DEFAULTS = {
    * Omitted key in stored settings means “all statuses, same order as workOrderStatuses”.
    */
   shopFloorBoardOrder: [...DEFAULT_WORK_ORDER_STATUSES],
+  /**
+   * Work order statuses that mark a Simple Job as closed (excluded from Open jobs / Due lists).
+   * Derived from controlledDropdowns.work_order_status.entries[].marksJobClosed.
+   */
+  workOrderClosedStatuses: [],
   /** Company billing address (invoices, AR, remittance) */
   accountsBillingAddress: "",
   /** Company shipping / ship-from address */
@@ -127,6 +132,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "logoDocumentScale",
   "workOrderStatuses",
   "shopFloorBoardOrder",
+  "workOrderClosedStatuses",
   "accountsBillingAddress",
   "accountsShippingAddress",
   "accountsPaymentTerms",
@@ -318,6 +324,10 @@ export function mergeUserSettings(stored) {
   merged.workOrderStatusTileColors = woDerived.tileColors;
   merged.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
     woDerived.shopFloorBoardOrder,
+    merged.workOrderStatuses
+  );
+  merged.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
+    woDerived.workOrderClosedStatuses,
     merged.workOrderStatuses
   );
 
@@ -565,6 +575,10 @@ export function sanitizeUserSettingsPatch(body) {
       out.workOrderStatusTileColors = derived.tileColors;
       out.shopFloorBoardOrder = normalizeShopFloorBoardOrder(
         derived.shopFloorBoardOrder,
+        derived.statuses
+      );
+      out.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
+        derived.workOrderClosedStatuses,
         derived.statuses
       );
       continue;

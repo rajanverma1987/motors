@@ -122,8 +122,12 @@ function normalizeShowOnShopFloor(raw) {
   return true;
 }
 
+function normalizeMarksJobClosed(raw) {
+  return raw === true || raw === "true" || raw === 1;
+}
+
 /**
- * @param {{ value: string, label?: string, tileColor?: string, showOnShopFloor?: boolean }} entry
+ * @param {{ value: string, label?: string, tileColor?: string, showOnShopFloor?: boolean, marksJobClosed?: boolean }} entry
  * @param {{ boardLowerSet?: Set<string>, canonCount?: number, tiles?: Record<string, string> }} [ctx]
  */
 function normalizeWoEntry(entry, ctx = {}) {
@@ -149,6 +153,7 @@ function normalizeWoEntry(entry, ctx = {}) {
     tileTextColor: tile.tileTextColor,
     tileColor: tile.tileColor,
     showOnShopFloor,
+    marksJobClosed: normalizeMarksJobClosed(entry?.marksJobClosed),
   };
 }
 
@@ -339,6 +344,7 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoard
             !boardLowerSet.size || boardLowerSet.size >= legacyList.length
               ? true
               : boardLowerSet.has(value.toLowerCase()),
+          marksJobClosed: false,
         };
       })
       .filter(Boolean);
@@ -362,6 +368,7 @@ function normalizeWoEntries(rawEntries, legacyStatuses, legacyTiles, legacyBoard
       tileTextColor: "",
       tileColor: "",
       showOnShopFloor: true,
+      marksJobClosed: false,
     }));
   }
   return uniq;
@@ -414,7 +421,43 @@ export function deriveWorkOrderFieldsFromControlledEntries(entries) {
     statuses,
     tileColors,
     shopFloorBoardOrder: deriveShopFloorBoardOrderFromEntries(list, statuses),
+    workOrderClosedStatuses: deriveWorkOrderClosedStatusesFromEntries(list),
   };
+}
+
+/** Work order statuses that mark a Simple Job as closed (hide from Open / Due). */
+export function deriveWorkOrderClosedStatusesFromEntries(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  const out = [];
+  const seen = new Set();
+  for (const e of list) {
+    if (!e?.marksJobClosed) continue;
+    const value = String(e.value || "").trim();
+    if (!value) continue;
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+    if (out.length >= 25) break;
+  }
+  return out;
+}
+
+/**
+ * Closed work-order status labels from merged settings.
+ * @param {Record<string, unknown>|null|undefined} mergedSettings
+ * @returns {string[]}
+ */
+export function workOrderClosedStatusesFromMerged(mergedSettings) {
+  const direct = Array.isArray(mergedSettings?.workOrderClosedStatuses)
+    ? mergedSettings.workOrderClosedStatuses
+    : [];
+  if (direct.length) {
+    return direct.map((s) => String(s || "").trim()).filter(Boolean).slice(0, 25);
+  }
+  return deriveWorkOrderClosedStatusesFromEntries(
+    mergedSettings?.controlledDropdowns?.work_order_status?.entries
+  );
 }
 
 /** Statuses to show as columns on the shop floor job board (dropdown row order). */
