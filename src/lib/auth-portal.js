@@ -275,8 +275,8 @@ export async function resolveUserFinancialAccess(portalUser) {
   const email = String(portalUser.email).trim().toLowerCase();
   const isEmployee = Boolean(
     portalUser.isEmployee ||
-      portalUser.authType === "employee" ||
-      (portalUser.employeeId && String(portalUser.employeeId).trim())
+    portalUser.authType === "employee" ||
+    (portalUser.employeeId && String(portalUser.employeeId).trim())
   );
 
   await connectDB();

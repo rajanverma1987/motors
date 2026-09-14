@@ -226,6 +226,13 @@ export default function CustomerViewModal({
   const [openQuoteId, setOpenQuoteId] = useState(null);
   const [openSimpleRecordId, setOpenSimpleRecordId] = useState(null);
 
+  // Keep load effect independent of parent callback identity (e.g. confirm dialog
+  // re-renders customers-panel and recreates inline onClose → full form reload).
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   const openRecordBtnClass =
     "font-mono text-[12px] font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded";
 
@@ -308,8 +315,8 @@ export default function CustomerViewModal({
         });
         if (cancelled) return;
         if (!res.ok) {
-          toast.error("Failed to load customer");
-          onClose?.();
+          toastRef.current.error("Failed to load customer");
+          onCloseRef.current?.();
           return;
         }
         const data = await res.json();
@@ -319,15 +326,15 @@ export default function CustomerViewModal({
         setLoadingCustomerId(null);
       } catch {
         if (!cancelled) {
-          toast.error("Failed to load customer");
-          onClose?.();
+          toastRef.current.error("Failed to load customer");
+          onCloseRef.current?.();
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, customerId, toast, onClose]);
+  }, [open, customerId]);
 
   useEffect(() => {
     if (!open || !customer?.id || loadingCustomerId) return;

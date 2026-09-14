@@ -778,7 +778,7 @@ export default function Table({
         position: "sticky",
         top: 0,
         zIndex: 22,
-        backgroundColor: "hsl(var(--card))",
+        backgroundColor: "hsl(var(--form-bg))",
         boxShadow: "inset 0 -1px 0 hsl(var(--border))",
       }
     : undefined;
@@ -803,13 +803,12 @@ export default function Table({
   const tableContent = (
     <table ref={tableRef} className={tableClass} onMouseLeave={clearCellHover}>
       {colgroup}
-      <thead className="border-b-2 border-border bg-primary/[0.03] outline-none dark:bg-primary/5">
+      <thead className="border-b-2 border-border bg-card outline-none">
         {hasHeaderSubtotals ? (
-          <tr ref={headerSubtotalRowRef} className="border-b border-border">
+          <tr ref={headerSubtotalRowRef} className="border-b border-border bg-[hsl(var(--form-bg))]">
             {displayColumns.map((col, i) => {
               const style = getEffectiveColStyle(col);
               const stickyCls = stickyColClassName(i);
-              const align = alignClass[resolveColumnAlign(col)] ?? "text-left";
               const thStyle = mergeStickyCellStyle(
                 i,
                 effectiveStickyHeader ? { ...thStickySubtotalStyle, ...style } : style,
@@ -820,11 +819,18 @@ export default function Table({
                 <th
                   key={`subtotal-${col.key ?? i}`}
                   scope="col"
-                  className={`${cellPx(col)} py-1 ${headerText} leading-none text-title outline-none whitespace-nowrap ${align} ${cellBorderClass}${stickyCls ? ` ${stickyCls}` : ""} transition-colors ${cellHoverClass(-1, i)}`}
-                  style={thStyle}
+                  className={`p-1 ${headerText} leading-none text-title outline-none whitespace-nowrap ${cellBorderClass}${stickyCls ? ` ${stickyCls}` : ""} transition-colors ${cellHoverClass(-1, i)}`}
+                  style={
+                    effectiveStickyHeader
+                      ? thStyle
+                      : {
+                          ...thStyle,
+                          backgroundColor: "hsl(var(--form-bg))",
+                        }
+                  }
                   onMouseEnter={() => setCellHover({ row: -1, col: i })}
                 >
-                  {hasValue ? col.headerSubtotal : <span className="sr-only"> </span>}
+                  {hasValue ? col.headerSubtotal : <span className="block min-h-[2.25rem]" aria-hidden />}
                 </th>
               );
             })}

@@ -711,7 +711,7 @@ export default function ServiceProposalsPanel({
   const currencySubtotalBadge = useCallback((title, amount) => {
     return (
       <span
-        className="inline-flex max-w-full items-center rounded bg-primary px-1.5 py-0.5 text-[11px] font-bold leading-none tabular-nums text-white shadow-sm"
+        className="flex w-full items-center justify-end rounded-none border border-primary/25 bg-primary/[0.1] px-2 py-2 text-sm font-bold leading-none tabular-nums text-primary dark:bg-primary/20"
         title={`${title} subtotal`}
       >
         {formatSimpleMoney(amount)}
