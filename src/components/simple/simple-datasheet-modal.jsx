@@ -103,6 +103,8 @@ export default function SimpleDatasheetModal({
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [diagramOpen, setDiagramOpen] = useState(false);
   const wasOpenRef = useRef(false);
+  const formRef = useRef(form);
+  formRef.current = form;
 
   const jobNumberLabel = useMemo(() => recordTypeJobNumberLabel(recordType), [recordType]);
 
@@ -212,7 +214,8 @@ export default function SimpleDatasheetModal({
     e.stopPropagation();
     setSaving(true);
     try {
-      await onSave?.(isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form));
+      const current = formRef.current;
+      await onSave?.(isDc ? normalizeDcDatasheet(current) : normalizeAcDatasheet(current));
     } catch (err) {
       await alert({
         title: "Error",

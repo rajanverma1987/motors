@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import Textarea from "@/components/ui/textarea";
 
 /**
  * Normal text input; double-click opens a larger textarea modal to edit/save.
+ * Save uses type="button" (not form submit) so the event cannot bubble through the
+ * React portal tree into a parent <form> (e.g. Datasheet) and save stale data.
  */
 export default function SimpleDoubleClickTextEditInput({
   value = "",
@@ -21,8 +23,6 @@ export default function SimpleDoubleClickTextEditInput({
   "aria-label": ariaLabel,
   ...rest
 }) {
-  const uid = useId();
-  const formId = `dbl-edit-${uid.replace(/:/g, "")}`;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -46,6 +46,7 @@ export default function SimpleDoubleClickTextEditInput({
 
   const handleSave = (e) => {
     e?.preventDefault?.();
+    e?.stopPropagation?.();
     onChange?.(draft);
     closeEditor();
   };
@@ -76,12 +77,12 @@ export default function SimpleDoubleClickTextEditInput({
         size="md"
         zIndex={zIndex}
         actions={
-          <Button type="submit" form={formId} variant="primary" size="sm">
+          <Button type="button" variant="primary" size="sm" onClick={handleSave}>
             Save
           </Button>
         }
       >
-        <form id={formId} onSubmit={handleSave} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3">
           <Textarea
             label={label}
             value={draft}
@@ -90,7 +91,7 @@ export default function SimpleDoubleClickTextEditInput({
             placeholder={placeholder || "Enter value…"}
             textareaClassName="min-h-[10rem]"
           />
-        </form>
+        </div>
       </Modal>
     </>
   );

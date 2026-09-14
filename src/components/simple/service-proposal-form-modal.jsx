@@ -743,6 +743,7 @@ export default function ServiceProposalFormModal({
       ...form,
       ...(isDc ? { dcDatasheet: { ...sheet } } : { acDatasheet: { ...sheet } }),
     };
+    setForm(nextForm);
     // Persist like Receiving / Shipping: keep datasheet modal open after save.
     const saved = await saveForm(nextForm, {
       successMessage: "Datasheet saved.",
