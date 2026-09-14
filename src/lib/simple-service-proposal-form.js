@@ -14,7 +14,7 @@ import {
   stripLogisticsChargeOtherItems,
 } from "@/lib/simple-motor-logistics";
 import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
-import { isMongoObjectIdString } from "@/lib/technician-select-options";
+import { isMongoObjectIdString, isShopAdminSelectValue } from "@/lib/technician-select-options";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -34,6 +34,7 @@ export function pickQuotedByDisplay(...candidates) {
     const s = String(c ?? "").trim();
     if (!s) continue;
     if (isMongoObjectIdString(s)) continue;
+    if (isShopAdminSelectValue(s)) continue;
     return s;
   }
   return "";
@@ -330,9 +331,14 @@ export function cloneServiceProposalAsNewRfq(form) {
     try {
       const copy = JSON.parse(JSON.stringify(sheet));
       copy.jobNumber = "";
+      // New RFQ is attributed to whoever creates the copy, not the source technician.
+      copy.technician = "";
+      if (copy.assembly && typeof copy.assembly === "object") {
+        copy.assembly = { ...copy.assembly, technicianName: "" };
+      }
       return copy;
     } catch {
-      return { ...sheet, jobNumber: "" };
+      return { ...sheet, jobNumber: "", technician: "" };
     }
   };
 
@@ -342,6 +348,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     id: "",
     documentNumber: "",
     quote: "",
+    preparedBy: "",
+    quotedBy: "",
     recordType: RECORD_TYPE_RFQ,
     status: "",
     jobStatus: "",

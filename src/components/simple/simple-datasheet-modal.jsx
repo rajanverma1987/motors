@@ -16,6 +16,7 @@ import DatasheetFieldGrid, {
   DATASHEET_FIELD_INPUT,
 } from "@/components/simple/simple-datasheet-field-grid";
 import { useAlert } from "@/components/confirm-provider";
+import { useAuth } from "@/contexts/auth-context";
 import {
   AC_DATASHEET_FIELD_COLUMNS,
   AC_DATASHEET_SECTIONS,
@@ -33,6 +34,9 @@ import {
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
 import { RECORD_TYPE_RFQ, recordTypeJobNumberLabel } from "@/lib/simple-service-proposal-form";
+import {
+  resolveLoggedInEmployeeSelectValue,
+} from "@/lib/technician-select-options";
 
 const FORM_ID = "simple-datasheet-form";
 const FIELD_INPUT = DATASHEET_FIELD_INPUT;
@@ -79,6 +83,8 @@ export default function SimpleDatasheetModal({
   motorType = "AC",
   initialDatasheet = null,
   technicianOptions = [],
+  /** Prefer this when datasheet technician is empty (usually Prepared By). */
+  defaultTechnicianValue = "",
   printContext = null,
   recordId = null,
   attachments = [],
@@ -92,6 +98,7 @@ export default function SimpleDatasheetModal({
   recordType = RECORD_TYPE_RFQ,
 }) {
   const alert = useAlert();
+  const { user } = useAuth();
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
   const [form, setForm] = useState(() =>
     isDc ? createEmptyDcDatasheet() : createEmptyAcDatasheet()
@@ -110,11 +117,32 @@ export default function SimpleDatasheetModal({
 
   const canAttach = Boolean(String(recordId || "").trim());
 
+  const resolveTechnicianValue = (raw) => {
+    const value = String(raw || "").trim();
+    const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
+    if (!value) {
+      const preferred = String(defaultTechnicianValue || "").trim();
+      if (preferred && opts.some((o) => String(o.value) === preferred)) return preferred;
+      const loggedIn = resolveLoggedInEmployeeSelectValue(user, []);
+      if (loggedIn && opts.some((o) => String(o.value) === loggedIn)) return loggedIn;
+      if (preferred) return preferred;
+      return loggedIn || "";
+    }
+    const byValue = opts.find((o) => String(o.value) === value);
+    if (byValue) return String(byValue.value);
+    const byLabel = opts.find(
+      (o) => String(o.label || "").trim().toLowerCase() === value.toLowerCase()
+    );
+    if (byLabel) return String(byLabel.value);
+    return value;
+  };
+
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       const next = isDc
         ? normalizeDcDatasheet(initialDatasheet || {})
         : normalizeAcDatasheet(initialDatasheet || {});
+      next.technician = resolveTechnicianValue(next.technician);
       if (!isDc) {
         const asm = next.assembly && typeof next.assembly === "object" ? next.assembly : {};
         if (!String(asm.date || "").trim()) asm.date = String(next.date || "").slice(0, 10);
@@ -130,6 +158,7 @@ export default function SimpleDatasheetModal({
       setDiagramOpen(false);
     }
     wasOpenRef.current = open;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per open
   }, [open, isDc, initialDatasheet]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
@@ -445,7 +474,9 @@ export default function SimpleDatasheetModal({
               }}
               placeholder="Select…"
               searchable
+              disabled
               aria-label="Technician"
+              title="Technician is set when the datasheet is first saved"
             />
           </div>
           <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />

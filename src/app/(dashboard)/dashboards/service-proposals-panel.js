@@ -30,6 +30,7 @@ import {
 import SimpleSelect from "@/components/simple/simple-select";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
+import { useAuth } from "@/contexts/auth-context";
 import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
 import {
   invoiceStatusSelectOptionsFromMerged,
@@ -46,7 +47,7 @@ import {
 import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
-import { resolveEmployeeDisplayName } from "@/lib/technician-select-options";
+import { resolveEmployeeDisplayName, withShopAdminEmployee } from "@/lib/technician-select-options";
 import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import {
   formatSimpleMoney,
@@ -173,6 +174,7 @@ export default function ServiceProposalsPanel({
   const alert = useAlert();
   const confirm = useConfirm();
   const { canViewFinancials } = useFinancialAccess();
+  const { user } = useAuth();
   const searchParams = useSearchParams();
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
@@ -294,7 +296,7 @@ export default function ServiceProposalsPanel({
       ]);
       const customersList = Array.isArray(cust) ? cust : [];
       const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
-      const employeesList = Array.isArray(emps) ? emps : [];
+      const employeesList = withShopAdminEmployee(Array.isArray(emps) ? emps : [], user);
       const normalized = (Array.isArray(pageData.items) ? pageData.items : []).map((doc) => {
         const customer = byId.get(String(doc?.customerId || "").trim()) || null;
         const preparedByRaw = String(doc?.preparedBy || doc?.quotedBy || "").trim();
@@ -339,6 +341,7 @@ export default function ServiceProposalsPanel({
     statusFilter,
     dateFrom,
     dateTo,
+    user,
   ]);
 
   useEffect(() => {

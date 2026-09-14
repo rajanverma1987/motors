@@ -2,22 +2,57 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
-import Link from "next/link";
 import { FiMaximize2, FiMinimize2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import { FormContainer, FormSectionTitle } from "@/components/ui/form-layout";
+import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
 import { useAlert } from "@/components/confirm-provider";
-import { USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
-import { resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
+import { USER_SETTINGS_DEFAULTS, mergeUserSettings } from "@/lib/user-settings";
+import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 import {
   applySimpleBoardEvent,
   computeJobBoardColumns,
   resolveStatusToColumnKey,
 } from "@/lib/simple-job-board";
-import { SIMPLE_TAB_SERVICE_PROPOSALS } from "@/lib/simple-portal-tabs";
+import {
+  quoteStatusSelectOptionsFromMerged,
+  quoteStatusTileColorForValue,
+  resolveQuoteInvoiceStatusDisplayLabel,
+} from "@/lib/dropdown-catalog";
+import { formToServiceProposalListRow } from "@/lib/simple-service-proposal-form";
+import { saveSimpleServiceProposal } from "@/lib/simple-portal-api";
+
+function proposalStatusPill(proposalStatus, mergedSettings, quoteOpts) {
+  const raw = String(proposalStatus || "").trim();
+  if (!raw) return null;
+  const bare = raw.replace(/^invoice:/i, "").trim();
+  const quoteIdx = quoteOpts.findIndex(
+    (o) => String(o.value || "").toLowerCase() === bare.toLowerCase()
+  );
+  const { tileColor, tileBgColor, tileTextColor, index } = quoteStatusTileColorForValue(
+    mergedSettings,
+    bare,
+    quoteIdx >= 0 ? quoteIdx : 0
+  );
+  const pill = resolveStatusTileProps(tileColor, index, { tileBgColor, tileTextColor, tileColor });
+  const label =
+    resolveQuoteInvoiceStatusDisplayLabel(raw, mergedSettings) ||
+    quoteOpts.find((o) => String(o.value || "").toLowerCase() === bare.toLowerCase())?.label ||
+    bare;
+  return { label, style: pill.style || null, className: pill.className || "" };
+}
 
 export default function SimpleJobBoardSection() {
   const alert = useAlert();
+  const formatDate = useFormatDate();
+  const { settings } = useUserSettings();
+  const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const quoteOpts = useMemo(
+    () => quoteStatusSelectOptionsFromMerged(mergedSettings),
+    [mergedSettings]
+  );
+
   const [jobs, setJobs] = useState([]);
   const [statusTileColors, setStatusTileColors] = useState({});
   const [boardColumns, setBoardColumns] = useState(() => [
@@ -31,6 +66,7 @@ export default function SimpleJobBoardSection() {
   const [hideEmptyStatuses, setHideEmptyStatuses] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [openJobId, setOpenJobId] = useState("");
 
   useEffect(() => {
     setMounted(true);
@@ -41,14 +77,14 @@ export default function SimpleJobBoardSection() {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e) => {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape" && !openJobId) setFullscreen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [fullscreen]);
+  }, [fullscreen, openJobId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,11 +162,42 @@ export default function SimpleJobBoardSection() {
     return columns.filter((s) => (byStatus[s] || []).length > 0);
   }, [columns, byStatus, hideEmptyStatuses]);
 
+  const totalJobs = jobs.length;
+
   const boardGridClass = compact
     ? "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] items-start gap-3 pb-4"
     : "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] items-start gap-3 pb-4";
 
   const listClass = compact ? "flex flex-col gap-1 p-2" : "flex flex-col gap-2 p-2";
+
+  const openJob = (jobId) => {
+    const id = String(jobId || "").trim();
+    if (!id) return;
+    setOpenJobId(id);
+  };
+
+  const closeJob = () => setOpenJobId("");
+
+  const handleJobSave = async (nextForm, options = {}) => {
+    const forceNew = options?.forceNew === true;
+    const id = forceNew ? undefined : openJobId || nextForm.id || undefined;
+    const documentNumber = String(nextForm.documentNumber ?? nextForm.quote ?? "").trim();
+    const row = formToServiceProposalListRow(
+      { ...nextForm, documentNumber, ...(forceNew ? { id: "", recordType: "RFQ" } : {}) },
+      {
+        id: id || "",
+        companyName: String(nextForm.companyName || "").trim(),
+      }
+    );
+    const saved = await saveSimpleServiceProposal(
+      { ...row, id: id || undefined },
+      { forceNew: forceNew || !id }
+    );
+    const sid = String(saved?.id || id || "").trim();
+    if (sid) setOpenJobId(sid);
+    void load();
+    return saved;
+  };
 
   const shareBoard = async () => {
     try {
@@ -192,37 +259,72 @@ export default function SimpleJobBoardSection() {
                 </div>
                 <div className={listClass}>
                   {list.length === 0 ? (
-                    <p className="px-1 py-4 text-center text-xs text-secondary">—</p>
+                    <p className="px-1 py-4 text-center text-xs text-secondary">-</p>
                   ) : (
                     list.map((job) => {
-                      const href = `/dashboards?tab=${SIMPLE_TAB_SERVICE_PROPOSALS}&open=${encodeURIComponent(job.id)}`;
                       const cardClass = compact
-                        ? "block rounded-none border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card"
-                        : "block rounded-none border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card";
+                        ? "w-full rounded-none border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card"
+                        : "w-full rounded-none border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card";
+                      const proposalPill = proposalStatusPill(
+                        job.proposalStatus,
+                        mergedSettings,
+                        quoteOpts
+                      );
+                      const dueDateRaw = String(job.dueDate || "").trim();
+                      const dueDateLabel = dueDateRaw
+                        ? `Due ${formatDate(dueDateRaw)}`
+                        : "Due -";
                       return (
-                        <Link key={job.id} href={href} className={cardClass} onClick={() => setFullscreen(false)}>
+                        <button
+                          key={job.id}
+                          type="button"
+                          className={cardClass}
+                          onClick={() => openJob(job.id)}
+                        >
                           {compact ? (
-                            <p className="truncate text-xs text-title">
-                              <span className="font-mono font-semibold text-primary">
-                                {job.workOrderNumber}
-                              </span>
-                              <span className="mx-1 text-secondary">·</span>
-                              <span className="text-sm font-semibold text-title">
-                                {job.customerCompany || job.companyName || "—"}
-                              </span>
-                            </p>
+                            <div className="flex min-w-0 flex-col gap-1">
+                              <p className="min-w-0 truncate text-xs text-title">
+                                <span className="font-mono font-semibold text-primary">
+                                  {job.workOrderNumber}
+                                </span>
+                                <span className="mx-1 text-secondary">·</span>
+                                <span className="text-sm font-semibold text-title">
+                                  {job.customerCompany || job.companyName || "-"}
+                                </span>
+                              </p>
+                              <p className="truncate text-[11px] text-secondary">{dueDateLabel}</p>
+                              {proposalPill ? (
+                                <span
+                                  className={`job-board-status-pill inline-flex max-w-full truncate rounded-full px-2 py-0.5 text-[10px] font-semibold ${proposalPill.className}`}
+                                  style={proposalPill.style || undefined}
+                                  title={proposalPill.label}
+                                >
+                                  {proposalPill.label}
+                                </span>
+                              ) : null}
+                            </div>
                           ) : (
                             <>
                               <p className="font-mono text-sm font-semibold text-primary">
                                 {job.workOrderNumber}
                               </p>
                               <p className="mt-0.5 truncate text-base font-semibold text-title">
-                                {job.customerCompany || job.companyName || "—"}
+                                {job.customerCompany || job.companyName || "-"}
                               </p>
                               <p className="mt-1 text-xs text-secondary">{job.motorClass}</p>
+                              <p className="mt-1 text-xs text-secondary">{dueDateLabel}</p>
+                              {proposalPill ? (
+                                <span
+                                  className={`job-board-status-pill mt-2 inline-flex max-w-full truncate rounded-full px-2.5 py-0.5 text-xs font-semibold ${proposalPill.className}`}
+                                  style={proposalPill.style || undefined}
+                                  title={proposalPill.label}
+                                >
+                                  {proposalPill.label}
+                                </span>
+                              ) : null}
                             </>
                           )}
-                        </Link>
+                        </button>
                       );
                     })
                   )}
@@ -293,10 +395,17 @@ export default function SimpleJobBoardSection() {
       <FormContainer>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <FormSectionTitle as="h2">Shop floor job board</FormSectionTitle>
+            <FormSectionTitle as="h2">
+              Shop floor job board
+              {!loading ? (
+                <span className="ml-2 text-base font-semibold text-secondary">
+                  ({totalJobs})
+                </span>
+              ) : null}
+            </FormSectionTitle>
             <p className="mt-1 text-sm text-secondary">
               Kanban of Simple JOB service proposals by Job Status. Columns follow Settings →
-              Dropdowns (Shop floor toggle).
+              Dropdowns (Shop floor toggle). Click a card to open the job here.
             </p>
           </div>
           {toolbar}
@@ -317,7 +426,14 @@ export default function SimpleJobBoardSection() {
           >
             <div className="flex shrink-0 flex-wrap items-end justify-between gap-3 border-b border-border px-4 py-3 sm:px-6">
               <div>
-                <h2 className="text-xl font-bold text-title">Shop floor job board</h2>
+                <h2 className="text-xl font-bold text-title">
+                  Shop floor job board
+                  {!loading ? (
+                    <span className="ml-2 text-base font-semibold text-secondary">
+                      ({totalJobs})
+                    </span>
+                  ) : null}
+                </h2>
                 <p className="mt-0.5 text-sm text-secondary">
                   Full screen · Esc to exit
                 </p>
@@ -334,6 +450,13 @@ export default function SimpleJobBoardSection() {
     <>
       {inline}
       {fullscreenUi}
+      <ServiceProposalFormModal
+        open={Boolean(openJobId)}
+        onClose={closeJob}
+        initialForm={openJobId ? { id: openJobId } : null}
+        onSave={handleJobSave}
+        zIndex={fullscreen ? 220 : 120}
+      />
     </>
   );
 }

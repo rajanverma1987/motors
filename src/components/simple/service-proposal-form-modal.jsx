@@ -56,7 +56,12 @@ import {
   quoteStatusTileColorForValue,
   invoiceStatusTileColorForValue,
 } from "@/lib/dropdown-catalog";
-import { buildEmployeeSelectOptions, resolveEmployeeSelectValue } from "@/lib/technician-select-options";
+import {
+  buildEmployeeSelectOptions,
+  resolveEmployeeSelectValue,
+  resolveLoggedInEmployeeSelectValue,
+  withShopAdminEmployee,
+} from "@/lib/technician-select-options";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
   resolveStatusTileProps,
@@ -421,6 +426,7 @@ export default function ServiceProposalFormModal({
   initialForm = null,
   /** When opened from a search results list — show Previous / Next in modal header center. */
   searchResultNavigation = null,
+  zIndex = 100,
 }) {
   const alert = useAlert();
   const confirm = useConfirm();
@@ -568,9 +574,14 @@ export default function ServiceProposalFormModal({
     [customers]
   );
 
+  const employeesWithAdmin = useMemo(
+    () => withShopAdminEmployee(employees, user),
+    [employees, user]
+  );
+
   const preparedByOptions = useMemo(
-    () => buildEmployeeSelectOptions(employees, form.preparedBy),
-    [employees, form.preparedBy]
+    () => buildEmployeeSelectOptions(employeesWithAdmin, form.preparedBy),
+    [employeesWithAdmin, form.preparedBy]
   );
 
   const employeeDisplayLabel = useCallback(
@@ -581,9 +592,11 @@ export default function ServiceProposalFormModal({
       if (fromOpts?.label && fromOpts.label !== "—" && fromOpts.label !== "Unknown employee") {
         return fromOpts.label;
       }
-      return buildEmployeeSelectOptions(employees, id).find((o) => o.value === id)?.label || "";
+      return (
+        buildEmployeeSelectOptions(employeesWithAdmin, id).find((o) => o.value === id)?.label || ""
+      );
     },
-    [employees, preparedByOptions]
+    [employeesWithAdmin, preparedByOptions]
   );
 
   const loadCustomers = useCallback(async () => {
@@ -671,15 +684,22 @@ export default function ServiceProposalFormModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: key on open + record id
   }, [open, initialForm?.id]);
 
-  /** Map Prepared By to employee ids; if Proposal Approved By was stored as an id, show the name. */
+  /**
+   * Map Prepared By to employee ids (or shop admin).
+   * If empty, default to the logged-in user once. Never overwrite a saved value with another viewer.
+   * If Proposal Approved By was stored as an id, show the name.
+   */
   useEffect(() => {
-    if (!open || !employees.length) return;
+    if (!open || !employeesWithAdmin.length) return;
     setForm((f) => {
-      const preparedBy = resolveEmployeeSelectValue(employees, f.preparedBy);
+      const existingPreparedBy = String(f.preparedBy || "").trim();
+      const preparedBy = existingPreparedBy
+        ? resolveEmployeeSelectValue(employeesWithAdmin, existingPreparedBy)
+        : resolveLoggedInEmployeeSelectValue(user, employeesWithAdmin);
       const approvedRaw = String(f.proposalApprovedBy || "").trim();
       let proposalApprovedBy = approvedRaw;
       if (approvedRaw) {
-        const byId = employees.find(
+        const byId = employeesWithAdmin.find(
           (e) => String(e.id ?? e._id ?? "").trim() === approvedRaw
         );
         if (byId) {
@@ -691,7 +711,7 @@ export default function ServiceProposalFormModal({
       if (preparedBy === f.preparedBy && proposalApprovedBy === f.proposalApprovedBy) return f;
       return { ...f, preparedBy, proposalApprovedBy };
     });
-  }, [open, employees]);
+  }, [open, employeesWithAdmin, user]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -724,6 +744,7 @@ export default function ServiceProposalFormModal({
       selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
     const meta = {
       companyName,
+      technicianValue: String(form.preparedBy || "").trim(),
       technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
     };
     const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
@@ -917,6 +938,7 @@ export default function ServiceProposalFormModal({
       selectedCustomer?.companyName || selectedCustomer?.primaryContactName || "";
     const meta = {
       companyName,
+      technicianValue: String(form.preparedBy || "").trim(),
       technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
     };
     if (String(form.motorPower || "AC").toUpperCase() === "DC") {
@@ -1222,7 +1244,7 @@ export default function ServiceProposalFormModal({
     const bundle = buildSimpleServiceProposalPrintBundle({
       form,
       customer,
-      employees,
+      employees: employeesWithAdmin,
       accountSettings: mergedSettings,
       user,
       notesMode,
@@ -1374,6 +1396,7 @@ export default function ServiceProposalFormModal({
         size="7xl"
         width="95vw"
         height="min(94vh, 920px)"
+        zIndex={zIndex}
         showClose={!saving && !copying && !loadingRecord}
         closeOnOutsideClick={false}
         headerClassName="[&_h2]:max-w-none [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-none"
@@ -1691,9 +1714,10 @@ export default function ServiceProposalFormModal({
                   value={form.preparedBy}
                   onChange={(e) => patch("preparedBy", e.target.value)}
                   placeholder={loadingEmployees ? "Loading…" : "Select…"}
-                  disabled={loadingEmployees}
+                  disabled
                   searchable
                   aria-label="Prepared By"
+                  title="Prepared By is set to the employee who created this record"
                 />
               </FieldRow>
               <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -2304,6 +2328,7 @@ export default function ServiceProposalFormModal({
         motorType={form.motorPower === "DC" ? "DC" : "AC"}
         initialDatasheet={datasheetInitial}
         technicianOptions={preparedByOptions}
+        defaultTechnicianValue={String(form.preparedBy || "").trim()}
         recordId={recordId || null}
         recordType={form.recordType}
         attachments={Array.isArray(form.attachments) ? form.attachments : []}

@@ -2,6 +2,7 @@ import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
 import { RECORD_TYPE_INVOICE, parseMoneyInput, sumLinePrices, sumOtherLinePrices } from "@/lib/simple-service-proposal-form";
 import { isLogisticsChargeOtherLine } from "@/lib/simple-motor-logistics";
+import { resolveEmployeeDisplayName } from "@/lib/technician-select-options";
 
 export const PRINT_NOTES_INTERNAL = "internal";
 export const PRINT_NOTES_CUSTOMER = "customer";
@@ -11,16 +12,7 @@ function linePrice(line) {
 }
 
 function employeeDisplayName(employees, id) {
-  const key = String(id || "").trim();
-  if (!key) return "";
-  const list = Array.isArray(employees) ? employees : [];
-  const row = list.find((e) => String(e.id || e._id || "").trim() === key);
-  if (!row) return key;
-  return (
-    String(row.name || row.fullName || row.displayName || "").trim() ||
-    [row.firstName, row.lastName].filter(Boolean).join(" ").trim() ||
-    key
-  );
+  return resolveEmployeeDisplayName(employees, id);
 }
 
 function motorLinesFromForm(form) {

@@ -26,7 +26,7 @@ const TABS = [
   { id: "time-clock", label: "Time clock" },
   { id: "hours", label: "Hours" },
   { id: "punches", label: "Punches" },
-  { id: "release-payment", label: "Release Payment" },
+  { id: "release-payment", label: "Record Payment" },
   { id: "alerts", label: "Alerts" },
 ];
 

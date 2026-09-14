@@ -639,7 +639,7 @@ function proposalMotorIdentityPrefill(proposalForm) {
  * Prefill datasheet from service proposal motor / header fields.
  * Always fills blank datasheet fields from the proposal (does not overwrite values already on the sheet).
  * @param {Record<string, unknown>} proposalForm
- * @param {{ companyName?: string, technicianLabel?: string }} [meta]
+ * @param {{ companyName?: string, technicianValue?: string, technicianLabel?: string }} [meta]
  */
 export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
   const f = proposalForm || {};
@@ -662,7 +662,9 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
   return normalizeAcDatasheet({
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
+    technician: String(
+      base.technician || meta.technicianValue || meta.technicianLabel || f.preparedBy || ""
+    ).trim(),
     // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
     jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
@@ -673,7 +675,7 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
 
 /**
  * @param {Record<string, unknown>} proposalForm
- * @param {{ companyName?: string, technicianLabel?: string }} [meta]
+ * @param {{ companyName?: string, technicianValue?: string, technicianLabel?: string }} [meta]
  */
 export function buildDcDatasheetFromProposal(proposalForm, meta = {}) {
   const f = proposalForm || {};
@@ -697,7 +699,9 @@ export function buildDcDatasheetFromProposal(proposalForm, meta = {}) {
   return normalizeDcDatasheet({
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(base.technician || meta.technicianLabel || f.preparedBy || "").trim(),
+    technician: String(
+      base.technician || meta.technicianValue || meta.technicianLabel || f.preparedBy || ""
+    ).trim(),
     // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
     jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
