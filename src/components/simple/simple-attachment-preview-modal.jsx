@@ -32,6 +32,11 @@ export function isPdfAttachment(url, name = "") {
   return ext === "pdf";
 }
 
+/** True when the file can be shown in SimpleAttachmentPreviewModal (image or PDF). */
+export function isPreviewableAttachment(url, name = "") {
+  return isImageAttachment(url, name) || isPdfAttachment(url, name);
+}
+
 /**
  * In-app preview for attachment View actions (photos in modal, PDFs in modal, others with download).
  */

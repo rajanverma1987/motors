@@ -17,6 +17,7 @@ function monthLabel(ym) {
 
 /**
  * Lists recorded payroll payments for one employee.
+ * Optional leftPanel renders a side column (e.g. employee edit form).
  */
 export default function SimpleEmployeePaymentHistoryModal({
   open,
@@ -24,6 +25,10 @@ export default function SimpleEmployeePaymentHistoryModal({
   employeeId,
   employeeName = "",
   employeeNumber = "",
+  leftPanel = null,
+  actions = null,
+  title: titleOverride = "",
+  showClose = true,
 }) {
   const alert = useAlert();
   const formatDate = useFormatDate();
@@ -31,6 +36,7 @@ export default function SimpleEmployeePaymentHistoryModal({
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
 
+  const hasLeftPanel = leftPanel != null;
   const fmt = useCallback(
     (n) => {
       try {
@@ -76,6 +82,9 @@ export default function SimpleEmployeePaymentHistoryModal({
 
   const titleName = String(employeeName || "").trim() || "Employee";
   const titleNumber = String(employeeNumber || "").trim();
+  const modalTitle =
+    String(titleOverride || "").trim() ||
+    (hasLeftPanel ? titleName : "Employee payment history");
 
   const columns = [
     {
@@ -156,27 +165,57 @@ export default function SimpleEmployeePaymentHistoryModal({
     },
   ];
 
+  const historyTable = (
+    <Table
+      columns={columns}
+      data={payments}
+      rowKey="id"
+      loading={loading}
+      emptyMessage={loading ? "Loading…" : "No payroll payments recorded for this employee."}
+      responsive
+    />
+  );
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Employee payment history"
-      size="5xl"
-      width="min(960px, 96vw)"
-      showClose
+      title={modalTitle}
+      size={hasLeftPanel ? "7xl" : "5xl"}
+      width={hasLeftPanel ? "min(1280px, 98vw)" : "min(960px, 96vw)"}
+      height={hasLeftPanel ? "min(90vh, 880px)" : undefined}
+      showClose={showClose}
+      closeOnOutsideClick={false}
+      actions={actions}
+      bodyClassName={hasLeftPanel ? "!relative !overflow-hidden !p-3 sm:!p-4" : ""}
     >
-      <div className="mb-3 text-sm text-secondary">
-        <span className="font-medium text-title">{titleName}</span>
-        {titleNumber ? ` · #${titleNumber}` : ""}
-      </div>
-      <Table
-        columns={columns}
-        data={payments}
-        rowKey="id"
-        loading={loading}
-        emptyMessage={loading ? "Loading…" : "No payroll payments recorded for this employee."}
-        responsive
-      />
+      {hasLeftPanel ? (
+        <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
+          <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+            {leftPanel}
+          </div>
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:overflow-hidden">
+            <div className="shrink-0 border-b border-border pb-1.5">
+              <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
+              {titleNumber ? (
+                <p className="mt-0.5 text-xs text-secondary">
+                  {titleName}
+                  {` · #${titleNumber}`}
+                </p>
+              ) : null}
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto">{historyTable}</div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="mb-3 text-sm text-secondary">
+            <span className="font-medium text-title">{titleName}</span>
+            {titleNumber ? ` · #${titleNumber}` : ""}
+          </div>
+          {historyTable}
+        </>
+      )}
     </Modal>
   );
 }

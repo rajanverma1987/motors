@@ -93,6 +93,7 @@ export async function GET(request) {
     const jobNumber = String(searchParams.get("jobNumber") || "").trim();
     const vendorId = String(searchParams.get("vendorId") || "").trim();
     const paymentStatus = String(searchParams.get("paymentStatus") || "").trim();
+    const poTypeFilter = String(searchParams.get("poType") || "").trim().toLowerCase();
     const from = String(searchParams.get("from") || "").trim().slice(0, 10);
     const to = String(searchParams.get("to") || "").trim().slice(0, 10);
     const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
@@ -105,6 +106,7 @@ export async function GET(request) {
       searchParams.has("from") ||
       searchParams.has("to") ||
       searchParams.has("paymentStatus") ||
+      searchParams.has("poType") ||
       searchParams.has("serviceProposalId") ||
       searchParams.has("jobNumber") ||
       searchParams.has("vendorId");
@@ -147,6 +149,52 @@ export async function GET(request) {
         paymentStatus: { $regex: `^${escaped}$`, $options: "i" },
       });
     }
+    /** Match resolveSimplePoType: explicit shop/job first, else job link ⇒ job, else shop. */
+    if (poTypeFilter === "job") {
+      andParts.push({
+        $and: [
+          { poType: { $not: { $regex: /^shop$/i } } },
+          {
+            $or: [
+              { poType: { $regex: /^job$/i } },
+              { serviceProposalId: { $gt: "" } },
+              { jobNumber: { $gt: "" } },
+            ],
+          },
+        ],
+      });
+    } else if (poTypeFilter === "shop") {
+      andParts.push({
+        $or: [
+          { poType: { $regex: /^shop$/i } },
+          {
+            $and: [
+              {
+                $or: [
+                  { poType: { $exists: false } },
+                  { poType: null },
+                  { poType: "" },
+                ],
+              },
+              {
+                $or: [
+                  { serviceProposalId: { $exists: false } },
+                  { serviceProposalId: null },
+                  { serviceProposalId: "" },
+                ],
+              },
+              {
+                $or: [
+                  { jobNumber: { $exists: false } },
+                  { jobNumber: null },
+                  { jobNumber: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    }
     if (from || to) {
       const range = mongoCalendarDateRange(from, to);
       if (range) {
@@ -171,6 +219,51 @@ export async function GET(request) {
 
     const baseForCards = { createdByEmail: email };
     const cardAnd = [];
+    if (poTypeFilter === "job") {
+      cardAnd.push({
+        $and: [
+          { poType: { $not: { $regex: /^shop$/i } } },
+          {
+            $or: [
+              { poType: { $regex: /^job$/i } },
+              { serviceProposalId: { $gt: "" } },
+              { jobNumber: { $gt: "" } },
+            ],
+          },
+        ],
+      });
+    } else if (poTypeFilter === "shop") {
+      cardAnd.push({
+        $or: [
+          { poType: { $regex: /^shop$/i } },
+          {
+            $and: [
+              {
+                $or: [
+                  { poType: { $exists: false } },
+                  { poType: null },
+                  { poType: "" },
+                ],
+              },
+              {
+                $or: [
+                  { serviceProposalId: { $exists: false } },
+                  { serviceProposalId: null },
+                  { serviceProposalId: "" },
+                ],
+              },
+              {
+                $or: [
+                  { jobNumber: { $exists: false } },
+                  { jobNumber: null },
+                  { jobNumber: "" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+    }
     if (from || to) {
       const range = mongoCalendarDateRange(from, to);
       if (range) {

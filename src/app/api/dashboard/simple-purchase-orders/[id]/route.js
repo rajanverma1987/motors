@@ -80,9 +80,21 @@ export async function PUT(request, context) {
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
-    const item = serializeSimplePortalDoc(doc);
+    let item = serializeSimplePortalDoc(doc);
     try {
-      await applySimplePoInventoryReceipts(email, previous.lineItems, doc.lineItems);
+      const receipt = await applySimplePoInventoryReceipts(email, previous.lineItems, doc.lineItems, {
+        purchaseOrderId: String(doc._id),
+        poNumber: String(doc.poNumber || "").trim(),
+        vendorName: String(doc.vendorName || "").trim(),
+      });
+      if (receipt.mutated && Array.isArray(receipt.lineItems)) {
+        const updated = await SimplePurchaseOrder.findOneAndUpdate(
+          { _id: id, createdByEmail: email },
+          { $set: { lineItems: receipt.lineItems } },
+          { new: true }
+        ).lean();
+        if (updated) item = serializeSimplePortalDoc(updated);
+      }
     } catch (invErr) {
       console.error("Simple PO inventory receipts:", invErr);
       return NextResponse.json(
@@ -132,7 +144,11 @@ export async function DELETE(request, context) {
     }
     try {
       // Treat delete as reverting all Received lines for inventory.
-      await applySimplePoInventoryReceipts(email, existing.lineItems, []);
+      await applySimplePoInventoryReceipts(email, existing.lineItems, [], {
+        purchaseOrderId: String(existing._id),
+        poNumber: String(existing.poNumber || "").trim(),
+        vendorName: String(existing.vendorName || "").trim(),
+      });
     } catch (invErr) {
       console.error("Simple PO inventory reverse on delete:", invErr);
       return NextResponse.json(

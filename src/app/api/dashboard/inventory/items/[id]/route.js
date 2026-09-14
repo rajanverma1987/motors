@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import InventoryItem from "@/models/InventoryItem";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { adjustInventoryOnHand } from "@/lib/inventory-service";
 import { LIMITS, clampString, clampStringCoerced } from "@/lib/validation";
 
 function toRow(doc) {
@@ -68,19 +69,34 @@ export async function PATCH(request, context) {
     }
     if (body.location !== undefined) doc.location = clampString(body.location, 120);
     if (body.notes !== undefined) doc.notes = clampString(body.notes, LIMITS.message.max);
-    if (body.onHandDelta !== undefined) {
-      const d = Number(body.onHandDelta);
-      if (!Number.isFinite(d)) {
-        return NextResponse.json({ error: "Invalid onHandDelta" }, { status: 400 });
+
+    const hasDelta = body.onHandDelta !== undefined;
+    const hasSet = body.setOnHand !== undefined;
+    if (hasDelta || hasSet) {
+      let delta = 0;
+      if (hasDelta) {
+        delta = Number(body.onHandDelta);
+        if (!Number.isFinite(delta)) {
+          return NextResponse.json({ error: "Invalid onHandDelta" }, { status: 400 });
+        }
+      } else {
+        const v = Number(body.setOnHand);
+        if (!Number.isFinite(v) || v < 0) {
+          return NextResponse.json({ error: "Invalid setOnHand" }, { status: 400 });
+        }
+        delta = v - (Number(doc.onHand) || 0);
       }
-      doc.onHand = Math.max(0, (Number(doc.onHand) || 0) + d);
-    }
-    if (body.setOnHand !== undefined) {
-      const v = Number(body.setOnHand);
-      if (!Number.isFinite(v) || v < 0) {
-        return NextResponse.json({ error: "Invalid setOnHand" }, { status: 400 });
+      if (delta !== 0) {
+        await doc.save();
+        const adj = await adjustInventoryOnHand(email, id, delta, {
+          reason: clampString(body.reason || (hasSet ? "set_on_hand" : "adjust"), 200),
+          notes: clampString(body.adjustNotes || "", 500),
+        });
+        if (!adj.ok) {
+          return NextResponse.json({ error: adj.error || "Adjust failed" }, { status: 400 });
+        }
+        return NextResponse.json({ ok: true, item: toRow(adj.item) });
       }
-      doc.onHand = v;
     }
 
     await doc.save();

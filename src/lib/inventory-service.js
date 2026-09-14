@@ -1,11 +1,53 @@
 import mongoose from "mongoose";
 import InventoryItem from "@/models/InventoryItem";
 import InventoryReservation from "@/models/InventoryReservation";
+import InventoryMovement from "@/models/InventoryMovement";
 import Quote from "@/models/Quote";
 
 /** @param {string} status */
 export function isShippedStatus(status) {
   return /\bshipped\b/i.test(String(status || ""));
+}
+
+/**
+ * @param {object} fields
+ */
+export async function recordInventoryMovement(fields) {
+  const email = String(fields.createdByEmail || "").trim().toLowerCase();
+  const itemId = String(fields.inventoryItemId || "").trim();
+  if (!email || !mongoose.Types.ObjectId.isValid(itemId)) {
+    return null;
+  }
+  const qty = Number(fields.qty);
+  if (!Number.isFinite(qty) || qty === 0) return null;
+
+  let balanceAfter = fields.balanceAfter;
+  if (balanceAfter == null) {
+    const item = await InventoryItem.findOne({ _id: itemId, createdByEmail: email })
+      .select("onHand")
+      .lean();
+    if (item) balanceAfter = Number(item.onHand) || 0;
+  }
+
+  return InventoryMovement.create({
+    createdByEmail: email,
+    inventoryItemId: itemId,
+    qty,
+    type: fields.type,
+    purchaseOrderId: String(fields.purchaseOrderId || "").trim(),
+    poLineId: String(fields.poLineId || "").trim(),
+    poNumber: String(fields.poNumber || "").trim(),
+    vendorName: String(fields.vendorName || "").trim(),
+    simpleServiceProposalId: String(fields.simpleServiceProposalId || "").trim(),
+    documentNumber: String(fields.documentNumber || "").trim(),
+    quoteId: String(fields.quoteId || "").trim(),
+    workOrderId: String(fields.workOrderId || "").trim(),
+    reservationId: String(fields.reservationId || "").trim(),
+    relatedMovementId: String(fields.relatedMovementId || "").trim(),
+    reason: String(fields.reason || "").trim(),
+    notes: String(fields.notes || "").trim(),
+    balanceAfter: balanceAfter == null ? null : Number(balanceAfter),
+  });
 }
 
 /**
@@ -27,10 +69,6 @@ function sumPartsQtyByInventoryItem(partsLines) {
 
 /**
  * When the first work order is created for a quote, reserve parts linked on the quote.
- * Skips if reservations already exist for this quote (one active set per quote).
- *
- * Uses sequential writes (no multi-document transactions) so it works on standalone MongoDB.
- * Quote lines must include `inventoryItemId` (e.g. from “Add parts” on the quote).
  *
  * @param {string} email
  * @param {string} quoteId
@@ -54,7 +92,6 @@ export async function reserveInventoryForQuoteIfFirstWorkOrder(email, quoteId, w
   const byItem = sumPartsQtyByInventoryItem(quote.partsLines);
   if (byItem.size === 0) return { ok: true, skipped: true, reason: "no_linked_parts" };
 
-  /** Successfully applied steps to roll back on later failure */
   const committed = [];
 
   try {
@@ -83,6 +120,17 @@ export async function reserveInventoryForQuoteIfFirstWorkOrder(email, quoteId, w
         await InventoryReservation.deleteOne({ _id: resDoc._id });
         throw new Error(`Inventory item update failed: ${itemId}`);
       }
+
+      await recordInventoryMovement({
+        createdByEmail: e,
+        inventoryItemId: oid,
+        qty,
+        type: "reserve",
+        quoteId: qid,
+        workOrderId: String(workOrderId || "").trim(),
+        reservationId: String(resDoc._id),
+        balanceAfter: Number(item.onHand) || 0,
+      });
 
       committed.push({ reservationId: resDoc._id, oid, qty });
     }
@@ -118,12 +166,23 @@ export async function releaseInventoryReservationsForQuote(email, quoteId) {
   if (reservations.length === 0) return { ok: true };
 
   for (const r of reservations) {
-    await InventoryItem.updateOne(
+    const item = await InventoryItem.findOneAndUpdate(
       { _id: r.inventoryItemId, createdByEmail: e },
-      { $inc: { reserved: -r.qty } }
-    );
+      { $inc: { reserved: -r.qty } },
+      { new: true }
+    ).lean();
     r.status = "released";
     await r.save();
+    await recordInventoryMovement({
+      createdByEmail: e,
+      inventoryItemId: r.inventoryItemId,
+      qty: r.qty,
+      type: "release",
+      quoteId: qid,
+      workOrderId: String(r.workOrderId || "").trim(),
+      reservationId: String(r._id),
+      balanceAfter: item ? Number(item.onHand) || 0 : null,
+    });
   }
   return { ok: true };
 }
@@ -133,7 +192,7 @@ export async function releaseInventoryReservationsForQuote(email, quoteId) {
  *
  * @param {string} email
  * @param {string} quoteId
- * @param {string} [consumingWorkOrderId] - WO that moved to Shipped (stored for usage history)
+ * @param {string} [consumingWorkOrderId]
  */
 export async function consumeInventoryForQuoteOnShipped(email, quoteId, consumingWorkOrderId) {
   const e = email.trim().toLowerCase();
@@ -150,19 +209,30 @@ export async function consumeInventoryForQuoteOnShipped(email, quoteId, consumin
   if (reservations.length === 0) return { ok: true, skipped: true };
 
   for (const r of reservations) {
-    await InventoryItem.updateOne(
+    const item = await InventoryItem.findOneAndUpdate(
       { _id: r.inventoryItemId, createdByEmail: e },
-      { $inc: { onHand: -r.qty, reserved: -r.qty } }
-    );
+      { $inc: { onHand: -r.qty, reserved: -r.qty } },
+      { new: true }
+    ).lean();
     r.status = "consumed";
     if (woId) r.consumedByWorkOrderId = woId;
     await r.save();
+    await recordInventoryMovement({
+      createdByEmail: e,
+      inventoryItemId: r.inventoryItemId,
+      qty: -r.qty,
+      type: "consume",
+      quoteId: qid,
+      workOrderId: woId || String(r.workOrderId || "").trim(),
+      reservationId: String(r._id),
+      balanceAfter: item ? Number(item.onHand) || 0 : null,
+    });
   }
   return { ok: true };
 }
 
 /**
- * @param {unknown} otherItems — Simple Service Proposal Other Items lines
+ * @param {unknown} otherItems
  * @returns {Map<string, number>}
  */
 export function sumOtherItemsQtyByInventoryItem(otherItems) {
@@ -171,7 +241,6 @@ export function sumOtherItemsQtyByInventoryItem(otherItems) {
 
 /**
  * Reserve inventory for a Simple JOB from Other Items with inventoryItemId.
- * Skips if active reservations already exist (unless force).
  *
  * @param {string} email
  * @param {string} proposalId
@@ -223,6 +292,16 @@ export async function reserveInventoryForSimpleJob(email, proposalId, otherItems
         throw new Error(`Inventory item update failed: ${itemId}`);
       }
 
+      await recordInventoryMovement({
+        createdByEmail: e,
+        inventoryItemId: oid,
+        qty,
+        type: "reserve",
+        simpleServiceProposalId: sid,
+        reservationId: String(resDoc._id),
+        balanceAfter: Number(item.onHand) || 0,
+      });
+
       committed.push({ reservationId: resDoc._id, oid, qty });
     }
     return { ok: true };
@@ -257,12 +336,22 @@ export async function releaseInventoryReservationsForSimple(email, proposalId) {
   if (reservations.length === 0) return { ok: true };
 
   for (const r of reservations) {
-    await InventoryItem.updateOne(
+    const item = await InventoryItem.findOneAndUpdate(
       { _id: r.inventoryItemId, createdByEmail: e },
-      { $inc: { reserved: -r.qty } }
-    );
+      { $inc: { reserved: -r.qty } },
+      { new: true }
+    ).lean();
     r.status = "released";
     await r.save();
+    await recordInventoryMovement({
+      createdByEmail: e,
+      inventoryItemId: r.inventoryItemId,
+      qty: r.qty,
+      type: "release",
+      simpleServiceProposalId: sid,
+      reservationId: String(r._id),
+      balanceAfter: item ? Number(item.onHand) || 0 : null,
+    });
   }
   return { ok: true };
 }
@@ -309,12 +398,22 @@ export async function consumeInventoryForSimpleOnShipped(email, proposalId) {
   if (reservations.length === 0) return { ok: true, skipped: true };
 
   for (const r of reservations) {
-    await InventoryItem.updateOne(
+    const item = await InventoryItem.findOneAndUpdate(
       { _id: r.inventoryItemId, createdByEmail: e },
-      { $inc: { onHand: -r.qty, reserved: -r.qty } }
-    );
+      { $inc: { onHand: -r.qty, reserved: -r.qty } },
+      { new: true }
+    ).lean();
     r.status = "consumed";
     await r.save();
+    await recordInventoryMovement({
+      createdByEmail: e,
+      inventoryItemId: r.inventoryItemId,
+      qty: -r.qty,
+      type: "consume",
+      simpleServiceProposalId: sid,
+      reservationId: String(r._id),
+      balanceAfter: item ? Number(item.onHand) || 0 : null,
+    });
   }
   return { ok: true };
 }
@@ -362,19 +461,34 @@ export async function applySimpleServiceProposalInventoryLifecycle(email, propos
  * @param {string} email
  * @param {string} inventoryItemId
  * @param {number} qty
+ * @param {{ purchaseOrderId?: string, poLineId?: string, poNumber?: string, vendorName?: string, notes?: string }} [meta]
  */
-export async function receiveInventoryFromPoLine(email, inventoryItemId, qty) {
+export async function receiveInventoryFromPoLine(email, inventoryItemId, qty, meta = {}) {
   const e = email.trim().toLowerCase();
   const id = String(inventoryItemId || "").trim();
   if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
     return { ok: true, skipped: true };
   }
-  const r = await InventoryItem.updateOne(
+  const item = await InventoryItem.findOneAndUpdate(
     { _id: id, createdByEmail: e },
-    { $inc: { onHand: qty } }
-  );
-  if (r.matchedCount === 0) return { ok: false, error: "Inventory item not found" };
-  return { ok: true };
+    { $inc: { onHand: qty } },
+    { new: true }
+  ).lean();
+  if (!item) return { ok: false, error: "Inventory item not found" };
+
+  await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty,
+    type: "receive_po",
+    purchaseOrderId: meta.purchaseOrderId,
+    poLineId: meta.poLineId,
+    poNumber: meta.poNumber,
+    vendorName: meta.vendorName,
+    notes: meta.notes,
+    balanceAfter: Number(item.onHand) || 0,
+  });
+  return { ok: true, item };
 }
 
 /**
@@ -383,17 +497,250 @@ export async function receiveInventoryFromPoLine(email, inventoryItemId, qty) {
  * @param {string} email
  * @param {string} inventoryItemId
  * @param {number} qty
+ * @param {{ purchaseOrderId?: string, poLineId?: string, poNumber?: string, vendorName?: string, notes?: string }} [meta]
  */
-export async function reverseReceiveInventoryFromPoLine(email, inventoryItemId, qty) {
+export async function reverseReceiveInventoryFromPoLine(email, inventoryItemId, qty, meta = {}) {
   const e = email.trim().toLowerCase();
   const id = String(inventoryItemId || "").trim();
   if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
     return { ok: true, skipped: true };
   }
-  const r = await InventoryItem.updateOne(
+  const item = await InventoryItem.findOneAndUpdate(
     { _id: id, createdByEmail: e },
-    { $inc: { onHand: -qty } }
+    { $inc: { onHand: -qty } },
+    { new: true }
+  ).lean();
+  if (!item) return { ok: false, error: "Inventory item not found" };
+
+  await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty: -qty,
+    type: "receive_po",
+    purchaseOrderId: meta.purchaseOrderId,
+    poLineId: meta.poLineId,
+    poNumber: meta.poNumber,
+    vendorName: meta.vendorName,
+    notes: meta.notes || "Receipt reversed",
+    reason: "reverse_receive",
+    balanceAfter: Number(item.onHand) || 0,
+  });
+  return { ok: true, item };
+}
+
+/**
+ * Manual stock adjust (delta). Writes adjust movement.
+ *
+ * @param {string} email
+ * @param {string} inventoryItemId
+ * @param {number} delta
+ * @param {{ reason?: string, notes?: string }} [meta]
+ */
+export async function adjustInventoryOnHand(email, inventoryItemId, delta, meta = {}) {
+  const e = email.trim().toLowerCase();
+  const id = String(inventoryItemId || "").trim();
+  const d = Number(delta);
+  if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(d) || d === 0) {
+    return { ok: false, error: "Invalid adjust" };
+  }
+
+  const current = await InventoryItem.findOne({ _id: id, createdByEmail: e });
+  if (!current) return { ok: false, error: "Inventory item not found" };
+
+  const nextOnHand = Math.max(0, (Number(current.onHand) || 0) + d);
+  const applied = nextOnHand - (Number(current.onHand) || 0);
+  if (applied === 0) {
+    return { ok: false, error: "Adjust would not change on-hand" };
+  }
+
+  current.onHand = nextOnHand;
+  await current.save();
+
+  await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty: applied,
+    type: "adjust",
+    reason: meta.reason,
+    notes: meta.notes,
+    balanceAfter: nextOnHand,
+  });
+
+  return { ok: true, item: current.toObject(), applied };
+}
+
+/**
+ * Issue stock to a Simple job. Reduces matching active reservation when present.
+ *
+ * @param {string} email
+ * @param {string} inventoryItemId
+ * @param {{ qty: number, simpleServiceProposalId: string, documentNumber?: string, notes?: string }} opts
+ */
+export async function issueInventoryToJob(email, inventoryItemId, opts) {
+  const e = email.trim().toLowerCase();
+  const id = String(inventoryItemId || "").trim();
+  const qty = Number(opts?.qty);
+  const sid = String(opts?.simpleServiceProposalId || "").trim();
+  if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
+    return { ok: false, error: "Invalid qty" };
+  }
+  if (!sid) return { ok: false, error: "Job required" };
+
+  const item = await InventoryItem.findOne({ _id: id, createdByEmail: e });
+  if (!item) return { ok: false, error: "Inventory item not found" };
+
+  const onHand = Number(item.onHand) || 0;
+  const reserved = Number(item.reserved) || 0;
+  const available = onHand - reserved;
+  if (qty > onHand) {
+    return { ok: false, error: "Not enough on-hand quantity" };
+  }
+
+  const reservation = await InventoryReservation.findOne({
+    createdByEmail: e,
+    inventoryItemId: id,
+    simpleServiceProposalId: sid,
+    status: "active",
+  });
+
+  let reservedDelta = 0;
+  if (reservation) {
+    const resQty = Number(reservation.qty) || 0;
+    const fromRes = Math.min(resQty, qty);
+    reservedDelta = fromRes;
+    if (fromRes >= resQty) {
+      reservation.status = "consumed";
+      await reservation.save();
+    } else {
+      reservation.qty = resQty - fromRes;
+      await reservation.save();
+    }
+  } else if (qty > available) {
+    return {
+      ok: false,
+      error: "Not enough available quantity (on-hand minus reserved)",
+    };
+  }
+
+  item.onHand = onHand - qty;
+  item.reserved = Math.max(0, reserved - reservedDelta);
+  await item.save();
+
+  const movement = await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty: -qty,
+    type: "issue_job",
+    simpleServiceProposalId: sid,
+    documentNumber: opts.documentNumber,
+    reservationId: reservation ? String(reservation._id) : "",
+    notes: opts.notes,
+    balanceAfter: Number(item.onHand) || 0,
+  });
+
+  return { ok: true, item: item.toObject(), movement };
+}
+
+/**
+ * Issue stock to shop use (no job link).
+ *
+ * @param {string} email
+ * @param {string} inventoryItemId
+ * @param {{ qty: number, reason?: string, notes?: string }} opts
+ */
+export async function issueInventoryToShop(email, inventoryItemId, opts) {
+  const e = email.trim().toLowerCase();
+  const id = String(inventoryItemId || "").trim();
+  const qty = Number(opts?.qty);
+  if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
+    return { ok: false, error: "Invalid qty" };
+  }
+
+  const item = await InventoryItem.findOne({ _id: id, createdByEmail: e });
+  if (!item) return { ok: false, error: "Inventory item not found" };
+
+  const onHand = Number(item.onHand) || 0;
+  const reserved = Number(item.reserved) || 0;
+  const available = onHand - reserved;
+  if (qty > available) {
+    return { ok: false, error: "Not enough available quantity" };
+  }
+
+  item.onHand = onHand - qty;
+  await item.save();
+
+  const movement = await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty: -qty,
+    type: "issue_shop",
+    reason: opts.reason,
+    notes: opts.notes,
+    balanceAfter: Number(item.onHand) || 0,
+  });
+
+  return { ok: true, item: item.toObject(), movement };
+}
+
+/**
+ * Return previously issued stock to on-hand.
+ *
+ * @param {string} email
+ * @param {string} inventoryItemId
+ * @param {{ qty: number, relatedMovementId?: string, notes?: string, simpleServiceProposalId?: string }} opts
+ */
+export async function returnInventoryToStock(email, inventoryItemId, opts) {
+  const e = email.trim().toLowerCase();
+  const id = String(inventoryItemId || "").trim();
+  const qty = Number(opts?.qty);
+  if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
+    return { ok: false, error: "Invalid qty" };
+  }
+
+  const relatedId = String(opts?.relatedMovementId || "").trim();
+  if (relatedId && mongoose.Types.ObjectId.isValid(relatedId)) {
+    const prior = await InventoryMovement.findOne({
+      _id: relatedId,
+      createdByEmail: e,
+      inventoryItemId: id,
+      type: { $in: ["issue_job", "issue_shop"] },
+    }).lean();
+    if (!prior) return { ok: false, error: "Related issue movement not found" };
+    const issued = Math.abs(Number(prior.qty) || 0);
+    const alreadyReturned = await InventoryMovement.aggregate([
+      {
+        $match: {
+          createdByEmail: e,
+          inventoryItemId: new mongoose.Types.ObjectId(id),
+          type: "return_stock",
+          relatedMovementId: relatedId,
+        },
+      },
+      { $group: { _id: null, total: { $sum: "$qty" } } },
+    ]);
+    const returnedSoFar = Number(alreadyReturned[0]?.total) || 0;
+    if (returnedSoFar + qty > issued) {
+      return { ok: false, error: "Return qty exceeds original issue" };
+    }
+  }
+
+  const item = await InventoryItem.findOneAndUpdate(
+    { _id: id, createdByEmail: e },
+    { $inc: { onHand: qty } },
+    { new: true }
   );
-  if (r.matchedCount === 0) return { ok: false, error: "Inventory item not found" };
-  return { ok: true };
+  if (!item) return { ok: false, error: "Inventory item not found" };
+
+  const movement = await recordInventoryMovement({
+    createdByEmail: e,
+    inventoryItemId: id,
+    qty,
+    type: "return_stock",
+    relatedMovementId: relatedId,
+    simpleServiceProposalId: opts.simpleServiceProposalId,
+    notes: opts.notes,
+    balanceAfter: Number(item.onHand) || 0,
+  });
+
+  return { ok: true, item: item.toObject(), movement };
 }

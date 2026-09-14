@@ -11,12 +11,20 @@ const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 
 /**
- * Pick inventory parts + qty → Other Items lines for Simple Service Proposal.
+ * Pick inventory parts.
+ * - Default: qty per part → Other Items (or custom buildLine).
+ * - linkOne: click a row to link a single SKU (no qty).
  */
 export default function SimpleAddFromInventoryModal({
   open,
   onClose,
   onAddLines,
+  onLinkItem,
+  buildLine,
+  submitLabel = "Add to Other Items",
+  hint = "Enter quantity for each part to add. Lines appear under Other Items (you can set price after).",
+  title = "Add from inventory",
+  mode = "qty",
   zIndex = 140,
 }) {
   const alert = useAlert();
@@ -71,6 +79,10 @@ export default function SimpleAddFromInventoryModal({
     for (const it of items) {
       const q = parseFloat(pickerQty[it.id] ?? "0");
       if (!Number.isFinite(q) || q <= 0) continue;
+      if (typeof buildLine === "function") {
+        lines.push(buildLine(it, q));
+        continue;
+      }
       const uom = (it.uom && String(it.uom).trim()) || "ea";
       const name = String(it.name || it.sku || "Part").trim() || "Part";
       lines.push({
@@ -95,24 +107,29 @@ export default function SimpleAddFromInventoryModal({
     onClose?.();
   };
 
+  const handleLink = (it) => {
+    onLinkItem?.(it);
+    onClose?.();
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Add from inventory"
+      title={title}
       size="lg"
       width="min(720px, 96vw)"
       zIndex={zIndex}
       closeOnOutsideClick={false}
       actions={
-        <Button type="button" variant="primary" size="sm" onClick={() => void handleSubmit()} disabled={loading}>
-          Add to Other Items
-        </Button>
+        mode === "linkOne" ? null : (
+          <Button type="button" variant="primary" size="sm" onClick={() => void handleSubmit()} disabled={loading}>
+            {submitLabel}
+          </Button>
+        )
       }
     >
-      <p className="mb-2 text-xs text-secondary">
-        Enter quantity for each part to add. Lines appear under Other Items (you can set price after).
-      </p>
+      <p className="mb-2 text-xs text-secondary">{hint}</p>
       <input
         type="search"
         value={search}
@@ -138,7 +155,11 @@ export default function SimpleAddFromInventoryModal({
                 <th className="px-2 py-1.5">Part</th>
                 <th className="w-16 px-2 py-1.5">UOM</th>
                 <th className="w-20 px-2 py-1.5 text-right">Available</th>
-                <th className="w-24 px-2 py-1.5">Qty</th>
+                {mode === "linkOne" ? (
+                  <th className="w-20 px-2 py-1.5 text-center">Link</th>
+                ) : (
+                  <th className="w-24 px-2 py-1.5">Qty</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -148,7 +169,7 @@ export default function SimpleAddFromInventoryModal({
                 return (
                   <tr key={it.id} className="border-b border-border last:border-b-0">
                     <td className="px-2 py-1.5">
-                      <div className="font-medium text-title">{it.name || "—"}</div>
+                      <div className="font-medium text-title">{it.name || "-"}</div>
                       {it.sku ? <div className="text-xs text-secondary">SKU: {it.sku}</div> : null}
                     </td>
                     <td className="px-2 py-1.5 tabular-nums text-secondary">{it.uom || "ea"}</td>
@@ -160,18 +181,31 @@ export default function SimpleAddFromInventoryModal({
                       {avail}
                     </td>
                     <td className="px-2 py-1.5">
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={pickerQty[it.id] ?? ""}
-                        onChange={(e) =>
-                          setPickerQty((prev) => ({ ...prev, [it.id]: e.target.value }))
-                        }
-                        className={FIELD_INPUT}
-                        placeholder="0"
-                        aria-label={`Qty for ${it.name || "part"}`}
-                      />
+                      {mode === "linkOne" ? (
+                        <div className="flex justify-center">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleLink(it)}
+                          >
+                            Link
+                          </Button>
+                        </div>
+                      ) : (
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={pickerQty[it.id] ?? ""}
+                          onChange={(e) =>
+                            setPickerQty((prev) => ({ ...prev, [it.id]: e.target.value }))
+                          }
+                          className={FIELD_INPUT}
+                          placeholder="0"
+                          aria-label={`Qty for ${it.name || "part"}`}
+                        />
+                      )}
                     </td>
                   </tr>
                 );

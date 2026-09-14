@@ -138,6 +138,7 @@ export async function fetchSimplePurchaseOrdersPage(query = {}) {
     params.set("sortDir", query.sortDir === "asc" ? "asc" : "desc");
   }
   if (query.paymentStatus) params.set("paymentStatus", String(query.paymentStatus));
+  if (query.poType) params.set("poType", String(query.poType).trim().toLowerCase());
   if (query.from) params.set("from", String(query.from).slice(0, 10));
   if (query.to) params.set("to", String(query.to).slice(0, 10));
   if (query.serviceProposalId) params.set("serviceProposalId", String(query.serviceProposalId));

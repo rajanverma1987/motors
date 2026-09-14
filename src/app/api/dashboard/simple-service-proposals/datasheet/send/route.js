@@ -44,7 +44,7 @@ export async function GET(request) {
     const motorType = String(searchParams.get("motorType") || "AC").toUpperCase();
     const documentLabel =
       String(searchParams.get("documentLabel") || "").trim() ||
-      `${motorType} Motor Datasheet and Inspection Report`;
+      `${motorType} Motor Datasheet`;
 
     await connectDB();
     const email = user.email.trim().toLowerCase();
@@ -98,7 +98,7 @@ export async function POST(request) {
     const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
 
     const docNumber = String(printContext.documentNumber || datasheet?.jobNumber || "").trim();
-    const reportTitle = `${motorType} Motor Datasheet and Inspection Report`;
+    const reportTitle = `${motorType} Motor Datasheet`;
 
     if (!toEmail) {
       return NextResponse.json({ error: "Customer email is required." }, { status: 400 });

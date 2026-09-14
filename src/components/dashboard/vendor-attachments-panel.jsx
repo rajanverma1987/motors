@@ -1,8 +1,9 @@
 "use client";
 
 import { useId, useState } from "react";
-import { FiTrash2, FiExternalLink, FiUpload, FiCamera } from "react-icons/fi";
+import { FiTrash2, FiExternalLink, FiDownload, FiUpload, FiCamera } from "react-icons/fi";
 import SimpleAttachmentPreviewModal, {
+  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 
@@ -88,6 +89,21 @@ export default function VendorAttachmentsPanel({
     setPreview({ url: href, name });
   };
 
+  const downloadUrl = (row) => {
+    const href = resolveAttachmentHref(row?.url ?? row);
+    const name =
+      (typeof row === "object" && row ? String(row.name || "").trim() : "") || "attachment";
+    if (!href) return;
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = name;
+    a.rel = "noopener noreferrer";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
   const hasRows = attachments.length > 0 || pendingFiles.length > 0;
   const uploadBtnClass = `inline-flex cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border-[0.5px] border-border bg-transparent px-3 py-1 text-sm text-text transition-opacity hover:bg-card hover:border-primary/20 ${
     uploading ? "pointer-events-none cursor-not-allowed opacity-50" : ""
@@ -156,21 +172,34 @@ export default function VendorAttachmentsPanel({
               </tr>
             </thead>
             <tbody>
-              {attachments.map((row, i) => (
+              {attachments.map((row, i) => {
+                const canPreview = isPreviewableAttachment(row?.url, row?.name);
+                return (
                 <tr key={`${row.url}-${i}`} className="border-b border-border last:border-b-0">
                   <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={row.name || row.url}>
                     {row.name || row.url || "—"}
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex justify-end gap-1">
+                      {canPreview ? (
+                        <button
+                          type="button"
+                          className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                          aria-label="Preview document"
+                          title="Preview"
+                          onClick={() => viewUrl(row)}
+                        >
+                          <FiExternalLink className="h-4 w-4" aria-hidden />
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                        aria-label="View document"
-                        title="View"
-                        onClick={() => viewUrl(row)}
+                        aria-label="Download document"
+                        title="Download"
+                        onClick={() => downloadUrl(row)}
                       >
-                        <FiExternalLink className="h-4 w-4" aria-hidden />
+                        <FiDownload className="h-4 w-4" aria-hidden />
                       </button>
                       {canRemove ? (
                         <button
@@ -187,7 +216,8 @@ export default function VendorAttachmentsPanel({
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
               {!readOnly
                 ? pendingFiles.map((file, i) => (
                     <tr key={`pending-${file.name}-${i}`} className="border-b border-border last:border-b-0 bg-muted/10">

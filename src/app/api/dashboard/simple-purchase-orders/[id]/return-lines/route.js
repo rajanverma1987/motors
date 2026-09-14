@@ -10,6 +10,7 @@ import {
 import { checkRateLimit } from "@/lib/rate-limit";
 import { clampString } from "@/lib/validation";
 import { reverseReceiveInventoryFromPoLine } from "@/lib/inventory-service";
+import { shouldAddPoLineToInventory } from "@/lib/simple-po-line-receipts";
 import mongoose from "mongoose";
 import {
   canReturnPoLine,
@@ -89,6 +90,7 @@ export async function POST(request, context) {
       const priorStatus = getPoLineReceivingStatus(line);
       const invId = String(line?.inventoryItemId || "").trim();
       if (
+        shouldAddPoLineToInventory(line) &&
         invId &&
         mongoose.Types.ObjectId.isValid(invId) &&
         (priorStatus === SIMPLE_PO_RECEIVING_STATUS_RECEIVED ||
@@ -96,7 +98,12 @@ export async function POST(request, context) {
       ) {
         const qty = lineReceiveQty(line);
         if (qty > 0) {
-          const rev = await reverseReceiveInventoryFromPoLine(email, invId, qty);
+          const rev = await reverseReceiveInventoryFromPoLine(email, invId, qty, {
+            purchaseOrderId: String(doc._id),
+            poNumber: String(doc.poNumber || "").trim(),
+            vendorName: String(doc.vendorName || "").trim(),
+            poLineId: lid,
+          });
           if (!rev.ok && !rev.skipped) {
             return NextResponse.json(
               { error: rev.error || "Could not reverse inventory for returned line." },

@@ -6,7 +6,6 @@ import {
   FiBell,
   FiCheckCircle,
   FiClipboard,
-  FiEdit2,
   FiLayers,
   FiPlus,
   FiX,
@@ -14,6 +13,7 @@ import {
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
+import Tabs from "@/components/ui/tabs";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimplePoDueNotificationsModal from "@/components/simple/simple-po-due-notifications-modal";
@@ -34,6 +34,7 @@ import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
   deleteSimplePurchaseOrder,
+  fetchSimplePurchaseOrder,
   fetchSimplePurchaseOrdersPage,
 } from "@/lib/simple-portal-api";
 import {
@@ -42,7 +43,6 @@ import {
   resolveSimplePoType,
   SIMPLE_PO_TYPE_JOB,
   SIMPLE_PO_TYPE_SHOP,
-  simplePoTypeLabel,
 } from "@/lib/simple-purchase-order-form";
 import {
   normalizePoPaymentStatusKey,
@@ -77,10 +77,6 @@ function poStatusBadgeVariant(status) {
   return "default";
 }
 
-function poTypeBadgeVariant(row) {
-  return resolveSimplePoType(row) === SIMPLE_PO_TYPE_JOB ? "primary" : "default";
-}
-
 function paymentFilterIcon(label) {
   const l = String(label || "").toLowerCase();
   if (!l || l === "all") return FiLayers;
@@ -97,6 +93,9 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const searchParams = useSearchParams();
   const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
   const jobView = useSimpleJobView();
+
+  const [poTypeTab, setPoTypeTab] = useState(SIMPLE_PO_TYPE_JOB);
+  const isJobTab = poTypeTab === SIMPLE_PO_TYPE_JOB;
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -149,6 +148,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortBy: tableSort?.key || "poCutDate",
         sortDir: tableSort?.direction || "desc",
         paymentStatus: paymentFilter || "",
+        poType: poTypeTab,
         from: dateFrom,
         to: dateTo,
       });
@@ -162,11 +162,17 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort, paymentFilter, dateFrom, dateTo]);
+  }, [page, pageSize, searchQuery, tableSort, paymentFilter, poTypeTab, dateFrom, dateTo]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    setPage(1);
+    setPaymentFilter(FILTER_ALL);
+    setSearchQuery("");
+  }, [poTypeTab]);
 
   useEffect(() => {
     setPage(1);
@@ -285,6 +291,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const displayRows = enrichedRows;
 
   const openEdit = (row) => {
+    if (row) setPoTypeTab(resolveSimplePoType(row));
     setEditingPo(row);
     setModalMode("edit");
     setModalOpen(true);
@@ -293,9 +300,21 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   useSimpleOpenParam({
     ready: !loading,
     onOpen: useCallback(
-      (openId) => {
+      async (openId) => {
         const row = rows.find((r) => String(r.id) === openId);
-        if (row) openEdit(row);
+        if (row) {
+          openEdit(row);
+          return true;
+        }
+        try {
+          const item = await fetchSimplePurchaseOrder(openId);
+          if (item) {
+            openEdit(item);
+            return true;
+          }
+        } catch {
+          /* ignore */
+        }
         return true;
       },
       [rows]
@@ -345,22 +364,22 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const columns = useMemo(
     () => [
       {
-        key: "edit",
+        key: "actions",
         label: "",
         sortable: false,
         className: "w-10",
         render: (_, row) => (
           <button
             type="button"
-            className="rounded p-0.5 text-primary hover:bg-primary/10"
-            title="Edit"
-            aria-label="Edit"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Delete"
+            aria-label="Delete"
             onClick={(e) => {
               e.stopPropagation();
-              openEdit(row);
+              handleDelete(row);
             }}
           >
-            <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
+            <FiX className="h-3.5 w-3.5" aria-hidden />
           </button>
         ),
       },
@@ -374,82 +393,72 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             className="font-medium text-primary hover:underline"
             onClick={() => openEdit(row)}
           >
-            {v || "—"}
+            {v || "-"}
           </button>
         ),
       },
-      {
-        key: "customerName",
-        label: "Customer",
-        sortable: false,
-        render: (v, row) => {
-          if (resolveSimplePoType(row) !== SIMPLE_PO_TYPE_JOB) return "—";
-          const customerId = String(row.customerId || "").trim();
-          const name = String(v || "").trim() || "—";
-          if (!customerId || name === "—") return name;
-          return (
-            <button
-              type="button"
-              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
-              onClick={(e) => {
-                e.stopPropagation();
-                setOpenCustomerId(customerId);
-              }}
-              title="Open customer"
-            >
-              {name}
-            </button>
-          );
-        },
-      },
-      {
-        key: "poType",
-        label: "Type",
-        sortable: true,
-        render: (_, row) => (
-          <Badge
-            variant={poTypeBadgeVariant(row)}
-            className="rounded-full px-2.5 py-0.5 text-xs"
-          >
-            {simplePoTypeLabel(row)}
-          </Badge>
-        ),
-      },
-      {
-        key: "jobNumber",
-        label: "Job#",
-        sortable: true,
-        render: (v, row) => {
-          const jobLabel = String(v || "").trim() || "—";
-          const proposalId = String(row.serviceProposalId || "").trim();
-          if (!proposalId || jobLabel === "—") return jobLabel;
-          return (
-            <button
-              type="button"
-              className="font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
-              onClick={(e) => {
-                e.stopPropagation();
-                jobView?.openJob?.(proposalId);
-              }}
-              title="Open service proposal"
-            >
-              {jobLabel}
-            </button>
-          );
-        },
-      },
+      ...(isJobTab
+        ? [
+            {
+              key: "customerName",
+              label: "Customer",
+              sortable: false,
+              render: (v, row) => {
+                const customerId = String(row.customerId || "").trim();
+                const name = String(v || "").trim() || "-";
+                if (!customerId || name === "-") return name;
+                return (
+                  <button
+                    type="button"
+                    className="rounded text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpenCustomerId(customerId);
+                    }}
+                    title="Open customer"
+                  >
+                    {name}
+                  </button>
+                );
+              },
+            },
+            {
+              key: "jobNumber",
+              label: "Job#",
+              sortable: true,
+              render: (v, row) => {
+                const jobLabel = String(v || "").trim() || "-";
+                const proposalId = String(row.serviceProposalId || "").trim();
+                if (!proposalId || jobLabel === "-") return jobLabel;
+                return (
+                  <button
+                    type="button"
+                    className="rounded font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      jobView?.openJob?.(proposalId);
+                    }}
+                    title="Open service proposal"
+                  >
+                    {jobLabel}
+                  </button>
+                );
+              },
+            },
+          ]
+        : []),
       {
         key: "vendorName",
         label: "Vendor Name",
         sortable: true,
         render: (v, row) => {
           const vendorId = String(row.vendorId || "").trim();
-          const name = String(v || "").trim() || "—";
-          if (!vendorId || name === "—") return name;
+          const name = String(v || "").trim() || "-";
+          if (!vendorId || name === "-") return name;
           return (
             <button
               type="button"
-              className="text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1 rounded"
+              className="rounded text-left font-medium text-primary hover:underline focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1"
               onClick={(e) => {
                 e.stopPropagation();
                 setOpenVendorId(vendorId);
@@ -465,7 +474,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         key: "vendorPhone",
         label: "Phone",
         sortable: true,
-        render: (v) => v || "—",
+        render: (v) => v || "-",
       },
       {
         key: "poCutDate",
@@ -473,7 +482,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortable: true,
         render: (v) => {
           const text = formatDate(v);
-          return text && text !== "-" ? text : "—";
+          return text && text !== "-" ? text : "-";
         },
       },
       {
@@ -482,7 +491,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortable: true,
         render: (v) => {
           const text = formatDate(v);
-          return text && text !== "-" ? text : "—";
+          return text && text !== "-" ? text : "-";
         },
       },
       {
@@ -490,8 +499,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         label: "PO Status",
         sortable: true,
         render: (v) => {
-          const label = String(v || "").trim() || "—";
-          if (label === "—") return label;
+          const label = String(v || "").trim() || "-";
+          if (label === "-") return label;
           return (
             <Badge
               variant={poStatusBadgeVariant(label)}
@@ -507,8 +516,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         label: "Payment Status",
         sortable: true,
         render: (v) => {
-          const raw = String(v || "").trim() || "—";
-          if (raw === "—") return raw;
+          const raw = String(v || "").trim() || "-";
+          if (raw === "-") return raw;
           const { tileColor, tileBgColor, tileTextColor, index, label } = poPaymentStatusTileColorForValue(
             mergedSettings,
             raw
@@ -568,39 +577,19 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
               sortable: true,
               render: (v) => {
                 const text = formatDate(v);
-                return text && text !== "-" ? text : "—";
+                return text && text !== "-" ? text : "-";
               },
             },
           ]
         : []),
-      {
-        key: "actions",
-        label: "",
-        sortable: false,
-        className: "w-10",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Delete"
-            aria-label="Delete"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row);
-            }}
-          >
-            <FiX className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ),
-      },
     ],
-    [formatDate, handleDelete, jobView, mergedSettings, canViewFinancials]
+    [canViewFinancials, formatDate, handleDelete, isJobTab, jobView, mergedSettings]
   );
 
   const isCreate = modalMode === "create";
 
-  return (
-    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+  const listPanel = (
+    <>
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
         {paymentSummaryCards.map((card) => (
           <StatusFilterPillButton
@@ -634,14 +623,14 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             setPage(1);
             setSearchQuery(q);
           }}
-          searchPlaceholder="Search purchase orders…"
+          searchPlaceholder={isJobTab ? "Search job purchase orders…" : "Search shop purchase orders…"}
           sortState={tableSort}
           onSort={(key, direction) => {
             setPage(1);
             setTableSort({ key, direction });
           }}
           onRefresh={reload}
-          columnSettingsKey="simple-purchase-orders"
+          columnSettingsKey={isJobTab ? "simple-purchase-orders-job" : "simple-purchase-orders-shop"}
           toolbarBeforeSearch={
             <div className="flex items-center gap-2">
               <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
@@ -675,13 +664,15 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           emptyMessage={
             totalCount === 0
               ? searchQuery.trim()
-                ? "No purchase orders match your search."
+                ? `No ${isJobTab ? "job" : "shop"} purchase orders match your search.`
                 : paymentFilter
-                  ? `No ${paymentFilter.toLowerCase()} purchase orders.`
+                  ? `No ${paymentFilter.toLowerCase()} ${isJobTab ? "job" : "shop"} purchase orders.`
                   : dateFrom || dateTo
-                    ? "No purchase orders in this date range."
-                    : "No purchase orders yet. Click Add New for a Shop PO, or create a Job PO from a service proposal."
-              : "No purchase orders yet."
+                    ? `No ${isJobTab ? "job" : "shop"} purchase orders in this date range.`
+                    : isJobTab
+                      ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
+                      : "No shop purchase orders yet. Click Add New to create one."
+              : `No ${isJobTab ? "job" : "shop"} purchase orders yet.`
           }
           fillHeight
           responsive
@@ -696,6 +687,29 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           }}
         />
       </div>
+    </>
+  );
+
+  return (
+    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+      <Tabs
+        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+        value={poTypeTab}
+        onChange={(id) => {
+          const next = id === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
+          if (next === poTypeTab) return;
+          setPoTypeTab(next);
+        }}
+        animatePanel={false}
+        listClassName="mx-0 shrink-0 !rounded-none"
+        tabButtonClassName="!rounded-none"
+        panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-3"
+        ariaLabel="Purchase order type"
+        tabs={[
+          { id: SIMPLE_PO_TYPE_JOB, label: "Job PO", children: listPanel },
+          { id: SIMPLE_PO_TYPE_SHOP, label: "Shop PO", children: listPanel },
+        ]}
+      />
 
       <SimplePurchaseOrderFormModal
         open={modalOpen && (isCreate || !!editingPo)}
@@ -704,8 +718,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         jobNumber={String(editingPo?.jobNumber || "").trim()}
         mode={isCreate ? "create" : "edit"}
         initialPoId={String(editingPo?.id || "").trim()}
-        defaultPoType={isCreate ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB}
-        allowPoTypeChange={isCreate}
+        defaultPoType={isCreate ? poTypeTab : resolveSimplePoType(editingPo)}
+        allowPoTypeChange={false}
         onSaved={() => reload()}
       />
 

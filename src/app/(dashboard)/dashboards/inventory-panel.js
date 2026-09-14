@@ -1,24 +1,25 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { FiEdit2, FiPlus, FiX } from "react-icons/fi";
+import { FiPlus, FiRotateCcw, FiTool, FiX } from "react-icons/fi";
 import Table from "@/components/ui/table";
-import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleInventoryItemModal from "@/components/simple/simple-inventory-item-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { usePreferredTablePageSize, useFormatDateTime } from "@/contexts/user-settings-context";
+import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
 
 const ADJUST_FORM_ID = "simple-inventory-adjust-form";
+const ISSUE_FORM_ID = "simple-inventory-issue-form";
+const RETURN_FORM_ID = "simple-inventory-return-form";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold text-title";
+const TOOLBAR_BTN = "h-9 !rounded-none px-2.5";
 
 function FieldRow({ label, labelWidth = "8rem", children }) {
   return (
@@ -31,23 +32,9 @@ function FieldRow({ label, labelWidth = "8rem", children }) {
   );
 }
 
-function usageStatusVariant(status) {
-  if (status === "consumed") return "success";
-  if (status === "active") return "warning";
-  return "default";
-}
-
-function usageStatusLabel(status) {
-  if (status === "consumed") return "Consumed";
-  if (status === "active") return "Reserved";
-  if (status === "released") return "Released";
-  return String(status || "—");
-}
-
 export default function InventoryPanel() {
   const alert = useAlert();
   const confirm = useConfirm();
-  const formatDateTime = useFormatDateTime();
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,17 +43,28 @@ export default function InventoryPanel() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
 
   const [adjustItem, setAdjustItem] = useState(null);
   const [adjustDelta, setAdjustDelta] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
 
-  const [usageFor, setUsageFor] = useState(null);
-  const [usageLoading, setUsageLoading] = useState(false);
-  const [usagePayload, setUsagePayload] = useState(null);
+  const [issueOpen, setIssueOpen] = useState(false);
+  const [issueItems, setIssueItems] = useState([]);
+  const [issueQtys, setIssueQtys] = useState({});
+  const [issueReason, setIssueReason] = useState("");
+  const [issueNotes, setIssueNotes] = useState("");
+  const [issueSaving, setIssueSaving] = useState(false);
+
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returnItems, setReturnItems] = useState([]);
+  const [returnQtys, setReturnQtys] = useState({});
+  const [returnNotes, setReturnNotes] = useState("");
+  const [returnSaving, setReturnSaving] = useState(false);
 
   const load = useCallback(
     async ({ showError = true } = {}) => {
@@ -112,6 +110,11 @@ export default function InventoryPanel() {
 
   const displayRows = items;
 
+  const selectedRows = useMemo(() => {
+    const set = new Set(selectedIds.map(String));
+    return items.filter((r) => set.has(String(r.id)));
+  }, [items, selectedIds]);
+
   const openCreate = useCallback(() => {
     setEditingItem(null);
     setItemModalOpen(true);
@@ -134,59 +137,78 @@ export default function InventoryPanel() {
     ),
   });
 
-  const closeUsage = useCallback(() => {
-    setUsageFor(null);
-    setUsagePayload(null);
-    setUsageLoading(false);
-  }, []);
-
-  const openUsage = useCallback(
-    async (row) => {
-      setUsageFor(row);
-      setUsagePayload(null);
-      setUsageLoading(true);
-      try {
-        const res = await fetch(`/api/dashboard/inventory/items/${row.id}/usage`, {
-          credentials: "include",
-          cache: "no-store",
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || "Failed to load usage");
-        setUsagePayload(data);
-      } catch (e) {
+  const requireSelection = useCallback(
+    async (minCount = 1) => {
+      if (selectedRows.length < minCount) {
         await alert({
-          title: "Error",
-          message: e.message || "Could not load usage",
+          title: "Select parts",
+          message: "Select at least one part in the table first.",
           variant: "danger",
         });
-        closeUsage();
-      } finally {
-        setUsageLoading(false);
+        return null;
       }
+      return selectedRows;
     },
-    [alert, closeUsage]
+    [alert, selectedRows]
   );
 
-  const handleDelete = useCallback(
-    async (row) => {
-      const onHand = Number(row?.onHand) || 0;
-      if (onHand > 0) {
-        await alert({
-          title: "Cannot delete",
-          message: "Set on-hand quantity to 0 before deleting this part.",
-          variant: "danger",
-        });
-        return;
-      }
-      const label = row?.name || row?.sku || "this part";
-      const ok = await confirm({
-        title: "Delete inventory part",
-        message: `Permanently delete “${label}”? Reservations and PO links are not removed automatically.`,
-        confirmLabel: "Delete",
-        cancelLabel: "Cancel",
+  const openIssue = useCallback(async () => {
+    const rows = await requireSelection(1);
+    if (!rows) return;
+    const qtys = {};
+    for (const row of rows) qtys[String(row.id)] = "";
+    setIssueItems(rows);
+    setIssueQtys(qtys);
+    setIssueReason("");
+    setIssueNotes("");
+    setIssueOpen(true);
+  }, [requireSelection]);
+
+  const openReturn = useCallback(async () => {
+    const rows = await requireSelection(1);
+    if (!rows) return;
+    const qtys = {};
+    for (const row of rows) qtys[String(row.id)] = "";
+    setReturnItems(rows);
+    setReturnQtys(qtys);
+    setReturnNotes("");
+    setReturnOpen(true);
+  }, [requireSelection]);
+
+  const handleDeleteSelected = useCallback(async () => {
+    const rows = await requireSelection(1);
+    if (!rows) return;
+    const blocked = rows.filter((r) => (Number(r.onHand) || 0) > 0);
+    const deletable = rows.filter((r) => (Number(r.onHand) || 0) <= 0);
+    if (deletable.length === 0) {
+      await alert({
+        title: "Cannot delete",
+        message: "Set on-hand quantity to 0 before deleting selected parts.",
         variant: "danger",
       });
-      if (!ok) return;
+      return;
+    }
+    const ok = await confirm({
+      title: deletable.length === 1 ? "Delete inventory part" : "Delete inventory parts",
+      message:
+        deletable.length === 1
+          ? `Permanently delete "${deletable[0].name || deletable[0].sku || "this part"}"?${
+              blocked.length
+                ? ` ${blocked.length} selected part(s) with on-hand stock will be skipped.`
+                : ""
+            }`
+          : `Permanently delete ${deletable.length} part(s)?${
+              blocked.length
+                ? ` ${blocked.length} selected part(s) with on-hand stock will be skipped.`
+                : ""
+            }`,
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
+    const errors = [];
+    for (const row of deletable) {
       try {
         const res = await fetch(`/api/dashboard/inventory/items/${row.id}`, {
           method: "DELETE",
@@ -194,18 +216,25 @@ export default function InventoryPanel() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Delete failed");
-        await alert({ title: "Deleted", message: "Part deleted." });
-        void load();
       } catch (e) {
-        await alert({
-          title: "Error",
-          message: e.message || "Delete failed",
-          variant: "danger",
-        });
+        errors.push(`${row.name || row.sku || row.id}: ${e.message || "Failed"}`);
       }
-    },
-    [alert, confirm, load]
-  );
+    }
+    setSelectedIds([]);
+    void load();
+    if (errors.length) {
+      await alert({
+        title: "Some deletes failed",
+        message: errors.join("\n"),
+        variant: "danger",
+      });
+      return;
+    }
+    await alert({
+      title: "Deleted",
+      message: deletable.length === 1 ? "Part deleted." : `${deletable.length} parts deleted.`,
+    });
+  }, [alert, confirm, load, requireSelection]);
 
   const applyAdjust = useCallback(
     async (e) => {
@@ -226,13 +255,17 @@ export default function InventoryPanel() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ onHandDelta: d }),
+          body: JSON.stringify({
+            onHandDelta: d,
+            reason: adjustReason.trim() || "adjust",
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Update failed");
         await alert({ title: "Success", message: "Stock updated." });
         setAdjustItem(null);
         setAdjustDelta("");
+        setAdjustReason("");
         void load();
       } catch (err) {
         await alert({
@@ -244,31 +277,137 @@ export default function InventoryPanel() {
         setAdjustSaving(false);
       }
     },
-    [adjustDelta, adjustItem, alert, load]
+    [adjustDelta, adjustItem, adjustReason, alert, load]
+  );
+
+  const applyIssue = useCallback(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!issueItems.length) return;
+
+      const lines = [];
+      for (const row of issueItems) {
+        const qty = parseFloat(issueQtys[String(row.id)] ?? "");
+        if (!Number.isFinite(qty) || qty <= 0) {
+          await alert({
+            title: "Quantity required",
+            message: `Enter a quantity greater than zero for "${row.name || row.sku || "part"}".`,
+            variant: "danger",
+          });
+          return;
+        }
+        lines.push({ row, qty });
+      }
+
+      setIssueSaving(true);
+      const errors = [];
+      try {
+        for (const { row, qty } of lines) {
+          try {
+            const res = await fetch(`/api/dashboard/inventory/items/${row.id}/issue`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                target: "shop",
+                qty,
+                reason: issueReason.trim(),
+                notes: issueNotes.trim(),
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Issue failed");
+          } catch (err) {
+            errors.push(`${row.name || row.sku || row.id}: ${err.message || "Failed"}`);
+          }
+        }
+        if (errors.length) {
+          await alert({
+            title: errors.length === lines.length ? "Issue failed" : "Some issues failed",
+            message: errors.join("\n"),
+            variant: "danger",
+          });
+        } else {
+          await alert({
+            title: "Success",
+            message: lines.length === 1 ? "Stock issued." : `${lines.length} parts issued.`,
+          });
+        }
+        setIssueOpen(false);
+        setIssueItems([]);
+        setSelectedIds([]);
+        void load();
+      } finally {
+        setIssueSaving(false);
+      }
+    },
+    [alert, issueItems, issueNotes, issueQtys, issueReason, load]
+  );
+
+  const applyReturn = useCallback(
+    async (e) => {
+      e?.preventDefault?.();
+      if (!returnItems.length) return;
+
+      const lines = [];
+      for (const row of returnItems) {
+        const qty = parseFloat(returnQtys[String(row.id)] ?? "");
+        if (!Number.isFinite(qty) || qty <= 0) {
+          await alert({
+            title: "Quantity required",
+            message: `Enter a quantity greater than zero for "${row.name || row.sku || "part"}".`,
+            variant: "danger",
+          });
+          return;
+        }
+        lines.push({ row, qty });
+      }
+
+      setReturnSaving(true);
+      const errors = [];
+      try {
+        for (const { row, qty } of lines) {
+          try {
+            const res = await fetch(`/api/dashboard/inventory/items/${row.id}/return`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({
+                qty,
+                notes: returnNotes.trim(),
+              }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Return failed");
+          } catch (err) {
+            errors.push(`${row.name || row.sku || row.id}: ${err.message || "Failed"}`);
+          }
+        }
+        if (errors.length) {
+          await alert({
+            title: errors.length === lines.length ? "Return failed" : "Some returns failed",
+            message: errors.join("\n"),
+            variant: "danger",
+          });
+        } else {
+          await alert({
+            title: "Success",
+            message: lines.length === 1 ? "Stock returned." : `${lines.length} parts returned.`,
+          });
+        }
+        setReturnOpen(false);
+        setReturnItems([]);
+        setSelectedIds([]);
+        void load();
+      } finally {
+        setReturnSaving(false);
+      }
+    },
+    [alert, load, returnItems, returnNotes, returnQtys]
   );
 
   const columns = useMemo(
     () => [
-      {
-        key: "edit",
-        label: "",
-        sortable: false,
-        className: "w-10",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="rounded p-0.5 text-primary hover:bg-primary/10"
-            title="Edit"
-            aria-label="Edit"
-            onClick={(e) => {
-              e.stopPropagation();
-              openEdit(row);
-            }}
-          >
-            <FiEdit2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ),
-      },
       {
         key: "name",
         label: "Part",
@@ -280,10 +419,10 @@ export default function InventoryPanel() {
             title={v ? String(v) : ""}
             onClick={(e) => {
               e.stopPropagation();
-              void openUsage(row);
+              openEdit(row);
             }}
           >
-            {v || "—"}
+            {v || "-"}
           </button>
         ),
       },
@@ -311,6 +450,7 @@ export default function InventoryPanel() {
                 e.stopPropagation();
                 setAdjustItem(row);
                 setAdjustDelta("");
+                setAdjustReason("");
               }}
             >
               ±
@@ -352,29 +492,11 @@ export default function InventoryPanel() {
         render: (v) => <span className="tabular-nums">{v}</span>,
       },
       { key: "location", label: "Location", sortable: true },
-      {
-        key: "actions",
-        label: "",
-        sortable: false,
-        className: "w-10",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Delete"
-            aria-label="Delete"
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleDelete(row);
-            }}
-          >
-            <FiX className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ),
-      },
     ],
-    [handleDelete, openEdit, openUsage]
+    [openEdit]
   );
+
+  const hasSelection = selectedIds.length > 0;
 
   return (
     <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
@@ -384,6 +506,9 @@ export default function InventoryPanel() {
         rowKey="id"
         loading={loading}
         searchable
+        selectable
+        selectedRowIds={selectedIds}
+        onSelectionChange={setSelectedIds}
         onSearch={(q) => {
           setPage(1);
           setSearchQuery(q);
@@ -407,6 +532,43 @@ export default function InventoryPanel() {
             <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
             Add New
           </Button>
+        }
+        toolbarAfterRefresh={
+          <div className="flex items-center gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!hasSelection}
+              onClick={() => void openIssue()}
+            >
+              <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+              Issue inventory
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!hasSelection}
+              onClick={() => void openReturn()}
+            >
+              <FiRotateCcw className="h-4 w-4 shrink-0" aria-hidden />
+              Return
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={!hasSelection}
+              onClick={() => void handleDeleteSelected()}
+            >
+              <FiX className="h-4 w-4 shrink-0" aria-hidden />
+              Delete
+            </Button>
+          </div>
         }
         emptyMessage={
           totalCount === 0
@@ -435,7 +597,10 @@ export default function InventoryPanel() {
           setEditingItem(null);
         }}
         item={editingItem}
-        onSaved={() => void load()}
+        onSaved={(saved) => {
+          if (saved?.id) setEditingItem((prev) => ({ ...(prev || {}), ...saved }));
+          void load();
+        }}
       />
 
       <Modal
@@ -444,8 +609,9 @@ export default function InventoryPanel() {
           if (adjustSaving) return;
           setAdjustItem(null);
           setAdjustDelta("");
+          setAdjustReason("");
         }}
-        title={adjustItem ? `Adjust stock — ${adjustItem.name}` : "Adjust"}
+        title={adjustItem ? `Adjust stock: ${adjustItem.name}` : "Adjust"}
         width="min(420px, 96vw)"
         zIndex={125}
         showClose={!adjustSaving}
@@ -469,7 +635,7 @@ export default function InventoryPanel() {
         >
           <p className="text-sm text-secondary">
             Current on-hand:{" "}
-            <span className="font-semibold text-title">{adjustItem?.onHand ?? "—"}</span>. Use
+            <span className="font-semibold text-title">{adjustItem?.onHand ?? "-"}</span>. Use
             positive to receive, negative to remove.
           </p>
           <FieldRow label="Adjustment">
@@ -484,81 +650,189 @@ export default function InventoryPanel() {
               aria-label="Adjustment quantity"
             />
           </FieldRow>
+          <FieldRow label="Reason">
+            <input
+              type="text"
+              value={adjustReason}
+              onChange={(e) => setAdjustReason(e.target.value)}
+              className={FIELD_INPUT}
+              placeholder="Optional note"
+              disabled={adjustSaving}
+              aria-label="Adjust reason"
+            />
+          </FieldRow>
         </Form>
       </Modal>
 
       <Modal
-        open={!!usageFor}
-        onClose={closeUsage}
-        title={usageFor ? `Movement history — ${usageFor.name}` : "Movement history"}
-        size="4xl"
+        open={issueOpen}
+        onClose={() => {
+          if (issueSaving) return;
+          setIssueOpen(false);
+          setIssueItems([]);
+        }}
+        title={`Issue inventory (${issueItems.length})`}
+        width="min(560px, 96vw)"
         zIndex={125}
-        headerClassName="min-w-0"
+        showClose={!issueSaving}
+        closeOnOutsideClick={false}
+        actions={
+          <Button
+            type="submit"
+            form={ISSUE_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={issueSaving}
+          >
+            {issueSaving ? "Issuing…" : "Issue"}
+          </Button>
+        }
       >
-        {usageLoading ? (
-          <p className="text-sm text-secondary">Loading…</p>
-        ) : usagePayload?.rows?.length ? (
+        <Form
+          id={ISSUE_FORM_ID}
+          onSubmit={applyIssue}
+          className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+        >
+          <FieldRow label="Reason">
+            <input
+              type="text"
+              value={issueReason}
+              onChange={(e) => setIssueReason(e.target.value)}
+              className={FIELD_INPUT}
+              placeholder="Shop use / department"
+              disabled={issueSaving}
+              aria-label="Issue reason"
+            />
+          </FieldRow>
+          <FieldRow label="Notes">
+            <input
+              type="text"
+              value={issueNotes}
+              onChange={(e) => setIssueNotes(e.target.value)}
+              className={FIELD_INPUT}
+              disabled={issueSaving}
+              aria-label="Issue notes"
+            />
+          </FieldRow>
           <div className="overflow-x-auto border border-border">
-            <table className="w-full min-w-[640px] border-collapse text-sm">
+            <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-left dark:bg-muted/15">
-                  <th className="px-3 py-2 font-semibold text-title">Job#</th>
-                  <th className="px-3 py-2 text-right font-semibold text-title">Qty</th>
-                  <th className="px-3 py-2 font-semibold text-title">Status</th>
-                  <th className="px-3 py-2 font-semibold text-title">Reserved</th>
-                  <th className="px-3 py-2 font-semibold text-title">Used (consumed)</th>
+                  <th className="px-2 py-1.5 font-semibold text-title">Part</th>
+                  <th className="w-20 px-2 py-1.5 text-right font-semibold text-title">Avail</th>
+                  <th className="w-28 px-2 py-1.5 font-semibold text-title">Qty</th>
                 </tr>
               </thead>
               <tbody>
-                {usagePayload.rows.map((r) => {
-                  const jobLabel = String(r.jobNumber || r.workOrderNumber || r.quoteRfqNumber || "").trim();
-                  return (
-                    <tr key={r.reservationId} className="border-b border-border last:border-b-0">
-                      <td className="px-3 py-2 text-title">
-                        {r.workOrderId ? (
-                          <Link
-                            href={`/dashboard/work-orders?open=${encodeURIComponent(r.workOrderId)}`}
-                            className="font-medium text-primary hover:underline"
-                          >
-                            {jobLabel || r.workOrderId}
-                          </Link>
-                        ) : jobLabel ? (
-                          <span className="font-medium tabular-nums text-title">{jobLabel}</span>
-                        ) : (
-                          <span className="text-secondary">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-right tabular-nums font-medium text-title">
-                        {r.qty}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge
-                          variant={usageStatusVariant(r.status)}
-                          className="rounded-full px-2.5 py-0.5 text-xs"
-                        >
-                          {usageStatusLabel(r.status)}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-secondary">
-                        {r.reservedAt ? formatDateTime(r.reservedAt) : "—"}
-                      </td>
-                      <td className="px-3 py-2 text-secondary">
-                        {r.usedAt ? formatDateTime(r.usedAt) : "—"}
-                      </td>
-                    </tr>
-                  );
-                })}
+                {issueItems.map((row) => (
+                  <tr key={row.id} className="border-b border-border last:border-b-0">
+                    <td className="px-2 py-1.5">
+                      <div className="font-medium text-title">{row.name || "-"}</div>
+                      {row.sku ? <div className="text-xs text-secondary">SKU: {row.sku}</div> : null}
+                    </td>
+                    <td className="px-2 py-1.5 text-right tabular-nums text-secondary">
+                      {row.available ?? "-"}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={issueQtys[String(row.id)] ?? ""}
+                        onChange={(e) =>
+                          setIssueQtys((prev) => ({ ...prev, [String(row.id)]: e.target.value }))
+                        }
+                        className={FIELD_INPUT}
+                        disabled={issueSaving}
+                        aria-label={`Issue qty for ${row.name || "part"}`}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-        ) : usagePayload ? (
-          <p className="text-sm text-secondary">
-            No movement history for this part yet. Add it on a Service Proposal via{" "}
-            <span className="font-semibold text-title">Add From Inventory</span>, save as a{" "}
-            <span className="font-semibold text-title">JOB</span> to reserve, then set Job Status to{" "}
-            <span className="font-semibold text-title">Shipped</span> to consume.
-          </p>
-        ) : null}
+        </Form>
+      </Modal>
+
+      <Modal
+        open={returnOpen}
+        onClose={() => {
+          if (returnSaving) return;
+          setReturnOpen(false);
+          setReturnItems([]);
+        }}
+        title={`Return to stock (${returnItems.length})`}
+        width="min(560px, 96vw)"
+        zIndex={125}
+        showClose={!returnSaving}
+        closeOnOutsideClick={false}
+        actions={
+          <Button
+            type="submit"
+            form={RETURN_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={returnSaving}
+          >
+            {returnSaving ? "Returning…" : "Return"}
+          </Button>
+        }
+      >
+        <Form
+          id={RETURN_FORM_ID}
+          onSubmit={applyReturn}
+          className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+        >
+          <FieldRow label="Notes">
+            <input
+              type="text"
+              value={returnNotes}
+              onChange={(e) => setReturnNotes(e.target.value)}
+              className={FIELD_INPUT}
+              disabled={returnSaving}
+              aria-label="Return notes"
+            />
+          </FieldRow>
+          <div className="overflow-x-auto border border-border">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border bg-muted/30 text-left dark:bg-muted/15">
+                  <th className="px-2 py-1.5 font-semibold text-title">Part</th>
+                  <th className="w-24 px-2 py-1.5 text-right font-semibold text-title">On hand</th>
+                  <th className="w-28 px-2 py-1.5 font-semibold text-title">Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {returnItems.map((row) => (
+                  <tr key={row.id} className="border-b border-border last:border-b-0">
+                    <td className="px-2 py-1.5">
+                      <div className="font-medium text-title">{row.name || "-"}</div>
+                      {row.sku ? <div className="text-xs text-secondary">SKU: {row.sku}</div> : null}
+                    </td>
+                    <td className="px-2 py-1.5 text-right tabular-nums text-secondary">
+                      {row.onHand ?? "-"}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={returnQtys[String(row.id)] ?? ""}
+                        onChange={(e) =>
+                          setReturnQtys((prev) => ({ ...prev, [String(row.id)]: e.target.value }))
+                        }
+                        className={FIELD_INPUT}
+                        disabled={returnSaving}
+                        aria-label={`Return qty for ${row.name || "part"}`}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Form>
       </Modal>
     </div>
   );

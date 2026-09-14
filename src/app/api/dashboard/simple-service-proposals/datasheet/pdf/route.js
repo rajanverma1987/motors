@@ -11,7 +11,7 @@ function shopCompanyNameFromUser(user) {
 }
 
 /**
- * POST: Generate and download the AC / DC Motor Datasheet & Inspection Report PDF.
+ * POST: Generate and download the AC / DC Motor Datasheet PDF.
  */
 export async function POST(request) {
   try {

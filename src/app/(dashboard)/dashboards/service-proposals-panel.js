@@ -21,6 +21,7 @@ import Textarea from "@/components/ui/textarea";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import SimpleInvoiceTaxesModal from "@/components/simple/simple-invoice-taxes-modal";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
   SIMPLE_SCREEN_PANEL_CLASS,
@@ -201,6 +202,7 @@ export default function ServiceProposalsPanel({
     count: 0,
   });
   const [invoiceFinance, setInvoiceFinance] = useState(EMPTY_INVOICE_FINANCE);
+  const [taxesModalOpen, setTaxesModalOpen] = useState(false);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
 
@@ -1096,6 +1098,19 @@ export default function ServiceProposalsPanel({
           }}
           onRefresh={reload}
           columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
+          toolbarBeforeRefresh={
+            isInvoices && canViewFinancials ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 !rounded-none px-2.5"
+                onClick={() => setTaxesModalOpen(true)}
+              >
+                Taxes
+              </Button>
+            ) : null
+          }
           toolbarBeforeSearch={
             isInvoices ? null : (
               <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
@@ -1151,6 +1166,18 @@ export default function ServiceProposalsPanel({
         onSave={handleSave}
         onAttachmentsChange={handleAttachmentsChange}
       />
+
+      {isInvoices ? (
+        <SimpleInvoiceTaxesModal
+          open={taxesModalOpen}
+          onClose={() => setTaxesModalOpen(false)}
+          dateFrom={dateFrom}
+          dateTo={dateTo}
+          onSaved={() => {
+            void reload();
+          }}
+        />
+      ) : null}
 
       <Modal
         open={!!notesEdit}

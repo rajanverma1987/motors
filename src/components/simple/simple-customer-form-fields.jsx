@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { FiEye, FiPlus, FiX } from "react-icons/fi";
+import { FiDownload, FiEye, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
-import SimpleAttachmentPreviewModal from "@/components/simple/simple-attachment-preview-modal";
+import SimpleAttachmentPreviewModal, {
+  isPreviewableAttachment,
+} from "@/components/simple/simple-attachment-preview-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
@@ -194,6 +196,22 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       return;
     }
     setPreview({ url: href, name: doc?.name || "" });
+  };
+
+  const downloadDocument = (doc) => {
+    const href = resolveCustomerDocumentHref(doc?.url);
+    if (!href) {
+      void alert({ title: "Error", message: "File is not available yet.", variant: "danger" });
+      return;
+    }
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = String(doc?.name || "document").trim() || "document";
+    a.rel = "noopener noreferrer";
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
   const copyBillingToShipping = () => {
@@ -772,15 +790,28 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                     <tr key={rowKey} className="border-b border-border last:border-b-0">
                       <td className="pl-[5px] pr-1 py-1 align-middle">
                         {doc.url ? (
-                          <button
-                            type="button"
-                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
-                            title="View file"
-                            aria-label="View file"
-                            onClick={() => openDocument(doc)}
-                          >
-                            <FiEye className="h-3.5 w-3.5" aria-hidden />
-                          </button>
+                          <div className="flex items-center gap-0.5">
+                            {isPreviewableAttachment(doc.url, doc.name || fileLabel) ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
+                                title="Preview file"
+                                aria-label="Preview file"
+                                onClick={() => openDocument(doc)}
+                              >
+                                <FiEye className="h-3.5 w-3.5" aria-hidden />
+                              </button>
+                            ) : null}
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
+                              title="Download file"
+                              aria-label="Download file"
+                              onClick={() => downloadDocument(doc)}
+                            >
+                              <FiDownload className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                          </div>
                         ) : null}
                       </td>
                       <td className="pl-[5px] pr-1 py-1 align-middle">

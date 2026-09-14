@@ -194,6 +194,8 @@ export default function Table({
   onRefresh,
   /** Optional node rendered immediately before the search input in the table toolbar. */
   toolbarBeforeSearch = null,
+  /** Optional node rendered immediately before the refresh control in the table toolbar. */
+  toolbarBeforeRefresh = null,
   /** Optional node rendered immediately after the refresh control in the table toolbar. */
   toolbarAfterRefresh = null,
   /** Header label for the actions column (default "Actions"). Pass "" for a compact delete-only column. */
@@ -242,6 +244,7 @@ export default function Table({
     typeof effectiveOnColumnVisibilityChange === "function";
   const hasRefresh = typeof onRefresh === "function";
   const hasToolbarBeforeSearch = toolbarBeforeSearch != null;
+  const hasToolbarBeforeRefresh = toolbarBeforeRefresh != null;
   const hasToolbarAfterRefresh = toolbarAfterRefresh != null;
 
   const [searchInput, setSearchInput] = useState("");
@@ -1094,55 +1097,60 @@ export default function Table({
               />
             </div>
           )}
-          {hasRefresh && (
-            <button
-              type="button"
-              onClick={() => onRefresh()}
-              disabled={loading}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Refresh table"
-              title="Refresh"
-            >
-              <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
-            </button>
-          )}
-          {hasColumnSettings && (
-            <button
-              type="button"
-              onClick={openSettingsModal}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
-              aria-label="Table column settings"
-              title="Column settings"
-            >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-            </button>
-          )}
-          {hasToolbarAfterRefresh ? <div className="shrink-0">{toolbarAfterRefresh}</div> : null}
-          {loading && !hasRefresh && (
-            <span
-              className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
-              aria-label="Loading"
-            />
-          )}
-          {exportable && data.length > 0 &&
-            (exportIconOnly ? (
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {hasToolbarBeforeRefresh ? (
+              <div className="flex shrink-0 items-center gap-1">{toolbarBeforeRefresh}</div>
+            ) : null}
+            {hasRefresh && (
               <button
                 type="button"
-                onClick={handleExportCsv}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-primary outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label={exportButtonTitle}
-                title={exportButtonTitle}
+                onClick={() => onRefresh()}
+                disabled={loading}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label="Refresh table"
+                title="Refresh"
               >
-                <FiDownload className="h-5 w-5 shrink-0" aria-hidden />
+                <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
               </button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={handleExportCsv} className="shrink-0">
-                Export CSV
-              </Button>
-            ))}
+            )}
+            {hasToolbarAfterRefresh ? <div className="flex shrink-0 items-center gap-1">{toolbarAfterRefresh}</div> : null}
+            {hasColumnSettings && (
+              <button
+                type="button"
+                onClick={openSettingsModal}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Table column settings"
+                title="Column settings"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+            )}
+            {loading && !hasRefresh && (
+              <span
+                className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-border border-t-primary"
+                aria-label="Loading"
+              />
+            )}
+            {exportable && data.length > 0 &&
+              (exportIconOnly ? (
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-primary outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={exportButtonTitle}
+                  title={exportButtonTitle}
+                >
+                  <FiDownload className="h-5 w-5 shrink-0" aria-hidden />
+                </button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={handleExportCsv} className="shrink-0">
+                  Export CSV
+                </Button>
+              ))}
+          </div>
         </div>
       )}
 

@@ -66,7 +66,7 @@ export default function SimpleSendDatasheetModal({
       toEmail: defaultTo,
       toName: customerName,
       motorType: isDc ? "DC" : "AC",
-      documentLabel: `${isDc ? "DC" : "AC"} Motor Datasheet and Inspection Report`,
+      documentLabel: `${isDc ? "DC" : "AC"} Motor Datasheet`,
     });
 
     fetch(`/api/dashboard/simple-service-proposals/datasheet/send?${params.toString()}`, {

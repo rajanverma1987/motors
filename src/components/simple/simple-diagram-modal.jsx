@@ -44,6 +44,44 @@ function pointerMidpoint(a, b) {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
 
+/** Large contact area is usually a palm, not a fingertip. */
+const PALM_CONTACT_PX = 28;
+
+function isLikelyPalmPointer(p) {
+  if (!p || p.type !== "touch") return false;
+  const w = Number(p.width) || 0;
+  const h = Number(p.height) || 0;
+  return w >= PALM_CONTACT_PX || h >= PALM_CONTACT_PX;
+}
+
+/**
+ * Palm rejection for stylus users: while a pen is down, ignore touch contacts
+ * (resting hand). Pinch zoom only uses two touch fingers when no pen is active.
+ */
+function listTrackedPointers(map) {
+  return Array.from(map.entries()).map(([id, p]) => ({ id, ...p }));
+}
+
+function hasActivePen(map) {
+  return listTrackedPointers(map).some((p) => p.type === "pen");
+}
+
+function pointersForPinch(map) {
+  if (hasActivePen(map)) return [];
+  return listTrackedPointers(map).filter((p) => p.type === "touch" && !isLikelyPalmPointer(p));
+}
+
+function shouldIgnoreIncomingPointer(e, map) {
+  const type = String(e.pointerType || "mouse");
+  if (type === "pen" || type === "mouse") return false;
+  // Touch while stylus is drawing: treat as palm / accidental contact.
+  if (hasActivePen(map)) return true;
+  const w = Number(e.width) || 0;
+  const h = Number(e.height) || 0;
+  if (w >= PALM_CONTACT_PX || h >= PALM_CONTACT_PX) return true;
+  return false;
+}
+
 function normalizeRect(a, b) {
   const x1 = Math.min(a.x, b.x);
   const y1 = Math.min(a.y, b.y);
@@ -543,7 +581,7 @@ export default function SimpleDiagramModal({
   }, [redraw]);
 
   const beginPinchGesture = () => {
-    const pts = Array.from(activePointersRef.current.values());
+    const pts = pointersForPinch(activePointersRef.current);
     if (pts.length < 2) return;
     const [a, b] = pts;
     const mid = pointerMidpoint(a, b);
@@ -557,7 +595,7 @@ export default function SimpleDiagramModal({
   const applyTwoFingerGesture = () => {
     const viewport = viewportRef.current;
     const gesture = gestureRef.current;
-    const pts = Array.from(activePointersRef.current.values());
+    const pts = pointersForPinch(activePointersRef.current);
     if (!viewport || !gesture || pts.length < 2) return;
     const [a, b] = pts;
     const mid = pointerMidpoint(a, b);
@@ -670,6 +708,20 @@ export default function SimpleDiagramModal({
   const onViewportPointerDown = (e) => {
     if (step !== "draw") return;
     e.preventDefault();
+    if (shouldIgnoreIncomingPointer(e, activePointersRef.current)) return;
+
+    const pointerType = String(e.pointerType || "mouse");
+
+    // Stylus takes priority: drop palm/finger contacts and cancel accidental touch strokes.
+    if (pointerType === "pen") {
+      for (const [id, p] of [...activePointersRef.current.entries()]) {
+        if (p.type === "touch") activePointersRef.current.delete(id);
+      }
+      if (drawingRef.current) cancelActiveStroke();
+      gestureRef.current = null;
+      suppressDrawRef.current = false;
+    }
+
     const viewport = viewportRef.current;
     if (!viewport) return;
     try {
@@ -677,17 +729,28 @@ export default function SimpleDiagramModal({
     } catch {
       /* ignore */
     }
-    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const count = activePointersRef.current.size;
+    activePointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY,
+      type: pointerType,
+      width: Number(e.width) || 0,
+      height: Number(e.height) || 0,
+    });
 
-    if (count >= 2) {
+    const pinchPts = pointersForPinch(activePointersRef.current);
+    if (pinchPts.length >= 2) {
       suppressDrawRef.current = true;
       cancelActiveStroke();
       beginPinchGesture();
       return;
     }
 
+    if (gestureRef.current) {
+      gestureRef.current = null;
+    }
+
     if (suppressDrawRef.current) return;
+    if (pointerType === "touch" && hasActivePen(activePointersRef.current)) return;
     startDrawAtEvent(e);
   };
 
@@ -695,16 +758,29 @@ export default function SimpleDiagramModal({
     if (step !== "draw") return;
     if (!activePointersRef.current.has(e.pointerId)) return;
     e.preventDefault();
-    activePointersRef.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const count = activePointersRef.current.size;
+    const prev = activePointersRef.current.get(e.pointerId);
+    activePointersRef.current.set(e.pointerId, {
+      x: e.clientX,
+      y: e.clientY,
+      type: prev?.type || String(e.pointerType || "mouse"),
+      width: Number(e.width) || prev?.width || 0,
+      height: Number(e.height) || prev?.height || 0,
+    });
 
-    if (count >= 2) {
+    const pinchPts = pointersForPinch(activePointersRef.current);
+    if (pinchPts.length >= 2) {
       if (!gestureRef.current) beginPinchGesture();
       applyTwoFingerGesture();
       return;
     }
 
+    if (gestureRef.current && pinchPts.length < 2) {
+      gestureRef.current = null;
+    }
+
     if (suppressDrawRef.current || !drawingRef.current) return;
+    // Only continue drawing from the same pointer type that started the stroke.
+    if (String(e.pointerType || "") === "touch" && hasActivePen(activePointersRef.current)) return;
     continueDrawAtEvent(e);
   };
 
@@ -713,6 +789,7 @@ export default function SimpleDiagramModal({
       if (drawingRef.current) endDrawAtEvent(e);
       return;
     }
+    const released = activePointersRef.current.get(e.pointerId);
     activePointersRef.current.delete(e.pointerId);
     try {
       viewportRef.current?.releasePointerCapture(e.pointerId);
@@ -720,20 +797,29 @@ export default function SimpleDiagramModal({
       /* ignore */
     }
 
-    const count = activePointersRef.current.size;
-    if (count >= 2) {
+    const pinchPts = pointersForPinch(activePointersRef.current);
+    if (pinchPts.length >= 2) {
       beginPinchGesture();
       return;
     }
 
-    if (count === 1) {
+    if (pinchPts.length === 1) {
       gestureRef.current = null;
       return;
     }
 
     gestureRef.current = null;
+
+    // Ending a palm/touch contact while pen is still down must not end the pen stroke.
+    const penStillDown = hasActivePen(activePointersRef.current);
+    if (penStillDown && released?.type !== "pen") {
+      return;
+    }
+
     if (drawingRef.current) endDrawAtEvent(e);
-    suppressDrawRef.current = false;
+    if (activePointersRef.current.size === 0) {
+      suppressDrawRef.current = false;
+    }
   };
 
   const handleUndo = () => {
@@ -1319,8 +1405,8 @@ export default function SimpleDiagramModal({
                   {tool === TOOL_SELECT
                     ? "Drag a box, then delete the area. Press Delete or Escape."
                     : tool === TOOL_ERASER
-                      ? "Scrub to erase strokes. Pinch anytime to zoom."
-                      : "Draw with stylus or finger. Pinch anytime to zoom."}
+                      ? "Scrub to erase strokes. Two fingers to zoom. Palm rests are ignored with a stylus."
+                      : "Draw with stylus or finger. Two fingers to zoom. Palm rests are ignored with a stylus."}
                 </p>
               </div>
             </div>

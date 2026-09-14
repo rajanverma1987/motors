@@ -199,14 +199,34 @@ function drawCompactHeader(doc, y, { title, subtitle, docNumber, docLabel, custo
   doc.save();
   doc.strokeColor("#1c1917").lineWidth(1).moveTo(MARGIN, nextY).lineTo(MARGIN + CONTENT_WIDTH, nextY).stroke();
   doc.restore();
-  return nextY + 5;
+  // Extra gap after subtitle (e.g. COMPLETE MOTOR) before the first section.
+  return nextY + (subtitle ? 14 : 5);
+}
+
+function measureWrappedHeight(doc, text, width, font, size) {
+  doc.font(font).fontSize(size);
+  const h = doc.heightOfString(String(text || ""), { width: Math.max(8, width) });
+  return Number.isFinite(h) ? h : size;
 }
 
 function drawInfoGrid(doc, y, rows) {
-  const rowH = 14;
+  const minRowH = 14;
+  const padY = 3;
   for (const row of rows) {
     const colCount = row.length;
     const colW = CONTENT_WIDTH / colCount;
+    const labelW = colW * 0.42;
+    const valueW = colW - labelW - 6;
+
+    let rowH = minRowH;
+    for (let i = 0; i < colCount; i += 1) {
+      const cell = row[i];
+      if (!cell) continue;
+      const labelH = measureWrappedHeight(doc, String(cell.label || "").toUpperCase(), labelW - 4, "Helvetica-Bold", 6.5);
+      const valueH = measureWrappedHeight(doc, cellVal(cell.value), valueW, "Helvetica-Bold", 7.5);
+      rowH = Math.max(rowH, Math.ceil(Math.max(labelH, valueH) + padY * 2));
+    }
+
     for (let i = 0; i < colCount; i += 1) {
       const cell = row[i];
       if (!cell) continue;
@@ -215,11 +235,12 @@ function drawInfoGrid(doc, y, rows) {
       doc.strokeColor("#d6d3d1").lineWidth(0.5).rect(x, y, colW, rowH).stroke();
       doc.restore();
 
-      doc.font("Helvetica-Bold").fontSize(6.5).fillColor("#57534e").text(cell.label.toUpperCase(), x + 3, y + 2, {
-        width: colW * 0.45,
+      const valueX = x + labelW;
+      doc.font("Helvetica-Bold").fontSize(6.5).fillColor("#57534e").text(String(cell.label || "").toUpperCase(), x + 3, y + padY, {
+        width: labelW - 4,
       });
-      doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#1c1917").text(cellVal(cell.value), x + colW * 0.45, y + 2, {
-        width: colW * 0.53,
+      doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#1c1917").text(cellVal(cell.value), valueX, y + padY, {
+        width: valueW,
       });
     }
     y += rowH;
@@ -231,7 +252,10 @@ function drawFieldGrid(doc, y, columns, values, columnTitles) {
   const numCols = columns.length;
   const colW = CONTENT_WIDTH / numCols;
   const headerH = 13;
-  const rowH = 12.5;
+  const minRowH = 12.5;
+  const padY = 2.5;
+  // Match print sheet label/value split (~38% / 62%).
+  const labelRatio = 0.38;
 
   for (let c = 0; c < numCols; c += 1) {
     const x = MARGIN + c * colW;
@@ -249,6 +273,18 @@ function drawFieldGrid(doc, y, columns, values, columnTitles) {
 
   const maxRows = Math.max(...columns.map((c) => c.length));
   for (let r = 0; r < maxRows; r += 1) {
+    const labelW = colW * labelRatio;
+    const valueW = colW - labelW - 6;
+
+    let rowH = minRowH;
+    for (let c = 0; c < numCols; c += 1) {
+      const field = columns[c]?.[r];
+      if (!field) continue;
+      const labelH = measureWrappedHeight(doc, field.label, labelW - 4, "Helvetica", 6.5);
+      const valueH = measureWrappedHeight(doc, cellVal(values?.[field.key]), valueW, "Helvetica-Bold", 7);
+      rowH = Math.max(rowH, Math.ceil(Math.max(labelH, valueH) + padY * 2));
+    }
+
     for (let c = 0; c < numCols; c += 1) {
       const x = MARGIN + c * colW;
       const field = columns[c]?.[r];
@@ -257,13 +293,13 @@ function drawFieldGrid(doc, y, columns, values, columnTitles) {
       doc.restore();
 
       if (field) {
-        doc.font("Helvetica").fontSize(6.5).fillColor("#57534e").text(field.label, x + 3, y + 2.5, {
-          width: colW * 0.48,
+        const valueX = x + labelW;
+        doc.font("Helvetica").fontSize(6.5).fillColor("#57534e").text(field.label, x + 3, y + padY, {
+          width: labelW - 4,
         });
         const v = cellVal(values?.[field.key]);
-        doc.font("Helvetica-Bold").fontSize(7).fillColor("#1c1917").text(v, x + colW * 0.48, y + 2.5, {
-          width: colW * 0.5,
-          align: "right",
+        doc.font("Helvetica-Bold").fontSize(7).fillColor("#1c1917").text(v, valueX, y + padY, {
+          width: valueW,
         });
       }
     }
@@ -297,11 +333,22 @@ function drawNotesBox(doc, y, label, notes, minHeight = 24) {
 }
 
 function drawKvTable(doc, y, pairs) {
-  const rowH = 13;
+  const minRowH = 13;
+  const padY = 2.5;
   for (let i = 0; i < pairs.length; i += 2) {
     const pairA = pairs[i];
     const pairB = pairs[i + 1] || null;
     const colW = CONTENT_WIDTH / 2;
+    const labelW = colW * 0.48;
+    const valueW = colW * 0.48;
+
+    let rowH = minRowH;
+    [pairA, pairB].forEach((item) => {
+      if (!item || !item[0]) return;
+      const labelH = measureWrappedHeight(doc, item[0], labelW - 4, "Helvetica-Bold", 6.5);
+      const valueH = measureWrappedHeight(doc, cellVal(item[1]), valueW, "Helvetica-Bold", 7);
+      rowH = Math.max(rowH, Math.ceil(Math.max(labelH, valueH) + padY * 2));
+    });
 
     [pairA, pairB].forEach((item, idx) => {
       const x = MARGIN + idx * colW;
@@ -311,13 +358,13 @@ function drawKvTable(doc, y, pairs) {
 
       if (item && item[0]) {
         doc.save();
-        doc.rect(x, y, colW * 0.48, rowH).fill("#fafaf9");
+        doc.rect(x, y, labelW, rowH).fill("#fafaf9");
         doc.restore();
-        doc.font("Helvetica-Bold").fontSize(6.5).fillColor("#44403c").text(item[0], x + 3, y + 2.5, {
-          width: colW * 0.46,
+        doc.font("Helvetica-Bold").fontSize(6.5).fillColor("#44403c").text(item[0], x + 3, y + padY, {
+          width: labelW - 4,
         });
-        doc.font("Helvetica-Bold").fontSize(7).fillColor("#1c1917").text(cellVal(item[1]), x + colW * 0.5, y + 2.5, {
-          width: colW * 0.48,
+        doc.font("Helvetica-Bold").fontSize(7).fillColor("#1c1917").text(cellVal(item[1]), x + colW * 0.5, y + padY, {
+          width: valueW,
         });
       }
     });
@@ -398,7 +445,7 @@ function drawSignatures(doc, y) {
 }
 
 /**
- * Builds professional multi-page PDF buffer for AC or DC Motor Datasheet & Inspection Report.
+ * Builds professional multi-page PDF buffer for AC or DC Motor Datasheet.
  * Includes complete test readings, measurements, disassembly, assembly, notes, diagrams, and images.
  */
 export async function buildDatasheetPdfBuffer({
@@ -458,7 +505,7 @@ export async function buildDatasheetPdfBuffer({
     // PAGE 1: AC Motor Datasheet (Nameplate, Winding, Core)
     let y = MARGIN;
     y = drawMasthead(doc, y, {
-      title: "AC Motor Datasheet and Inspection Report",
+      title: "AC Motor Datasheet",
       subtitle: section,
       shopName,
       docNumber,
@@ -603,7 +650,7 @@ export async function buildDatasheetPdfBuffer({
     // PAGE 1: DC Field Frame
     let y = MARGIN;
     y = drawMasthead(doc, y, {
-      title: "DC Motor Datasheet and Inspection Report",
+      title: "DC Motor Datasheet",
       subtitle: isComplete ? "Field Frame" : section,
       shopName,
       docNumber,

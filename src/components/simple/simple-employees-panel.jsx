@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEdit2 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -72,6 +71,7 @@ const PAY_TYPE_OPTIONS = [
 ];
 
 const EMPLOYEE_FORM_ID = "simple-employees-form";
+const EMPLOYEE_DETAIL_FORM_ID = "simple-employees-detail-form";
 
 function buildEmployeePayload(form) {
   const f = form || {};
@@ -97,6 +97,257 @@ function buildEmployeePayload(form) {
   };
 }
 
+function formFromEmployee(dataToUse) {
+  return {
+    name: dataToUse.name ?? "",
+    email: dataToUse.email ?? "",
+    role: dataToUse.role ?? "",
+    phone: dataToUse.phone ?? "",
+    password: "",
+    canLogin: Boolean(dataToUse.canLogin),
+    financialAccess: dataToUse.financialAccess || "role",
+    technicianAppAccess: Boolean(dataToUse.technicianAppAccess),
+    timeClockEnabled: dataToUse.timeClockEnabled !== false,
+    employeeNumber: dataToUse.employeeNumber ?? "",
+    department: dataToUse.department ?? "",
+    employmentStatus: dataToUse.employmentStatus || "Active",
+    hireDate: dataToUse.hireDate ?? "",
+    payType: dataToUse.payType === "salary" ? "salary" : "hourly",
+    hourlyRate: dataToUse.hourlyRate ?? "",
+    scheduledStart: dataToUse.scheduledStart ?? "",
+    scheduledEnd: dataToUse.scheduledEnd ?? "",
+    defaultBreakMinutes: String(dataToUse.defaultBreakMinutes ?? 0),
+    passkeyRegistered: Boolean(dataToUse.passkeyRegistered),
+  };
+}
+
+function EmployeeFormFields({
+  form,
+  setForm,
+  saving,
+  editingId,
+  roleOptions,
+  canViewFinancials,
+}) {
+  return (
+    <>
+      <p className={SECTION_TITLE}>Employee</p>
+      <FieldRow label="Name">
+        <input
+          type="text"
+          required
+          disabled={saving}
+          value={form.name}
+          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Name"
+        />
+      </FieldRow>
+      <FieldRow label="Email">
+        <input
+          type="email"
+          disabled={saving}
+          value={form.email}
+          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Email"
+          required={form.timeClockEnabled !== false}
+        />
+      </FieldRow>
+      <FieldRow label="Emp #">
+        <input
+          type="text"
+          disabled={saving}
+          value={form.employeeNumber || ""}
+          onChange={(e) => setForm((f) => ({ ...f, employeeNumber: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Employee number"
+        />
+      </FieldRow>
+      <FieldRow label="Role">
+        <SimpleSelect
+          name="role"
+          options={roleOptions}
+          value={form.role}
+          onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+          placeholder="Select role"
+          disabled={saving}
+          aria-label="Role"
+        />
+      </FieldRow>
+      <FieldRow label="Department">
+        <input
+          type="text"
+          disabled={saving}
+          value={form.department || ""}
+          onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Department"
+        />
+      </FieldRow>
+      <FieldRow label="Status">
+        <SimpleSelect
+          name="employmentStatus"
+          options={EMPLOYMENT_STATUS_OPTIONS}
+          value={form.employmentStatus || "Active"}
+          onChange={(e) => setForm((f) => ({ ...f, employmentStatus: e.target.value }))}
+          disabled={saving}
+          aria-label="Employment status"
+        />
+      </FieldRow>
+      <FieldRow label="Hire date">
+        <input
+          type="date"
+          disabled={saving}
+          value={form.hireDate || ""}
+          onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Hire date"
+        />
+      </FieldRow>
+      <FieldRow label="Phone">
+        <input
+          type="tel"
+          disabled={saving}
+          value={form.phone}
+          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Phone"
+        />
+      </FieldRow>
+      <p className={SECTION_TITLE}>Schedule and pay</p>
+      <FieldRow label="Shift start">
+        <input
+          type="time"
+          disabled={saving}
+          value={form.scheduledStart || ""}
+          onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Scheduled start"
+        />
+      </FieldRow>
+      <FieldRow label="Shift end">
+        <input
+          type="time"
+          disabled={saving}
+          value={form.scheduledEnd || ""}
+          onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Scheduled end"
+        />
+      </FieldRow>
+      <FieldRow label="Break (min)">
+        <input
+          type="number"
+          min={0}
+          max={240}
+          disabled={saving}
+          value={form.defaultBreakMinutes ?? "0"}
+          onChange={(e) => setForm((f) => ({ ...f, defaultBreakMinutes: e.target.value }))}
+          className={FIELD_INPUT}
+          aria-label="Default break minutes"
+        />
+      </FieldRow>
+      <FieldRow label="Pay type">
+        <SimpleSelect
+          name="payType"
+          options={PAY_TYPE_OPTIONS}
+          value={form.payType || "hourly"}
+          onChange={(e) => setForm((f) => ({ ...f, payType: e.target.value }))}
+          disabled={saving}
+          aria-label="Pay type"
+        />
+      </FieldRow>
+      <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"}>
+        {canViewFinancials ? (
+          <input
+            type="text"
+            inputMode="decimal"
+            disabled={saving}
+            value={form.hourlyRate || ""}
+            onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
+            placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
+          />
+        ) : (
+          <span className="text-xs italic text-secondary">Restricted (financial data)</span>
+        )}
+      </FieldRow>
+      <FieldRow label="Password">
+        <input
+          type="password"
+          disabled={saving}
+          value={form.password}
+          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+          className={FIELD_INPUT}
+          autoComplete="new-password"
+          placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
+          aria-label="Password"
+        />
+      </FieldRow>
+      <FieldRow label="Access" className="items-start">
+        <div className="flex flex-col gap-2 py-0.5">
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving}
+              checked={form.timeClockEnabled !== false}
+              onChange={(e) => setForm((f) => ({ ...f, timeClockEnabled: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Time clock enabled
+          </label>
+          {form.passkeyRegistered ? (
+            <p className="text-xs text-secondary">Time clock passkey registered on a device.</p>
+          ) : (
+            <p className="text-xs text-secondary">
+              Employee registers a passkey after scanning the shop Time Clock QR.
+            </p>
+          )}
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving}
+              checked={form.canLogin}
+              onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Can login to Shop Management System
+          </label>
+          <label className="inline-flex items-center gap-2 text-sm text-title">
+            <input
+              type="checkbox"
+              disabled={saving}
+              checked={form.technicianAppAccess}
+              onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
+              className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
+            />
+            Technician App access
+          </label>
+
+          <div className="mt-1 border-t border-border pt-2">
+            <label className="block text-xs font-bold text-title">Financial information access</label>
+            <p className="mt-0.5 text-[11px] text-secondary">
+              Controls whether this employee can see costs, pricing, margins, invoices, and AP / AR data.
+            </p>
+            <select
+              disabled={saving}
+              value={form.financialAccess || "role"}
+              onChange={(e) => setForm((f) => ({ ...f, financialAccess: e.target.value }))}
+              className="mt-1 h-7 w-full rounded-none border border-border bg-card px-2 text-xs text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="role">Default by role (e.g. Office/Manager allowed, Technician restricted)</option>
+              <option value="allowed">Always allowed (Can view costs, pricing, margins, AP / AR)</option>
+              <option value="restricted">Always restricted (Hide all costs, pricing, margins, AP / AR)</option>
+            </select>
+          </div>
+        </div>
+      </FieldRow>
+    </>
+  );
+}
+
 export default function SimpleEmployeesPanel({ onChanged }) {
   const alert = useAlert();
   const { canViewFinancials } = useAuth();
@@ -107,11 +358,11 @@ export default function SimpleEmployeesPanel({ onChanged }) {
   const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [tableSort, setTableSort] = useState({ key: "name", direction: "asc" });
-  const [modalOpen, setModalOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(INITIAL_EMPLOYEE_FORM);
-  const [historyEmployee, setHistoryEmployee] = useState(null);
+  const [detailEmployee, setDetailEmployee] = useState(null);
 
   const roleOptions = useMemo(() => {
     const values = new Set(ROLE_OPTIONS.map((o) => o.value));
@@ -158,10 +409,11 @@ export default function SimpleEmployeesPanel({ onChanged }) {
   const openCreate = () => {
     setEditingId(null);
     setForm(INITIAL_EMPLOYEE_FORM);
-    setModalOpen(true);
+    setDetailEmployee(null);
+    setCreateOpen(true);
   };
 
-  const openEdit = async (row) => {
+  const openEmployeeDetail = async (row) => {
     if (!row?.id) return;
     let dataToUse = row;
     try {
@@ -171,33 +423,25 @@ export default function SimpleEmployeesPanel({ onChanged }) {
       // use row data
     }
     setEditingId(dataToUse.id);
-    setForm({
-      name: dataToUse.name ?? "",
-      email: dataToUse.email ?? "",
-      role: dataToUse.role ?? "",
-      phone: dataToUse.phone ?? "",
-      password: "",
-      canLogin: Boolean(dataToUse.canLogin),
-      financialAccess: dataToUse.financialAccess || "role",
-      technicianAppAccess: Boolean(dataToUse.technicianAppAccess),
-      timeClockEnabled: dataToUse.timeClockEnabled !== false,
-      employeeNumber: dataToUse.employeeNumber ?? "",
-      department: dataToUse.department ?? "",
-      employmentStatus: dataToUse.employmentStatus || "Active",
-      hireDate: dataToUse.hireDate ?? "",
-      payType: dataToUse.payType === "salary" ? "salary" : "hourly",
-      hourlyRate: dataToUse.hourlyRate ?? "",
-      scheduledStart: dataToUse.scheduledStart ?? "",
-      scheduledEnd: dataToUse.scheduledEnd ?? "",
-      defaultBreakMinutes: String(dataToUse.defaultBreakMinutes ?? 0),
-      passkeyRegistered: Boolean(dataToUse.passkeyRegistered),
+    setForm(formFromEmployee(dataToUse));
+    setCreateOpen(false);
+    setDetailEmployee({
+      employeeId: String(dataToUse.id || "").trim(),
+      name: String(dataToUse.name || "").trim(),
+      employeeNumber: String(dataToUse.employeeNumber || "").trim(),
     });
-    setModalOpen(true);
   };
 
-  const closeModal = () => {
+  const closeCreate = () => {
     if (saving) return;
-    setModalOpen(false);
+    setCreateOpen(false);
+    setEditingId(null);
+    setForm(INITIAL_EMPLOYEE_FORM);
+  };
+
+  const closeDetail = () => {
+    if (saving) return;
+    setDetailEmployee(null);
     setEditingId(null);
     setForm(INITIAL_EMPLOYEE_FORM);
   };
@@ -226,7 +470,8 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         title: "Success",
         message: isEdit ? "Employee updated." : "Employee added.",
       });
-      setModalOpen(false);
+      setCreateOpen(false);
+      setDetailEmployee(null);
       setEditingId(null);
       setForm(INITIAL_EMPLOYEE_FORM);
       setLoading(true);
@@ -246,40 +491,20 @@ export default function SimpleEmployeesPanel({ onChanged }) {
   const columns = useMemo(
     () => [
       {
-        key: "actions",
-        label: "",
-        render: (_, row) => (
+        key: "name",
+        label: "Name",
+        sortable: true,
+        render: (v, row) => (
           <button
             type="button"
-            onClick={() => openEdit(row)}
-            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="Edit"
-            title="Edit"
-          >
-            <FiEdit2 className="h-4 w-4" />
-          </button>
-        ),
-      },
-      { key: "name", label: "Name", sortable: true, render: (v, row) => (
-        canViewFinancials ? (
-          <button
-            type="button"
-            className="font-medium text-primary hover:underline underline-offset-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-            onClick={() =>
-              setHistoryEmployee({
-                employeeId: String(row?.id || "").trim(),
-                name: String(v || row?.name || "").trim(),
-                employeeNumber: String(row?.employeeNumber || "").trim(),
-              })
-            }
-            title="View payment history"
+            className="rounded font-medium text-primary underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            onClick={() => void openEmployeeDetail(row)}
+            title="Edit employee and view payment history"
           >
             {v || "-"}
           </button>
-        ) : (
-          <span className="font-medium text-title">{v || "-"}</span>
-        )
-      ) },
+        ),
+      },
       { key: "employeeNumber", label: "Emp #", sortable: true },
       { key: "role", label: "Role", sortable: true },
       { key: "department", label: "Dept", sortable: true },
@@ -373,13 +598,24 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         ),
       },
     ],
-    [canViewFinancials]
+    []
   );
+
+  const formFieldProps = {
+    form,
+    setForm,
+    saving,
+    editingId,
+    roleOptions,
+    canViewFinancials,
+  };
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-secondary">Add and edit staff records for login, shop assignments, and time clock.</p>
+        <p className="text-sm text-secondary">
+          Click an employee name to edit their record and view payment history.
+        </p>
         <Button variant="primary" size="sm" onClick={openCreate} className="shrink-0">
           Add Employee
         </Button>
@@ -419,9 +655,9 @@ export default function SimpleEmployeesPanel({ onChanged }) {
       />
 
       <Modal
-        open={modalOpen}
-        onClose={closeModal}
-        title={editingId ? "Edit employee" : "Add Employee"}
+        open={createOpen}
+        onClose={closeCreate}
+        title="Add Employee"
         size="lg"
         showClose={!saving}
         closeOnOutsideClick={false}
@@ -436,230 +672,32 @@ export default function SimpleEmployeesPanel({ onChanged }) {
           onSubmit={handleSubmit}
           className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
         >
-          <p className={SECTION_TITLE}>Employee</p>
-          <FieldRow label="Name">
-            <input
-              type="text"
-              required
-              disabled={saving}
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Name"
-            />
-          </FieldRow>
-          <FieldRow label="Email">
-            <input
-              type="email"
-              disabled={saving}
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Email"
-              required={form.timeClockEnabled !== false}
-            />
-          </FieldRow>
-          <FieldRow label="Emp #">
-            <input
-              type="text"
-              disabled={saving}
-              value={form.employeeNumber || ""}
-              onChange={(e) => setForm((f) => ({ ...f, employeeNumber: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Employee number"
-            />
-          </FieldRow>
-          <FieldRow label="Role">
-            <SimpleSelect
-              name="role"
-              options={roleOptions}
-              value={form.role}
-              onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              placeholder="Select role"
-              disabled={saving}
-              aria-label="Role"
-            />
-          </FieldRow>
-          <FieldRow label="Department">
-            <input
-              type="text"
-              disabled={saving}
-              value={form.department || ""}
-              onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Department"
-            />
-          </FieldRow>
-          <FieldRow label="Status">
-            <SimpleSelect
-              name="employmentStatus"
-              options={EMPLOYMENT_STATUS_OPTIONS}
-              value={form.employmentStatus || "Active"}
-              onChange={(e) => setForm((f) => ({ ...f, employmentStatus: e.target.value }))}
-              disabled={saving}
-              aria-label="Employment status"
-            />
-          </FieldRow>
-          <FieldRow label="Hire date">
-            <input
-              type="date"
-              disabled={saving}
-              value={form.hireDate || ""}
-              onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Hire date"
-            />
-          </FieldRow>
-          <FieldRow label="Phone">
-            <input
-              type="tel"
-              disabled={saving}
-              value={form.phone}
-              onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Phone"
-            />
-          </FieldRow>
-          <p className={SECTION_TITLE}>Schedule and pay</p>
-          <FieldRow label="Shift start">
-            <input
-              type="time"
-              disabled={saving}
-              value={form.scheduledStart || ""}
-              onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Scheduled start"
-            />
-          </FieldRow>
-          <FieldRow label="Shift end">
-            <input
-              type="time"
-              disabled={saving}
-              value={form.scheduledEnd || ""}
-              onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Scheduled end"
-            />
-          </FieldRow>
-          <FieldRow label="Break (min)">
-            <input
-              type="number"
-              min={0}
-              max={240}
-              disabled={saving}
-              value={form.defaultBreakMinutes ?? "0"}
-              onChange={(e) => setForm((f) => ({ ...f, defaultBreakMinutes: e.target.value }))}
-              className={FIELD_INPUT}
-              aria-label="Default break minutes"
-            />
-          </FieldRow>
-          <FieldRow label="Pay type">
-            <SimpleSelect
-              name="payType"
-              options={PAY_TYPE_OPTIONS}
-              value={form.payType || "hourly"}
-              onChange={(e) => setForm((f) => ({ ...f, payType: e.target.value }))}
-              disabled={saving}
-              aria-label="Pay type"
-            />
-          </FieldRow>
-          <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"}>
-            {canViewFinancials ? (
-              <input
-                type="text"
-                inputMode="decimal"
-                disabled={saving}
-                value={form.hourlyRate || ""}
-                onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
-                className={FIELD_INPUT}
-                aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
-                placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
-              />
-            ) : (
-              <span className="text-xs text-secondary italic">Restricted (financial data)</span>
-            )}
-          </FieldRow>
-          <FieldRow label="Password">
-            <input
-              type="password"
-              disabled={saving}
-              value={form.password}
-              onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-              className={FIELD_INPUT}
-              autoComplete="new-password"
-              placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
-              aria-label="Password"
-            />
-          </FieldRow>
-          <FieldRow label="Access" className="items-start">
-            <div className="flex flex-col gap-2 py-0.5">
-              <label className="inline-flex items-center gap-2 text-sm text-title">
-                <input
-                  type="checkbox"
-                  disabled={saving}
-                  checked={form.timeClockEnabled !== false}
-                  onChange={(e) => setForm((f) => ({ ...f, timeClockEnabled: e.target.checked }))}
-                  className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
-                />
-                Time clock enabled
-              </label>
-              {form.passkeyRegistered ? (
-                <p className="text-xs text-secondary">Time clock passkey registered on a device.</p>
-              ) : (
-                <p className="text-xs text-secondary">
-                  Employee registers a passkey after scanning the shop Time Clock QR.
-                </p>
-              )}
-              <label className="inline-flex items-center gap-2 text-sm text-title">
-                <input
-                  type="checkbox"
-                  disabled={saving}
-                  checked={form.canLogin}
-                  onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
-                  className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
-                />
-                Can login to Shop Management System
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-title">
-                <input
-                  type="checkbox"
-                  disabled={saving}
-                  checked={form.technicianAppAccess}
-                  onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
-                  className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
-                />
-                Technician App access
-              </label>
-
-              <div className="pt-2 border-t border-border mt-1">
-                <label className="block text-xs font-bold text-title">
-                  Financial information access
-                </label>
-                <p className="text-[11px] text-secondary mt-0.5">
-                  Controls whether this employee can see costs, pricing, margins, invoices, and AP / AR data.
-                </p>
-                <select
-                  disabled={saving}
-                  value={form.financialAccess || "role"}
-                  onChange={(e) => setForm((f) => ({ ...f, financialAccess: e.target.value }))}
-                  className="mt-1 h-7 w-full rounded-none border border-border bg-card px-2 text-xs text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary"
-                >
-                  <option value="role">Default by role (e.g. Office/Manager allowed, Technician restricted)</option>
-                  <option value="allowed">Always allowed (Can view costs, pricing, margins, AP / AR)</option>
-                  <option value="restricted">Always restricted (Hide all costs, pricing, margins, AP / AR)</option>
-                </select>
-              </div>
-            </div>
-          </FieldRow>
+          <EmployeeFormFields {...formFieldProps} />
         </Form>
       </Modal>
 
       <SimpleEmployeePaymentHistoryModal
-        open={Boolean(historyEmployee?.employeeId)}
-        onClose={() => setHistoryEmployee(null)}
-        employeeId={historyEmployee?.employeeId}
-        employeeName={historyEmployee?.name}
-        employeeNumber={historyEmployee?.employeeNumber}
+        open={Boolean(detailEmployee?.employeeId)}
+        onClose={closeDetail}
+        employeeId={detailEmployee?.employeeId}
+        employeeName={detailEmployee?.name}
+        employeeNumber={detailEmployee?.employeeNumber}
+        title={detailEmployee?.name || "Employee"}
+        showClose={!saving}
+        actions={
+          <Button type="submit" form={EMPLOYEE_DETAIL_FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        }
+        leftPanel={
+          <Form
+            id={EMPLOYEE_DETAIL_FORM_ID}
+            onSubmit={handleSubmit}
+            className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          >
+            <EmployeeFormFields {...formFieldProps} />
+          </Form>
+        }
       />
     </div>
   );

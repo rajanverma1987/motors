@@ -7,11 +7,13 @@ import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
 import Tabs from "@/components/ui/tabs";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
 import SimplePoLineCancellationModal from "@/components/simple/simple-po-line-cancellation-modal";
 import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-modal";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
 import SimpleAttachmentPreviewModal, {
+  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
@@ -235,6 +237,8 @@ export default function SimplePurchaseOrderFormModal({
   const [returnOpen, setReturnOpen] = useState(false);
   const [returnInitialLineIds, setReturnInitialLineIds] = useState([]);
   const [returningLine, setReturningLine] = useState(false);
+  const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
+  const [linkInventoryLineId, setLinkInventoryLineId] = useState(null);
 
   const poType = resolveSimplePoType(form);
   const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
@@ -566,6 +570,44 @@ export default function SimplePurchaseOrderFormModal({
       const next = (f.lineItems || []).filter((line) => line.id !== lineId);
       return { ...f, lineItems: next.length ? next : [emptyPoLine()] };
     });
+  };
+
+  const handleAddFromInventoryLines = (lines) => {
+    setForm((f) => {
+      const existing = Array.isArray(f.lineItems) ? [...f.lineItems] : [];
+      const content = existing.filter((line) => poLineHasContent(line));
+      const trailing = existing.filter((line) => !poLineHasContent(line));
+      const mapped = (Array.isArray(lines) ? lines : []).map((line) => ({
+        ...emptyPoLine(),
+        ...line,
+        id: line.id || emptyPoLine().id,
+      }));
+      const next = [...content, ...mapped, ...(trailing.length ? trailing : [emptyPoLine()])];
+      const last = next[next.length - 1];
+      if (last && poLineHasContent(last)) next.push(emptyPoLine());
+      return { ...f, lineItems: next };
+    });
+  };
+
+  const handleLinkInventoryItem = (item) => {
+    const lineId = linkInventoryLineId;
+    setLinkInventoryLineId(null);
+    if (!lineId || !item?.id) return;
+    setForm((f) => ({
+      ...f,
+      lineItems: (f.lineItems || []).map((line) => {
+        if (line.id !== lineId) return line;
+        return {
+          ...line,
+          inventoryItemId: String(item.id),
+          inventoryName: String(item.name || "").trim(),
+          inventorySku: String(item.sku || "").trim(),
+          addToInventory: true,
+          uom: line.uom || item.uom || "ea",
+          itemName: line.itemName || item.name || "",
+        };
+      }),
+    }));
   };
 
   const handleLineRemoveClick = async (lineId) => {
@@ -1496,6 +1538,23 @@ export default function SimplePurchaseOrderFormModal({
                 label: "Purchase Order",
                 children: (
                   <>
+                    {!isViewMode && isShopPo ? (
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={saving}
+                          onClick={() => setAddFromInventoryOpen(true)}
+                        >
+                          <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                          Add from inventory
+                        </Button>
+                        <span className="text-xs text-secondary">
+                          Links existing SKUs so receive can increase on-hand.
+                        </span>
+                      </div>
+                    ) : null}
                     <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
                       <table className={`w-full ${canViewFinancials ? "min-w-[52rem]" : "min-w-[20rem]"} border-collapse border-spacing-0 text-xs`}>
                         <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
@@ -1747,7 +1806,7 @@ export default function SimplePurchaseOrderFormModal({
                       <p className="text-sm text-secondary">Add line items on the Purchase Order tab first.</p>
                     ) : (
                       <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                        <table className="w-full min-w-[56rem] border-collapse border-spacing-0 text-xs">
+                        <table className={`w-full ${isShopPo ? "min-w-[72rem]" : "min-w-[56rem]"} border-collapse border-spacing-0 text-xs`}>
                           <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                             <tr className="border-b-2 border-border">
                               <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
@@ -1757,6 +1816,12 @@ export default function SimplePurchaseOrderFormModal({
                               <th className="w-40 border-r border-border px-1 py-1 text-left font-semibold">Receiving Status</th>
                               <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Received Date</th>
                               <th className="w-36 border-r border-border px-1 py-1 text-left font-semibold">Vendor Invoice#</th>
+                              {isShopPo ? (
+                                <>
+                                  <th className="w-44 border-r border-border px-1 py-1 text-left font-semibold">Inventory SKU</th>
+                                  <th className="w-28 border-r border-border px-1 py-1 text-center font-semibold">Add to inventory</th>
+                                </>
+                              ) : null}
                               <th className="w-16 px-1 py-1 text-center font-semibold">Return</th>
                             </tr>
                           </thead>
@@ -1764,13 +1829,17 @@ export default function SimplePurchaseOrderFormModal({
                             {contentLines.map((line) => {
                               const inactive = isPoLineInactive(line);
                               const canReturn = canReturnPoLine(line) && String(form.id || "").trim();
+                              const linkedSku =
+                                String(line.inventorySku || "").trim() ||
+                                String(line.inventoryName || "").trim() ||
+                                (String(line.inventoryItemId || "").trim() ? "Linked" : "");
                               const rowClass = inactive
                                 ? "border-t border-border bg-danger/10 line-through text-secondary"
                                 : "border-t border-border bg-card";
                               return (
                               <tr key={line.id} className={rowClass}>
-                                <td className="border-r border-border px-1 py-1">{line.itemName || "—"}</td>
-                                <td className="border-r border-border px-1 py-1">{line.uom || "—"}</td>
+                                <td className="border-r border-border px-1 py-1">{line.itemName || "-"}</td>
+                                <td className="border-r border-border px-1 py-1">{line.uom || "-"}</td>
                                 <td className="border-r border-border px-1 py-1 text-right tabular-nums">
                                   {line.quantity || "0"}
                                 </td>
@@ -1781,8 +1850,8 @@ export default function SimplePurchaseOrderFormModal({
                                     value={line.receivedQty ?? "0"}
                                     onChange={(e) => patchLine(line.id, "receivedQty", e.target.value)}
                                     className={`${CELL_INPUT} text-right tabular-nums ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
+                                    disabled={saving || inactive || isViewMode}
+                                    readOnly={inactive || isViewMode}
                                   />
                                 </td>
                                 <td className="border-r border-border px-1 py-0.5">
@@ -1794,7 +1863,7 @@ export default function SimplePurchaseOrderFormModal({
                                     }
                                     value={line.receivingStatus || "Ordered"}
                                     onChange={(e) => patchLine(line.id, "receivingStatus", e.target.value)}
-                                    disabled={saving || inactive}
+                                    disabled={saving || inactive || isViewMode}
                                     aria-label={`Receiving status for ${line.itemName || "line"}`}
                                   />
                                 </td>
@@ -1804,8 +1873,8 @@ export default function SimplePurchaseOrderFormModal({
                                     value={String(line.receivedDate || "").slice(0, 10)}
                                     onChange={(e) => patchLine(line.id, "receivedDate", e.target.value)}
                                     className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
+                                    disabled={saving || inactive || isViewMode}
+                                    readOnly={inactive || isViewMode}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1814,11 +1883,52 @@ export default function SimplePurchaseOrderFormModal({
                                     value={line.vendorInvoiceNumber || ""}
                                     onChange={(e) => patchLine(line.id, "vendorInvoiceNumber", e.target.value)}
                                     className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive}
-                                    readOnly={inactive}
+                                    disabled={saving || inactive || isViewMode}
+                                    readOnly={inactive || isViewMode}
                                     aria-label={`Vendor Invoice# for ${line.itemName || "line"}`}
                                   />
                                 </td>
+                                {isShopPo ? (
+                                  <>
+                                    <td className="border-r border-border px-1 py-1">
+                                      {linkedSku ? (
+                                        <div className="min-w-0">
+                                          <div className="truncate font-medium text-title" title={linkedSku}>
+                                            {line.inventoryName || linkedSku}
+                                          </div>
+                                          {line.inventorySku ? (
+                                            <div className="truncate text-[10px] text-secondary">
+                                              SKU: {line.inventorySku}
+                                            </div>
+                                          ) : null}
+                                        </div>
+                                      ) : !inactive && !isViewMode ? (
+                                        <button
+                                          type="button"
+                                          className="text-xs font-medium text-primary hover:underline"
+                                          disabled={saving}
+                                          onClick={() => setLinkInventoryLineId(line.id)}
+                                        >
+                                          Link SKU…
+                                        </button>
+                                      ) : (
+                                        <span className="text-secondary">-</span>
+                                      )}
+                                    </td>
+                                    <td className="border-r border-border px-1 py-1 text-center">
+                                      <input
+                                        type="checkbox"
+                                        className="h-3.5 w-3.5 accent-primary"
+                                        checked={Boolean(line.addToInventory)}
+                                        onChange={(e) =>
+                                          patchLine(line.id, "addToInventory", e.target.checked)
+                                        }
+                                        disabled={saving || inactive || isViewMode}
+                                        aria-label={`Add ${line.itemName || "line"} to inventory on receive`}
+                                      />
+                                    </td>
+                                  </>
+                                ) : null}
                                 <td className="p-0 text-center">
                                   {canReturn ? (
                                     <button
@@ -2040,21 +2150,24 @@ export default function SimplePurchaseOrderFormModal({
                           ) : (
                             (form.vendorDocuments || []).map((doc, i) => {
                               const href = resolveAttachmentHref(doc.url);
+                              const canPreview = isPreviewableAttachment(doc.url, doc.name);
                               return (
                                 <tr key={`${doc.url}-${i}`} className="border-t border-border bg-card">
                                   <td className="px-1 py-0.5">
                                     <div className="flex items-center gap-0.5">
-                                      <button
-                                        type="button"
-                                        className="rounded p-0.5 text-primary hover:bg-primary/10"
-                                        title="View"
-                                        aria-label="View"
-                                        onClick={() =>
-                                          href && setAttachmentPreview({ url: href, name: doc.name || "" })
-                                        }
-                                      >
-                                        <FiEye className="h-3.5 w-3.5" aria-hidden />
-                                      </button>
+                                      {canPreview ? (
+                                        <button
+                                          type="button"
+                                          className="rounded p-0.5 text-primary hover:bg-primary/10"
+                                          title="Preview"
+                                          aria-label="Preview"
+                                          onClick={() =>
+                                            href && setAttachmentPreview({ url: href, name: doc.name || "" })
+                                          }
+                                        >
+                                          <FiEye className="h-3.5 w-3.5" aria-hidden />
+                                        </button>
+                                      ) : null}
                                       <a
                                         href={href || "#"}
                                         download={doc.name || "attachment"}
@@ -2208,6 +2321,36 @@ export default function SimplePurchaseOrderFormModal({
           </Form>
         ) : null}
       </Modal>
+
+      <SimpleAddFromInventoryModal
+        open={addFromInventoryOpen}
+        onClose={() => setAddFromInventoryOpen(false)}
+        zIndex={150}
+        title="Add from inventory"
+        submitLabel="Add to PO"
+        hint="Enter quantity for each part. Lines are linked to those SKUs and marked Add to inventory."
+        buildLine={(it, qty) => ({
+          ...emptyPoLine(),
+          itemName: String(it.name || it.sku || "Part").trim() || "Part",
+          uom: (it.uom && String(it.uom).trim()) || "ea",
+          quantity: String(qty),
+          inventoryItemId: it.id,
+          inventoryName: String(it.name || "").trim(),
+          inventorySku: String(it.sku || "").trim(),
+          addToInventory: true,
+        })}
+        onAddLines={handleAddFromInventoryLines}
+      />
+
+      <SimpleAddFromInventoryModal
+        open={Boolean(linkInventoryLineId)}
+        onClose={() => setLinkInventoryLineId(null)}
+        zIndex={150}
+        mode="linkOne"
+        title="Link inventory SKU"
+        hint="Pick an existing SKU to link to this receive line. Checking Add to inventory will increase that SKU on receive."
+        onLinkItem={handleLinkInventoryItem}
+      />
 
       <SimplePoLineCancellationModal
         open={cancellationOpen}

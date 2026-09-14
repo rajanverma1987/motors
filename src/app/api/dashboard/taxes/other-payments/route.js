@@ -46,7 +46,7 @@ export async function POST(request) {
     const periodPart = taxPeriod ? ` (${taxPeriod})` : "";
     await LedgerEntry.create({
       date: paidDate,
-      description: clampString(`Tax payment — ${taxType}${periodPart}`, 200),
+      description: clampString(`Tax payment: ${taxType}${periodPart}`, 200),
       party: "",
       debit: String(paidAmount),
       credit: "0",

@@ -111,8 +111,12 @@ export function emptyPoLine() {
     receivingStatus: SIMPLE_PO_RECEIVING_STATUS_ORDERED,
     receivedDate: "",
     vendorInvoiceNumber: "",
-    /** Optional — when set and line becomes Received, on-hand increases */
+    /** Optional — when set and addToInventory, receive increases that SKU */
     inventoryItemId: "",
+    inventorySku: "",
+    inventoryName: "",
+    /** When true on receive, increase inventory (create SKU if none linked) */
+    addToInventory: false,
     cancelled: false,
     cancelledAt: "",
     cancellationReason: "",
@@ -389,6 +393,13 @@ export function storedPoToForm(row) {
               : normalizeReceivingStatus(merged.receivingStatus),
           receivedDate: String(merged.receivedDate || "").slice(0, 10),
           vendorInvoiceNumber: String(merged.vendorInvoiceNumber || "").trim(),
+          inventoryItemId: String(merged.inventoryItemId || "").trim(),
+          inventorySku: String(merged.inventorySku || "").trim(),
+          inventoryName: String(merged.inventoryName || "").trim(),
+          addToInventory:
+            merged.addToInventory === true || merged.addToInventory === false
+              ? Boolean(merged.addToInventory)
+              : Boolean(String(merged.inventoryItemId || "").trim()),
         };
       })
     : [];
@@ -468,6 +479,8 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
     (typeof crypto !== "undefined" && crypto.randomUUID
       ? crypto.randomUUID()
       : `spo-${Date.now()}`);
+  const poType = resolveSimplePoType(form);
+  const isShopPo = poType === SIMPLE_PO_TYPE_SHOP;
   const lineItems = (Array.isArray(form.lineItems) ? form.lineItems : [])
     .map((line) => {
       const cancelled = isPoLineCancelled(line);
@@ -499,6 +512,10 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         receivingStatus,
         receivedDate: String(line.receivedDate || "").slice(0, 10),
         vendorInvoiceNumber: String(line.vendorInvoiceNumber || "").trim(),
+        inventoryItemId: isShopPo ? String(line.inventoryItemId || "").trim() : "",
+        inventorySku: isShopPo ? String(line.inventorySku || "").trim() : "",
+        inventoryName: isShopPo ? String(line.inventoryName || "").trim() : "",
+        addToInventory: isShopPo ? Boolean(line.addToInventory) : false,
         total: t.total,
         taxAmount: t.taxAmount,
         grandTotal: t.grandTotal,
@@ -510,7 +527,8 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         parsePoMoney(line.quantity) ||
         parsePoMoney(line.price) ||
         parsePoMoney(line.taxPercent) ||
-        String(line.vendorInvoiceNumber || "").trim()
+        String(line.vendorInvoiceNumber || "").trim() ||
+        String(line.inventoryItemId || "").trim()
     );
 
   const payments = (Array.isArray(form.payments) ? form.payments : [])
