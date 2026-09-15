@@ -91,6 +91,8 @@ export const config = {
     "/admin/support/:path*",
     "/admin/iqwirecalculator",
     "/admin/iqwirecalculator/:path*",
+    "/admin/iqmotortrack",
+    "/admin/iqmotortrack/:path*",
     "/admin/subscription-plans",
     "/admin/subscription-plans/:path*",
     "/dashboard",

@@ -294,6 +294,15 @@ export default function MotorMaintenanceAndRepairPage() {
           >
             Launch IQMotorTrack
           </Link>
+          <p className="mt-4 text-sm text-secondary">
+            Deep dive:{" "}
+            <Link
+              href="/blog/plant-motor-maintenance-and-repair-software-iqmotortrack"
+              className="font-medium text-primary hover:underline"
+            >
+              Plant motor maintenance and repair software guide
+            </Link>
+          </p>
         </div>
       </section>
     </>

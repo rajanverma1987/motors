@@ -18,6 +18,7 @@ import {
   FiUserCheck,
   FiBarChart2,
   FiSmartphone,
+  FiTool,
   FiBriefcase,
   FiEdit2,
 } from "react-icons/fi";
@@ -32,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/admin/active-clients", label: "Active clients", icon: FiUserCheck },
   { href: "/admin/subscription-plans", label: "Subscriptions", icon: FiCreditCard },
   { href: "/admin/iqwirecalculator", label: "IQWireCalculator", icon: FiSmartphone },
+  { href: "/admin/iqmotortrack", label: "IQMotorTrack", icon: FiTool },
   { href: "/admin/cir-mills", label: "Cir Mills", icon: FiBarChart2 },
   { href: "/admin/diagram-templates", label: "Diagram designs", icon: FiEdit2 },
   { href: "/admin/marketplace", label: "Marketplace", icon: FiShoppingBag },

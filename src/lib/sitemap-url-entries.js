@@ -203,6 +203,12 @@ export async function getSitemapEntries() {
       priority: 0.84,
     },
     { url: `${baseUrl}/blog/how-to-get-more-customers-for-motor-repair-shop`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
+    {
+      url: `${baseUrl}/blog/plant-motor-maintenance-and-repair-software-iqmotortrack`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.88,
+    },
     { url: `${baseUrl}/blog/motor-rewinding-business-marketing-usa`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
     { url: `${baseUrl}/blog/best-software-for-repair-shop-2026`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.86 },
     { url: `${baseUrl}/blog/how-to-manage-repair-jobs-efficiently`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },

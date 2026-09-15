@@ -55,7 +55,7 @@ function LoginScreen({ onCreate }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-bg">
+    <div className="flex min-h-0 flex-col bg-bg">
       <AuthHero
         title="IQMotorTrack"
         subtitle={`Motor maintenance and repair for plants. Free for ${IQMOTORTRACK_FREE_MOTOR_LIMIT} motors. Pro $${IQMOTORTRACK_MONTHLY_USD}/mo.`}
@@ -63,7 +63,6 @@ function LoginScreen({ onCreate }) {
       <div className="flex-1 px-4 py-5">
         <Form id="track-login-form" onSubmit={onSubmit} className="space-y-4">
           <h2 className="text-lg font-bold text-title">Sign in</h2>
-          <p className="text-sm text-secondary">Plant facility login. This is not a shop account.</p>
           <Input
             label="Email"
             name="email"
@@ -90,7 +89,7 @@ function LoginScreen({ onCreate }) {
             {!busy ? <FiArrowRight className="h-4 w-4 shrink-0" aria-hidden /> : null}
           </Button>
           <button type="button" onClick={onCreate} className="w-full text-center text-sm text-secondary">
-            New here? <span className="font-semibold text-primary">Create a facility account</span>
+            New here? <span className="font-semibold text-primary">Create Account</span>
           </button>
         </Form>
       </div>
@@ -144,7 +143,7 @@ function RegisterScreen({ onBack }) {
   };
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-bg">
+    <div className="flex min-h-0 flex-col bg-bg">
       <AuthHero
         title="Create facility"
         subtitle={`Free for up to ${IQMOTORTRACK_FREE_MOTOR_LIMIT} motors. Upgrade to Pro when you need more.`}

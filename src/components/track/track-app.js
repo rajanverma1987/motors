@@ -8,6 +8,7 @@ import TrackAuthScreens from "./auth-screens";
 import TrackInstallBanner from "./install-banner";
 import TrackMotorsScreen from "./motors-screen";
 import TrackProfileScreen from "./profile-screen";
+import TrackBrandFooter from "./brand-footer";
 
 const TABS = [
   { id: "motors", label: "Motors", icon: FiCpu },
@@ -31,8 +32,11 @@ function AppShell() {
 
   if (loading) {
     return (
-      <div className="flex min-h-[100dvh] items-center justify-center bg-bg">
+      <div className="flex min-h-[100dvh] flex-col items-center justify-center bg-bg">
         <p className="text-sm text-secondary">Loading IQMotorTrack…</p>
+        <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md">
+          <TrackBrandFooter className="pb-[max(0.35rem,env(safe-area-inset-bottom))]" />
+        </div>
       </div>
     );
   }
@@ -41,7 +45,10 @@ function AppShell() {
     return (
       <div className="mx-auto flex min-h-[100dvh] max-w-md flex-col bg-bg shadow-sm sm:border-x sm:border-border">
         <TrackInstallBanner />
-        <TrackAuthScreens />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <TrackAuthScreens />
+        </div>
+        <TrackBrandFooter className="pb-[max(0.35rem,env(safe-area-inset-bottom))]" />
       </div>
     );
   }
@@ -63,7 +70,7 @@ function AppShell() {
           <TrackProfileScreen />
         </div>
       </main>
-      <nav className="border-t border-border bg-card pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1">
+      <nav className="border-t border-border bg-card pt-1">
         <ul className="grid grid-cols-2">
           {TABS.map((item) => {
             const Icon = item.icon;
@@ -85,6 +92,7 @@ function AppShell() {
           })}
         </ul>
       </nav>
+      <TrackBrandFooter className="pb-[max(0.35rem,env(safe-area-inset-bottom))]" />
     </div>
   );
 }

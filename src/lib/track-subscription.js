@@ -243,3 +243,115 @@ export async function cancelTrackPaypalSubscription(facility) {
     console.warn("cancelTrackPaypalSubscription:", err.message);
   }
 }
+
+function isoOrNull(d) {
+  if (!d) return null;
+  try {
+    return new Date(d).toISOString();
+  } catch {
+    return null;
+  }
+}
+
+export function trackSubscriptionTypeLabel(facility) {
+  const status = String(facility?.subscriptionStatus || "free");
+  if (status === "active") return "Pro";
+  if (status === "past_due") return "Past due";
+  if (status === "cancelled") return "Cancelled";
+  if (status === "expired") return "Expired";
+  return "Free";
+}
+
+export function trackNextDueAt(facility) {
+  const status = String(facility?.subscriptionStatus || "free");
+  if (status === "active" || status === "cancelled" || status === "past_due") {
+    return facility.currentPeriodEndsAt || null;
+  }
+  return facility.currentPeriodEndsAt || null;
+}
+
+export function trackFacilityToAdminJson(facility, { motorCount = 0 } = {}) {
+  const pro = isTrackPro(facility);
+  return {
+    id: String(facility._id),
+    email: facility.email,
+    facilityName: facility.facilityName || "",
+    contactName: facility.contactName || "",
+    name: facility.contactName || "",
+    phone: facility.phone || "",
+    country: facility.country || "",
+    countryCode: facility.countryCode || "",
+    canLogin: facility.canLogin !== false,
+    banned: facility.canLogin === false,
+    plan: facility.plan || "free",
+    subscriptionStatus: facility.subscriptionStatus,
+    subscriptionType: trackSubscriptionTypeLabel(facility),
+    lastPaidAt: isoOrNull(facility.lastPaymentAt),
+    nextDueAt: isoOrNull(trackNextDueAt(facility)),
+    currentPeriodEndsAt: isoOrNull(facility.currentPeriodEndsAt),
+    lastLoginAt: isoOrNull(facility.lastLoginAt),
+    createdAt: isoOrNull(facility.createdAt),
+    paypalSubscriptionId: facility.paypalSubscriptionId || "",
+    cancelAtPeriodEnd: Boolean(facility.cancelAtPeriodEnd),
+    isPro: pro,
+    unlocked: pro,
+    motorCount: Number(motorCount) || 0,
+    motorLimit: pro ? null : TRACK_FREE_MOTOR_LIMIT,
+  };
+}
+
+/** Cancel PayPal if present and force Free plan immediately. Login still allowed unless banned. */
+export async function revokeTrackAccess(facility) {
+  const subId = String(facility.paypalSubscriptionId || "").trim();
+  if (subId) {
+    try {
+      await cancelPaypalSubscription(subId, "Admin removed IQMotorTrack Pro access");
+    } catch (err) {
+      console.warn("revokeTrackAccess paypal:", err.message);
+    }
+  }
+  const now = new Date();
+  facility.plan = "free";
+  facility.subscriptionStatus = "expired";
+  facility.cancelAtPeriodEnd = true;
+  facility.currentPeriodEndsAt = now;
+  await facility.save();
+  return facility;
+}
+
+/** Grant or extend complimentary Pro for N days (admin). */
+export function grantTrackProDays(facility, days) {
+  const n = Math.floor(Number(days));
+  if (!Number.isFinite(n) || n < 1 || n > 365) {
+    throw new Error("Pro grant must be between 1 and 365 days");
+  }
+  const now = Date.now();
+  const currentEnd =
+    facility.plan === "pro" && facility.currentPeriodEndsAt
+      ? new Date(facility.currentPeriodEndsAt).getTime()
+      : 0;
+  const from = Math.max(now, currentEnd);
+  const next = new Date(from);
+  next.setDate(next.getDate() + n);
+  facility.plan = "pro";
+  facility.subscriptionStatus = "active";
+  facility.cancelAtPeriodEnd = false;
+  facility.currentPeriodEndsAt = next;
+  return facility;
+}
+
+export async function motorCountsByFacilityIds(facilityIds) {
+  await connectDB();
+  const ids = (facilityIds || []).filter(Boolean);
+  if (!ids.length) return new Map();
+  const rows = await TrackMotor.aggregate([
+    { $match: { facilityId: { $in: ids }, archived: { $ne: true } } },
+    { $group: { _id: "$facilityId", count: { $sum: 1 } } },
+  ]);
+  const map = new Map();
+  for (const row of rows) {
+    map.set(String(row._id), Number(row.count) || 0);
+  }
+  return map;
+}
+
