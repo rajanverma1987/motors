@@ -118,6 +118,12 @@ export async function getSitemapEntries() {
       priority: 0.9,
     },
     {
+      url: `${baseUrl}/motor-maintenance-and-repair`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.92,
+    },
+    {
       url: `${baseUrl}/iqwirecalculator/privacy`,
       lastModified: new Date(),
       changeFrequency: "yearly",

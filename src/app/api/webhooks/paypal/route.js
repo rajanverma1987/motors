@@ -19,8 +19,18 @@ import {
   applyMobileAppPaymentDenied,
   findMobileAppAccountForPaypalEvent,
 } from "@/lib/mobile-app-subscription";
+import {
+  applyTrackSubscriptionActivated,
+  applyTrackSubscriptionCancelled,
+  applyTrackPaymentDenied,
+  findTrackFacilityForPaypalEvent,
+} from "@/lib/track-subscription";
 
 export const dynamic = "force-dynamic";
+
+function getHeader(request, name) {
+  return request.headers.get(name) || "";
+}
 
 function subscriberEmailFromEvent(event) {
   return String(event?.resource?.subscriber?.email_address || "").trim().toLowerCase();
@@ -89,6 +99,7 @@ export async function POST(request) {
     try {
       let isCalculatorSub = false;
       let isMobileAppSub = false;
+      let isTrackSub = false;
       if (subId) {
         await connectDB();
         isCalculatorSub = !!(await CalculatorEntitlement.findOne({ paypalSubscriptionId: subId })
@@ -108,6 +119,20 @@ export async function POST(request) {
             }
           }
         }
+        if (!isCalculatorSub && !isMobileAppSub) {
+          const trackFacility = await findTrackFacilityForPaypalEvent({
+            paypalSubscriptionId: subId,
+            subscriberEmail: subscriberEmailFromEvent(event),
+            customId: event?.resource?.custom_id,
+          });
+          if (trackFacility) {
+            isTrackSub = true;
+            if (subId && trackFacility.paypalSubscriptionId !== subId) {
+              trackFacility.paypalSubscriptionId = subId;
+              await trackFacility.save();
+            }
+          }
+        }
       }
 
       if (eventType === "BILLING.SUBSCRIPTION.ACTIVATED" && subId) {
@@ -115,6 +140,8 @@ export async function POST(request) {
           await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
         } else if (isMobileAppSub) {
           await applyMobileAppSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
         } else {
           await applySubscriptionActivated({ subscriptionId: subId, eventId });
         }
@@ -123,6 +150,8 @@ export async function POST(request) {
           await applyCalculatorSubscriptionCancelled({ paypalSubscriptionId: subId });
         } else if (isMobileAppSub) {
           await applyMobileAppSubscriptionCancelled({ paypalSubscriptionId: subId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionCancelled({ paypalSubscriptionId: subId });
         } else {
           await applySubscriptionCancelled({ subscriptionId: subId, eventId });
         }
@@ -131,6 +160,8 @@ export async function POST(request) {
           await applyCalculatorSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
         } else if (isMobileAppSub) {
           await applyMobileAppSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
+        } else if (isTrackSub) {
+          await applyTrackSubscriptionActivated({ paypalSubscriptionId: subId, eventId });
         } else {
           const amt = event.resource?.amount?.total != null ? Number(event.resource.amount.total) : undefined;
           const currency = event.resource?.amount?.currency || "USD";
@@ -146,6 +177,8 @@ export async function POST(request) {
       } else if (eventType === "PAYMENT.SALE.DENIED" && subId) {
         if (isMobileAppSub) {
           await applyMobileAppPaymentDenied({ paypalSubscriptionId: subId });
+        } else if (isTrackSub) {
+          await applyTrackPaymentDenied({ paypalSubscriptionId: subId });
         } else if (!isCalculatorSub) {
           await applyPaymentSaleDenied({ subscriptionId: subId, eventId });
         }

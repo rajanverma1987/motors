@@ -223,6 +223,7 @@ export async function getTechnicianFromRequest(request) {
 }
 
 const MOBILE_APP_JWT_TYP = "motors_mobile_app";
+const TRACK_JWT_TYP = "motors_iqmotortrack";
 
 /**
  * JWT for IQWireCalculator mobile app (Bearer). Not interchangeable with portal or technician tokens.
@@ -252,6 +253,40 @@ export async function verifyMobileAppToken(token) {
       accountId,
       email,
       name: String(payload.name || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * JWT for IQMotorTrack plant PWA (Bearer).
+ */
+export async function createTrackToken({ facilityId, email, contactName }) {
+  return new SignJWT({
+    typ: TRACK_JWT_TYP,
+    facilityId: String(facilityId || ""),
+    email: String(email || "").toLowerCase().trim(),
+    contactName: String(contactName || ""),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("30d")
+    .sign(getPortalJwtSecret());
+}
+
+export async function verifyTrackToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getPortalJwtSecret());
+    if (payload.typ !== TRACK_JWT_TYP) return null;
+    const facilityId = String(payload.facilityId || "").trim();
+    const email = String(payload.email || "")
+      .trim()
+      .toLowerCase();
+    if (!facilityId || !email) return null;
+    return {
+      facilityId,
+      email,
+      contactName: String(payload.contactName || ""),
     };
   } catch {
     return null;

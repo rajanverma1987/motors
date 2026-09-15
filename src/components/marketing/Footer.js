@@ -8,6 +8,7 @@ const footerLinks = {
     { href: "/careers", label: "Careers: hire technicians (public job posts)" },
     { href: "/blog", label: "Blog: shop guides & calculators" },
     { href: "/iqwirecalculator", label: "IQWireCalculator: CM Best Match app" },
+    { href: "/motor-maintenance-and-repair", label: "IQMotorTrack: motor maintenance and repair" },
     { href: "/motor-repair-shop-management-software", label: "Shop management software" },
     { href: "/motor-repair-crm-software", label: "Motor repair shop management system" },
     { href: "/work-order-software-for-motor-repair-shops", label: "Work order software" },
@@ -23,6 +24,7 @@ const footerLinks = {
     { href: "/benefits-of-motor-repair-directory", label: "Directory benefits" },
   ],
   "For buyers": [
+    { href: "/motor-maintenance-and-repair", label: "Motor maintenance and repair (IQMotorTrack)" },
     { href: "/electric-motor-repair", label: "Electric motor repair hub" },
     { href: "/industrial-motor-repair", label: "Industrial motor repair" },
     { href: "/marketplace", label: "Parts & equipment marketplace" },
