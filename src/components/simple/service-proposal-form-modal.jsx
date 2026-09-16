@@ -713,6 +713,31 @@ export default function ServiceProposalFormModal({
     });
   }, [open, employeesWithAdmin, user]);
 
+  /** §14.5 - linked-record context for proposals converted from an IQMotorTrack RFQ. */
+  const trackLink = useMemo(() => {
+    if (String(form.sourceSystem || "") !== "IQMotorTrack") return null;
+    const version = Number(form.trackProposalVersion) || 0;
+    return {
+      serialNumber: String(form.trackSerialNumber || "").trim(),
+      facilityName: String(form.trackFacilityName || form.companyName || "").trim(),
+      datasheetPrefilled: Boolean(form.trackDatasheetPrefilled),
+      provenance: String(form.trackDatasheetProvenance || "").trim(),
+      powerConflict: Boolean(form.trackDatasheetPowerConflict),
+      sentLabel: version
+        ? `Proposal sent to the plant (version ${version})`
+        : "Not sent to the plant yet",
+    };
+  }, [
+    form.sourceSystem,
+    form.trackSerialNumber,
+    form.trackFacilityName,
+    form.companyName,
+    form.trackDatasheetPrefilled,
+    form.trackDatasheetProvenance,
+    form.trackDatasheetPowerConflict,
+    form.trackProposalVersion,
+  ]);
+
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleMotorTypeChange = async (nextType) => {
@@ -1521,6 +1546,41 @@ export default function ServiceProposalFormModal({
               </Button>
             </div>
           </div>
+
+          {trackLink ? (
+            <div className="mb-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
+                  Linked to IQMotorTrack
+                </Badge>
+                {trackLink.serialNumber ? (
+                  <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Serial {trackLink.serialNumber}
+                  </Badge>
+                ) : null}
+                {trackLink.datasheetPrefilled ? (
+                  <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Datasheet pre-filled{trackLink.provenance ? ` from ${trackLink.provenance}` : ""}
+                  </Badge>
+                ) : null}
+                {trackLink.powerConflict ? (
+                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Shared datasheet power type did not match
+                  </Badge>
+                ) : null}
+                {trackLink.sentLabel ? (
+                  <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                    {trackLink.sentLabel}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="mt-1.5 text-xs text-secondary">
+                Saving keeps this proposal private. Use Motor Down RFQs to send it to{" "}
+                {trackLink.facilityName || "the plant"}. The serial number belongs to the plant record and
+                cannot be edited here.
+              </p>
+            </div>
+          ) : null}
 
           {/* Columns: customer/motor | meta + status | notes + PO lines.
               Tablet portrait (md): two side-by-side, third full-width below.

@@ -6,6 +6,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getPasswordPolicyError } from "@/lib/password-policy";
 import { LIMITS, clampString, isValidEmail } from "@/lib/validation";
 import { trackSessionPayload } from "@/lib/track-auth";
+import { issueTrackEmailVerification } from "@/lib/track-account-tokens";
+import { sendTrackVerifyEmail } from "@/lib/email";
+import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -69,11 +72,25 @@ export async function POST(request) {
       postalCode,
       country,
       countryCode: /^[A-Z]{2}$/.test(countryCode) ? countryCode : "",
-      emailVerified: true,
+      emailVerified: false,
       plan: "free",
       subscriptionStatus: "free",
       lastLoginAt: new Date(),
     });
+
+    const { token: verifyToken, code } = issueTrackEmailVerification(facility);
+    await facility.save();
+    const base = String(getPublicSiteUrl(request) || "").replace(/\/+$/, "");
+    try {
+      await sendTrackVerifyEmail({
+        to: facility.email,
+        contactName: facility.contactName,
+        verifyUrl: `${base}/Track?verify=${encodeURIComponent(verifyToken)}`,
+        code,
+      });
+    } catch (mailErr) {
+      console.warn("Track verification email failed:", mailErr?.message || mailErr);
+    }
 
     const token = await createTrackToken({
       facilityId: facility._id.toString(),

@@ -10,6 +10,7 @@ import { applySimpleServiceProposalInventoryLifecycle } from "@/lib/inventory-se
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { stripTrackOwnedFields } from "@/lib/track-proposal-hooks";
 import {
   andMongoClauses,
   invoiceFinanceAddFieldsStages,
@@ -337,7 +338,8 @@ export async function POST(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const body = await request.json().catch(() => ({}));
-    const payload = sanitizeSimplePortalPayload(body);
+    // A new proposal can never claim an IQMotorTrack link: only conversion sets those.
+    const payload = stripTrackOwnedFields(sanitizeSimplePortalPayload(body));
     const mergedSettings = await loadMergedSettingsForEmail(email);
     const requestedNumber = String(payload.documentNumber || payload.quote || "").trim();
     if (requestedNumber) {

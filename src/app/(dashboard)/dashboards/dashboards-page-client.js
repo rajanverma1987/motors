@@ -12,6 +12,7 @@ import {
   FiShoppingCart,
   FiSliders,
   FiUsers,
+  FiZap,
 } from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth-context";
@@ -26,6 +27,7 @@ import ReportsPanel from "./reports-panel";
 import MasterDataSearchPanel from "./master-data-search-panel";
 import CalculatorsPanel from "./calculators-panel";
 import DashboardOverviewPanel from "./dashboard-overview-panel";
+import TrackRfqsPanel from "./track-rfqs-panel";
 import {
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_CALCULATORS,
@@ -38,6 +40,7 @@ import {
   SIMPLE_TAB_PURCHASE_ORDERS,
   SIMPLE_TAB_REPORTS,
   SIMPLE_TAB_SERVICE_PROPOSALS,
+  SIMPLE_TAB_TRACK_RFQS,
 } from "@/lib/simple-portal-tabs";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
@@ -131,6 +134,11 @@ export default function DashboardsPageClient() {
         id: SIMPLE_TAB_CUSTOMERS,
         label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
         children: <CustomersPanel />,
+      },
+      {
+        id: SIMPLE_TAB_TRACK_RFQS,
+        label: <TabLabel icon={FiZap}>Motor Down RFQs</TabLabel>,
+        children: <TrackRfqsPanel />,
       },
       {
         id: SIMPLE_TAB_SERVICE_PROPOSALS,

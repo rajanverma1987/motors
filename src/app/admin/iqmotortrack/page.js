@@ -7,7 +7,9 @@ import Button from "@/components/ui/button";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
+import Tabs from "@/components/ui/tabs";
 import { Form } from "@/components/ui/form-layout";
+import TrackIntegrationLog from "./integration-log";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
@@ -77,7 +79,7 @@ function FacilityDetailModal({ account, open, onClose }) {
   );
 }
 
-export default function AdminIqMotorTrackPage() {
+function FacilitiesPanel() {
   const toast = useToast();
   const confirm = useConfirm();
   const [accounts, setAccounts] = useState([]);
@@ -615,5 +617,20 @@ export default function AdminIqMotorTrackPage() {
         </Form>
       </Modal>
     </div>
+  );
+}
+
+export default function AdminIqMotorTrackPage() {
+  return (
+    <Tabs
+      className="h-full min-h-0 w-full min-w-0 flex-1"
+      panelClassName="flex min-h-0 flex-1 flex-col pt-6"
+      ariaLabel="IQMotorTrack sections"
+      keepMounted
+      tabs={[
+        { id: "facilities", label: "Facilities", children: <FacilitiesPanel /> },
+        { id: "integration", label: "Integration log", children: <TrackIntegrationLog /> },
+      ]}
+    />
   );
 }

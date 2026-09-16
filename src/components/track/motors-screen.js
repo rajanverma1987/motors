@@ -1,98 +1,60 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FiEdit2, FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiChevronRight, FiPlus, FiTrash2 } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
-import Modal from "@/components/ui/modal";
-import { Form } from "@/components/ui/form-layout";
 import { useConfirm } from "@/components/confirm-provider";
 import { useToast } from "@/components/toast-provider";
 import { IQMOTORTRACK_FREE_MOTOR_LIMIT, IQMOTORTRACK_MONTHLY_USD } from "@/lib/iqmotortrack-marketing";
+import {
+  TRACK_CRITICALITY_LABEL,
+  TRACK_CRITICALITY_VARIANT,
+  TRACK_STATUS_LABEL,
+  TRACK_STATUS_VARIANT,
+  trackMotorLocation,
+  trackMotorTitle,
+} from "@/lib/track-motor-fields";
 import { appFetch } from "./api";
 import { useTrackAuth } from "./auth-context";
+import TrackMotorFormModal from "./motor-form-modal";
 import TrackPaypalSubscribeModal from "./paypal-subscribe";
+import { TrackEmpty } from "./ui";
 
-const STATUS_VARIANT = {
-  in_service: "success",
-  down: "danger",
-  under_repair: "warning",
-  spare: "default",
-  retired: "default",
-};
-
-const STATUS_LABEL = {
-  in_service: "In service",
-  down: "Down",
-  under_repair: "Under repair",
-  spare: "Spare",
-  retired: "Retired",
-};
-
-const CRITICALITY_OPTIONS = [
-  { value: "critical", label: "Critical" },
-  { value: "important", label: "Important" },
-  { value: "standard", label: "Standard" },
-  { value: "spare", label: "Spare" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "in_service", label: "In service" },
+const FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "in_service", label: "Running" },
   { value: "down", label: "Down" },
+  { value: "awaiting_proposals", label: "Awaiting proposals" },
   { value: "under_repair", label: "Under repair" },
-  { value: "spare", label: "Spare" },
-  { value: "retired", label: "Retired" },
+  { value: "repaired", label: "Repaired, awaiting return" },
+  { value: "spare", label: "Standby" },
+  { value: "retired", label: "Decommissioned" },
 ];
 
-const POWER_OPTIONS = [
-  { value: "AC", label: "AC" },
-  { value: "DC", label: "DC" },
-];
-
-const emptyForm = () => ({
-  manufacturer: "",
-  modelNumber: "",
-  serialNumber: "",
-  powerType: "AC",
-  motorType: "",
-  hp: "",
-  kw: "",
-  voltage: "",
-  fullLoadAmps: "",
-  rpm: "",
-  frame: "",
-  enclosure: "",
-  locationBuilding: "",
-  locationArea: "",
-  locationAssetTag: "",
-  criticality: "standard",
-  status: "in_service",
-  notes: "",
-});
-
-function motorTitle(m) {
-  const parts = [m.manufacturer, m.hp ? `${m.hp} HP` : m.kw ? `${m.kw} kW` : "", m.voltage].filter(Boolean);
-  return parts.join(" · ") || "Motor";
-}
-
-export default function TrackMotorsScreen() {
+export default function TrackMotorsScreen({ onOpenMotor, refreshKey = 0, onChanged }) {
   const confirm = useConfirm();
   const toast = useToast();
   const { token, session, refreshSession } = useTrackAuth();
   const [motors, setMotors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState(emptyForm());
-  const [saving, setSaving] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const data = await appFetch("/api/track/motors", { token });
+      const params = new URLSearchParams();
+      if (search.trim()) params.set("q", search.trim());
+      if (status) params.set("status", status);
+      if (showArchived) params.set("archived", "1");
+      const qs = params.toString();
+      const data = await appFetch(`/api/track/motors${qs ? `?${qs}` : ""}`, { token });
       setMotors(data.motors || []);
       await refreshSession().catch(() => {});
     } catch (err) {
@@ -103,111 +65,75 @@ export default function TrackMotorsScreen() {
   };
 
   useEffect(() => {
-    load().catch(() => {});
+    const timer = setTimeout(() => {
+      load().catch(() => {});
+    }, search ? 300 : 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, search, status, showArchived, refreshKey]);
 
-  const atLimit = !session?.isPro && motors.length >= (session?.motorLimit || IQMOTORTRACK_FREE_MOTOR_LIMIT);
+  const activeCount = session?.motorCount ?? motors.filter((m) => !m.archived).length;
+  const limit = session?.motorLimit || IQMOTORTRACK_FREE_MOTOR_LIMIT;
+  const atLimit = !session?.isPro && activeCount >= limit;
 
   const openCreate = () => {
     if (atLimit) {
       setPayOpen(true);
       return;
     }
-    setEditing(null);
-    setForm(emptyForm());
     setFormOpen(true);
   };
 
-  const openEdit = (m) => {
-    setEditing(m);
-    setForm({
-      manufacturer: m.manufacturer || "",
-      modelNumber: m.modelNumber || "",
-      serialNumber: m.serialNumber || "",
-      powerType: m.powerType || "AC",
-      motorType: m.motorType || "",
-      hp: m.hp || "",
-      kw: m.kw || "",
-      voltage: m.voltage || "",
-      fullLoadAmps: m.fullLoadAmps || "",
-      rpm: m.rpm || "",
-      frame: m.frame || "",
-      enclosure: m.enclosure || "",
-      locationBuilding: m.locationBuilding || "",
-      locationArea: m.locationArea || "",
-      locationAssetTag: m.locationAssetTag || "",
-      criticality: m.criticality || "standard",
-      status: m.status || "in_service",
-      notes: m.notes || "",
-    });
-    setFormOpen(true);
-  };
-
-  const setField = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
-
-  const save = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      if (editing?.id) {
-        await appFetch(`/api/track/motors/${editing.id}`, {
-          token,
-          method: "PATCH",
-          body: form,
-        });
-        toast.success("Motor updated.");
-      } else {
-        await appFetch("/api/track/motors", {
-          token,
-          method: "POST",
-          body: form,
-        });
-        toast.success("Motor added.");
-      }
-      setFormOpen(false);
-      await load();
-    } catch (err) {
-      if (err.code === "MOTOR_LIMIT") {
-        setFormOpen(false);
-        setPayOpen(true);
-      }
-      toast.error(err.message || "Could not save.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const remove = async (m) => {
+  const archive = async (motor) => {
     const ok = await confirm({
       title: "Archive motor",
-      message: `Archive ${motorTitle(m)}? It will no longer count toward your free limit.`,
+      message: `Archive ${trackMotorTitle(motor)}? The record stays searchable and stops counting toward your plan limit.`,
       confirmLabel: "Archive",
       variant: "danger",
     });
     if (!ok) return;
     try {
-      await appFetch(`/api/track/motors/${m.id}`, { token, method: "DELETE" });
+      await appFetch(`/api/track/motors/${motor.id}`, { token, method: "DELETE" });
       toast.success("Motor archived.");
       await load();
+      onChanged?.();
     } catch (err) {
       toast.error(err.message || "Could not archive.");
     }
   };
 
+  const restore = async (motor) => {
+    try {
+      await appFetch(`/api/track/motors/${motor.id}`, {
+        token,
+        method: "PATCH",
+        body: { archived: false },
+      });
+      toast.success("Motor restored.");
+      await load();
+      onChanged?.();
+    } catch (err) {
+      if (err.code === "MOTOR_LIMIT") setPayOpen(true);
+      toast.error(err.message || "Could not restore.");
+    }
+  };
+
   return (
-    <div className="space-y-3 px-4 pb-6 pt-3">
+    <div className="space-y-3 px-4 pb-8 pt-3">
       <div className="flex items-center justify-between gap-2">
-        <div>
-          <p className="text-sm text-secondary">{session?.usageLabel || "Motors"}</p>
-          {!session?.isPro ? (
-            <p className="text-xs text-secondary">
-              Free tier: {IQMOTORTRACK_FREE_MOTOR_LIMIT} motors. Pro ${IQMOTORTRACK_MONTHLY_USD}/mo unlimited.
-            </p>
-          ) : (
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-title">
+            {activeCount} {activeCount === 1 ? "motor" : "motors"}
+          </p>
+          {session?.isPro ? (
             <Badge variant="success" className="mt-1 rounded-full px-2.5 py-0.5 text-xs">
-              Pro
+              Pro, unlimited motors
             </Badge>
+          ) : (
+            <p className="text-xs text-secondary">
+              Free plan: {activeCount} of {limit} used. Pro is ${IQMOTORTRACK_MONTHLY_USD} per month for
+              unlimited motors.
+            </p>
           )}
         </div>
         <Button type="button" size="sm" onClick={openCreate}>
@@ -218,119 +144,159 @@ export default function TrackMotorsScreen() {
 
       {atLimit ? (
         <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 text-sm text-title">
-          Free plan limit reached. Upgrade to Pro (${IQMOTORTRACK_MONTHLY_USD}/mo) for unlimited motors.
+          You have reached the free plan limit of {limit} motors. Upgrade to Pro for unlimited motors,
+          unlimited RFQs and full history.
           <Button type="button" size="sm" className="mt-2 w-full" onClick={() => setPayOpen(true)}>
             Upgrade with PayPal
           </Button>
         </div>
       ) : null}
 
-      {loading ? <p className="text-sm text-secondary">Loading motors…</p> : null}
-      {!loading && motors.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border bg-card p-6 text-center">
-          <p className="font-semibold text-title">No motors yet</p>
-          <p className="mt-1 text-sm text-secondary">Add your first motor to start motor maintenance and repair tracking.</p>
-          <Button type="button" className="mt-4" onClick={openCreate}>
-            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-            Add motor
-          </Button>
+      <div className="space-y-2">
+        <Input
+          label="Search"
+          name="track-motor-search"
+          placeholder="Serial, manufacturer, asset tag or location"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Select
+              label="Status"
+              name="track-motor-status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              options={FILTER_OPTIONS}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowArchived((prev) => !prev)}
+            className={`shrink-0 rounded-lg border px-2.5 py-2 text-xs font-semibold ${
+              showArchived
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-card text-secondary"
+            }`}
+          >
+            Archived
+          </button>
         </div>
+      </div>
+
+      {loading ? <p className="text-sm text-secondary">Loading motors…</p> : null}
+
+      {!loading && motors.length === 0 ? (
+        <TrackEmpty
+          title={search || status ? "No motors match" : "No motors yet"}
+          message={
+            search || status
+              ? "Try a different search or clear the status filter."
+              : "Add your first motor. Snap the nameplate and we will keep the record, history and due dates in one place."
+          }
+        >
+          {search || status ? null : (
+            <Button type="button" onClick={openCreate}>
+              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+              Add motor
+            </Button>
+          )}
+        </TrackEmpty>
       ) : null}
 
       <ul className="space-y-2">
-        {motors.map((m) => (
-          <li key={m.id} className="rounded-2xl border border-border bg-card p-3">
-            <div className="flex items-start gap-2">
-              <div className="flex shrink-0 gap-1">
-                <button
-                  type="button"
-                  onClick={() => openEdit(m)}
-                  className="rounded-md p-2 text-primary hover:bg-primary/10"
-                  aria-label="Edit"
-                >
-                  <FiEdit2 className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => remove(m)}
-                  className="rounded-md p-2 text-danger hover:bg-danger/10"
-                  aria-label="Archive"
-                >
-                  <FiTrash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-title">{motorTitle(m)}</p>
-                <p className="mt-0.5 text-xs text-secondary">
-                  {[m.locationBuilding, m.locationArea, m.locationAssetTag].filter(Boolean).join(" · ") || "No location"}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <Badge
-                    variant={STATUS_VARIANT[m.status] || "default"}
-                    className="rounded-full px-2.5 py-0.5 text-xs"
-                  >
-                    {STATUS_LABEL[m.status] || m.status}
-                  </Badge>
-                  <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
-                    {m.powerType}
-                  </Badge>
-                  {m.serialNumber ? (
-                    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
-                      S/N {m.serialNumber}
+        {motors.map((motor) => (
+          <li key={motor.id} className="rounded-2xl border border-border bg-card">
+            <div className="flex items-stretch">
+              <button
+                type="button"
+                onClick={() => onOpenMotor?.(motor.id)}
+                className="flex min-w-0 flex-1 items-center gap-2 p-3 text-left"
+              >
+                {motor.motorPhotoUrl || motor.nameplatePhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={motor.motorPhotoUrl || motor.nameplatePhotoUrl}
+                    alt=""
+                    className="h-12 w-12 shrink-0 rounded-lg border border-border object-cover"
+                  />
+                ) : null}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-title">{trackMotorTitle(motor)}</span>
+                  <span className="mt-0.5 block truncate text-xs text-secondary">
+                    {trackMotorLocation(motor) || "No location recorded"}
+                  </span>
+                  <span className="mt-2 flex flex-wrap gap-1.5">
+                    <Badge
+                      variant={TRACK_STATUS_VARIANT[motor.status] || "default"}
+                      className="rounded-full px-2.5 py-0.5 text-xs"
+                    >
+                      {TRACK_STATUS_LABEL[motor.status] || motor.status}
                     </Badge>
-                  ) : null}
-                </div>
+                    <Badge
+                      variant={TRACK_CRITICALITY_VARIANT[motor.criticality] || "default"}
+                      className="rounded-full px-2.5 py-0.5 text-xs"
+                    >
+                      {TRACK_CRITICALITY_LABEL[motor.criticality] || motor.criticality}
+                    </Badge>
+                    {motor.openRfq ? (
+                      <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
+                        {motor.openRfq.proposalsReceived} of {motor.openRfq.invitedCount} responded
+                      </Badge>
+                    ) : null}
+                    {motor.serialNumber ? (
+                      <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                        S/N {motor.serialNumber}
+                      </Badge>
+                    ) : null}
+                    {motor.archived ? (
+                      <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                        Archived
+                      </Badge>
+                    ) : null}
+                  </span>
+                </span>
+                <FiChevronRight className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
+              </button>
+              <div className="flex shrink-0 items-start border-l border-border p-1.5">
+                {motor.archived ? (
+                  <button
+                    type="button"
+                    onClick={() => restore(motor)}
+                    className="rounded-md px-2 py-1.5 text-[11px] font-semibold text-primary hover:bg-primary/10"
+                  >
+                    Restore
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => archive(motor)}
+                    aria-label="Archive motor"
+                    className="rounded-md p-2 text-danger hover:bg-danger/10"
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                  </button>
+                )}
               </div>
             </div>
           </li>
         ))}
       </ul>
 
-      <Modal
+      <TrackMotorFormModal
         open={formOpen}
+        motor={null}
         onClose={() => setFormOpen(false)}
-        title={editing ? "Edit motor" : "Add motor"}
-        size="md"
-        actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setFormOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="track-motor-form" size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
-        }
-      >
-        <Form id="track-motor-form" onSubmit={save} className="grid gap-3 sm:grid-cols-2">
-          <Input label="Manufacturer" value={form.manufacturer} onChange={setField("manufacturer")} required />
-          <Input label="Model" value={form.modelNumber} onChange={setField("modelNumber")} />
-          <Input label="Serial number" value={form.serialNumber} onChange={setField("serialNumber")} />
-          <Select label="Power" value={form.powerType} onChange={setField("powerType")} options={POWER_OPTIONS} />
-          <Input label="HP" value={form.hp} onChange={setField("hp")} />
-          <Input label="kW" value={form.kw} onChange={setField("kw")} />
-          <Input label="Voltage" value={form.voltage} onChange={setField("voltage")} required />
-          <Input label="FLA" value={form.fullLoadAmps} onChange={setField("fullLoadAmps")} />
-          <Input label="RPM" value={form.rpm} onChange={setField("rpm")} />
-          <Input label="Frame" value={form.frame} onChange={setField("frame")} />
-          <Input label="Enclosure" value={form.enclosure} onChange={setField("enclosure")} />
-          <Input label="Motor type" value={form.motorType} onChange={setField("motorType")} />
-          <Input label="Building" value={form.locationBuilding} onChange={setField("locationBuilding")} />
-          <Input label="Area" value={form.locationArea} onChange={setField("locationArea")} />
-          <Input label="Asset tag" value={form.locationAssetTag} onChange={setField("locationAssetTag")} />
-          <Select
-            label="Criticality"
-            value={form.criticality}
-            onChange={setField("criticality")}
-            options={CRITICALITY_OPTIONS}
-          />
-          <Select label="Status" value={form.status} onChange={setField("status")} options={STATUS_OPTIONS} />
-          <div className="sm:col-span-2">
-            <Input label="Notes" value={form.notes} onChange={setField("notes")} />
-          </div>
-        </Form>
-      </Modal>
-
+        onSaved={(motor, meta) => {
+          if (meta?.limitReached) {
+            setPayOpen(true);
+            return;
+          }
+          load().catch(() => {});
+          onChanged?.();
+          if (motor?.id) onOpenMotor?.(motor.id);
+        }}
+      />
       <TrackPaypalSubscribeModal open={payOpen} onClose={() => setPayOpen(false)} />
     </div>
   );

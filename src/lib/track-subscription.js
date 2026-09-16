@@ -147,6 +147,7 @@ export function trackFacilityToJson(facility, access, billing) {
     postalCode: facility.postalCode || "",
     country: facility.country || "",
     countryCode: facility.countryCode || "",
+    emailVerified: facility.emailVerified !== false,
     plan: access.plan,
     subscriptionStatus: access.subscriptionStatus,
     isPro: access.isPro,

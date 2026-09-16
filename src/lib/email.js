@@ -884,3 +884,210 @@ export async function sendWorkOrderPdfToRecipient(
     ],
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * IQMotorTrack <-> IQMotorBase integration emails (§11)
+ * ------------------------------------------------------------------ */
+
+function trackShopActionButton(label, url) {
+  return `<p><a href="${escHtmlEmail(url)}" style="display:inline-block;padding:10px 20px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;">${escHtmlEmail(label)}</a></p>`;
+}
+
+function trackDetailRows(rows) {
+  const body = rows
+    .filter(([, value]) => String(value ?? "").trim())
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;font-weight:600;white-space:nowrap;">${escHtmlEmail(label)}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;">${escHtmlEmail(value)}</td></tr>`
+    )
+    .join("");
+  if (!body) return "";
+  return `<table style="border-collapse:collapse;margin:12px 0;font-size:14px;">${body}</table>`;
+}
+
+/**
+ * E1 - a new IQMotorTrack RFQ reaches a shop. In-app shops get a dashboard link,
+ * email-only shops get a secure single-use response link (§9.7).
+ */
+export async function sendTrackRfqToShop({
+  to,
+  listingCompanyName,
+  facilityName,
+  facilityCity,
+  motorSummary,
+  urgencyLabel,
+  isEmergency,
+  failureDescription,
+  logisticsLabel,
+  neededBackBy,
+  invitedShopCount,
+  actionUrl,
+  actionLabel,
+  respondsBy,
+}) {
+  const urgencyPrefix = isEmergency ? "EMERGENCY: " : "";
+  const subject = `${urgencyPrefix}Motor down RFQ from ${facilityName || "a plant"} to ${listingCompanyName || "your shop"}`;
+  const emergencyBanner = isEmergency
+    ? `<p style="padding:10px 14px;background:#fee2e2;border-left:4px solid #dc2626;font-weight:700;color:#991b1b;">Emergency request. The plant needs a fast response.</p>`
+    : "";
+  const rows = trackDetailRows([
+    ["Plant", facilityName],
+    ["Plant location", facilityCity],
+    ["Motor", motorSummary],
+    ["Urgency", urgencyLabel],
+    ["Logistics", logisticsLabel],
+    ["Needed back by", neededBackBy],
+    ["Sent to", invitedShopCount > 1 ? `${invitedShopCount} shops` : "your shop only"],
+  ]);
+  const closing =
+    respondsBy === "in_app"
+      ? `<p style="font-size:13px;color:#555;">Open the RFQ in your Simple portal to see the full motor detail, the shared datasheet, and to convert it into a Service Proposal.</p>`
+      : `<p style="font-size:13px;color:#555;">This secure link is for your shop only and expires. You can submit a proposal or decline without logging in. Claim your listing on the same page to receive datasheet write-back and convert RFQs in the app.</p>`;
+  const html = `
+    ${emergencyBanner}
+    <p>Hello,</p>
+    <p>A plant using <strong>IQMotorTrack</strong> has a motor down and sent you a request for quote.</p>
+    ${rows}
+    ${failureDescription ? `<p><strong>What happened:</strong><br/>${escHtmlEmail(failureDescription).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${trackShopActionButton(actionLabel || "Open the RFQ", actionUrl)}
+    ${closing}
+    <p>,  IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E2 - the plant added failure details or photos to an open RFQ. */
+export async function sendTrackRfqUpdatedToShop({ to, facilityName, motorSummary, note, actionUrl }) {
+  const subject = `RFQ updated by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> updated the motor down RFQ you were invited to.</p>
+    ${trackDetailRows([["Motor", motorSummary]])}
+    ${note ? `<p><strong>Update:</strong><br/>${escHtmlEmail(note).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${trackShopActionButton("View the updated RFQ", actionUrl)}
+    <p>,  IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E3 - the plant cancelled the RFQ. */
+export async function sendTrackRfqCancelledToShop({ to, facilityName, motorSummary, reason }) {
+  const subject = `RFQ cancelled by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const html = `
+    <p>Hello,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> cancelled the motor down RFQ you were invited to. No proposal is needed.</p>
+    ${trackDetailRows([["Motor", motorSummary], ["Reason", reason]])}
+    <p>,  IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** E9 - this shop won the job. */
+export async function sendTrackAwardedToShop({
+  to,
+  facilityName,
+  motorSummary,
+  totalPriceLabel,
+  turnaroundLabel,
+  actionUrl,
+}) {
+  const subject = `You won the job: ${facilityName || "plant"} awarded your proposal to IQMotorBase.com`;
+  const html = `
+    <p>Congratulations,</p>
+    <p><strong>${escHtmlEmail(facilityName || "The plant")}</strong> awarded your proposal for the motor below.</p>
+    ${trackDetailRows([
+      ["Motor", motorSummary],
+      ["Awarded price", totalPriceLabel],
+      ["Turnaround", turnaroundLabel],
+    ])}
+    ${trackShopActionButton("Open the Service Proposal", actionUrl)}
+    <p style="font-size:13px;color:#555;">Convert the proposal to a JOB when you start work. Datasheet values you save on this job flow back to the plant's motor record with your shop credited.</p>
+    <p>,  IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
+ * E10 - this shop was not selected. Never discloses the winning shop or price (§8.3, §12).
+ */
+export async function sendTrackNotSelectedToShop({ to, facilityName, motorSummary, responded }) {
+  const subject = `RFQ closed by ${facilityName || "the plant"} to IQMotorBase.com`;
+  const line = responded
+    ? "Your proposal was not selected this time. The plant awarded the job to another shop."
+    : "The plant has closed this RFQ. No proposal was received from your shop.";
+  const html = `
+    <p>Hello,</p>
+    <p>${escHtmlEmail(line)}</p>
+    ${trackDetailRows([["Motor", motorSummary]])}
+    <p style="font-size:13px;color:#555;">Thank you for your time. Keeping your listing capabilities and turnaround up to date helps you rank higher on the next request.</p>
+    <p>,  IQMotorBase.com</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Facility-side notification for E6 / E7 / E8 / E12 / E13 / E14. */
+export async function sendTrackFacilityNotification({
+  to,
+  headline,
+  motorSummary,
+  rows = [],
+  bodyNote = "",
+  actionUrl,
+  actionLabel = "Open IQMotorTrack",
+}) {
+  const subject = `${headline} to IQMotorTrack`;
+  const html = `
+    <p>Hello,</p>
+    <p>${escHtmlEmail(headline)}.</p>
+    ${trackDetailRows([["Motor", motorSummary], ...rows])}
+    ${bodyNote ? `<p>${escHtmlEmail(bodyNote).replace(/\n/g, "<br/>")}</p>` : ""}
+    ${actionUrl ? trackShopActionButton(actionLabel, actionUrl) : ""}
+    <p>,  IQMotorTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Platform admin alert when an IQMotorTrack delivery is out of retries (§11, §14.11). */
+export async function sendTrackDeliveryFailureToAdmin({ eventType, rfqRequestId, listingId, lastError, attempts }) {
+  const to = listingNotifyEmail();
+  if (!to) return { ok: true };
+  const html = `
+    <p>An IQMotorTrack integration delivery failed after ${escHtmlEmail(String(attempts))} attempts.</p>
+    ${trackDetailRows([
+      ["Event", eventType],
+      ["RFQ", rfqRequestId],
+      ["Listing", listingId],
+      ["Last error", lastError],
+    ])}
+    ${trackShopActionButton("Open the integration log", `${getPublicSiteUrl()}/admin/iqmotortrack`)}
+    <p>,  IQMotorBase.com (automated)</p>
+  `;
+  return sendEmail(to, "IQMotorTrack delivery failed after retries", wrapPlatformBrandedHtml(html));
+}
+
+/** Password reset for an IQMotorTrack facility account. */
+export async function sendTrackPasswordResetEmail({ to, contactName, resetUrl }) {
+  const subject = "Reset your IQMotorTrack password";
+  const html = `
+    <p>Hello ${escHtmlEmail(contactName || "there")},</p>
+    <p>Use the link below to set a new IQMotorTrack password. It expires in 60 minutes and can be used once.</p>
+    ${trackShopActionButton("Set a new password", resetUrl)}
+    <p style="font-size:13px;color:#555;">If you did not ask for this, you can ignore this email. Your password stays unchanged.</p>
+    <p>,  IQMotorTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/** Email verification for a new IQMotorTrack facility account. */
+export async function sendTrackVerifyEmail({ to, contactName, verifyUrl, code }) {
+  const subject = "Verify your IQMotorTrack email";
+  const html = `
+    <p>Hello ${escHtmlEmail(contactName || "there")},</p>
+    <p>Confirm this address to finish setting up your IQMotorTrack facility account.</p>
+    ${trackShopActionButton("Verify my email", verifyUrl)}
+    <p>Or enter this code in the app: <strong style="font-size:18px;letter-spacing:2px;">${escHtmlEmail(code)}</strong></p>
+    <p style="font-size:13px;color:#555;">The code expires in 24 hours.</p>
+    <p>,  IQMotorTrack</p>
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}

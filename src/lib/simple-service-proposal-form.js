@@ -364,6 +364,21 @@ export function cloneServiceProposalAsNewRfq(form) {
     dcDatasheet: cloneSheet(source.dcDatasheet),
     scopeDetails,
     otherItems,
+    // A copy is a fresh shop record: it is never linked to the source IQMotorTrack RFQ.
+    sourceSystem: "",
+    externalRef: "",
+    trackLeadId: "",
+    trackRfqRequestId: "",
+    trackInvitationId: "",
+    trackMotorId: "",
+    trackFacilityId: "",
+    trackSerialNumber: "",
+    trackFacilityName: "",
+    trackDatasheetPrefilled: false,
+    trackDatasheetProvenance: "",
+    trackDatasheetPowerConflict: false,
+    trackProposalSentAt: "",
+    trackProposalVersion: 0,
   };
 }
 
@@ -701,6 +716,18 @@ export function simpleServiceProposalDocToForm(doc) {
         shippingPo: next.shippingPo || next.customerPo || "",
       })
     : null;
+
+  // IQMotorTrack link, shown read-only on the form. The server owns these values.
+  next.sourceSystem = String(d.sourceSystem || "").trim();
+  next.trackRfqRequestId = String(d.trackRfqRequestId || "").trim();
+  next.trackInvitationId = String(d.trackInvitationId || "").trim();
+  next.trackSerialNumber = String(d.trackSerialNumber || "").trim();
+  next.trackFacilityName = String(d.trackFacilityName || d.companyName || "").trim();
+  next.trackDatasheetPrefilled = Boolean(d.trackDatasheetPrefilled);
+  next.trackDatasheetProvenance = String(d.trackDatasheetProvenance || "").trim();
+  next.trackDatasheetPowerConflict = Boolean(d.trackDatasheetPowerConflict);
+  next.trackProposalSentAt = d.trackProposalSentAt ? String(d.trackProposalSentAt) : "";
+  next.trackProposalVersion = Number(d.trackProposalVersion) || 0;
 
   return next;
 }

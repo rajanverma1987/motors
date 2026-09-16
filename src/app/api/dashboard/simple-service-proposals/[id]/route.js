@@ -18,6 +18,22 @@ import {
 } from "@/lib/job-board-emit";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 import { assertSimplePortalJobNumberAvailable } from "@/lib/simple-portal-job-numbers";
+import { loadMergedSettingsForEmail } from "@/lib/simple-service-proposal-list-query";
+import {
+  emitTrackProposalDeleted,
+  emitTrackProposalSideEffects,
+  stripTrackOwnedFields,
+} from "@/lib/track-proposal-hooks";
+import { getListingIdsForUser } from "@/lib/dashboard-leads-scope";
+import Listing from "@/models/Listing";
+
+/** Company name and listing id used when reporting back to IQMotorTrack (§9.8). */
+async function trackShopIdentity(email) {
+  const listingIds = await getListingIdsForUser(email);
+  if (listingIds.length === 0) return { shopName: email, listingId: "" };
+  const listing = await Listing.findById(listingIds[0]).select("companyName").lean();
+  return { shopName: String(listing?.companyName || email), listingId: listingIds[0] };
+}
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -67,7 +83,7 @@ export async function PUT(request, context) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
     const body = await request.json().catch(() => ({}));
-    const payload = sanitizeSimplePortalPayload(body);
+    const payload = stripTrackOwnedFields(sanitizeSimplePortalPayload(body));
     const nextDocumentNumber = String(payload.documentNumber || payload.quote || "").trim();
     const prevDocumentNumber = String(previous.documentNumber || previous.quote || "").trim();
     if (
@@ -132,6 +148,19 @@ export async function PUT(request, context) {
       previous,
       next: doc,
     });
+    if (String(doc.sourceSystem || "") === "IQMotorTrack") {
+      const [identity, mergedSettings] = await Promise.all([
+        trackShopIdentity(email),
+        loadMergedSettingsForEmail(email),
+      ]);
+      await emitTrackProposalSideEffects({
+        previous,
+        next: doc,
+        shopName: identity.shopName,
+        listingId: identity.listingId,
+        mergedSettings,
+      });
+    }
     return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple service proposal error:", err);
@@ -177,6 +206,7 @@ export async function DELETE(request, context) {
     if (String(deleted.recordType || "").toUpperCase() === "JOB") {
       void notifySimpleJobBoardDeleted(email, id);
     }
+    await emitTrackProposalDeleted(deleted);
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("Dashboard delete simple service proposal error:", err);

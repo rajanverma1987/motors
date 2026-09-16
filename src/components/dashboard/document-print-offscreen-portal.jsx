@@ -125,7 +125,7 @@ function waitForPrintImages(root, timeoutMs = 5000) {
 }
 
 /**
- * Off-screen print portal — opens the system print dialog only (no full-screen overlay).
+ * Off-screen print portal. Opens the system print dialog only (no full-screen overlay).
  * Always prints as a light document (ignores UI dark mode).
  * Waits briefly for images (e.g. job diagrams) before calling window.print().
  */
@@ -143,17 +143,28 @@ export default function DocumentPrintOffscreenPortal({ open, onClose, children }
     if (!open) return undefined;
     const restoreTheme = beginPrintLightTheme();
     let cancelled = false;
-    const handleAfterPrint = () => {
+    let closed = false;
+    const finish = () => {
+      if (closed || cancelled) return;
+      closed = true;
       restoreTheme();
       onCloseRef.current?.();
     };
+    const handleAfterPrint = () => finish();
     window.addEventListener("afterprint", handleAfterPrint);
     const id = requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         void (async () => {
           await waitForPrintImages(rootRef.current);
           if (cancelled) return;
-          window.print();
+          try {
+            window.print();
+          } catch (err) {
+            // Cursor preview, some embedded WebViews, and locked-down browsers throw here
+            // (e.g. missing window.webkit.messageHandlers.print). Close cleanly so UI does not hang.
+            console.warn("Print dialog unavailable:", err?.message || err);
+            finish();
+          }
         })();
       });
     });

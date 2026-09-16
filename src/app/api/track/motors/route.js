@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import TrackMotor from "@/models/TrackMotor";
+import TrackRfqRequest from "@/models/TrackRfqRequest";
 import {
   getTrackFacilityFromRequest,
   serializeTrackMotor,
   trackUnauthorized,
 } from "@/lib/track-auth";
-import TrackMotor, {
-  TRACK_MOTOR_CRITICALITY,
-  TRACK_MOTOR_POWER_TYPES,
-  TRACK_MOTOR_STATUS,
-} from "@/models/TrackMotor";
-import { connectDB } from "@/lib/db";
 import { canAddMotor } from "@/lib/track-subscription";
-import { clampString } from "@/lib/validation";
+import { applyTrackMotorFields, validateTrackMotor } from "@/lib/track-motor-input";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +19,52 @@ export async function GET(request) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const includeArchived = searchParams.get("archived") === "1";
-    const q = {
+    const statusFilter = String(searchParams.get("status") || "").trim();
+    const search = String(searchParams.get("q") || "").trim();
+
+    const query = {
       facilityId: facility._id,
       ...(includeArchived ? {} : { archived: { $ne: true } }),
     };
-    const docs = await TrackMotor.find(q).sort({ updatedAt: -1 }).lean();
+    if (statusFilter) query.status = statusFilter;
+    if (search) {
+      const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+      query.$or = [
+        { manufacturer: rx },
+        { serialNumber: rx },
+        { modelNumber: rx },
+        { facilityLocation: rx },
+        { locationAssetTag: rx },
+        { application: rx },
+      ];
+    }
+
+    const docs = await TrackMotor.find(query).sort({ updatedAt: -1 }).lean();
+    const openRfqIds = docs.map((d) => d.openRfqId).filter(Boolean);
+    const rfqMap = new Map();
+    if (openRfqIds.length) {
+      const rfqs = await TrackRfqRequest.find({ _id: { $in: openRfqIds } })
+        .select("status invitations urgency")
+        .lean();
+      for (const rfq of rfqs) {
+        const invitations = rfq.invitations || [];
+        rfqMap.set(String(rfq._id), {
+          id: String(rfq._id),
+          status: rfq.status,
+          urgency: rfq.urgency,
+          invitedCount: invitations.length,
+          proposalsReceived: invitations.filter((i) => i.response).length,
+        });
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      motors: docs.map(serializeTrackMotor),
+      motors: docs.map((doc) => {
+        const motor = serializeTrackMotor(doc);
+        motor.openRfq = motor.openRfqId ? rfqMap.get(motor.openRfqId) || null : null;
+        return motor;
+      }),
     });
   } catch (err) {
     console.error("Track motors GET:", err);
@@ -56,55 +91,22 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const manufacturer = clampString(body?.manufacturer, 120);
-    const voltage = clampString(body?.voltage, 80);
-    const powerType = String(body?.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
-    const hp = clampString(body?.hp, 40);
-    const kw = clampString(body?.kw, 40);
-    if (!manufacturer) {
-      return NextResponse.json({ error: "Manufacturer is required." }, { status: 400 });
-    }
-    if (!voltage) {
-      return NextResponse.json({ error: "Voltage is required." }, { status: 400 });
-    }
-    if (!hp && !kw) {
-      return NextResponse.json({ error: "Enter HP and/or kW." }, { status: 400 });
-    }
-    if (!TRACK_MOTOR_POWER_TYPES.includes(powerType)) {
-      return NextResponse.json({ error: "Power type must be AC or DC." }, { status: 400 });
-    }
-
-    const criticality = TRACK_MOTOR_CRITICALITY.includes(String(body?.criticality || ""))
-      ? String(body.criticality)
-      : "standard";
-    const status = TRACK_MOTOR_STATUS.includes(String(body?.status || ""))
-      ? String(body.status)
-      : "in_service";
+    const draft = applyTrackMotorFields(body, { facilityId: facility._id, powerType: "AC" });
+    const error = validateTrackMotor(draft);
+    if (error) return NextResponse.json({ error }, { status: 400 });
 
     await connectDB();
-    const doc = await TrackMotor.create({
-      facilityId: facility._id,
-      manufacturer,
-      modelNumber: clampString(body?.modelNumber, 120),
-      serialNumber: clampString(body?.serialNumber, 120),
-      powerType,
-      motorType: clampString(body?.motorType, 80),
-      hp,
-      kw,
-      voltage,
-      fullLoadAmps: clampString(body?.fullLoadAmps, 40),
-      rpm: clampString(body?.rpm, 40),
-      frame: clampString(body?.frame, 60),
-      enclosure: clampString(body?.enclosure, 60),
-      locationBuilding: clampString(body?.locationBuilding, 120),
-      locationArea: clampString(body?.locationArea, 120),
-      locationAssetTag: clampString(body?.locationAssetTag, 80),
-      criticality,
-      status,
-      notes: clampString(body?.notes, 2000),
-    });
-
-    return NextResponse.json({ ok: true, motor: serializeTrackMotor(doc) }, { status: 201 });
+    const doc = await TrackMotor.create(draft);
+    return NextResponse.json(
+      {
+        ok: true,
+        motor: serializeTrackMotor(doc),
+        serialNumberWarning: draft.serialNumber
+          ? ""
+          : "No serial number recorded. Serial number is this motor's identity across shops, so add it when you can.",
+      },
+      { status: 201 }
+    );
   } catch (err) {
     console.error("Track motors POST:", err);
     return NextResponse.json({ error: err.message || "Failed" }, { status: 500 });

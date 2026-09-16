@@ -11,6 +11,7 @@ import {
   IQMOTORTRACK_FREE_MOTOR_LIMIT,
   IQMOTORTRACK_MONTHLY_USD,
 } from "@/lib/iqmotortrack-marketing";
+import { TrackForgotPasswordModal } from "./account-flows";
 import { useTrackAuth } from "./auth-context";
 
 function AuthHero({ title, subtitle }) {
@@ -40,6 +41,7 @@ function LoginScreen({ onCreate }) {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -88,11 +90,19 @@ function LoginScreen({ onCreate }) {
             {busy ? "Signing in…" : "Sign in"}
             {!busy ? <FiArrowRight className="h-4 w-4 shrink-0" aria-hidden /> : null}
           </Button>
+          <button
+            type="button"
+            onClick={() => setForgotOpen(true)}
+            className="w-full text-center text-sm font-semibold text-primary"
+          >
+            Forgot your password?
+          </button>
           <button type="button" onClick={onCreate} className="w-full text-center text-sm text-secondary">
             New here? <span className="font-semibold text-primary">Create Account</span>
           </button>
         </Form>
       </div>
+      <TrackForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
     </div>
   );
 }
