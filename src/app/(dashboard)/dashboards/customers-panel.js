@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { FiCopy, FiLayers, FiPlus, FiUser, FiUserPlus, FiX } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
@@ -33,6 +34,7 @@ import {
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
+import TrackRfqsPanel from "./track-rfqs-panel";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
 
@@ -41,6 +43,8 @@ const TYPE_LEAD = "Lead";
 const FILTER_ALL = "";
 const FILTER_CUSTOMERS = TYPE_CUSTOMER;
 const FILTER_LEADS = TYPE_LEAD;
+const LEAD_SOURCE_BASE = "base";
+const LEAD_SOURCE_TRACK = "track";
 
 const LEAD_STATUS_LABEL = {
   new: "New",
@@ -64,7 +68,7 @@ function leadToTableRow(lead) {
     rowKey: `lead-${id}`,
     id,
     recordType: TYPE_LEAD,
-    companyName: String(lead?.company || "").trim() || String(lead?.name || "").trim() || "—",
+    companyName: String(lead?.company || "").trim() || String(lead?.name || "").trim() || "-",
     primaryContactName: String(lead?.name || "").trim(),
     phone: String(lead?.phone || "").trim(),
     email: String(lead?.email || "").trim(),
@@ -96,17 +100,27 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const { canViewFinancials } = useFinancialAccess();
   const { settings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
+  const searchParams = useSearchParams();
+  const initialFilter = String(searchParams.get("filter") || "").trim();
+  const initialLeadSource = String(searchParams.get("leadSource") || "").trim().toLowerCase();
   const [customerRows, setCustomerRows] = useState([]);
   const [leadRows, setLeadRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState(FILTER_ALL);
+  const [typeFilter, setTypeFilter] = useState(
+    initialFilter === FILTER_LEADS || initialFilter === "leads" ? FILTER_LEADS : FILTER_ALL
+  );
+  const [leadSourceTab, setLeadSourceTab] = useState(
+    initialLeadSource === LEAD_SOURCE_TRACK ? LEAD_SOURCE_TRACK : LEAD_SOURCE_BASE
+  );
   const [tableSort, setTableSort] = useState({ key: "companyName", direction: "asc" });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = usePreferredTablePageSize();
   const [totalCount, setTotalCount] = useState(0);
   const [customerTotalCount, setCustomerTotalCount] = useState(0);
   const [leadTotalCount, setLeadTotalCount] = useState(0);
+  const [baseLeadTotalCount, setBaseLeadTotalCount] = useState(0);
+  const [trackLeadTotalCount, setTrackLeadTotalCount] = useState(0);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(INITIAL_CUSTOMER_FORM);
   const [saving, setSaving] = useState(false);
@@ -117,6 +131,19 @@ export default function CustomersPanel({ createNonce = 0 }) {
   const lastHandledCreateNonceRef = useRef(createNonce);
 
   const showingLeads = typeFilter === FILTER_LEADS;
+  const showingBaseLeads = showingLeads && leadSourceTab === LEAD_SOURCE_BASE;
+  const showingTrackLeads = showingLeads && leadSourceTab === LEAD_SOURCE_TRACK;
+
+  useEffect(() => {
+    const filter = String(searchParams.get("filter") || "").trim();
+    const leadSource = String(searchParams.get("leadSource") || "").trim().toLowerCase();
+    if (filter === FILTER_LEADS || filter === "leads") {
+      setTypeFilter(FILTER_LEADS);
+    }
+    if (leadSource === LEAD_SOURCE_TRACK || leadSource === LEAD_SOURCE_BASE) {
+      setLeadSourceTab(leadSource);
+    }
+  }, [searchParams]);
 
   const loadAll = useCallback(
     async ({ showError = true } = {}) => {
@@ -131,12 +158,16 @@ export default function CustomersPanel({ createNonce = 0 }) {
           params.set("sortBy", tableSort.key);
           params.set("sortDir", tableSort.direction || "asc");
         }
-        const endpoint = showingLeads
-          ? `/api/dashboard/leads?${params}`
-          : `/api/dashboard/customers?${params}`;
         const countParams = new URLSearchParams({ page: "1", pageSize: "1" });
-        const [listRes, custCountRes, leadCountRes] = await Promise.all([
-          fetch(endpoint, { credentials: "include", cache: "no-store" }),
+        const loadBaseLeadsList = showingBaseLeads;
+        const loadCustomersList = !showingLeads;
+
+        const [listRes, custCountRes, baseLeadCountRes, trackLeadCountRes] = await Promise.all([
+          loadBaseLeadsList
+            ? fetch(`/api/dashboard/leads?${params}`, { credentials: "include", cache: "no-store" })
+            : loadCustomersList
+              ? fetch(`/api/dashboard/customers?${params}`, { credentials: "include", cache: "no-store" })
+              : Promise.resolve(null),
           fetch(`/api/dashboard/customers?${countParams}`, {
             credentials: "include",
             cache: "no-store",
@@ -145,22 +176,44 @@ export default function CustomersPanel({ createNonce = 0 }) {
             credentials: "include",
             cache: "no-store",
           }),
+          fetch(`/api/dashboard/track-rfqs`, {
+            credentials: "include",
+            cache: "no-store",
+          }),
         ]);
-        const listData = await listRes.json().catch(() => ({}));
+
         const custCountData = await custCountRes.json().catch(() => ({}));
-        const leadCountData = await leadCountRes.json().catch(() => ({}));
-        if (!listRes.ok) throw new Error(listData.error || "Failed to load");
-        const items = Array.isArray(listData.items) ? listData.items : [];
-        if (showingLeads) {
+        const baseLeadCountData = await baseLeadCountRes.json().catch(() => ({}));
+        const trackLeadCountData = await trackLeadCountRes.json().catch(() => ({}));
+        const baseCount = Number(baseLeadCountData.totalCount) || 0;
+        const trackCount = Array.isArray(trackLeadCountData.items)
+          ? trackLeadCountData.items.length
+          : Number(trackLeadCountData.totalCount) || 0;
+
+        setCustomerTotalCount(Number(custCountData.totalCount) || 0);
+        setBaseLeadTotalCount(baseCount);
+        setTrackLeadTotalCount(trackCount);
+        setLeadTotalCount(baseCount + trackCount);
+
+        if (showingTrackLeads) {
+          setCustomerRows([]);
+          setLeadRows([]);
+          setTotalCount(trackCount);
+        } else if (showingBaseLeads) {
+          const listData = listRes ? await listRes.json().catch(() => ({})) : {};
+          if (listRes && !listRes.ok) throw new Error(listData.error || "Failed to load");
+          const items = Array.isArray(listData.items) ? listData.items : [];
           setLeadRows(items.map(leadToTableRow).filter((r) => r.id));
           setCustomerRows([]);
+          setTotalCount(Number(listData.totalCount) || 0);
         } else {
+          const listData = listRes ? await listRes.json().catch(() => ({})) : {};
+          if (listRes && !listRes.ok) throw new Error(listData.error || "Failed to load");
+          const items = Array.isArray(listData.items) ? listData.items : [];
           setCustomerRows(items.map(customerToTableRow).filter((r) => r.id));
           setLeadRows([]);
+          setTotalCount(Number(listData.totalCount) || 0);
         }
-        setTotalCount(Number(listData.totalCount) || 0);
-        setCustomerTotalCount(Number(custCountData.totalCount) || 0);
-        setLeadTotalCount(Number(leadCountData.totalCount) || 0);
       } catch (err) {
         setCustomerRows([]);
         setLeadRows([]);
@@ -176,7 +229,7 @@ export default function CustomersPanel({ createNonce = 0 }) {
         setLoading(false);
       }
     },
-    [alert, page, pageSize, searchQuery, tableSort, showingLeads]
+    [alert, page, pageSize, searchQuery, tableSort, showingLeads, showingBaseLeads, showingTrackLeads]
   );
 
   useEffect(() => {
@@ -676,12 +729,25 @@ export default function CustomersPanel({ createNonce = 0 }) {
     if (typeFilter === FILTER_CUSTOMERS && totalCount === 0) {
       return "No customers yet. Click Add New to create one.";
     }
-    if (typeFilter === FILTER_LEADS && totalCount === 0) {
-      return "No leads assigned to this shop yet.";
+    if (showingBaseLeads && totalCount === 0) {
+      return "No IQMotorBase website leads assigned to this shop yet.";
     }
     if (totalCount === 0) return "No customers or leads yet.";
     return "No customers or leads yet.";
   })();
+
+  const leadSourceTabs = [
+    {
+      id: LEAD_SOURCE_BASE,
+      label: "IQMotorBase Leads",
+      count: baseLeadTotalCount,
+    },
+    {
+      id: LEAD_SOURCE_TRACK,
+      label: "IQMotorTrack Leads",
+      count: trackLeadTotalCount,
+    },
+  ];
 
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
@@ -700,45 +766,122 @@ export default function CustomersPanel({ createNonce = 0 }) {
         ))}
       </div>
 
-      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-        <Table
-          columns={columns}
-          data={displayRows}
-          rowKey="rowKey"
-          loading={loading}
-          searchable
-          onSearch={(q) => {
-            setPage(1);
-            setSearchQuery(q);
-          }}
-          searchPlaceholder="Search company, contact, email, type…"
-          sortState={tableSort}
-          onSort={(key, direction) => {
-            setPage(1);
-            setTableSort({ key, direction });
-          }}
-          onRefresh={() => loadAll({ showError: true })}
-          columnSettingsKey="simple-customers"
-          toolbarBeforeSearch={
-            <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
-              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-              Add New
-            </Button>
-          }
-          emptyMessage={emptyMessage}
-          fillHeight
-          responsive
-          dense
-          textSize="xs"
-          stickyColumns
-          paginateClientSide={false}
-          pagination={{ page, pageSize, totalCount }}
-          onPageChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
-          }}
-        />
-      </div>
+      {showingLeads ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="shrink-0 border-b border-border bg-card px-3 pt-2">
+            <div className="flex flex-wrap gap-1" role="tablist" aria-label="Lead source">
+              {leadSourceTabs.map((tab) => {
+                const active = leadSourceTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => {
+                      setPage(1);
+                      setLeadSourceTab(tab.id);
+                    }}
+                    className={`inline-flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                      active
+                        ? "border-primary text-primary"
+                        : "border-transparent text-secondary hover:text-title"
+                    }`}
+                  >
+                    {tab.label}
+                    <Badge
+                      variant={active ? "primary" : "default"}
+                      className="rounded-full px-2 py-0.5 text-xs"
+                    >
+                      {tab.count}
+                    </Badge>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {showingTrackLeads ? (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <TrackRfqsPanel embedded />
+            </div>
+          ) : (
+            <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
+              <Table
+                columns={columns}
+                data={displayRows}
+                rowKey="rowKey"
+                loading={loading}
+                searchable
+                onSearch={(q) => {
+                  setPage(1);
+                  setSearchQuery(q);
+                }}
+                searchPlaceholder="Search company, contact, email…"
+                sortState={tableSort}
+                onSort={(key, direction) => {
+                  setPage(1);
+                  setTableSort({ key, direction });
+                }}
+                onRefresh={() => loadAll({ showError: true })}
+                columnSettingsKey="simple-customers-base-leads"
+                emptyMessage={emptyMessage}
+                fillHeight
+                responsive
+                dense
+                textSize="xs"
+                stickyColumns
+                paginateClientSide={false}
+                pagination={{ page, pageSize, totalCount }}
+                onPageChange={(nextPage, nextPageSize) => {
+                  setPage(nextPage);
+                  setPageSize(nextPageSize);
+                }}
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
+          <Table
+            columns={columns}
+            data={displayRows}
+            rowKey="rowKey"
+            loading={loading}
+            searchable
+            onSearch={(q) => {
+              setPage(1);
+              setSearchQuery(q);
+            }}
+            searchPlaceholder="Search company, contact, email, type…"
+            sortState={tableSort}
+            onSort={(key, direction) => {
+              setPage(1);
+              setTableSort({ key, direction });
+            }}
+            onRefresh={() => loadAll({ showError: true })}
+            columnSettingsKey="simple-customers"
+            toolbarBeforeSearch={
+              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Add New
+              </Button>
+            }
+            emptyMessage={emptyMessage}
+            fillHeight
+            responsive
+            dense
+            textSize="xs"
+            stickyColumns
+            paginateClientSide={false}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+          />
+        </div>
+      )}
 
       <CustomerViewModal
         open={Boolean(viewCustomerId)}

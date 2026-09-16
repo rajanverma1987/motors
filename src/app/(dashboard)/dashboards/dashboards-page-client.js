@@ -12,7 +12,6 @@ import {
   FiShoppingCart,
   FiSliders,
   FiUsers,
-  FiZap,
 } from "react-icons/fi";
 import Tabs from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/auth-context";
@@ -27,8 +26,8 @@ import ReportsPanel from "./reports-panel";
 import MasterDataSearchPanel from "./master-data-search-panel";
 import CalculatorsPanel from "./calculators-panel";
 import DashboardOverviewPanel from "./dashboard-overview-panel";
-import TrackRfqsPanel from "./track-rfqs-panel";
 import {
+  SIMPLE_CUSTOMERS_LEADS_HREF,
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_CUSTOMERS,
@@ -83,9 +82,11 @@ export default function DashboardsPageClient() {
     ? SIMPLE_TAB_CALCULATORS
     : !canViewFinancials && tabParam === SIMPLE_TAB_INVOICES
       ? SIMPLE_TAB_SERVICE_PROPOSALS
-      : SIMPLE_TAB_IDS.includes(tabParam)
-        ? tabParam
-        : SIMPLE_TAB_SERVICE_PROPOSALS;
+      : tabParam === SIMPLE_TAB_TRACK_RFQS
+        ? SIMPLE_TAB_CUSTOMERS
+        : SIMPLE_TAB_IDS.includes(tabParam)
+          ? tabParam
+          : SIMPLE_TAB_SERVICE_PROPOSALS;
   /** Immediate UI feedback — URL sync via router.replace can lag and feel like dead clicks. */
   const [pendingTab, setPendingTab] = useState(null);
   const activeTab =
@@ -123,6 +124,13 @@ export default function DashboardsPageClient() {
     router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
   }, [calcOnly, router, searchParams, tabParam]);
 
+  // Old hub tab links: Motor Down RFQs now live under Customers → Leads.
+  useEffect(() => {
+    if (calcOnly) return;
+    if (tabParam !== SIMPLE_TAB_TRACK_RFQS) return;
+    router.replace(SIMPLE_CUSTOMERS_LEADS_HREF, { scroll: false });
+  }, [calcOnly, router, tabParam]);
+
   const tabs = useMemo(() => {
     const all = [
       {
@@ -134,11 +142,6 @@ export default function DashboardsPageClient() {
         id: SIMPLE_TAB_CUSTOMERS,
         label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
         children: <CustomersPanel />,
-      },
-      {
-        id: SIMPLE_TAB_TRACK_RFQS,
-        label: <TabLabel icon={FiZap}>Motor Down RFQs</TabLabel>,
-        children: <TrackRfqsPanel />,
       },
       {
         id: SIMPLE_TAB_SERVICE_PROPOSALS,

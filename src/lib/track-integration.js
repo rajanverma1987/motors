@@ -182,7 +182,7 @@ function shopResponseUrl(rfqId, invitationId, token) {
 }
 
 function simpleLeadUrl() {
-  return `${siteBase()}/dashboards?tab=track-rfqs`;
+  return `${siteBase()}/dashboards?tab=customers&filter=Lead&leadSource=track`;
 }
 
 function simpleProposalUrl(proposalId) {

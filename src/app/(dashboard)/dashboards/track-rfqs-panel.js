@@ -99,8 +99,9 @@ function Row({ label, value }) {
 /**
  * §9.4 / §14 - the shop's view of IQMotorTrack Motor Down RFQs, with Convert to
  * Service Proposal, Decline to Quote and Send Proposal to IQMotorTrack.
+ * When `embedded`, renders without the outer Simple screen shell (for Customers → Leads).
  */
-export default function TrackRfqsPanel() {
+export default function TrackRfqsPanel({ embedded = false }) {
   const toast = useToast();
   const confirm = useConfirm();
   const [rows, setRows] = useState([]);
@@ -330,7 +331,7 @@ export default function TrackRfqsPanel() {
   const canAct = lead && !rfqState?.cancelled && !rfqState?.notSelected && lead.status !== "lost";
 
   return (
-    <div className={SIMPLE_SCREEN_PANEL_CLASS}>
+    <div className={embedded ? "flex min-h-0 flex-1 flex-col overflow-hidden" : SIMPLE_SCREEN_PANEL_CLASS}>
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} flex flex-wrap items-end gap-2 px-4 py-3`}>
         <div className="min-w-[12rem] flex-1">
           <Input

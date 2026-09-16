@@ -1575,7 +1575,7 @@ export default function ServiceProposalFormModal({
                 ) : null}
               </div>
               <p className="mt-1.5 text-xs text-secondary">
-                Saving keeps this proposal private. Use Motor Down RFQs to send it to{" "}
+                Saving keeps this proposal private. Use Customers → Leads to send it to{" "}
                 {trackLink.facilityName || "the plant"}. The serial number belongs to the plant record and
                 cannot be edited here.
               </p>
