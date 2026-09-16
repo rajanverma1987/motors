@@ -901,26 +901,58 @@ export default function SettingsPageClient() {
                 </div>
               </div>
             </FormContainer>
-
+          </div>
+        ),
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        children: (
+          <div className="flex flex-col gap-8 pb-4">
             <FormContainer>
-              <FormSectionTitle as="h2">Purchase order delivery due notifications</FormSectionTitle>
+              <FormSectionTitle as="h2">Notification types</FormSectionTitle>
               <p className="mb-4 text-sm text-secondary">
-                Notify the right people when a purchase order is approaching or past its expected delivery date using your shop SMTP.
+                Choose which email alerts this shop should receive. Email delivery uses Workspace SMTP under Email
+                Settings.
               </p>
               <div className="flex flex-col gap-4">
                 <Checkbox
                   name="poDueNotificationEnabled"
-                  label="Enable purchase order due date notifications"
-                  help="Alerts purchasing staff and managers about orders awaiting vendor delivery."
+                  label="Purchase order due status notifications"
+                  help="Alert when purchase orders are approaching or past their expected delivery date."
                   checked={draft.poDueNotificationEnabled !== false}
                   onChange={(e) => updateDraft({ poDueNotificationEnabled: e.target.checked })}
                 />
+                <Checkbox
+                  name="leadEmailAlerts"
+                  label="New lead notifications"
+                  help="Email when new website or IQMotorTrack leads are assigned to this shop."
+                  checked={draft.leadEmailAlerts !== false}
+                  onChange={(e) => updateDraft({ leadEmailAlerts: e.target.checked })}
+                />
+                <Checkbox
+                  name="marketingTips"
+                  label="Product tips and best practices"
+                  help="Occasional emails about product tips and shop workflow improvements."
+                  checked={draft.marketingTips !== false}
+                  onChange={(e) => updateDraft({ marketingTips: e.target.checked })}
+                />
+              </div>
+            </FormContainer>
+
+            <FormContainer>
+              <FormSectionTitle as="h2">Purchase order due status</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Configure recipients and timing for purchase order delivery due alerts. Requires Workspace SMTP.
+              </p>
+              <div className="flex flex-col gap-4">
                 <Input
                   label="Notification recipient emails"
                   value={draft.poDueNotificationEmails ?? ""}
                   onChange={(e) => updateDraft({ poDueNotificationEmails: e.target.value })}
                   placeholder="purchasing@yourshop.com, manager@yourshop.com"
                   help="Comma-separated email addresses. If left blank, notifications are sent to your shop login email."
+                  disabled={draft.poDueNotificationEnabled === false}
                 />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Input
@@ -935,6 +967,7 @@ export default function SettingsPageClient() {
                       })
                     }
                     help="Notify when due date is within this number of days (default 2 days)."
+                    disabled={draft.poDueNotificationEnabled === false}
                   />
                   <div className="flex items-center pt-2 sm:pt-6">
                     <Checkbox
@@ -943,6 +976,7 @@ export default function SettingsPageClient() {
                       help="Continue alerting when orders are past their expected delivery date."
                       checked={draft.poDueNotificationIncludeOverdue !== false}
                       onChange={(e) => updateDraft({ poDueNotificationIncludeOverdue: e.target.checked })}
+                      disabled={draft.poDueNotificationEnabled === false}
                     />
                   </div>
                 </div>
@@ -952,13 +986,14 @@ export default function SettingsPageClient() {
                   help="Runs an automated check once per day when purchasing staff view the dashboard."
                   checked={draft.poDueNotificationAutoSend !== false}
                   onChange={(e) => updateDraft({ poDueNotificationAutoSend: e.target.checked })}
+                  disabled={draft.poDueNotificationEnabled === false}
                 />
                 <div className="flex flex-wrap items-center gap-3 pt-1">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={poDueTesting}
+                    disabled={poDueTesting || draft.poDueNotificationEnabled === false}
                     onClick={handleTestPoDueNotifications}
                   >
                     {poDueTesting ? "Sending…" : "Send test due notification"}
@@ -1106,6 +1141,12 @@ export default function SettingsPageClient() {
       draft.smtpPasswordConfigured,
       smtpPasswordInput,
       smtpTesting,
+      poDueTesting,
+      draft.poDueNotificationEnabled,
+      draft.poDueNotificationEmails,
+      draft.poDueNotificationDaysBefore,
+      draft.poDueNotificationIncludeOverdue,
+      draft.poDueNotificationAutoSend,
       draft.workOrderStatusTileColors,
       draft.controlledDropdowns,
       draft.productDropdowns,

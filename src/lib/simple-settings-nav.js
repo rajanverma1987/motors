@@ -10,6 +10,7 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "status", label: "Status" },
   { id: "product-dropdowns", label: "Dropdowns" },
   { id: "inventory", label: "Inventory" },
+  { id: "notifications", label: "Notifications" },
   { id: "smtp", label: "Email Settings" },
   { id: "master", label: "Master" },
   { id: "diagrams", label: "Diagrams" },
@@ -35,6 +36,7 @@ export const SIMPLE_SETTINGS_DRAFT_SECTION_IDS = new Set([
   "status",
   "product-dropdowns",
   "inventory",
+  "notifications",
   "smtp",
 ]);
 

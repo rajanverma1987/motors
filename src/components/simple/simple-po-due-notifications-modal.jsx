@@ -183,6 +183,18 @@ export default function SimplePoDueNotificationsModal({
             </div>
             <p className="mt-1 text-[11px] text-secondary">
               Alert window: {data?.daysBefore ?? 2} day(s) before due date.
+              {isOwner ? (
+                <>
+                  {" "}
+                  <Link
+                    href="/dashboards/settings?section=notifications"
+                    className="text-primary underline"
+                    onClick={onClose}
+                  >
+                    Manage notification settings
+                  </Link>
+                </>
+              ) : null}
             </p>
           </div>
         </div>

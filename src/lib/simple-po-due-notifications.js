@@ -390,7 +390,7 @@ export function buildPoDueNotificationEmail({
 
     <div style="padding:16px 28px;background:#f9fafb;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;line-height:1.5">
       <p style="margin:0 0 4px">Sent via shop workspace SMTP from ${esc(shopName)}.</p>
-      <p style="margin:0">To update delivery notification preferences, alert windows, or recipient emails, open Settings and go to Email Settings.</p>
+      <p style="margin:0">To update delivery notification preferences, alert windows, or recipient emails, open Settings and go to Notifications.</p>
     </div>
   </div>
 </body>
