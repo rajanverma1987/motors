@@ -7,6 +7,7 @@ import { getAdminFromRequest } from "@/lib/auth-admin";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendNewWebsiteLeadNotificationToShop } from "@/lib/email";
 import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -48,7 +49,7 @@ export async function PATCH(request, context) {
       const newlyAssigned = nextIds.filter((lid) => !previousIds.has(lid));
       if (newlyAssigned.length > 0) {
         const listings = await Listing.find({ _id: { $in: newlyAssigned }, status: "approved" })
-          .select("email companyName notificationEmails crmUserId")
+          .select("email companyName notificationEmails crmUserId primaryContactPerson")
           .lean();
         const siteUrl = getPublicSiteUrl(request);
         for (const listing of listings) {
@@ -61,6 +62,15 @@ export async function PATCH(request, context) {
               siteUrl,
             })
           );
+          try {
+            await maybeSendLeadPlatformNurtureEmail({
+              listing,
+              siteUrl,
+              source: "admin_assign",
+            });
+          } catch (e) {
+            console.warn("Lead nurture email skipped:", e?.message || e);
+          }
         }
       }
     }

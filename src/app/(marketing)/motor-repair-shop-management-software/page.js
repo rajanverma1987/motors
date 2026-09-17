@@ -1,9 +1,9 @@
 import Link from "next/link";
-import Button from "@/components/ui/button";
 import BlogPageLayout from "@/components/marketing/BlogPageLayout";
 import SoftwareDemoBookingPanel from "@/components/marketing/SoftwareDemoBookingPanel";
 import SoftwareSeoFaqJsonLd from "@/components/marketing/SoftwareSeoFaqJsonLd";
 import SoftwareClusterLinks from "@/components/marketing/SoftwareClusterLinks";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import {
   SEO_SOFTWARE_PILLAR_PATH,
   SEO_SOFTWARE_WORK_ORDER_PATH,
@@ -22,7 +22,7 @@ const path = SEO_SOFTWARE_PILLAR_PATH;
 
 const TITLE = "Motor Repair Shop Management Software | IQMotorBase";
 const DESCRIPTION =
-  "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built specifically for electric motor repair shops. Book a demo.";
+  "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built for electric motor repair shops. Starts at $349/mo. Book a free demo.";
 
 const heroOg = heroDashboardTabletOgImage({
   alt: "IQMotorBase motor repair shop management software dashboard on a tablet, service proposals pipeline and job list",
@@ -63,8 +63,8 @@ export const metadata = {
 
 const faqItems = [
   {
-    q: "How much does motor repair shop management software cost?",
-    a: "IQMotorBase uses custom pricing, monthly, yearly, or one-time, tailored to the shop’s workflow. There is no published self-serve price list. Book a demo to get pricing for your shop.",
+    q: "How much does IQMotorBase cost?",
+    a: "IQMotorBase is $349 per month, or $3,235 per year (equivalent to $269 per month, saving $983 per year). Both plans include unlimited users and the full platform. Founder pricing is also available for the first 10 shops at a permanently locked discounted rate. Book a free demo to see the workflow and confirm fit for your shop.",
   },
   {
     q: "Can I import my existing customer and job data?",
@@ -94,7 +94,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Motor repair shop management software for electric motor and rewind shops"
-        description="Job write-ups, work orders, inventory, invoicing, and repair leads in one system, built for motor repair, not adapted from auto repair. Book a demo to see the workflow on your shop’s terms."
+        description="Job write-ups, work orders, inventory, invoicing, and repair leads in one system, built for motor repair, not adapted from auto repair. Starts at $349/mo. Book a free 30-min demo."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         wideSidebar
@@ -109,17 +109,16 @@ export default function MotorRepairShopManagementSoftwarePage() {
           "Repair leads built in",
         ]}
         heroPrimaryCta={
-          <Link href="#book-a-demo" className="w-full min-w-0 sm:w-auto">
-            <Button variant="primary" size="lg" className="w-full min-w-0 sm:w-auto">
-              Book a demo
-            </Button>
-          </Link>
+          <DemoBookingLink className="inline-flex min-h-12 w-full min-w-0 touch-manipulation items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-semibold text-white hover:opacity-90 sm:w-auto sm:min-h-[3.25rem]">
+            Book a free 30-min demo
+          </DemoBookingLink>
         }
         heroSecondaryCta={
-          <Link href="/pricing" className="w-full min-w-0 sm:w-auto">
-            <Button variant="outline" size="lg" className="w-full min-w-0 sm:w-auto">
-              See pricing
-            </Button>
+          <Link
+            href="/pricing"
+            className="inline-flex min-h-12 w-full min-w-0 touch-manipulation items-center justify-center rounded-md border border-border bg-transparent px-6 py-3 text-base font-semibold text-text hover:border-primary/30 hover:bg-card sm:w-auto sm:min-h-[3.25rem]"
+          >
+            See pricing
           </Link>
         }
         sidebarCta={
@@ -343,7 +342,9 @@ export default function MotorRepairShopManagementSoftwarePage() {
                   </tr>
                   <tr className="align-top">
                     <td className="py-3 pr-4 font-medium text-title">Pricing model</td>
-                    <td className="py-3 pr-4">Custom, monthly, yearly, or one-time; book a demo</td>
+                    <td className="py-3 pr-4">
+                      $349/mo or $3,235/yr (unlimited users). Founder pricing for first 10 shops.
+                    </td>
                     <td className="py-3 pr-4">“Free” until errors cost jobs</td>
                     <td className="py-3 pr-4">Usually published SaaS tiers</td>
                     <td className="py-3">
@@ -395,16 +396,74 @@ export default function MotorRepairShopManagementSoftwarePage() {
               >
                 electric motor repair shops listings
               </Link>
-              . Pricing is custom, see{" "}
+              . Pricing starts at $349/month or $3,235/year. See{" "}
               <Link href="/pricing" className="text-primary font-medium hover:underline">
                 pricing
               </Link>{" "}
-              and book a demo. Buyers comparing repair cost context can also read{" "}
+              or book a free demo. Buyers comparing repair cost context can also read{" "}
               <Link href="/cost-of-motor-repair-and-rewinding" className="text-primary font-medium hover:underline">
                 cost of motor repair and rewinding
               </Link>
               .
             </p>
+          </section>
+
+          <section id="pricing" className="mt-10 not-prose">
+            <div className="overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8">
+              <div className="mx-auto max-w-3xl text-center">
+                <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
+                  Simple, transparent pricing
+                </h2>
+                <p className="mt-3 text-secondary">
+                  One platform. Unlimited users. Everything your motor repair shop needs.
+                </p>
+              </div>
+              <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch">
+                <div className="flex flex-col rounded-xl border border-border bg-bg p-6 text-left">
+                  <div className="text-sm font-semibold text-secondary">Standard</div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span className="text-4xl font-bold tabular-nums text-title">$349</span>
+                    <span className="text-secondary">/month</span>
+                  </div>
+                  <p className="mt-1 text-sm text-secondary">or $3,235/year (save $983)</p>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-secondary">
+                    Full platform. Unlimited users. Work orders, leads, inventory, invoicing, QuickBooks sync, and all
+                    future updates.
+                  </p>
+                  <DemoBookingLink className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-primary px-4 py-3 text-base font-semibold text-white hover:opacity-90">
+                    Book a free demo
+                  </DemoBookingLink>
+                </div>
+                <div className="flex flex-col rounded-xl border-2 border-warning/50 bg-warning/5 p-6 text-left">
+                  <span className="inline-block w-fit rounded-full bg-warning px-3 py-1 text-xs font-bold text-white">
+                    Limited: founder spots available
+                  </span>
+                  <div className="mt-3 text-sm font-semibold text-secondary">Founder pricing</div>
+                  <div className="mt-2 flex items-baseline gap-1">
+                    <span
+                      className="select-none text-4xl font-bold tabular-nums text-warning blur-[6px]"
+                      aria-hidden
+                    >
+                      ••••
+                    </span>
+                    <span className="text-secondary">/month</span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-title">Permanently locked rate. Never increases.</p>
+                  <p className="mt-3 flex-1 text-sm leading-relaxed text-secondary">
+                    Everything in Standard at a significantly discounted rate, locked in for life. First 10 shops only.
+                  </p>
+                  <Link
+                    href="/pricing#pricing-contact-form"
+                    className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-md bg-warning px-4 py-3 text-base font-semibold text-white hover:opacity-90"
+                  >
+                    Request founder pricing
+                  </Link>
+                </div>
+              </div>
+              <p className="mt-6 text-center text-sm text-secondary">
+                Not sure which fits? Book a free demo. We will show you the platform before you decide anything.
+              </p>
+            </div>
           </section>
 
           <section>
@@ -420,17 +479,29 @@ export default function MotorRepairShopManagementSoftwarePage() {
           </section>
 
           <section className="mt-10 not-prose">
-            <p className="text-center text-sm text-secondary sm:text-base">
-              Evaluating options? Read the{" "}
-              <Link href={SEO_SOFTWARE_COMPARISON_PATH} className="text-primary font-medium hover:underline">
-                2026 software comparison
-              </Link>{" "}
-              or see{" "}
-              <Link href="/pricing" className="text-primary font-medium hover:underline">
-                pricing
-              </Link>
-              .
-            </p>
+            <div className="rounded-2xl bg-primary px-6 py-10 text-center sm:px-10 sm:py-12">
+              <h2 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                See IQMotorBase in 30 minutes
+              </h2>
+              <p className="mx-auto mt-3 max-w-xl text-base text-white/80 sm:text-lg">
+                Book a free demo call. We will show you the full platform and tell you honestly whether it fits your
+                shop. No pressure.
+              </p>
+              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                <DemoBookingLink className="inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-md bg-white px-6 py-3 text-base font-semibold text-primary hover:bg-white/90 sm:w-auto">
+                  Book a free 30-minute demo
+                </DemoBookingLink>
+                <Link
+                  href="/pricing"
+                  className="inline-flex min-h-12 w-full max-w-md items-center justify-center rounded-md border border-white/50 bg-transparent px-6 py-3 text-base font-semibold text-white hover:border-white hover:bg-white/10 sm:w-auto"
+                >
+                  See pricing first
+                </Link>
+              </div>
+              <p className="mt-5 text-sm text-white/60">
+                $349/mo or $3,235/yr. Founder pricing available for first 10 shops.
+              </p>
+            </div>
           </section>
 
           <SoftwareClusterLinks

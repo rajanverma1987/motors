@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Textarea from "@/components/ui/textarea";
 import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import { FOUNDER_SPOTS_TOTAL } from "./pricing-cards-client";
 
 const FAQS = [
@@ -19,7 +20,7 @@ const FAQS = [
   },
   {
     q: "Is there a free trial?",
-    a: "We offer a free 20-minute demo rather than a self-serve trial. Book a demo to see the full platform before committing. Most shop owners have everything they need to decide after the demo.",
+    a: "We offer a free 30-minute demo rather than a self-serve trial. Book a demo on our calendar to see the full platform before committing. Most shop owners have everything they need to decide after the demo.",
   },
   {
     q: "What is founder pricing?",
@@ -248,11 +249,9 @@ export default function PricingContactFaqClient() {
                 ? "We'll confirm your founder rate and availability within a few hours. In the meantime, book a demo to see the platform:"
                 : "While you wait, book a free demo to see IQMotorBase in action:"}
             </p>
-            <Link href="/contact" className="mt-4 inline-block">
-              <Button type="button" variant="primary" size="md">
-                Book a free 20-minute demo →
-              </Button>
-            </Link>
+            <DemoBookingLink className="mt-4 inline-flex min-h-11 items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90">
+              Book a free 30-minute demo
+            </DemoBookingLink>
           </div>
         )}
       </div>

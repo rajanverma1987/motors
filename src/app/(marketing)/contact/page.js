@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { Form } from "@/components/ui/form-layout";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
 
 function getDetectedTimezone() {
@@ -88,14 +89,23 @@ export default function ContactPage() {
         <div className="relative z-10 mx-auto max-w-[86.4rem] px-4 sm:px-6">
           <div className="mx-auto max-w-[50.4rem] text-center">
             <span className="inline-flex items-center rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
-              Get in touch
+              Free 30-minute demo
             </span>
             <h1 className="mt-6 text-4xl font-bold tracking-tight text-title sm:text-5xl lg:text-6xl">
-              Contact for demo
+              Book a free demo
             </h1>
             <p className="mt-5 text-lg text-secondary sm:text-xl">
-              Schedule a demo, ask about pricing, or get support. We&apos;ll respond within 24 hrs.
+              Pick a time on our calendar for a 30-minute walkthrough. We will show you the full platform, answer
+              every question, and tell you honestly whether IQMotorBase is the right fit for your shop.
             </p>
+            <div className="mt-8">
+              <DemoBookingLink className="inline-flex min-h-12 items-center justify-center rounded-md bg-primary px-8 py-3 text-base font-semibold text-white hover:opacity-90">
+                Pick a time on my calendar
+              </DemoBookingLink>
+              <p className="mt-3 text-sm text-secondary">
+                Or fill in the form below and we will follow up within one business day.
+              </p>
+            </div>
           </div>
         </div>
       </section>

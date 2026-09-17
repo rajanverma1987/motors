@@ -2,9 +2,9 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
 export const metadata = marketingPageMetadata({
   path: "/contact",
-  title: "Contact IQMotorBase | Book a Demo",
+  title: "Book a Free Demo | IQMotorBase",
   description:
-    "Book a demo for IQMotorBase motor repair shop software. Contact us for pricing, onboarding, or general questions.",
+    "Book a free 30-minute demo of IQMotorBase motor repair shop software. See the full platform, ask questions, and get honest guidance on whether it fits your shop.",
 });
 
 export default function ContactLayout({ children }) {

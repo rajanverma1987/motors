@@ -402,6 +402,36 @@ export async function sendNewWebsiteLeadNotificationToShop({
 }
 
 /**
+ * Platform nurture for non-paying directory / IQMotorTrack shops after a repair lead.
+ */
+export async function sendLeadPlatformNurtureEmail({ to, name, bookingUrl, unsubscribeUrl }) {
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const displayName = String(name || "there").trim() || "there";
+  const cal = String(bookingUrl || "https://cal.com/iqmotorbase/30min").trim();
+  const unsub = String(unsubscribeUrl || "").trim();
+  const subject = "You received a repair lead from IQMotorBase: here is how to get more";
+  const html = `
+    <p>Hi ${esc(displayName)},</p>
+    <p>Your shop received a repair inquiry through IQMotorBase recently. A buyer in your area found your listing and submitted a request.</p>
+    <p>That lead came through our free directory listing. The platform can do a lot more than that.</p>
+    <p>IQMotorBase is a shop management system built specifically for electric motor repair, not adapted from auto repair software, not a generic CRM. Work orders with full motor nameplate data, job tracking from intake to test bench, customer and motor history, invoicing, accounts receivable, inventory, QuickBooks sync, and more repair leads from our directory.</p>
+    <p>I wanted to reach out personally because your shop is already in our network and already receiving inquiries. You are not starting from scratch.</p>
+    <p>We are currently offering founder pricing to the first 10 shops, a permanently locked discounted rate. One spot is already taken. If you want to see the platform before the founder spots are gone, I can show you everything in 30 minutes.</p>
+    <p><a href="${esc(cal)}" style="display:inline-block;padding:12px 22px;background:#9a5d33;color:#fff;text-decoration:none;border-radius:6px;font-weight:600;">Book a free 30-min demo</a></p>
+    <p>Book a time here: <a href="${esc(cal)}">${esc(cal)}</a></p>
+    <p>Or just reply to this email and we will find a time that works.</p>
+    <p>Raj<br>+1 (385) 386-3860<br><a href="https://iqmotorbase.com">IQMotorBase.com</a></p>
+    ${
+      unsub
+        ? `<p style="margin-top:28px;padding-top:16px;border-top:1px solid #e5e7eb;font-size:12px;color:#64748b;line-height:1.5;">You received this because your shop received a repair lead through IQMotorBase. <a href="${esc(unsub)}" style="color:#64748b;">Unsubscribe</a> from these emails.</p>`
+        : ""
+    }
+  `;
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
+}
+
+/**
  * Notify a listed repair center when a visitor unlocks their contact info on the public listing page.
  */
 export async function sendContactUnlockNotificationToShop({

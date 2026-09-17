@@ -7,6 +7,7 @@ import { FiMenu, FiX } from "react-icons/fi";
 import { useAuth } from "@/contexts/auth-context";
 import { DEFAULT_PORTAL_LANDING_PATH } from "@/lib/all-jobs-tabs";
 import BrandLogo from "@/components/marketing/brand-logo";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
 const productNav = {
   href: "/motor-repair-shop-management-software",
@@ -145,12 +146,9 @@ export default function Navbar() {
                 </>
               )}
               <NavTextLink href="/pricing" label="Pricing" pathname={pathname} />
-              <Link
-                href="/contact"
-                className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92"
-              >
-                Contact for demo
-              </Link>
+              <DemoBookingLink className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92">
+                Book a free demo
+              </DemoBookingLink>
             </div>
             <button
               type="button"
@@ -243,13 +241,12 @@ export default function Navbar() {
                 onClick={closeMobile}
                 className="flex min-h-12 justify-center rounded-md border border-border px-4 hover:bg-form-bg"
               />
-              <Link
-                href="/contact"
+              <DemoBookingLink
                 onClick={closeMobile}
                 className="flex min-h-12 touch-manipulation items-center justify-center rounded-md bg-primary px-4 text-sm font-semibold text-white transition-opacity hover:opacity-92"
               >
-                Contact for demo
-              </Link>
+                Book a free demo
+              </DemoBookingLink>
             </div>
           </nav>
         </aside>

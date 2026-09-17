@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import { loadLeadContact, saveLeadContact } from "@/lib/lead-contact-storage";
 
 /**
@@ -21,8 +22,14 @@ export default function SeoLeadMiniForm({
   idPrefix = "seo-lead",
   /** Optional override for the small print below submit. */
   footerNote,
+  /** Show primary calendar booking button (default: yes for prominent / demo labels). */
+  showCalendarCta,
 }) {
   const isProminent = variant === "prominent";
+  const calendarCta =
+    showCalendarCta != null
+      ? !!showCalendarCta
+      : isProminent || /\bdemo\b/i.test(String(submitLabel || ""));
   const labelClass = isProminent ? "mb-1.5 block text-sm font-medium text-title" : "mb-1 block text-xs font-medium text-secondary";
   const inputClassName = isProminent ? "py-3 text-base" : "";
   const formClass = isProminent ? "space-y-4" : "space-y-3";
@@ -198,20 +205,35 @@ export default function SeoLeadMiniForm({
         </div>
       )}
       {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {calendarCta ? (
+        <DemoBookingLink
+          className={`inline-flex w-full items-center justify-center rounded-md bg-primary px-4 font-semibold text-white hover:opacity-90 ${
+            isProminent ? "min-h-12 py-3 text-base" : "min-h-11 py-2.5 text-sm"
+          }`}
+        >
+          Book a free 30-min demo
+        </DemoBookingLink>
+      ) : null}
       <Button
         type="submit"
-        variant="primary"
+        variant={calendarCta ? "outline" : "primary"}
         size={isProminent ? "lg" : "md"}
-        className={`w-full ${isProminent ? "font-semibold shadow-md" : ""}`}
+        className={`w-full ${isProminent ? "font-semibold" : ""}`}
         disabled={submitting}
       >
-        {submitting ? "Sending…" : submitLabel}
+        {submitting ? "Sending…" : calendarCta ? "Or request a callback" : submitLabel}
       </Button>
       <p className={isProminent ? "text-sm text-secondary" : "text-xs text-secondary"}>
         {footerNote ?? "We'll follow up to help you get listed and onboarded. Prefer email? "}
         <a href="/contact" className="text-primary underline">
           Contact page
         </a>
+        {calendarCta ? null : (
+          <>
+            {" · "}
+            <DemoBookingLink className="text-primary underline">Book on calendar</DemoBookingLink>
+          </>
+        )}
         .
       </p>
     </form>

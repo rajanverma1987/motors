@@ -46,7 +46,7 @@ export function SoftwareAppSchema() {
           "@type": "Offer",
           price: "0",
           priceCurrency: "USD",
-          description: "Custom pricing. Contact for a demo",
+          description: "Starts at $349/month. Book a free demo",
         },
         featureList: [
           "Job Write-Up and work order management",

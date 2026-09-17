@@ -3,6 +3,7 @@ import Link from "next/link";
 import Button from "@/components/ui/button";
 import { HomePageJsonLd } from "@/components/seo/JsonLd";
 import HomeFAQ from "@/components/marketing/home-faq";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import {
   HERO_DASHBOARD_TABLET_ALT,
   HERO_DASHBOARD_TABLET_PATH,
@@ -206,11 +207,11 @@ export default function HomePage() {
               are built in too.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <Link href="/contact" className="w-full min-w-0 sm:w-auto">
+              <DemoBookingLink className="w-full min-w-0 sm:w-auto">
                 <Button variant="primary" size="lg" className="min-h-12 w-full min-w-0 touch-manipulation sm:w-auto">
-                  Get a demo
+                  Book a free 30-min demo
                 </Button>
-              </Link>
+              </DemoBookingLink>
               <a href="#features" className="w-full min-w-0 sm:w-auto">
                 <Button variant="outline" size="lg" className="min-h-12 w-full min-w-0 touch-manipulation border-border/80 bg-card/70 backdrop-blur-sm sm:w-auto">
                   See what’s included
@@ -559,32 +560,64 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Custom pricing */}
-          <div className="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12 overflow-hidden">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-              <div className="min-w-0">
-                <span className="text-sm font-semibold uppercase tracking-wide text-primary">Custom pricing</span>
-                <h3 className="mt-3 text-2xl font-bold text-title sm:text-3xl">
-                  Pricing tailored to your workflow
-                </h3>
-                <p className="mt-3 max-w-[50.4rem] text-secondary">
-                  Every business is different. We analyze your process and offer the best pricing model - monthly,
-                  yearly, or one-time.
+          {/* Transparent pricing */}
+          <div id="pricing" className="mt-12 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-8 lg:p-10 xl:p-12">
+            <div className="mx-auto max-w-3xl text-center">
+              <h2 className="text-2xl font-bold tracking-tight text-title sm:text-3xl">
+                Simple, transparent pricing
+              </h2>
+              <p className="mt-3 text-secondary">
+                One platform. Unlimited users. Everything your motor repair shop needs.
+              </p>
+            </div>
+            <div className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch">
+              <div className="flex flex-col rounded-xl border border-border bg-bg p-6 text-left">
+                <div className="text-sm font-semibold text-secondary">Standard</div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span className="text-4xl font-bold tabular-nums text-title">$349</span>
+                  <span className="text-secondary">/month</span>
+                </div>
+                <p className="mt-1 text-sm text-secondary">or $3,235/year (save $983)</p>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-secondary">
+                  Full platform. Unlimited users. Work orders, leads, inventory, invoicing, QuickBooks
+                  sync, and all future updates.
                 </p>
-              </div>
-              <div className="flex shrink-0 flex-col gap-3 sm:flex-row lg:flex-col">
-                <Link href="/pricing">
-                  <Button variant="primary" size="sm" className="w-full sm:w-auto lg:w-full">
-                    Get pricing
+                <DemoBookingLink className="mt-5 block">
+                  <Button variant="primary" size="lg" className="w-full">
+                    Book a free demo
                   </Button>
-                </Link>
-                <Link href="/pricing">
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto lg:w-full">
-                    Book a demo
+                </DemoBookingLink>
+              </div>
+              <div className="flex flex-col rounded-xl border-2 border-warning/50 bg-warning/5 p-6 text-left">
+                <span className="inline-block w-fit rounded-full bg-warning px-3 py-1 text-xs font-bold text-white">
+                  Limited: founder spots available
+                </span>
+                <div className="mt-3 text-sm font-semibold text-secondary">Founder pricing</div>
+                <div className="mt-2 flex items-baseline gap-1">
+                  <span
+                    className="select-none text-4xl font-bold tabular-nums text-warning blur-[6px]"
+                    aria-hidden
+                  >
+                    ••••
+                  </span>
+                  <span className="text-secondary">/month</span>
+                </div>
+                <p className="mt-1 text-sm font-medium text-title">Permanently locked rate. Never increases.</p>
+                <p className="mt-3 flex-1 text-sm leading-relaxed text-secondary">
+                  Everything in Standard at a significantly discounted rate, locked in for life. First 10
+                  shops only. Contact us to check if spots are still available.
+                </p>
+                <Link href="/pricing#pricing-contact-form" className="mt-5 block">
+                  <Button variant="primary" size="lg" className="w-full bg-warning hover:opacity-90">
+                    Request founder pricing
                   </Button>
                 </Link>
               </div>
             </div>
+            <p className="mt-6 text-center text-sm text-secondary">
+              Not sure which fits? Book a demo. We will show you the platform and answer every question
+              before you decide anything.
+            </p>
           </div>
         </div>
       </section>
@@ -619,22 +652,29 @@ export default function HomePage() {
       <HomeFAQ />
 
       {/* CTA */}
-      <section className="border-t border-border bg-card py-16 sm:py-24">
+      <section className="border-t border-border bg-primary py-16 sm:py-24">
         <div className="mx-auto max-w-[86.4rem] px-4 text-center sm:px-6">
-          <h2 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">
-            Ready to streamline your center?
+          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+            See IQMotorBase in 30 minutes
           </h2>
-          <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-secondary">
-            Contact us for a demo and see how IQMotorBase.com can help you manage jobs, stock, grow with leads, and hire
-            through public job postings.
+          <p className="mx-auto mt-4 max-w-[43.2rem] text-lg text-white/80">
+            Book a free demo call. We will show you the full platform, answer every question you have, and
+            tell you honestly whether it is the right fit for your shop. No pressure, no sales pitch.
           </p>
-          <div className="mt-10 flex justify-center px-2 sm:px-0">
-            <Link href="/contact" className="w-full max-w-md min-w-0 sm:max-w-none sm:w-auto">
-              <Button variant="primary" size="lg" className="w-full sm:w-auto">
-                Contact for demo
-              </Button>
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 px-2 sm:flex-row sm:px-0">
+            <DemoBookingLink className="inline-flex min-h-12 w-full max-w-md min-w-0 touch-manipulation items-center justify-center rounded-md bg-white px-6 py-3 text-base font-semibold text-primary hover:bg-white/90 sm:w-auto sm:min-h-[3.25rem]">
+              Book a free 30-minute demo
+            </DemoBookingLink>
+            <Link
+              href="/pricing"
+              className="inline-flex min-h-12 w-full max-w-md min-w-0 touch-manipulation items-center justify-center rounded-md border border-white/50 bg-transparent px-6 py-3 text-base font-semibold text-white hover:border-white hover:bg-white/10 sm:w-auto sm:min-h-[3.25rem]"
+            >
+              See pricing first
             </Link>
           </div>
+          <p className="mt-6 text-sm text-white/60">
+            $349/mo or $3,235/yr. Founder pricing available for first 10 shops.
+          </p>
         </div>
       </section>
     </>

@@ -2,9 +2,9 @@
 
 export const HOME_FAQS = [
   {
-    question: "How much does motor repair shop software cost?",
+    question: "How much does IQMotorBase cost?",
     answer:
-      "IQMotorBase uses custom pricing tailored to your workflow, monthly, yearly, or one-time options are available. Contact us for a quote or book a demo.",
+      "IQMotorBase is $349 per month on the monthly plan, or $3,235 per year on the annual plan (equivalent to $269 per month, saving $983 per year). Both plans include unlimited users and the full platform. Founder pricing is also available for the first 10 shops at a permanently locked discounted rate. Contact us to check availability.",
   },
   {
     question: "Can I import my existing customer and job data?",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Breadcrumbs from "@/components/seo/breadcrumbs";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 
 const site = getPublicSiteUrl().replace(/\/$/, "");
@@ -171,8 +172,12 @@ export default function AboutPage() {
           </h2>
           <p className="mt-4 text-sm leading-relaxed text-secondary sm:text-base">
             For shop owners interested in listing or the platform:{" "}
+            <DemoBookingLink className="font-medium text-primary hover:underline">
+              Book a free demo
+            </DemoBookingLink>
+            {" or "}
             <Link href="/contact" className="font-medium text-primary hover:underline">
-              Book a demo or contact us
+              contact us
             </Link>
             .
           </p>

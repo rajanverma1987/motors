@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { FiCheck } from "react-icons/fi";
 import Button from "@/components/ui/button";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
 const FOUNDER_SPOTS_TOTAL = 10;
 const FOUNDER_SPOTS_TAKEN = 1;
@@ -48,6 +48,18 @@ export default function PricingCardsClient() {
 
   return (
     <>
+      <div className="mb-8 flex flex-col gap-4 rounded-xl border border-primary/20 bg-primary/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <p className="min-w-[12.5rem] flex-1 text-sm text-title">
+          Not sure if it fits your workflow? Book a 30-minute demo first. We will show you everything and
+          answer your questions before you decide.
+        </p>
+        <DemoBookingLink className="shrink-0">
+          <Button type="button" variant="primary" size="md" className="w-full whitespace-nowrap sm:w-auto">
+            Book a free demo, 30 minutes
+          </Button>
+        </DemoBookingLink>
+      </div>
+
       <div className="mb-8 flex justify-center">
         <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
           <button
@@ -101,13 +113,13 @@ export default function PricingCardsClient() {
               </li>
             ))}
           </ul>
-          <Link href="/contact" className="mt-6 block">
+          <DemoBookingLink className="mt-6 block">
             <Button type="button" variant="primary" size="lg" className="w-full">
-              Book a free demo →
+              Book a free demo
             </Button>
-          </Link>
+          </DemoBookingLink>
           <p className="mt-2 text-center text-xs text-secondary">
-            20 minutes. No pressure. See if it fits your shop.
+            30 minutes. No pressure. See if it fits your shop.
           </p>
         </div>
 

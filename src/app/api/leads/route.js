@@ -14,6 +14,7 @@ import { sanitizeCalculatorContext } from "@/lib/motor-rewind-cost/sanitize-calc
 import { computeCustomerRewindBallpark } from "@/lib/motor-rewind-cost/calculate";
 import { parseAdminSortParams, sortAndPaginateAdminRows } from "@/lib/admin-table-sort";
 import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
 
 const LEAD_ADMIN_SORT_KEYS = ["name", "email", "source", "assignedTo", "createdAt"];
 
@@ -94,7 +95,7 @@ export async function POST(request) {
         return NextResponse.json({ error: "Invalid listing reference." }, { status: 400 });
       }
       const listingDoc = await Listing.findOne({ _id: rawListingId, status: "approved" })
-        .select("_id email companyName notificationEmails crmUserId")
+        .select("_id email companyName notificationEmails crmUserId primaryContactPerson")
         .lean();
       if (!listingDoc) {
         return NextResponse.json(
@@ -195,6 +196,15 @@ export async function POST(request) {
           siteUrl,
         })
       );
+      try {
+        await maybeSendLeadPlatformNurtureEmail({
+          listing,
+          siteUrl,
+          source: "website",
+        });
+      } catch (e) {
+        console.warn("Lead nurture email skipped:", e?.message || e);
+      }
     }
 
     if (sanitizedCalc && serverBreakdown) {

@@ -11,6 +11,8 @@ import {
 } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import HeroBackground from "@/components/marketing/HeroBackground";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
+import { getDemoBookingUrl } from "@/lib/demo-booking-url";
 
 const POPULAR_LINKS = [
   {
@@ -44,10 +46,11 @@ const POPULAR_LINKS = [
     icon: FiBookOpen,
   },
   {
-    href: "/contact",
+    href: getDemoBookingUrl(),
     label: "Book a demo",
-    description: "20-minute walkthrough of IQMotorBase for shop owners.",
+    description: "30-minute walkthrough of IQMotorBase for shop owners.",
     icon: FiMail,
+    external: true,
   },
 ];
 
@@ -101,27 +104,42 @@ export default function NotFoundContent() {
         <ul className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
           {POPULAR_LINKS.map((item) => {
             const Icon = item.icon;
+            const className =
+              "group flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/30 hover:bg-primary/[0.04] sm:p-5";
+            const inner = (
+              <>
+                <span
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
+                  aria-hidden
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block font-semibold text-title group-hover:text-primary">
+                    {item.label}
+                  </span>
+                  <span className="mt-1 block text-sm leading-snug text-secondary">
+                    {item.description}
+                  </span>
+                </span>
+              </>
+            );
             return (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="group flex gap-3 rounded-xl border border-border bg-card p-4 shadow-sm transition-colors hover:border-primary/30 hover:bg-primary/[0.04] sm:p-5"
-                >
-                  <span
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15"
-                    aria-hidden
+                {item.external ? (
+                  <a
+                    href={item.href}
+                    className={className}
+                    rel="noopener noreferrer"
+                    target="_blank"
                   >
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-title group-hover:text-primary">
-                      {item.label}
-                    </span>
-                    <span className="mt-1 block text-sm leading-snug text-secondary">
-                      {item.description}
-                    </span>
-                  </span>
-                </Link>
+                    {inner}
+                  </a>
+                ) : (
+                  <Link href={item.href} className={className}>
+                    {inner}
+                  </Link>
+                )}
               </li>
             );
           })}
@@ -137,9 +155,9 @@ export default function NotFoundContent() {
               list your center for free
             </Link>{" "}
             or{" "}
-            <Link href="/contact" className="font-medium text-primary hover:underline">
+            <DemoBookingLink className="font-medium text-primary hover:underline">
               book a platform demo
-            </Link>
+            </DemoBookingLink>
             .
           </p>
           <Link

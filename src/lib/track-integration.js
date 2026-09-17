@@ -26,6 +26,7 @@ import TrackRfqRequest from "@/models/TrackRfqRequest";
 import TrackServiceHistory from "@/models/TrackServiceHistory";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { sendToListingNotifyEmails } from "@/lib/listing-notify-emails";
+import { maybeSendLeadPlatformNurtureEmail } from "@/lib/lead-nurture";
 import {
   sendTrackAwardedToShop,
   sendTrackDeliveryFailureToAdmin,
@@ -270,7 +271,7 @@ export async function deliverTrackInvitation({ rfq, invitation, facility }) {
 
   try {
     const listing = await Listing.findOne({ _id: invitation.listingId, status: "approved" })
-      .select("companyName city state email notificationEmails crmUserId")
+      .select("companyName city state email notificationEmails crmUserId primaryContactPerson")
       .lean();
     if (!listing) {
       throw new Error("Shop listing is no longer available. Pick another shop.");
@@ -321,6 +322,18 @@ export async function deliverTrackInvitation({ rfq, invitation, facility }) {
     // An in-app shop has the Lead in its dashboard even when SMTP is unavailable.
     if (respondsBy === "email" && notify.sent.length === 0) {
       throw new Error("Could not email this shop. It has no working notification address.");
+    }
+
+    if (notify.sent.length > 0 || respondsBy === "in_app") {
+      try {
+        await maybeSendLeadPlatformNurtureEmail({
+          listing,
+          siteUrl: getPublicSiteUrl(),
+          source: "iqmotortrack",
+        });
+      } catch (e) {
+        console.warn("Track lead nurture email skipped:", e?.message || e);
+      }
     }
 
     invitation.deliveryStatus = "sent";

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import FooterNavLinks from "./FooterNavLinks";
 import BrandLogo from "@/components/marketing/brand-logo";
+import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
 const footerLinks = {
   "For repair shops": [
@@ -47,6 +48,7 @@ const footerLinks = {
     { href: "/#features", label: "Features & inventory" },
     { href: "/careers", label: "Careers: job postings" },
     { href: "/pricing", label: "Pricing" },
+    { href: "demo-booking", label: "Book a free demo", booking: true },
     { href: "/contact", label: "Contact" },
     { href: "/about", label: "About" },
   ],
@@ -84,14 +86,20 @@ export default function Footer() {
             <div key={title} className="min-w-0">
               <h3 className="text-sm font-semibold text-title">{title}</h3>
               <ul className="mt-2 space-y-1.5">
-                {links.map(({ href, label }) => (
+                {links.map(({ href, label, booking }) => (
                   <li key={label}>
-                    <Link
-                      href={href}
-                      className="inline-block max-w-full break-words text-sm leading-snug text-secondary transition-colors hover:text-primary"
-                    >
-                      {label}
-                    </Link>
+                    {booking ? (
+                      <DemoBookingLink className="inline-block max-w-full break-words text-sm font-medium leading-snug text-primary transition-colors hover:underline">
+                        {label}
+                      </DemoBookingLink>
+                    ) : (
+                      <Link
+                        href={href}
+                        className="inline-block max-w-full break-words text-sm leading-snug text-secondary transition-colors hover:text-primary"
+                      >
+                        {label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

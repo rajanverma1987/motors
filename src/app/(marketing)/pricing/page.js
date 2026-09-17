@@ -7,16 +7,15 @@ import PricingContactFaqClient from "./pricing-contact-faq-client";
 
 export const metadata = marketingPageMetadata({
   path: "/pricing",
-  title: "Pricing | Motor Repair Shop Software | IQMotorBase",
+  title: "Pricing | $349/mo | Motor Repair Shop Software | IQMotorBase",
   description:
-    "IQMotorBase shop management software starts at $349/month. " +
-    "Work orders, leads, inventory, invoicing, and QuickBooks sync, " +
-    "built exclusively for electric motor repair shops. " +
-    "10 founder spots available at a permanently locked rate.",
-  ogTitle: "Pricing | Motor Repair Shop Software | IQMotorBase",
+    "IQMotorBase starts at $349/month or $3,235/year. Work orders, leads, " +
+    "inventory, invoicing, and QuickBooks sync for electric motor repair shops. " +
+    "Founder pricing available for first 10 shops.",
+  ogTitle: "Pricing | $349/mo | Motor Repair Shop Software | IQMotorBase",
   ogDescription:
-    "IQMotorBase starts at $349/month. Built exclusively for electric " +
-    "motor repair shops. 10 founder spots available.",
+    "IQMotorBase starts at $349/month or $3,235/year. Built exclusively for electric " +
+    "motor repair shops. Founder pricing available for first 10 shops.",
 });
 
 const site = getPublicSiteUrl().replace(/\/$/, "");
@@ -95,7 +94,7 @@ const faqSchema = {
         "@type": "Answer",
         text:
           "IQMotorBase offers a free demo rather than a self-serve trial. " +
-          "Book a 20-minute demo to see the full platform and get your " +
+          "Book a 30-minute demo to see the full platform and get your " +
           "questions answered before committing.",
       },
     },
