@@ -12,7 +12,10 @@ import {
 
 const path = SEO_SOFTWARE_INVENTORY_PATH;
 
-const TITLE = "Motor Repair Shop Inventory Software | IQMotorBase";
+// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
+const TITLE = "Electric Motor Repair Shop Inventory Software";
+const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
   "Track on-hand and reserved parts, get low-stock alerts, and let inventory update itself when a work order ships. Built for motor repair shops.";
 
@@ -25,7 +28,7 @@ export const metadata = {
     "motor repair shop inventory management",
   ],
   openGraph: {
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
@@ -34,7 +37,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
   },
   alternates: { canonical: path },

@@ -12,7 +12,10 @@ import {
 
 const path = SEO_SOFTWARE_WORK_ORDER_PATH;
 
-const TITLE = "Work Order Software for Electric Motor Repair Shops | IQMotorBase";
+// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
+const TITLE = "Work Order Software for Electric Motor Repair Shops";
+const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
   "Work orders that stay linked to the job number, the quote, and the parts reserved for it. See how motor repair shops track jobs from intake to delivery.";
 
@@ -26,7 +29,7 @@ export const metadata = {
     "motor repair job management software",
   ],
   openGraph: {
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
@@ -35,7 +38,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
   },
   alternates: { canonical: path },

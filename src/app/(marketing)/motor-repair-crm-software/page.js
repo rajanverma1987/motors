@@ -12,7 +12,10 @@ import {
 
 const path = SEO_SOFTWARE_CRM_PATH;
 
-const TITLE = "Motor Repair Shop Management System | IQMotorBase";
+// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
+const TITLE = "Electric Motor Repair CRM & Customer Management";
+const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
   "One customer and motor registry with full repair history, plus the leads that fill it. See how IQMotorBase connects leads, customers, and jobs.";
 
@@ -25,7 +28,7 @@ export const metadata = {
     "motor repair customer database",
   ],
   openGraph: {
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
@@ -34,7 +37,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
   },
   alternates: { canonical: path },

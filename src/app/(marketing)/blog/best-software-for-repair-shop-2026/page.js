@@ -14,7 +14,10 @@ import {
 
 const path = SEO_SOFTWARE_COMPARISON_PATH;
 
-const TITLE = "Best Software for Electric Motor Repair Shops (2026 Comparison) | IQMotorBase";
+// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
+const TITLE = "Best Software for Electric Motor Repair Shops (2026)";
+const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
   "An honest comparison of IQMotorBase, Spring Point, Aptean, and general auto-shop tools for electric motor and rewind shops.";
 
@@ -27,7 +30,7 @@ export const metadata = {
     "IQMotorBase vs Spring Point",
   ],
   openGraph: {
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
@@ -36,7 +39,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
   },
   alternates: { canonical: path },

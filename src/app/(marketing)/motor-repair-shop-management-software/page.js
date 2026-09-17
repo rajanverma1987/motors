@@ -20,7 +20,10 @@ import {
 
 const path = SEO_SOFTWARE_PILLAR_PATH;
 
-const TITLE = "Motor Repair Shop Management Software | IQMotorBase";
+// The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
+// omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
+const TITLE = "Electric Motor Repair Shop Management Software";
+const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
   "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built for electric motor repair shops. Starts at $349/mo. Book a free demo.";
 
@@ -38,7 +41,7 @@ export const metadata = {
     "electric motor repair management software",
   ],
   openGraph: {
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     url: path,
     type: "article",
@@ -48,7 +51,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: TITLE,
+    title: SOCIAL_TITLE,
     description: DESCRIPTION,
     images: [
       {
