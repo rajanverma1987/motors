@@ -3,7 +3,6 @@
 import { useId, useState } from "react";
 import { FiTrash2, FiExternalLink, FiDownload, FiUpload, FiCamera } from "react-icons/fi";
 import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 
@@ -85,8 +84,9 @@ export default function VendorAttachmentsPanel({
   const viewUrl = (row) => {
     const href = resolveAttachmentHref(row?.url ?? row);
     const name = typeof row === "object" && row ? row.name || "" : "";
+    const contentType = typeof row === "object" && row ? row.contentType || "" : "";
     if (!href) return;
-    setPreview({ url: href, name });
+    setPreview({ url: href, name, contentType });
   };
 
   const downloadUrl = (row) => {
@@ -173,7 +173,6 @@ export default function VendorAttachmentsPanel({
             </thead>
             <tbody>
               {attachments.map((row, i) => {
-                const canPreview = isPreviewableAttachment(row?.url, row?.name);
                 return (
                 <tr key={`${row.url}-${i}`} className="border-b border-border last:border-b-0">
                   <td className="max-w-[20rem] truncate px-3 py-2 text-title" title={row.name || row.url}>
@@ -181,17 +180,15 @@ export default function VendorAttachmentsPanel({
                   </td>
                   <td className="px-3 py-2 text-right">
                     <div className="flex justify-end gap-1">
-                      {canPreview ? (
-                        <button
-                          type="button"
-                          className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                          aria-label="Preview document"
-                          title="Preview"
-                          onClick={() => viewUrl(row)}
-                        >
-                          <FiExternalLink className="h-4 w-4" aria-hidden />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                        aria-label="Preview document"
+                        title="Preview"
+                        onClick={() => viewUrl(row)}
+                      >
+                        <FiExternalLink className="h-4 w-4" aria-hidden />
+                      </button>
                       <button
                         type="button"
                         className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
@@ -248,6 +245,7 @@ export default function VendorAttachmentsPanel({
         onClose={() => setPreview(null)}
         url={preview?.url}
         name={preview?.name}
+        contentType={preview?.contentType}
       />
     </div>
   );

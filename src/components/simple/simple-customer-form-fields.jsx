@@ -5,9 +5,7 @@ import { FiDownload, FiEye, FiPlus, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
-import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
-} from "@/components/simple/simple-attachment-preview-modal";
+import SimpleAttachmentPreviewModal from "@/components/simple/simple-attachment-preview-modal";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
@@ -195,7 +193,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       void alert({ title: "Error", message: "File is not available yet.", variant: "danger" });
       return;
     }
-    setPreview({ url: href, name: doc?.name || "" });
+    setPreview({ url: href, name: doc?.name || "", contentType: doc?.contentType || "" });
   };
 
   const downloadDocument = (doc) => {
@@ -791,17 +789,15 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
                       <td className="pl-[5px] pr-1 py-1 align-middle">
                         {doc.url ? (
                           <div className="flex items-center gap-0.5">
-                            {isPreviewableAttachment(doc.url, doc.name || fileLabel) ? (
-                              <button
-                                type="button"
-                                className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
-                                title="Preview file"
-                                aria-label="Preview file"
-                                onClick={() => openDocument(doc)}
-                              >
-                                <FiEye className="h-3.5 w-3.5" aria-hidden />
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
+                              title="Preview file"
+                              aria-label="Preview file"
+                              onClick={() => openDocument(doc)}
+                            >
+                              <FiEye className="h-3.5 w-3.5" aria-hidden />
+                            </button>
                             <button
                               type="button"
                               className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
@@ -856,6 +852,7 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
       onClose={() => setPreview(null)}
       url={preview?.url}
       name={preview?.name}
+      contentType={preview?.contentType}
     />
     </>
   );

@@ -7,7 +7,6 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
 import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
@@ -109,7 +108,11 @@ export default function SimpleServiceProposalAttachmentsModal({
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    setPreview({ url: href, name: row?.name || "" });
+    setPreview({
+      url: href,
+      name: row?.name || "",
+      contentType: row?.contentType || "",
+    });
   };
 
   const downloadAttachment = (row) => {
@@ -244,23 +247,20 @@ export default function SimpleServiceProposalAttachmentsModal({
                 <tbody>
                   {list.map((row, index) => {
                     const rowBusy = deletingUrl === String(row.url || "");
-                    const canPreview = isPreviewableAttachment(row?.url, row?.name);
                     return (
                       <tr key={`${row.url}-${index}`} className="border-b border-border last:border-b-0">
                         <td className="px-1.5 py-1">
                           <div className="flex items-center gap-0.5">
-                            {canPreview ? (
-                              <button
-                                type="button"
-                                title="Preview"
-                                aria-label={`Preview ${row.name || "document"}`}
-                                disabled={busy}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
-                                onClick={() => openAttachment(row)}
-                              >
-                                <FiEye className="h-4 w-4 shrink-0" aria-hidden />
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              title="Preview"
+                              aria-label={`Preview ${row.name || "document"}`}
+                              disabled={busy}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
+                              onClick={() => openAttachment(row)}
+                            >
+                              <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+                            </button>
                             <button
                               type="button"
                               title="Download"
@@ -305,6 +305,7 @@ export default function SimpleServiceProposalAttachmentsModal({
         onClose={() => setPreview(null)}
         url={preview?.url}
         name={preview?.name}
+        contentType={preview?.contentType}
       />
     </>
   );

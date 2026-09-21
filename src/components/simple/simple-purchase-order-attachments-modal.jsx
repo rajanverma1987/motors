@@ -7,7 +7,6 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
 import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
@@ -102,7 +101,11 @@ export default function SimplePurchaseOrderAttachmentsModal({
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    setPreview({ url: href, name: row?.name || "" });
+    setPreview({
+      url: href,
+      name: row?.name || "",
+      contentType: row?.contentType || "",
+    });
   };
 
   const downloadAttachment = (row) => {
@@ -222,23 +225,20 @@ export default function SimplePurchaseOrderAttachmentsModal({
             </thead>
             <tbody>
               {documents.map((row, index) => {
-                const canPreview = isPreviewableAttachment(row?.url, row?.name);
                 return (
                 <tr key={`${row.url}-${index}`} className="border-t border-border bg-card">
                   <td className="px-1 py-0.5">
                     <div className="flex items-center gap-0.5">
-                      {canPreview ? (
-                        <button
-                          type="button"
-                          className="rounded p-0.5 text-primary hover:bg-primary/10"
-                          title="Preview"
-                          aria-label="Preview"
-                          onClick={() => openAttachment(row)}
-                          disabled={busy}
-                        >
-                          <FiEye className="h-3.5 w-3.5" aria-hidden />
-                        </button>
-                      ) : null}
+                      <button
+                        type="button"
+                        className="rounded p-0.5 text-primary hover:bg-primary/10"
+                        title="Preview"
+                        aria-label="Preview"
+                        onClick={() => openAttachment(row)}
+                        disabled={busy}
+                      >
+                        <FiEye className="h-3.5 w-3.5" aria-hidden />
+                      </button>
                       <button
                         type="button"
                         className="rounded p-0.5 text-primary hover:bg-primary/10"
@@ -279,6 +279,7 @@ export default function SimplePurchaseOrderAttachmentsModal({
         onClose={() => setPreview(null)}
         url={preview?.url}
         name={preview?.name}
+        contentType={preview?.contentType}
       />
     </>
   );

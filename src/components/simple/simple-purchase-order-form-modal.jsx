@@ -13,7 +13,6 @@ import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-m
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
 import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import SimpleVendorFormFields from "@/components/simple/simple-vendor-form-fields";
@@ -2150,24 +2149,26 @@ export default function SimplePurchaseOrderFormModal({
                           ) : (
                             (form.vendorDocuments || []).map((doc, i) => {
                               const href = resolveAttachmentHref(doc.url);
-                              const canPreview = isPreviewableAttachment(doc.url, doc.name);
                               return (
                                 <tr key={`${doc.url}-${i}`} className="border-t border-border bg-card">
                                   <td className="px-1 py-0.5">
                                     <div className="flex items-center gap-0.5">
-                                      {canPreview ? (
-                                        <button
-                                          type="button"
-                                          className="rounded p-0.5 text-primary hover:bg-primary/10"
-                                          title="Preview"
-                                          aria-label="Preview"
-                                          onClick={() =>
-                                            href && setAttachmentPreview({ url: href, name: doc.name || "" })
-                                          }
-                                        >
-                                          <FiEye className="h-3.5 w-3.5" aria-hidden />
-                                        </button>
-                                      ) : null}
+                                      <button
+                                        type="button"
+                                        className="rounded p-0.5 text-primary hover:bg-primary/10"
+                                        title="Preview"
+                                        aria-label="Preview"
+                                        onClick={() =>
+                                          href &&
+                                          setAttachmentPreview({
+                                            url: href,
+                                            name: doc.name || "",
+                                            contentType: doc.contentType || "",
+                                          })
+                                        }
+                                      >
+                                        <FiEye className="h-3.5 w-3.5" aria-hidden />
+                                      </button>
                                       <a
                                         href={href || "#"}
                                         download={doc.name || "attachment"}
@@ -2228,6 +2229,7 @@ export default function SimplePurchaseOrderFormModal({
         onClose={() => setAttachmentPreview(null)}
         url={attachmentPreview?.url}
         name={attachmentPreview?.name}
+        contentType={attachmentPreview?.contentType}
       />
 
       <Modal

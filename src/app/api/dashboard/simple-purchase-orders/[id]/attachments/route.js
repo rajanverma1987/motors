@@ -101,6 +101,9 @@ export async function POST(request, context) {
     const url = `/uploads/simple-purchase-orders/${ownerKey}/${recordId}/${safeName}`;
     const name = (documentName || file.name || safeName).trim() || safeName;
     const attachment = { url, name, uploadedAt: new Date().toISOString() };
+    if (validated.magicType === "pdf") attachment.contentType = "application/pdf";
+    else if (file.type) attachment.contentType = String(file.type).slice(0, 120);
+    else if (String(validated.ext || "").toLowerCase() === ".pdf") attachment.contentType = "application/pdf";
 
     const existing = Array.isArray(doc.vendorDocuments) ? doc.vendorDocuments : [];
     doc.set("vendorDocuments", [...existing, attachment]);

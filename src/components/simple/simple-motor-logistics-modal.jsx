@@ -8,7 +8,6 @@ import Checkbox from "@/components/ui/checkbox";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleAttachmentFilePicker from "@/components/simple/simple-attachment-file-picker";
 import SimpleAttachmentPreviewModal, {
-  isPreviewableAttachment,
   resolveAttachmentHref,
 } from "@/components/simple/simple-attachment-preview-modal";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
@@ -314,23 +313,20 @@ function LogisticsColumn({
                 <tbody>
                   {attachments.map((row, index) => {
                     const rowBusy = deletingUrl === String(row.url || "");
-                    const canPreview = isPreviewableAttachment(row?.url, row?.name);
                     return (
                       <tr key={`${row.url}-${index}`} className="border-b border-border last:border-b-0">
                         <td className="px-1.5 py-1">
                           <div className="flex items-center gap-0.5">
-                            {canPreview ? (
-                              <button
-                                type="button"
-                                title="Preview"
-                                aria-label={`Preview ${row.name || "document"}`}
-                                disabled={busy}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
-                                onClick={() => onView(row)}
-                              >
-                                <FiEye className="h-4 w-4 shrink-0" aria-hidden />
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              title="Preview"
+                              aria-label={`Preview ${row.name || "document"}`}
+                              disabled={busy}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-sm text-primary hover:bg-primary/10 disabled:opacity-40"
+                              onClick={() => onView(row)}
+                            >
+                              <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+                            </button>
                             <button
                               type="button"
                               title="Download"
@@ -613,11 +609,12 @@ export default function SimpleMotorLogisticsModal({
   const openAttachment = (row) => {
     const href = resolveAttachmentHref(row?.url ?? row);
     const name = typeof row === "object" && row ? row.name || "" : "";
+    const contentType = typeof row === "object" && row ? row.contentType || "" : "";
     if (!href) {
       void alert({ title: "Error", message: "File URL is missing.", variant: "danger" });
       return;
     }
-    setPreview({ url: href, name });
+    setPreview({ url: href, name, contentType });
   };
 
   const downloadAttachment = (row) => {
@@ -813,6 +810,7 @@ export default function SimpleMotorLogisticsModal({
         onClose={() => setPreview(null)}
         url={preview?.url}
         name={preview?.name}
+        contentType={preview?.contentType}
       />
     </>
   );

@@ -86,7 +86,8 @@ export async function POST(request, context) {
 
     const url = `/uploads/simple-service-proposals/${ownerKey}/${recordId}/${safeName}`;
     const name = (documentName || file.name || safeName).trim() || safeName;
-    const attachment = { url, name };
+      const attachment = { url, name };
+      if (file.type) attachment.contentType = String(file.type).slice(0, 120);
 
     let item = null;
     if (isValidSimplePortalId(recordId)) {
