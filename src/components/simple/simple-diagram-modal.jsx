@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import {
   FiArrowLeft,
   FiEdit2,
+  FiMail,
   FiPlus,
   FiRotateCcw,
   FiRotateCw,
@@ -16,6 +17,7 @@ import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
+import SimpleDiagramEmailModal from "@/components/simple/simple-diagram-email-modal";
 import { normalizeJobDiagram, normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 
 const CANVAS_W = 1400;
@@ -110,6 +112,8 @@ export default function SimpleDiagramModal({
   /** @deprecated Prefer jobDiagrams */
   jobDiagram,
   onSaved,
+  defaultToEmail = "",
+  defaultToName = "",
 }) {
   const toast = useToast();
   const confirm = useConfirm();
@@ -132,6 +136,7 @@ export default function SimpleDiagramModal({
   const [printRoot, setPrintRoot] = useState(null);
   /** When set, save replaces this diagram id; empty string means create new. */
   const [editingDiagramId, setEditingDiagramId] = useState("");
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
@@ -203,7 +208,10 @@ export default function SimpleDiagramModal({
   }, [q, toast]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setEmailOpen(false);
+      return;
+    }
     resetDrawState();
     const list = syncDiagramsFromProps();
     setActiveId("");
@@ -1083,6 +1091,16 @@ export default function SimpleDiagramModal({
         <Button type="button" size="sm" variant="outline" onClick={handlePrint} disabled={!active?.url}>
           Print
         </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setEmailOpen(true)}
+          disabled={!active?.id || !active?.url || !recordId}
+        >
+          <FiMail className="h-4 w-4 shrink-0" />
+          Email
+        </Button>
         <Button type="button" size="sm" variant="outline" onClick={() => void startEditSaved()}>
           Edit
         </Button>
@@ -1145,6 +1163,7 @@ export default function SimpleDiagramModal({
     );
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -1454,6 +1473,15 @@ export default function SimpleDiagramModal({
         </div>
       ) : null}
     </Modal>
+    <SimpleDiagramEmailModal
+      open={emailOpen}
+      onClose={() => setEmailOpen(false)}
+      recordId={recordId || ""}
+      diagram={active}
+      defaultToEmail={defaultToEmail}
+      defaultToName={defaultToName}
+    />
+    </>
   );
 }
 

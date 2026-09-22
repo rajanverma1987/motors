@@ -625,6 +625,8 @@ export default function SimpleDatasheetModal({
       onClose={() => setDiagramOpen(false)}
       recordId={recordId || null}
       jobDiagrams={Array.isArray(jobDiagrams) ? jobDiagrams : []}
+      defaultToEmail={String(resolvedPrintContext.customerEmail || "").trim()}
+      defaultToName={String(resolvedPrintContext.customerName || resolvedPrintContext.companyName || "").trim()}
       onSaved={(nextDiagrams) => {
         onDiagramsChange?.(Array.isArray(nextDiagrams) ? nextDiagrams : []);
       }}
