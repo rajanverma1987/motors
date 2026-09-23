@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { FiArrowLeft, FiPrinter, FiRefreshCw } from "react-icons/fi";
+import { FiArrowLeft, FiPlus, FiPrinter, FiRefreshCw, FiTrash2 } from "react-icons/fi";
 import QRCode from "qrcode";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -130,6 +130,25 @@ function printQrDataUrl(dataUrl, title) {
   }
 }
 
+function formatPunchTime(iso) {
+  if (!iso) return "-";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function formatPunchDate(isoDate) {
+  if (!isoDate) return "-";
+  const d = new Date(`${isoDate}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return isoDate;
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export default function EmployeesHubClient() {
   const alert = useAlert();
   const confirm = useConfirm();
@@ -143,12 +162,27 @@ export default function EmployeesHubClient() {
   const [hoursFrom, setHoursFrom] = useState(daysAgoIso(7));
   const [hoursTo, setHoursTo] = useState(todayIso());
   const [hoursRows, setHoursRows] = useState([]);
+  const [manualHours, setManualHours] = useState([]);
+  const [manualHoursTotal, setManualHoursTotal] = useState(0);
+  const [manualPage, setManualPage] = useState(1);
+  const [manualPageSize, setManualPageSize] = usePreferredTablePageSize();
+  const [addHoursOpen, setAddHoursOpen] = useState(false);
+  const [addHours, setAddHours] = useState({
+    employeeId: "",
+    workDate: todayIso(),
+    hours: "",
+    note: "",
+  });
   const [punches, setPunches] = useState([]);
   const [punchPage, setPunchPage] = useState(1);
   const [punchPageSize, setPunchPageSize] = usePreferredTablePageSize();
   const [punchTotal, setPunchTotal] = useState(0);
   const [addPunchOpen, setAddPunchOpen] = useState(false);
   const [addPunch, setAddPunch] = useState({ employeeId: "", type: "in", punchedAt: "" });
+  const [punchHistoryOpen, setPunchHistoryOpen] = useState(false);
+  const [punchHistoryEmployee, setPunchHistoryEmployee] = useState(null);
+  const [punchHistoryDays, setPunchHistoryDays] = useState([]);
+  const [punchHistoryLoading, setPunchHistoryLoading] = useState(false);
 
   const loadMeta = useCallback(async () => {
     const res = await fetch("/api/dashboard/time-clock", { credentials: "include", cache: "no-store" });
@@ -172,8 +206,26 @@ export default function EmployeesHubClient() {
     setHoursRows(Array.isArray(data.rows) ? data.rows : []);
   }, [hoursFrom, hoursTo]);
 
+  const loadManualHours = useCallback(async () => {
+    const params = new URLSearchParams({
+      from: hoursFrom,
+      to: hoursTo,
+      page: String(manualPage),
+      pageSize: String(manualPageSize),
+    });
+    const res = await fetch(`/api/dashboard/time-clock/manual-hours?${params}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed to load manual hours");
+    setManualHours(Array.isArray(data.items) ? data.items : []);
+    setManualHoursTotal(Number(data.totalCount) || 0);
+  }, [hoursFrom, hoursTo, manualPage, manualPageSize]);
+
   const loadPunches = useCallback(async () => {
     const params = new URLSearchParams({
+      view: "summary",
       page: String(punchPage),
       pageSize: String(punchPageSize),
     });
@@ -187,6 +239,40 @@ export default function EmployeesHubClient() {
     setPunchTotal(Number(data.totalCount) || 0);
   }, [punchPage, punchPageSize]);
 
+  const loadPunchHistory = useCallback(async (employeeId) => {
+    const id = String(employeeId || "").trim();
+    if (!id) return;
+    setPunchHistoryLoading(true);
+    try {
+      const params = new URLSearchParams({ view: "by-day", employeeId: id });
+      const res = await fetch(`/api/dashboard/time-clock/punches?${params}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to load punch history");
+      setPunchHistoryEmployee(data.employee || null);
+      setPunchHistoryDays(Array.isArray(data.days) ? data.days : []);
+    } finally {
+      setPunchHistoryLoading(false);
+    }
+  }, []);
+
+  const openPunchHistory = async (row) => {
+    setPunchHistoryOpen(true);
+    setPunchHistoryEmployee({
+      id: row.employeeId,
+      name: row.employeeName,
+      employeeNumber: row.employeeNumber,
+    });
+    setPunchHistoryDays([]);
+    try {
+      await loadPunchHistory(row.employeeId);
+    } catch (err) {
+      await alert({ title: "Error", message: err.message || "Failed to load history", variant: "danger" });
+    }
+  };
+
   const refresh = useCallback(async () => {
     if (tab === "employees" || tab === "release-payment") {
       setLoading(false);
@@ -195,14 +281,17 @@ export default function EmployeesHubClient() {
     setLoading(true);
     try {
       await loadMeta();
-      if (tab === "hours") await loadHours();
+      if (tab === "hours") {
+        await loadHours();
+        await loadManualHours();
+      }
       if (tab === "punches") await loadPunches();
     } catch (err) {
       await alert({ title: "Error", message: err.message || "Failed to load", variant: "danger" });
     } finally {
       setLoading(false);
     }
-  }, [alert, loadHours, loadMeta, loadPunches, tab]);
+  }, [alert, loadHours, loadManualHours, loadMeta, loadPunches, tab]);
 
   useEffect(() => {
     void refresh();
@@ -297,18 +386,20 @@ export default function EmployeesHubClient() {
     }
   };
 
-  const voidPunch = async (row) => {
+  const voidPunchDay = async (dayRow) => {
+    const empId = punchHistoryEmployee?.id;
+    if (!empId || !dayRow?.date) return;
     const ok1 = await confirm({
-      title: "Void punch",
-      message: `Void ${row.type} for ${row.employeeName || "employee"}?`,
-      confirmLabel: "Void",
+      title: "Delete day punches",
+      message: `Delete all In/Out punches for ${punchHistoryEmployee?.name || "employee"} on ${formatPunchDate(dayRow.date)}?`,
+      confirmLabel: "Delete",
       variant: "danger",
     });
     if (!ok1) return;
     const ok2 = await confirm({
-      title: "Confirm void",
-      message: "This cannot be undone from the employee app. Continue?",
-      confirmLabel: "Void punch",
+      title: "Confirm delete",
+      message: "This removes the day's punch record from Hours totals. Continue?",
+      confirmLabel: "Delete day",
       variant: "danger",
     });
     if (!ok2) return;
@@ -316,14 +407,20 @@ export default function EmployeesHubClient() {
       method: "PATCH",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, void: true, voidReason: "Voided by manager" }),
+      body: JSON.stringify({
+        voidDay: true,
+        employeeId: empId,
+        workDate: dayRow.date,
+        voidReason: "Day voided by manager",
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      await alert({ title: "Error", message: data.error || "Void failed", variant: "danger" });
+      await alert({ title: "Error", message: data.error || "Delete failed", variant: "danger" });
       return;
     }
     await loadPunches();
+    await loadPunchHistory(empId);
   };
 
   const submitAddPunch = async (e) => {
@@ -341,6 +438,63 @@ export default function EmployeesHubClient() {
     }
     setAddPunchOpen(false);
     await loadPunches();
+    if (punchHistoryOpen && punchHistoryEmployee?.id === addPunch.employeeId) {
+      await loadPunchHistory(addPunch.employeeId);
+    }
+  };
+
+  const submitAddHours = async (e) => {
+    e.preventDefault();
+    const res = await fetch("/api/dashboard/time-clock/manual-hours", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        employeeId: addHours.employeeId,
+        workDate: addHours.workDate,
+        hours: Number(addHours.hours),
+        note: addHours.note,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await alert({ title: "Error", message: data.error || "Failed to save hours", variant: "danger" });
+      return;
+    }
+    setAddHoursOpen(false);
+    setAddHours({ employeeId: "", workDate: todayIso(), hours: "", note: "" });
+    await loadHours();
+    await loadManualHours();
+  };
+
+  const voidManualHoursEntry = async (row) => {
+    const ok1 = await confirm({
+      title: "Void manual hours",
+      message: `Remove ${row.hours} h for ${row.employeeName || "employee"} on ${row.workDate}?`,
+      confirmLabel: "Void",
+      variant: "danger",
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: "Confirm void",
+      message: "This entry will no longer count toward Hours totals. Continue?",
+      confirmLabel: "Void entry",
+      variant: "danger",
+    });
+    if (!ok2) return;
+    const res = await fetch("/api/dashboard/time-clock/manual-hours", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: row.id, void: true, voidReason: "Voided by manager" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await alert({ title: "Error", message: data.error || "Void failed", variant: "danger" });
+      return;
+    }
+    await loadHours();
+    await loadManualHours();
   };
 
   const alerts = useMemo(() => {
@@ -559,7 +713,7 @@ export default function EmployeesHubClient() {
       ) : null}
 
       {!loading && tab === "hours" ? (
-        <div className="w-full min-w-0 space-y-3">
+        <div className="w-full min-w-0 space-y-6">
           <div className="flex flex-wrap items-end gap-2">
             <label className="text-xs font-bold text-title">
               From
@@ -579,16 +733,42 @@ export default function EmployeesHubClient() {
                 onChange={(e) => setHoursTo(e.target.value)}
               />
             </label>
-            <Button type="button" size="sm" variant="outline" onClick={() => void loadHours()}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setManualPage(1);
+                void loadHours();
+                void loadManualHours();
+              }}
+            >
               Apply
             </Button>
           </div>
+
           <Table
             columns={[
               { key: "name", label: "Employee" },
               { key: "employeeNumber", label: "Emp #" },
               { key: "department", label: "Dept" },
-              { key: "totalHours", label: "Hours" },
+              {
+                key: "clockedHours",
+                label: "Clocked",
+                render: (v) => (Number(v) || 0).toFixed(2),
+              },
+              {
+                key: "manualHours",
+                label: "Manual",
+                render: (v) => (Number(v) || 0).toFixed(2),
+              },
+              {
+                key: "totalHours",
+                label: "Hours",
+                render: (v) => (
+                  <span className="font-semibold tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
+                ),
+              },
               { key: "lateCount", label: "Late" },
               { key: "earlyCount", label: "Early out" },
             ]}
@@ -597,6 +777,91 @@ export default function EmployeesHubClient() {
             emptyMessage="No hours in this range."
             responsive
           />
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-bold text-title">Manual hours entries</h3>
+                <p className="text-xs text-secondary">
+                  Hours entered here are kept as a record and included in the Hours totals above (and Record Payment).
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                onClick={() => {
+                  setAddHours({
+                    employeeId: "",
+                    workDate: hoursTo || todayIso(),
+                    hours: "",
+                    note: "",
+                  });
+                  setAddHoursOpen(true);
+                }}
+              >
+                <FiPlus className="h-4 w-4 shrink-0" />
+                Add hours
+              </Button>
+            </div>
+            <Table
+              columns={[
+                {
+                  key: "actions",
+                  label: "",
+                  render: (_, row) =>
+                    row.voidedAt ? null : (
+                      <button
+                        type="button"
+                        className="p-1.5 text-danger hover:bg-danger/10"
+                        title="Void"
+                        aria-label="Void manual hours"
+                        onClick={() => void voidManualHoursEntry(row)}
+                      >
+                        <FiTrash2 className="h-4 w-4" />
+                      </button>
+                    ),
+                },
+                {
+                  key: "workDate",
+                  label: "Date",
+                  render: (v) => v || "",
+                },
+                { key: "employeeName", label: "Employee" },
+                {
+                  key: "hours",
+                  label: "Hours",
+                  render: (v) => (
+                    <span className="tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
+                  ),
+                },
+                {
+                  key: "note",
+                  label: "Note",
+                  render: (v) => (String(v || "").trim() ? v : "-"),
+                },
+                {
+                  key: "createdAt",
+                  label: "Entered",
+                  render: (v) => (v ? new Date(v).toLocaleString() : ""),
+                },
+              ]}
+              data={manualHours}
+              rowKey="id"
+              emptyMessage="No manual hours in this range."
+              responsive
+              pagination={{
+                page: manualPage,
+                pageSize: manualPageSize,
+                totalCount: manualHoursTotal,
+              }}
+              onPageChange={(p, ps) => {
+                setManualPage(p);
+                setManualPageSize(ps);
+              }}
+              paginateClientSide={false}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -610,46 +875,38 @@ export default function EmployeesHubClient() {
           <Table
             columns={[
               {
-                key: "actions",
-                label: "",
-                render: (_, row) =>
-                  row.voidedAt ? null : (
-                    <button
-                      type="button"
-                      className="p-1.5 text-danger hover:bg-danger/10"
-                      title="Void"
-                      aria-label="Void punch"
-                      onClick={() => void voidPunch(row)}
-                    >
-                      Void
-                    </button>
-                  ),
+                key: "employeeName",
+                label: "Employee",
+                render: (v, row) => (
+                  <button
+                    type="button"
+                    className="text-left font-semibold text-primary hover:underline"
+                    onClick={() => void openPunchHistory(row)}
+                  >
+                    {v || "Employee"}
+                  </button>
+                ),
               },
-              { key: "employeeName", label: "Employee" },
+              { key: "employeeNumber", label: "Emp #" },
+              { key: "department", label: "Dept" },
               {
-                key: "type",
-                label: "Type",
+                key: "todayIn",
+                label: "Today In",
                 render: (v) => (
-                  <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs uppercase">
-                    {v}
-                  </Badge>
+                  <span className="tabular-nums">{formatPunchTime(v)}</span>
                 ),
               },
               {
-                key: "punchedAt",
-                label: "When",
-                render: (v) => (v ? new Date(v).toLocaleString() : ""),
-              },
-              { key: "source", label: "Source" },
-              {
-                key: "distanceM",
-                label: "Distance m",
-                render: (v) => (v != null ? Math.round(v) : "—"),
+                key: "todayOut",
+                label: "Today Out",
+                render: (v) => (
+                  <span className="tabular-nums">{formatPunchTime(v)}</span>
+                ),
               },
             ]}
             data={punches}
-            rowKey="id"
-            emptyMessage="No punches yet."
+            rowKey="employeeId"
+            emptyMessage="No employees on the time clock yet."
             responsive
             pagination={{ page: punchPage, pageSize: punchPageSize, totalCount: punchTotal }}
             onPageChange={(p, ps) => {
@@ -726,6 +983,149 @@ export default function EmployeesHubClient() {
               className="mt-1 h-8 w-full border border-border px-2 text-sm"
               value={addPunch.punchedAt}
               onChange={(e) => setAddPunch((f) => ({ ...f, punchedAt: e.target.value }))}
+            />
+          </label>
+        </Form>
+      </Modal>
+
+      <Modal
+        open={punchHistoryOpen}
+        onClose={() => {
+          setPunchHistoryOpen(false);
+          setPunchHistoryEmployee(null);
+          setPunchHistoryDays([]);
+        }}
+        title={
+          punchHistoryEmployee?.name
+            ? `Punches: ${punchHistoryEmployee.name}`
+            : "Employee punches"
+        }
+        size="lg"
+        width="min(720px, 96vw)"
+        actions={
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setPunchHistoryOpen(false);
+              setPunchHistoryEmployee(null);
+              setPunchHistoryDays([]);
+            }}
+          >
+            Close
+          </Button>
+        }
+      >
+        {punchHistoryLoading ? (
+          <p className="py-6 text-center text-sm text-secondary">Loading…</p>
+        ) : (
+          <Table
+            columns={[
+              {
+                key: "actions",
+                label: "",
+                render: (_, row) => (
+                  <button
+                    type="button"
+                    className="p-1.5 text-danger hover:bg-danger/10"
+                    title="Delete day"
+                    aria-label="Delete day punches"
+                    onClick={() => void voidPunchDay(row)}
+                  >
+                    <FiTrash2 className="h-4 w-4" />
+                  </button>
+                ),
+              },
+              {
+                key: "date",
+                label: "Date",
+                render: (v) => formatPunchDate(v),
+              },
+              {
+                key: "inAt",
+                label: "In",
+                render: (v) => <span className="tabular-nums">{formatPunchTime(v)}</span>,
+              },
+              {
+                key: "outAt",
+                label: "Out",
+                render: (v) => <span className="tabular-nums">{formatPunchTime(v)}</span>,
+              },
+            ]}
+            data={punchHistoryDays}
+            rowKey="date"
+            emptyMessage="No punch days for this employee."
+            responsive
+          />
+        )}
+      </Modal>
+
+      <Modal
+        open={addHoursOpen}
+        onClose={() => setAddHoursOpen(false)}
+        title="Add hours"
+        size="md"
+        actions={
+          <Button type="submit" form="add-hours-form" size="sm" variant="primary">
+            Save
+          </Button>
+        }
+      >
+        <Form
+          id="add-hours-form"
+          onSubmit={submitAddHours}
+          className="flex flex-col gap-3 !space-y-0 !border-0 !p-0 !shadow-none"
+        >
+          <label className="text-xs font-bold">
+            Employee
+            <select
+              required
+              className="mt-1 h-8 w-full border border-border px-2 text-sm"
+              value={addHours.employeeId}
+              onChange={(e) => setAddHours((f) => ({ ...f, employeeId: e.target.value }))}
+            >
+              <option value="">Select…</option>
+              {employeeOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-xs font-bold">
+            Date
+            <input
+              type="date"
+              required
+              className="mt-1 h-8 w-full border border-border px-2 text-sm"
+              value={addHours.workDate}
+              onChange={(e) => setAddHours((f) => ({ ...f, workDate: e.target.value }))}
+            />
+          </label>
+          <label className="text-xs font-bold">
+            Hours
+            <input
+              type="number"
+              required
+              min="0.01"
+              max="24"
+              step="0.01"
+              className="mt-1 h-8 w-full border border-border px-2 text-sm"
+              value={addHours.hours}
+              onChange={(e) => setAddHours((f) => ({ ...f, hours: e.target.value }))}
+              placeholder="e.g. 8"
+            />
+          </label>
+          <label className="text-xs font-bold">
+            Note (optional)
+            <textarea
+              rows={3}
+              maxLength={500}
+              className="mt-1 w-full border border-border px-2 py-1.5 text-sm"
+              value={addHours.note}
+              onChange={(e) => setAddHours((f) => ({ ...f, note: e.target.value }))}
+              placeholder="Reason or description…"
             />
           </label>
         </Form>

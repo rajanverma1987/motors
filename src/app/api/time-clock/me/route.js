@@ -14,8 +14,10 @@ import {
   computeHoursFromPunches,
   getOpenPunchState,
   lateEarlyFlags,
+  mergeHoursWithManual,
   serializePunch,
 } from "@/lib/time-clock-punches";
+import TimeClockManualHours from "@/models/TimeClockManualHours";
 
 async function requireEmployeeSession(request, token) {
   const session = await getTimeClockSessionFromRequest(request);
@@ -89,17 +91,37 @@ export async function GET(request) {
         weekAgo.setDate(weekAgo.getDate() - 7);
         punchedAt.$gte = weekAgo;
       }
-      const list = await TimeClockPunch.find({
-        createdByEmail: shop.ownerEmail,
-        employeeId: session.employeeId,
-        voidedAt: null,
-        ...(Object.keys(punchedAt).length ? { punchedAt } : {}),
-      })
-        .sort({ punchedAt: 1 })
-        .lean();
-      const hours = computeHoursFromPunches(list);
+      const workDate = {};
+      if (from) workDate.$gte = from;
+      if (to) workDate.$lte = to;
+      else if (!from && punchedAt.$gte) {
+        workDate.$gte = punchedAt.$gte.toISOString().slice(0, 10);
+      }
+
+      const [list, manuals] = await Promise.all([
+        TimeClockPunch.find({
+          createdByEmail: shop.ownerEmail,
+          employeeId: session.employeeId,
+          voidedAt: null,
+          ...(Object.keys(punchedAt).length ? { punchedAt } : {}),
+        })
+          .sort({ punchedAt: 1 })
+          .lean(),
+        TimeClockManualHours.find({
+          createdByEmail: shop.ownerEmail,
+          employeeId: session.employeeId,
+          voidedAt: null,
+          ...(Object.keys(workDate).length ? { workDate } : {}),
+        })
+          .sort({ workDate: 1 })
+          .lean(),
+      ]);
+      const punchHours = computeHoursFromPunches(list);
+      const hours = mergeHoursWithManual(punchHours, manuals);
       return NextResponse.json({
         totalHours: hours.totalHours,
+        clockedHours: hours.clockedHours,
+        manualHours: hours.manualHours,
         byDay: hours.byDay.map((d) => {
           const dayPunches = list.filter(
             (p) => String(p.punchedAt).slice(0, 10) === d.date || new Date(p.punchedAt).toISOString().slice(0, 10) === d.date

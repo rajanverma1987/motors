@@ -21,6 +21,53 @@ export function serializePunch(doc) {
   };
 }
 
+/** Local calendar date YYYY-MM-DD (shop-facing day boundaries). */
+export function localDateIso(value = new Date()) {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function punchWorkDate(punchedAt) {
+  return localDateIso(punchedAt);
+}
+
+/**
+ * One row per local calendar day: first In, last Out, and punch ids for that day.
+ * @param {Array} punches
+ */
+export function buildDailyPunchSummaries(punches) {
+  const byDay = new Map();
+  for (const raw of Array.isArray(punches) ? punches : []) {
+    if (raw?.voidedAt) continue;
+    const date = punchWorkDate(raw.punchedAt);
+    if (!date) continue;
+    if (!byDay.has(date)) {
+      byDay.set(date, {
+        date,
+        inAt: null,
+        outAt: null,
+        punchIds: [],
+      });
+    }
+    const row = byDay.get(date);
+    const id = raw._id?.toString?.() || String(raw.id || "");
+    if (id) row.punchIds.push(id);
+    const type = String(raw.type || "");
+    const atIso = raw.punchedAt ? new Date(raw.punchedAt).toISOString() : null;
+    if (!atIso) continue;
+    if (type === "in") {
+      if (!row.inAt || new Date(atIso) < new Date(row.inAt)) row.inAt = atIso;
+    } else if (type === "out") {
+      if (!row.outAt || new Date(atIso) > new Date(row.outAt)) row.outAt = atIso;
+    }
+  }
+  return [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date));
+}
+
 /** Latest non-voided punch for employee; open session if type is in or break_*. */
 export async function getOpenPunchState(shopEmail, employeeId) {
   const email = String(shopEmail || "").trim().toLowerCase();
@@ -114,4 +161,74 @@ export function lateEarlyFlags(punchedAtIso, scheduledStart, scheduledEnd, type)
   if (type === "in" && start && /^\d{2}:\d{2}$/.test(start) && hhmm > start) late = true;
   if (type === "out" && end && /^\d{2}:\d{2}$/.test(end) && hhmm < end) early = true;
   return { late, early };
+}
+
+/**
+ * Combine punch-derived hours with manager-entered manual day hours.
+ * @param {{ totalHours: number, byDay: Array<{ date: string, hours: number }> }} punchHours
+ * @param {Array<{ workDate?: string, hours?: number }>} manualEntries
+ */
+export function mergeHoursWithManual(punchHours, manualEntries) {
+  const base = punchHours && typeof punchHours === "object"
+    ? punchHours
+    : { totalHours: 0, byDay: [] };
+  const byDay = new Map(
+    (Array.isArray(base.byDay) ? base.byDay : []).map((d) => [
+      String(d.date || "").slice(0, 10),
+      Number(d.hours) || 0,
+    ])
+  );
+  let manualTotal = 0;
+  for (const entry of Array.isArray(manualEntries) ? manualEntries : []) {
+    const day = String(entry.workDate || entry.date || "").slice(0, 10);
+    const h = Number(entry.hours);
+    if (!day || !Number.isFinite(h) || h <= 0) continue;
+    manualTotal += h;
+    byDay.set(day, Math.round(((byDay.get(day) || 0) + h) * 100) / 100);
+  }
+  const clockedHours = Math.round((Number(base.totalHours) || 0) * 100) / 100;
+  const manualHours = Math.round(manualTotal * 100) / 100;
+  return {
+    clockedHours,
+    manualHours,
+    totalHours: Math.round((clockedHours + manualHours) * 100) / 100,
+    byDay: [...byDay.entries()]
+      .filter(([date]) => date)
+      .map(([date, hours]) => ({
+        date,
+        hours: Math.round(hours * 100) / 100,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
+  };
+}
+
+export function serializeManualHours(doc) {
+  const p = doc && (doc.toObject ? doc.toObject() : doc);
+  if (!p) return null;
+  return {
+    id: p._id?.toString?.() || String(p.id || ""),
+    employeeId: String(p.employeeId || ""),
+    employeeName: String(p.employeeName || ""),
+    employeeNumber: String(p.employeeNumber || ""),
+    workDate: String(p.workDate || "").slice(0, 10),
+    hours: Math.round((Number(p.hours) || 0) * 100) / 100,
+    note: String(p.note || ""),
+    voidedAt: p.voidedAt ? new Date(p.voidedAt).toISOString() : null,
+    voidReason: String(p.voidReason || ""),
+    createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : null,
+    createdByUserEmail: String(p.createdByUserEmail || ""),
+  };
+}
+
+/** Validate YYYY-MM-DD and hours 0.01–24. */
+export function parseManualHoursInput({ workDate, hours }) {
+  const date = String(workDate || "").trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return { error: "A valid work date (YYYY-MM-DD) is required." };
+  }
+  const n = Number(hours);
+  if (!Number.isFinite(n) || n <= 0 || n > 24) {
+    return { error: "Hours must be greater than 0 and at most 24." };
+  }
+  return { workDate: date, hours: Math.round(n * 100) / 100 };
 }

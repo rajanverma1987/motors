@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Employee from "@/models/Employee";
 import TimeClockPunch from "@/models/TimeClockPunch";
+import TimeClockManualHours from "@/models/TimeClockManualHours";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
   computeHoursFromPunches,
   lateEarlyFlags,
+  mergeHoursWithManual,
   serializePunch,
 } from "@/lib/time-clock-punches";
 
@@ -26,54 +28,78 @@ export async function GET(request) {
     if (from) punchedAt.$gte = new Date(`${from}T00:00:00.000`);
     if (to) punchedAt.$lte = new Date(`${to}T23:59:59.999`);
 
-    const q = {
+    const workDate = {};
+    if (from) workDate.$gte = from;
+    if (to) workDate.$lte = to;
+
+    const punchQ = {
       createdByEmail: email,
       voidedAt: null,
       ...(Object.keys(punchedAt).length ? { punchedAt } : {}),
       ...(employeeId ? { employeeId } : {}),
     };
+    const manualQ = {
+      createdByEmail: email,
+      voidedAt: null,
+      ...(Object.keys(workDate).length ? { workDate } : {}),
+      ...(employeeId ? { employeeId } : {}),
+    };
 
-    const punches = await TimeClockPunch.find(q).sort({ punchedAt: 1 }).lean();
-    const byEmployee = new Map();
+    const [punches, manuals] = await Promise.all([
+      TimeClockPunch.find(punchQ).sort({ punchedAt: 1 }).lean(),
+      TimeClockManualHours.find(manualQ).sort({ workDate: 1 }).lean(),
+    ]);
+
+    const byEmployeePunches = new Map();
     for (const p of punches) {
       const id = String(p.employeeId);
-      if (!byEmployee.has(id)) byEmployee.set(id, []);
-      byEmployee.get(id).push(p);
+      if (!byEmployeePunches.has(id)) byEmployeePunches.set(id, []);
+      byEmployeePunches.get(id).push(p);
     }
 
-    const empIds = [...byEmployee.keys()];
-    const employees = await Employee.find({
-      createdByEmail: email,
-      _id: { $in: empIds },
-    })
-      .select("name employeeNumber department scheduledStart scheduledEnd hourlyRate payType")
-      .lean();
+    const byEmployeeManual = new Map();
+    for (const m of manuals) {
+      const id = String(m.employeeId);
+      if (!byEmployeeManual.has(id)) byEmployeeManual.set(id, []);
+      byEmployeeManual.get(id).push(m);
+    }
+
+    const empIds = [...new Set([...byEmployeePunches.keys(), ...byEmployeeManual.keys()])];
+    const employees = empIds.length
+      ? await Employee.find({
+          createdByEmail: email,
+          _id: { $in: empIds },
+        })
+          .select("name employeeNumber department scheduledStart scheduledEnd hourlyRate payType")
+          .lean()
+      : [];
     const empMap = new Map(employees.map((e) => [String(e._id), e]));
 
     const rows = [];
-    for (const [id, list] of byEmployee) {
+    for (const id of empIds) {
+      const list = byEmployeePunches.get(id) || [];
+      const manualList = byEmployeeManual.get(id) || [];
       const emp = empMap.get(id);
-      const hours = computeHoursFromPunches(list);
+      const punchHours = computeHoursFromPunches(list);
+      const hours = mergeHoursWithManual(punchHours, manualList);
       const flags = list.map((p) =>
-        lateEarlyFlags(
-          p.punchedAt,
-          emp?.scheduledStart,
-          emp?.scheduledEnd,
-          p.type
-        )
+        lateEarlyFlags(p.punchedAt, emp?.scheduledStart, emp?.scheduledEnd, p.type)
       );
       rows.push({
         employeeId: id,
-        name: emp?.name || list[0]?.employeeName || "",
+        name: emp?.name || list[0]?.employeeName || manualList[0]?.employeeName || "",
         employeeNumber: emp?.employeeNumber || "",
         department: emp?.department || "",
         payType: emp?.payType || "hourly",
         hourlyRate: emp?.hourlyRate || "",
+        clockedHours: hours.clockedHours,
+        manualHours: hours.manualHours,
         totalHours: hours.totalHours,
         byDay: hours.byDay,
         lateCount: flags.filter((f) => f.late).length,
         earlyCount: flags.filter((f) => f.early).length,
         punchCount: list.length,
+        manualEntryCount: manualList.length,
       });
     }
 
