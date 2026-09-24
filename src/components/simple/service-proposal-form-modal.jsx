@@ -1265,7 +1265,19 @@ export default function ServiceProposalFormModal({
     // Always rebuild from the live form so Send/Print never reuse a prior job snapshot.
     setPrintBundle(null);
     setPrintSendMeta(null);
-    const customer = customers.find((c) => c.id === form.customerId) || null;
+    let customer = customers.find((c) => c.id === form.customerId) || null;
+    try {
+      const res = await fetch(`/api/dashboard/customers/${encodeURIComponent(form.customerId)}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (res.ok && data && typeof data === "object") {
+        customer = { ...(customer || {}), ...data, id: data.id || form.customerId };
+      }
+    } catch {
+      // Keep the list snapshot if the full customer record cannot be loaded.
+    }
     const bundle = buildSimpleServiceProposalPrintBundle({
       form,
       customer,

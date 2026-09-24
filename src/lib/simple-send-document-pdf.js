@@ -109,7 +109,7 @@ function drawSectionTitle(doc, y, title) {
   return doc.y + 6;
 }
 
-async function drawMasthead(doc, y, { title, shopName, shopContact, logoBuffer, logoScale }) {
+async function drawMasthead(doc, y, { title, subtitle, metaLines, shopName, shopContact, logoBuffer, logoScale }) {
   const { heightRem, maxWidthRem } = logoDocumentSizeRem(logoScale);
   const logoH = Math.max(28, Math.min(120, heightRem * 12));
   const logoW = Math.max(80, Math.min(CONTENT_W * 0.55, maxWidthRem * 12));
@@ -124,11 +124,28 @@ async function drawMasthead(doc, y, { title, shopName, shopContact, logoBuffer, 
   }
   const titleX = MARGIN + (logoUsedH ? logoW + 12 : 0);
   const titleW = CONTENT_W - (logoUsedH ? logoW + 12 : 0);
-  doc.font("Helvetica-Bold").fontSize(16).fillColor("#1c1917").text(title, titleX, y, {
+  let textY = y;
+  doc.font("Helvetica-Bold").fontSize(16).fillColor("#1c1917").text(title, titleX, textY, {
     width: titleW,
     align: "right",
   });
-  y = Math.max(y + logoUsedH, doc.y) + 8;
+  textY = doc.y + 2;
+  if (subtitle) {
+    doc.font("Helvetica-Bold").fontSize(22).fillColor("#1c1917").text(subtitle, titleX, textY, {
+      width: titleW,
+      align: "right",
+    });
+    textY = doc.y + 4;
+  }
+  const lines = Array.isArray(metaLines) ? metaLines.filter(Boolean) : [];
+  for (const line of lines) {
+    doc.font("Helvetica").fontSize(9).fillColor("#44403c").text(line, titleX, textY, {
+      width: titleW,
+      align: "right",
+    });
+    textY = doc.y + 1;
+  }
+  y = Math.max(y + logoUsedH, textY) + 8;
   y = drawRule(doc, y);
   if (shopName) {
     doc.font("Helvetica-Bold").fontSize(10).fillColor("#1c1917").text(shopName, MARGIN, y, { width: CONTENT_W });
@@ -283,6 +300,20 @@ export async function buildQuoteInvoicePdfBuffer({
   let y = MARGIN;
   y = await drawMasthead(pdf, y, {
     title,
+    subtitle:
+      kind === "invoice"
+        ? txt(q.invoiceNumber) || "—"
+        : txt(q.rfqNumber || q.invoiceNumber) || "—",
+    metaLines:
+      kind === "invoice"
+        ? [
+            `Customer PO: ${txt(q.customerPo) || "—"}`,
+            `Invoice Sent Date: ${dateLabel(q.invoiceSubmitDate, currency)}`,
+          ]
+        : [
+            `Customer PO: ${txt(q.customerPo) || "—"}`,
+            `Proposal Sent Date: ${dateLabel(q.proposalSubmitDate || q.date, currency)}`,
+          ],
     shopName: txt(extras.fromShopName || shopName),
     shopContact: txt(extras.fromShopContact),
     logoBuffer,
@@ -301,21 +332,29 @@ export async function buildQuoteInvoicePdfBuffer({
   const right = [txt(extras.customerToName), txt(extras.customerBillingAddress, 800)].filter(Boolean).join("\n");
   y = drawTwoCol(pdf, y, "From", left || "—", "To", right || "—");
 
-  y = drawSectionTitle(pdf, y, kind === "invoice" ? "Invoice info" : `${SERVICE_PROPOSAL_DOCUMENT_TITLE} info`);
-  y = drawInfoGrid(pdf, y, [
+  y = drawSectionTitle(pdf, y, "Proposal Info");
+  y = drawInfoGrid(
+    pdf,
+    y,
     kind === "invoice"
-      ? { label: "Invoice#", value: txt(q.invoiceNumber) || "—" }
-      : { label: `${SERVICE_PROPOSAL_DOCUMENT_TITLE}#`, value: txt(q.rfqNumber || q.invoiceNumber) || "—" },
-    kind === "invoice" ? { label: `${SERVICE_PROPOSAL_DOCUMENT_TITLE}#`, value: txt(q.rfqNumber) || "—" } : null,
-    { label: "Customer PO#", value: txt(q.customerPo) || "—" },
-    kind === "invoice"
-      ? { label: "Proposal Sent Date", value: dateLabel(q.proposalSubmitDate || q.date, currency) }
-      : { label: "Proposal Date", value: dateLabel(q.date, currency) },
-    kind === "invoice"
-      ? { label: "Invoice Date", value: dateLabel(q.invoiceSubmitDate, currency) }
-      : null,
-    { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
-  ].filter(Boolean));
+      ? [
+          { label: `${SERVICE_PROPOSAL_DOCUMENT_TITLE}#`, value: txt(q.rfqNumber) || "—" },
+          { label: "Proposal Sent Date", value: dateLabel(q.proposalSubmitDate || q.date, currency) },
+          { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
+          {
+            label: "Proposal Approved By",
+            value: txt(q.proposalApprovedByDisplay || q.proposalApprovedBy) || "—",
+          },
+        ]
+      : [
+          { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
+          {
+            label: "Proposal Approved By",
+            value: txt(q.proposalApprovedByDisplay || q.proposalApprovedBy) || "—",
+          },
+          { label: "Est. completion", value: dateLabel(q.estimatedCompletion, currency) },
+        ]
+  );
 
   const motorBits = [txt(q.motorIdentityLine), txt(q.motorSpecsLine), txt(q.motorDetailsLine), txt(q.motorType)]
     .filter(Boolean)

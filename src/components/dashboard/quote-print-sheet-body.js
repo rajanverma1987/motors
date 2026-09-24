@@ -52,12 +52,23 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
   return (
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-2 border-b border-neutral-300 pb-1.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <PrintShopLogo logoUrl={q.fromShopLogoUrl} scale={q.logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">
               {SERVICE_PROPOSAL_DOCUMENT_TITLE}
             </h1>
+            <p className="mt-0.5 text-3xl font-extrabold leading-none tracking-tight text-neutral-900 print:text-[26pt]">
+              {q.rfqNumber || "—"}
+            </p>
+            <p className="mt-1.5 text-xs text-neutral-800">
+              <span className="font-semibold">Customer PO: </span>
+              {q.customerPo || "—"}
+            </p>
+            <p className="text-xs text-neutral-800">
+              <span className="font-semibold">Proposal Sent Date: </span>
+              {formatDate(q.proposalSubmitDate || q.date)}
+            </p>
           </div>
         </div>
         <div className="mt-1 min-w-0">
@@ -102,23 +113,17 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
       </div>
 
       <section className="mb-2">
-        <h2 className={sectionLabel}>Service proposal info</h2>
-        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <dt className={infoFieldLabel}>RFQ#</dt>
-            <dd className="font-medium text-neutral-900">{q.rfqNumber || "—"}</dd>
-          </div>
-          <div>
-            <dt className={infoFieldLabel}>Customer PO#</dt>
-            <dd className="text-neutral-900">{q.customerPo || "—"}</dd>
-          </div>
-          <div>
-            <dt className={infoFieldLabel}>Proposal Date</dt>
-            <dd className="text-neutral-900">{formatDate(q.date)}</dd>
-          </div>
+        <h2 className={sectionLabel}>Proposal Info</h2>
+        <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
           <div>
             <dt className={infoFieldLabel}>Prepared by</dt>
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
+          </div>
+          <div>
+            <dt className={infoFieldLabel}>Proposal Approved By</dt>
+            <dd className="text-neutral-900">
+              {q.proposalApprovedByDisplay || q.proposalApprovedBy || "—"}
+            </dd>
           </div>
           <div>
             <dt className={infoFieldLabel}>Est. completion</dt>

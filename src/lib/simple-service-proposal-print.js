@@ -121,6 +121,7 @@ export function buildSimpleServiceProposalPrintBundle({
   const laborTotal = sumLinePrices(form?.scopeDetails);
   const partsTotal = sumOtherLinePrices(form?.otherItems);
   const preparedByDisplay = employeeDisplayName(employees, form?.preparedBy);
+  const proposalApprovedByDisplay = employeeDisplayName(employees, form?.proposalApprovedBy);
   const fromShopName = String(user?.shopName || "").trim();
   const fromShopContact = [user?.contactName, user?.email].filter(Boolean).join(" · ") || "";
   const fromShopLogoUrl = String(accountSettings?.logoUrl || "").trim();
@@ -144,6 +145,8 @@ export function buildSimpleServiceProposalPrintBundle({
     invoiceSubmitDate: String(form?.invoiceSubmitDate || "").trim(),
     preparedBy: String(form?.preparedBy || "").trim(),
     preparedByDisplay,
+    proposalApprovedBy: String(form?.proposalApprovedBy || "").trim(),
+    proposalApprovedByDisplay,
     estimatedCompletion: String(form?.dueDate || "").trim(),
     scopeLines,
     partsLines,

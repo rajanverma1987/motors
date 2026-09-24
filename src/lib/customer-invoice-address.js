@@ -1,5 +1,21 @@
+function formatPostalAddress(source, keys) {
+  if (!source) return "";
+  const street = String(source[keys.street] ?? "").trim();
+  const city = String(source[keys.city] ?? "").trim();
+  const state = String(source[keys.state] ?? "").trim();
+  const zip = String(source[keys.zip] ?? source[keys.zipAlt] ?? "").trim();
+  const country = String(source[keys.country] ?? "").trim();
+  const lines = [];
+  if (street) lines.push(street);
+  const cityLine = [city, state, zip].filter(Boolean).join(", ");
+  if (cityLine) lines.push(cityLine);
+  if (country && country.toLowerCase() !== "united states") lines.push(country);
+  return lines.join("\n");
+}
+
 /**
- * "To" block on invoices / service proposals: client name line(s) + billing address from Customer record.
+ * "To" block on invoices / service proposals: client name line(s) + address from Customer record.
+ * Uses billing address, then shipping if billing is empty.
  */
 export function customerInvoiceToBlock(customer) {
   if (!customer) {
@@ -15,16 +31,22 @@ export function customerInvoiceToBlock(customer) {
     toName = toName ? `${toName}\n${email}` : email;
   }
 
-  const lines = [];
-  const addr = String(customer.address ?? "").trim();
-  if (addr) lines.push(addr);
-  const city = String(customer.city ?? "").trim();
-  const state = String(customer.state ?? "").trim();
-  const zip = String(customer.zipCode ?? "").trim();
-  const cityLine = [city, state, zip].filter(Boolean).join(", ");
-  if (cityLine) lines.push(cityLine);
-  const country = String(customer.country ?? "").trim();
-  if (country && country.toLowerCase() !== "united states") lines.push(country);
+  const billing = formatPostalAddress(customer, {
+    street: "address",
+    city: "city",
+    state: "state",
+    zip: "zipCode",
+    zipAlt: "zip",
+    country: "country",
+  });
+  const shipping = formatPostalAddress(customer, {
+    street: "shippingAddress",
+    city: "shippingCity",
+    state: "shippingState",
+    zip: "shippingZipCode",
+    zipAlt: "shippingZip",
+    country: "shippingCountry",
+  });
 
-  return { toName, billingAddress: lines.join("\n") };
+  return { toName, billingAddress: billing || shipping };
 }

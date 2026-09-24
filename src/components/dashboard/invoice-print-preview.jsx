@@ -54,6 +54,8 @@ export default function InvoicePrintPreview({
   const notesMode = q.printNotesMode === "internal" ? "internal" : "customer";
   const notesText =
     notesMode === "internal" ? String(q.notes || "").trim() : String(q.customerNotes || "").trim();
+  const toName = String(customerToName || q.customerToName || "").trim();
+  const toAddress = String(customerBillingAddress || q.customerBillingAddress || "").trim();
 
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
@@ -65,10 +67,21 @@ export default function InvoicePrintPreview({
   return (
     <div className="mx-auto max-w-[52.8rem] bg-white text-sm leading-snug text-neutral-900 print:max-w-none print:text-black">
       <header className="mb-2 border-b border-neutral-300 pb-1.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <PrintShopLogo logoUrl={fromShopLogoUrl} scale={logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
             <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Invoice</h1>
+            <p className="mt-0.5 text-3xl font-extrabold leading-none tracking-tight text-neutral-900 print:text-[26pt]">
+              {q.invoiceNumber || "—"}
+            </p>
+            <p className="mt-1.5 text-xs text-neutral-800">
+              <span className="font-semibold">Customer PO: </span>
+              {q.customerPo || "—"}
+            </p>
+            <p className="text-xs text-neutral-800">
+              <span className="font-semibold">Invoice Sent Date: </span>
+              {formatDate(q.invoiceSubmitDate)}
+            </p>
           </div>
         </div>
         <div className="mt-1 min-w-0">
@@ -96,18 +109,18 @@ export default function InvoicePrintPreview({
           ) : null}
         </div>
         <div className="flex min-w-0 justify-end print:justify-end">
-          <div className="w-full max-w-[16rem] text-left">
+          <div className="w-full min-w-0 max-w-[22rem] text-left">
             <p className={sectionLabel}>To</p>
-            {customerToName ? (
+            {toName ? (
               <p className="whitespace-pre-wrap text-xs font-medium text-neutral-900">
-                {customerToName}
+                {toName}
               </p>
             ) : (
               <p className="text-xs text-neutral-500">—</p>
             )}
-            {customerBillingAddress ? (
+            {toAddress ? (
               <p className="mt-1.5 whitespace-pre-wrap text-xs text-neutral-800">
-                {customerBillingAddress}
+                {toAddress}
               </p>
             ) : null}
           </div>
@@ -115,31 +128,25 @@ export default function InvoicePrintPreview({
       </div>
 
       <section className="mb-2">
-        <h2 className={sectionLabel}>Invoice info</h2>
-        <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-3">
-          <div>
-            <dt className={infoFieldLabel}>Invoice#</dt>
-            <dd className="font-medium text-neutral-900">{q.invoiceNumber || "—"}</dd>
-          </div>
+        <h2 className={sectionLabel}>Proposal Info</h2>
+        <dl className="grid gap-x-3 gap-y-1 text-xs sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <dt className={infoFieldLabel}>{SERVICE_PROPOSAL_DOCUMENT_TITLE}#</dt>
             <dd className="text-neutral-900">{q.rfqNumber || "—"}</dd>
-          </div>
-          <div>
-            <dt className={infoFieldLabel}>Customer PO#</dt>
-            <dd className="text-neutral-900">{q.customerPo || "—"}</dd>
           </div>
           <div>
             <dt className={infoFieldLabel}>Proposal Sent Date</dt>
             <dd className="text-neutral-900">{formatDate(q.proposalSubmitDate || q.date)}</dd>
           </div>
           <div>
-            <dt className={infoFieldLabel}>Invoice Date</dt>
-            <dd className="text-neutral-900">{formatDate(q.invoiceSubmitDate)}</dd>
-          </div>
-          <div>
             <dt className={infoFieldLabel}>Prepared by</dt>
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
+          </div>
+          <div>
+            <dt className={infoFieldLabel}>Proposal Approved By</dt>
+            <dd className="text-neutral-900">
+              {q.proposalApprovedByDisplay || q.proposalApprovedBy || "—"}
+            </dd>
           </div>
         </dl>
       </section>
