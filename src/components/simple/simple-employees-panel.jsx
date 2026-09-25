@@ -8,6 +8,7 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
+import SimpleEmployeeAttachments from "@/components/simple/simple-employee-attachments";
 import { useAlert } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useAuth } from "@/contexts/auth-context";
@@ -57,6 +58,7 @@ const INITIAL_EMPLOYEE_FORM = {
   scheduledStart: "",
   scheduledEnd: "",
   defaultBreakMinutes: "0",
+  attachments: [],
 };
 
 const EMPLOYMENT_STATUS_OPTIONS = [
@@ -118,6 +120,7 @@ function formFromEmployee(dataToUse) {
     scheduledEnd: dataToUse.scheduledEnd ?? "",
     defaultBreakMinutes: String(dataToUse.defaultBreakMinutes ?? 0),
     passkeyRegistered: Boolean(dataToUse.passkeyRegistered),
+    attachments: Array.isArray(dataToUse.attachments) ? dataToUse.attachments : [],
   };
 }
 
@@ -129,163 +132,170 @@ function EmployeeFormFields({
   roleOptions,
   canViewFinancials,
 }) {
+  const pairLabel = "6.25rem";
   return (
     <>
       <p className={SECTION_TITLE}>Employee</p>
-      <FieldRow label="Name">
-        <input
-          type="text"
-          required
-          disabled={saving}
-          value={form.name}
-          onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Name"
-        />
-      </FieldRow>
-      <FieldRow label="Email">
-        <input
-          type="email"
-          disabled={saving}
-          value={form.email}
-          onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Email"
-          required={form.timeClockEnabled !== false}
-        />
-      </FieldRow>
-      <FieldRow label="Emp #">
-        <input
-          type="text"
-          disabled={saving}
-          value={form.employeeNumber || ""}
-          onChange={(e) => setForm((f) => ({ ...f, employeeNumber: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Employee number"
-        />
-      </FieldRow>
-      <FieldRow label="Role">
-        <SimpleSelect
-          name="role"
-          options={roleOptions}
-          value={form.role}
-          onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-          placeholder="Select role"
-          disabled={saving}
-          aria-label="Role"
-        />
-      </FieldRow>
-      <FieldRow label="Department">
-        <input
-          type="text"
-          disabled={saving}
-          value={form.department || ""}
-          onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Department"
-        />
-      </FieldRow>
-      <FieldRow label="Status">
-        <SimpleSelect
-          name="employmentStatus"
-          options={EMPLOYMENT_STATUS_OPTIONS}
-          value={form.employmentStatus || "Active"}
-          onChange={(e) => setForm((f) => ({ ...f, employmentStatus: e.target.value }))}
-          disabled={saving}
-          aria-label="Employment status"
-        />
-      </FieldRow>
-      <FieldRow label="Hire date">
-        <input
-          type="date"
-          disabled={saving}
-          value={form.hireDate || ""}
-          onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Hire date"
-        />
-      </FieldRow>
-      <FieldRow label="Phone">
-        <input
-          type="tel"
-          disabled={saving}
-          value={form.phone}
-          onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Phone"
-        />
-      </FieldRow>
-      <p className={SECTION_TITLE}>Schedule and pay</p>
-      <FieldRow label="Shift start">
-        <input
-          type="time"
-          disabled={saving}
-          value={form.scheduledStart || ""}
-          onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Scheduled start"
-        />
-      </FieldRow>
-      <FieldRow label="Shift end">
-        <input
-          type="time"
-          disabled={saving}
-          value={form.scheduledEnd || ""}
-          onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Scheduled end"
-        />
-      </FieldRow>
-      <FieldRow label="Break (min)">
-        <input
-          type="number"
-          min={0}
-          max={240}
-          disabled={saving}
-          value={form.defaultBreakMinutes ?? "0"}
-          onChange={(e) => setForm((f) => ({ ...f, defaultBreakMinutes: e.target.value }))}
-          className={FIELD_INPUT}
-          aria-label="Default break minutes"
-        />
-      </FieldRow>
-      <FieldRow label="Pay type">
-        <SimpleSelect
-          name="payType"
-          options={PAY_TYPE_OPTIONS}
-          value={form.payType || "hourly"}
-          onChange={(e) => setForm((f) => ({ ...f, payType: e.target.value }))}
-          disabled={saving}
-          aria-label="Pay type"
-        />
-      </FieldRow>
-      <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"}>
-        {canViewFinancials ? (
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+        <FieldRow label="Name" labelWidth={pairLabel}>
           <input
             type="text"
-            inputMode="decimal"
+            required
             disabled={saving}
-            value={form.hourlyRate || ""}
-            onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             className={FIELD_INPUT}
-            aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
-            placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
+            aria-label="Name"
           />
-        ) : (
-          <span className="text-xs italic text-secondary">Restricted (financial data)</span>
-        )}
-      </FieldRow>
-      <FieldRow label="Password">
-        <input
-          type="password"
-          disabled={saving}
-          value={form.password}
-          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-          className={FIELD_INPUT}
-          autoComplete="new-password"
-          placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
-          aria-label="Password"
-        />
-      </FieldRow>
+        </FieldRow>
+        <FieldRow label="Email" labelWidth={pairLabel}>
+          <input
+            type="email"
+            disabled={saving}
+            value={form.email}
+            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Email"
+            required={form.timeClockEnabled !== false}
+          />
+        </FieldRow>
+        <FieldRow label="Emp #" labelWidth={pairLabel}>
+          <input
+            type="text"
+            disabled={saving}
+            value={form.employeeNumber || ""}
+            onChange={(e) => setForm((f) => ({ ...f, employeeNumber: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Employee number"
+          />
+        </FieldRow>
+        <FieldRow label="Role" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="role"
+            options={roleOptions}
+            value={form.role}
+            onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+            placeholder="Select role"
+            disabled={saving}
+            aria-label="Role"
+          />
+        </FieldRow>
+        <FieldRow label="Department" labelWidth={pairLabel}>
+          <input
+            type="text"
+            disabled={saving}
+            value={form.department || ""}
+            onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Department"
+          />
+        </FieldRow>
+        <FieldRow label="Status" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="employmentStatus"
+            options={EMPLOYMENT_STATUS_OPTIONS}
+            value={form.employmentStatus || "Active"}
+            onChange={(e) => setForm((f) => ({ ...f, employmentStatus: e.target.value }))}
+            disabled={saving}
+            aria-label="Employment status"
+          />
+        </FieldRow>
+        <FieldRow label="Hire date" labelWidth={pairLabel}>
+          <input
+            type="date"
+            disabled={saving}
+            value={form.hireDate || ""}
+            onChange={(e) => setForm((f) => ({ ...f, hireDate: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Hire date"
+          />
+        </FieldRow>
+        <FieldRow label="Phone" labelWidth={pairLabel}>
+          <input
+            type="tel"
+            disabled={saving}
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Phone"
+          />
+        </FieldRow>
+      </div>
+
+      <p className={SECTION_TITLE}>Schedule and pay</p>
+      <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+        <FieldRow label="Shift start" labelWidth={pairLabel}>
+          <input
+            type="time"
+            disabled={saving}
+            value={form.scheduledStart || ""}
+            onChange={(e) => setForm((f) => ({ ...f, scheduledStart: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Scheduled start"
+          />
+        </FieldRow>
+        <FieldRow label="Shift end" labelWidth={pairLabel}>
+          <input
+            type="time"
+            disabled={saving}
+            value={form.scheduledEnd || ""}
+            onChange={(e) => setForm((f) => ({ ...f, scheduledEnd: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Scheduled end"
+          />
+        </FieldRow>
+        <FieldRow label="Break (min)" labelWidth={pairLabel}>
+          <input
+            type="number"
+            min={0}
+            max={240}
+            disabled={saving}
+            value={form.defaultBreakMinutes ?? "0"}
+            onChange={(e) => setForm((f) => ({ ...f, defaultBreakMinutes: e.target.value }))}
+            className={FIELD_INPUT}
+            aria-label="Default break minutes"
+          />
+        </FieldRow>
+        <FieldRow label="Pay type" labelWidth={pairLabel}>
+          <SimpleSelect
+            name="payType"
+            options={PAY_TYPE_OPTIONS}
+            value={form.payType || "hourly"}
+            onChange={(e) => setForm((f) => ({ ...f, payType: e.target.value }))}
+            disabled={saving}
+            aria-label="Pay type"
+          />
+        </FieldRow>
+        <FieldRow label={form.payType === "salary" ? "Salary" : "Hourly rate"} labelWidth={pairLabel}>
+          {canViewFinancials ? (
+            <input
+              type="text"
+              inputMode="decimal"
+              disabled={saving}
+              value={form.hourlyRate || ""}
+              onChange={(e) => setForm((f) => ({ ...f, hourlyRate: e.target.value }))}
+              className={FIELD_INPUT}
+              aria-label={form.payType === "salary" ? "Salary" : "Hourly rate"}
+              placeholder={form.payType === "salary" ? "e.g. 65000" : "e.g. 28.50"}
+            />
+          ) : (
+            <span className="text-xs italic text-secondary">Restricted (financial data)</span>
+          )}
+        </FieldRow>
+        <FieldRow label="Password" labelWidth={pairLabel}>
+          <input
+            type="password"
+            disabled={saving}
+            value={form.password}
+            onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+            className={FIELD_INPUT}
+            autoComplete="new-password"
+            placeholder={editingId ? "Leave blank to keep current" : "Optional (6 to 128 characters)"}
+            aria-label="Password"
+          />
+        </FieldRow>
+      </div>
+
       <FieldRow label="Access" className="items-start">
         <div className="flex flex-col gap-2 py-0.5">
           <label className="inline-flex items-center gap-2 text-sm text-title">
@@ -344,6 +354,12 @@ function EmployeeFormFields({
           </div>
         </div>
       </FieldRow>
+
+      <SimpleEmployeeAttachments
+        recordId={editingId}
+        attachments={form.attachments}
+        onAttachmentsChange={(next) => setForm((f) => ({ ...f, attachments: next }))}
+      />
     </>
   );
 }
@@ -658,7 +674,8 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         open={createOpen}
         onClose={closeCreate}
         title="Add Employee"
-        size="lg"
+        size="xl"
+        width="min(920px, 96vw)"
         showClose={!saving}
         closeOnOutsideClick={false}
         actions={

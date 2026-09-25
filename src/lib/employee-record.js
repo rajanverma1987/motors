@@ -25,6 +25,15 @@ export function toEmployeeJson(e) {
     defaultBreakMinutes: Number(e.defaultBreakMinutes) || 0,
     passkeyRegistered: passkeys.length > 0,
     passkeyCount: passkeys.length,
+    attachments: Array.isArray(e.attachments)
+      ? e.attachments
+          .map((a) => ({
+            url: String(a?.url || "").trim(),
+            name: String(a?.name || "").trim(),
+            contentType: String(a?.contentType || "").trim(),
+          }))
+          .filter((a) => a.url)
+      : [],
     createdAt: e.createdAt,
     updatedAt: e.updatedAt,
   };

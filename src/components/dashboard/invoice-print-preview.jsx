@@ -70,8 +70,8 @@ export default function InvoicePrintPreview({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <PrintShopLogo logoUrl={fromShopLogoUrl} scale={logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">Invoice</h1>
-            <p className="mt-0.5 text-3xl font-extrabold leading-none tracking-tight text-neutral-900 print:text-[26pt]">
+            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 print:text-[22pt]">Invoice</h1>
+            <p className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-neutral-900 print:text-[16pt]">
               {q.invoiceNumber || "—"}
             </p>
             <p className="mt-1.5 text-xs text-neutral-800">

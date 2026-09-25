@@ -63,6 +63,17 @@ const employeeSchema = new mongoose.Schema(
     scheduledEnd: { type: String, default: "", trim: true },
     defaultBreakMinutes: { type: Number, default: 0 },
     passkeys: { type: [passkeySchema], default: [] },
+    /** HR / onboarding files: { url, name, contentType } */
+    attachments: {
+      type: [
+        {
+          url: { type: String, required: true, trim: true },
+          name: { type: String, default: "", trim: true },
+          contentType: { type: String, default: "", trim: true },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );
@@ -83,7 +94,8 @@ if (
   (existingEmployee.schema.path("technicianAppAccess") == null ||
     existingEmployee.schema.path("expoPushTokens") == null ||
     existingEmployee.schema.path("timeClockEnabled") == null ||
-    existingEmployee.schema.path("passkeys") == null)
+    existingEmployee.schema.path("passkeys") == null ||
+    existingEmployee.schema.path("attachments") == null)
 ) {
   delete mongoose.models.Employee;
 }

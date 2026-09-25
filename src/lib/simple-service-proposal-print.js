@@ -142,6 +142,7 @@ export function buildSimpleServiceProposalPrintBundle({
     customerPo: String(form?.customerPo || "").trim(),
     date: String(form?.dateCreated || "").trim(),
     proposalSubmitDate: String(form?.proposalSubmitDate || "").trim(),
+    proposalAcceptedDate: String(form?.proposalAcceptedDate || "").trim(),
     invoiceSubmitDate: String(form?.invoiceSubmitDate || "").trim(),
     preparedBy: String(form?.preparedBy || "").trim(),
     preparedByDisplay,

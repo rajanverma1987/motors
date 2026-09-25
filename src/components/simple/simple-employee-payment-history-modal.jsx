@@ -182,7 +182,7 @@ export default function SimpleEmployeePaymentHistoryModal({
       onClose={onClose}
       title={modalTitle}
       size={hasLeftPanel ? "7xl" : "5xl"}
-      width={hasLeftPanel ? "min(1280px, 98vw)" : "min(960px, 96vw)"}
+      width={hasLeftPanel ? "min(1680px, 98vw)" : "min(960px, 96vw)"}
       height={hasLeftPanel ? "min(90vh, 880px)" : undefined}
       showClose={showClose}
       closeOnOutsideClick={false}
@@ -190,7 +190,7 @@ export default function SimpleEmployeePaymentHistoryModal({
       bodyClassName={hasLeftPanel ? "!relative !overflow-hidden !p-3 sm:!p-4" : ""}
     >
       {hasLeftPanel ? (
-        <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.25fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
+        <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
           <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
             {leftPanel}
           </div>

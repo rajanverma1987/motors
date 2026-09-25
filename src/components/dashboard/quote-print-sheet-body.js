@@ -55,10 +55,10 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <PrintShopLogo logoUrl={q.fromShopLogoUrl} scale={q.logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
-            <h1 className="text-xl font-bold tracking-tight text-neutral-900 print:text-[18pt]">
+            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 print:text-[22pt]">
               {SERVICE_PROPOSAL_DOCUMENT_TITLE}
             </h1>
-            <p className="mt-0.5 text-3xl font-extrabold leading-none tracking-tight text-neutral-900 print:text-[26pt]">
+            <p className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-neutral-900 print:text-[16pt]">
               {q.rfqNumber || "—"}
             </p>
             <p className="mt-1.5 text-xs text-neutral-800">
@@ -120,7 +120,9 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
             <dd className="text-neutral-900">{q.preparedByDisplay || q.preparedBy || "—"}</dd>
           </div>
           <div>
-            <dt className={infoFieldLabel}>Proposal Approved By</dt>
+            <dt className={infoFieldLabel}>Date Approved</dt>
+            <dd className="text-neutral-900">{formatDate(q.proposalAcceptedDate)}</dd>
+            <dt className={`${infoFieldLabel} mt-1.5`}>Proposal Approved By</dt>
             <dd className="text-neutral-900">
               {q.proposalApprovedByDisplay || q.proposalApprovedBy || "—"}
             </dd>

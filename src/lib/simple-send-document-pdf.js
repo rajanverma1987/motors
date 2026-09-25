@@ -125,13 +125,13 @@ async function drawMasthead(doc, y, { title, subtitle, metaLines, shopName, shop
   const titleX = MARGIN + (logoUsedH ? logoW + 12 : 0);
   const titleW = CONTENT_W - (logoUsedH ? logoW + 12 : 0);
   let textY = y;
-  doc.font("Helvetica-Bold").fontSize(16).fillColor("#1c1917").text(title, titleX, textY, {
+  doc.font("Helvetica-Bold").fontSize(22).fillColor("#1c1917").text(title, titleX, textY, {
     width: titleW,
     align: "right",
   });
   textY = doc.y + 2;
   if (subtitle) {
-    doc.font("Helvetica-Bold").fontSize(22).fillColor("#1c1917").text(subtitle, titleX, textY, {
+    doc.font("Helvetica-Bold").fontSize(16).fillColor("#1c1917").text(subtitle, titleX, textY, {
       width: titleW,
       align: "right",
     });
@@ -348,6 +348,7 @@ export async function buildQuoteInvoicePdfBuffer({
         ]
       : [
           { label: "Prepared by", value: txt(q.preparedByDisplay || q.preparedBy) || "—" },
+          { label: "Date Approved", value: dateLabel(q.proposalAcceptedDate, currency) },
           {
             label: "Proposal Approved By",
             value: txt(q.proposalApprovedByDisplay || q.proposalApprovedBy) || "—",
