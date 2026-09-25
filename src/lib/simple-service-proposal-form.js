@@ -235,6 +235,7 @@ export const SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS = [
 export function createEmptyServiceProposalForm(overrides = {}) {
   return {
     customerId: "",
+    companyName: "",
     customerEmail: "",
     customerPhone: "",
     customerTaxExempt: true,
@@ -624,6 +625,7 @@ export function simpleServiceProposalDocToForm(doc) {
 
   next.id = String(d.id || "").trim();
   next.customerId = String(d.customerId || "").trim();
+  next.companyName = String(d.companyName || "").trim();
   next.customerEmail = String(d.customerEmail || d.email || "").trim();
   next.customerPhone = String(d.customerPhone || d.phone || "").trim();
   next.customerTaxExempt = d.customerTaxExempt !== false;

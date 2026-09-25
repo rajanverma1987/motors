@@ -233,10 +233,11 @@ export default function SimpleCustomerFormFields({ form, setForm, layout = "grid
             <input
               type="text"
               value={form.customerNumber || ""}
-              onChange={(e) => patch("customerNumber", e.target.value)}
-              className={FIELD_INPUT}
+              readOnly
+              disabled
+              className={`${FIELD_INPUT} !bg-muted cursor-not-allowed text-secondary`}
               aria-label="Customer ID"
-              placeholder="e.g. 001"
+              title="Assigned automatically"
             />
           </FieldRow>
           <FieldRow label="Contact Name" labelWidth={labelW}>

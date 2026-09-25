@@ -12,6 +12,7 @@ import { userIsListingOnlyAccount, listingOnlyCustomerCount } from "@/lib/listin
 import { userIsTrialAccount, shopCustomerCount } from "@/lib/trial-account-restrictions";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { formatCustomerNumber, nextCustomerNumberForShop } from "@/lib/next-customer-number";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 const MAX_DOCUMENTS = 50;
@@ -43,6 +44,10 @@ export async function GET(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const { searchParams } = new URL(request.url);
+    if (String(searchParams.get("suggestNumber") || "") === "1") {
+      const nextCustomerNumber = await nextCustomerNumberForShop(email);
+      return NextResponse.json({ nextCustomerNumber });
+    }
     const includePagination =
       searchParams.has("page") ||
       searchParams.has("pageSize") ||
@@ -81,11 +86,16 @@ export async function GET(request) {
         { email: rx },
         { phone: rx },
         { city: rx },
+        { customerNumber: rx },
       ];
+    }
+    const findQuery = Customer.find(q);
+    if (sortField === "customerNumber") {
+      findQuery.collation({ locale: "en", numericOrdering: true });
     }
     const [totalCount, list] = await Promise.all([
       Customer.countDocuments(q),
-      Customer.find(q).sort(sort).skip(skip).limit(pageSize).lean(),
+      findQuery.sort(sort).skip(skip).limit(pageSize).lean(),
     ]);
     const listWithId = list.map((c) => {
       const additionalContacts = Array.isArray(c.additionalContacts)
@@ -99,6 +109,7 @@ export async function GET(request) {
         ...c,
         id: c._id.toString(),
         _id: undefined,
+        customerNumber: formatCustomerNumber(c.customerNumber),
         shippingAddress: c.shippingAddress ?? "",
         shippingCity: c.shippingCity ?? "",
         shippingState: c.shippingState ?? "",
@@ -186,8 +197,10 @@ export async function POST(request) {
     if (alternateEmail?.trim() && !isValidEmail(alternateEmail)) {
       return NextResponse.json({ error: "Please enter a valid alternate email address." }, { status: 400 });
     }
+    const requestedNumber = formatCustomerNumber(clampString(customerNumber, 50));
+    const assignedNumber = requestedNumber || (await nextCustomerNumberForShop(ownerEmail));
     const doc = await Customer.create({
-      customerNumber: clampString(customerNumber, 50),
+      customerNumber: assignedNumber,
       companyName: clampString(companyName, LIMITS.companyName.max),
       primaryContactName: clampString(primaryContactName, LIMITS.name.max),
       phone: clampString(phone, 30),

@@ -55,7 +55,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
         <div className="flex flex-wrap items-start justify-between gap-2">
           <PrintShopLogo logoUrl={q.fromShopLogoUrl} scale={q.logoDocumentScale} alt="" />
           <div className="shrink-0 text-right">
-            <h1 className="text-3xl font-extrabold tracking-tight text-neutral-900 print:text-[22pt]">
+            <h1 className="text-lg font-semibold tracking-tight text-neutral-900 print:text-[13pt]">
               {SERVICE_PROPOSAL_DOCUMENT_TITLE}
             </h1>
             <p className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-neutral-900 print:text-[16pt]">

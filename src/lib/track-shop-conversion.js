@@ -20,6 +20,7 @@ import { serializeSimplePortalDoc } from "@/lib/simple-portal-mongo";
 import { normalizeTrackDatasheet, trackCoreMeasurementsFromDatasheet } from "@/lib/track-datasheet";
 import { applyTrackConvertedToProposal } from "@/lib/track-integration";
 import { TRACK_LOGISTICS_LABEL, TRACK_URGENCY_LABEL } from "@/lib/track-rfq";
+import { nextCustomerNumberForShop } from "@/lib/next-customer-number";
 
 export const TRACK_SOURCE_SYSTEM = "IQMotorTrack";
 
@@ -110,22 +111,10 @@ export async function findTrackCustomerMatches(email, lead) {
   return { certain: null, probable: rows };
 }
 
-async function nextCustomerNumber(shopEmail) {
-  const rows = await Customer.find({ createdByEmail: shopEmail })
-    .select("customerNumber")
-    .lean();
-  let max = 0;
-  for (const row of rows) {
-    const num = parseInt(String(row.customerNumber || "").replace(/\D/g, ""), 10);
-    if (Number.isFinite(num) && num > max) max = num;
-  }
-  return String(max + 1).padStart(3, "0");
-}
-
 async function createTrackCustomer(shopEmail, lead) {
   const doc = await Customer.create({
     createdByEmail: shopEmail,
-    customerNumber: await nextCustomerNumber(shopEmail),
+    customerNumber: await nextCustomerNumberForShop(shopEmail),
     companyName: facilityCompany(lead) || "IQMotorTrack customer",
     primaryContactName: String(lead.name || ""),
     email: String(lead.email || ""),

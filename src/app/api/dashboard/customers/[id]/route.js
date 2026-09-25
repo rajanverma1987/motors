@@ -6,6 +6,7 @@ import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
 import { normalizeTaxExempt, normalizeTaxPercent } from "@/lib/quote-invoice-totals";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { formatCustomerNumber } from "@/lib/format-customer-number";
 
 const MAX_ADDITIONAL_CONTACTS = 20;
 const MAX_DOCUMENTS = 50;
@@ -83,7 +84,7 @@ export async function GET(request, context) {
       : [];
     const out = {
       id: customerId,
-      customerNumber: doc.customerNumber ?? "",
+      customerNumber: formatCustomerNumber(doc.customerNumber),
       companyName: doc.companyName ?? "",
       primaryContactName: doc.primaryContactName ?? "",
       phone: doc.phone ?? "",
@@ -182,7 +183,10 @@ export async function PATCH(request, context) {
       }
       doc.companyName = clampString(companyName, LIMITS.companyName.max);
     }
-    if (customerNumber !== undefined) doc.customerNumber = clampString(customerNumber, 50);
+    if (customerNumber !== undefined) {
+      doc.customerNumber =
+        formatCustomerNumber(clampString(customerNumber, 50)) || doc.customerNumber;
+    }
     if (primaryContactName !== undefined) doc.primaryContactName = clampString(primaryContactName, LIMITS.name.max);
     if (phone !== undefined) doc.phone = clampString(phone, 30);
     if (fax !== undefined) doc.fax = clampString(fax, 30);

@@ -452,6 +452,7 @@ export default function ServiceProposalFormModal({
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
+  const [commissionCount, setCommissionCount] = useState(0);
   const [purchaseOrderOpen, setPurchaseOrderOpen] = useState(false);
   const [purchaseOrderMode, setPurchaseOrderMode] = useState("create");
   const [purchaseOrderInitialPoId, setPurchaseOrderInitialPoId] = useState("");
@@ -800,11 +801,12 @@ export default function ServiceProposalFormModal({
   };
 
   const handleCustomerChange = (customerId) => {
-    const c = customers.find((row) => row.id === customerId);
+    const c = customers.find((row) => String(row.id || row._id || "") === String(customerId || "").trim());
     const taxExempt = c?.taxExempt !== false;
     setForm((f) => ({
       ...f,
       customerId,
+      companyName: String(c?.companyName || c?.primaryContactName || "").trim(),
       customerEmail: c?.email || "",
       customerPhone: c?.phone || "",
       customerTaxExempt: taxExempt,
@@ -844,6 +846,7 @@ export default function ServiceProposalFormModal({
         setForm((f) => ({
           ...f,
           customerId: id,
+          companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
           customerEmail: saved.email || "",
           customerPhone: saved.phone || "",
           customerTaxExempt: saved.taxExempt !== false,
@@ -862,6 +865,7 @@ export default function ServiceProposalFormModal({
       setForm((f) => ({
         ...f,
         customerId: id,
+        companyName: String(saved.companyName || newCustomerForm.companyName || "").trim(),
         customerEmail: saved.email || "",
         customerPhone: saved.phone || "",
         customerTaxExempt: saved.taxExempt !== false,
@@ -907,6 +911,35 @@ export default function ServiceProposalFormModal({
     }
     refreshJobPurchaseOrders();
   }, [open, refreshJobPurchaseOrders]);
+
+  const loadCommissionCount = useCallback(async () => {
+    if (!recordId || !canViewFinancials) {
+      setCommissionCount(0);
+      return;
+    }
+    try {
+      const res = await fetch(
+        `/api/dashboard/sales-commissions?quoteId=${encodeURIComponent(recordId)}`,
+        { credentials: "include", cache: "no-store" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setCommissionCount(0);
+        return;
+      }
+      setCommissionCount(Array.isArray(data.commissions) ? data.commissions.length : 0);
+    } catch {
+      setCommissionCount(0);
+    }
+  }, [recordId, canViewFinancials]);
+
+  useEffect(() => {
+    if (!open) {
+      setCommissionCount(0);
+      return;
+    }
+    void loadCommissionCount();
+  }, [open, loadCommissionCount]);
 
   const proposalPoTableGroups = useMemo(
     () => buildProposalPoTableGroups(jobPurchaseOrders),
@@ -1479,7 +1512,7 @@ export default function ServiceProposalFormModal({
                   }
                   onClick={() => setCommissionOpen(true)}
                 >
-                  Add Commission
+                  {commissionCount > 0 ? `Add Commission (${commissionCount})` : "Add Commission"}
                 </Button>
               ) : null}
               <Button
@@ -1511,8 +1544,8 @@ export default function ServiceProposalFormModal({
                 title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
                 onClick={() => setAttachmentsOpen(true)}
               >
-                {Array.isArray(form.attachments) && form.attachments.length
-                  ? `Attachments (${form.attachments.length})`
+                {Array.isArray(form.attachments) && form.attachments.length > 0
+                  ? `Add Attachments (${form.attachments.length})`
                   : "Add Attachments"}
               </Button>
               {canViewFinancials ? (
@@ -2274,6 +2307,7 @@ export default function ServiceProposalFormModal({
         open={commissionOpen && !!commissionPreset?.quoteId}
         onClose={() => setCommissionOpen(false)}
         presetQuote={commissionPreset}
+        onChanged={loadCommissionCount}
       />
 
       <SimplePurchaseOrderFormModal

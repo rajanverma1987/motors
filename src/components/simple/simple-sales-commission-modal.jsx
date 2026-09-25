@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiEye, FiUserPlus } from "react-icons/fi";
+import { FiCheck, FiEye, FiTrash2, FiUserPlus } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { resolveQuoteInvoiceStatusDisplayLabel } from "@/lib/dropdown-catalog";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -64,8 +64,10 @@ export default function SimpleSalesCommissionModal({
   zIndex = 130,
   presetQuote = null,
   onCreated,
+  onChanged,
 }) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const fmt = useFormatMoney();
   const formatDate = useFormatDate();
   const { settings } = useUserSettings();
@@ -97,6 +99,7 @@ export default function SimpleSalesCommissionModal({
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [viewingRow, setViewingRow] = useState(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
 
   const quoteId = presetQuote?.quoteId ? String(presetQuote.quoteId).trim() : "";
 
@@ -147,6 +150,7 @@ export default function SimpleSalesCommissionModal({
     setPayPendingFiles([]);
     setPaySaving(false);
     setPayUploading(false);
+    setDeletingId("");
   }, []);
 
   useEffect(() => {
@@ -218,6 +222,7 @@ export default function SimpleSalesCommissionModal({
       setForm(FORM_INITIAL);
       onCreated?.(data.commission);
       await loadCommissions();
+      onChanged?.();
       await alert({ title: "Saved", message: "Commission added." });
     } catch (err) {
       await alert({
@@ -310,6 +315,40 @@ export default function SimpleSalesCommissionModal({
     setViewModalOpen(false);
     setViewingRow(null);
     setViewLoading(false);
+  };
+
+  const handleDeleteCommission = async (row) => {
+    const id = String(row?.id || "").trim();
+    if (!id || deletingId) return;
+    const name = String(row?.salesPersonName || "this sales person").trim();
+    const amountLabel = fmt(row?.amount || 0);
+    const ok = await confirm({
+      title: "Delete commission",
+      message: `Delete the ${amountLabel} commission for ${name}? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok) return;
+
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/dashboard/sales-commissions/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to delete commission");
+      setCommissionRows((prev) => prev.filter((r) => String(r.id) !== id));
+      onChanged?.();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err.message || "Failed to delete commission",
+        variant: "danger",
+      });
+    } finally {
+      setDeletingId("");
+    }
   };
 
   const handlePaySubmit = async (e) => {
@@ -466,7 +505,7 @@ export default function SimpleSalesCommissionModal({
                 <table className={TABLE_CLASS}>
                   <thead>
                     <tr className={THEAD_ROW}>
-                      <th className={`${TH_CLASS} w-12`}>Action</th>
+                      <th className={`${TH_CLASS} w-16`}>Action</th>
                       <th className={TH_CLASS}>Sales person</th>
                       <th className={`${TH_CLASS} text-right`}>Amount</th>
                       <th className={TH_CLASS}>Status</th>
@@ -493,27 +532,41 @@ export default function SimpleSalesCommissionModal({
                         return (
                           <tr key={row.id} className="border-b border-border last:border-b-0">
                             <td className={TD_CLASS}>
-                              {!isPaid ? (
+                              <div className="flex items-center gap-0.5">
+                                {!isPaid ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => openPayModal(row)}
+                                    className="rounded p-1 text-success hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-success"
+                                    aria-label="Pay commission"
+                                    title="Pay commission"
+                                    disabled={Boolean(deletingId)}
+                                  >
+                                    <FiCheck className="h-4 w-4 shrink-0" aria-hidden />
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => openViewModal(row)}
+                                    className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    aria-label="View payment"
+                                    title="View payment"
+                                    disabled={Boolean(deletingId)}
+                                  >
+                                    <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+                                  </button>
+                                )}
                                 <button
                                   type="button"
-                                  onClick={() => openPayModal(row)}
-                                  className="rounded p-1 text-success hover:bg-success/10 focus:outline-none focus:ring-2 focus:ring-success"
-                                  aria-label="Pay commission"
-                                  title="Pay commission"
+                                  onClick={() => handleDeleteCommission(row)}
+                                  className="rounded p-1 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger disabled:opacity-50"
+                                  aria-label="Delete commission"
+                                  title="Delete commission"
+                                  disabled={Boolean(deletingId)}
                                 >
-                                  <FiCheck className="h-4 w-4 shrink-0" aria-hidden />
+                                  <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
                                 </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => openViewModal(row)}
-                                  className="rounded p-1 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-                                  aria-label="View payment"
-                                  title="View payment"
-                                >
-                                  <FiEye className="h-4 w-4 shrink-0" aria-hidden />
-                                </button>
-                              )}
+                              </div>
                             </td>
                             <td className={TD_CLASS}>{row.salesPersonName || "—"}</td>
                             <td className={`${TD_CLASS} text-right tabular-nums`}>

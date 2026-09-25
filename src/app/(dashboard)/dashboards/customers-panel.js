@@ -16,6 +16,7 @@ import { usePreferredTablePageSize, useUserSettings } from "@/contexts/user-sett
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import {
   buildCustomerPayload,
+  formatCustomerNumber,
   INITIAL_CUSTOMER_FORM,
   uploadCustomerDocumentFiles,
 } from "@/lib/customer-record-form";
@@ -37,6 +38,20 @@ import {
 import TrackRfqsPanel from "./track-rfqs-panel";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
+
+async function fetchNextCustomerNumber() {
+  try {
+    const res = await fetch("/api/dashboard/customers?suggestNumber=1", {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) return "";
+    return formatCustomerNumber(data.nextCustomerNumber);
+  } catch {
+    return "";
+  }
+}
 
 const TYPE_CUSTOMER = "Customer";
 const TYPE_LEAD = "Lead";
@@ -240,6 +255,10 @@ export default function CustomersPanel({ createNonce = 0 }) {
     setConvertingFromLeadId(null);
     setForm({ ...INITIAL_CUSTOMER_FORM });
     setModalOpen(true);
+    void fetchNextCustomerNumber().then((next) => {
+      if (!next) return;
+      setForm((f) => (String(f.customerNumber || "").trim() ? f : { ...f, customerNumber: next }));
+    });
   }, []);
 
   useEffect(() => {
@@ -294,6 +313,10 @@ export default function CustomersPanel({ createNonce = 0 }) {
         notes: String(row?.leadRaw?.message || row?.leadRaw?.problemDescription || "").trim(),
       });
       setModalOpen(true);
+      void fetchNextCustomerNumber().then((next) => {
+        if (!next) return;
+        setForm((f) => (String(f.customerNumber || "").trim() ? f : { ...f, customerNumber: next }));
+      });
     },
     [alert, customerRows, openCustomerDetails]
   );
@@ -587,8 +610,9 @@ export default function CustomersPanel({ createNonce = 0 }) {
         key: "customerNumber",
         label: "ID",
         sortable: true,
+        type: "numeric",
         className: "w-20",
-        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : v || "—"),
+        render: (v, row) => (row.recordType === TYPE_LEAD ? "—" : formatCustomerNumber(v) || "—"),
       },
       {
         key: "companyName",

@@ -1849,8 +1849,8 @@ export default function SimplePurchaseOrderFormModal({
                                     value={line.receivedQty ?? "0"}
                                     onChange={(e) => patchLine(line.id, "receivedQty", e.target.value)}
                                     className={`${CELL_INPUT} text-right tabular-nums ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive || isViewMode}
-                                    readOnly={inactive || isViewMode}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border px-1 py-0.5">
@@ -1862,7 +1862,7 @@ export default function SimplePurchaseOrderFormModal({
                                     }
                                     value={line.receivingStatus || "Ordered"}
                                     onChange={(e) => patchLine(line.id, "receivingStatus", e.target.value)}
-                                    disabled={saving || inactive || isViewMode}
+                                    disabled={saving || inactive}
                                     aria-label={`Receiving status for ${line.itemName || "line"}`}
                                   />
                                 </td>
@@ -1872,8 +1872,8 @@ export default function SimplePurchaseOrderFormModal({
                                     value={String(line.receivedDate || "").slice(0, 10)}
                                     onChange={(e) => patchLine(line.id, "receivedDate", e.target.value)}
                                     className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive || isViewMode}
-                                    readOnly={inactive || isViewMode}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                   />
                                 </td>
                                 <td className="border-r border-border p-0">
@@ -1882,8 +1882,8 @@ export default function SimplePurchaseOrderFormModal({
                                     value={line.vendorInvoiceNumber || ""}
                                     onChange={(e) => patchLine(line.id, "vendorInvoiceNumber", e.target.value)}
                                     className={`${CELL_INPUT} ${inactive ? "!bg-danger/5 line-through pointer-events-none" : ""}`}
-                                    disabled={saving || inactive || isViewMode}
-                                    readOnly={inactive || isViewMode}
+                                    disabled={saving || inactive}
+                                    readOnly={inactive}
                                     aria-label={`Vendor Invoice# for ${line.itemName || "line"}`}
                                   />
                                 </td>
@@ -1901,7 +1901,7 @@ export default function SimplePurchaseOrderFormModal({
                                             </div>
                                           ) : null}
                                         </div>
-                                      ) : !inactive && !isViewMode ? (
+                                      ) : !inactive ? (
                                         <button
                                           type="button"
                                           className="text-xs font-medium text-primary hover:underline"
@@ -1922,7 +1922,7 @@ export default function SimplePurchaseOrderFormModal({
                                         onChange={(e) =>
                                           patchLine(line.id, "addToInventory", e.target.checked)
                                         }
-                                        disabled={saving || inactive || isViewMode}
+                                        disabled={saving || inactive}
                                         aria-label={`Add ${line.itemName || "line"} to inventory on receive`}
                                       />
                                     </td>

@@ -306,7 +306,7 @@ export default function ServiceProposalsPanel({
             status: resolveConfiguredStatusSlug(doc?.status, mergedSettings),
           },
           {
-            companyName: customer?.companyName || doc?.companyName || "",
+            companyName: customer?.companyName || customer?.primaryContactName || doc?.companyName || "",
             phone: customer?.phone || doc?.phone || doc?.customerPhone || "",
             email: customer?.email || doc?.email || doc?.customerEmail || "",
             preparedByLabel: resolveEmployeeDisplayName(employeesList, preparedByRaw),
@@ -359,8 +359,9 @@ export default function ServiceProposalsPanel({
 
   const customerName = useCallback(
     (id) => {
-      const c = customers.find((row) => row.id === id);
-      return c?.companyName || c?.primaryContactName || "";
+      const key = String(id || "").trim();
+      const c = customers.find((row) => String(row.id || row._id || "") === key);
+      return String(c?.companyName || c?.primaryContactName || "").trim();
     },
     [customers]
   );
@@ -423,7 +424,11 @@ export default function ServiceProposalsPanel({
       { ...form, documentNumber, ...(forceNew ? { id: "", recordType: RECORD_TYPE_RFQ } : {}) },
       {
         id: id || "",
-        companyName: customerName(form.customerId) || (forceNew ? "" : editingRow?.companyName) || "",
+        companyName:
+          customerName(form.customerId) ||
+          String(form.companyName || "").trim() ||
+          (forceNew ? "" : editingRow?.companyName) ||
+          "",
         preparedByLabel: employeeLabel(form.preparedBy),
       }
     );

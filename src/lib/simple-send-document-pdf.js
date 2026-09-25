@@ -109,7 +109,7 @@ function drawSectionTitle(doc, y, title) {
   return doc.y + 6;
 }
 
-async function drawMasthead(doc, y, { title, subtitle, metaLines, shopName, shopContact, logoBuffer, logoScale }) {
+async function drawMasthead(doc, y, { title, subtitle, metaLines, shopName, shopContact, logoBuffer, logoScale, titleSize = 22, titleBold = true }) {
   const { heightRem, maxWidthRem } = logoDocumentSizeRem(logoScale);
   const logoH = Math.max(28, Math.min(120, heightRem * 12));
   const logoW = Math.max(80, Math.min(CONTENT_W * 0.55, maxWidthRem * 12));
@@ -125,7 +125,7 @@ async function drawMasthead(doc, y, { title, subtitle, metaLines, shopName, shop
   const titleX = MARGIN + (logoUsedH ? logoW + 12 : 0);
   const titleW = CONTENT_W - (logoUsedH ? logoW + 12 : 0);
   let textY = y;
-  doc.font("Helvetica-Bold").fontSize(22).fillColor("#1c1917").text(title, titleX, textY, {
+  doc.font(titleBold ? "Helvetica-Bold" : "Helvetica").fontSize(titleSize).fillColor("#1c1917").text(title, titleX, textY, {
     width: titleW,
     align: "right",
   });
@@ -300,6 +300,8 @@ export async function buildQuoteInvoicePdfBuffer({
   let y = MARGIN;
   y = await drawMasthead(pdf, y, {
     title,
+    titleSize: 13,
+    titleBold: false,
     subtitle:
       kind === "invoice"
         ? txt(q.invoiceNumber) || "—"

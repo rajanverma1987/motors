@@ -1,3 +1,7 @@
+import { formatCustomerNumber } from "@/lib/format-customer-number";
+
+export { formatCustomerNumber };
+
 export const CUSTOMER_TYPE_OPTIONS = [
   { value: "", label: "Select…" },
   { value: "Commercial", label: "Commercial" },
@@ -126,7 +130,7 @@ export function resolveCustomerDocumentHref(url) {
 export function customerApiToForm(data) {
   const d = data || {};
   return {
-    customerNumber: d.customerNumber ?? "",
+    customerNumber: formatCustomerNumber(d.customerNumber),
     companyName: d.companyName ?? "",
     primaryContactName: d.primaryContactName ?? "",
     phone: d.phone ?? "",
@@ -168,7 +172,7 @@ export function customerApiToForm(data) {
 export function buildCustomerPayload(form) {
   const f = form || {};
   return {
-    customerNumber: f.customerNumber ?? "",
+    customerNumber: formatCustomerNumber(f.customerNumber),
     companyName: f.companyName ?? "",
     primaryContactName: f.primaryContactName ?? "",
     phone: f.phone ?? "",
