@@ -16,6 +16,16 @@ import {
   normalizeAcDatasheet,
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
+import {
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_ROTOR_COLUMNS,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  createEmptyGeneratorDatasheet,
+  createEmptyPumpDatasheet,
+  normalizeGeneratorDatasheet,
+  normalizePumpDatasheet,
+} from "@/lib/simple-datasheet-extra";
+import { resolveMachineType } from "@/lib/machine-types";
 
 /** Blocks that hold plant-relevant technical values, per power type. */
 const AC_BLOCKS = [{ key: "dataSheet", label: "DataSheet", columns: AC_DATASHEET_FIELD_COLUMNS }];
@@ -23,30 +33,50 @@ const DC_BLOCKS = [
   { key: "fieldFrame", label: "Field Frame", columns: DC_FIELD_FRAME_FIELD_COLUMNS },
   { key: "armature", label: "Armature", columns: DC_ARMATURE_FIELD_COLUMNS },
 ];
+const PUMP_BLOCKS = [{ key: "dataSheet", label: "DataSheet", columns: PUMP_DATASHEET_FIELD_COLUMNS }];
+const GENERATOR_BLOCKS = [
+  { key: "dataSheet", label: "DataSheet", columns: GENERATOR_DATASHEET_FIELD_COLUMNS },
+  { key: "rotorExciter", label: "Rotor & Exciter", columns: GENERATOR_ROTOR_COLUMNS },
+];
 
 /** Four core measurements the shop keeps on the proposal itself (§9.8). */
 export const TRACK_CORE_MEASUREMENT_FIELDS = [
-  { proposalKey: "sl", label: "Slots", acKey: "dataSheet.slots", dcKey: "armature.slots" },
+  { proposalKey: "sl", label: "Slots", acKey: "dataSheet.slots", dcKey: "armature.slots", generatorKey: "dataSheet.slots" },
   {
     proposalKey: "cl",
     label: "Core Length",
     acKey: "dataSheet.core_length",
     dcKey: "fieldFrame.core_length",
+    generatorKey: "dataSheet.core_length",
   },
   {
     proposalKey: "cd",
     label: "Core Diameter",
     acKey: "dataSheet.core_dia",
     dcKey: "fieldFrame.inside_diameter",
+    pumpKey: "dataSheet.impeller_dia",
+    generatorKey: "dataSheet.core_dia",
   },
-  { proposalKey: "bars", label: "Bars", acKey: "", dcKey: "armature.bars" },
+  { proposalKey: "bars", label: "Bars", acKey: "", dcKey: "armature.bars", pumpKey: "dataSheet.no_of_vanes" },
 ];
+
+function corePath(field, powerType) {
+  const type = resolveMachineType(powerType);
+  if (type === "DC") return field.dcKey;
+  if (type === "Pump") return field.pumpKey;
+  if (type === "Generator") return field.generatorKey;
+  return field.acKey;
+}
 
 /**
  * @param {"AC"|"DC"} powerType
  */
 export function trackDatasheetBlocks(powerType) {
-  return String(powerType).toUpperCase() === "DC" ? DC_BLOCKS : AC_BLOCKS;
+  const type = resolveMachineType(powerType);
+  if (type === "DC") return DC_BLOCKS;
+  if (type === "Pump") return PUMP_BLOCKS;
+  if (type === "Generator") return GENERATOR_BLOCKS;
+  return AC_BLOCKS;
 }
 
 /**
@@ -54,9 +84,11 @@ export function trackDatasheetBlocks(powerType) {
  * @param {Record<string, unknown>} [overrides]
  */
 export function createEmptyTrackDatasheet(powerType, overrides = {}) {
-  return String(powerType).toUpperCase() === "DC"
-    ? createEmptyDcDatasheet(overrides)
-    : createEmptyAcDatasheet(overrides);
+  const type = resolveMachineType(powerType);
+  if (type === "DC") return createEmptyDcDatasheet(overrides);
+  if (type === "Pump") return createEmptyPumpDatasheet(overrides);
+  if (type === "Generator") return createEmptyGeneratorDatasheet(overrides);
+  return createEmptyAcDatasheet(overrides);
 }
 
 /**
@@ -64,9 +96,11 @@ export function createEmptyTrackDatasheet(powerType, overrides = {}) {
  * @param {"AC"|"DC"} powerType
  */
 export function normalizeTrackDatasheet(raw, powerType) {
-  return String(powerType).toUpperCase() === "DC"
-    ? normalizeDcDatasheet(raw || {})
-    : normalizeAcDatasheet(raw || {});
+  const type = resolveMachineType(powerType);
+  if (type === "DC") return normalizeDcDatasheet(raw || {});
+  if (type === "Pump") return normalizePumpDatasheet(raw || {});
+  if (type === "Generator") return normalizeGeneratorDatasheet(raw || {});
+  return normalizeAcDatasheet(raw || {});
 }
 
 function readPath(obj, path) {
@@ -275,10 +309,9 @@ export function mergeTrackDatasheet({
  */
 export function trackCoreMeasurementsFromDatasheet(data, powerType) {
   const sheet = normalizeTrackDatasheet(data, powerType);
-  const isDc = String(powerType).toUpperCase() === "DC";
   const out = {};
   for (const field of TRACK_CORE_MEASUREMENT_FIELDS) {
-    const path = isDc ? field.dcKey : field.acKey;
+    const path = corePath(field, powerType);
     if (!path) continue;
     const value = readPath(sheet, path);
     if (value) out[field.proposalKey] = value;
@@ -293,10 +326,9 @@ export function trackCoreMeasurementsFromDatasheet(data, powerType) {
  * @param {"AC"|"DC"} powerType
  */
 export function trackDatasheetFromCoreMeasurements(proposal, powerType) {
-  const isDc = String(powerType).toUpperCase() === "DC";
   const out = createEmptyTrackDatasheet(powerType);
   for (const field of TRACK_CORE_MEASUREMENT_FIELDS) {
-    const path = isDc ? field.dcKey : field.acKey;
+    const path = corePath(field, powerType);
     if (!path) continue;
     const value = String(proposal?.[field.proposalKey] ?? "").trim();
     if (value) writePath(out, path, value);

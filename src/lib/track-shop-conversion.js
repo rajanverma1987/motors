@@ -18,6 +18,7 @@ import { createSimpleServiceProposalWithUniqueJobNumber } from "@/lib/simple-por
 import { loadMergedSettingsForEmail } from "@/lib/simple-service-proposal-list-query";
 import { serializeSimplePortalDoc } from "@/lib/simple-portal-mongo";
 import { normalizeTrackDatasheet, trackCoreMeasurementsFromDatasheet } from "@/lib/track-datasheet";
+import { machineTypesMatch, resolveMachineType } from "@/lib/machine-types";
 import { applyTrackConvertedToProposal } from "@/lib/track-integration";
 import { TRACK_LOGISTICS_LABEL, TRACK_URGENCY_LABEL } from "@/lib/track-rfq";
 import { nextCustomerNumberForShop } from "@/lib/next-customer-number";
@@ -135,7 +136,7 @@ async function createTrackCustomer(shopEmail, lead) {
 /** §9.5 motor field mapping, IQMotorTrack snapshot to the Simple proposal fields. */
 function motorFieldsFromSnapshot(snapshot) {
   const src = snapshot || {};
-  const powerType = String(src.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+  const powerType = resolveMachineType(src.powerType, "AC");
   const hpKw = String(src.hp || "").trim()
     ? `${String(src.hp).trim()} HP`
     : String(src.kw || "").trim()
@@ -214,11 +215,10 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
   }
 
   const snapshot = lead.trackMotorSnapshot || {};
-  const powerType = String(snapshot.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+  const powerType = resolveMachineType(snapshot.powerType, "AC");
   const sharedSheet = lead.trackDatasheetSnapshot || null;
-  // §9.5 D: a power-type conflict pre-fills nothing and warns instead.
-  const sheetPowerType = String(lead.trackDatasheetPowerType || powerType).toUpperCase();
-  const powerConflict = Boolean(sharedSheet) && sheetPowerType !== powerType;
+  const sheetPowerType = resolveMachineType(lead.trackDatasheetPowerType || powerType, powerType);
+  const powerConflict = Boolean(sharedSheet) && !machineTypesMatch(sheetPowerType, powerType);
   const prefill = sharedSheet && !powerConflict ? normalizeTrackDatasheet(sharedSheet, powerType) : null;
   const core = prefill ? trackCoreMeasurementsFromDatasheet(prefill, powerType) : {};
 
@@ -238,6 +238,8 @@ export async function convertTrackLeadToProposal({ email, lead, customerId = "",
     ...core,
     acDatasheet: powerType === "AC" ? prefill : null,
     dcDatasheet: powerType === "DC" ? prefill : null,
+    pumpDatasheet: powerType === "Pump" ? prefill : null,
+    generatorDatasheet: powerType === "Generator" ? prefill : null,
     internalNotes: proposalNotesFromLead(lead),
     customerNotes: "",
     customerPo: "",
@@ -302,12 +304,14 @@ export function trackLinkedProposalContext(proposal) {
     invitationId,
     proposalId: String(src._id || src.id || ""),
     rfqRequestId: String(src.trackRfqRequestId || ""),
-    powerType: String(src.motorPower || "AC").toUpperCase() === "DC" ? "DC" : "AC",
+    powerType: resolveMachineType(src.motorPower, "AC"),
     jobNumber: String(src.documentNumber || ""),
     recordType: String(src.recordType || "RFQ").toUpperCase(),
     jobStatus: String(src.jobStatus || ""),
     status: String(src.status || ""),
     acDatasheet: src.acDatasheet || null,
     dcDatasheet: src.dcDatasheet || null,
+    pumpDatasheet: src.pumpDatasheet || null,
+    generatorDatasheet: src.generatorDatasheet || null,
   };
 }

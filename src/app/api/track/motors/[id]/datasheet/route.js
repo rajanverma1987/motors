@@ -8,6 +8,7 @@ import {
   serializeTrackDatasheetVersion,
   trackUnauthorized,
 } from "@/lib/track-auth";
+import { resolveMachineType } from "@/lib/machine-types";
 import {
   flattenTrackDatasheet,
   mergeTrackDatasheet,
@@ -83,7 +84,7 @@ export async function PATCH(request, context) {
       return NextResponse.json({ error: "No datasheet values supplied." }, { status: 400 });
     }
 
-    const powerType = String(motor.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+    const powerType = resolveMachineType(motor.powerType, "AC");
     const allowed = new Set(trackDatasheetFieldPaths(powerType).map((f) => f.path));
     const incoming = {};
     for (const [path, value] of Object.entries(values)) {

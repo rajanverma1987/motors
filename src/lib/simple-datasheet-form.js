@@ -1,6 +1,13 @@
 /** Simple portal AC / DC datasheet shapes (linked to a service proposal job). */
 
 import { todayISODate } from "@/lib/simple-service-proposal-form";
+import {
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_ROTOR_COLUMNS,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  generatorDatasheetHasData,
+  pumpDatasheetHasData,
+} from "@/lib/simple-datasheet-extra";
 
 /** @type {{ key: string, label: string }[][]} */
 export const AC_DATASHEET_FIELD_COLUMNS = [
@@ -248,6 +255,36 @@ export const MASTER_DATA_SEARCH_FORMS = {
         label: "Armature",
         mongoPrefix: "dcDatasheet.armature",
         columns: DC_ARMATURE_FIELD_COLUMNS,
+      },
+    ],
+  },
+  pump: {
+    id: "pump",
+    label: "Pump",
+    blocks: [
+      {
+        id: "dataSheet",
+        label: "Complete Pump",
+        mongoPrefix: "pumpDatasheet.dataSheet",
+        columns: PUMP_DATASHEET_FIELD_COLUMNS,
+      },
+    ],
+  },
+  generator: {
+    id: "generator",
+    label: "Generator",
+    blocks: [
+      {
+        id: "dataSheet",
+        label: "DataSheet",
+        mongoPrefix: "generatorDatasheet.dataSheet",
+        columns: GENERATOR_DATASHEET_FIELD_COLUMNS,
+      },
+      {
+        id: "rotorExciter",
+        label: "Rotor & Exciter",
+        mongoPrefix: "generatorDatasheet.rotorExciter",
+        columns: GENERATOR_ROTOR_COLUMNS,
       },
     ],
   },
@@ -589,6 +626,9 @@ function acNestedBlockHasMeaningfulData(block, emptyKeys) {
  */
 export function datasheetHasData(sheet, motorType) {
   if (!sheet || typeof sheet !== "object") return false;
+  const kind = String(motorType || "").trim();
+  if (kind === "Pump") return pumpDatasheetHasData(sheet);
+  if (kind === "Generator") return generatorDatasheetHasData(sheet);
   if (motorType === "DC") {
     if (sheet.fieldFrame || sheet.armature) {
       return (

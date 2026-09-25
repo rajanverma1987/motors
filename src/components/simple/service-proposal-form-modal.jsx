@@ -99,6 +99,16 @@ import {
   datasheetHasData,
   syncDatasheetJobNumber,
 } from "@/lib/simple-datasheet-form";
+import {
+  buildGeneratorDatasheetFromProposal,
+  buildPumpDatasheetFromProposal,
+} from "@/lib/simple-datasheet-extra";
+import {
+  MACHINE_TYPES,
+  datasheetStorageKey,
+  proposalMotorFieldLabel,
+  resolveMachineType,
+} from "@/lib/machine-types";
 import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import {
   fetchSimpleServiceProposal,
@@ -724,6 +734,8 @@ export default function ServiceProposalFormModal({
       datasheetPrefilled: Boolean(form.trackDatasheetPrefilled),
       provenance: String(form.trackDatasheetProvenance || "").trim(),
       powerConflict: Boolean(form.trackDatasheetPowerConflict),
+      sharedPowerType: String(form.trackDatasheetSharedPowerType || "").trim(),
+      machineType: String(form.motorPower || "").trim(),
       sentLabel: version
         ? `Proposal sent to the plant (version ${version})`
         : "Not sent to the plant yet",
@@ -742,27 +754,39 @@ export default function ServiceProposalFormModal({
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleMotorTypeChange = async (nextType) => {
-    const next = String(nextType || "").toUpperCase() === "DC" ? "DC" : "AC";
-    if (form.motorPower === next) return;
-    const otherType = next === "AC" ? "DC" : "AC";
-    const otherSheet = otherType === "AC" ? form.acDatasheet : form.dcDatasheet;
-    if (datasheetHasData(otherSheet, otherType)) {
+    const next = resolveMachineType(nextType);
+    if (resolveMachineType(form.motorPower) === next) return;
+    const cleared = {};
+    const holding = [];
+    for (const type of MACHINE_TYPES) {
+      if (type === next) continue;
+      const key = datasheetStorageKey(type);
+      if (datasheetHasData(form[key], type)) {
+        holding.push(type);
+        cleared[key] = null;
+      }
+    }
+    if (holding.length) {
+      const names = holding.join(" and ");
       const ok = await confirm({
         title: `Switch to ${next}?`,
-        message: `This will delete all ${otherType} datasheet data for this job. Do you want to continue?`,
+        message: `This will delete the ${names} datasheet data for this job. Do you want to continue?`,
         confirmLabel: "Continue",
         variant: "danger",
       });
       if (!ok) return;
-      setForm((f) => ({
-        ...f,
-        motorPower: next,
-        acDatasheet: otherType === "AC" ? null : f.acDatasheet,
-        dcDatasheet: otherType === "DC" ? null : f.dcDatasheet,
-      }));
+      setForm((f) => ({ ...f, motorPower: next, ...cleared }));
       return;
     }
     patch("motorPower", next);
+  };
+
+  const buildActiveDatasheet = (source, meta) => {
+    const type = resolveMachineType(source?.motorPower);
+    if (type === "DC") return buildDcDatasheetFromProposal(source, meta);
+    if (type === "Pump") return buildPumpDatasheetFromProposal(source, meta);
+    if (type === "Generator") return buildGeneratorDatasheetFromProposal(source, meta);
+    return buildAcDatasheetFromProposal(source, meta);
   };
 
   const openDatasheet = () => {
@@ -773,22 +797,20 @@ export default function ServiceProposalFormModal({
       technicianValue: String(form.preparedBy || "").trim(),
       technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
     };
-    const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
-    const sheet = isDc
-      ? buildDcDatasheetFromProposal(form, meta)
-      : buildAcDatasheetFromProposal(form, meta);
+    const type = resolveMachineType(form.motorPower);
+    const sheet = buildActiveDatasheet(form, meta);
     setForm((f) => ({
       ...f,
-      ...(isDc ? { dcDatasheet: sheet } : { acDatasheet: sheet }),
+      [datasheetStorageKey(type)]: sheet,
     }));
     setDatasheetOpen(true);
   };
 
   const handleDatasheetSave = async (sheet) => {
-    const isDc = String(form.motorPower || "AC").toUpperCase() === "DC";
+    const type = resolveMachineType(form.motorPower);
     const nextForm = {
       ...form,
-      ...(isDc ? { dcDatasheet: { ...sheet } } : { acDatasheet: { ...sheet } }),
+      [datasheetStorageKey(type)]: { ...sheet },
     };
     setForm(nextForm);
     // Persist like Receiving / Shipping: keep datasheet modal open after save.
@@ -999,9 +1021,10 @@ export default function ServiceProposalFormModal({
       technicianValue: String(form.preparedBy || "").trim(),
       technicianLabel: employeeDisplayLabel(form.preparedBy) || "",
     };
-    if (String(form.motorPower || "AC").toUpperCase() === "DC") {
-      return buildDcDatasheetFromProposal(form, meta);
-    }
+    const type = resolveMachineType(form.motorPower);
+    if (type === "DC") return buildDcDatasheetFromProposal(form, meta);
+    if (type === "Pump") return buildPumpDatasheetFromProposal(form, meta);
+    if (type === "Generator") return buildGeneratorDatasheetFromProposal(form, meta);
     return buildAcDatasheetFromProposal(form, meta);
   }, [form, selectedCustomer, employeeDisplayLabel]);
 
@@ -1181,6 +1204,8 @@ export default function ServiceProposalFormModal({
       const newDocNumber = String(saved.documentNumber || saved.quote || "").trim();
       let nextAc = syncDatasheetJobNumber(cloned.acDatasheet, newDocNumber);
       let nextDc = syncDatasheetJobNumber(cloned.dcDatasheet, newDocNumber);
+      let nextPump = syncDatasheetJobNumber(cloned.pumpDatasheet, newDocNumber);
+      let nextGenerator = syncDatasheetJobNumber(cloned.generatorDatasheet, newDocNumber);
       let nextDiagrams = [];
 
       if (sourceDiagrams.length) {
@@ -1224,6 +1249,8 @@ export default function ServiceProposalFormModal({
         jobDiagrams: nextDiagrams,
         acDatasheet: nextAc,
         dcDatasheet: nextDc,
+        pumpDatasheet: nextPump,
+        generatorDatasheet: nextGenerator,
       };
 
       let applied = syncedForm;
@@ -1240,6 +1267,11 @@ export default function ServiceProposalFormModal({
             quote: persistedNum,
             acDatasheet: syncDatasheetJobNumber(persisted.acDatasheet || nextAc, persistedNum),
             dcDatasheet: syncDatasheetJobNumber(persisted.dcDatasheet || nextDc, persistedNum),
+            pumpDatasheet: syncDatasheetJobNumber(persisted.pumpDatasheet || nextPump, persistedNum),
+            generatorDatasheet: syncDatasheetJobNumber(
+              persisted.generatorDatasheet || nextGenerator,
+              persistedNum
+            ),
             jobDiagrams: normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram).length
               ? normalizeJobDiagrams(persisted.jobDiagrams, persisted.jobDiagram)
               : nextDiagrams,
@@ -1257,6 +1289,11 @@ export default function ServiceProposalFormModal({
             ...simpleServiceProposalDocToForm(fresh),
             acDatasheet: syncDatasheetJobNumber(fresh.acDatasheet || nextAc, freshNum),
             dcDatasheet: syncDatasheetJobNumber(fresh.dcDatasheet || nextDc, freshNum),
+            pumpDatasheet: syncDatasheetJobNumber(fresh.pumpDatasheet || nextPump, freshNum),
+            generatorDatasheet: syncDatasheetJobNumber(
+              fresh.generatorDatasheet || nextGenerator,
+              freshNum
+            ),
             jobDiagrams: normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram).length
               ? normalizeJobDiagrams(fresh.jobDiagrams, fresh.jobDiagram)
               : nextDiagrams,
@@ -1610,7 +1647,7 @@ export default function ServiceProposalFormModal({
                 ) : null}
                 {trackLink.powerConflict ? (
                   <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
-                    Shared datasheet power type did not match
+                    Shared datasheet is {trackLink.sharedPowerType || "another machine type"}, this machine is {trackLink.machineType || "AC"}. Datasheet was not prefilled.
                   </Badge>
                 ) : null}
                 {trackLink.sentLabel ? (
@@ -1675,15 +1712,15 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
-              <FieldRow label="Motor Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Motor type">
-                  {["AC", "DC"].map((opt) => (
+              <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
+                  {MACHINE_TYPES.map((opt) => (
                     <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
                       <input
                         type="radio"
                         name="motorPower"
                         value={opt}
-                        checked={form.motorPower === opt}
+                        checked={resolveMachineType(form.motorPower) === opt}
                         onChange={() => handleMotorTypeChange(opt)}
                         className="h-3.5 w-3.5 accent-primary"
                       />
@@ -1699,7 +1736,7 @@ export default function ServiceProposalFormModal({
                     variant="primary"
                     size="sm"
                     className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
-                    title={`View ${form.motorPower === "DC" ? "DC" : "AC"} datasheet`}
+                    title={`View ${resolveMachineType(form.motorPower)} datasheet`}
                     onClick={openDatasheet}
                   >
                     View Datasheet
@@ -1710,7 +1747,7 @@ export default function ServiceProposalFormModal({
                     size="sm"
                     className={`${TOOLBAR_BTN} justify-center !px-3`}
                     disabled={saving || copying}
-                    title={`Email ${form.motorPower === "DC" ? "DC" : "AC"} report to customer`}
+                    title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
                     onClick={() => setEmailDatasheetOpen(true)}
                   >
                     Email Report
@@ -1737,7 +1774,7 @@ export default function ServiceProposalFormModal({
               {MOTOR_FIELDS.map((field) => (
                 <FieldRow
                   key={field.key}
-                  label={field.label}
+                  label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
                   labelWidth="7.75rem"
                   controlClassName="min-w-0 flex-1"
                 >
@@ -2431,7 +2468,7 @@ export default function ServiceProposalFormModal({
         open={datasheetOpen}
         onClose={() => setDatasheetOpen(false)}
         onSave={handleDatasheetSave}
-        motorType={form.motorPower === "DC" ? "DC" : "AC"}
+        motorType={resolveMachineType(form.motorPower)}
         initialDatasheet={datasheetInitial}
         technicianOptions={preparedByOptions}
         defaultTechnicianValue={String(form.preparedBy || "").trim()}
@@ -2480,7 +2517,7 @@ export default function ServiceProposalFormModal({
       <SimpleSendDatasheetModal
         open={emailDatasheetOpen}
         onClose={() => setEmailDatasheetOpen(false)}
-        motorType={form.motorPower === "DC" ? "DC" : "AC"}
+        motorType={resolveMachineType(form.motorPower)}
         datasheet={datasheetInitial}
         printContext={datasheetPrintContext}
         technicianLabel={employeeDisplayLabel(form.preparedBy) || ""}

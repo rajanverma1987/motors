@@ -15,6 +15,7 @@ import {
 } from "@/lib/simple-motor-logistics";
 import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import { isMongoObjectIdString, isShopAdminSelectValue } from "@/lib/technician-select-options";
+import { resolveMachineType } from "@/lib/machine-types";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -255,6 +256,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     motorPaint: "",
     acDatasheet: null,
     dcDatasheet: null,
+    pumpDatasheet: null,
+    generatorDatasheet: null,
     internalNotes: "",
     customerNotes: "",
     customerPo: "",
@@ -324,6 +327,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     payments: _payments,
     acDatasheet: _ac,
     dcDatasheet: _dc,
+    pumpDatasheet: _pump,
+    generatorDatasheet: _generator,
     ...rest
   } = source;
 
@@ -363,6 +368,8 @@ export function cloneServiceProposalAsNewRfq(form) {
     motorShipping: null,
     acDatasheet: cloneSheet(source.acDatasheet),
     dcDatasheet: cloneSheet(source.dcDatasheet),
+    pumpDatasheet: cloneSheet(source.pumpDatasheet),
+    generatorDatasheet: cloneSheet(source.generatorDatasheet),
     scopeDetails,
     otherItems,
     // A copy is a fresh shop record: it is never linked to the source IQMotorTrack RFQ.
@@ -378,6 +385,7 @@ export function cloneServiceProposalAsNewRfq(form) {
     trackDatasheetPrefilled: false,
     trackDatasheetProvenance: "",
     trackDatasheetPowerConflict: false,
+    trackDatasheetSharedPowerType: "",
     trackProposalSentAt: "",
     trackProposalVersion: 0,
   };
@@ -630,7 +638,7 @@ export function simpleServiceProposalDocToForm(doc) {
   next.customerPhone = String(d.customerPhone || d.phone || "").trim();
   next.customerTaxExempt = d.customerTaxExempt !== false;
   next.taxPercent = String(d.taxPercent ?? next.taxPercent ?? "").trim();
-  next.motorPower = String(d.motorPower || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+  next.motorPower = resolveMachineType(d.motorPower, "AC");
   next.namePlate = String(d.namePlate || "Original").trim() || "Original";
   next.documentNumber = String(d.documentNumber || d.quote || "").trim();
   next.recordType = String(d.recordType || RECORD_TYPE_RFQ)
@@ -704,6 +712,17 @@ export function simpleServiceProposalDocToForm(doc) {
     d.dcDatasheet && typeof d.dcDatasheet === "object"
       ? { ...d.dcDatasheet, jobNumber: docNumberForSheets || String(d.dcDatasheet.jobNumber || "").trim() }
       : null;
+  next.pumpDatasheet =
+    d.pumpDatasheet && typeof d.pumpDatasheet === "object"
+      ? { ...d.pumpDatasheet, jobNumber: docNumberForSheets || String(d.pumpDatasheet.jobNumber || "").trim() }
+      : null;
+  next.generatorDatasheet =
+    d.generatorDatasheet && typeof d.generatorDatasheet === "object"
+      ? {
+          ...d.generatorDatasheet,
+          jobNumber: docNumberForSheets || String(d.generatorDatasheet.jobNumber || "").trim(),
+        }
+      : null;
 
   const docNumber = next.documentNumber;
   next.motorReceiving = d.motorReceiving
@@ -728,6 +747,7 @@ export function simpleServiceProposalDocToForm(doc) {
   next.trackDatasheetPrefilled = Boolean(d.trackDatasheetPrefilled);
   next.trackDatasheetProvenance = String(d.trackDatasheetProvenance || "").trim();
   next.trackDatasheetPowerConflict = Boolean(d.trackDatasheetPowerConflict);
+  next.trackDatasheetSharedPowerType = String(d.trackDatasheetSharedPowerType || "").trim();
   next.trackProposalSentAt = d.trackProposalSentAt ? String(d.trackProposalSentAt) : "";
   next.trackProposalVersion = Number(d.trackProposalVersion) || 0;
 

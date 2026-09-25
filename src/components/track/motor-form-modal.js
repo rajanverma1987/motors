@@ -17,6 +17,7 @@ import {
   TRACK_STATUS_OPTIONS,
 } from "@/lib/track-motor-fields";
 import { appFetch } from "./api";
+import { resolveMachineType } from "@/lib/machine-types";
 import { useTrackAuth } from "./auth-context";
 import TrackPhotoInput from "./photo-input";
 import { trackDateInputValue } from "./ui";
@@ -52,6 +53,11 @@ function emptyForm() {
     insulationClass: "",
     serviceFactor: "",
     nemaDesign: "",
+    kva: "",
+    powerFactor: "",
+    ratedFlow: "",
+    ratedHead: "",
+    pumpSize: "",
     bearingDE: "",
     bearingODE: "",
     facilityLocation: "",
@@ -103,9 +109,17 @@ export default function TrackMotorFormModal({ open, motor, onClose, onSaved }) {
 
   const missing = useMemo(() => {
     const list = [];
+    const machineType = resolveMachineType(form.powerType, "AC");
     if (!form.manufacturer.trim()) list.push("Manufacturer");
-    if (!form.voltage.trim()) list.push("Voltage");
-    if (!form.hp.trim() && !form.kw.trim()) list.push("HP or kW");
+    if (machineType !== "Pump" && !form.voltage.trim()) list.push("Voltage");
+    const hasPower = form.hp.trim() || form.kw.trim();
+    if (machineType === "Pump") {
+      if (!hasPower && !form.ratedFlow.trim()) list.push("HP, kW, or rated flow");
+    } else if (machineType === "Generator") {
+      if (!hasPower && !form.kva.trim()) list.push("kVA, HP, or kW");
+    } else if (!hasPower) {
+      list.push("HP or kW");
+    }
     if (!form.facilityLocation.trim()) list.push("Facility location");
     return list;
   }, [form]);
@@ -214,12 +228,12 @@ export default function TrackMotorFormModal({ open, motor, onClose, onSaved }) {
               ) : null}
             </div>
             <Select
-              label="Power type"
+              label="Machine type"
               value={form.powerType}
               onChange={setField("powerType")}
               options={TRACK_POWER_OPTIONS}
               searchable={false}
-              help="Decides which datasheet format applies: AC or DC."
+              help="Decides which datasheet format applies: AC, DC, Pump, or Generator."
             />
             <Input
               label="Motor type"
@@ -235,7 +249,7 @@ export default function TrackMotorFormModal({ open, motor, onClose, onSaved }) {
                 value={form.voltage}
                 onChange={setField("voltage")}
                 placeholder="460 or 230/460"
-                required
+                required={resolveMachineType(form.powerType, "AC") !== "Pump"}
               />
             </div>
             <Input label="Full load amps" value={form.fullLoadAmps} onChange={setField("fullLoadAmps")} />
@@ -260,6 +274,11 @@ export default function TrackMotorFormModal({ open, motor, onClose, onSaved }) {
             <Input label="Insulation class" value={form.insulationClass} onChange={setField("insulationClass")} />
             <Input label="Service factor" value={form.serviceFactor} onChange={setField("serviceFactor")} />
             <Input label="NEMA design letter" value={form.nemaDesign} onChange={setField("nemaDesign")} />
+            <Input label="kVA" value={form.kva} onChange={setField("kva")} />
+            <Input label="Power factor" value={form.powerFactor} onChange={setField("powerFactor")} />
+            <Input label="Rated flow" value={form.ratedFlow} onChange={setField("ratedFlow")} />
+            <Input label="Rated head" value={form.ratedHead} onChange={setField("ratedHead")} />
+            <Input label="Pump size" value={form.pumpSize} onChange={setField("pumpSize")} />
             <Input label="Bearing DE" value={form.bearingDE} onChange={setField("bearingDE")} />
             <Input label="Bearing ODE" value={form.bearingODE} onChange={setField("bearingODE")} />
           </div>

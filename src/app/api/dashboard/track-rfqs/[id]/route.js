@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { flattenTrackDatasheet } from "@/lib/track-datasheet";
+import { resolveMachineType, machineTypesMatch } from "@/lib/machine-types";
 import { trackSnapshotDisplayGroups } from "@/lib/track-snapshot";
 import {
   applyTrackLeadViewed,
@@ -35,9 +36,9 @@ export async function GET(request, context) {
     );
 
     const snapshot = lead.trackMotorSnapshot || {};
-    const motorPowerType = String(snapshot.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
-    const sheetPowerType = String(lead.trackDatasheetPowerType || motorPowerType).toUpperCase();
-    const powerConflict = Boolean(lead.trackDatasheetSnapshot) && sheetPowerType !== motorPowerType;
+    const motorPowerType = resolveMachineType(snapshot.powerType, "AC");
+    const sheetPowerType = resolveMachineType(lead.trackDatasheetPowerType || motorPowerType, motorPowerType);
+    const powerConflict = Boolean(lead.trackDatasheetSnapshot) && !machineTypesMatch(sheetPowerType, motorPowerType);
 
     const proposal = lead.trackProposalId
       ? await SimpleServiceProposal.findOne({

@@ -5,6 +5,7 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { safePdfFilename } from "@/lib/simple-send-document-pdf";
 import { buildDatasheetPdfBuffer } from "@/lib/simple-datasheet-pdf";
+import { resolveMachineType } from "@/lib/machine-types";
 
 function shopCompanyNameFromUser(user) {
   return (user.shopName && String(user.shopName).trim()) || process.env.MOTOR_SHOP_COMPANY_NAME?.trim() || "";
@@ -21,7 +22,7 @@ export async function POST(request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const motorType = String(body?.motorType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+    const motorType = resolveMachineType(body?.motorType || "AC");
     const datasheet = body?.datasheet && typeof body.datasheet === "object" ? body.datasheet : {};
     const printContext = body?.printContext && typeof body.printContext === "object" ? body.printContext : {};
     const technicianLabel = String(body?.technicianLabel || "").trim();

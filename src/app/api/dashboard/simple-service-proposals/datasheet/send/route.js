@@ -16,6 +16,7 @@ import {
   safePdfFilename,
 } from "@/lib/simple-send-document-pdf";
 import { buildDatasheetPdfBuffer } from "@/lib/simple-datasheet-pdf";
+import { machineTypeDocumentTitle, resolveMachineType } from "@/lib/machine-types";
 
 function esc(v) {
   return v == null
@@ -41,10 +42,9 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const toEmail = String(searchParams.get("toEmail") || "").trim();
     const toName = String(searchParams.get("toName") || "").trim();
-    const motorType = String(searchParams.get("motorType") || "AC").toUpperCase();
+    const motorType = resolveMachineType(searchParams.get("motorType") || "AC");
     const documentLabel =
-      String(searchParams.get("documentLabel") || "").trim() ||
-      `${motorType} Motor Datasheet`;
+      String(searchParams.get("documentLabel") || "").trim() || machineTypeDocumentTitle(motorType);
 
     await connectDB();
     const email = user.email.trim().toLowerCase();
@@ -90,7 +90,7 @@ export async function POST(request) {
 
     const toEmail = String(body?.toEmail || "").trim();
     const toName = String(body?.toName || "").trim();
-    const motorType = String(body?.motorType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+    const motorType = resolveMachineType(body?.motorType || "AC");
     const datasheet = body?.datasheet && typeof body.datasheet === "object" ? body.datasheet : {};
     const printContext = body?.printContext && typeof body.printContext === "object" ? body.printContext : {};
     const technicianLabel = String(body?.technicianLabel || "").trim();
@@ -98,7 +98,7 @@ export async function POST(request) {
     const attachments = Array.isArray(body?.attachments) ? body.attachments : [];
 
     const docNumber = String(printContext.documentNumber || datasheet?.jobNumber || "").trim();
-    const reportTitle = `${motorType} Motor Datasheet`;
+    const reportTitle = machineTypeDocumentTitle(motorType);
 
     if (!toEmail) {
       return NextResponse.json({ error: "Customer email is required." }, { status: 400 });

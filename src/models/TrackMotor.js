@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const CRITICALITY = ["critical", "important", "standard", "spare"];
-const POWER_TYPES = ["AC", "DC"];
+const POWER_TYPES = ["AC", "DC", "Pump", "Generator"];
 const MOTOR_STATUS = [
   "in_service",
   "down",
@@ -44,7 +44,7 @@ const trackMotorSchema = new mongoose.Schema(
     motorType: { type: String, default: "", trim: true, maxlength: 80 },
     hp: { type: String, default: "", trim: true, maxlength: 40 },
     kw: { type: String, default: "", trim: true, maxlength: 40 },
-    voltage: { type: String, required: true, trim: true, maxlength: 80 },
+    voltage: { type: String, default: "", trim: true, maxlength: 80 },
     fullLoadAmps: { type: String, default: "", trim: true, maxlength: 40 },
     rpm: { type: String, default: "", trim: true, maxlength: 40 },
     phase: { type: String, default: "", trim: true, maxlength: 30 },
@@ -55,6 +55,11 @@ const trackMotorSchema = new mongoose.Schema(
     insulationClass: { type: String, default: "", trim: true, maxlength: 30 },
     serviceFactor: { type: String, default: "", trim: true, maxlength: 30 },
     nemaDesign: { type: String, default: "", trim: true, maxlength: 20 },
+    kva: { type: String, default: "", trim: true, maxlength: 40 },
+    powerFactor: { type: String, default: "", trim: true, maxlength: 40 },
+    ratedFlow: { type: String, default: "", trim: true, maxlength: 40 },
+    ratedHead: { type: String, default: "", trim: true, maxlength: 40 },
+    pumpSize: { type: String, default: "", trim: true, maxlength: 40 },
     bearingDE: { type: String, default: "", trim: true, maxlength: 60 },
     bearingODE: { type: String, default: "", trim: true, maxlength: 60 },
     /** §6.3 step 3 - required free text location, e.g. "Building A, Line 3". */

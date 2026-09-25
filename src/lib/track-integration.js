@@ -44,6 +44,7 @@ import {
   trackTurnaroundDays,
 } from "@/lib/track-rfq";
 import { mergeTrackDatasheet } from "@/lib/track-datasheet";
+import { machineTypesMatch, resolveMachineType } from "@/lib/machine-types";
 import { trackRespondsBy } from "@/lib/track-shop-accounts";
 
 const MAX_DELIVERY_ATTEMPTS = 6;
@@ -794,7 +795,7 @@ export async function applyTrackDatasheetWriteBack({
   const motor = await TrackMotor.findById(rfq.motorId);
   if (!motor) return { ok: false, reason: "no_motor" };
 
-  const incomingPowerType = String(powerType || "").toUpperCase() === "DC" ? "DC" : "AC";
+  const incomingPowerType = resolveMachineType(powerType, "AC");
   const key = `datasheet_saved:${invitation._id}:${revision || crypto
     .createHash("sha1")
     .update(JSON.stringify(datasheet || {}))
@@ -815,7 +816,7 @@ export async function applyTrackDatasheetWriteBack({
   try {
     // Power type conflict: store the version and flag for facility review, never
     // silently change the motor's power type (§9.8).
-    const conflict = incomingPowerType !== String(motor.powerType || "AC").toUpperCase();
+    const conflict = !machineTypesMatch(incomingPowerType, motor.powerType || "AC");
 
     const latest = await TrackDatasheetVersion.findOne({ motorId: motor._id, powerType: incomingPowerType })
       .sort({ version: -1 })
@@ -864,7 +865,7 @@ export async function applyTrackDatasheetWriteBack({
       rfqRequestId: rfq._id,
       recordedAt: new Date(),
       note: conflict
-        ? `Power type on the shop datasheet (${incomingPowerType}) differs from the motor record (${motor.powerType}).`
+        ? `Machine type on the shop datasheet (${incomingPowerType}) differs from the motor record (${resolveMachineType(motor.powerType, "AC")}).`
         : "",
     });
 

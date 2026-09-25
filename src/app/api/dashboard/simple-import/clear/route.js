@@ -28,6 +28,8 @@ const CLEARABLE_COLLECTION_KEYS = [
   "simpleServiceProposalOtherItems",
   "simpleServiceProposalAcDatasheets",
   "simpleServiceProposalDcDatasheets",
+  "simpleServiceProposalPumpDatasheets",
+  "simpleServiceProposalGeneratorDatasheets",
   "simplePurchaseOrderLineItems",
 ];
 
@@ -83,6 +85,16 @@ export async function POST(request) {
           return SimpleServiceProposal.updateMany(
             { createdByEmail: ownerEmail },
             { $set: { dcDatasheet: null } },
+          );
+        case "simpleServiceProposalPumpDatasheets":
+          return SimpleServiceProposal.updateMany(
+            { createdByEmail: ownerEmail },
+            { $set: { pumpDatasheet: null } },
+          );
+        case "simpleServiceProposalGeneratorDatasheets":
+          return SimpleServiceProposal.updateMany(
+            { createdByEmail: ownerEmail },
+            { $set: { generatorDatasheet: null } },
           );
         case "simplePurchaseOrderLineItems":
           return SimplePurchaseOrder.updateMany(

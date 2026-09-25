@@ -9,6 +9,20 @@ import {
   DC_ARMATURE_FIELD_COLUMNS,
   DC_FIELD_FRAME_FIELD_COLUMNS,
 } from "@/lib/simple-datasheet-form";
+import { resolveMachineType } from "@/lib/machine-types";
+import {
+  GENERATOR_ASSEMBLY_GROUPS,
+  GENERATOR_COLUMN_TITLES,
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_DISASSEMBLY_GROUPS,
+  GENERATOR_ROTOR_COLUMNS,
+  PUMP_ASSEMBLY_GROUPS,
+  PUMP_COLUMN_TITLES,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  PUMP_DISASSEMBLY_GROUPS,
+  generatorDatasheetVisibleTabs,
+  pumpDatasheetVisibleTabs,
+} from "@/lib/simple-datasheet-extra";
 
 function cellValue(v) {
   const s = String(v ?? "").trim();
@@ -668,6 +682,83 @@ function AcAssemblyPrintBody({ values }) {
  * Printable datasheet: professional letter-size shop form (bordered field grid).
  * Appends one page per saved job diagram and attached photos / documents.
  */
+function groupPairs(groups, values) {
+  const pairs = [];
+  const v = values || {};
+  for (const group of groups) {
+    if (group.whenKey && String(v[group.whenKey] || "").toLowerCase() !== "true") continue;
+    if (group.type === "goodBad") {
+      for (const row of group.rows || []) pairs.push([row.label, visualStatusLabel(v[row.key])]);
+    } else if (group.type === "checks") {
+      for (const item of group.items || []) pairs.push([item.label, boolYes(v[item.key])]);
+    } else if (group.type === "fields") {
+      for (const [key, label] of group.fields || []) pairs.push([label, v[key]]);
+    } else if (group.type === "textarea") {
+      pairs.push([group.label || group.title, v[group.key]]);
+    }
+  }
+  return pairs;
+}
+
+function StructuredDatasheetPages({
+  title,
+  datasheet,
+  headerProps,
+  visibleTabs,
+  dataColumns,
+  columnTitles,
+  disassemblyGroups,
+  assemblyGroups,
+  rotor = false,
+}) {
+  const section = String(datasheet?.section || "").trim();
+  const pages = [];
+  let first = true;
+  const push = (tabTitle, body) => {
+    pages.push(
+      <PrintTabPage
+        key={tabTitle}
+        headerProps={headerProps}
+        title={title}
+        subtitle={`${section} · ${tabTitle}`}
+        pageBreakBefore={!first}
+      >
+        {body}
+      </PrintTabPage>
+    );
+    first = false;
+  };
+  if (visibleTabs.includes("DataSheet")) {
+    push(
+      "DataSheet",
+      <>
+        <PrintFieldGrid columns={dataColumns} values={datasheet?.dataSheet || {}} columnTitles={columnTitles} />
+        <PrintNotes notes={datasheet?.dataSheet?.notes} />
+      </>
+    );
+  }
+  if (rotor && visibleTabs.includes("Rotor & Exciter")) {
+    push(
+      "Rotor & Exciter",
+      <>
+        <PrintFieldGrid
+          columns={GENERATOR_ROTOR_COLUMNS}
+          values={datasheet?.rotorExciter || {}}
+          columnTitles={["Rotor / field", "Excitation", ""]}
+        />
+        <PrintNotes notes={datasheet?.rotorExciter?.notes} />
+      </>
+    );
+  }
+  if (visibleTabs.includes("Disassembly")) {
+    push("Disassembly", <TwoColKvTable pairs={groupPairs(disassemblyGroups, datasheet?.disassembly)} />);
+  }
+  if (visibleTabs.includes("Assembly")) {
+    push("Assembly", <TwoColKvTable pairs={groupPairs(assemblyGroups, datasheet?.assembly)} />);
+  }
+  return pages;
+}
+
 export default function SimpleDatasheetPrintSheet({
   motorType = "AC",
   datasheet,
@@ -712,6 +803,32 @@ export default function SimpleDatasheetPrintSheet({
 
   const diagramPages = <PrintDiagramPages diagrams={jobDiagrams} headerProps={headerProps} />;
   const attachmentPages = <PrintAttachmentPages attachments={attachments} headerProps={headerProps} />;
+  const machineType = resolveMachineType(motorType);
+
+  if (machineType === "Pump" || machineType === "Generator") {
+    const isPump = machineType === "Pump";
+    return (
+      <div className="datasheet-print-root bg-white text-black" style={{ fontFamily: "Arial, Helvetica, sans-serif" }}>
+        <StructuredDatasheetPages
+          title={isPump ? "Pump Datasheet" : "Generator Datasheet"}
+          datasheet={datasheet}
+          headerProps={headerProps}
+          visibleTabs={
+            isPump
+              ? pumpDatasheetVisibleTabs(datasheet?.section)
+              : generatorDatasheetVisibleTabs(datasheet?.section)
+          }
+          dataColumns={isPump ? PUMP_DATASHEET_FIELD_COLUMNS : GENERATOR_DATASHEET_FIELD_COLUMNS}
+          columnTitles={isPump ? PUMP_COLUMN_TITLES : GENERATOR_COLUMN_TITLES}
+          disassemblyGroups={isPump ? PUMP_DISASSEMBLY_GROUPS : GENERATOR_DISASSEMBLY_GROUPS}
+          assemblyGroups={isPump ? PUMP_ASSEMBLY_GROUPS : GENERATOR_ASSEMBLY_GROUPS}
+          rotor={!isPump}
+        />
+        {diagramPages}
+        {attachmentPages}
+      </div>
+    );
+  }
 
   if (!isDc) {
     const section = String(datasheet?.section || "Complete Motor").trim();

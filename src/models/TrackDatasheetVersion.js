@@ -20,7 +20,7 @@ const trackDatasheetVersionSchema = new mongoose.Schema(
       index: true,
     },
     version: { type: Number, required: true },
-    powerType: { type: String, enum: ["AC", "DC"], required: true },
+    powerType: { type: String, enum: ["AC", "DC", "Pump", "Generator"], required: true },
     data: { type: mongoose.Schema.Types.Mixed, default: {} },
     /** Per-field provenance: { "dataSheet.slots": { source, shopName, jobNumber, at, previousValue } } */
     fieldProvenance: { type: mongoose.Schema.Types.Mixed, default: {} },

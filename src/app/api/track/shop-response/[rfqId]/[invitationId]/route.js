@@ -11,6 +11,7 @@ import {
   hashTrackEmailToken,
 } from "@/lib/track-integration";
 import { flattenTrackDatasheet } from "@/lib/track-datasheet";
+import { resolveMachineType } from "@/lib/machine-types";
 import { trackSnapshotDisplayGroups } from "@/lib/track-snapshot";
 import {
   TRACK_DECLINE_REASONS,
@@ -70,7 +71,7 @@ async function stampTokenUsed(rfqId, invitationId) {
 
 function publicView(rfq, invitation) {
   const snapshot = rfq.motorSnapshot || {};
-  const powerType = String(snapshot.powerType || "AC").toUpperCase() === "DC" ? "DC" : "AC";
+  const powerType = resolveMachineType(snapshot.powerType, "AC");
   return {
     rfqId: String(rfq._id),
     invitationId: String(invitation._id),

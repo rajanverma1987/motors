@@ -56,6 +56,8 @@ export const TRACK_CRITICALITY_OPTIONS = [
 export const TRACK_POWER_OPTIONS = [
   { value: "AC", label: "AC" },
   { value: "DC", label: "DC" },
+  { value: "Pump", label: "Pump" },
+  { value: "Generator", label: "Generator" },
 ];
 
 export const TRACK_PHASE_OPTIONS = [
@@ -95,6 +97,11 @@ export const TRACK_MOTOR_TEXT_FIELDS = {
   insulationClass: 30,
   serviceFactor: 30,
   nemaDesign: 20,
+  kva: 40,
+  powerFactor: 40,
+  ratedFlow: 40,
+  ratedHead: 40,
+  pumpSize: 40,
   bearingDE: 60,
   bearingODE: 60,
   facilityLocation: 240,
@@ -110,7 +117,7 @@ export const TRACK_NAMEPLATE_DISPLAY_FIELDS = [
   { key: "manufacturer", label: "Manufacturer" },
   { key: "modelNumber", label: "Model number" },
   { key: "serialNumber", label: "Serial number" },
-  { key: "powerType", label: "Power type" },
+  { key: "powerType", label: "Machine type" },
   { key: "motorType", label: "Motor type" },
   { key: "hp", label: "HP" },
   { key: "kw", label: "kW" },
@@ -125,6 +132,11 @@ export const TRACK_NAMEPLATE_DISPLAY_FIELDS = [
   { key: "insulationClass", label: "Insulation class" },
   { key: "serviceFactor", label: "Service factor" },
   { key: "nemaDesign", label: "NEMA design letter" },
+  { key: "kva", label: "kVA" },
+  { key: "powerFactor", label: "Power factor" },
+  { key: "ratedFlow", label: "Rated flow" },
+  { key: "ratedHead", label: "Rated head" },
+  { key: "pumpSize", label: "Pump size" },
   { key: "bearingDE", label: "Bearing DE" },
   { key: "bearingODE", label: "Bearing ODE" },
 ];

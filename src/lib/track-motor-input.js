@@ -4,6 +4,7 @@
 
 import { clampString } from "@/lib/validation";
 import { TRACK_MOTOR_TEXT_FIELDS } from "@/lib/track-motor-fields";
+import { resolveMachineType } from "@/lib/machine-types";
 import { TRACK_MOTOR_CRITICALITY, TRACK_MOTOR_STATUS } from "@/models/TrackMotor";
 
 function parseDate(value) {
@@ -34,7 +35,7 @@ export function applyTrackMotorFields(body, target) {
     target[key] = clampString(body[key], max);
   }
   if (body.powerType !== undefined) {
-    target.powerType = String(body.powerType).toUpperCase() === "DC" ? "DC" : "AC";
+    target.powerType = resolveMachineType(body.powerType, "AC");
   }
   if (body.criticality !== undefined && TRACK_MOTOR_CRITICALITY.includes(String(body.criticality))) {
     target.criticality = String(body.criticality);
@@ -64,9 +65,18 @@ export function applyTrackMotorFields(body, target) {
  * @returns {string} error message, or "" when valid
  */
 export function validateTrackMotor(motor) {
+  const type = resolveMachineType(motor?.powerType, "AC");
   if (!String(motor.manufacturer || "").trim()) return "Manufacturer is required.";
-  if (!String(motor.voltage || "").trim()) return "Voltage is required.";
-  if (!String(motor.hp || "").trim() && !String(motor.kw || "").trim()) {
+  if (type !== "Pump" && !String(motor.voltage || "").trim()) return "Voltage is required.";
+  const hasPower = String(motor.hp || "").trim() || String(motor.kw || "").trim();
+  if (type === "Pump") {
+    if (!hasPower && !String(motor.ratedFlow || "").trim()) {
+      return "Enter HP, kW, or rated flow.";
+    }
+  } else if (type === "Generator") {
+    if (!hasPower && !String(motor.kva || "").trim()) return "Enter kVA, HP, and/or kW.";
+    if (!String(motor.voltage || "").trim()) return "Voltage is required.";
+  } else if (!hasPower) {
     return "Enter HP and/or kW.";
   }
   if (!String(motor.facilityLocation || "").trim()) {

@@ -6,6 +6,7 @@
  * shop from saving its own record, and repeated saves never duplicate history.
  */
 
+import { datasheetStorageKey } from "@/lib/machine-types";
 import {
   applyTrackDatasheetWriteBack,
   applyTrackInvoiceIssued,
@@ -53,7 +54,7 @@ export function stripTrackOwnedFields(payload) {
 }
 
 function sheetFor(context, doc) {
-  const raw = context.powerType === "DC" ? doc?.dcDatasheet : doc?.acDatasheet;
+  const raw = doc?.[datasheetStorageKey(context.powerType)];
   return raw && typeof raw === "object" ? raw : null;
 }
 

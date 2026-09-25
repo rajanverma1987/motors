@@ -11,6 +11,20 @@ import {
 } from "@/lib/simple-datasheet-form";
 import { readShopSettingsLogoFile } from "@/lib/shop-email-logo";
 import { logoDocumentSizeRem } from "@/lib/logo-document-scale";
+import { resolveMachineType } from "@/lib/machine-types";
+import {
+  GENERATOR_ASSEMBLY_GROUPS,
+  GENERATOR_COLUMN_TITLES,
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_DISASSEMBLY_GROUPS,
+  GENERATOR_ROTOR_COLUMNS,
+  PUMP_ASSEMBLY_GROUPS,
+  PUMP_COLUMN_TITLES,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  PUMP_DISASSEMBLY_GROUPS,
+  generatorDatasheetVisibleTabs,
+  pumpDatasheetVisibleTabs,
+} from "@/lib/simple-datasheet-extra";
 
 const MARGIN = 36;
 const PAGE_WIDTH = 612;
@@ -460,6 +474,7 @@ export async function buildDatasheetPdfBuffer({
   settings = {},
 }) {
   const isDc = String(motorType || "AC").toUpperCase() === "DC";
+  const machineType = resolveMachineType(motorType);
   const docNumber = txt(printContext.documentNumber || datasheet?.jobNumber);
   const docLabel = txt(printContext.documentLabel || "Job#");
   const customerName = txt(printContext.customerName || printContext.companyName || datasheet?.company);
@@ -493,7 +508,105 @@ export async function buildDatasheetPdfBuffer({
     ],
   ];
 
-  if (!isDc) {
+  if (machineType === "Pump" || machineType === "Generator") {
+    const isPump = machineType === "Pump";
+    const visible = isPump
+      ? pumpDatasheetVisibleTabs(section)
+      : generatorDatasheetVisibleTabs(section);
+    const title = isPump ? "Pump Datasheet" : "Generator Datasheet";
+    let y = MARGIN;
+    const paint = (tabTitle, draw) => {
+      doc.addPage();
+      y = MARGIN;
+      y = drawCompactHeader(doc, y, {
+        title,
+        subtitle: `${section} · ${tabTitle}`,
+        docNumber,
+        docLabel,
+        customerName,
+      });
+      y = draw(y);
+      drawSignatures(doc, y);
+    };
+    y = drawMasthead(doc, y, {
+      title,
+      subtitle: section,
+      shopName,
+      docNumber,
+      docLabel,
+      logoBuffer,
+      logoScale: settings?.logoDocumentScale,
+    });
+    y = drawInfoGrid(doc, y, infoRows);
+    if (visible.includes("DataSheet")) {
+      y = drawFieldGrid(
+        doc,
+        y,
+        isPump ? PUMP_DATASHEET_FIELD_COLUMNS : GENERATOR_DATASHEET_FIELD_COLUMNS,
+        datasheet?.dataSheet || {},
+        isPump ? PUMP_COLUMN_TITLES : GENERATOR_COLUMN_TITLES
+      );
+      y = drawNotesBox(doc, y, "Datasheet notes", datasheet?.dataSheet?.notes);
+      drawSignatures(doc, y);
+    }
+    if (!isPump && visible.includes("Rotor & Exciter")) {
+      paint("Rotor & Exciter", (startY) => {
+        let next = drawFieldGrid(doc, startY, GENERATOR_ROTOR_COLUMNS, datasheet?.rotorExciter || {}, [
+          "Rotor / field",
+          "Excitation",
+          "",
+        ]);
+        return drawNotesBox(doc, next, "Rotor notes", datasheet?.rotorExciter?.notes);
+      });
+    }
+    const drawGroupPage = (tabTitle, groups, values) => {
+      paint(tabTitle, (startY) => {
+        let next = startY;
+        for (const group of groups) {
+          if (group.whenKey && String(values?.[group.whenKey] || "").toLowerCase() !== "true") continue;
+          if (next > BOTTOM_LIMIT - 90) {
+            doc.addPage();
+            next = drawCompactHeader(doc, MARGIN, {
+              title,
+              subtitle: `${section} · ${tabTitle}`,
+              docNumber,
+              docLabel,
+              customerName,
+            });
+          }
+          next = drawSectionBanner(doc, next, group.title);
+          if (group.type === "textarea") {
+            next = drawNotesBox(doc, next, group.label || group.title, values?.[group.key]);
+            continue;
+          }
+          const pairs = [];
+          if (group.type === "goodBad") {
+            for (const row of group.rows || []) pairs.push([row.label, visualStatusVal(values?.[row.key])]);
+          } else if (group.type === "checks") {
+            for (const item of group.items || []) pairs.push([item.label, boolYesVal(values?.[item.key])]);
+          } else if (group.type === "fields") {
+            for (const [key, label] of group.fields || []) pairs.push([label, values?.[key]]);
+          }
+          if (pairs.length) next = drawKvTable(doc, next, pairs);
+        }
+        return next;
+      });
+    };
+    if (visible.includes("Disassembly")) {
+      drawGroupPage(
+        "Disassembly",
+        isPump ? PUMP_DISASSEMBLY_GROUPS : GENERATOR_DISASSEMBLY_GROUPS,
+        datasheet?.disassembly || {}
+      );
+    }
+    if (visible.includes("Assembly")) {
+      drawGroupPage(
+        "Assembly",
+        isPump ? PUMP_ASSEMBLY_GROUPS : GENERATOR_ASSEMBLY_GROUPS,
+        datasheet?.assembly || {}
+      );
+    }
+  } else if (!isDc) {
     // --- AC MOTOR REPORT ---
     const dataSheetBlock =
       datasheet?.dataSheet && typeof datasheet.dataSheet === "object" ? datasheet.dataSheet : datasheet;

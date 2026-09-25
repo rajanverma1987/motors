@@ -10,6 +10,7 @@ import Textarea from "@/components/ui/textarea";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
+import { machineTypeDocumentTitle, resolveMachineType } from "@/lib/machine-types";
 import {
   SEND_DOCUMENT_CUSTOM_MESSAGE_MAX,
   SEND_DOCUMENT_CC_MAX_LENGTH,
@@ -42,7 +43,8 @@ export default function SimpleSendDatasheetModal({
   const [emailCc, setEmailCc] = useState("");
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
 
-  const isDc = String(motorType || "AC").toUpperCase() === "DC";
+  const machineType = resolveMachineType(motorType);
+  const reportTitle = machineTypeDocumentTitle(machineType);
   const docNumber = String(printContext?.documentNumber || datasheet?.jobNumber || "").trim();
   const customerName = String(printContext?.customerName || printContext?.companyName || datasheet?.company || "").trim();
   const defaultTo = String(printContext?.customerEmail || "").trim();
@@ -65,8 +67,8 @@ export default function SimpleSendDatasheetModal({
     const params = new URLSearchParams({
       toEmail: defaultTo,
       toName: customerName,
-      motorType: isDc ? "DC" : "AC",
-      documentLabel: `${isDc ? "DC" : "AC"} Motor Datasheet`,
+      motorType: machineType,
+      documentLabel: reportTitle,
     });
 
     fetch(`/api/dashboard/simple-service-proposals/datasheet/send?${params.toString()}`, {
@@ -86,7 +88,7 @@ export default function SimpleSendDatasheetModal({
     return () => {
       cancelled = true;
     };
-  }, [open, defaultTo, customerName, isDc]);
+  }, [open, defaultTo, customerName, machineType, reportTitle]);
 
   const handleSend = async () => {
     const targetEmail = toEmail.trim();
@@ -106,7 +108,7 @@ export default function SimpleSendDatasheetModal({
           toName: customerName,
           cc: emailCc.trim(),
           customMessage: emailCustomMessage.trim(),
-          motorType: isDc ? "DC" : "AC",
+          motorType: machineType,
           datasheet,
           printContext,
           technicianLabel,
@@ -138,7 +140,7 @@ export default function SimpleSendDatasheetModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={`Email ${isDc ? "DC" : "AC"} Report to Customer`}
+      title={`Email ${reportTitle} to Customer`}
       size="6xl"
       width="min(980px, 96vw)"
       zIndex={zIndex}
@@ -238,7 +240,7 @@ export default function SimpleSendDatasheetModal({
           <div className="max-h-[min(56vh,540px)] overflow-auto rounded-lg border border-border bg-neutral-100 p-3 sm:p-5 shadow-inner">
             <div className="mx-auto w-full max-w-[50rem] bg-white p-4 shadow-sm sm:p-6 text-black">
               <SimpleDatasheetPrintSheet
-                motorType={isDc ? "DC" : "AC"}
+                motorType={machineType}
                 datasheet={datasheet}
                 printContext={printContext || {}}
                 technicianLabel={technicianLabel}

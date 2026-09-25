@@ -12,6 +12,7 @@ import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-se
 import SimpleDiagramModal from "@/components/simple/simple-diagram-modal";
 import SimpleAcDisassemblyFields from "@/components/simple/simple-ac-disassembly-fields";
 import SimpleAcAssemblyFields from "@/components/simple/simple-ac-assembly-fields";
+import SimpleStructuredDatasheetFields from "@/components/simple/simple-structured-datasheet-fields";
 import DatasheetFieldGrid, {
   DATASHEET_FIELD_INPUT,
 } from "@/components/simple/simple-datasheet-field-grid";
@@ -33,6 +34,28 @@ import {
   normalizeAcDatasheet,
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
+import {
+  GENERATOR_ASSEMBLY_GROUPS,
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_DATASHEET_SECTIONS,
+  GENERATOR_DISASSEMBLY_GROUPS,
+  GENERATOR_ROTOR_COLUMNS,
+  GENERATOR_TAB_ASSEMBLY,
+  GENERATOR_TAB_DATASHEET,
+  GENERATOR_TAB_DISASSEMBLY,
+  GENERATOR_TAB_ROTOR,
+  PUMP_ASSEMBLY_GROUPS,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  PUMP_DATASHEET_SECTIONS,
+  PUMP_DISASSEMBLY_GROUPS,
+  createEmptyGeneratorDatasheet,
+  createEmptyPumpDatasheet,
+  generatorDatasheetVisibleTabs,
+  normalizeGeneratorDatasheet,
+  normalizePumpDatasheet,
+  pumpDatasheetVisibleTabs,
+} from "@/lib/simple-datasheet-extra";
+import { machineTypeDiagramsEnabled, resolveMachineType } from "@/lib/machine-types";
 import { RECORD_TYPE_RFQ, recordTypeJobNumberLabel } from "@/lib/simple-service-proposal-form";
 import {
   resolveLoggedInEmployeeSelectValue,
@@ -99,10 +122,17 @@ export default function SimpleDatasheetModal({
 }) {
   const alert = useAlert();
   const { user } = useAuth();
-  const isDc = String(motorType || "AC").toUpperCase() === "DC";
-  const [form, setForm] = useState(() =>
-    isDc ? createEmptyDcDatasheet() : createEmptyAcDatasheet()
-  );
+  const machineType = resolveMachineType(motorType);
+  const isDc = machineType === "DC";
+  const isPump = machineType === "Pump";
+  const isGenerator = machineType === "Generator";
+  const isStructured = isPump || isGenerator;
+  const diagramsEnabled = machineTypeDiagramsEnabled(machineType);
+  const [form, setForm] = useState(() => {
+    if (isPump) return createEmptyPumpDatasheet();
+    if (isGenerator) return createEmptyGeneratorDatasheet();
+    return isDc ? createEmptyDcDatasheet() : createEmptyAcDatasheet();
+  });
   const [saving, setSaving] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
@@ -139,9 +169,13 @@ export default function SimpleDatasheetModal({
 
   useEffect(() => {
     if (open && !wasOpenRef.current) {
-      const next = isDc
-        ? normalizeDcDatasheet(initialDatasheet || {})
-        : normalizeAcDatasheet(initialDatasheet || {});
+      const next = isPump
+        ? normalizePumpDatasheet(initialDatasheet || {})
+        : isGenerator
+          ? normalizeGeneratorDatasheet(initialDatasheet || {})
+          : isDc
+            ? normalizeDcDatasheet(initialDatasheet || {})
+            : normalizeAcDatasheet(initialDatasheet || {});
       next.technician = resolveTechnicianValue(next.technician);
       if (!isDc) {
         const asm = next.assembly && typeof next.assembly === "object" ? next.assembly : {};
@@ -159,7 +193,7 @@ export default function SimpleDatasheetModal({
     }
     wasOpenRef.current = open;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per open
-  }, [open, isDc, initialDatasheet]);
+  }, [open, isDc, isPump, isGenerator, initialDatasheet]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -179,6 +213,15 @@ export default function SimpleDatasheetModal({
       const activeTab = visible.includes(f.activeTab) ? f.activeTab : visible[0];
       return { ...f, section: nextSection, activeTab };
     });
+  };
+
+  const handleStructuredSectionChange = (nextSection) => {
+    const visible = isPump ? pumpDatasheetVisibleTabs(nextSection) : generatorDatasheetVisibleTabs(nextSection);
+    setForm((f) => ({
+      ...f,
+      section: nextSection,
+      activeTab: visible.includes(f.activeTab) ? f.activeTab : visible[0],
+    }));
   };
 
   const handleAcSectionChange = (nextSection) => {
@@ -205,7 +248,7 @@ export default function SimpleDatasheetModal({
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          motorType: isDc ? "DC" : "AC",
+          motorType: machineType,
           datasheet: printDatasheet,
           printContext: resolvedPrintContext,
           technicianLabel,
@@ -222,7 +265,7 @@ export default function SimpleDatasheetModal({
       const a = document.createElement("a");
       a.href = url;
       const num = resolvedPrintContext.documentNumber || "Report";
-      a.download = `${isDc ? "DC" : "AC"}-Datasheet-Report-${num}.pdf`;
+      a.download = `${machineType}-Datasheet-Report-${num}.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -244,7 +287,14 @@ export default function SimpleDatasheetModal({
     setSaving(true);
     try {
       const current = formRef.current;
-      await onSave?.(isDc ? normalizeDcDatasheet(current) : normalizeAcDatasheet(current));
+      const normalized = isPump
+        ? normalizePumpDatasheet(current)
+        : isGenerator
+          ? normalizeGeneratorDatasheet(current)
+          : isDc
+            ? normalizeDcDatasheet(current)
+            : normalizeAcDatasheet(current);
+      await onSave?.(normalized);
     } catch (err) {
       await alert({
         title: "Error",
@@ -292,18 +342,19 @@ export default function SimpleDatasheetModal({
     };
   }, [printContext, form.company, form.jobNumber, jobStatus, jobStatusOptions]);
 
-  const printDatasheet = useMemo(
-    () => (isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form)),
-    [isDc, form]
-  );
+  const printDatasheet = useMemo(() => {
+    if (isPump) return normalizePumpDatasheet(form);
+    if (isGenerator) return normalizeGeneratorDatasheet(form);
+    return isDc ? normalizeDcDatasheet(form) : normalizeAcDatasheet(form);
+  }, [isDc, isPump, isGenerator, form]);
 
   const dcVisibleTabs = useMemo(
     () => (isDc ? dcDatasheetVisibleTabs(form.section) : []),
     [isDc, form.section]
   );
   const acVisibleTabs = useMemo(
-    () => (!isDc ? acDatasheetVisibleTabs(form.section) : []),
-    [isDc, form.section]
+    () => (!isDc && !isStructured ? acDatasheetVisibleTabs(form.section) : []),
+    [isDc, isStructured, form.section]
   );
 
   const activeDcTab = dcVisibleTabs.includes(form.activeTab) ? form.activeTab : dcVisibleTabs[0];
@@ -312,7 +363,7 @@ export default function SimpleDatasheetModal({
   const dcColumns = isArmatureTab ? DC_ARMATURE_FIELD_COLUMNS : DC_FIELD_FRAME_FIELD_COLUMNS;
   const dcBlock = form[dcBlockKey] && typeof form[dcBlockKey] === "object" ? form[dcBlockKey] : {};
 
-  const showAcTabStripe = !isDc && form.section === "Complete Motor";
+  const showAcTabStripe = !isDc && !isStructured && form.section === "Complete Motor";
   const activeAcTab = acVisibleTabs.includes(form.activeTab) ? form.activeTab : acVisibleTabs[0];
   const acBlockKey =
     activeAcTab === AC_DATASHEET_TAB_DISASSEMBLY
@@ -320,6 +371,15 @@ export default function SimpleDatasheetModal({
       : activeAcTab === AC_DATASHEET_TAB_ASSEMBLY
         ? "assembly"
         : "dataSheet";
+  const structuredVisibleTabs = useMemo(() => {
+    if (isPump) return pumpDatasheetVisibleTabs(form.section);
+    if (isGenerator) return generatorDatasheetVisibleTabs(form.section);
+    return [];
+  }, [isPump, isGenerator, form.section]);
+  const activeStructuredTab = structuredVisibleTabs.includes(form.activeTab)
+    ? form.activeTab
+    : structuredVisibleTabs[0];
+  const showStructuredTabStripe = isStructured && structuredVisibleTabs.length > 1;
   const acBlock = form[acBlockKey] && typeof form[acBlockKey] === "object" ? form[acBlockKey] : {};
 
   const headerActions = (
@@ -333,7 +393,15 @@ export default function SimpleDatasheetModal({
     <Modal
       open={open && !printing}
       onClose={() => !saving && !printing && onClose?.()}
-      title={isDc ? "Add/Edit DC Fields" : "Add/Edit AC Fields"}
+      title={
+        isPump
+          ? "Add/Edit Pump Fields"
+          : isGenerator
+            ? "Add/Edit Generator Fields"
+            : isDc
+              ? "Add/Edit DC Fields"
+              : "Add/Edit AC Fields"
+      }
       size="6xl"
       width="min(1100px, 96vw)"
       height="min(90vh, 880px)"
@@ -358,6 +426,22 @@ export default function SimpleDatasheetModal({
                       value={opt}
                       checked={form.section === opt}
                       onChange={() => handleDcSectionChange(opt)}
+                      className="h-3.5 w-3.5 accent-primary"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : isStructured ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine section">
+                {(isPump ? PUMP_DATASHEET_SECTIONS : GENERATOR_DATASHEET_SECTIONS).map((opt) => (
+                  <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                    <input
+                      type="radio"
+                      name="structuredSection"
+                      value={opt}
+                      checked={form.section === opt}
+                      onChange={() => handleStructuredSectionChange(opt)}
                       className="h-3.5 w-3.5 accent-primary"
                     />
                     {opt}
@@ -392,7 +476,7 @@ export default function SimpleDatasheetModal({
               size="sm"
               className={TOOLBAR_BTN}
               disabled={downloadingPdf || saving || printing}
-              title={`Download ${isDc ? "DC" : "AC"} report PDF with attached images`}
+              title={`Download ${machineType} report PDF with attached images`}
               onClick={handleDownloadPdf}
             >
               {downloadingPdf ? "Generating PDF…" : "Download PDF"}
@@ -403,7 +487,7 @@ export default function SimpleDatasheetModal({
               size="sm"
               className={TOOLBAR_BTN}
               disabled={saving || printing}
-              title={`Email ${isDc ? "DC" : "AC"} test & inspection report to customer`}
+              title={`Email ${machineType} test and inspection report to customer`}
               onClick={() => setEmailOpen(true)}
             >
               Email Report
@@ -419,6 +503,7 @@ export default function SimpleDatasheetModal({
             >
               Attachments{Array.isArray(attachments) && attachments.length ? ` (${attachments.length})` : ""}
             </Button>
+            {diagramsEnabled ? (
             <Button
               type="button"
               variant="primary"
@@ -438,6 +523,7 @@ export default function SimpleDatasheetModal({
                 ? `Diagrams (${jobDiagrams.length})`
                 : "Draw/View Diagram"}
             </Button>
+            ) : null}
           </div>
         </div>
 
@@ -553,7 +639,75 @@ export default function SimpleDatasheetModal({
           </div>
         ) : null}
 
-        {isDc ? (
+        {showStructuredTabStripe ? (
+          <div className="flex flex-wrap gap-1" role="tablist" aria-label="Datasheet tabs">
+            {structuredVisibleTabs.map((tab) => {
+              const active = tab === activeStructuredTab;
+              return (
+                <button
+                  key={tab}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${TAB_BTN} ${
+                    active
+                      ? "bg-primary text-white"
+                      : "border border-border bg-primary/[0.06] text-title hover:bg-primary/15 dark:bg-primary/15"
+                  }`}
+                  onClick={() => patch("activeTab", tab)}
+                >
+                  {tab}
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {isStructured ? (
+          activeStructuredTab === GENERATOR_TAB_ROTOR ? (
+            <>
+              <DatasheetFieldGrid
+                columns={GENERATOR_ROTOR_COLUMNS}
+                values={form.rotorExciter || {}}
+                onFieldChange={(key, value) => patchNested("rotorExciter", key, value)}
+                labelWidth="12rem"
+              />
+              <NotesPanel
+                label="Notes:"
+                value={form.rotorExciter?.notes ?? ""}
+                onChange={(v) => patchNested("rotorExciter", "notes", v)}
+                ariaLabel="Rotor and exciter notes"
+              />
+            </>
+          ) : activeStructuredTab === GENERATOR_TAB_DISASSEMBLY || activeStructuredTab === "Disassembly" ? (
+            <SimpleStructuredDatasheetFields
+              groups={isPump ? PUMP_DISASSEMBLY_GROUPS : GENERATOR_DISASSEMBLY_GROUPS}
+              values={form.disassembly || {}}
+              onChange={(key, value) => patchNested("disassembly", key, value)}
+            />
+          ) : activeStructuredTab === GENERATOR_TAB_ASSEMBLY || activeStructuredTab === "Assembly" ? (
+            <SimpleStructuredDatasheetFields
+              groups={isPump ? PUMP_ASSEMBLY_GROUPS : GENERATOR_ASSEMBLY_GROUPS}
+              values={form.assembly || {}}
+              onChange={(key, value) => patchNested("assembly", key, value)}
+            />
+          ) : (
+            <>
+              <DatasheetFieldGrid
+                columns={isPump ? PUMP_DATASHEET_FIELD_COLUMNS : GENERATOR_DATASHEET_FIELD_COLUMNS}
+                values={form.dataSheet || {}}
+                onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
+                labelWidth="11.5rem"
+              />
+              <NotesPanel
+                label="Notes:"
+                value={form.dataSheet?.notes ?? ""}
+                onChange={(v) => patchNested("dataSheet", "notes", v)}
+                ariaLabel="DataSheet notes"
+              />
+            </>
+          )
+        ) : isDc ? (
           <>
             <DatasheetFieldGrid
               columns={dcColumns}
@@ -602,7 +756,7 @@ export default function SimpleDatasheetModal({
     {printing ? (
       <DocumentPrintOffscreenPortal open onClose={handlePrintDone}>
         <SimpleDatasheetPrintSheet
-          motorType={isDc ? "DC" : "AC"}
+          motorType={machineType}
           datasheet={printDatasheet}
           printContext={resolvedPrintContext}
           technicianLabel={technicianLabel}
@@ -635,7 +789,7 @@ export default function SimpleDatasheetModal({
     <SimpleSendDatasheetModal
       open={emailOpen}
       onClose={() => setEmailOpen(false)}
-      motorType={isDc ? "DC" : "AC"}
+      motorType={machineType}
       datasheet={printDatasheet}
       printContext={resolvedPrintContext}
       technicianLabel={technicianLabel}

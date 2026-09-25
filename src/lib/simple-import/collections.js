@@ -27,6 +27,16 @@ import {
   normalizeDcDatasheet,
 } from "@/lib/simple-datasheet-form";
 import { sanitizeSimplePortalPayload } from "@/lib/simple-portal-mongo";
+import { resolveMachineType } from "@/lib/machine-types";
+import {
+  GENERATOR_DATASHEET_FIELD_COLUMNS,
+  GENERATOR_ROTOR_COLUMNS,
+  PUMP_DATASHEET_FIELD_COLUMNS,
+  createEmptyGeneratorDatasheet,
+  createEmptyPumpDatasheet,
+  normalizeGeneratorDatasheet,
+  normalizePumpDatasheet,
+} from "@/lib/simple-datasheet-extra";
 import {
   csvCalendarDateToMongo,
   normalizeCsvCalendarDate,
@@ -126,6 +136,12 @@ const DC_ARM_FIELD_KEYS = datasheetFieldKeys(DC_ARMATURE_FIELD_COLUMNS);
 const AC_DS_CSV_HEADERS = AC_DS_FIELD_KEYS.map((k) => `ds_${k}`);
 const DC_FF_CSV_HEADERS = DC_FF_FIELD_KEYS.map((k) => `ff_${k}`);
 const DC_ARM_CSV_HEADERS = DC_ARM_FIELD_KEYS.map((k) => `arm_${k}`);
+const PUMP_DS_FIELD_KEYS = datasheetFieldKeys(PUMP_DATASHEET_FIELD_COLUMNS);
+const GENERATOR_DS_FIELD_KEYS = datasheetFieldKeys(GENERATOR_DATASHEET_FIELD_COLUMNS);
+const GENERATOR_ROTOR_FIELD_KEYS = datasheetFieldKeys(GENERATOR_ROTOR_COLUMNS);
+const PUMP_DS_CSV_HEADERS = PUMP_DS_FIELD_KEYS.map((k) => `ds_${k}`);
+const GENERATOR_DS_CSV_HEADERS = GENERATOR_DS_FIELD_KEYS.map((k) => `ds_${k}`);
+const GENERATOR_ROTOR_CSV_HEADERS = GENERATOR_ROTOR_FIELD_KEYS.map((k) => `rotor_${k}`);
 
 function key(sourceSystem, externalRef) {
   return `${s(sourceSystem).toLowerCase()}::${s(externalRef).toLowerCase()}`;
@@ -610,8 +626,8 @@ const IMPORT_COLLECTIONS = {
         errs.push("record_type must be RFQ, JOB, or INVOICE");
       }
       const motorPower = s(r.motor_power || "AC").toUpperCase();
-      if (motorPower && !["AC", "DC"].includes(motorPower)) {
-        errs.push("motor_power must be AC or DC");
+      if (motorPower && !["AC", "DC", "PUMP", "GENERATOR"].includes(motorPower)) {
+        errs.push("motor_power must be AC, DC, Pump, or Generator");
       }
       errs.push(...validateCsvDateColumns(r, SP_CSV_DATE_COLUMNS));
       return errs;
@@ -643,7 +659,7 @@ const IMPORT_COLLECTIONS = {
       const customerPhone = s(r.customer_phone) || s(customer?.phone);
       const customerEmail = (s(r.customer_email) || s(customer?.email)).toLowerCase();
       const status = resolveConfiguredStatusSlug(r.status, mergedSettings);
-      const motorPower = s(r.motor_power || "AC").toUpperCase() || "AC";
+      const motorPower = resolveMachineType(r.motor_power || "AC", "AC");
       const hasTaxExemptCol = Object.prototype.hasOwnProperty.call(r, "customer_tax_exempt") && s(r.customer_tax_exempt) !== "";
       const customerTaxExempt = hasTaxExemptCol
         ? boolish(r.customer_tax_exempt, true)
@@ -1109,6 +1125,229 @@ const IMPORT_COLLECTIONS = {
       doc.set("dcDatasheet", next);
       doc.markModified("dcDatasheet");
       if (!s(doc.motorPower)) doc.set("motorPower", "DC");
+      await doc.save();
+    },
+  },
+  simpleServiceProposalPumpDatasheets: {
+    label: "Service Proposal — Pump Datasheet",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref"],
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "date",
+      "technician",
+      "section",
+      "active_tab",
+      ...PUMP_DS_CSV_HEADERS,
+      "ds_notes",
+      "disassembly_json",
+      "assembly_json",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-PUMP-DS",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      date: "2026-08-01",
+      technician: "Alex Tech",
+      section: "Complete Pump",
+      active_tab: "DataSheet",
+      ds_make: "Goulds",
+      ds_model: "3196",
+      ds_notes: "Imported pump datasheet",
+      disassembly_json: "",
+      assembly_json: "",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) errs.push("service_proposal_external_ref is required");
+      const section = s(r.section);
+      if (section && !["Complete Pump", "Pump End Only"].includes(section)) {
+        errs.push('section must be "Complete Pump" or "Pump End Only"');
+      }
+      const tab = s(r.active_tab);
+      if (tab && !["DataSheet", "Disassembly", "Assembly"].includes(tab)) {
+        errs.push('active_tab must be "DataSheet", "Disassembly", or "Assembly"');
+      }
+      errs.push(...validateCsvDateColumns(r, ["date"]));
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      return {
+        serviceProposalId,
+        sheet: {
+          date: normalizeCsvCalendarDate(r.date),
+          technician: s(r.technician),
+          section: s(r.section),
+          activeTab: s(r.active_tab),
+          dataSheet: {
+            ...pickPrefixedFields(r, "ds_", PUMP_DS_FIELD_KEYS),
+            ...(s(r.ds_notes) ? { notes: s(r.ds_notes) } : {}),
+          },
+          disassembly: parseJsonObjectField(r.disassembly_json, "disassembly_json"),
+          assembly: parseJsonObjectField(r.assembly_json, "assembly_json"),
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const existingRaw =
+        doc.pumpDatasheet && typeof doc.pumpDatasheet === "object"
+          ? typeof doc.pumpDatasheet.toObject === "function"
+            ? doc.pumpDatasheet.toObject()
+            : doc.pumpDatasheet
+          : null;
+      const existing = existingRaw ? normalizePumpDatasheet(existingRaw) : createEmptyPumpDatasheet();
+      const patch = payload.sheet || {};
+      const next = normalizePumpDatasheet({
+        ...existing,
+        date: patch.date || existing.date,
+        technician: patch.technician || existing.technician,
+        jobNumber: s(doc.documentNumber || doc.quote || existing.jobNumber),
+        company: s(doc.companyName || existing.company),
+        section: patch.section || existing.section,
+        activeTab: patch.activeTab || existing.activeTab,
+        dataSheet: { ...existing.dataSheet, ...(patch.dataSheet || {}) },
+        disassembly: patch.disassembly ? { ...existing.disassembly, ...patch.disassembly } : existing.disassembly,
+        assembly: patch.assembly ? { ...existing.assembly, ...patch.assembly } : existing.assembly,
+      });
+      doc.set("pumpDatasheet", next);
+      doc.markModified("pumpDatasheet");
+      if (!s(doc.motorPower)) doc.set("motorPower", "Pump");
+      await doc.save();
+    },
+  },
+  simpleServiceProposalGeneratorDatasheets: {
+    label: "Service Proposal — Generator Datasheet",
+    model: SimpleServiceProposal,
+    skipModelValidation: true,
+    parentCollection: "simpleServiceProposals",
+    requiredHeaders: [...BASE_HEADERS, "service_proposal_external_ref"],
+    headers: [
+      ...BASE_HEADERS,
+      "service_proposal_external_ref",
+      "service_proposal_source_system",
+      "date",
+      "technician",
+      "section",
+      "active_tab",
+      ...GENERATOR_DS_CSV_HEADERS,
+      "ds_notes",
+      ...GENERATOR_ROTOR_CSV_HEADERS,
+      "rotor_notes",
+      "rotor_exciter_json",
+      "disassembly_json",
+      "assembly_json",
+    ],
+    sample: {
+      source_system: "manual_csv",
+      external_ref: "SSP-1001-GEN-DS",
+      service_proposal_external_ref: "SSP-1001",
+      service_proposal_source_system: "manual_csv",
+      date: "2026-08-01",
+      technician: "Alex Tech",
+      section: "Complete Generator",
+      active_tab: "DataSheet",
+      ds_make: "Marathon",
+      ds_kw: "500",
+      ds_notes: "Imported generator datasheet",
+      rotor_exciter_json: "",
+      disassembly_json: "",
+      assembly_json: "",
+    },
+    validateRow: (r) => {
+      const errs = [];
+      if (!s(r.external_ref)) errs.push("external_ref is required");
+      if (!s(r.service_proposal_external_ref)) errs.push("service_proposal_external_ref is required");
+      const section = s(r.section);
+      if (section && !["Complete Generator", "Stator Only", "Rotor Only"].includes(section)) {
+        errs.push('section must be "Complete Generator", "Stator Only", or "Rotor Only"');
+      }
+      const tab = s(r.active_tab);
+      if (tab && !["DataSheet", "Rotor & Exciter", "Disassembly", "Assembly"].includes(tab)) {
+        errs.push('active_tab must be "DataSheet", "Rotor & Exciter", "Disassembly", or "Assembly"');
+      }
+      errs.push(...validateCsvDateColumns(r, ["date"]));
+      return errs;
+    },
+    buildPayload: (r, ctx) => {
+      const serviceProposalId = ctx.resolveRef(
+        "simpleServiceProposals",
+        s(r.service_proposal_source_system || "manual_csv"),
+        s(r.service_proposal_external_ref),
+      );
+      if (!serviceProposalId) {
+        throw new Error("service_proposal_external_ref not found — import Service Proposals first");
+      }
+      const rotorFromJson = parseJsonObjectField(r.rotor_exciter_json, "rotor_exciter_json");
+      return {
+        serviceProposalId,
+        sheet: {
+          date: normalizeCsvCalendarDate(r.date),
+          technician: s(r.technician),
+          section: s(r.section),
+          activeTab: s(r.active_tab),
+          dataSheet: {
+            ...pickPrefixedFields(r, "ds_", GENERATOR_DS_FIELD_KEYS),
+            ...(s(r.ds_notes) ? { notes: s(r.ds_notes) } : {}),
+          },
+          rotorExciter: {
+            ...pickPrefixedFields(r, "rotor_", GENERATOR_ROTOR_FIELD_KEYS),
+            ...(rotorFromJson && typeof rotorFromJson === "object" ? rotorFromJson : {}),
+            ...(s(r.rotor_notes) ? { notes: s(r.rotor_notes) } : {}),
+          },
+          disassembly: parseJsonObjectField(r.disassembly_json, "disassembly_json"),
+          assembly: parseJsonObjectField(r.assembly_json, "assembly_json"),
+        },
+      };
+    },
+    importRow: async ({ payload, ownerEmail }) => {
+      const doc = await SimpleServiceProposal.findOne({
+        _id: payload.serviceProposalId,
+        createdByEmail: ownerEmail,
+      });
+      if (!doc) throw new Error("Service proposal not found");
+      const existingRaw =
+        doc.generatorDatasheet && typeof doc.generatorDatasheet === "object"
+          ? typeof doc.generatorDatasheet.toObject === "function"
+            ? doc.generatorDatasheet.toObject()
+            : doc.generatorDatasheet
+          : null;
+      const existing = existingRaw ? normalizeGeneratorDatasheet(existingRaw) : createEmptyGeneratorDatasheet();
+      const patch = payload.sheet || {};
+      const next = normalizeGeneratorDatasheet({
+        ...existing,
+        date: patch.date || existing.date,
+        technician: patch.technician || existing.technician,
+        jobNumber: s(doc.documentNumber || doc.quote || existing.jobNumber),
+        company: s(doc.companyName || existing.company),
+        section: patch.section || existing.section,
+        activeTab: patch.activeTab || existing.activeTab,
+        dataSheet: { ...existing.dataSheet, ...(patch.dataSheet || {}) },
+        rotorExciter: { ...existing.rotorExciter, ...(patch.rotorExciter || {}) },
+        disassembly: patch.disassembly ? { ...existing.disassembly, ...patch.disassembly } : existing.disassembly,
+        assembly: patch.assembly ? { ...existing.assembly, ...patch.assembly } : existing.assembly,
+      });
+      doc.set("generatorDatasheet", next);
+      doc.markModified("generatorDatasheet");
+      if (!s(doc.motorPower)) doc.set("motorPower", "Generator");
       await doc.save();
     },
   },
