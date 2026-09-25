@@ -150,6 +150,79 @@ export function computeHoursFromPunches(punches) {
   };
 }
 
+function overlapMs(startA, endA, startB, endB) {
+  return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
+}
+
+/**
+ * Hours worked on one local calendar day.
+ * A finished session is check-out minus check-in, minus breaks.
+ * An open session (still checked in) runs from check-in to `now`.
+ * Only the slice that falls on `dayIso` is counted.
+ * @param {Array} punches
+ * @param {string} dayIso YYYY-MM-DD local
+ * @param {Date} [now]
+ */
+export function hoursOnLocalDay(punches, dayIso, now = new Date()) {
+  const day = String(dayIso || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;
+  const [year, month, date] = day.split("-").map(Number);
+  const dayStart = new Date(year, month - 1, date, 0, 0, 0, 0).getTime();
+  const dayEnd = new Date(year, month - 1, date, 23, 59, 59, 999).getTime();
+  const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  if (!Number.isFinite(dayStart) || !Number.isFinite(nowMs)) return 0;
+  const cap = Math.min(nowMs, dayEnd);
+
+  const list = (Array.isArray(punches) ? punches : [])
+    .filter((p) => !p?.voidedAt)
+    .slice()
+    .sort((a, b) => new Date(a.punchedAt) - new Date(b.punchedAt));
+
+  let totalMs = 0;
+  let openIn = null;
+  let breakStart = null;
+  /** @type {Array<[number, number]>} */
+  let breaks = [];
+
+  const addSession = (endMs) => {
+    if (openIn == null || !Number.isFinite(endMs) || endMs <= openIn) return;
+    const closedBreaks = breaks.slice();
+    if (breakStart != null && breakStart < endMs) closedBreaks.push([breakStart, endMs]);
+    let ms = overlapMs(openIn, endMs, dayStart, cap);
+    for (const [bs, be] of closedBreaks) {
+      ms -= overlapMs(bs, be, dayStart, cap);
+    }
+    totalMs += Math.max(0, ms);
+  };
+
+  for (const p of list) {
+    const t = String(p.type || "");
+    const at = new Date(p.punchedAt).getTime();
+    if (!Number.isFinite(at)) continue;
+    if (t === "in") {
+      openIn = at;
+      breakStart = null;
+      breaks = [];
+    } else if (t === "break_start" && openIn != null) {
+      breakStart = at;
+    } else if (t === "break_end" && breakStart != null) {
+      breaks.push([breakStart, at]);
+      breakStart = null;
+    } else if (t === "out" && openIn != null) {
+      addSession(at);
+      openIn = null;
+      breakStart = null;
+      breaks = [];
+    }
+  }
+
+  if (openIn != null && nowMs >= dayStart && nowMs <= dayEnd) {
+    addSession(nowMs);
+  }
+
+  return Math.round((totalMs / 3600000) * 100) / 100;
+}
+
 export function lateEarlyFlags(punchedAtIso, scheduledStart, scheduledEnd, type) {
   const start = String(scheduledStart || "").trim();
   const end = String(scheduledEnd || "").trim();

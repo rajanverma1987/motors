@@ -6,7 +6,9 @@ import TimeClockManualHours from "@/models/TimeClockManualHours";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
   computeHoursFromPunches,
+  hoursOnLocalDay,
   lateEarlyFlags,
+  localDateIso,
   mergeHoursWithManual,
   serializePunch,
 } from "@/lib/time-clock-punches";
@@ -45,9 +47,24 @@ export async function GET(request) {
       ...(employeeId ? { employeeId } : {}),
     };
 
-    const [punches, manuals] = await Promise.all([
+    const now = new Date();
+    const today = localDateIso(now);
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const lookback = new Date(todayStart);
+    lookback.setDate(lookback.getDate() - 7);
+
+    const [punches, manuals, todayPunches] = await Promise.all([
       TimeClockPunch.find(punchQ).sort({ punchedAt: 1 }).lean(),
       TimeClockManualHours.find(manualQ).sort({ workDate: 1 }).lean(),
+      TimeClockPunch.find({
+        createdByEmail: email,
+        voidedAt: null,
+        punchedAt: { $gte: lookback, $lte: now },
+        ...(employeeId ? { employeeId } : {}),
+      })
+        .sort({ punchedAt: 1 })
+        .lean(),
     ]);
 
     const byEmployeePunches = new Map();
@@ -64,7 +81,20 @@ export async function GET(request) {
       byEmployeeManual.get(id).push(m);
     }
 
-    const empIds = [...new Set([...byEmployeePunches.keys(), ...byEmployeeManual.keys()])];
+    const byEmployeeToday = new Map();
+    for (const p of todayPunches) {
+      const id = String(p.employeeId);
+      if (!byEmployeeToday.has(id)) byEmployeeToday.set(id, []);
+      byEmployeeToday.get(id).push(p);
+    }
+
+    const empIds = [
+      ...new Set([
+        ...byEmployeePunches.keys(),
+        ...byEmployeeManual.keys(),
+        ...byEmployeeToday.keys(),
+      ]),
+    ];
     const employees = empIds.length
       ? await Employee.find({
           createdByEmail: email,
@@ -82,6 +112,8 @@ export async function GET(request) {
       const emp = empMap.get(id);
       const punchHours = computeHoursFromPunches(list);
       const hours = mergeHoursWithManual(punchHours, manualList);
+      const todayHours = hoursOnLocalDay(byEmployeeToday.get(id) || [], today, now);
+      if (!list.length && !manualList.length && todayHours <= 0) continue;
       const flags = list.map((p) =>
         lateEarlyFlags(p.punchedAt, emp?.scheduledStart, emp?.scheduledEnd, p.type)
       );
@@ -95,6 +127,7 @@ export async function GET(request) {
         clockedHours: hours.clockedHours,
         manualHours: hours.manualHours,
         totalHours: hours.totalHours,
+        todayHours,
         byDay: hours.byDay,
         lateCount: flags.filter((f) => f.late).length,
         earlyCount: flags.filter((f) => f.early).length,

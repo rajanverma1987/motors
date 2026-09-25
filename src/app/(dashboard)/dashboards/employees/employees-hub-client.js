@@ -297,6 +297,14 @@ export default function EmployeesHubClient() {
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (tab !== "hours") return undefined;
+    const id = setInterval(() => {
+      void loadHours().catch(() => {});
+    }, 30000);
+    return () => clearInterval(id);
+  }, [tab, loadHours]);
+
   const switchTab = (nextTab) => {
     if (nextTab === tab) return;
     if (nextTab === "employees" || nextTab === "release-payment") {
@@ -767,6 +775,13 @@ export default function EmployeesHubClient() {
                 label: "Hours",
                 render: (v) => (
                   <span className="font-semibold tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
+                ),
+              },
+              {
+                key: "todayHours",
+                label: "Today",
+                render: (v) => (
+                  <span className="tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
                 ),
               },
               { key: "lateCount", label: "Late" },
