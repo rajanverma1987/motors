@@ -70,6 +70,7 @@ import {
 } from "@/lib/invoice-tax-collected";
 import { computeSpInvoiceMoney } from "@/lib/simple-reports/helpers";
 import { proposalLogisticsChargesTotal } from "@/lib/simple-motor-logistics";
+import { resolveMachineType } from "@/lib/machine-types";
 
 const FILTER_AMOUNT_RECEIVABLE = INVOICE_FILTER_AMOUNT_RECEIVABLE;
 const FILTER_TAX_COLLECTED = INVOICE_FILTER_TAX_COLLECTED;
@@ -745,6 +746,17 @@ export default function ServiceProposalsPanel({
           </button>
         ),
       },
+      ...(!isInvoices
+        ? [
+            {
+              key: "jobType",
+              label: "Job Type",
+              sortable: true,
+              align: "center",
+              render: (_, row) => resolveMachineType(row?.motorPower, "AC"),
+            },
+          ]
+        : []),
       {
         key: "date",
         label: "Date",
