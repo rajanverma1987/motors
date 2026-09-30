@@ -32,6 +32,7 @@ export async function GET(request) {
       workOrders: jobs,
       workOrderStatuses: merged.workOrderStatuses,
       shopFloorBoardOrder: merged.shopFloorBoardOrder,
+      shopFloorBoardDesign: merged.shopFloorBoardDesign,
       workOrderStatusTileColors: merged.workOrderStatusTileColors || {},
     });
   } catch (err) {

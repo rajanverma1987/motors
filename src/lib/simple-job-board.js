@@ -68,6 +68,18 @@ export function computeJobBoardColumns(canonical, boardSubset, jobs) {
   return [...ordered, ...unknownTail];
 }
 
+export const SHOP_FLOOR_BOARD_DESIGNS = [
+  { id: "columns", label: "Columns" },
+  { id: "lanes", label: "Lanes" },
+  { id: "list", label: "List" },
+];
+
+export function normalizeShopFloorBoardDesign(value) {
+  const id = String(value || "").trim().toLowerCase();
+  if (id === "lanes" || id === "list") return id;
+  return "columns";
+}
+
 export function resolveStatusToColumnKey(status, columnTitles) {
   const t = String(status ?? "").trim();
   if (!t) return "";

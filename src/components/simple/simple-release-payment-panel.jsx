@@ -21,6 +21,7 @@ import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import { SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/lib/simple-service-proposal-form";
 import {
   estimateEmployeePeriodPay,
+  parsePayRate,
   periodMonthBounds,
 } from "@/lib/employee-payroll-payment";
 
@@ -50,8 +51,80 @@ function currentMonthValue() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function todayIsoDate() {
-  return new Date().toISOString().slice(0, 10);
+function localTodayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function paidAtIsoForSave(dateStr) {
+  const raw = String(dateStr || "").trim();
+  if (raw === localTodayIso()) return new Date().toISOString();
+  const [year, month, day] = raw.split("-").map(Number);
+  if (!year || !month || !day) return "";
+  return new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
+}
+
+function amountForHours(hours, rate) {
+  const h = Number(hours);
+  const r = parsePayRate(rate);
+  if (!Number.isFinite(h) || h < 0) return "0.00";
+  return (Math.round((r * h + Number.EPSILON) * 100) / 100).toFixed(2);
+}
+
+function payrollRowForEmployee({
+  employeeId,
+  name,
+  employeeNumber,
+  department,
+  payType,
+  hourlyRate,
+  monthHours,
+  monthPayment,
+  paidHours,
+  balance,
+  isCurrentMonth,
+}) {
+  let totalHours = Number(monthHours) || 0;
+  let payment = monthPayment || null;
+  let status = payment ? "paid" : "unpaid";
+
+  if (payType === "hourly" && isCurrentMonth && balance) {
+    totalHours = Number(balance.unpaidHours) || 0;
+    payment = balance.lastPayment || payment;
+    status = totalHours > 0.0001 ? "unpaid" : "paid";
+    if (status === "paid" && !monthPayment) return null;
+  } else if (payType === "hourly" && isCurrentMonth) {
+    status = totalHours > 0.0001 ? "unpaid" : payment ? "paid" : "unpaid";
+  } else if (payType === "hourly" && payment) {
+    totalHours = Number(paidHours) || 0;
+    status = "paid";
+  }
+
+  const amountDue =
+    status === "unpaid"
+      ? estimateEmployeePeriodPay({
+          payType,
+          hourlyRate,
+          totalHours: payType === "salary" ? 0 : totalHours,
+        })
+      : 0;
+
+  if (status === "unpaid" && payType === "hourly" && totalHours <= 0.0001) return null;
+  if (status === "unpaid" && payType === "salary" && amountDue <= 0) return null;
+  if (status === "paid" && !payment) return null;
+
+  return {
+    employeeId,
+    name,
+    employeeNumber,
+    department,
+    payType,
+    hourlyRate,
+    totalHours,
+    amountDue,
+    payment,
+    status,
+  };
 }
 
 function monthLabel(ym) {
@@ -84,7 +157,8 @@ export default function SimpleReleasePaymentPanel() {
   const [payModalOpen, setPayModalOpen] = useState(false);
   const [payingRow, setPayingRow] = useState(null);
   const [payAmount, setPayAmount] = useState("");
-  const [payPaidAt, setPayPaidAt] = useState(todayIsoDate);
+  const [payHours, setPayHours] = useState("");
+  const [payPaidAt, setPayPaidAt] = useState(localTodayIso);
   const [payPeriodFrom, setPayPeriodFrom] = useState("");
   const [payPeriodTo, setPayPeriodTo] = useState("");
   const [payMethod, setPayMethod] = useState("");
@@ -119,8 +193,9 @@ export default function SimpleReleasePaymentPanel() {
     }
     setLoading(true);
     try {
+      const isCurrentMonth = month === currentMonthValue();
       const hoursParams = new URLSearchParams({ from: bounds.from, to: bounds.to });
-      const [hoursRes, paymentsRes, employeesRes] = await Promise.all([
+      const [hoursRes, paymentsRes, employeesRes, balancesRes] = await Promise.all([
         fetch(`/api/dashboard/time-clock/hours?${hoursParams}`, {
           credentials: "include",
           cache: "no-store",
@@ -130,18 +205,28 @@ export default function SimpleReleasePaymentPanel() {
           cache: "no-store",
         }),
         fetch("/api/dashboard/employees", { credentials: "include", cache: "no-store" }),
+        fetch(
+          `/api/dashboard/employee-payroll-payments?balances=1&periodMonth=${encodeURIComponent(month)}`,
+          {
+            credentials: "include",
+            cache: "no-store",
+          }
+        ),
       ]);
 
       const hoursData = await hoursRes.json().catch(() => ({}));
       const paymentsData = await paymentsRes.json().catch(() => ({}));
       const employeesData = await employeesRes.json().catch(() => ({}));
+      const balancesData = await balancesRes.json().catch(() => ({}));
 
       if (!hoursRes.ok) throw new Error(hoursData.error || "Failed to load hours");
       if (!paymentsRes.ok) throw new Error(paymentsData.error || "Failed to load payroll payments");
       if (!employeesRes.ok) throw new Error(employeesData.error || "Failed to load employees");
+      if (!balancesRes.ok) throw new Error(balancesData.error || "Failed to load unpaid hours");
 
       const hoursRows = Array.isArray(hoursData.rows) ? hoursData.rows : [];
       const payments = Array.isArray(paymentsData.payments) ? paymentsData.payments : [];
+      const balances = Array.isArray(balancesData.balances) ? balancesData.balances : [];
       const employees = Array.isArray(employeesData.items)
         ? employeesData.items
         : Array.isArray(employeesData)
@@ -149,7 +234,14 @@ export default function SimpleReleasePaymentPanel() {
           : [];
 
       const hoursByEmployee = new Map(hoursRows.map((r) => [String(r.employeeId), r]));
-      const paymentByEmployee = new Map(payments.map((p) => [String(p.employeeId), p]));
+      const paymentByEmployee = new Map();
+      const paidHoursByEmployee = new Map();
+      for (const payment of payments) {
+        const id = String(payment.employeeId || "");
+        if (!paymentByEmployee.has(id)) paymentByEmployee.set(id, payment);
+        paidHoursByEmployee.set(id, (paidHoursByEmployee.get(id) || 0) + (Number(payment.hours) || 0));
+      }
+      const balanceByEmployee = new Map(balances.map((b) => [String(b.employeeId), b]));
 
       const activeEmployees = employees.filter((e) => {
         const status = String(e.employmentStatus || "Active").trim().toLowerCase();
@@ -159,62 +251,48 @@ export default function SimpleReleasePaymentPanel() {
       const nextRows = [];
       const seen = new Set();
 
+      const pushRow = (source) => {
+        const row = payrollRowForEmployee({ ...source, isCurrentMonth });
+        if (!row || seen.has(row.employeeId)) return;
+        seen.add(row.employeeId);
+        nextRows.push(row);
+      };
+
       for (const emp of activeEmployees) {
         const id = String(emp.id || emp._id || "").trim();
         if (!id) continue;
-        seen.add(id);
         const hoursRow = hoursByEmployee.get(id);
-        const totalHours = Number(hoursRow?.totalHours) || 0;
-        const payType =
-          String(emp.payType || hoursRow?.payType || "hourly").toLowerCase() === "salary"
-            ? "salary"
-            : "hourly";
-        const hourlyRate = String(emp.hourlyRate ?? hoursRow?.hourlyRate ?? "").trim();
-        const amountDue = estimateEmployeePeriodPay({
-          payType,
-          hourlyRate,
-          totalHours,
-        });
-        const payment = paymentByEmployee.get(id) || null;
-
-        if (!payment && payType === "hourly" && totalHours <= 0) continue;
-        if (!payment && payType === "salary" && amountDue <= 0) continue;
-
-        nextRows.push({
+        pushRow({
           employeeId: id,
           name: String(emp.name || hoursRow?.name || "").trim() || "Employee",
           employeeNumber: String(emp.employeeNumber || hoursRow?.employeeNumber || "").trim(),
           department: String(emp.department || hoursRow?.department || "").trim(),
-          payType,
-          hourlyRate,
-          totalHours,
-          amountDue,
-          payment,
-          status: payment ? "paid" : "unpaid",
+          payType:
+            String(emp.payType || hoursRow?.payType || "hourly").toLowerCase() === "salary"
+              ? "salary"
+              : "hourly",
+          hourlyRate: String(emp.hourlyRate ?? hoursRow?.hourlyRate ?? "").trim(),
+          monthHours: Number(hoursRow?.totalHours) || 0,
+          monthPayment: paymentByEmployee.get(id) || null,
+          paidHours: paidHoursByEmployee.get(id) || 0,
+          balance: balanceByEmployee.get(id) || null,
         });
       }
 
       for (const hoursRow of hoursRows) {
         const id = String(hoursRow.employeeId || "").trim();
         if (!id || seen.has(id)) continue;
-        const totalHours = Number(hoursRow.totalHours) || 0;
-        const payType =
-          String(hoursRow.payType || "hourly").toLowerCase() === "salary" ? "salary" : "hourly";
-        const hourlyRate = String(hoursRow.hourlyRate || "").trim();
-        const amountDue = estimateEmployeePeriodPay({ payType, hourlyRate, totalHours });
-        const payment = paymentByEmployee.get(id) || null;
-        if (!payment && totalHours <= 0 && amountDue <= 0) continue;
-        nextRows.push({
+        pushRow({
           employeeId: id,
           name: String(hoursRow.name || "").trim() || "Employee",
           employeeNumber: String(hoursRow.employeeNumber || "").trim(),
           department: String(hoursRow.department || "").trim(),
-          payType,
-          hourlyRate,
-          totalHours,
-          amountDue,
-          payment,
-          status: payment ? "paid" : "unpaid",
+          payType: String(hoursRow.payType || "hourly").toLowerCase() === "salary" ? "salary" : "hourly",
+          hourlyRate: String(hoursRow.hourlyRate || "").trim(),
+          monthHours: Number(hoursRow.totalHours) || 0,
+          monthPayment: paymentByEmployee.get(id) || null,
+          paidHours: paidHoursByEmployee.get(id) || 0,
+          balance: balanceByEmployee.get(id) || null,
         });
       }
 
@@ -248,9 +326,13 @@ export default function SimpleReleasePaymentPanel() {
   const openPay = (row) => {
     if (!row || row.status === "paid") return;
     const monthBounds = periodMonthBounds(month);
+    const hours = row.payType === "hourly" ? (Number(row.totalHours) || 0).toFixed(2) : "";
     setPayingRow(row);
-    setPayAmount(String(Number(row.amountDue) || 0));
-    setPayPaidAt(todayIsoDate());
+    setPayHours(hours);
+    setPayAmount(
+      row.payType === "hourly" ? amountForHours(hours, row.hourlyRate) : String(Number(row.amountDue) || 0)
+    );
+    setPayPaidAt(localTodayIso());
     setPayPeriodFrom(monthBounds?.from || "");
     setPayPeriodTo(monthBounds?.to || "");
     setPayMethod("");
@@ -319,6 +401,28 @@ export default function SimpleReleasePaymentPanel() {
       await alert({ title: "Error", message: "Mode of payment is required.", variant: "danger" });
       return;
     }
+    const hoursToPay =
+      payingRow.payType === "hourly" ? Number.parseFloat(String(payHours)) : 0;
+    if (payingRow.payType === "hourly") {
+      const unpaid = Number(payingRow.totalHours) || 0;
+      if (!Number.isFinite(hoursToPay) || hoursToPay <= 0) {
+        await alert({ title: "Error", message: "Enter the hours to pay.", variant: "danger" });
+        return;
+      }
+      if (hoursToPay > unpaid + 0.001) {
+        await alert({
+          title: "Error",
+          message: "Hours to pay cannot be more than the unpaid hours.",
+          variant: "danger",
+        });
+        return;
+      }
+    }
+    const paidAtIso = paidAtIsoForSave(payPaidAt.trim());
+    if (!paidAtIso) {
+      await alert({ title: "Error", message: "Paid date is required.", variant: "danger" });
+      return;
+    }
     if (!payPeriodFrom.trim() || !payPeriodTo.trim()) {
       await alert({
         title: "Error",
@@ -349,9 +453,9 @@ export default function SimpleReleasePaymentPanel() {
           periodTo: payPeriodTo.trim(),
           payType: payingRow.payType,
           hourlyRate: payingRow.hourlyRate,
-          hours: payingRow.totalHours,
+          hours: payingRow.payType === "hourly" ? hoursToPay : 0,
           amount,
-          paidAt: payPaidAt.trim(),
+          paidAt: paidAtIso,
           paymentMethod: String(payMethod || "").trim(),
           notes: payNotes.trim(),
         }),
@@ -398,28 +502,32 @@ export default function SimpleReleasePaymentPanel() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row) =>
-        row.status === "paid" ? (
-          <button
-            type="button"
-            className="inline-flex items-center p-1.5 text-primary hover:bg-primary/10"
-            title="View payment"
-            aria-label="View payment"
-            onClick={() => void openView(row)}
-          >
-            <FiEye className="h-4 w-4 shrink-0" aria-hidden />
-          </button>
-        ) : (
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            className="h-7 shrink-0 whitespace-nowrap px-2.5 text-xs"
-            onClick={() => openPay(row)}
-          >
-            Pay
-          </Button>
-        ),
+      render: (_, row) => (
+        <div className="flex items-center gap-1">
+          {row.status === "unpaid" ? (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="h-7 shrink-0 whitespace-nowrap px-2.5 text-xs"
+              onClick={() => openPay(row)}
+            >
+              Pay
+            </Button>
+          ) : null}
+          {row.payment ? (
+            <button
+              type="button"
+              className="inline-flex items-center p-1.5 text-primary hover:bg-primary/10"
+              title="View payment"
+              aria-label="View payment"
+              onClick={() => void openView(row)}
+            >
+              <FiEye className="h-4 w-4 shrink-0" aria-hidden />
+            </button>
+          ) : null}
+        </div>
+      ),
     },
     {
       key: "name",
@@ -445,7 +553,7 @@ export default function SimpleReleasePaymentPanel() {
     },
     {
       key: "totalHours",
-      label: "Hours",
+      label: month === currentMonthValue() ? "Unpaid hours" : "Hours",
       align: "right",
       sortable: true,
       render: (v) => (Number(v) || 0).toFixed(2),
@@ -465,7 +573,7 @@ export default function SimpleReleasePaymentPanel() {
       label: "Amount due",
       align: "right",
       sortable: true,
-      render: (v, row) => fmt(row.payment?.amount ?? v),
+      render: (v) => fmt(v),
     },
     {
       key: "status",
@@ -519,8 +627,10 @@ export default function SimpleReleasePaymentPanel() {
       </div>
 
       <p className="text-sm text-secondary">
-        Hourly pay uses clocked hours × rate for the month. Salary uses the employee salary amount.
-        Record payment per employee when you pay them. Click an employee name to view payment history.
+        Unpaid hours are time worked since the last payment. After you record a payment, that number
+        goes back to 0 and new clock time adds up again. You can pay part of the hours. The rest stays
+        unpaid. Salary uses the employee salary amount. Punch history is kept on the Hours tab. Click
+        an employee name to view payment history.
       </p>
 
       <Table
@@ -562,9 +672,15 @@ export default function SimpleReleasePaymentPanel() {
               {payingRow.employeeNumber ? ` · #${payingRow.employeeNumber}` : ""}
               {" · "}
               {payingRow.payType === "salary" ? "Salary" : "Hourly"}
-              {" · "}
-              <span className="tabular-nums">{(Number(payingRow.totalHours) || 0).toFixed(2)}</span>
-              {" hrs"}
+              {payingRow.payType === "hourly" ? (
+                <>
+                  {" · "}
+                  <span className="tabular-nums">
+                    {(Number(payingRow.totalHours) || 0).toFixed(2)}
+                  </span>
+                  {" unpaid hrs"}
+                </>
+              ) : null}
             </p>
           ) : null}
           <FieldRow label="Pay period">
@@ -588,6 +704,28 @@ export default function SimpleReleasePaymentPanel() {
               />
             </div>
           </FieldRow>
+          {payingRow?.payType === "hourly" ? (
+            <FieldRow label="Hours to pay" className="items-start">
+              <input
+                type="number"
+                min="0"
+                max={Number(payingRow.totalHours) || 0}
+                step="0.01"
+                value={payHours}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setPayHours(next);
+                  setPayAmount(amountForHours(next, payingRow.hourlyRate));
+                }}
+                required
+                className={FIELD_INPUT}
+                aria-label="Hours to pay"
+              />
+              <p className="mt-1 text-xs text-secondary">
+                Prefilled with unpaid hours. Lower it to pay part. Time after you confirm starts the next balance.
+              </p>
+            </FieldRow>
+          ) : null}
           <FieldRow label="Amount">
             <input
               type="number"
@@ -677,7 +815,7 @@ export default function SimpleReleasePaymentPanel() {
                   : "-"}
               </p>
             </FieldRow>
-            <FieldRow label="Hours">
+            <FieldRow label="Hours paid">
               <p className="text-sm tabular-nums text-title">
                 {(Number(viewingPayment.hours) || 0).toFixed(2)}
               </p>

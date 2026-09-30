@@ -1,7 +1,9 @@
 import mongoose from "mongoose";
 
 /**
- * Recorded wage / payroll payout for one employee for one calendar month (Simple portal).
+ * Recorded wage payout for one employee (Simple portal).
+ * Hourly employees can have more than one payment. Each one stores the hours paid
+ * and the unpaid balance at that moment (`hoursDue`) so the next balance can start over.
  */
 const employeePayrollPaymentSchema = new mongoose.Schema(
   {
@@ -16,7 +18,10 @@ const employeePayrollPaymentSchema = new mongoose.Schema(
     payType: { type: String, enum: ["hourly", "salary"], default: "hourly" },
     /** Snapshot of rate / salary amount at pay time */
     hourlyRate: { type: String, default: "", trim: true },
+    /** Hours the user confirmed as paid. */
     hours: { type: Number, default: 0 },
+    /** Unpaid hourly balance at payment time, before subtracting `hours`. Null on older rows. */
+    hoursDue: { type: Number, default: null },
     amount: { type: Number, required: true, default: 0 },
     status: { type: String, enum: ["paid"], default: "paid" },
     paidAt: { type: Date, default: null },
@@ -31,10 +36,7 @@ const employeePayrollPaymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-employeePayrollPaymentSchema.index(
-  { createdByEmail: 1, employeeId: 1, periodMonth: 1 },
-  { unique: true, name: "unique_employee_payroll_month" }
-);
+employeePayrollPaymentSchema.index({ createdByEmail: 1, employeeId: 1, paidAt: -1 });
 employeePayrollPaymentSchema.index({ createdByEmail: 1, periodMonth: 1, paidAt: -1 });
 
 export default mongoose.models.EmployeePayrollPayment ||

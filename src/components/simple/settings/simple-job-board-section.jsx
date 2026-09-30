@@ -13,7 +13,9 @@ import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/w
 import {
   applySimpleBoardEvent,
   computeJobBoardColumns,
+  normalizeShopFloorBoardDesign,
   resolveStatusToColumnKey,
+  SHOP_FLOOR_BOARD_DESIGNS,
 } from "@/lib/simple-job-board";
 import {
   quoteStatusSelectOptionsFromMerged,
@@ -46,7 +48,7 @@ function proposalStatusPill(proposalStatus, mergedSettings, quoteOpts) {
 export default function SimpleJobBoardSection() {
   const alert = useAlert();
   const formatDate = useFormatDate();
-  const { settings } = useUserSettings();
+  const { settings, applyLocalSettings } = useUserSettings();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
   const quoteOpts = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -163,6 +165,31 @@ export default function SimpleJobBoardSection() {
   }, [columns, byStatus, hideEmptyStatuses]);
 
   const totalJobs = jobs.length;
+  const design = normalizeShopFloorBoardDesign(settings?.shopFloorBoardDesign);
+
+  const selectDesign = async (nextId) => {
+    const next = normalizeShopFloorBoardDesign(nextId);
+    if (next === design) return;
+    applyLocalSettings({ shopFloorBoardDesign: next });
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ shopFloorBoardDesign: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not save the board design");
+      if (data.settings) applyLocalSettings(data.settings);
+    } catch (e) {
+      applyLocalSettings({ shopFloorBoardDesign: design });
+      await alert({
+        title: "Error",
+        message: e.message || "Could not save the board design",
+        variant: "danger",
+      });
+    }
+  };
 
   const boardGridClass = compact
     ? "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] items-start gap-3 pb-4"
@@ -231,7 +258,7 @@ export default function SimpleJobBoardSection() {
             : "No status columns to show. Configure statuses in Settings → Dropdowns."}
         </p>
       ) : (
-        <div className={boardGridClass}>
+        <div className={design === "columns" ? boardGridClass : "flex w-full min-w-0 flex-col gap-3 pb-4"}>
           {displayColumns.map((status) => {
             const list = byStatus[status] || [];
             const colorIdx = columns.indexOf(status);
@@ -240,31 +267,60 @@ export default function SimpleJobBoardSection() {
               colorIdx >= 0 ? colorIdx : 0,
               statusTileColors
             );
+            const sectionClass =
+              design === "lanes"
+                ? "flex h-auto w-full min-w-0 flex-col rounded-none border border-border bg-card sm:flex-row"
+                : "flex h-auto w-full min-w-0 flex-col rounded-none border border-border bg-card";
+            const headerClass =
+              design === "lanes"
+                ? "flex w-full shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3 sm:w-44 sm:flex-col sm:items-start sm:justify-start sm:gap-3 sm:border-b-0 sm:border-r"
+                : design === "list"
+                  ? `flex shrink-0 items-center justify-between gap-2 px-3 py-2 ${headerTile.className}`
+                  : "flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2";
+            const jobsClass =
+              design === "lanes"
+                ? "flex min-w-0 flex-1 flex-wrap content-start gap-2 p-2"
+                : design === "list"
+                  ? "flex flex-col"
+                  : listClass;
             return (
-              <div
-                key={status}
-                className="flex h-auto w-full min-w-0 flex-col rounded-none border border-border bg-card"
-              >
-                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2">
-                  <span
-                    className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold sm:max-w-[min(100%,260px)] ${headerTile.className}`}
-                    style={headerTile.style}
-                    title={status}
+              <div key={status} className={sectionClass}>
+                <div
+                  className={headerClass}
+                  style={design === "list" ? headerTile.style : undefined}
+                >
+                  {design === "list" ? (
+                    <span className="truncate text-xs font-semibold" title={status}>
+                      {status}
+                    </span>
+                  ) : (
+                    <span
+                      className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-none px-2.5 py-0.5 text-xs font-semibold sm:max-w-[min(100%,260px)] ${headerTile.className}`}
+                      style={headerTile.style}
+                      title={status}
+                    >
+                      {status}
+                    </span>
+                  )}
+                  <p
+                    className={`whitespace-nowrap text-[11px] ${design === "list" ? "" : "text-secondary"}`}
                   >
-                    {status}
-                  </span>
-                  <p className="whitespace-nowrap text-[11px] text-secondary">
                     {list.length} job(s)
                   </p>
                 </div>
-                <div className={listClass}>
+                <div className={jobsClass}>
                   {list.length === 0 ? (
-                    <p className="px-1 py-4 text-center text-xs text-secondary">-</p>
+                    <p className="w-full px-1 py-4 text-center text-xs text-secondary">-</p>
                   ) : (
                     list.map((job) => {
-                      const cardClass = compact
-                        ? "w-full rounded-none border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card"
-                        : "w-full rounded-none border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card";
+                      const widthClass =
+                        design === "lanes" ? "w-full sm:w-56 sm:max-w-full" : "w-full";
+                      const cardClass =
+                        design === "list"
+                          ? `${widthClass} rounded-none border-0 border-t border-border bg-bg px-3 py-2 text-left shadow-none transition-colors hover:bg-card`
+                          : compact
+                            ? `${widthClass} rounded-none border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card`
+                            : `${widthClass} rounded-none border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card`;
                       const proposalPill = proposalStatusPill(
                         job.proposalStatus,
                         mergedSettings,
@@ -339,6 +395,26 @@ export default function SimpleJobBoardSection() {
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
+      <div className="inline-flex flex-wrap items-center gap-1" role="group" aria-label="Board design">
+        {SHOP_FLOOR_BOARD_DESIGNS.map((opt) => {
+          const selected = design === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => void selectDesign(opt.id)}
+              className={`rounded-none border px-3 py-1 text-xs font-medium transition-colors ${
+                selected
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-secondary hover:border-primary/40 hover:text-primary"
+              }`}
+            >
+              {opt.label}
+            </button>
+          );
+        })}
+      </div>
       <button
         type="button"
         onClick={() => setCompact((v) => !v)}
@@ -404,8 +480,8 @@ export default function SimpleJobBoardSection() {
               ) : null}
             </FormSectionTitle>
             <p className="mt-1 text-sm text-secondary">
-              Kanban of Simple JOB service proposals by Job Status. Columns follow Settings →
-              Dropdowns (Shop floor toggle). Click a card to open the job here.
+              Pick Columns, Lanes, or List. Status columns follow Settings, then Dropdowns.
+              Click a job to open it here.
             </p>
           </div>
           {toolbar}

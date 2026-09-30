@@ -32,6 +32,8 @@ export const USER_SETTINGS_DEFAULTS = {
    * Omitted key in stored settings means “all statuses, same order as workOrderStatuses”.
    */
   shopFloorBoardOrder: [...DEFAULT_WORK_ORDER_STATUSES],
+  /** Shop floor job board layout: columns, lanes, or list. */
+  shopFloorBoardDesign: "columns",
   /**
    * Work order statuses that mark a Simple Job as closed (excluded from Open jobs / Due lists).
    * Derived from controlledDropdowns.work_order_status.entries[].marksJobClosed.
@@ -117,6 +119,7 @@ import {
 import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
 import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-closed-status";
 import { normalizeProductDropdowns, sanitizeProductDropdownsPatch } from "@/lib/product-dropdown-catalog";
+import { normalizeShopFloorBoardDesign } from "@/lib/simple-job-board";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -132,6 +135,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "logoDocumentScale",
   "workOrderStatuses",
   "shopFloorBoardOrder",
+  "shopFloorBoardDesign",
   "workOrderClosedStatuses",
   "accountsBillingAddress",
   "accountsShippingAddress",
@@ -326,6 +330,7 @@ export function mergeUserSettings(stored) {
     woDerived.shopFloorBoardOrder,
     merged.workOrderStatuses
   );
+  merged.shopFloorBoardDesign = normalizeShopFloorBoardDesign(merged.shopFloorBoardDesign);
   merged.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
     woDerived.workOrderClosedStatuses,
     merged.workOrderStatuses
@@ -434,6 +439,10 @@ export function sanitizeUserSettingsPatch(body) {
         .map((s) => String(s ?? "").trim().slice(0, 80))
         .filter(Boolean)
         .slice(0, 25);
+      continue;
+    }
+    if (key === "shopFloorBoardDesign") {
+      out.shopFloorBoardDesign = normalizeShopFloorBoardDesign(body[key]);
       continue;
     }
     if (key === "accountsBillingAddress" || key === "accountsShippingAddress") {

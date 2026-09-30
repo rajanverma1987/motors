@@ -113,7 +113,7 @@ export default function SimpleEmployeePaymentHistoryModal({
     },
     {
       key: "hours",
-      label: "Hours",
+      label: "Hours paid",
       align: "right",
       render: (v) => (Number(v) || 0).toFixed(2),
     },

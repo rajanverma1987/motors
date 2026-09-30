@@ -10,6 +10,37 @@ import {
   isValidPeriodMonth,
   periodMonthBounds,
 } from "@/lib/employee-payroll-payment";
+import {
+  hourlyUnpaidBalances,
+  hourlyUnpaidHoursForEmployee,
+} from "@/lib/payroll-hour-balance";
+
+let payrollIndexReady = null;
+
+/** Older installs kept one payment per employee per month. That lock is gone. */
+function ensurePayrollIndexes() {
+  if (!payrollIndexReady) {
+    payrollIndexReady = EmployeePayrollPayment.collection
+      .dropIndex("unique_employee_payroll_month")
+      .catch((err) => {
+        const missing = err?.code === 27 || err?.codeName === "IndexNotFound";
+        if (!missing) payrollIndexReady = null;
+      });
+  }
+  return payrollIndexReady;
+}
+
+function parsePaidAt(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [year, month, day] = raw.split("-").map(Number);
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+    return Number.isNaN(end.getTime()) ? null : end;
+  }
+  const parsed = new Date(raw);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
 
 /** List payroll payments; filter by periodMonth and/or employeeId. */
 export async function GET(request) {
@@ -23,6 +54,19 @@ export async function GET(request) {
     const employeeId = clampString(searchParams.get("employeeId"), 80);
 
     await connectDB();
+    await ensurePayrollIndexes();
+
+    if (searchParams.get("balances") === "1") {
+      const rows = await hourlyUnpaidBalances(owner, new Date(), periodMonth);
+      return NextResponse.json({
+        balances: rows.map((row) => ({
+          employeeId: row.employeeId,
+          unpaidHours: row.unpaidHours,
+          lastPayment: employeePayrollPaymentToJson(row.lastPayment),
+        })),
+      });
+    }
+
     const where = { createdByEmail: owner };
     if (periodMonth) {
       if (!isValidPeriodMonth(periodMonth)) {
@@ -98,30 +142,50 @@ export async function POST(request) {
     }
 
     const bounds = periodMonthBounds(periodMonth);
-    const paidAt = new Date(`${paidAtInput}T12:00:00.000Z`);
-    if (Number.isNaN(paidAt.getTime())) {
+    const paidAt = parsePaidAt(paidAtInput);
+    if (!paidAt) {
       return NextResponse.json({ error: "Invalid paid date" }, { status: 400 });
     }
 
     await connectDB();
+    await ensurePayrollIndexes();
     const employee = await Employee.findOne({ _id: employeeId, createdByEmail: owner }).lean();
     if (!employee) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 });
     }
 
-    const existing = await EmployeePayrollPayment.findOne({
-      createdByEmail: owner,
-      employeeId,
-      periodMonth,
-    }).lean();
-    if (existing) {
-      return NextResponse.json(
-        { error: "Payroll for this employee and month is already recorded." },
-        { status: 409 }
-      );
+    let hoursDue = null;
+    let hoursPaid = Number.isFinite(hours) && hours >= 0 ? hours : 0;
+    if (payType === "salary") {
+      const existing = await EmployeePayrollPayment.findOne({
+        createdByEmail: owner,
+        employeeId,
+        periodMonth,
+        payType: "salary",
+      }).lean();
+      if (existing) {
+        return NextResponse.json(
+          { error: "Salary for this employee and month is already recorded." },
+          { status: 409 }
+        );
+      }
+      hoursPaid = 0;
+    } else {
+      const unpaidHours = await hourlyUnpaidHoursForEmployee(owner, employeeId, periodMonth, paidAt);
+      if (!Number.isFinite(hours) || hours <= 0) {
+        return NextResponse.json({ error: "Enter the hours to pay." }, { status: 400 });
+      }
+      if (hours > unpaidHours + 0.001) {
+        return NextResponse.json(
+          { error: "Hours to pay cannot be more than the unpaid hours." },
+          { status: 400 }
+        );
+      }
+      hoursDue = unpaidHours;
+      hoursPaid = hours;
     }
 
-    const doc = await EmployeePayrollPayment.create({
+    const payload = {
       createdByEmail: owner,
       employeeId,
       employeeName: String(employee.name || "").trim(),
@@ -131,14 +195,27 @@ export async function POST(request) {
       periodTo: periodToInput || bounds?.to || "",
       payType,
       hourlyRate: hourlyRate || String(employee.hourlyRate || "").trim(),
-      hours: Number.isFinite(hours) && hours >= 0 ? hours : 0,
+      hours: hoursPaid,
+      hoursDue,
       amount,
       status: "paid",
       paidAt,
       paymentMethod,
       notes,
       attachments: [],
-    });
+    };
+
+    let doc;
+    try {
+      doc = await EmployeePayrollPayment.create(payload);
+    } catch (err) {
+      if (err?.code !== 11000) throw err;
+      payrollIndexReady = null;
+      await EmployeePayrollPayment.collection
+        .dropIndex("unique_employee_payroll_month")
+        .catch(() => {});
+      doc = await EmployeePayrollPayment.create(payload);
+    }
 
     return NextResponse.json({
       ok: true,
@@ -147,12 +224,6 @@ export async function POST(request) {
       }),
     });
   } catch (err) {
-    if (err?.code === 11000) {
-      return NextResponse.json(
-        { error: "Payroll for this employee and month is already recorded." },
-        { status: 409 }
-      );
-    }
     console.error("Create employee payroll payment error:", err);
     return NextResponse.json({ error: err.message || "Failed to record payment" }, { status: 500 });
   }

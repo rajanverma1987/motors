@@ -137,6 +137,15 @@ function formatPunchTime(iso) {
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+function punchLocalDate(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 function formatPunchDate(isoDate) {
   if (!isoDate) return "-";
   const d = new Date(`${isoDate}T12:00:00`);
@@ -1065,7 +1074,16 @@ export default function EmployeesHubClient() {
               {
                 key: "outAt",
                 label: "Out",
-                render: (v) => <span className="tabular-nums">{formatPunchTime(v)}</span>,
+                render: (v, row) => {
+                  const time = formatPunchTime(v);
+                  const nextDay = Boolean(v) && punchLocalDate(v) !== String(row?.date || "");
+                  return (
+                    <span className="tabular-nums">
+                      {time}
+                      {nextDay && time !== "-" ? " (next day)" : ""}
+                    </span>
+                  );
+                },
               },
             ]}
             data={punchHistoryDays}

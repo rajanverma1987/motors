@@ -36,36 +36,57 @@ export function punchWorkDate(punchedAt) {
 }
 
 /**
- * One row per local calendar day: first In, last Out, and punch ids for that day.
+ * One row per local calendar day of the clock-in.
+ * An Out after midnight stays on the shift's In date, so a day never shows
+ * an Out without the In that opened it.
  * @param {Array} punches
  */
 export function buildDailyPunchSummaries(punches) {
+  const list = (Array.isArray(punches) ? punches : [])
+    .filter((p) => !p?.voidedAt)
+    .slice()
+    .sort((a, b) => new Date(a.punchedAt).getTime() - new Date(b.punchedAt).getTime());
+
   const byDay = new Map();
-  for (const raw of Array.isArray(punches) ? punches : []) {
-    if (raw?.voidedAt) continue;
-    const date = punchWorkDate(raw.punchedAt);
-    if (!date) continue;
+  const ensure = (date) => {
     if (!byDay.has(date)) {
-      byDay.set(date, {
-        date,
-        inAt: null,
-        outAt: null,
-        punchIds: [],
-      });
+      byDay.set(date, { date, inAt: null, outAt: null, punchIds: [] });
     }
-    const row = byDay.get(date);
+    return byDay.get(date);
+  };
+  const pushId = (row, raw) => {
     const id = raw._id?.toString?.() || String(raw.id || "");
-    if (id) row.punchIds.push(id);
+    if (id && !row.punchIds.includes(id)) row.punchIds.push(id);
+  };
+
+  let openDate = "";
+
+  for (const raw of list) {
     const type = String(raw.type || "");
-    const atIso = raw.punchedAt ? new Date(raw.punchedAt).toISOString() : null;
-    if (!atIso) continue;
+    const at = raw.punchedAt ? new Date(raw.punchedAt) : null;
+    if (!at || Number.isNaN(at.getTime())) continue;
+    const atIso = at.toISOString();
     if (type === "in") {
-      if (!row.inAt || new Date(atIso) < new Date(row.inAt)) row.inAt = atIso;
-    } else if (type === "out") {
-      if (!row.outAt || new Date(atIso) > new Date(row.outAt)) row.outAt = atIso;
+      const date = punchWorkDate(atIso);
+      if (!date) continue;
+      openDate = date;
+      const row = ensure(date);
+      pushId(row, raw);
+      if (!row.inAt || at.getTime() < new Date(row.inAt).getTime()) row.inAt = atIso;
+      continue;
+    }
+    if (!openDate) continue;
+    const row = ensure(openDate);
+    pushId(row, raw);
+    if (type === "out") {
+      if (!row.outAt || at.getTime() > new Date(row.outAt).getTime()) row.outAt = atIso;
+      openDate = "";
     }
   }
-  return [...byDay.values()].sort((a, b) => b.date.localeCompare(a.date));
+
+  return [...byDay.values()]
+    .filter((row) => row.inAt)
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 /** Latest non-voided punch for employee; open session if type is in or break_*. */
@@ -221,6 +242,85 @@ export function hoursOnLocalDay(punches, dayIso, now = new Date()) {
   }
 
   return Math.round((totalMs / 3600000) * 100) / 100;
+}
+
+/**
+ * Clocked plus manual hours strictly after a payment moment.
+ * Punch time after `after` counts, including the rest of that same day.
+ * Manual hours are stored by date only, so they count only on later calendar days.
+ * @param {Array} punches
+ * @param {Array<{ workDate?: string, hours?: number }>} manualEntries
+ * @param {Date|string|number} after
+ * @param {Date} [now]
+ */
+export function workedHoursAfter(punches, manualEntries, after, now = new Date()) {
+  const afterMs = new Date(after).getTime();
+  const nowMs = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  if (!Number.isFinite(afterMs) || !Number.isFinite(nowMs) || nowMs <= afterMs) {
+    return manualHoursAfterDate(manualEntries, afterMs);
+  }
+
+  const list = (Array.isArray(punches) ? punches : [])
+    .filter((p) => !p?.voidedAt)
+    .slice()
+    .sort((a, b) => new Date(a.punchedAt) - new Date(b.punchedAt));
+
+  let totalMs = 0;
+  let openIn = null;
+  let breakStart = null;
+  /** @type {Array<[number, number]>} */
+  let breaks = [];
+
+  const addSession = (endMs) => {
+    if (openIn == null || !Number.isFinite(endMs) || endMs <= openIn) return;
+    const closedBreaks = breaks.slice();
+    if (breakStart != null && breakStart < endMs) closedBreaks.push([breakStart, endMs]);
+    let ms = overlapMs(openIn, endMs, afterMs, nowMs);
+    for (const [bs, be] of closedBreaks) {
+      ms -= overlapMs(bs, be, afterMs, nowMs);
+    }
+    totalMs += Math.max(0, ms);
+  };
+
+  for (const p of list) {
+    const t = String(p.type || "");
+    const at = new Date(p.punchedAt).getTime();
+    if (!Number.isFinite(at)) continue;
+    if (t === "in") {
+      openIn = at;
+      breakStart = null;
+      breaks = [];
+    } else if (t === "break_start" && openIn != null) {
+      breakStart = at;
+    } else if (t === "break_end" && breakStart != null) {
+      breaks.push([breakStart, at]);
+      breakStart = null;
+    } else if (t === "out" && openIn != null) {
+      addSession(at);
+      openIn = null;
+      breakStart = null;
+      breaks = [];
+    }
+  }
+
+  if (openIn != null) addSession(nowMs);
+
+  const clocked = totalMs / 3600000;
+  const manual = manualHoursAfterDate(manualEntries, afterMs);
+  return Math.round((clocked + manual) * 100) / 100;
+}
+
+function manualHoursAfterDate(manualEntries, afterMs) {
+  if (!Number.isFinite(afterMs)) return 0;
+  const day = localDateIso(new Date(afterMs));
+  let total = 0;
+  for (const entry of Array.isArray(manualEntries) ? manualEntries : []) {
+    const workDate = String(entry.workDate || entry.date || "").slice(0, 10);
+    const hours = Number(entry.hours);
+    if (!workDate || !Number.isFinite(hours) || hours <= 0) continue;
+    if (workDate > day) total += hours;
+  }
+  return total;
 }
 
 export function lateEarlyFlags(punchedAtIso, scheduledStart, scheduledEnd, type) {

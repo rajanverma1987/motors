@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import ThemeToggle from "@/components/theme-toggle";
 import { useToast } from "@/components/toast-provider";
 import { mergeUserSettings, USER_SETTINGS_DEFAULTS } from "@/lib/user-settings";
+import { normalizeShopFloorBoardDesign } from "@/lib/simple-job-board";
 import { resolveWorkOrderStatusTileProps } from "@/lib/work-order-status-tiles";
 
 /**
@@ -110,6 +111,7 @@ function applyBoardEvent(setWorkOrders, msg) {
 export default function JobBoardClient({
   initialWorkOrders,
   initialBoardOrder,
+  initialBoardDesign,
   initialWorkOrderStatuses,
   initialStatusTileColors,
   publicMode = false,
@@ -136,6 +138,9 @@ export default function JobBoardClient({
   const [loading, setLoading] = useState(!publicMode || !Array.isArray(initialWorkOrders));
   const [compact, setCompact] = useState(false);
   const [hideEmptyStatuses, setHideEmptyStatuses] = useState(false);
+  const [boardDesign, setBoardDesign] = useState(() =>
+    normalizeShopFloorBoardDesign(initialBoardDesign)
+  );
 
   const load = useCallback(async () => {
     if (publicMode) return;
@@ -165,6 +170,7 @@ export default function JobBoardClient({
             ? { ...u.workOrderStatusTileColors }
             : {}
         );
+        setBoardDesign(normalizeShopFloorBoardDesign(u.shopFloorBoardDesign));
       }
     } finally {
       setLoading(false);
@@ -191,10 +197,12 @@ export default function JobBoardClient({
     ) {
       setStatusTileColors({ ...initialStatusTileColors });
     }
+    setBoardDesign(normalizeShopFloorBoardDesign(initialBoardDesign));
   }, [
     publicMode,
     initialWorkOrders,
     initialBoardOrder,
+    initialBoardDesign,
     initialWorkOrderStatuses,
     initialStatusTileColors,
   ]);
@@ -255,12 +263,26 @@ export default function JobBoardClient({
     ? "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,220px),1fr))] items-start gap-3 pb-4"
     : "grid w-full min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),1fr))] items-start gap-3 pb-4";
 
+  const design = normalizeShopFloorBoardDesign(boardDesign);
+  const boardWrapClass =
+    design === "columns"
+      ? boardGridClass
+      : "flex w-full min-w-0 flex-col gap-3 pb-4";
   const columnClass =
-    "flex h-auto w-full min-w-0 flex-col rounded-lg border border-border bg-card";
+    design === "lanes"
+      ? "flex h-auto w-full min-w-0 flex-col border border-border bg-card sm:flex-row"
+      : design === "list"
+        ? "flex h-auto w-full min-w-0 flex-col border border-border bg-card"
+        : "flex h-auto w-full min-w-0 flex-col rounded-lg border border-border bg-card";
 
-  const listClass = compact
-    ? "flex flex-col gap-1 p-2"
-    : "flex flex-col gap-2 p-2";
+  const listClass =
+    design === "lanes"
+      ? "flex min-w-0 flex-1 flex-wrap content-start gap-2 p-2"
+      : design === "list"
+        ? "flex flex-col"
+        : compact
+          ? "flex flex-col gap-1 p-2"
+          : "flex flex-col gap-2 p-2";
 
   const rootClass = publicMode
     ? "flex w-full min-w-0 flex-col bg-bg px-4 py-6 sm:px-6"
@@ -349,7 +371,7 @@ export default function JobBoardClient({
             : "No status columns to show."}
         </p>
       ) : (
-        <div className={boardGridClass}>
+        <div className={boardWrapClass}>
           {displayColumns.map((status) => {
             const list = byStatus[status] || [];
             const colorIdx = columns.indexOf(status);
@@ -358,30 +380,50 @@ export default function JobBoardClient({
               colorIdx >= 0 ? colorIdx : 0,
               statusTileColors
             );
+            const headerClass =
+              design === "lanes"
+                ? "flex w-full shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-3 sm:w-44 sm:flex-col sm:items-start sm:justify-start sm:gap-3 sm:border-b-0 sm:border-r"
+                : design === "list"
+                  ? `flex shrink-0 items-center justify-between gap-2 px-3 py-2 ${headerTile.className}`
+                  : "flex shrink-0 items-center justify-between gap-2 border-b border-border px-3 py-2";
             return (
               <div
                 key={status}
                 className={columnClass}
               >
-                <div className="shrink-0 border-b border-border px-3 py-2 flex items-center justify-between gap-2">
-                  <span
-                    className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-full px-2.5 py-0.5 text-xs font-semibold sm:max-w-[min(100%,260px)] ${headerTile.className}`}
-                    style={headerTile.style}
-                    title={status}
-                  >
-                    {status}
-                  </span>
-                  <p className="text-[11px] text-secondary whitespace-nowrap">{list.length} job(s)</p>
+                <div
+                  className={headerClass}
+                  style={design === "list" ? headerTile.style : undefined}
+                >
+                  {design === "list" ? (
+                    <span className="truncate text-xs font-semibold" title={status}>
+                      {status}
+                    </span>
+                  ) : (
+                    <span
+                      className={`job-board-status-pill inline-flex max-w-[min(100%,220px)] items-center truncate rounded-none px-2.5 py-0.5 text-xs font-semibold sm:max-w-[min(100%,260px)] ${headerTile.className}`}
+                      style={headerTile.style}
+                      title={status}
+                    >
+                      {status}
+                    </span>
+                  )}
+                  <p className={`whitespace-nowrap text-[11px] ${design === "list" ? "" : "text-secondary"}`}>
+                    {list.length} job(s)
+                  </p>
                 </div>
                 <div className={listClass}>
                   {list.length === 0 ? (
-                    <p className="px-1 py-4 text-center text-xs text-secondary">—</p>
+                    <p className="w-full px-1 py-4 text-center text-xs text-secondary">-</p>
                   ) : (
                     list.map((wo) => {
+                      const widthClass = design === "lanes" ? "w-full sm:w-56" : "w-full";
                       const cardClass =
-                        compact
-                          ? "block rounded border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card"
-                          : "block rounded-md border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card";
+                        design === "list"
+                          ? `${widthClass} block rounded-none border-0 border-t border-border bg-bg px-3 py-2 text-left shadow-none transition-colors hover:bg-card`
+                          : compact
+                            ? `${widthClass} block rounded-none border border-border bg-bg px-2 py-1 text-left text-xs shadow-sm transition-colors hover:border-primary/40 hover:bg-card`
+                            : `${widthClass} block rounded-none border border-border bg-bg p-3 text-left shadow-sm transition-colors hover:border-primary/40 hover:bg-card`;
                       const inner =
                         compact ? (
                           <p className="truncate text-xs text-title">
