@@ -18,6 +18,7 @@ export function toEmployeeJson(e) {
     department: e.department ?? "",
     employmentStatus: e.employmentStatus || "Active",
     hireDate: e.hireDate ?? "",
+    inactiveDate: e.inactiveDate ?? "",
     payType: e.payType === "salary" ? "salary" : "hourly",
     hourlyRate: e.hourlyRate ?? "",
     scheduledStart: e.scheduledStart ?? "",
@@ -63,9 +64,24 @@ export function applyEmployeeBodyFields(doc, body, { clampString, LIMITS }) {
     doc.employeeNumber = clampString(body.employeeNumber ?? "", 40);
   }
   if (body.department !== undefined) doc.department = clampString(body.department ?? "", 80);
+  if (body.inactiveDate !== undefined) {
+    doc.inactiveDate = String(body.inactiveDate || "").trim().slice(0, 10);
+  }
   if (body.employmentStatus !== undefined) {
     const s = String(body.employmentStatus || "").trim();
     doc.employmentStatus = ["Active", "Inactive", "Terminated"].includes(s) ? s : "Active";
+  }
+  if (doc.employmentStatus === "Active") {
+    doc.inactiveDate = "";
+  }
+  if (doc.employmentStatus === "Inactive") {
+    doc.canLogin = false;
+    doc.technicianAppAccess = false;
+    doc.timeClockEnabled = false;
+    if (!String(doc.inactiveDate || "").trim()) {
+      const now = new Date();
+      doc.inactiveDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
   }
   if (body.hireDate !== undefined) {
     doc.hireDate = String(body.hireDate || "").trim().slice(0, 10);

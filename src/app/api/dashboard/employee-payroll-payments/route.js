@@ -61,7 +61,10 @@ export async function GET(request) {
       return NextResponse.json({
         balances: rows.map((row) => ({
           employeeId: row.employeeId,
+          workedHours: row.workedHours,
+          paidHours: row.paidHours,
           unpaidHours: row.unpaidHours,
+          allUnpaidHours: row.allUnpaidHours,
           lastPayment: employeePayrollPaymentToJson(row.lastPayment),
         })),
       });

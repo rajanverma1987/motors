@@ -62,6 +62,48 @@ export function parsePayRate(value) {
   return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
+function inclusiveDayCount(from, to) {
+  const start = Date.parse(`${from}T00:00:00.000Z`);
+  const end = Date.parse(`${to}T00:00:00.000Z`);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0;
+  return Math.round((end - start) / 86400000) + 1;
+}
+
+/**
+ * Hours from one payment that belong to a month (or any YYYY-MM-DD range).
+ * The whole payment counts when its pay period sits inside the range.
+ * A period that crosses the range is split by the number of days in each side.
+ */
+export function paidHoursAppliedToRange(payment, rangeFrom, rangeTo) {
+  const hours = Number(payment?.hours) || 0;
+  if (hours <= 0) return 0;
+  const fromRaw = String(rangeFrom || "").slice(0, 10);
+  const toRaw = String(rangeTo || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromRaw) || !/^\d{4}-\d{2}-\d{2}$/.test(toRaw)) return 0;
+
+  let periodFrom = String(payment?.periodFrom || "").slice(0, 10);
+  let periodTo = String(payment?.periodTo || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(periodFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(periodTo)) {
+    const bounds = periodMonthBounds(payment?.periodMonth);
+    if (!bounds) return 0;
+    periodFrom = bounds.from;
+    periodTo = bounds.to;
+  }
+  if (periodFrom > periodTo) return 0;
+
+  const overlapFrom = periodFrom > fromRaw ? periodFrom : fromRaw;
+  const overlapTo = periodTo < toRaw ? periodTo : toRaw;
+  if (overlapFrom > overlapTo) return 0;
+  if (overlapFrom === periodFrom && overlapTo === periodTo) {
+    return Math.round((hours + Number.EPSILON) * 100) / 100;
+  }
+
+  const periodDays = inclusiveDayCount(periodFrom, periodTo);
+  const overlapDays = inclusiveDayCount(overlapFrom, overlapTo);
+  if (periodDays <= 0 || overlapDays <= 0) return 0;
+  return Math.round((hours * (overlapDays / periodDays) + Number.EPSILON) * 100) / 100;
+}
+
 /**
  * Estimated pay for a period from hours + employee pay settings.
  * Hourly: hours × rate. Salary: rate field is treated as the period salary amount.

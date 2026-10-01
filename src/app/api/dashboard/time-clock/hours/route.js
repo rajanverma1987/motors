@@ -12,6 +12,7 @@ import {
   mergeHoursWithManual,
   serializePunch,
 } from "@/lib/time-clock-punches";
+import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 
 export async function GET(request) {
   try {
@@ -100,13 +101,15 @@ export async function GET(request) {
           createdByEmail: email,
           _id: { $in: empIds },
         })
-          .select("name employeeNumber department scheduledStart scheduledEnd hourlyRate payType")
+          .select("name employeeNumber department scheduledStart scheduledEnd hourlyRate payType employmentStatus")
           .lean()
       : [];
     const empMap = new Map(employees.map((e) => [String(e._id), e]));
 
+    const hiddenIds = await settledInactiveEmployeeIds(email, now);
     const rows = [];
     for (const id of empIds) {
+      if (hiddenIds.has(id)) continue;
       const list = byEmployeePunches.get(id) || [];
       const manualList = byEmployeeManual.get(id) || [];
       const emp = empMap.get(id);

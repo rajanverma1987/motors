@@ -50,6 +50,7 @@ export async function POST(request) {
       const employeeCandidates = await Employee.find({ email: emailRaw }).select("+passwordHash").lean();
       for (const emp of employeeCandidates) {
         if (!emp?.canLogin) continue;
+        if (String(emp.employmentStatus || "Active") !== "Active") continue;
         if (!emp?.passwordHash) continue;
         const ok = await verifyPassword(password, emp.passwordHash);
         if (!ok) continue;

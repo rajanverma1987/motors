@@ -11,6 +11,7 @@ import {
 } from "@/lib/time-clock-settings";
 import { getOpenPunchState, serializePunch } from "@/lib/time-clock-punches";
 import { toEmployeeJson } from "@/lib/employee-record";
+import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 
 async function requireShop(request) {
   const user = await getPortalUserFromRequest(request);
@@ -40,12 +41,15 @@ export async function GET(request) {
       );
     }
 
-    const employees = await Employee.find({ createdByEmail: auth.email })
+    const hiddenIds = await settledInactiveEmployeeIds(auth.email);
+    const employees = (
+      await Employee.find({ createdByEmail: auth.email })
       .select(
         "name email employeeNumber department scheduledStart scheduledEnd passkeys timeClockEnabled employmentStatus"
       )
       .sort({ name: 1 })
-      .lean();
+      .lean()
+    ).filter((emp) => !hiddenIds.has(String(emp._id)));
 
     const clockEligible = employees.filter((emp) => {
       const status = String(emp.employmentStatus || "Active").trim() || "Active";

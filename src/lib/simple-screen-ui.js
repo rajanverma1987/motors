@@ -6,6 +6,15 @@ export const SIMPLE_SCREEN_FILTERS_CLASS = "simple-screen-filters";
 
 export const SIMPLE_SCREEN_TABLE_WRAP_CLASS = "simple-screen-table-wrap";
 
+/** Same table chrome as Service Proposals: compact type, dense rows, sticky columns. */
+export const SIMPLE_LIST_TABLE_PROPS = {
+  dense: true,
+  textSize: "xs",
+  stickyColumns: true,
+  responsive: true,
+  fillHeight: true,
+};
+
 export const SIMPLE_SCREEN_PANEL_CLASS =
   "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden";
 

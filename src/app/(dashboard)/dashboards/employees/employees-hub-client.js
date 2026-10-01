@@ -17,6 +17,10 @@ import {
   TIME_CLOCK_RADIUS_MIN_M,
 } from "@/lib/time-clock-geo";
 import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
+import {
+  SIMPLE_LIST_TABLE_PROPS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 import SimpleEmployeesPanel from "@/components/simple/simple-employees-panel";
 import SimpleReleasePaymentPanel from "@/components/simple/simple-release-payment-panel";
 
@@ -546,8 +550,8 @@ export default function EmployeesHubClient() {
   );
 
   return (
-    <div className="box-border w-full px-4 py-8">
-      <div className="mb-4 flex w-full flex-wrap items-center justify-between gap-3">
+    <div className="simple-portal box-border flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-1 py-3">
+      <div className="mb-3 flex w-full shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
             href={SIMPLE_PORTAL_PATH}
@@ -572,7 +576,7 @@ export default function EmployeesHubClient() {
       <div
         role="tablist"
         aria-label="Employees sections"
-        className="mb-4 flex w-full flex-wrap gap-1 border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
+        className="mb-3 flex w-full shrink-0 flex-wrap gap-1 border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
       >
         {TABS.map((t) => (
           <button
@@ -592,7 +596,7 @@ export default function EmployeesHubClient() {
         ))}
       </div>
 
-      <div className="w-full min-w-0">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
       {tab === "employees" ? (
         <SimpleEmployeesPanel onChanged={() => void loadMeta().catch(() => {})} />
       ) : null}
@@ -615,12 +619,13 @@ export default function EmployeesHubClient() {
       ) : null}
 
       {!loading && tab === "floor" ? (
-        <div className="w-full min-w-0 space-y-3">
-          <p className="text-sm text-secondary">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
+          <p className="shrink-0 text-sm text-secondary">
             Currently clocked in: <strong>{meta?.floor?.length || 0}</strong>
           </p>
-          <div className="w-full min-w-0 overflow-x-auto">
+          <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
           <Table
+            {...SIMPLE_LIST_TABLE_PROPS}
             columns={[
               { key: "name", label: "Employee" },
               { key: "employeeNumber", label: "Emp #" },
@@ -643,20 +648,19 @@ export default function EmployeesHubClient() {
                 render: (_, row) =>
                   row.lastPunch?.punchedAt
                     ? new Date(row.lastPunch.punchedAt).toLocaleString()
-                    : "—",
+                    : "-",
               },
             ]}
             data={meta?.floor || []}
             rowKey="employeeId"
             emptyMessage="Nobody is clocked in."
-            responsive
           />
           </div>
         </div>
       ) : null}
 
       {!loading && tab === "time-clock" ? (
-        <div className="grid w-full min-w-0 gap-6 lg:grid-cols-2">
+        <div className="grid min-h-0 w-full min-w-0 flex-1 gap-6 overflow-auto lg:grid-cols-2">
           <div className="space-y-3 border border-border bg-card p-4">
             <h2 className="text-sm font-bold uppercase tracking-wide text-title">Shop QR</h2>
             <p className="text-sm text-secondary">
@@ -730,7 +734,7 @@ export default function EmployeesHubClient() {
       ) : null}
 
       {!loading && tab === "hours" ? (
-        <div className="w-full min-w-0 space-y-6">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-6 overflow-auto">
           <div className="flex flex-wrap items-end gap-2">
             <label className="text-xs font-bold text-title">
               From
@@ -764,7 +768,10 @@ export default function EmployeesHubClient() {
             </Button>
           </div>
 
+          <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} !flex-none`}>
           <Table
+            {...SIMPLE_LIST_TABLE_PROPS}
+            fillHeight={false}
             columns={[
               { key: "name", label: "Employee" },
               { key: "employeeNumber", label: "Emp #" },
@@ -799,8 +806,8 @@ export default function EmployeesHubClient() {
             data={hoursRows}
             rowKey="employeeId"
             emptyMessage="No hours in this range."
-            responsive
           />
+          </div>
 
           <div className="space-y-2">
             <div className="flex flex-wrap items-start justify-between gap-2">
@@ -828,7 +835,10 @@ export default function EmployeesHubClient() {
                 Add hours
               </Button>
             </div>
+            <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} !flex-none`}>
             <Table
+              {...SIMPLE_LIST_TABLE_PROPS}
+              fillHeight={false}
               columns={[
                 {
                   key: "actions",
@@ -873,7 +883,6 @@ export default function EmployeesHubClient() {
               data={manualHours}
               rowKey="id"
               emptyMessage="No manual hours in this range."
-              responsive
               pagination={{
                 page: manualPage,
                 pageSize: manualPageSize,
@@ -885,18 +894,21 @@ export default function EmployeesHubClient() {
               }}
               paginateClientSide={false}
             />
+            </div>
           </div>
         </div>
       ) : null}
 
       {!loading && tab === "punches" ? (
-        <div className="w-full min-w-0 space-y-3">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
           <div className="flex justify-end">
             <Button type="button" size="sm" variant="primary" onClick={() => setAddPunchOpen(true)}>
               Add punch
             </Button>
           </div>
+          <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
           <Table
+            {...SIMPLE_LIST_TABLE_PROPS}
             columns={[
               {
                 key: "employeeName",
@@ -931,7 +943,6 @@ export default function EmployeesHubClient() {
             data={punches}
             rowKey="employeeId"
             emptyMessage="No employees on the time clock yet."
-            responsive
             pagination={{ page: punchPage, pageSize: punchPageSize, totalCount: punchTotal }}
             onPageChange={(p, ps) => {
               setPunchPage(p);
@@ -939,12 +950,14 @@ export default function EmployeesHubClient() {
             }}
             paginateClientSide={false}
           />
+          </div>
         </div>
       ) : null}
 
       {!loading && tab === "alerts" ? (
-        <div className="w-full min-w-0">
+        <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table
+          {...SIMPLE_LIST_TABLE_PROPS}
           columns={[
             { key: "name", label: "Employee" },
             { key: "message", label: "Alert" },
@@ -952,7 +965,6 @@ export default function EmployeesHubClient() {
           data={alerts}
           rowKey="id"
           emptyMessage="No open clock alerts."
-          responsive
         />
         </div>
       ) : null}
@@ -1045,6 +1057,8 @@ export default function EmployeesHubClient() {
           <p className="py-6 text-center text-sm text-secondary">Loading…</p>
         ) : (
           <Table
+            {...SIMPLE_LIST_TABLE_PROPS}
+            fillHeight={false}
             columns={[
               {
                 key: "actions",
@@ -1089,7 +1103,6 @@ export default function EmployeesHubClient() {
             data={punchHistoryDays}
             rowKey="date"
             emptyMessage="No punch days for this employee."
-            responsive
           />
         )}
       </Modal>

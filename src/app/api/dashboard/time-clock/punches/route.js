@@ -9,6 +9,7 @@ import {
   punchWorkDate,
   serializePunch,
 } from "@/lib/time-clock-punches";
+import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 
 export async function GET(request) {
   try {
@@ -54,9 +55,11 @@ export async function GET(request) {
         byEmployee.get(id).push(p);
       }
 
+      const hiddenIds = await settledInactiveEmployeeIds(email);
       const rows = employees
         .filter((e) => {
           const id = String(e._id);
+          if (hiddenIds.has(id)) return false;
           const status = String(e.employmentStatus || "Active");
           if (status === "Terminated" && !byEmployee.has(id)) return false;
           return e.timeClockEnabled !== false || byEmployee.has(id);

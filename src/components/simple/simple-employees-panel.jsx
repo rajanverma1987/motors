@@ -9,9 +9,13 @@ import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
 import SimpleEmployeeAttachments from "@/components/simple/simple-employee-attachments";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useAuth } from "@/contexts/auth-context";
+import {
+  SIMPLE_LIST_TABLE_PROPS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -53,6 +57,7 @@ const INITIAL_EMPLOYEE_FORM = {
   department: "",
   employmentStatus: "Active",
   hireDate: "",
+  inactiveDate: "",
   payType: "hourly",
   hourlyRate: "",
   scheduledStart: "",
@@ -91,6 +96,7 @@ function buildEmployeePayload(form) {
     department: f.department ?? "",
     employmentStatus: f.employmentStatus || "Active",
     hireDate: f.hireDate ?? "",
+    inactiveDate: f.inactiveDate ?? "",
     payType: f.payType === "salary" ? "salary" : "hourly",
     hourlyRate: f.hourlyRate ?? "",
     scheduledStart: f.scheduledStart ?? "",
@@ -114,6 +120,7 @@ function formFromEmployee(dataToUse) {
     department: dataToUse.department ?? "",
     employmentStatus: dataToUse.employmentStatus || "Active",
     hireDate: dataToUse.hireDate ?? "",
+    inactiveDate: dataToUse.inactiveDate ?? "",
     payType: dataToUse.payType === "salary" ? "salary" : "hourly",
     hourlyRate: dataToUse.hourlyRate ?? "",
     scheduledStart: dataToUse.scheduledStart ?? "",
@@ -195,11 +202,32 @@ function EmployeeFormFields({
             name="employmentStatus"
             options={EMPLOYMENT_STATUS_OPTIONS}
             value={form.employmentStatus || "Active"}
-            onChange={(e) => setForm((f) => ({ ...f, employmentStatus: e.target.value }))}
+            onChange={(e) => {
+              const employmentStatus = e.target.value;
+              setForm((f) => ({
+                ...f,
+                employmentStatus,
+                inactiveDate: employmentStatus === "Active" ? "" : f.inactiveDate,
+                ...(employmentStatus === "Inactive"
+                  ? { canLogin: false, technicianAppAccess: false, timeClockEnabled: false }
+                  : {}),
+              }));
+            }}
             disabled={saving}
             aria-label="Employment status"
           />
         </FieldRow>
+        {form.employmentStatus === "Inactive" ? (
+          <FieldRow label="Inactive date" labelWidth={pairLabel}>
+            <input
+              type="date"
+              readOnly
+              value={form.inactiveDate || ""}
+              className={FIELD_INPUT}
+              aria-label="Inactive date"
+            />
+          </FieldRow>
+        ) : null}
         <FieldRow label="Hire date" labelWidth={pairLabel}>
           <input
             type="date"
@@ -301,8 +329,8 @@ function EmployeeFormFields({
           <label className="inline-flex items-center gap-2 text-sm text-title">
             <input
               type="checkbox"
-              disabled={saving}
-              checked={form.timeClockEnabled !== false}
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.timeClockEnabled !== false}
               onChange={(e) => setForm((f) => ({ ...f, timeClockEnabled: e.target.checked }))}
               className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
             />
@@ -318,8 +346,8 @@ function EmployeeFormFields({
           <label className="inline-flex items-center gap-2 text-sm text-title">
             <input
               type="checkbox"
-              disabled={saving}
-              checked={form.canLogin}
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.canLogin}
               onChange={(e) => setForm((f) => ({ ...f, canLogin: e.target.checked }))}
               className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
             />
@@ -328,8 +356,8 @@ function EmployeeFormFields({
           <label className="inline-flex items-center gap-2 text-sm text-title">
             <input
               type="checkbox"
-              disabled={saving}
-              checked={form.technicianAppAccess}
+              disabled={saving || form.employmentStatus === "Inactive"}
+              checked={form.employmentStatus === "Inactive" ? false : form.technicianAppAccess}
               onChange={(e) => setForm((f) => ({ ...f, technicianAppAccess: e.target.checked }))}
               className="h-3.5 w-3.5 rounded-none border-border text-primary focus:ring-primary"
             />
@@ -364,8 +392,14 @@ function EmployeeFormFields({
   );
 }
 
+function localTodayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function SimpleEmployeesPanel({ onChanged }) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const { canViewFinancials } = useAuth();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -460,6 +494,104 @@ export default function SimpleEmployeesPanel({ onChanged }) {
     setDetailEmployee(null);
     setEditingId(null);
     setForm(INITIAL_EMPLOYEE_FORM);
+  };
+
+  const makeInactive = async () => {
+    if (!editingId || saving) return;
+    const ok1 = await confirm({
+      title: "Make inactive",
+      message:
+        "This records today's date as the inactive date and turns off shop login, the Technician App, and time clock. The employee stays on the Employees tab. They stay on the other tabs only until all pay is recorded.",
+      confirmLabel: "Continue",
+      variant: "danger",
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: "Confirm inactive",
+      message: "Make this employee inactive now?",
+      confirmLabel: "Make inactive",
+      variant: "danger",
+    });
+    if (!ok2) return;
+
+    const nextForm = {
+      ...form,
+      employmentStatus: "Inactive",
+      inactiveDate: localTodayIso(),
+      canLogin: false,
+      technicianAppAccess: false,
+      timeClockEnabled: false,
+    };
+    setForm(nextForm);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/employees/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildEmployeePayload(nextForm)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update employee");
+      await load();
+      if (typeof onChanged === "function") onChanged();
+      await alert({
+        title: "Inactive",
+        message: `${nextForm.name || "Employee"} is inactive as of ${nextForm.inactiveDate}. App access is off.`,
+      });
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to update employee",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const makeActive = async () => {
+    if (!editingId || saving) return;
+    const ok = await confirm({
+      title: "Make active",
+      message:
+        "This employee will be Active again and the inactive date will be cleared. Shop login, the Technician App, and time clock stay off until you turn them back on and save.",
+      confirmLabel: "Make active",
+      variant: "primary",
+    });
+    if (!ok) return;
+
+    const nextForm = {
+      ...form,
+      employmentStatus: "Active",
+      inactiveDate: "",
+    };
+    setForm(nextForm);
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/employees/${editingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(buildEmployeePayload(nextForm)),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to update employee");
+      await load();
+      if (typeof onChanged === "function") onChanged();
+      await alert({
+        title: "Active",
+        message: `${nextForm.name || "Employee"} is active again. Turn app access back on if they should be able to sign in.`,
+      });
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to update employee",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -637,7 +769,9 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         </Button>
       </div>
 
+      <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
       <Table
+        {...SIMPLE_LIST_TABLE_PROPS}
         columns={columns}
         data={rows}
         rowKey="id"
@@ -661,7 +795,6 @@ export default function SimpleEmployeesPanel({ onChanged }) {
           setPage(1);
           setTableSort({ key, direction });
         }}
-        responsive
         pagination={{ page, pageSize, totalCount }}
         onPageChange={(nextPage, nextPageSize) => {
           setPage(nextPage);
@@ -669,6 +802,7 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         }}
         paginateClientSide={false}
       />
+      </div>
 
       <Modal
         open={createOpen}
@@ -702,9 +836,32 @@ export default function SimpleEmployeesPanel({ onChanged }) {
         title={detailEmployee?.name || "Employee"}
         showClose={!saving}
         actions={
-          <Button type="submit" form={EMPLOYEE_DETAIL_FORM_ID} variant="primary" size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
+          <>
+            {form.employmentStatus === "Inactive" ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={saving}
+                onClick={() => void makeActive()}
+              >
+                Make active
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                disabled={saving}
+                onClick={() => void makeInactive()}
+              >
+                Make inactive
+              </Button>
+            )}
+            <Button type="submit" form={EMPLOYEE_DETAIL_FORM_ID} variant="primary" size="sm" disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </>
         }
         leftPanel={
           <Form

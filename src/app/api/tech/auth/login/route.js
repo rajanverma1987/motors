@@ -26,6 +26,7 @@ export async function POST(request) {
     let employee = null;
     for (const c of candidates) {
       if (!c.technicianAppAccess) continue;
+      if (String(c.employmentStatus || "Active") !== "Active") continue;
       if (!c.passwordHash) continue;
       const ok = await verifyPassword(password, c.passwordHash);
       if (ok) {

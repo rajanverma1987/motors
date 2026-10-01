@@ -147,6 +147,13 @@ export async function getPortalUserFromRequest(request) {
   const payload = await getPortalPayloadFromRequest(request);
   if (!payload || !payload.email) return null;
   const isEmployee = isPortalEmployee(payload);
+  if (isEmployee && payload.employeeId) {
+    await connectDB();
+    const emp = await Employee.findById(payload.employeeId)
+      .select("employmentStatus canLogin")
+      .lean();
+    if (!emp || emp.employmentStatus !== "Active" || !emp.canLogin) return null;
+  }
   return {
     email: payload.email,
     shopName: payload.shopName || "",
@@ -219,6 +226,11 @@ export async function getTechnicianFromRequest(request) {
   if (!tech) return null;
   const allowed = await isShopOwnerLoginAllowed(tech.shopEmail);
   if (!allowed) return null;
+  await connectDB();
+  const emp = await Employee.findById(tech.employeeId)
+    .select("employmentStatus technicianAppAccess")
+    .lean();
+  if (!emp || emp.employmentStatus !== "Active" || !emp.technicianAppAccess) return null;
   return tech;
 }
 

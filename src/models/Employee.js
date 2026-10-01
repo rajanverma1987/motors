@@ -57,6 +57,8 @@ const employeeSchema = new mongoose.Schema(
       enum: ["Active", "Inactive", "Terminated"],
     },
     hireDate: { type: String, default: "", trim: true },
+    /** Local calendar date YYYY-MM-DD when the employee was made inactive. */
+    inactiveDate: { type: String, default: "", trim: true },
     payType: { type: String, default: "hourly", trim: true, enum: ["hourly", "salary"] },
     hourlyRate: { type: String, default: "", trim: true },
     scheduledStart: { type: String, default: "", trim: true },

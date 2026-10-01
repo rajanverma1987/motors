@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEye } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -24,6 +23,10 @@ import {
   parsePayRate,
   periodMonthBounds,
 } from "@/lib/employee-payroll-payment";
+import {
+  SIMPLE_LIST_TABLE_PROPS,
+  SIMPLE_SCREEN_TABLE_WRAP_CLASS,
+} from "@/lib/simple-screen-ui";
 
 const PAY_FORM_ID = "simple-employee-release-payment-form";
 const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
@@ -82,22 +85,23 @@ function payrollRowForEmployee({
   monthPayment,
   paidHours,
   balance,
-  isCurrentMonth,
 }) {
   let totalHours = Number(monthHours) || 0;
   let payment = monthPayment || null;
   let status = payment ? "paid" : "unpaid";
 
-  if (payType === "hourly" && isCurrentMonth && balance) {
+  let workedHours = Number(monthHours) || 0;
+  let monthPaidHours = Number(paidHours) || 0;
+
+  if (payType === "hourly" && balance) {
+    workedHours = Number(balance.workedHours) || 0;
+    monthPaidHours = Number(balance.paidHours) || 0;
     totalHours = Number(balance.unpaidHours) || 0;
-    payment = balance.lastPayment || payment;
-    status = totalHours > 0.0001 ? "unpaid" : "paid";
-    if (status === "paid" && !monthPayment) return null;
-  } else if (payType === "hourly" && isCurrentMonth) {
+    payment = balance.lastPayment || null;
     status = totalHours > 0.0001 ? "unpaid" : payment ? "paid" : "unpaid";
-  } else if (payType === "hourly" && payment) {
-    totalHours = Number(paidHours) || 0;
-    status = "paid";
+  } else if (payType === "hourly") {
+    totalHours = Math.max(0, Math.round((workedHours - monthPaidHours) * 100) / 100);
+    status = totalHours > 0.0001 ? "unpaid" : payment ? "paid" : "unpaid";
   }
 
   const amountDue =
@@ -113,6 +117,16 @@ function payrollRowForEmployee({
   if (status === "unpaid" && payType === "salary" && amountDue <= 0) return null;
   if (status === "paid" && !payment) return null;
 
+  const allUnpaidHours =
+    payType !== "hourly"
+      ? 0
+      : Math.max(
+          0,
+          balance && balance.allUnpaidHours != null
+            ? Number(balance.allUnpaidHours) || 0
+            : totalHours
+        );
+
   return {
     employeeId,
     name,
@@ -120,7 +134,10 @@ function payrollRowForEmployee({
     department,
     payType,
     hourlyRate,
+    workedHours: payType === "salary" ? null : workedHours,
+    paidHours: payType === "salary" ? null : monthPaidHours,
     totalHours,
+    allUnpaidHours,
     amountDue,
     payment,
     status,
@@ -128,9 +145,9 @@ function payrollRowForEmployee({
 }
 
 function monthLabel(ym) {
-  const bounds = periodMonthBounds(ym);
-  if (!bounds) return ym || "";
-  const d = new Date(`${bounds.from}T12:00:00`);
+  const monthBounds = periodMonthBounds(ym);
+  if (!monthBounds) return ym || "";
+  const d = new Date(`${monthBounds.from}T12:00:00`);
   return d.toLocaleString(undefined, { month: "long", year: "numeric" });
 }
 
@@ -167,10 +184,6 @@ export default function SimpleReleasePaymentPanel() {
   const [paySaving, setPaySaving] = useState(false);
   const [payUploading, setPayUploading] = useState(false);
 
-  const [viewModalOpen, setViewModalOpen] = useState(false);
-  const [viewingPayment, setViewingPayment] = useState(null);
-  const [viewLoading, setViewLoading] = useState(false);
-
   const [historyEmployee, setHistoryEmployee] = useState(null);
 
   const bounds = useMemo(() => periodMonthBounds(month), [month]);
@@ -193,7 +206,6 @@ export default function SimpleReleasePaymentPanel() {
     }
     setLoading(true);
     try {
-      const isCurrentMonth = month === currentMonthValue();
       const hoursParams = new URLSearchParams({ from: bounds.from, to: bounds.to });
       const [hoursRes, paymentsRes, employeesRes, balancesRes] = await Promise.all([
         fetch(`/api/dashboard/time-clock/hours?${hoursParams}`, {
@@ -245,14 +257,17 @@ export default function SimpleReleasePaymentPanel() {
 
       const activeEmployees = employees.filter((e) => {
         const status = String(e.employmentStatus || "Active").trim().toLowerCase();
-        return status === "active" || status === "";
+        if (status === "active" || status === "") return true;
+        if (status !== "inactive") return false;
+        const id = String(e.id || e._id || "").trim();
+        return (Number(balanceByEmployee.get(id)?.unpaidHours) || 0) > 0.0001;
       });
 
       const nextRows = [];
       const seen = new Set();
 
       const pushRow = (source) => {
-        const row = payrollRowForEmployee({ ...source, isCurrentMonth });
+        const row = payrollRowForEmployee(source);
         if (!row || seen.has(row.employeeId)) return;
         seen.add(row.employeeId);
         nextRows.push(row);
@@ -326,7 +341,7 @@ export default function SimpleReleasePaymentPanel() {
   const openPay = (row) => {
     if (!row || row.status === "paid") return;
     const monthBounds = periodMonthBounds(month);
-    const hours = row.payType === "hourly" ? (Number(row.totalHours) || 0).toFixed(2) : "";
+    const hours = row.payType === "hourly" ? (Number(row.allUnpaidHours) || 0).toFixed(2) : "";
     setPayingRow(row);
     setPayHours(hours);
     setPayAmount(
@@ -358,33 +373,6 @@ export default function SimpleReleasePaymentPanel() {
     });
   };
 
-  const openView = async (row) => {
-    const id = row?.payment?.id;
-    if (!id) return;
-    setViewModalOpen(true);
-    setViewingPayment(row.payment);
-    setViewLoading(true);
-    try {
-      const res = await fetch(`/api/dashboard/employee-payroll-payments/${id}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to load payment");
-      setViewingPayment(data);
-    } catch (err) {
-      setViewModalOpen(false);
-      setViewingPayment(null);
-      await alert({
-        title: "Error",
-        message: err?.message || "Failed to load payment",
-        variant: "danger",
-      });
-    } finally {
-      setViewLoading(false);
-    }
-  };
-
   const handlePaySubmit = async (e) => {
     e.preventDefault();
     if (!payingRow?.employeeId || !bounds) return;
@@ -404,7 +392,7 @@ export default function SimpleReleasePaymentPanel() {
     const hoursToPay =
       payingRow.payType === "hourly" ? Number.parseFloat(String(payHours)) : 0;
     if (payingRow.payType === "hourly") {
-      const unpaid = Number(payingRow.totalHours) || 0;
+      const unpaid = Number(payingRow.allUnpaidHours) || 0;
       if (!Number.isFinite(hoursToPay) || hoursToPay <= 0) {
         await alert({ title: "Error", message: "Enter the hours to pay.", variant: "danger" });
         return;
@@ -412,7 +400,7 @@ export default function SimpleReleasePaymentPanel() {
       if (hoursToPay > unpaid + 0.001) {
         await alert({
           title: "Error",
-          message: "Hours to pay cannot be more than the unpaid hours.",
+          message: "Hours to pay cannot be more than all unpaid hours.",
           variant: "danger",
         });
         return;
@@ -502,32 +490,18 @@ export default function SimpleReleasePaymentPanel() {
     {
       key: "actions",
       label: "Actions",
-      render: (_, row) => (
-        <div className="flex items-center gap-1">
-          {row.status === "unpaid" ? (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className="h-7 shrink-0 whitespace-nowrap px-2.5 text-xs"
-              onClick={() => openPay(row)}
-            >
-              Pay
-            </Button>
-          ) : null}
-          {row.payment ? (
-            <button
-              type="button"
-              className="inline-flex items-center p-1.5 text-primary hover:bg-primary/10"
-              title="View payment"
-              aria-label="View payment"
-              onClick={() => void openView(row)}
-            >
-              <FiEye className="h-4 w-4 shrink-0" aria-hidden />
-            </button>
-          ) : null}
-        </div>
-      ),
+      render: (_, row) =>
+        row.status === "unpaid" ? (
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="h-7 shrink-0 whitespace-nowrap px-2.5 text-xs"
+            onClick={() => openPay(row)}
+          >
+            Pay
+          </Button>
+        ) : null,
     },
     {
       key: "name",
@@ -552,8 +526,22 @@ export default function SimpleReleasePaymentPanel() {
       render: (v) => (String(v) === "salary" ? "Salary" : "Hourly"),
     },
     {
+      key: "workedHours",
+      label: "Total hours",
+      align: "right",
+      sortable: true,
+      render: (v) => (v == null ? "-" : (Number(v) || 0).toFixed(2)),
+    },
+    {
+      key: "paidHours",
+      label: "Paid hours",
+      align: "right",
+      sortable: true,
+      render: (v) => (v == null ? "-" : (Number(v) || 0).toFixed(2)),
+    },
+    {
       key: "totalHours",
-      label: month === currentMonthValue() ? "Unpaid hours" : "Hours",
+      label: "Unpaid hours",
       align: "right",
       sortable: true,
       render: (v) => (Number(v) || 0).toFixed(2),
@@ -600,7 +588,7 @@ export default function SimpleReleasePaymentPanel() {
   ];
 
   return (
-    <div className="w-full min-w-0 space-y-4">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex flex-wrap items-end gap-2">
           <label className="text-xs font-bold text-title">
@@ -627,20 +615,23 @@ export default function SimpleReleasePaymentPanel() {
       </div>
 
       <p className="text-sm text-secondary">
-        Unpaid hours are time worked since the last payment. After you record a payment, that number
-        goes back to 0 and new clock time adds up again. You can pay part of the hours. The rest stays
-        unpaid. Salary uses the employee salary amount. Punch history is kept on the Hours tab. Click
-        an employee name to view payment history.
+        Total hours, paid hours, and unpaid hours on this table are for the selected month only.
+        Pay shows every unpaid hour, including earlier and later periods, so they can be paid
+        together. You can pay part of those hours. The rest stays unpaid. Set the pay period to
+        cover the days you are paying. Salary uses the salary amount for the selected month. Punch
+        history is kept on the Hours tab. Click an employee name to view payment history.
       </p>
 
+      <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} min-h-0 flex-1`}>
       <Table
+        {...SIMPLE_LIST_TABLE_PROPS}
         columns={columns}
         data={rows}
         rowKey="employeeId"
         loading={loading}
         emptyMessage={loading ? "Loading…" : "No employee payroll due for this month."}
-        responsive
       />
+      </div>
 
       <Modal
         open={payModalOpen}
@@ -667,21 +658,26 @@ export default function SimpleReleasePaymentPanel() {
           className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
         >
           {payingRow ? (
-            <p className="text-sm text-secondary">
-              <span className="font-medium text-title">{payingRow.name}</span>
-              {payingRow.employeeNumber ? ` · #${payingRow.employeeNumber}` : ""}
-              {" · "}
-              {payingRow.payType === "salary" ? "Salary" : "Hourly"}
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-secondary">
+                <span className="font-medium text-title">{payingRow.name}</span>
+                {payingRow.employeeNumber ? ` · #${payingRow.employeeNumber}` : ""}
+                {" · "}
+                {payingRow.payType === "salary" ? "Salary" : "Hourly"}
+              </p>
               {payingRow.payType === "hourly" ? (
-                <>
-                  {" · "}
+                <p className="rounded-sm border border-warning/40 bg-warning/15 px-3 py-2 text-sm font-semibold text-title">
                   <span className="tabular-nums">
                     {(Number(payingRow.totalHours) || 0).toFixed(2)}
                   </span>
-                  {" unpaid hrs"}
-                </>
+                  {" unpaid this month · "}
+                  <span className="tabular-nums">
+                    {(Number(payingRow.allUnpaidHours) || 0).toFixed(2)}
+                  </span>
+                  {" unpaid, all periods"}
+                </p>
               ) : null}
-            </p>
+            </div>
           ) : null}
           <FieldRow label="Pay period">
             <div className="flex min-w-0 flex-nowrap items-center gap-2">
@@ -709,7 +705,7 @@ export default function SimpleReleasePaymentPanel() {
               <input
                 type="number"
                 min="0"
-                max={Number(payingRow.totalHours) || 0}
+                max={Number(payingRow.allUnpaidHours) || 0}
                 step="0.01"
                 value={payHours}
                 onChange={(e) => {
@@ -722,7 +718,7 @@ export default function SimpleReleasePaymentPanel() {
                 aria-label="Hours to pay"
               />
               <p className="mt-1 text-xs text-secondary">
-                Prefilled with unpaid hours. Lower it to pay part. Time after you confirm starts the next balance.
+                Prefilled with all unpaid hours, including earlier and later periods. The table above shows this month only. Lower it to pay part. The rest stays unpaid.
               </p>
             </FieldRow>
           ) : null}
@@ -784,65 +780,6 @@ export default function SimpleReleasePaymentPanel() {
             Documents upload when you confirm payment (proof of transfer, payslip, etc.).
           </p>
         </Form>
-      </Modal>
-
-      <Modal
-        open={viewModalOpen}
-        onClose={() => {
-          setViewModalOpen(false);
-          setViewingPayment(null);
-        }}
-        title="Payroll payment record"
-        size="lg"
-        showClose
-      >
-        {viewLoading ? (
-          <div className="flex items-center justify-center py-12 text-sm text-secondary">Loading…</div>
-        ) : viewingPayment ? (
-          <div className="flex flex-col gap-3">
-            <FieldRow label="Employee">
-              <p className="text-sm text-title">{viewingPayment.employeeName || "-"}</p>
-            </FieldRow>
-            <FieldRow label="Month">
-              <p className="text-sm text-title">{monthLabel(viewingPayment.periodMonth)}</p>
-            </FieldRow>
-            <FieldRow label="Pay period">
-              <p className="text-sm text-title">
-                {viewingPayment.periodFrom || viewingPayment.periodTo
-                  ? `${formatDate(viewingPayment.periodFrom) || viewingPayment.periodFrom || "-"} to ${
-                      formatDate(viewingPayment.periodTo) || viewingPayment.periodTo || "-"
-                    }`
-                  : "-"}
-              </p>
-            </FieldRow>
-            <FieldRow label="Hours paid">
-              <p className="text-sm tabular-nums text-title">
-                {(Number(viewingPayment.hours) || 0).toFixed(2)}
-              </p>
-            </FieldRow>
-            <FieldRow label="Amount">
-              <p className="text-sm tabular-nums text-title">{fmt(viewingPayment.amount)}</p>
-            </FieldRow>
-            <FieldRow label="Status">
-              <Badge variant="success" className="rounded-full px-2.5 py-0.5 text-xs">
-                Paid
-              </Badge>
-            </FieldRow>
-            <FieldRow label="Paid date">
-              <p className="text-sm text-title">{formatDate(viewingPayment.paidAt) || "-"}</p>
-            </FieldRow>
-            <FieldRow label="Mode of payment">
-              <p className="text-sm text-title">
-                {String(viewingPayment.paymentMethod || "").trim() || "-"}
-              </p>
-            </FieldRow>
-            <FieldRow label="Notes" className="items-start">
-              <p className="whitespace-pre-wrap text-sm text-title">
-                {String(viewingPayment.notes || "").trim() || "-"}
-              </p>
-            </FieldRow>
-          </div>
-        ) : null}
       </Modal>
 
       <SimpleEmployeePaymentHistoryModal
