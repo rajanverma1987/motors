@@ -7,6 +7,7 @@ import {
   FiClipboard,
   FiDatabase,
   FiFileText,
+  FiGrid,
   FiHome,
   FiPackage,
   FiShoppingCart,
@@ -34,6 +35,7 @@ import {
   SIMPLE_TAB_DASHBOARD,
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVENTORY,
+  SIMPLE_TAB_JOB_BOARD,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_MASTER_DATA_SEARCH,
   SIMPLE_TAB_PURCHASE_ORDERS,
@@ -43,6 +45,8 @@ import {
 } from "@/lib/simple-portal-tabs";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
+import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
+import { useUserSettings } from "@/contexts/user-settings-context";
 
 /** Square UI — only used on Simple `/dashboards`. */
 const DASHBOARDS_SQUARE_UI_CLASS = [
@@ -73,24 +77,27 @@ export default function DashboardsPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isOwner, canViewFinancials, isSimulatedFinancialRestriction } = useAuth();
+  const { settings, loading: settingsLoading } = useUserSettings();
   const effectiveIsOwner =
     isOwner ??
     Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
   const calcOnly = !!user?.calculatorOnlyAccount;
+  const showJobBoard = !calcOnly && settings?.shopFloorBoardInHub === true;
   const tabParam = searchParams.get("tab");
+  const tabAllowed = (id) =>
+    id === SIMPLE_TAB_JOB_BOARD ? showJobBoard : SIMPLE_TAB_IDS.includes(id);
   const urlTab = calcOnly
     ? SIMPLE_TAB_CALCULATORS
     : !canViewFinancials && tabParam === SIMPLE_TAB_INVOICES
       ? SIMPLE_TAB_SERVICE_PROPOSALS
       : tabParam === SIMPLE_TAB_TRACK_RFQS
         ? SIMPLE_TAB_CUSTOMERS
-        : SIMPLE_TAB_IDS.includes(tabParam)
+        : tabAllowed(tabParam)
           ? tabParam
           : SIMPLE_TAB_SERVICE_PROPOSALS;
   /** Immediate UI feedback — URL sync via router.replace can lag and feel like dead clicks. */
   const [pendingTab, setPendingTab] = useState(null);
-  const activeTab =
-    pendingTab && SIMPLE_TAB_IDS.includes(pendingTab) ? pendingTab : urlTab;
+  const activeTab = pendingTab && tabAllowed(pendingTab) ? pendingTab : urlTab;
 
   useEffect(() => {
     setPendingTab(null);
@@ -131,6 +138,14 @@ export default function DashboardsPageClient() {
     router.replace(SIMPLE_CUSTOMERS_LEADS_HREF, { scroll: false });
   }, [calcOnly, router, tabParam]);
 
+  useEffect(() => {
+    if (calcOnly || settingsLoading || showJobBoard) return;
+    if (tabParam !== SIMPLE_TAB_JOB_BOARD) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", SIMPLE_TAB_DASHBOARD);
+    router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
+  }, [calcOnly, router, searchParams, settingsLoading, showJobBoard, tabParam]);
+
   const tabs = useMemo(() => {
     const all = [
       {
@@ -138,6 +153,15 @@ export default function DashboardsPageClient() {
         label: <TabLabel icon={FiHome}>Dashboard</TabLabel>,
         children: <DashboardOverviewPanel />,
       },
+      ...(showJobBoard
+        ? [
+            {
+              id: SIMPLE_TAB_JOB_BOARD,
+              label: <TabLabel icon={FiGrid}>Job board</TabLabel>,
+              children: <SimpleJobBoardSection hub />,
+            },
+          ]
+        : []),
       {
         id: SIMPLE_TAB_CUSTOMERS,
         label: <TabLabel icon={FiUsers}>Customers</TabLabel>,
@@ -183,7 +207,7 @@ export default function DashboardsPageClient() {
       ? all
       : all.filter((t) => t.id !== SIMPLE_TAB_INVOICES);
     return calcOnly ? allowed.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : allowed;
-  }, [calcOnly, canViewFinancials]);
+  }, [calcOnly, canViewFinancials, showJobBoard]);
 
   return (
     <SimpleJobViewProvider>

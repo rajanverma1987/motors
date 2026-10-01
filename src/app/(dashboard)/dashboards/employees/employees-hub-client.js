@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FiArrowLeft, FiPlus, FiPrinter, FiRefreshCw, FiTrash2 } from "react-icons/fi";
 import QRCode from "qrcode";
@@ -23,6 +23,7 @@ import {
 } from "@/lib/simple-screen-ui";
 import SimpleEmployeesPanel from "@/components/simple/simple-employees-panel";
 import SimpleReleasePaymentPanel from "@/components/simple/simple-release-payment-panel";
+import SimplePunchesCalendar from "@/components/simple/simple-punches-calendar";
 
 const TABS = [
   { id: "employees", label: "Employees" },
@@ -134,37 +135,10 @@ function printQrDataUrl(dataUrl, title) {
   }
 }
 
-function formatPunchTime(iso) {
-  if (!iso) return "-";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-function punchLocalDate(iso) {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function formatPunchDate(isoDate) {
-  if (!isoDate) return "-";
-  const d = new Date(`${isoDate}T12:00:00`);
-  if (Number.isNaN(d.getTime())) return isoDate;
-  return d.toLocaleDateString(undefined, {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function EmployeesHubClient() {
   const alert = useAlert();
   const confirm = useConfirm();
+  const employeesPanelRef = useRef(null);
   const [tab, setTab] = useState("employees");
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState(null);
@@ -186,16 +160,9 @@ export default function EmployeesHubClient() {
     hours: "",
     note: "",
   });
-  const [punches, setPunches] = useState([]);
-  const [punchPage, setPunchPage] = useState(1);
-  const [punchPageSize, setPunchPageSize] = usePreferredTablePageSize();
-  const [punchTotal, setPunchTotal] = useState(0);
+  const [punchReload, setPunchReload] = useState(0);
   const [addPunchOpen, setAddPunchOpen] = useState(false);
   const [addPunch, setAddPunch] = useState({ employeeId: "", type: "in", punchedAt: "" });
-  const [punchHistoryOpen, setPunchHistoryOpen] = useState(false);
-  const [punchHistoryEmployee, setPunchHistoryEmployee] = useState(null);
-  const [punchHistoryDays, setPunchHistoryDays] = useState([]);
-  const [punchHistoryLoading, setPunchHistoryLoading] = useState(false);
 
   const loadMeta = useCallback(async () => {
     const res = await fetch("/api/dashboard/time-clock", { credentials: "include", cache: "no-store" });
@@ -236,56 +203,6 @@ export default function EmployeesHubClient() {
     setManualHoursTotal(Number(data.totalCount) || 0);
   }, [hoursFrom, hoursTo, manualPage, manualPageSize]);
 
-  const loadPunches = useCallback(async () => {
-    const params = new URLSearchParams({
-      view: "summary",
-      page: String(punchPage),
-      pageSize: String(punchPageSize),
-    });
-    const res = await fetch(`/api/dashboard/time-clock/punches?${params}`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Failed to load punches");
-    setPunches(Array.isArray(data.items) ? data.items : []);
-    setPunchTotal(Number(data.totalCount) || 0);
-  }, [punchPage, punchPageSize]);
-
-  const loadPunchHistory = useCallback(async (employeeId) => {
-    const id = String(employeeId || "").trim();
-    if (!id) return;
-    setPunchHistoryLoading(true);
-    try {
-      const params = new URLSearchParams({ view: "by-day", employeeId: id });
-      const res = await fetch(`/api/dashboard/time-clock/punches?${params}`, {
-        credentials: "include",
-        cache: "no-store",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to load punch history");
-      setPunchHistoryEmployee(data.employee || null);
-      setPunchHistoryDays(Array.isArray(data.days) ? data.days : []);
-    } finally {
-      setPunchHistoryLoading(false);
-    }
-  }, []);
-
-  const openPunchHistory = async (row) => {
-    setPunchHistoryOpen(true);
-    setPunchHistoryEmployee({
-      id: row.employeeId,
-      name: row.employeeName,
-      employeeNumber: row.employeeNumber,
-    });
-    setPunchHistoryDays([]);
-    try {
-      await loadPunchHistory(row.employeeId);
-    } catch (err) {
-      await alert({ title: "Error", message: err.message || "Failed to load history", variant: "danger" });
-    }
-  };
-
   const refresh = useCallback(async () => {
     if (tab === "employees" || tab === "release-payment") {
       setLoading(false);
@@ -298,13 +215,12 @@ export default function EmployeesHubClient() {
         await loadHours();
         await loadManualHours();
       }
-      if (tab === "punches") await loadPunches();
     } catch (err) {
       await alert({ title: "Error", message: err.message || "Failed to load", variant: "danger" });
     } finally {
       setLoading(false);
     }
-  }, [alert, loadHours, loadManualHours, loadMeta, loadPunches, tab]);
+  }, [alert, loadHours, loadManualHours, loadMeta, tab]);
 
   useEffect(() => {
     void refresh();
@@ -407,43 +323,6 @@ export default function EmployeesHubClient() {
     }
   };
 
-  const voidPunchDay = async (dayRow) => {
-    const empId = punchHistoryEmployee?.id;
-    if (!empId || !dayRow?.date) return;
-    const ok1 = await confirm({
-      title: "Delete day punches",
-      message: `Delete all In/Out punches for ${punchHistoryEmployee?.name || "employee"} on ${formatPunchDate(dayRow.date)}?`,
-      confirmLabel: "Delete",
-      variant: "danger",
-    });
-    if (!ok1) return;
-    const ok2 = await confirm({
-      title: "Confirm delete",
-      message: "This removes the day's punch record from Hours totals. Continue?",
-      confirmLabel: "Delete day",
-      variant: "danger",
-    });
-    if (!ok2) return;
-    const res = await fetch("/api/dashboard/time-clock/punches", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        voidDay: true,
-        employeeId: empId,
-        workDate: dayRow.date,
-        voidReason: "Day voided by manager",
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      await alert({ title: "Error", message: data.error || "Delete failed", variant: "danger" });
-      return;
-    }
-    await loadPunches();
-    await loadPunchHistory(empId);
-  };
-
   const submitAddPunch = async (e) => {
     e.preventDefault();
     const res = await fetch("/api/dashboard/time-clock/punches", {
@@ -458,10 +337,7 @@ export default function EmployeesHubClient() {
       return;
     }
     setAddPunchOpen(false);
-    await loadPunches();
-    if (punchHistoryOpen && punchHistoryEmployee?.id === addPunch.employeeId) {
-      await loadPunchHistory(addPunch.employeeId);
-    }
+    setPunchReload((n) => n + 1);
   };
 
   const submitAddHours = async (e) => {
@@ -597,9 +473,12 @@ export default function EmployeesHubClient() {
       </div>
 
       <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      {tab === "employees" ? (
-        <SimpleEmployeesPanel onChanged={() => void loadMeta().catch(() => {})} />
-      ) : null}
+      <div className={tab === "employees" ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" : "hidden"}>
+        <SimpleEmployeesPanel
+          ref={employeesPanelRef}
+          onChanged={() => void loadMeta().catch(() => {})}
+        />
+      </div>
 
       {tab === "release-payment" ? <SimpleReleasePaymentPanel /> : null}
 
@@ -900,58 +779,11 @@ export default function EmployeesHubClient() {
       ) : null}
 
       {!loading && tab === "punches" ? (
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
-          <div className="flex justify-end">
-            <Button type="button" size="sm" variant="primary" onClick={() => setAddPunchOpen(true)}>
-              Add punch
-            </Button>
-          </div>
-          <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-          <Table
-            {...SIMPLE_LIST_TABLE_PROPS}
-            columns={[
-              {
-                key: "employeeName",
-                label: "Employee",
-                render: (v, row) => (
-                  <button
-                    type="button"
-                    className="text-left font-semibold text-primary hover:underline"
-                    onClick={() => void openPunchHistory(row)}
-                  >
-                    {v || "Employee"}
-                  </button>
-                ),
-              },
-              { key: "employeeNumber", label: "Emp #" },
-              { key: "department", label: "Dept" },
-              {
-                key: "todayIn",
-                label: "Today In",
-                render: (v) => (
-                  <span className="tabular-nums">{formatPunchTime(v)}</span>
-                ),
-              },
-              {
-                key: "todayOut",
-                label: "Today Out",
-                render: (v) => (
-                  <span className="tabular-nums">{formatPunchTime(v)}</span>
-                ),
-              },
-            ]}
-            data={punches}
-            rowKey="employeeId"
-            emptyMessage="No employees on the time clock yet."
-            pagination={{ page: punchPage, pageSize: punchPageSize, totalCount: punchTotal }}
-            onPageChange={(p, ps) => {
-              setPunchPage(p);
-              setPunchPageSize(ps);
-            }}
-            paginateClientSide={false}
-          />
-          </div>
-        </div>
+        <SimplePunchesCalendar
+          reloadToken={punchReload}
+          onOpenEmployee={(row) => employeesPanelRef.current?.openEmployeeById(row.employeeId)}
+          onAddPunch={() => setAddPunchOpen(true)}
+        />
       ) : null}
 
       {!loading && tab === "alerts" ? (
@@ -1022,89 +854,6 @@ export default function EmployeesHubClient() {
             />
           </label>
         </Form>
-      </Modal>
-
-      <Modal
-        open={punchHistoryOpen}
-        onClose={() => {
-          setPunchHistoryOpen(false);
-          setPunchHistoryEmployee(null);
-          setPunchHistoryDays([]);
-        }}
-        title={
-          punchHistoryEmployee?.name
-            ? `Punches: ${punchHistoryEmployee.name}`
-            : "Employee punches"
-        }
-        size="lg"
-        width="min(720px, 96vw)"
-        actions={
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => {
-              setPunchHistoryOpen(false);
-              setPunchHistoryEmployee(null);
-              setPunchHistoryDays([]);
-            }}
-          >
-            Close
-          </Button>
-        }
-      >
-        {punchHistoryLoading ? (
-          <p className="py-6 text-center text-sm text-secondary">Loading…</p>
-        ) : (
-          <Table
-            {...SIMPLE_LIST_TABLE_PROPS}
-            fillHeight={false}
-            columns={[
-              {
-                key: "actions",
-                label: "",
-                render: (_, row) => (
-                  <button
-                    type="button"
-                    className="p-1.5 text-danger hover:bg-danger/10"
-                    title="Delete day"
-                    aria-label="Delete day punches"
-                    onClick={() => void voidPunchDay(row)}
-                  >
-                    <FiTrash2 className="h-4 w-4" />
-                  </button>
-                ),
-              },
-              {
-                key: "date",
-                label: "Date",
-                render: (v) => formatPunchDate(v),
-              },
-              {
-                key: "inAt",
-                label: "In",
-                render: (v) => <span className="tabular-nums">{formatPunchTime(v)}</span>,
-              },
-              {
-                key: "outAt",
-                label: "Out",
-                render: (v, row) => {
-                  const time = formatPunchTime(v);
-                  const nextDay = Boolean(v) && punchLocalDate(v) !== String(row?.date || "");
-                  return (
-                    <span className="tabular-nums">
-                      {time}
-                      {nextDay && time !== "-" ? " (next day)" : ""}
-                    </span>
-                  );
-                },
-              },
-            ]}
-            data={punchHistoryDays}
-            rowKey="date"
-            emptyMessage="No punch days for this employee."
-          />
-        )}
       </Modal>
 
       <Modal

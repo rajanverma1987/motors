@@ -5,9 +5,12 @@ import Employee from "@/models/Employee";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
   buildDailyPunchSummaries,
+  eachLocalDate,
   localDateIso,
+  punchSessionMetrics,
   punchWorkDate,
   serializePunch,
+  summarizePunchSessions,
 } from "@/lib/time-clock-punches";
 import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 
@@ -25,6 +28,81 @@ export async function GET(request) {
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 50));
     const employeeId = String(searchParams.get("employeeId") || "").trim();
     const includeVoided = searchParams.get("includeVoided") === "1";
+
+    if (view === "calendar") {
+      const from = String(searchParams.get("from") || "").slice(0, 10);
+      const to = String(searchParams.get("to") || "").slice(0, 10);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+        return NextResponse.json({ error: "A valid from and to date are required." }, { status: 400 });
+      }
+      const days = eachLocalDate(from, to, 63);
+      if (days.length === 0 || days.length > 62 || days[days.length - 1] !== to) {
+        return NextResponse.json({ error: "Select 62 days or fewer." }, { status: 400 });
+      }
+
+      const rangeStart = new Date(`${from}T12:00:00`);
+      rangeStart.setDate(rangeStart.getDate() - 1);
+      rangeStart.setHours(0, 0, 0, 0);
+      const rangeEnd = new Date(`${to}T12:00:00`);
+      rangeEnd.setDate(rangeEnd.getDate() + 2);
+      rangeEnd.setHours(23, 59, 59, 999);
+      const now = new Date();
+      const daySet = new Set(days);
+
+      const [employees, punches] = await Promise.all([
+        Employee.find({ createdByEmail: email })
+          .select("name employeeNumber department employmentStatus timeClockEnabled")
+          .sort({ name: 1 })
+          .lean(),
+        TimeClockPunch.find({
+          createdByEmail: email,
+          voidedAt: null,
+          punchedAt: { $gte: rangeStart, $lte: rangeEnd },
+        })
+          .sort({ punchedAt: 1 })
+          .lean(),
+      ]);
+
+      const byEmployee = new Map();
+      for (const punch of punches) {
+        const id = String(punch.employeeId || "");
+        if (!id) continue;
+        if (!byEmployee.has(id)) byEmployee.set(id, []);
+        byEmployee.get(id).push(punch);
+      }
+
+      const hiddenIds = await settledInactiveEmployeeIds(email);
+      const rows = employees
+        .filter((employee) => {
+          const id = String(employee._id);
+          if (hiddenIds.has(id)) return false;
+          const status = String(employee.employmentStatus || "Active");
+          if (status === "Terminated" && !byEmployee.has(id)) return false;
+          return employee.timeClockEnabled !== false || byEmployee.has(id);
+        })
+        .map((employee) => {
+          const id = String(employee._id);
+          const sessions = summarizePunchSessions(byEmployee.get(id) || []).filter((session) =>
+            daySet.has(session.date)
+          );
+          const byDay = {};
+          for (const session of sessions) {
+            const metrics = punchSessionMetrics(session, now);
+            if (!metrics) continue;
+            if (!byDay[session.date]) byDay[session.date] = [];
+            byDay[session.date].push(metrics);
+          }
+          return {
+            employeeId: id,
+            employeeName: employee.name || "",
+            employeeNumber: employee.employeeNumber || "",
+            department: employee.department || "",
+            days: byDay,
+          };
+        });
+
+      return NextResponse.json({ view: "calendar", from, to, days, employees: rows });
+    }
 
     if (view === "summary") {
       const today = localDateIso();

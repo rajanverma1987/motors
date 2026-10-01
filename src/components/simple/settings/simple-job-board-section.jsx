@@ -45,7 +45,7 @@ function proposalStatusPill(proposalStatus, mergedSettings, quoteOpts) {
   return { label, style: pill.style || null, className: pill.className || "" };
 }
 
-export default function SimpleJobBoardSection() {
+export default function SimpleJobBoardSection({ hub = false }) {
   const alert = useAlert();
   const formatDate = useFormatDate();
   const { settings, applyLocalSettings } = useUserSettings();
@@ -166,6 +166,34 @@ export default function SimpleJobBoardSection() {
 
   const totalJobs = jobs.length;
   const design = normalizeShopFloorBoardDesign(settings?.shopFloorBoardDesign);
+  const showInHub = settings?.shopFloorBoardInHub === true;
+  const [hubSaving, setHubSaving] = useState(false);
+
+  const setShowInHub = async (next) => {
+    if (hubSaving || next === showInHub) return;
+    applyLocalSettings({ shopFloorBoardInHub: next });
+    setHubSaving(true);
+    try {
+      const res = await fetch("/api/dashboard/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ shopFloorBoardInHub: next }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not save the Hub tab setting");
+      if (data.settings) applyLocalSettings(data.settings);
+    } catch (e) {
+      applyLocalSettings({ shopFloorBoardInHub: showInHub });
+      await alert({
+        title: "Error",
+        message: e.message || "Could not save the Hub tab setting",
+        variant: "danger",
+      });
+    } finally {
+      setHubSaving(false);
+    }
+  };
 
   const selectDesign = async (nextId) => {
     const next = normalizeShopFloorBoardDesign(nextId);
@@ -467,8 +495,14 @@ export default function SimpleJobBoardSection() {
   );
 
   const inline = (
-    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 pb-8">
-      <FormContainer>
+    <div
+      className={
+        hub
+          ? "flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-4 overflow-hidden px-4 py-4"
+          : "flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 pb-8"
+      }
+    >
+      <FormContainer className={hub ? "shrink-0" : ""}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <FormSectionTitle as="h2">
@@ -483,11 +517,30 @@ export default function SimpleJobBoardSection() {
               Pick Columns, Lanes, or List. Status columns follow Settings, then Dropdowns.
               Click a job to open it here.
             </p>
+            {hub ? null : (
+              <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                <input
+                  type="checkbox"
+                  checked={showInHub}
+                  disabled={hubSaving}
+                  onChange={(e) => void setShowInHub(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded-none border-border text-primary focus:ring-primary"
+                />
+                <span>
+                  <span className="block text-sm font-semibold text-title">
+                    Show this board as the second Hub tab
+                  </span>
+                  <span className="block text-xs text-secondary">
+                    When this is on, the shop floor job board appears next to Dashboard.
+                  </span>
+                </span>
+              </label>
+            )}
           </div>
           {toolbar}
         </div>
       </FormContainer>
-      {boardBody}
+      <div className={hub ? "min-h-0 flex-1 overflow-auto" : ""}>{boardBody}</div>
     </div>
   );
 

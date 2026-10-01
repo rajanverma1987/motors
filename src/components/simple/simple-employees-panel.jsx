@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
@@ -397,7 +397,7 @@ function localTodayIso() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function SimpleEmployeesPanel({ onChanged }) {
+const SimpleEmployeesPanel = forwardRef(function SimpleEmployeesPanel({ onChanged }, ref) {
   const alert = useAlert();
   const confirm = useConfirm();
   const { canViewFinancials } = useAuth();
@@ -481,6 +481,14 @@ export default function SimpleEmployeesPanel({ onChanged }) {
       employeeNumber: String(dataToUse.employeeNumber || "").trim(),
     });
   };
+
+  useImperativeHandle(ref, () => ({
+    openEmployeeById(employeeId) {
+      const id = String(employeeId || "").trim();
+      if (!id) return;
+      void openEmployeeDetail({ id });
+    },
+  }));
 
   const closeCreate = () => {
     if (saving) return;
@@ -875,4 +883,6 @@ export default function SimpleEmployeesPanel({ onChanged }) {
       />
     </div>
   );
-}
+});
+
+export default SimpleEmployeesPanel;

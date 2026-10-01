@@ -3,6 +3,8 @@
 export const SIMPLE_PORTAL_PATH = "/dashboards";
 
 export const SIMPLE_TAB_DASHBOARD = "dashboard";
+/** Optional Hub tab. Shown second, after Dashboard, when Settings enables it. */
+export const SIMPLE_TAB_JOB_BOARD = "job-board";
 export const SIMPLE_TAB_CUSTOMERS = "customers";
 export const SIMPLE_TAB_SERVICE_PROPOSALS = "service-proposals";
 /**

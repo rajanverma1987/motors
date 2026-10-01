@@ -171,6 +171,121 @@ export function computeHoursFromPunches(punches) {
   };
 }
 
+function roundHours(ms) {
+  return Math.round((Math.max(0, ms) / 3600000) * 100) / 100;
+}
+
+/**
+ * Pair punches into sessions. A session stays on the local date of its clock-in.
+ * @param {Array} punches
+ * @returns {Array<{ date: string, inAt: string, outAt: string|null, breaks: Array<{ start: string, end: string|null }> }>}
+ */
+export function summarizePunchSessions(punches) {
+  const list = (Array.isArray(punches) ? punches : [])
+    .filter((p) => !p?.voidedAt)
+    .slice()
+    .sort((a, b) => new Date(a.punchedAt).getTime() - new Date(b.punchedAt).getTime());
+
+  const sessions = [];
+  let open = null;
+
+  const closeBreak = (atIso) => {
+    if (!open?.breakStart) return;
+    open.breaks.push({ start: open.breakStart, end: atIso });
+    open.breakStart = null;
+  };
+
+  for (const raw of list) {
+    const type = String(raw.type || "");
+    const at = raw.punchedAt ? new Date(raw.punchedAt) : null;
+    if (!at || Number.isNaN(at.getTime())) continue;
+    const atIso = at.toISOString();
+    if (type === "in") {
+      if (open) {
+        if (open.breakStart) closeBreak(null);
+        sessions.push(open);
+      }
+      open = { date: punchWorkDate(atIso), inAt: atIso, outAt: null, breaks: [], breakStart: null };
+      continue;
+    }
+    if (!open) continue;
+    if (type === "break_start") {
+      if (!open.breakStart) open.breakStart = atIso;
+      continue;
+    }
+    if (type === "break_end") {
+      closeBreak(atIso);
+      continue;
+    }
+    if (type === "out") {
+      closeBreak(atIso);
+      open.outAt = atIso;
+      sessions.push(open);
+      open = null;
+    }
+  }
+  if (open) {
+    if (open.breakStart) closeBreak(null);
+    sessions.push(open);
+  }
+  return sessions.filter((session) => session.date && session.inAt);
+}
+
+/**
+ * Hours and break time for one session.
+ * An open shift counts only through `now` when its clock-in day is today.
+ */
+export function punchSessionMetrics(session, now = new Date()) {
+  const start = new Date(session?.inAt || "").getTime();
+  if (!Number.isFinite(start)) return null;
+  const today = localDateIso(now);
+  const open = !session.outAt;
+  let end = session.outAt ? new Date(session.outAt).getTime() : null;
+  if (!Number.isFinite(end) && session.date === today) end = now.getTime();
+
+  let breakMs = 0;
+  const breaks = [];
+  for (const item of Array.isArray(session.breaks) ? session.breaks : []) {
+    const bs = new Date(item.start || "").getTime();
+    if (!Number.isFinite(bs)) continue;
+    const be = item.end ? new Date(item.end).getTime() : Number.isFinite(end) ? end : null;
+    if (Number.isFinite(be) && Number.isFinite(end)) {
+      breakMs += Math.max(0, Math.min(be, end) - bs);
+    } else if (Number.isFinite(be) && item.end) {
+      breakMs += Math.max(0, be - bs);
+    }
+    breaks.push({ start: item.start, end: item.end || null });
+  }
+
+  return {
+    inAt: session.inAt,
+    outAt: session.outAt || null,
+    open,
+    hours: Number.isFinite(end) ? roundHours(end - start - breakMs) : null,
+    breakHours: roundHours(breakMs),
+    breaks,
+  };
+}
+
+/** Inclusive local dates from `from` through `to`, capped. */
+export function eachLocalDate(from, to, maxDays = 62) {
+  const start = String(from || "").slice(0, 10);
+  const end = String(to || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end) || start > end) {
+    return [];
+  }
+  const days = [];
+  const [y, m, d] = start.split("-").map(Number);
+  const cursor = new Date(y, m - 1, d);
+  while (days.length < maxDays) {
+    const iso = localDateIso(cursor);
+    if (!iso || iso > end) break;
+    days.push(iso);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return days;
+}
+
 function overlapMs(startA, endA, startB, endB) {
   return Math.max(0, Math.min(endA, endB) - Math.max(startA, startB));
 }

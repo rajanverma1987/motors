@@ -34,6 +34,8 @@ export const USER_SETTINGS_DEFAULTS = {
   shopFloorBoardOrder: [...DEFAULT_WORK_ORDER_STATUSES],
   /** Shop floor job board layout: columns, lanes, or list. */
   shopFloorBoardDesign: "columns",
+  /** When true, the shop floor job board is the second tab on the Hub. */
+  shopFloorBoardInHub: false,
   /**
    * Work order statuses that mark a Simple Job as closed (excluded from Open jobs / Due lists).
    * Derived from controlledDropdowns.work_order_status.entries[].marksJobClosed.
@@ -136,6 +138,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "workOrderStatuses",
   "shopFloorBoardOrder",
   "shopFloorBoardDesign",
+  "shopFloorBoardInHub",
   "workOrderClosedStatuses",
   "accountsBillingAddress",
   "accountsShippingAddress",
@@ -331,6 +334,7 @@ export function mergeUserSettings(stored) {
     merged.workOrderStatuses
   );
   merged.shopFloorBoardDesign = normalizeShopFloorBoardDesign(merged.shopFloorBoardDesign);
+  merged.shopFloorBoardInHub = merged.shopFloorBoardInHub === true;
   merged.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
     woDerived.workOrderClosedStatuses,
     merged.workOrderStatuses
