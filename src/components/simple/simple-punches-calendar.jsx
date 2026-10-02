@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { FiTrash2 } from "react-icons/fi";
 import Button from "@/components/ui/button";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
 
 const PERIODS = [
@@ -122,15 +123,30 @@ function periodTotalHours(employee, days) {
   return Math.round((total + Number.EPSILON) * 100) / 100;
 }
 
-function DayCell({ sessions, day }) {
+function DayCell({ sessions, day, canDelete, onDelete }) {
   const total = dayTotalHours(sessions);
   return (
     <div className="flex flex-col gap-0.5 leading-tight">
-      {total != null ? (
-        <p className="w-fit rounded-sm bg-primary/15 px-1 py-0.5 text-[11px] font-bold tabular-nums text-primary">
-          {total.toFixed(2)} hrs
-        </p>
-      ) : null}
+      <div className="flex items-start justify-between gap-1">
+        {total != null ? (
+          <p className="w-fit rounded-sm bg-primary/15 px-1 py-0.5 text-[11px] font-bold tabular-nums text-primary">
+            {total.toFixed(2)} hrs
+          </p>
+        ) : (
+          <span />
+        )}
+        {canDelete ? (
+          <button
+            type="button"
+            className="shrink-0 p-0.5 text-danger hover:bg-danger/10"
+            title="Delete day punches"
+            aria-label="Delete day punches"
+            onClick={() => onDelete?.()}
+          >
+            <FiTrash2 className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
+      </div>
       {sessions.map((session, index) => (
         <p key={`${session.inAt}-${index}`} className="tabular-nums text-title">
           {sessionLine(session, day)}
@@ -155,8 +171,14 @@ function DayCell({ sessions, day }) {
   );
 }
 
-export default function SimplePunchesCalendar({ reloadToken = 0, onOpenEmployee, onAddPunch }) {
+export default function SimplePunchesCalendar({
+  reloadToken = 0,
+  onOpenEmployee,
+  onAddPunch,
+  canDelete = false,
+}) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const { settings } = useUserSettings();
   const weekStartsOn = Number(settings?.weekStartsOn) === 1 ? 1 : 0;
   const initialWeek = weekRange(localIso(new Date()), weekStartsOn);
@@ -215,6 +237,48 @@ export default function SimplePunchesCalendar({ reloadToken = 0, onOpenEmployee,
   }, [load, reloadToken]);
 
   const today = localIso(new Date());
+  const visibleEmployees = employees.filter((employee) =>
+    days.some((day) => (employee.days?.[day] || []).length > 0)
+  );
+
+  const deleteDay = async (employee, day) => {
+    const name = employee.employeeName || "this employee";
+    const ok1 = await confirm({
+      title: "Delete day punches",
+      message: `Delete all punches for ${name} on ${formatDayHeading(day)}? A checkout after midnight on that shift is included.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+    });
+    if (!ok1) return;
+    const ok2 = await confirm({
+      title: "Confirm delete",
+      message: "This removes that day's punches from Hours totals. Continue?",
+      confirmLabel: "Delete day",
+      variant: "danger",
+    });
+    if (!ok2) return;
+    const res = await fetch("/api/dashboard/time-clock/punches", {
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        voidDay: true,
+        employeeId: employee.employeeId,
+        workDate: day,
+        voidReason: "Day voided by shop admin",
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      await alert({
+        title: "Error",
+        message: data.error || "Delete failed",
+        variant: "danger",
+      });
+      return;
+    }
+    await load();
+  };
 
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3">
@@ -265,8 +329,8 @@ export default function SimplePunchesCalendar({ reloadToken = 0, onOpenEmployee,
         <p className="text-sm text-secondary">Choose a custom range of 62 days or fewer.</p>
       ) : loading ? (
         <p className="text-sm text-secondary">Loading…</p>
-      ) : employees.length === 0 ? (
-        <p className="text-sm text-secondary">No employees on the time clock yet.</p>
+      ) : visibleEmployees.length === 0 ? (
+        <p className="text-sm text-secondary">No punches in this period.</p>
       ) : (
         <div className="min-h-0 flex-1 overflow-auto border border-border bg-card">
           <table className="w-max min-w-full border-collapse text-xs">
@@ -288,7 +352,7 @@ export default function SimplePunchesCalendar({ reloadToken = 0, onOpenEmployee,
               </tr>
             </thead>
             <tbody>
-              {employees.map((employee) => {
+              {visibleEmployees.map((employee) => {
                 const periodHours = periodTotalHours(employee, days);
                 return (
                 <tr key={employee.employeeId}>
@@ -321,7 +385,12 @@ export default function SimplePunchesCalendar({ reloadToken = 0, onOpenEmployee,
                         {sessions.length === 0 ? (
                           <span className="text-secondary">-</span>
                         ) : (
-                          <DayCell sessions={sessions} day={day} />
+                          <DayCell
+                            sessions={sessions}
+                            day={day}
+                            canDelete={canDelete}
+                            onDelete={() => void deleteDay(employee, day)}
+                          />
                         )}
                       </td>
                     );

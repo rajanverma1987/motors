@@ -99,7 +99,8 @@ export async function GET(request) {
             department: employee.department || "",
             days: byDay,
           };
-        });
+        })
+        .filter((row) => Object.keys(row.days).length > 0);
 
       return NextResponse.json({ view: "calendar", from, to, days, employees: rows });
     }
@@ -272,6 +273,12 @@ export async function PATCH(request) {
     const body = await request.json().catch(() => ({}));
 
     if (body.voidDay === true) {
+      if (!user.isOwner) {
+        return NextResponse.json(
+          { error: "Only the shop admin can delete punches." },
+          { status: 403 }
+        );
+      }
       const employeeId = String(body.employeeId || "").trim();
       const workDate = String(body.workDate || body.date || "").trim().slice(0, 10);
       if (!employeeId || !/^\d{4}-\d{2}-\d{2}$/.test(workDate)) {
@@ -282,9 +289,9 @@ export async function PATCH(request) {
         employeeId,
         voidedAt: null,
       }).lean();
-      const ids = list
-        .filter((p) => punchWorkDate(p.punchedAt) === workDate)
-        .map((p) => p._id);
+      const ids = summarizePunchSessions(list)
+        .filter((session) => session.date === workDate)
+        .flatMap((session) => session.punchIds || []);
       if (!ids.length) {
         return NextResponse.json({ error: "No punches found for that date." }, { status: 404 });
       }

@@ -11,6 +11,7 @@ import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useAuth } from "@/contexts/auth-context";
 import {
   TIME_CLOCK_RADIUS_DEFAULT_M,
   TIME_CLOCK_RADIUS_MAX_M,
@@ -138,6 +139,7 @@ function printQrDataUrl(dataUrl, title) {
 export default function EmployeesHubClient() {
   const alert = useAlert();
   const confirm = useConfirm();
+  const { isOwner } = useAuth();
   const employeesPanelRef = useRef(null);
   const [tab, setTab] = useState("employees");
   const [loading, setLoading] = useState(true);
@@ -783,6 +785,7 @@ export default function EmployeesHubClient() {
           reloadToken={punchReload}
           onOpenEmployee={(row) => employeesPanelRef.current?.openEmployeeById(row.employeeId)}
           onAddPunch={() => setAddPunchOpen(true)}
+          canDelete={Boolean(isOwner)}
         />
       ) : null}
 

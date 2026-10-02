@@ -195,6 +195,12 @@ export function summarizePunchSessions(punches) {
     open.breakStart = null;
   };
 
+  const remember = (raw) => {
+    if (!open) return;
+    const id = raw._id?.toString?.() || String(raw.id || "");
+    if (id && id !== "undefined" && !open.punchIds.includes(id)) open.punchIds.push(id);
+  };
+
   for (const raw of list) {
     const type = String(raw.type || "");
     const at = raw.punchedAt ? new Date(raw.punchedAt) : null;
@@ -205,10 +211,19 @@ export function summarizePunchSessions(punches) {
         if (open.breakStart) closeBreak(null);
         sessions.push(open);
       }
-      open = { date: punchWorkDate(atIso), inAt: atIso, outAt: null, breaks: [], breakStart: null };
+      open = {
+        date: punchWorkDate(atIso),
+        inAt: atIso,
+        outAt: null,
+        breaks: [],
+        breakStart: null,
+        punchIds: [],
+      };
+      remember(raw);
       continue;
     }
     if (!open) continue;
+    remember(raw);
     if (type === "break_start") {
       if (!open.breakStart) open.breakStart = atIso;
       continue;
