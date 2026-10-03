@@ -19,6 +19,11 @@ import {
   USER_SETTINGS_DEFAULTS,
   mergeUserSettings,
 } from "@/lib/user-settings";
+import {
+  WEEKDAY_OPTIONS,
+  allowedWeekEndDays,
+  normalizeShopWeek,
+} from "@/lib/shop-week";
 import { resolveWorkspaceSmtpSecure } from "@/lib/workspace-smtp-fields";
 import { applyDashboardDisplay } from "@/lib/apply-dashboard-zoom";
 import {
@@ -54,10 +59,10 @@ const PAGE_SIZE_OPTIONS = [
   { value: "100", label: "100 rows" },
 ];
 
-const WEEK_START_OPTIONS = [
-  { value: "0", label: "Sunday" },
-  { value: "1", label: "Monday" },
-];
+const WEEKDAY_SELECT_OPTIONS = WEEKDAY_OPTIONS.map((d) => ({
+  value: String(d.value),
+  label: d.label,
+}));
 
 const ACCOUNTS_PAYMENT_TERMS_OPTIONS = [
   { value: "on_receipt", label: "Due on receipt" },
@@ -603,14 +608,33 @@ export default function SettingsPageClient() {
             </FormContainer>
             <FormContainer>
               <FormSectionTitle as="h2">Calendar & dates</FormSectionTitle>
-              <div className="max-w-xs">
+              <p className="mb-3 max-w-[42rem] text-sm text-secondary">
+                Shop week used on Employees → Punches for This week, Previous week, and By weeks.
+                End day lists only days before the start day. A week is at least 3 days long.
+              </p>
+              <div className="grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
                 <Select
-                  label="Week starts on"
-                  options={WEEK_START_OPTIONS}
-                  value={String(draft.weekStartsOn)}
-                  onChange={(e) =>
-                    updateDraft({ weekStartsOn: Number(e.target.value) ? 1 : 0 })
-                  }
+                  label="Week start"
+                  options={WEEKDAY_SELECT_OPTIONS}
+                  value={String(draft.weekStartDay ?? 0)}
+                  onChange={(e) => {
+                    const weekStartDay = Number(e.target.value);
+                    const week = normalizeShopWeek(weekStartDay, draft.weekEndDay);
+                    updateDraft(week);
+                  }}
+                  searchable={false}
+                />
+                <Select
+                  label="Week end"
+                  options={allowedWeekEndDays(draft.weekStartDay ?? 0).map((day) => ({
+                    value: String(day),
+                    label: WEEKDAY_OPTIONS.find((o) => o.value === day)?.label || String(day),
+                  }))}
+                  value={String(draft.weekEndDay ?? 6)}
+                  onChange={(e) => {
+                    const week = normalizeShopWeek(draft.weekStartDay, Number(e.target.value));
+                    updateDraft(week);
+                  }}
                   searchable={false}
                 />
               </div>
@@ -854,7 +878,8 @@ export default function SettingsPageClient() {
       draft.logoDocumentScale,
       draft.marketingTips,
       draft.tablePageSize,
-      draft.weekStartsOn,
+      draft.weekStartDay,
+      draft.weekEndDay,
       draft.prefixRepairJob,
       draft.prefixInvoice,
       draft.prefixWorkOrder,

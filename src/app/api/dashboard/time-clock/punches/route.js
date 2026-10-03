@@ -11,8 +11,11 @@ import {
   punchWorkDate,
   serializePunch,
   summarizePunchSessions,
+  workedHoursAfter,
 } from "@/lib/time-clock-punches";
 import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
+import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
+import TimeClockManualHours from "@/models/TimeClockManualHours";
 
 export async function GET(request) {
   try {
@@ -48,10 +51,13 @@ export async function GET(request) {
       rangeEnd.setHours(23, 59, 59, 999);
       const now = new Date();
       const daySet = new Set(days);
+      const [fy, fm, fd] = from.split("-").map(Number);
+      const beforeRangeEnd = new Date(fy, fm - 1, fd, 0, 0, 0, 0);
+      beforeRangeEnd.setMilliseconds(-1);
 
-      const [employees, punches] = await Promise.all([
+      const [employees, punches, manualsInRange, manualsBefore, payments] = await Promise.all([
         Employee.find({ createdByEmail: email })
-          .select("name employeeNumber department employmentStatus timeClockEnabled")
+          .select("name employeeNumber department employmentStatus timeClockEnabled payType hourlyRate")
           .sort({ name: 1 })
           .lean(),
         TimeClockPunch.find({
@@ -61,7 +67,29 @@ export async function GET(request) {
         })
           .sort({ punchedAt: 1 })
           .lean(),
+        TimeClockManualHours.find({
+          createdByEmail: email,
+          voidedAt: null,
+          workDate: { $gte: from, $lte: to },
+        }).lean(),
+        TimeClockManualHours.find({
+          createdByEmail: email,
+          voidedAt: null,
+          workDate: { $lt: from },
+        }).lean(),
+        EmployeePayrollPayment.find({
+          createdByEmail: email,
+          payType: "hourly",
+        }).lean(),
       ]);
+
+      const punchesBefore = await TimeClockPunch.find({
+        createdByEmail: email,
+        voidedAt: null,
+        punchedAt: { $lte: beforeRangeEnd },
+      })
+        .sort({ punchedAt: 1 })
+        .lean();
 
       const byEmployee = new Map();
       for (const punch of punches) {
@@ -71,14 +99,52 @@ export async function GET(request) {
         byEmployee.get(id).push(punch);
       }
 
+      const manualsByEmployee = new Map();
+      for (const manual of manualsInRange) {
+        const id = String(manual.employeeId || "");
+        const workDate = String(manual.workDate || "").slice(0, 10);
+        if (!id || !daySet.has(workDate)) continue;
+        if (!manualsByEmployee.has(id)) manualsByEmployee.set(id, []);
+        manualsByEmployee.get(id).push(manual);
+      }
+
+      const punchesBeforeByEmployee = new Map();
+      for (const punch of punchesBefore) {
+        const id = String(punch.employeeId || "");
+        if (!id) continue;
+        if (!punchesBeforeByEmployee.has(id)) punchesBeforeByEmployee.set(id, []);
+        punchesBeforeByEmployee.get(id).push(punch);
+      }
+      const manualsBeforeByEmployee = new Map();
+      for (const manual of manualsBefore) {
+        const id = String(manual.employeeId || "");
+        if (!id) continue;
+        if (!manualsBeforeByEmployee.has(id)) manualsBeforeByEmployee.set(id, []);
+        manualsBeforeByEmployee.get(id).push(manual);
+      }
+
+      const paidByEmployee = new Map();
+      for (const payment of payments) {
+        const id = String(payment.employeeId || "").trim();
+        if (!id) continue;
+        const hours = Number(payment.hours) || 0;
+        if (hours > 0) {
+          paidByEmployee.set(
+            id,
+            Math.round(((paidByEmployee.get(id) || 0) + hours + Number.EPSILON) * 100) / 100
+          );
+        }
+      }
+
       const hiddenIds = await settledInactiveEmployeeIds(email);
       const rows = employees
         .filter((employee) => {
           const id = String(employee._id);
           if (hiddenIds.has(id)) return false;
           const status = String(employee.employmentStatus || "Active");
-          if (status === "Terminated" && !byEmployee.has(id)) return false;
-          return employee.timeClockEnabled !== false || byEmployee.has(id);
+          const hasActivity = byEmployee.has(id) || manualsByEmployee.has(id);
+          if (status === "Terminated" && !hasActivity) return false;
+          return employee.timeClockEnabled !== false || hasActivity;
         })
         .map((employee) => {
           const id = String(employee._id);
@@ -86,17 +152,39 @@ export async function GET(request) {
             daySet.has(session.date)
           );
           const byDay = {};
+          const ensureDay = (date) => {
+            if (!byDay[date]) byDay[date] = { sessions: [], manualHours: 0 };
+            return byDay[date];
+          };
           for (const session of sessions) {
             const metrics = punchSessionMetrics(session, now);
             if (!metrics) continue;
-            if (!byDay[session.date]) byDay[session.date] = [];
-            byDay[session.date].push(metrics);
+            ensureDay(session.date).sessions.push(metrics);
           }
+          for (const manual of manualsByEmployee.get(id) || []) {
+            const workDate = String(manual.workDate || "").slice(0, 10);
+            const hours = Number(manual.hours) || 0;
+            if (!workDate || hours <= 0) continue;
+            const day = ensureDay(workDate);
+            day.manualHours =
+              Math.round((day.manualHours + hours + Number.EPSILON) * 100) / 100;
+          }
+          const workedBefore = workedHoursAfter(
+            punchesBeforeByEmployee.get(id) || [],
+            manualsBeforeByEmployee.get(id) || [],
+            new Date(0),
+            beforeRangeEnd
+          );
           return {
             employeeId: id,
             employeeName: employee.name || "",
             employeeNumber: employee.employeeNumber || "",
             department: employee.department || "",
+            payType:
+              String(employee.payType || "").toLowerCase() === "salary" ? "salary" : "hourly",
+            hourlyRate: String(employee.hourlyRate || "").trim(),
+            lifetimePaidHours: paidByEmployee.get(id) || 0,
+            workedHoursBefore: workedBefore,
             days: byDay,
           };
         })

@@ -235,7 +235,7 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
 
 /**
  * Inactive employees whose pay is fully recorded.
- * They stay off Floor, Hours, Punches, Record Payment, and Alerts.
+ * They stay off Floor, Hours, Punches, and Alerts.
  * An inactive employee with unpaid hours or an unpaid salary month stays visible.
  * @returns {Promise<Set<string>>}
  */

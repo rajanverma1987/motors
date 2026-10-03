@@ -13,8 +13,12 @@ export const USER_SETTINGS_DEFAULTS = {
    * Example: { "simple-customers": ["phone", "email"] }
    */
   tableColumnVisibility: {},
-  /** First day of week for date pickers: 0 = Sunday, 1 = Monday */
-  weekStartsOn: 0,
+  /**
+   * Shop week: 0 Sunday … 6 Saturday.
+   * Legacy `weekStartsOn` (0/1) migrates into these in mergeUserSettings.
+   */
+  weekStartDay: 0,
+  weekEndDay: 6,
   /** ISO 4217 — how amounts are shown across the dashboard */
   currency: "USD",
   /** UI zoom for dashboard only (75–150, step 5). 100 = default browser-like size. */
@@ -122,6 +126,7 @@ import { normalizeWorkspaceSmtpFields } from "@/lib/workspace-smtp-fields";
 import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-closed-status";
 import { normalizeProductDropdowns, sanitizeProductDropdownsPatch } from "@/lib/product-dropdown-catalog";
 import { normalizeShopFloorBoardDesign } from "@/lib/simple-job-board";
+import { normalizeShopWeek } from "@/lib/shop-week";
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -130,7 +135,8 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "tablePageSize",
   "compactTables",
   "tableColumnVisibility",
-  "weekStartsOn",
+  "weekStartDay",
+  "weekEndDay",
   "currency",
   "zoomLevel",
   "fontSizeLevel",
@@ -335,6 +341,20 @@ export function mergeUserSettings(stored) {
   );
   merged.shopFloorBoardDesign = normalizeShopFloorBoardDesign(merged.shopFloorBoardDesign);
   merged.shopFloorBoardInHub = merged.shopFloorBoardInHub === true;
+  {
+    const legacyStart = Number(s.weekStartsOn);
+    const storedNew = s.weekStartDay !== undefined || s.weekEndDay !== undefined;
+    let start = merged.weekStartDay;
+    let end = merged.weekEndDay;
+    if (!storedNew && (legacyStart === 0 || legacyStart === 1)) {
+      start = legacyStart;
+      end = legacyStart === 1 ? 0 : 6;
+    }
+    const week = normalizeShopWeek(start, end);
+    merged.weekStartDay = week.weekStartDay;
+    merged.weekEndDay = week.weekEndDay;
+    delete merged.weekStartsOn;
+  }
   merged.workOrderClosedStatuses = normalizeShopFloorBoardOrder(
     woDerived.workOrderClosedStatuses,
     merged.workOrderStatuses
@@ -406,9 +426,9 @@ export function sanitizeUserSettingsPatch(body) {
       if (TABLE_PAGE_SIZES.has(n)) out[key] = n;
       continue;
     }
-    if (key === "weekStartsOn") {
+    if (key === "weekStartDay" || key === "weekEndDay") {
       const n = Number(body[key]);
-      if (n === 0 || n === 1) out[key] = n;
+      if (Number.isInteger(n) && n >= 0 && n <= 6) out[key] = n;
       continue;
     }
     if (key === "currency") {
@@ -599,6 +619,14 @@ export function sanitizeUserSettingsPatch(body) {
     if (typeof body[key] === "boolean") {
       out[key] = body[key];
     }
+  }
+  if (out.weekStartDay !== undefined || out.weekEndDay !== undefined) {
+    const week = normalizeShopWeek(
+      out.weekStartDay !== undefined ? out.weekStartDay : body.weekStartDay,
+      out.weekEndDay !== undefined ? out.weekEndDay : body.weekEndDay
+    );
+    out.weekStartDay = week.weekStartDay;
+    out.weekEndDay = week.weekEndDay;
   }
   return out;
 }

@@ -2,15 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FiArrowLeft, FiPlus, FiPrinter, FiRefreshCw, FiTrash2 } from "react-icons/fi";
+import { FiArrowLeft, FiPrinter, FiRefreshCw } from "react-icons/fi";
 import QRCode from "qrcode";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
-import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useAlert } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import {
   TIME_CLOCK_RADIUS_DEFAULT_M,
@@ -23,28 +22,18 @@ import {
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
 import SimpleEmployeesPanel from "@/components/simple/simple-employees-panel";
-import SimpleReleasePaymentPanel from "@/components/simple/simple-release-payment-panel";
 import SimplePunchesCalendar from "@/components/simple/simple-punches-calendar";
 
-const TABS = [
+const TOP_TABS = [
   { id: "employees", label: "Employees" },
-  { id: "floor", label: "Floor" },
   { id: "time-clock", label: "Time clock" },
-  { id: "hours", label: "Hours" },
-  { id: "punches", label: "Punches" },
-  { id: "release-payment", label: "Record Payment" },
-  { id: "alerts", label: "Alerts" },
+  { id: "floor", label: "Floor" },
 ];
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function daysAgoIso(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().slice(0, 10);
-}
+const REPORT_TABS = [
+  { id: "punches", label: "Punches" },
+  { id: "alerts", label: "Alerts" },
+];
 
 function printQrDataUrl(dataUrl, title) {
   const safeTitle = String(title || "Time Clock")
@@ -76,7 +65,7 @@ function printQrDataUrl(dataUrl, title) {
         <li style="margin-bottom:6px;">Confirm with Face ID / fingerprint / screen lock when asked.</li>
         <li style="margin-bottom:0;">Later punches: open Time Clock → tap <strong>Scan QR to Punch</strong> → point at this QR → allow <strong>location</strong> at the shop. Home Screen alone does not unlock punching.</li>
       </ol>
-      <p style="margin:12px 0 0;font-size:12px;text-align:center;color:#444;">Location must be on and you must be at the shop to punch. History and Hours do not need location.</p>
+      <p style="margin:12px 0 0;font-size:12px;text-align:center;color:#444;">Location must be on and you must be at the shop to punch. History does not need location.</p>
     </div>`;
   document.body.appendChild(root);
   const style = document.createElement("style");
@@ -138,7 +127,6 @@ function printQrDataUrl(dataUrl, title) {
 
 export default function EmployeesHubClient() {
   const alert = useAlert();
-  const confirm = useConfirm();
   const { isOwner } = useAuth();
   const employeesPanelRef = useRef(null);
   const [tab, setTab] = useState("employees");
@@ -148,20 +136,6 @@ export default function EmployeesHubClient() {
   const [lng, setLng] = useState("");
   const [radiusM, setRadiusM] = useState(String(TIME_CLOCK_RADIUS_DEFAULT_M));
   const [savingGeo, setSavingGeo] = useState(false);
-  const [hoursFrom, setHoursFrom] = useState(daysAgoIso(7));
-  const [hoursTo, setHoursTo] = useState(todayIso());
-  const [hoursRows, setHoursRows] = useState([]);
-  const [manualHours, setManualHours] = useState([]);
-  const [manualHoursTotal, setManualHoursTotal] = useState(0);
-  const [manualPage, setManualPage] = useState(1);
-  const [manualPageSize, setManualPageSize] = usePreferredTablePageSize();
-  const [addHoursOpen, setAddHoursOpen] = useState(false);
-  const [addHours, setAddHours] = useState({
-    employeeId: "",
-    workDate: todayIso(),
-    hours: "",
-    note: "",
-  });
   const [punchReload, setPunchReload] = useState(0);
   const [addPunchOpen, setAddPunchOpen] = useState(false);
   const [addPunch, setAddPunch] = useState({ employeeId: "", type: "in", punchedAt: "" });
@@ -177,68 +151,28 @@ export default function EmployeesHubClient() {
     return data;
   }, []);
 
-  const loadHours = useCallback(async () => {
-    const params = new URLSearchParams({ from: hoursFrom, to: hoursTo });
-    const res = await fetch(`/api/dashboard/time-clock/hours?${params}`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Failed to load hours");
-    setHoursRows(Array.isArray(data.rows) ? data.rows : []);
-  }, [hoursFrom, hoursTo]);
-
-  const loadManualHours = useCallback(async () => {
-    const params = new URLSearchParams({
-      from: hoursFrom,
-      to: hoursTo,
-      page: String(manualPage),
-      pageSize: String(manualPageSize),
-    });
-    const res = await fetch(`/api/dashboard/time-clock/manual-hours?${params}`, {
-      credentials: "include",
-      cache: "no-store",
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Failed to load manual hours");
-    setManualHours(Array.isArray(data.items) ? data.items : []);
-    setManualHoursTotal(Number(data.totalCount) || 0);
-  }, [hoursFrom, hoursTo, manualPage, manualPageSize]);
-
   const refresh = useCallback(async () => {
-    if (tab === "employees" || tab === "release-payment") {
+    if (tab === "employees") {
       setLoading(false);
       return;
     }
     setLoading(true);
     try {
       await loadMeta();
-      if (tab === "hours") {
-        await loadHours();
-        await loadManualHours();
-      }
     } catch (err) {
       await alert({ title: "Error", message: err.message || "Failed to load", variant: "danger" });
     } finally {
       setLoading(false);
     }
-  }, [alert, loadHours, loadManualHours, loadMeta, tab]);
+  }, [alert, loadMeta, tab]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    if (tab !== "hours") return undefined;
-    const id = setInterval(() => {
-      void loadHours().catch(() => {});
-    }, 30000);
-    return () => clearInterval(id);
-  }, [tab, loadHours]);
-
   const switchTab = (nextTab) => {
     if (nextTab === tab) return;
-    if (nextTab === "employees" || nextTab === "release-payment") {
+    if (nextTab === "employees") {
       setLoading(false);
     } else {
       setLoading(true);
@@ -342,60 +276,6 @@ export default function EmployeesHubClient() {
     setPunchReload((n) => n + 1);
   };
 
-  const submitAddHours = async (e) => {
-    e.preventDefault();
-    const res = await fetch("/api/dashboard/time-clock/manual-hours", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        employeeId: addHours.employeeId,
-        workDate: addHours.workDate,
-        hours: Number(addHours.hours),
-        note: addHours.note,
-      }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      await alert({ title: "Error", message: data.error || "Failed to save hours", variant: "danger" });
-      return;
-    }
-    setAddHoursOpen(false);
-    setAddHours({ employeeId: "", workDate: todayIso(), hours: "", note: "" });
-    await loadHours();
-    await loadManualHours();
-  };
-
-  const voidManualHoursEntry = async (row) => {
-    const ok1 = await confirm({
-      title: "Void manual hours",
-      message: `Remove ${row.hours} h for ${row.employeeName || "employee"} on ${row.workDate}?`,
-      confirmLabel: "Void",
-      variant: "danger",
-    });
-    if (!ok1) return;
-    const ok2 = await confirm({
-      title: "Confirm void",
-      message: "This entry will no longer count toward Hours totals. Continue?",
-      confirmLabel: "Void entry",
-      variant: "danger",
-    });
-    if (!ok2) return;
-    const res = await fetch("/api/dashboard/time-clock/manual-hours", {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: row.id, void: true, voidReason: "Voided by manager" }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      await alert({ title: "Error", message: data.error || "Void failed", variant: "danger" });
-      return;
-    }
-    await loadHours();
-    await loadManualHours();
-  };
-
   const alerts = useMemo(() => {
     const list = [];
     const now = Date.now();
@@ -429,7 +309,7 @@ export default function EmployeesHubClient() {
 
   return (
     <div className="simple-portal box-border flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden px-1 py-3">
-      <div className="mb-3 flex w-full shrink-0 flex-wrap items-center justify-between gap-3">
+      <div className="mb-3 flex w-full shrink-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <Link
             href={SIMPLE_PORTAL_PATH}
@@ -443,20 +323,44 @@ export default function EmployeesHubClient() {
             Employee records, time clock, floor status, and attendance reports.
           </p>
         </div>
-        {tab !== "employees" ? (
-        <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
-          <FiRefreshCw className="h-4 w-4 shrink-0" aria-hidden />
-          Refresh
-        </Button>
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            role="tablist"
+            aria-label="Employees sections"
+            className="flex flex-wrap gap-1 border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
+          >
+            {TOP_TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => switchTab(t.id)}
+                className={`shrink-0 px-3.5 py-2 text-sm font-bold tracking-tight ${
+                  tab === t.id
+                    ? "bg-primary text-white shadow-sm"
+                    : "bg-primary/10 text-primary hover:bg-primary/15"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {tab !== "employees" ? (
+            <Button type="button" variant="outline" size="sm" onClick={() => void refresh()}>
+              <FiRefreshCw className="h-4 w-4 shrink-0" aria-hidden />
+              Refresh
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div
         role="tablist"
-        aria-label="Employees sections"
+        aria-label="Attendance reports"
         className="mb-3 flex w-full shrink-0 flex-wrap gap-1 border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60"
       >
-        {TABS.map((t) => (
+        {REPORT_TABS.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -482,9 +386,7 @@ export default function EmployeesHubClient() {
         />
       </div>
 
-      {tab === "release-payment" ? <SimpleReleasePaymentPanel /> : null}
-
-      {loading && tab !== "employees" && tab !== "release-payment" ? (
+      {loading && tab !== "employees" ? (
         <div
           className="flex min-h-[16rem] flex-col items-center justify-center gap-3"
           role="status"
@@ -614,177 +516,12 @@ export default function EmployeesHubClient() {
         </div>
       ) : null}
 
-      {!loading && tab === "hours" ? (
-        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-6 overflow-auto">
-          <div className="flex flex-wrap items-end gap-2">
-            <label className="text-xs font-bold text-title">
-              From
-              <input
-                type="date"
-                className="mt-1 block h-8 border border-border px-2 text-sm"
-                value={hoursFrom}
-                onChange={(e) => setHoursFrom(e.target.value)}
-              />
-            </label>
-            <label className="text-xs font-bold text-title">
-              To
-              <input
-                type="date"
-                className="mt-1 block h-8 border border-border px-2 text-sm"
-                value={hoursTo}
-                onChange={(e) => setHoursTo(e.target.value)}
-              />
-            </label>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setManualPage(1);
-                void loadHours();
-                void loadManualHours();
-              }}
-            >
-              Apply
-            </Button>
-          </div>
-
-          <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} !flex-none`}>
-          <Table
-            {...SIMPLE_LIST_TABLE_PROPS}
-            fillHeight={false}
-            columns={[
-              { key: "name", label: "Employee" },
-              { key: "employeeNumber", label: "Emp #" },
-              { key: "department", label: "Dept" },
-              {
-                key: "clockedHours",
-                label: "Clocked",
-                render: (v) => (Number(v) || 0).toFixed(2),
-              },
-              {
-                key: "manualHours",
-                label: "Manual",
-                render: (v) => (Number(v) || 0).toFixed(2),
-              },
-              {
-                key: "totalHours",
-                label: "Hours",
-                render: (v) => (
-                  <span className="font-semibold tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
-                ),
-              },
-              {
-                key: "todayHours",
-                label: "Today",
-                render: (v) => (
-                  <span className="tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
-                ),
-              },
-              { key: "lateCount", label: "Late" },
-              { key: "earlyCount", label: "Early out" },
-            ]}
-            data={hoursRows}
-            rowKey="employeeId"
-            emptyMessage="No hours in this range."
-          />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-bold text-title">Manual hours entries</h3>
-                <p className="text-xs text-secondary">
-                  Hours entered here are kept as a record and included in the Hours totals above (and Record Payment).
-                </p>
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="primary"
-                onClick={() => {
-                  setAddHours({
-                    employeeId: "",
-                    workDate: hoursTo || todayIso(),
-                    hours: "",
-                    note: "",
-                  });
-                  setAddHoursOpen(true);
-                }}
-              >
-                <FiPlus className="h-4 w-4 shrink-0" />
-                Add hours
-              </Button>
-            </div>
-            <div className={`${SIMPLE_SCREEN_TABLE_WRAP_CLASS} !flex-none`}>
-            <Table
-              {...SIMPLE_LIST_TABLE_PROPS}
-              fillHeight={false}
-              columns={[
-                {
-                  key: "actions",
-                  label: "",
-                  render: (_, row) =>
-                    row.voidedAt ? null : (
-                      <button
-                        type="button"
-                        className="p-1.5 text-danger hover:bg-danger/10"
-                        title="Void"
-                        aria-label="Void manual hours"
-                        onClick={() => void voidManualHoursEntry(row)}
-                      >
-                        <FiTrash2 className="h-4 w-4" />
-                      </button>
-                    ),
-                },
-                {
-                  key: "workDate",
-                  label: "Date",
-                  render: (v) => v || "",
-                },
-                { key: "employeeName", label: "Employee" },
-                {
-                  key: "hours",
-                  label: "Hours",
-                  render: (v) => (
-                    <span className="tabular-nums">{(Number(v) || 0).toFixed(2)}</span>
-                  ),
-                },
-                {
-                  key: "note",
-                  label: "Note",
-                  render: (v) => (String(v || "").trim() ? v : "-"),
-                },
-                {
-                  key: "createdAt",
-                  label: "Entered",
-                  render: (v) => (v ? new Date(v).toLocaleString() : ""),
-                },
-              ]}
-              data={manualHours}
-              rowKey="id"
-              emptyMessage="No manual hours in this range."
-              pagination={{
-                page: manualPage,
-                pageSize: manualPageSize,
-                totalCount: manualHoursTotal,
-              }}
-              onPageChange={(p, ps) => {
-                setManualPage(p);
-                setManualPageSize(ps);
-              }}
-              paginateClientSide={false}
-            />
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {!loading && tab === "punches" ? (
         <SimplePunchesCalendar
           reloadToken={punchReload}
           onOpenEmployee={(row) => employeesPanelRef.current?.openEmployeeById(row.employeeId)}
           onAddPunch={() => setAddPunchOpen(true)}
+          employeeOptions={employeeOptions}
           canDelete={Boolean(isOwner)}
         />
       ) : null}
@@ -854,76 +591,6 @@ export default function EmployeesHubClient() {
               className="mt-1 h-8 w-full border border-border px-2 text-sm"
               value={addPunch.punchedAt}
               onChange={(e) => setAddPunch((f) => ({ ...f, punchedAt: e.target.value }))}
-            />
-          </label>
-        </Form>
-      </Modal>
-
-      <Modal
-        open={addHoursOpen}
-        onClose={() => setAddHoursOpen(false)}
-        title="Add hours"
-        size="md"
-        actions={
-          <Button type="submit" form="add-hours-form" size="sm" variant="primary">
-            Save
-          </Button>
-        }
-      >
-        <Form
-          id="add-hours-form"
-          onSubmit={submitAddHours}
-          className="flex flex-col gap-3 !space-y-0 !border-0 !p-0 !shadow-none"
-        >
-          <label className="text-xs font-bold">
-            Employee
-            <select
-              required
-              className="mt-1 h-8 w-full border border-border px-2 text-sm"
-              value={addHours.employeeId}
-              onChange={(e) => setAddHours((f) => ({ ...f, employeeId: e.target.value }))}
-            >
-              <option value="">Select…</option>
-              {employeeOptions.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs font-bold">
-            Date
-            <input
-              type="date"
-              required
-              className="mt-1 h-8 w-full border border-border px-2 text-sm"
-              value={addHours.workDate}
-              onChange={(e) => setAddHours((f) => ({ ...f, workDate: e.target.value }))}
-            />
-          </label>
-          <label className="text-xs font-bold">
-            Hours
-            <input
-              type="number"
-              required
-              min="0.01"
-              max="24"
-              step="0.01"
-              className="mt-1 h-8 w-full border border-border px-2 text-sm"
-              value={addHours.hours}
-              onChange={(e) => setAddHours((f) => ({ ...f, hours: e.target.value }))}
-              placeholder="e.g. 8"
-            />
-          </label>
-          <label className="text-xs font-bold">
-            Note (optional)
-            <textarea
-              rows={3}
-              maxLength={500}
-              className="mt-1 w-full border border-border px-2 py-1.5 text-sm"
-              value={addHours.note}
-              onChange={(e) => setAddHours((f) => ({ ...f, note: e.target.value }))}
-              placeholder="Reason or description…"
             />
           </label>
         </Form>
