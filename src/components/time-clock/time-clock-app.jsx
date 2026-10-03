@@ -7,6 +7,7 @@ import {
   browserSupportsWebAuthn,
 } from "@simplewebauthn/browser";
 import TimeClockQrScanner from "@/components/time-clock/time-clock-qr-scanner";
+import TimeClockJobsPanel from "@/components/time-clock/time-clock-jobs-panel";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 
@@ -532,6 +533,9 @@ export default function TimeClockApp({ token }) {
       <nav className="flex border-b border-neutral-300 bg-white">
           {[
             { id: "punch", label: "Punch" },
+            ...(employee?.technicianAppAccess || status?.technicianAppAccess
+              ? [{ id: "jobs", label: "Jobs" }]
+              : []),
             { id: "history", label: "History" },
             { id: "hours", label: "Hours" },
           ].map((t) => (
@@ -562,6 +566,16 @@ export default function TimeClockApp({ token }) {
             Tip: add Time Clock to your Home Screen for History and Hours. To punch, always scan the
             shop QR first, then use Face ID / fingerprint and location.
           </div>
+        ) : null}
+
+        {tab === "jobs" ? (
+          <TimeClockJobsPanel
+            token={token}
+            employeeId={employee?.id || ""}
+            employeeName={employee?.name || ""}
+            onError={(msg) => setError(msg || "")}
+            onMessage={(msg) => setMessage(msg || "")}
+          />
         ) : null}
 
         {tab === "punch" ? (
@@ -641,7 +655,7 @@ export default function TimeClockApp({ token }) {
             <p className="text-3xl font-bold">{hours?.totalHours ?? 0} h</p>
             <ul className="mt-4 divide-y divide-neutral-200">
               {(hours?.byDay || []).map((d) => (
-                <li key={d.date} className="flex justify-between py-2 text-sm">
+                <li key={d.date} className="flex justify-between gap-3 py-2 text-sm">
                   <span>
                     {d.date}
                     {d.late || d.early ? (
@@ -651,8 +665,13 @@ export default function TimeClockApp({ token }) {
                         {d.early ? "Early out" : ""}
                       </span>
                     ) : null}
+                    {Array.isArray(d.jobNumbers) && d.jobNumbers.length > 0 ? (
+                      <span className="mt-0.5 block text-xs text-[#945c2e]">
+                        Job {d.jobNumbers.join(", ")}
+                      </span>
+                    ) : null}
                   </span>
-                  <span className="font-semibold">{d.hours} h</span>
+                  <span className="shrink-0 font-semibold">{d.hours} h</span>
                 </li>
               ))}
             </ul>

@@ -153,7 +153,9 @@ export async function GET(request) {
           );
           const byDay = {};
           const ensureDay = (date) => {
-            if (!byDay[date]) byDay[date] = { sessions: [], manualHours: 0 };
+            if (!byDay[date]) {
+              byDay[date] = { sessions: [], manualHours: 0, manualJobNumbers: [] };
+            }
             return byDay[date];
           };
           for (const session of sessions) {
@@ -168,6 +170,10 @@ export async function GET(request) {
             const day = ensureDay(workDate);
             day.manualHours =
               Math.round((day.manualHours + hours + Number.EPSILON) * 100) / 100;
+            const jobNo = String(manual.documentNumber || "").trim();
+            if (jobNo && !day.manualJobNumbers.includes(jobNo)) {
+              day.manualJobNumbers.push(jobNo);
+            }
           }
           const workedBefore = workedHoursAfter(
             punchesBeforeByEmployee.get(id) || [],

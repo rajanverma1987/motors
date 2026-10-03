@@ -143,7 +143,9 @@ export async function GET(request) {
       employee: {
         id: session.employeeId,
         name: emp.name || session.employeeName,
+        technicianAppAccess: Boolean(emp.technicianAppAccess),
       },
+      technicianAppAccess: Boolean(emp.technicianAppAccess),
       geofenceConfigured: shop.lat != null && shop.lng != null,
       wallScanAuthorized,
       ...state,

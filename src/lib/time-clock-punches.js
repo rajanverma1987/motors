@@ -478,7 +478,7 @@ export function mergeHoursWithManual(punchHours, manualEntries) {
   const byDay = new Map(
     (Array.isArray(base.byDay) ? base.byDay : []).map((d) => [
       String(d.date || "").slice(0, 10),
-      Number(d.hours) || 0,
+      { hours: Number(d.hours) || 0, jobNumbers: [] },
     ])
   );
   let manualTotal = 0;
@@ -487,7 +487,14 @@ export function mergeHoursWithManual(punchHours, manualEntries) {
     const h = Number(entry.hours);
     if (!day || !Number.isFinite(h) || h <= 0) continue;
     manualTotal += h;
-    byDay.set(day, Math.round(((byDay.get(day) || 0) + h) * 100) / 100);
+    const prev = byDay.get(day) || { hours: 0, jobNumbers: [] };
+    const jobNo = String(entry.documentNumber || "").trim();
+    const jobNumbers = Array.isArray(prev.jobNumbers) ? [...prev.jobNumbers] : [];
+    if (jobNo && !jobNumbers.includes(jobNo)) jobNumbers.push(jobNo);
+    byDay.set(day, {
+      hours: Math.round((prev.hours + h) * 100) / 100,
+      jobNumbers,
+    });
   }
   const clockedHours = Math.round((Number(base.totalHours) || 0) * 100) / 100;
   const manualHours = Math.round(manualTotal * 100) / 100;
@@ -497,9 +504,10 @@ export function mergeHoursWithManual(punchHours, manualEntries) {
     totalHours: Math.round((clockedHours + manualHours) * 100) / 100,
     byDay: [...byDay.entries()]
       .filter(([date]) => date)
-      .map(([date, hours]) => ({
+      .map(([date, row]) => ({
         date,
-        hours: Math.round(hours * 100) / 100,
+        hours: Math.round((Number(row?.hours) || 0) * 100) / 100,
+        jobNumbers: Array.isArray(row?.jobNumbers) ? row.jobNumbers : [],
       }))
       .sort((a, b) => a.date.localeCompare(b.date)),
   };
@@ -516,6 +524,8 @@ export function serializeManualHours(doc) {
     workDate: String(p.workDate || "").slice(0, 10),
     hours: Math.round((Number(p.hours) || 0) * 100) / 100,
     note: String(p.note || ""),
+    proposalId: String(p.proposalId || "").trim(),
+    documentNumber: String(p.documentNumber || "").trim(),
     voidedAt: p.voidedAt ? new Date(p.voidedAt).toISOString() : null,
     voidReason: String(p.voidReason || ""),
     createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : null,

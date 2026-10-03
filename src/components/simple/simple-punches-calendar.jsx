@@ -129,13 +129,17 @@ function round2(n) {
 
 function dayEntry(employee, day) {
   const raw = employee?.days?.[day];
-  if (!raw) return { sessions: [], manualHours: 0 };
+  if (!raw) return { sessions: [], manualHours: 0, manualJobNumbers: [] };
   if (Array.isArray(raw)) {
-    return { sessions: raw, manualHours: 0 };
+    return { sessions: raw, manualHours: 0, manualJobNumbers: [] };
   }
+  const jobNumbers = Array.isArray(raw.manualJobNumbers)
+    ? raw.manualJobNumbers.map((n) => String(n || "").trim()).filter(Boolean)
+    : [];
   return {
     sessions: Array.isArray(raw.sessions) ? raw.sessions : [],
     manualHours: Math.max(0, Number(raw.manualHours) || 0),
+    manualJobNumbers: [...new Set(jobNumbers)],
   };
 }
 
@@ -238,6 +242,7 @@ function PayStatus({ allocation, onMarkPaid, enabled = true }) {
 function DayCell({
   sessions,
   manualHours = 0,
+  manualJobNumbers = [],
   day,
   allocation,
   canDelete,
@@ -248,6 +253,10 @@ function DayCell({
   const clocked = dayClockedHours(sessions);
   const total =
     clocked == null && manualHours <= 0 ? null : round2((clocked || 0) + manualHours);
+  const jobLabel =
+    Array.isArray(manualJobNumbers) && manualJobNumbers.length > 0
+      ? manualJobNumbers.join(", ")
+      : "";
   return (
     <div className="flex flex-col gap-0.5 leading-tight">
       <div className="flex items-start justify-between gap-1">
@@ -294,6 +303,11 @@ function DayCell({
       {manualHours > 0 ? (
         <p className="w-fit rounded-sm bg-warning/15 px-1 py-0.5 text-[11px] font-semibold tabular-nums text-warning">
           Manual {manualHours.toFixed(2)} hrs
+          {jobLabel ? (
+            <span className="mt-0.5 block text-[10px] font-bold text-warning">
+              Job {jobLabel}
+            </span>
+          ) : null}
         </p>
       ) : null}
     </div>
@@ -720,7 +734,10 @@ export default function SimplePunchesCalendar({
                           );
                         })
                       : days.map((day) => {
-                          const { sessions, manualHours } = dayEntry(employee, day);
+                          const { sessions, manualHours, manualJobNumbers } = dayEntry(
+                            employee,
+                            day
+                          );
                           const allocation = dayMap?.get(day);
                           const hasActivity = sessions.length > 0 || manualHours > 0;
                           return (
@@ -736,6 +753,7 @@ export default function SimplePunchesCalendar({
                                 <DayCell
                                   sessions={sessions}
                                   manualHours={manualHours}
+                                  manualJobNumbers={manualJobNumbers}
                                   day={day}
                                   allocation={allocation}
                                   payEnabled={payEnabled}

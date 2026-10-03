@@ -14,6 +14,10 @@ const timeClockManualHoursSchema = new mongoose.Schema(
     workDate: { type: String, required: true, trim: true },
     hours: { type: Number, required: true, min: 0, max: 24 },
     note: { type: String, default: "", trim: true },
+    /** Optional Simple Service Proposal (JOB) this time was logged against */
+    proposalId: { type: String, default: "", trim: true },
+    /** Denormalized JOB# / document number for display */
+    documentNumber: { type: String, default: "", trim: true },
     voidedAt: { type: Date, default: null },
     voidReason: { type: String, default: "", trim: true },
     createdByUserEmail: { type: String, default: "", trim: true, lowercase: true },
@@ -24,6 +28,8 @@ const timeClockManualHoursSchema = new mongoose.Schema(
 timeClockManualHoursSchema.index({ createdByEmail: 1, workDate: -1 });
 timeClockManualHoursSchema.index({ createdByEmail: 1, employeeId: 1, workDate: -1 });
 timeClockManualHoursSchema.index({ createdByEmail: 1, employeeId: 1, voidedAt: 1, workDate: -1 });
+timeClockManualHoursSchema.index({ createdByEmail: 1, proposalId: 1, workDate: -1 });
+timeClockManualHoursSchema.index({ createdByEmail: 1, employeeId: 1, proposalId: 1, workDate: -1 });
 
 export default mongoose.models.TimeClockManualHours ||
   mongoose.model("TimeClockManualHours", timeClockManualHoursSchema);
