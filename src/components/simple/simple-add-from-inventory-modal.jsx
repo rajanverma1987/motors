@@ -6,6 +6,7 @@ import Button from "@/components/ui/button";
 import { useAlert } from "@/components/confirm-provider";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { emptyOtherLine } from "@/lib/simple-service-proposal-form";
+import { formatSellPriceForLine } from "@/lib/inventory-pricing";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -22,7 +23,7 @@ export default function SimpleAddFromInventoryModal({
   onLinkItem,
   buildLine,
   submitLabel = "Add to Other Items",
-  hint = "Enter quantity for each part to add. Lines appear under Other Items (you can set price after).",
+  hint = "Enter quantity for each part to add. Unit price uses inventory cost and markup when set.",
   title = "Add from inventory",
   mode = "qty",
   zIndex = 140,
@@ -89,7 +90,7 @@ export default function SimpleAddFromInventoryModal({
         ...emptyOtherLine(),
         description: name,
         uom,
-        price: "",
+        price: formatSellPriceForLine(it.unitCost, it.markupPercent),
         qty: String(q),
         inventoryItemId: it.id,
       });

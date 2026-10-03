@@ -48,9 +48,9 @@ export const PRODUCT_DROPDOWN_DEFINITIONS = {
   },
   quote_type: {
     key: "quote_type",
-    label: "Quote type",
-    description: "How the customer reached out on the Service Proposal form.",
-    placeholder: "Select quote type",
+    label: "Lead source",
+    description: "How the customer reached out on the proposal form (Phone, Email, Walk-in).",
+    placeholder: "Select lead source",
     defaults: DEFAULT_QUOTE_TYPES,
   },
   payment_method: {

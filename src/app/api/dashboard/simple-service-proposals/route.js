@@ -26,6 +26,10 @@ import {
   assertSimplePortalJobNumberAvailable,
   createSimpleServiceProposalWithUniqueJobNumber,
 } from "@/lib/simple-portal-job-numbers";
+import {
+  normalizeProposalType,
+  PROPOSAL_TYPE_VALUES,
+} from "@/lib/proposal-types";
 
 function emptyInvoiceFinance() {
   return {
@@ -160,13 +164,15 @@ export async function GET(request) {
       searchParams.has("listKind") ||
       searchParams.has("from") ||
       searchParams.has("to") ||
-      searchParams.has("status");
+      searchParams.has("status") ||
+      searchParams.has("proposalType");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("pageSize")) || 25));
     const skip = (page - 1) * pageSize;
     const qText = String(searchParams.get("q") || "").trim();
     const listKind = String(searchParams.get("listKind") || "").trim().toLowerCase();
     const statusFilter = String(searchParams.get("status") || "").trim();
+    const proposalTypeFilter = String(searchParams.get("proposalType") || "").trim().toLowerCase();
     const from = String(searchParams.get("from") || "").trim().slice(0, 10);
     const to = String(searchParams.get("to") || "").trim().slice(0, 10);
     const sortBy = String(searchParams.get("sortBy") || "updatedAt").trim();
@@ -184,6 +190,22 @@ export async function GET(request) {
           : null;
     const dateClause = mongoSpDateRangeClause(from, to);
     const statusClause = mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoices });
+    let proposalTypeClause = null;
+    if (proposalTypeFilter && PROPOSAL_TYPE_VALUES.includes(normalizeProposalType(proposalTypeFilter))) {
+      const pt = normalizeProposalType(proposalTypeFilter);
+      // Missing proposalType on legacy docs counts as service.
+      proposalTypeClause =
+        pt === "service"
+          ? {
+              $or: [
+                { proposalType: pt },
+                { proposalType: { $exists: false } },
+                { proposalType: null },
+                { proposalType: "" },
+              ],
+            }
+          : { proposalType: pt };
+    }
 
     let searchClause = null;
     if (qText) {
@@ -202,6 +224,7 @@ export async function GET(request) {
           { email: rx },
           { quotedBy: rx },
           { quoteType: rx },
+          { proposalType: rx },
           { internalNotes: rx },
           { notes: rx },
         ],
@@ -209,7 +232,7 @@ export async function GET(request) {
     }
 
     const baseMatch = andMongoClauses({ createdByEmail: email }, kindClause, dateClause);
-    const listMatch = andMongoClauses(baseMatch, statusClause, searchClause);
+    const listMatch = andMongoClauses(baseMatch, statusClause, proposalTypeClause, searchClause);
 
     const sortField = simpleSpSortField(sortBy);
     const useStatusRank = sortBy === "status" && !isInvoices;

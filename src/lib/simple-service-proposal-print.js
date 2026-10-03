@@ -1,8 +1,15 @@
 import { accountsPaymentTermsLabel } from "@/lib/accounts-display";
 import { customerInvoiceToBlock } from "@/lib/customer-invoice-address";
-import { RECORD_TYPE_INVOICE, parseMoneyInput, sumLinePrices, sumOtherLinePrices } from "@/lib/simple-service-proposal-form";
+import {
+  RECORD_TYPE_INVOICE,
+  parseMoneyInput,
+  recordTypeDocumentLabel,
+  sumLinePrices,
+  sumOtherLinePrices,
+} from "@/lib/simple-service-proposal-form";
 import { isLogisticsChargeOtherLine } from "@/lib/simple-motor-logistics";
 import { resolveEmployeeDisplayName } from "@/lib/technician-select-options";
+import { proposalDocumentTitle, proposalDocumentTitleLower } from "@/lib/quote-document-labels";
 
 export const PRINT_NOTES_INTERNAL = "internal";
 export const PRINT_NOTES_CUSTOMER = "customer";
@@ -201,11 +208,20 @@ export function buildSimpleServiceProposalPrintBundle({
     };
   }
 
+  const proposalTitle = proposalDocumentTitle(form?.proposalType);
+  const numLabel = recordTypeDocumentLabel(form?.recordType);
   return {
     documentType,
     printNotesMode,
-    documentLabel: documentNumber ? `RFQ# ${documentNumber}` : "Service proposal",
-    quote: baseDoc,
+    documentTitle: proposalTitle,
+    kindLabel: proposalDocumentTitleLower(form?.proposalType),
+    documentLabel: documentNumber
+      ? `${proposalTitle} (${numLabel} ${documentNumber})`
+      : proposalTitle,
+    quote: {
+      ...baseDoc,
+      documentTitle: proposalTitle,
+    },
     invoicePayload: null,
   };
 }

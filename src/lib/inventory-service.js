@@ -3,6 +3,11 @@ import InventoryItem from "@/models/InventoryItem";
 import InventoryReservation from "@/models/InventoryReservation";
 import InventoryMovement from "@/models/InventoryMovement";
 import Quote from "@/models/Quote";
+import {
+  parseInventoryMoney,
+  parseMarkupPercent,
+  weightedAverageUnitCost,
+} from "@/lib/inventory-pricing";
 
 /** @param {string} status */
 export function isShippedStatus(status) {
@@ -457,11 +462,21 @@ export async function applySimpleServiceProposalInventoryLifecycle(email, propos
 
 /**
  * Increase on-hand when a PO line is newly marked Received (logistics).
+ * Optionally updates weighted-average unitCost and markupPercent.
  *
  * @param {string} email
  * @param {string} inventoryItemId
  * @param {number} qty
- * @param {{ purchaseOrderId?: string, poLineId?: string, poNumber?: string, vendorName?: string, notes?: string }} [meta]
+ * @param {{
+ *   purchaseOrderId?: string,
+ *   poLineId?: string,
+ *   poNumber?: string,
+ *   vendorName?: string,
+ *   notes?: string,
+ *   unitCost?: number,
+ *   markupPercent?: number,
+ *   updateCost?: boolean,
+ * }} [meta]
  */
 export async function receiveInventoryFromPoLine(email, inventoryItemId, qty, meta = {}) {
   const e = email.trim().toLowerCase();
@@ -469,11 +484,29 @@ export async function receiveInventoryFromPoLine(email, inventoryItemId, qty, me
   if (!mongoose.Types.ObjectId.isValid(id) || !Number.isFinite(qty) || qty <= 0) {
     return { ok: true, skipped: true };
   }
-  const item = await InventoryItem.findOneAndUpdate(
-    { _id: id, createdByEmail: e },
-    { $inc: { onHand: qty } },
-    { new: true }
-  ).lean();
+
+  const current = await InventoryItem.findOne({ _id: id, createdByEmail: e });
+  if (!current) return { ok: false, error: "Inventory item not found" };
+
+  const onHandBefore = Math.max(0, Number(current.onHand) || 0);
+  const update = { $inc: { onHand: qty } };
+  const setFields = {};
+
+  if (meta.updateCost !== false && meta.unitCost != null && String(meta.unitCost).trim() !== "") {
+    const receivedCost = parseInventoryMoney(meta.unitCost);
+    const oldCost = parseInventoryMoney(current.unitCost);
+    setFields.unitCost = weightedAverageUnitCost(onHandBefore, oldCost, qty, receivedCost);
+  }
+  if (meta.markupPercent != null && String(meta.markupPercent).trim() !== "") {
+    setFields.markupPercent = parseMarkupPercent(meta.markupPercent);
+  }
+  if (Object.keys(setFields).length) {
+    update.$set = setFields;
+  }
+
+  const item = await InventoryItem.findOneAndUpdate({ _id: id, createdByEmail: e }, update, {
+    new: true,
+  }).lean();
   if (!item) return { ok: false, error: "Inventory item not found" };
 
   await recordInventoryMovement({

@@ -5,10 +5,17 @@ import InventoryItem from "@/models/InventoryItem";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { adjustInventoryOnHand } from "@/lib/inventory-service";
 import { LIMITS, clampString, clampStringCoerced } from "@/lib/validation";
+import {
+  parseInventoryMoney,
+  parseMarkupPercent,
+  sellUnitPriceFromCostMarkup,
+} from "@/lib/inventory-pricing";
 
 function toRow(doc) {
   const onHand = Number(doc.onHand) || 0;
   const reserved = Number(doc.reserved) || 0;
+  const unitCost = Math.max(0, Number(doc.unitCost) || 0);
+  const markupPercent = parseMarkupPercent(doc.markupPercent);
   return {
     id: doc._id.toString(),
     name: doc.name ?? "",
@@ -17,6 +24,10 @@ function toRow(doc) {
     reserved,
     available: onHand - reserved,
     threshold: Number(doc.threshold) || 0,
+    unitCost,
+    markupPercent,
+    sellUnitPrice: sellUnitPriceFromCostMarkup(unitCost, markupPercent),
+    preferredVendorId: String(doc.preferredVendorId || "").trim(),
     location: doc.location ?? "",
     uom: doc.uom ?? "ea",
     notes: doc.notes ?? "",
@@ -66,6 +77,15 @@ export async function PATCH(request, context) {
     }
     if (body.threshold !== undefined) {
       doc.threshold = Math.max(0, Number(body.threshold) || 0);
+    }
+    if (body.unitCost !== undefined) {
+      doc.unitCost = Math.max(0, parseInventoryMoney(body.unitCost));
+    }
+    if (body.markupPercent !== undefined) {
+      doc.markupPercent = parseMarkupPercent(body.markupPercent);
+    }
+    if (body.preferredVendorId !== undefined) {
+      doc.preferredVendorId = clampString(body.preferredVendorId, 64);
     }
     if (body.location !== undefined) doc.location = clampString(body.location, 120);
     if (body.notes !== undefined) doc.notes = clampString(body.notes, LIMITS.message.max);

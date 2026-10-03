@@ -117,6 +117,8 @@ export function emptyPoLine() {
     inventoryName: "",
     /** When true on receive, increase inventory (create SKU if none linked) */
     addToInventory: false,
+    /** Markup % applied to inventory sell price when receiving into inventory */
+    inventoryMarkupPercent: "",
     cancelled: false,
     cancelledAt: "",
     cancellationReason: "",
@@ -400,6 +402,11 @@ export function storedPoToForm(row) {
             merged.addToInventory === true || merged.addToInventory === false
               ? Boolean(merged.addToInventory)
               : Boolean(String(merged.inventoryItemId || "").trim()),
+          inventoryMarkupPercent:
+            merged.inventoryMarkupPercent != null &&
+            String(merged.inventoryMarkupPercent).trim() !== ""
+              ? String(merged.inventoryMarkupPercent)
+              : "",
         };
       })
     : [];
@@ -516,6 +523,11 @@ export function formToSimplePurchaseOrderRow(form, meta = {}) {
         inventorySku: isShopPo ? String(line.inventorySku || "").trim() : "",
         inventoryName: isShopPo ? String(line.inventoryName || "").trim() : "",
         addToInventory: isShopPo ? Boolean(line.addToInventory) : false,
+        inventoryMarkupPercent: isShopPo
+          ? line.inventoryMarkupPercent != null && String(line.inventoryMarkupPercent).trim() !== ""
+            ? String(line.inventoryMarkupPercent)
+            : ""
+          : "",
         total: t.total,
         taxAmount: t.taxAmount,
         grandTotal: t.grandTotal,

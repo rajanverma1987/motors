@@ -596,12 +596,22 @@ export default function SimplePurchaseOrderFormModal({
       ...f,
       lineItems: (f.lineItems || []).map((line) => {
         if (line.id !== lineId) return line;
+        const itemMarkup =
+          item.markupPercent != null && String(item.markupPercent).trim() !== ""
+            ? String(item.markupPercent)
+            : "";
+        const defaultMarkup =
+          Number(mergedSettings?.defaultInventoryMarkupPercent) > 0
+            ? String(mergedSettings.defaultInventoryMarkupPercent)
+            : "";
         return {
           ...line,
           inventoryItemId: String(item.id),
           inventoryName: String(item.name || "").trim(),
           inventorySku: String(item.sku || "").trim(),
           addToInventory: true,
+          inventoryMarkupPercent:
+            String(line.inventoryMarkupPercent || "").trim() || itemMarkup || defaultMarkup,
           uom: line.uom || item.uom || "ea",
           itemName: line.itemName || item.name || "",
         };
@@ -1805,7 +1815,7 @@ export default function SimplePurchaseOrderFormModal({
                       <p className="text-sm text-secondary">Add line items on the Purchase Order tab first.</p>
                     ) : (
                       <div className={`shrink-0 overflow-auto border border-border ${TABLE_SCROLL_MAX_CLASS}`}>
-                        <table className={`w-full ${isShopPo ? "min-w-[72rem]" : "min-w-[56rem]"} border-collapse border-spacing-0 text-xs`}>
+                        <table className={`w-full ${isShopPo ? "min-w-[80rem]" : "min-w-[56rem]"} border-collapse border-spacing-0 text-xs`}>
                           <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
                             <tr className="border-b-2 border-border">
                               <th className="border-r border-border px-1 py-1 text-left font-semibold">Item Name</th>
@@ -1819,6 +1829,7 @@ export default function SimplePurchaseOrderFormModal({
                                 <>
                                   <th className="w-44 border-r border-border px-1 py-1 text-left font-semibold">Inventory SKU</th>
                                   <th className="w-28 border-r border-border px-1 py-1 text-center font-semibold">Add to inventory</th>
+                                  <th className="w-24 border-r border-border px-1 py-1 text-right font-semibold">Markup %</th>
                                 </>
                               ) : null}
                               <th className="w-16 px-1 py-1 text-center font-semibold">Return</th>
@@ -1919,11 +1930,53 @@ export default function SimplePurchaseOrderFormModal({
                                         type="checkbox"
                                         className="h-3.5 w-3.5 accent-primary"
                                         checked={Boolean(line.addToInventory)}
-                                        onChange={(e) =>
-                                          patchLine(line.id, "addToInventory", e.target.checked)
-                                        }
+                                        onChange={(e) => {
+                                          const checked = e.target.checked;
+                                          const def =
+                                            Number(mergedSettings?.defaultInventoryMarkupPercent) ||
+                                            0;
+                                          const fillMarkup =
+                                            checked &&
+                                            String(line.inventoryMarkupPercent || "").trim() === "" &&
+                                            def > 0;
+                                          setForm((f) => {
+                                            const next = (f.lineItems || []).map((row) => {
+                                              if (row.id !== line.id) return row;
+                                              return {
+                                                ...row,
+                                                addToInventory: checked,
+                                                ...(fillMarkup
+                                                  ? { inventoryMarkupPercent: String(def) }
+                                                  : {}),
+                                              };
+                                            });
+                                            return { ...f, lineItems: next };
+                                          });
+                                        }}
                                         disabled={saving || inactive}
                                         aria-label={`Add ${line.itemName || "line"} to inventory on receive`}
+                                      />
+                                    </td>
+                                    <td className="border-r border-border px-1 py-1">
+                                      <input
+                                        type="text"
+                                        inputMode="decimal"
+                                        value={line.inventoryMarkupPercent || ""}
+                                        onChange={(e) =>
+                                          patchLine(
+                                            line.id,
+                                            "inventoryMarkupPercent",
+                                            sanitizePoNumericInput(e.target.value)
+                                          )
+                                        }
+                                        className={`${CELL_INPUT} text-right tabular-nums ${
+                                          inactive ? "!bg-danger/5 line-through pointer-events-none" : ""
+                                        }`}
+                                        placeholder="0"
+                                        disabled={saving || inactive || !line.addToInventory}
+                                        readOnly={inactive}
+                                        aria-label={`Inventory markup percent for ${line.itemName || "line"}`}
+                                        title="Markup % applied when receiving into inventory"
                                       />
                                     </td>
                                   </>

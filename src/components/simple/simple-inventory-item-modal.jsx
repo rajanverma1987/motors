@@ -11,6 +11,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import { useAlert } from "@/components/confirm-provider";
 import { useFormatDateTime, useUserSettings } from "@/contexts/user-settings-context";
 import { normalizeInventoryLocations } from "@/lib/user-settings";
+import { sellUnitPriceFromCostMarkup } from "@/lib/inventory-pricing";
 
 const FORM_ID = "simple-inventory-item-form";
 const ADD_LOCATION_FORM_ID = "simple-inventory-add-location-form";
@@ -30,13 +31,15 @@ function FieldRow({ label, labelWidth = "8rem", children }) {
   );
 }
 
-function emptyForm() {
+function emptyForm(defaultMarkup = "") {
   return {
     name: "",
     sku: "",
     uom: "ea",
     onHand: "0",
     threshold: "0",
+    unitCost: "",
+    markupPercent: defaultMarkup,
     location: "",
   };
 }
@@ -49,6 +52,12 @@ function formFromItem(item) {
     uom: String(item.uom ?? "ea") || "ea",
     onHand: String(item.onHand ?? 0),
     threshold: String(item.threshold ?? 0),
+    unitCost:
+      item.unitCost != null && Number(item.unitCost) > 0 ? String(item.unitCost) : "",
+    markupPercent:
+      item.markupPercent != null && String(item.markupPercent).trim() !== ""
+        ? String(item.markupPercent)
+        : "",
     location: String(item.location ?? ""),
   };
 }
@@ -142,11 +151,15 @@ export default function SimpleInventoryItemModal({
       setHistoryFilter("all");
       return;
     }
-    setForm(isEdit ? formFromItem(item) : emptyForm());
+    const defaultMarkup =
+      Number(settings?.defaultInventoryMarkupPercent) > 0
+        ? String(settings.defaultInventoryMarkupPercent)
+        : "";
+    setForm(isEdit ? formFromItem(item) : emptyForm(defaultMarkup));
     if (isEdit && item?.id) {
       void loadMovements(item.id, "all");
     }
-  }, [open, isEdit, item, loadMovements]);
+  }, [open, isEdit, item, loadMovements, settings?.defaultInventoryMarkupPercent]);
 
   const patch = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -222,6 +235,8 @@ export default function SimpleInventoryItemModal({
             sku: form.sku,
             uom: uomToSave,
             threshold: Math.max(0, parseFloat(form.threshold) || 0),
+            unitCost: parseFloat(form.unitCost) || 0,
+            markupPercent: parseFloat(form.markupPercent) || 0,
             location: form.location,
             setOnHand: Math.max(0, parseFloat(form.onHand) || 0),
           }),
@@ -241,6 +256,8 @@ export default function SimpleInventoryItemModal({
             sku: form.sku,
             onHand: parseFloat(form.onHand) || 0,
             threshold: parseFloat(form.threshold) || 0,
+            unitCost: parseFloat(form.unitCost) || 0,
+            markupPercent: parseFloat(form.markupPercent) || 0,
             uom: uomToSave,
             location: form.location,
           }),
@@ -248,7 +265,11 @@ export default function SimpleInventoryItemModal({
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || "Failed to create");
         await alert({ title: "Success", message: "Part added." });
-        setForm(emptyForm());
+        const defaultMarkup =
+          Number(settings?.defaultInventoryMarkupPercent) > 0
+            ? String(settings.defaultInventoryMarkupPercent)
+            : "";
+        setForm(emptyForm(defaultMarkup));
         onSaved?.(data.item || null);
         onClose?.();
         return;
@@ -357,6 +378,46 @@ export default function SimpleInventoryItemModal({
                 className={FIELD_INPUT}
                 disabled={saving}
                 aria-label="Low-stock threshold"
+              />
+            </FieldRow>
+            <FieldRow label="Unit cost" labelWidth="7rem">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.unitCost}
+                onChange={(e) => patch("unitCost", e.target.value)}
+                className={FIELD_INPUT}
+                disabled={saving}
+                placeholder="0.00"
+                aria-label="Unit cost"
+              />
+            </FieldRow>
+            <FieldRow label="Markup %" labelWidth="7rem">
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={form.markupPercent}
+                onChange={(e) => patch("markupPercent", e.target.value)}
+                className={FIELD_INPUT}
+                disabled={saving}
+                placeholder="0"
+                aria-label="Markup percent"
+              />
+            </FieldRow>
+            <FieldRow label="Sell price" labelWidth="7rem">
+              <input
+                type="text"
+                readOnly
+                value={
+                  sellUnitPriceFromCostMarkup(form.unitCost, form.markupPercent) > 0
+                    ? sellUnitPriceFromCostMarkup(form.unitCost, form.markupPercent).toFixed(2)
+                    : ""
+                }
+                className={`${FIELD_INPUT} !bg-muted tabular-nums`}
+                aria-label="Sell unit price"
+                title="Computed from unit cost and markup"
               />
             </FieldRow>
             <FieldRow label="Location" labelWidth="7rem">

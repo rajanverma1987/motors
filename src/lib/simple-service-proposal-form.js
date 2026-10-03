@@ -16,6 +16,8 @@ import {
 import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import { isMongoObjectIdString, isShopAdminSelectValue } from "@/lib/technician-select-options";
 import { resolveMachineType } from "@/lib/machine-types";
+import { normalizeProposalType, PROPOSAL_TYPE_SERVICE } from "@/lib/proposal-types";
+import { proposalDocumentTitle } from "@/lib/quote-document-labels";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -24,6 +26,16 @@ export const RECORD_TYPE_INVOICE = "INVOICE";
 export const RECORD_TYPES = [RECORD_TYPE_RFQ, RECORD_TYPE_JOB, RECORD_TYPE_INVOICE];
 
 export const QUOTE_TYPE_VALUES = ["Phone", "Email", "Walk-in", "Other"];
+
+export {
+  PROPOSAL_TYPE_SALES,
+  PROPOSAL_TYPE_SERVICE,
+  PROPOSAL_TYPE_FIELD_SERVICE,
+  PROPOSAL_TYPE_VALUES,
+  PROPOSAL_TYPE_OPTIONS,
+  normalizeProposalType,
+  proposalTypeLabel,
+} from "@/lib/proposal-types";
 
 /**
  * Prefer a human-readable Quoted By label; never persist/display a raw Mongo ObjectId.
@@ -272,6 +284,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     documentNumber: "",
     recordType: RECORD_TYPE_RFQ,
     proposalApprovedBy: "",
+    /** Sales | Service | Field Service (not lead channel). */
+    proposalType: PROPOSAL_TYPE_SERVICE,
     quoteType: "",
     dueDate: "",
     proposalSubmitDate: "",
@@ -420,11 +434,15 @@ export function sumOtherLinePrices(lines) {
   return roundSpMoney(lines.reduce((sum, line) => sum + lineExtendedPrice(line), 0));
 }
 
-/** Display title for the form / modal heading. */
-export function recordTypeDisplayTitle(recordType) {
+/**
+ * Display title for the form / modal heading.
+ * @param {string} recordType
+ * @param {unknown} [proposalType]
+ */
+export function recordTypeDisplayTitle(recordType, proposalType) {
   const t = String(recordType || RECORD_TYPE_RFQ).toUpperCase();
   if (t === RECORD_TYPE_INVOICE) return "INVOICE";
-  return "SERVICE PROPOSAL";
+  return proposalDocumentTitle(proposalType).toUpperCase();
 }
 
 /** Document number field label (RFQ# / JOB# / Invoice#). */
@@ -585,6 +603,7 @@ export function toSimpleServiceProposalListRow(doc, meta = null) {
     customerPhone: String(form.customerPhone || phone).trim(),
     customerEmail: String(form.customerEmail || email).trim(),
     quotedBy: pickQuotedByDisplay(m.preparedByLabel, form.quotedBy, form.preparedBy),
+    proposalType: normalizeProposalType(form.proposalType),
     quoteType: String(form.quoteType || "").trim(),
     notes: String(form.notes || form.internalNotes || "").trim(),
     total: totals.total,
@@ -648,6 +667,7 @@ export function simpleServiceProposalDocToForm(doc) {
   next.jobStatus = String(d.jobStatus || "").trim();
   next.preparedBy = String(d.preparedBy || "").trim();
   next.proposalApprovedBy = String(d.proposalApprovedBy || "").trim();
+  next.proposalType = normalizeProposalType(d.proposalType);
   next.quoteType = normalizeQuoteTypeValue(d.quoteType);
   next.customerPo = String(d.customerPo || "").trim();
   next.shippingPo = String(d.shippingPo || "").trim();

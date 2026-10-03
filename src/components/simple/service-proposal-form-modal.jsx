@@ -84,6 +84,9 @@ import {
   RECORD_TYPE_RFQ,
   cloneServiceProposalAsNewRfq,
   computeInvoicePaymentSummary,
+  PROPOSAL_TYPE_OPTIONS,
+  PROPOSAL_TYPE_SALES,
+  normalizeProposalType,
   recordTypeDisplayTitle,
   recordTypeDocumentLabel,
   recordTypeJobNumberLabel,
@@ -471,6 +474,7 @@ export default function ServiceProposalFormModal({
   const [logisticsOpen, setLogisticsOpen] = useState(false);
   const [logisticsTab, setLogisticsTab] = useState(KIND_RECEIVING);
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
+  const [salesMotorOpen, setSalesMotorOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
   const [printBundle, setPrintBundle] = useState(null);
   const [printSendMeta, setPrintSendMeta] = useState(null);
@@ -971,13 +975,12 @@ export default function ServiceProposalFormModal({
   const [expandedPoIds, setExpandedPoIds] = useState(() => new Set());
 
   useEffect(() => {
+    // Keep POs collapsed by default; only drop ids that no longer exist.
     setExpandedPoIds((prev) => {
-      const next = new Set(prev);
-      for (const group of proposalPoTableGroups) {
-        if (!next.has(group.poId)) next.add(group.poId);
-      }
-      for (const id of [...next]) {
-        if (!proposalPoTableGroups.some((g) => g.poId === id)) next.delete(id);
+      const valid = new Set(proposalPoTableGroups.map((g) => g.poId));
+      const next = new Set();
+      for (const id of prev) {
+        if (valid.has(id)) next.add(id);
       }
       return next;
     });
@@ -1382,8 +1385,9 @@ export default function ServiceProposalFormModal({
     () => computeInvoicePaymentSummary(form.payments, billingTotal),
     [form.payments, billingTotal]
   );
-  const displayTitle = recordTypeDisplayTitle(form.recordType);
+  const displayTitle = recordTypeDisplayTitle(form.recordType, form.proposalType);
   const docLabel = recordTypeDocumentLabel(form.recordType);
+  const isSalesProposal = normalizeProposalType(form.proposalType) === PROPOSAL_TYPE_SALES;
 
   const docNumber = String(form.documentNumber || "").trim();
   const canOpenLogistics = Boolean(form.id && docNumber);
@@ -1672,6 +1676,35 @@ export default function ServiceProposalFormModal({
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
+              <FieldRow label="Proposal type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                <div
+                  className="flex flex-wrap gap-1"
+                  role="group"
+                  aria-label="Proposal type"
+                >
+                  {PROPOSAL_TYPE_OPTIONS.map((opt) => {
+                    const selected = normalizeProposalType(form.proposalType) === opt.value;
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        aria-pressed={selected}
+                        className={`inline-flex h-7 shrink-0 items-center border px-2 text-xs font-semibold ${
+                          selected
+                            ? "border-primary bg-primary text-white"
+                            : "border-border bg-card text-title hover:border-primary/40"
+                        }`}
+                        onClick={() => {
+                          patch("proposalType", opt.value);
+                          if (opt.value === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </FieldRow>
               <FieldRow label="Customer" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <div className="min-w-0 flex-1">
@@ -1712,81 +1745,176 @@ export default function ServiceProposalFormModal({
                   className={FIELD_INPUT}
                 />
               </FieldRow>
-              <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
-                  {MACHINE_TYPES.map((opt) => (
-                    <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-                      <input
-                        type="radio"
-                        name="motorPower"
-                        value={opt}
-                        checked={resolveMachineType(form.motorPower) === opt}
-                        onChange={() => handleMotorTypeChange(opt)}
-                        className="h-3.5 w-3.5 accent-primary"
-                      />
-                      {opt}
-                    </label>
-                  ))}
-                </div>
-              </FieldRow>
-              <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <div className="flex gap-1.5">
-                  <Button
+              {isSalesProposal ? (
+                <div className="border border-border bg-card">
+                  <button
                     type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
-                    title={`View ${resolveMachineType(form.motorPower)} datasheet`}
-                    onClick={openDatasheet}
+                    className="flex w-full items-center justify-between px-2 py-1.5 text-left text-xs font-bold text-title hover:bg-primary/5"
+                    aria-expanded={salesMotorOpen}
+                    onClick={() => setSalesMotorOpen((v) => !v)}
                   >
-                    View Datasheet
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={`${TOOLBAR_BTN} justify-center !px-3`}
-                    disabled={saving || copying}
-                    title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
-                    onClick={() => setEmailDatasheetOpen(true)}
-                  >
-                    Email Report
-                  </Button>
+                    <span>Motor / machine details (optional)</span>
+                    <span className="text-secondary">{salesMotorOpen ? "Hide" : "Show"}</span>
+                  </button>
+                  {salesMotorOpen ? (
+                    <div className="flex flex-col gap-2 border-t border-border px-2 py-2">
+                      <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
+                          {MACHINE_TYPES.map((opt) => (
+                            <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                              <input
+                                type="radio"
+                                name="motorPower"
+                                value={opt}
+                                checked={resolveMachineType(form.motorPower) === opt}
+                                onChange={() => handleMotorTypeChange(opt)}
+                                className="h-3.5 w-3.5 accent-primary"
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </FieldRow>
+                      <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex gap-1.5">
+                          <Button
+                            type="button"
+                            variant="primary"
+                            size="sm"
+                            className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
+                            title={`View ${resolveMachineType(form.motorPower)} datasheet`}
+                            onClick={openDatasheet}
+                          >
+                            View Datasheet
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className={`${TOOLBAR_BTN} justify-center !px-3`}
+                            disabled={saving || copying}
+                            title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
+                            onClick={() => setEmailDatasheetOpen(true)}
+                          >
+                            Email Report
+                          </Button>
+                        </div>
+                      </FieldRow>
+                      <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
+                          {["Original", "EOM"].map((opt) => (
+                            <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                              <input
+                                type="radio"
+                                name="namePlate"
+                                value={opt}
+                                checked={form.namePlate === opt}
+                                onChange={() => patch("namePlate", opt)}
+                                className="h-3.5 w-3.5 accent-primary"
+                              />
+                              {opt}
+                            </label>
+                          ))}
+                        </div>
+                      </FieldRow>
+                      {MOTOR_FIELDS.map((field) => (
+                        <FieldRow
+                          key={field.key}
+                          label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
+                          labelWidth="7.75rem"
+                          controlClassName="min-w-0 flex-1"
+                        >
+                          <SimpleDoubleClickTextEditInput
+                            label={field.label}
+                            value={form[field.key]}
+                            onChange={(next) => patch(field.key, next)}
+                            className={FIELD_INPUT}
+                            zIndex={160}
+                          />
+                        </FieldRow>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
-              </FieldRow>
-              <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
-                  {["Original", "EOM"].map((opt) => (
-                    <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
-                      <input
-                        type="radio"
-                        name="namePlate"
-                        value={opt}
-                        checked={form.namePlate === opt}
-                        onChange={() => patch("namePlate", opt)}
-                        className="h-3.5 w-3.5 accent-primary"
+              ) : (
+                <>
+                  <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
+                      {MACHINE_TYPES.map((opt) => (
+                        <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                          <input
+                            type="radio"
+                            name="motorPower"
+                            value={opt}
+                            checked={resolveMachineType(form.motorPower) === opt}
+                            onChange={() => handleMotorTypeChange(opt)}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </FieldRow>
+                  <FieldRow label="Datasheet" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex gap-1.5">
+                      <Button
+                        type="button"
+                        variant="primary"
+                        size="sm"
+                        className={`${TOOLBAR_BTN} flex-1 justify-center !px-3`}
+                        title={`View ${resolveMachineType(form.motorPower)} datasheet`}
+                        onClick={openDatasheet}
+                      >
+                        View Datasheet
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={`${TOOLBAR_BTN} justify-center !px-3`}
+                        disabled={saving || copying}
+                        title={`Email ${resolveMachineType(form.motorPower)} report to customer`}
+                        onClick={() => setEmailDatasheetOpen(true)}
+                      >
+                        Email Report
+                      </Button>
+                    </div>
+                  </FieldRow>
+                  <FieldRow label="Mfg Name Plate" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Name plate">
+                      {["Original", "EOM"].map((opt) => (
+                        <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                          <input
+                            type="radio"
+                            name="namePlate"
+                            value={opt}
+                            checked={form.namePlate === opt}
+                            onChange={() => patch("namePlate", opt)}
+                            className="h-3.5 w-3.5 accent-primary"
+                          />
+                          {opt}
+                        </label>
+                      ))}
+                    </div>
+                  </FieldRow>
+                  {MOTOR_FIELDS.map((field) => (
+                    <FieldRow
+                      key={field.key}
+                      label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
+                      labelWidth="7.75rem"
+                      controlClassName="min-w-0 flex-1"
+                    >
+                      <SimpleDoubleClickTextEditInput
+                        label={field.label}
+                        value={form[field.key]}
+                        onChange={(next) => patch(field.key, next)}
+                        className={FIELD_INPUT}
+                        zIndex={160}
                       />
-                      {opt}
-                    </label>
+                    </FieldRow>
                   ))}
-                </div>
-              </FieldRow>
-              {MOTOR_FIELDS.map((field) => (
-                <FieldRow
-                  key={field.key}
-                  label={proposalMotorFieldLabel(form.motorPower, field.key, field.label)}
-                  labelWidth="7.75rem"
-                  controlClassName="min-w-0 flex-1"
-                >
-                  <SimpleDoubleClickTextEditInput
-                    label={field.label}
-                    value={form[field.key]}
-                    onChange={(next) => patch(field.key, next)}
-                    className={FIELD_INPUT}
-                    zIndex={160}
-                  />
-                </FieldRow>
-              ))}
+                </>
+              )}
             </div>
 
             {/* Column 2 — meta + status */}
@@ -1872,13 +2000,13 @@ export default function ServiceProposalFormModal({
                   aria-label="Proposal Approved By"
                 />
               </FieldRow>
-              <FieldRow label="Quote Type" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+              <FieldRow label="Lead source" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <SimpleSelect
                   options={quoteTypeOptions}
                   value={form.quoteType}
                   onChange={(e) => patch("quoteType", e.target.value)}
                   placeholder="Select…"
-                  aria-label="Quote Type"
+                  aria-label="Lead source"
                 />
               </FieldRow>
               <FieldRow label="Due Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -2400,6 +2528,7 @@ export default function ServiceProposalFormModal({
         open={addFromInventoryOpen}
         onClose={() => setAddFromInventoryOpen(false)}
         zIndex={140}
+        hint="Enter quantity for each part. Unit price is filled from inventory cost and markup when set."
         onAddLines={(newLines) => {
           const existing = Array.isArray(form.otherItems) ? form.otherItems : [];
           const filled = existing.filter((line) =>

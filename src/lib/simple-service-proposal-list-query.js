@@ -30,6 +30,7 @@ const SORT_FIELD_MAP = {
   email: "customerEmail",
   quotedBy: "quotedBy",
   quoteType: "quoteType",
+  proposalType: "proposalType",
   jobType: "motorPower",
   total: "total",
   taxCollected: "taxCollected",

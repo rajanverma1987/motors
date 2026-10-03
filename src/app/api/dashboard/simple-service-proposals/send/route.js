@@ -111,7 +111,11 @@ export async function POST(request) {
       ? `<p style="white-space:pre-wrap;margin:12px 0">${esc(customMessage)}</p>`
       : "";
     const kind = documentType === "invoice" ? "invoice" : "quote";
-    const kindLabel = kind === "invoice" ? "invoice" : "service proposal";
+    const kindLabelRaw =
+      kind === "invoice"
+        ? "invoice"
+        : String(body?.kindLabel || "").trim() || "service proposal";
+    const kindLabel = kindLabelRaw;
     const html = withDashboardOutboundEmailFooter(`
       <p>Hello${toName ? ` ${esc(toName)}` : ""},</p>
       <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>

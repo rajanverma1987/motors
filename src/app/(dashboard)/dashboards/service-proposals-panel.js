@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import Table from "@/components/ui/table";
 import Button from "@/components/ui/button";
+import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
 import Textarea from "@/components/ui/textarea";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
@@ -56,7 +57,10 @@ import {
   isSimpleInvoiceRecord,
   RECORD_TYPE_RFQ,
   resolveRecordTypeOnSave,
+  PROPOSAL_TYPE_OPTIONS,
+  proposalTypeLabel,
 } from "@/lib/simple-service-proposal-form";
+import { proposalTypeBadgeVariant } from "@/lib/proposal-types";
 import {
   deleteSimpleServiceProposal,
   fetchSimpleServiceProposal,
@@ -192,6 +196,7 @@ export default function ServiceProposalsPanel({
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
+  const [proposalTypeFilter, setProposalTypeFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "date", direction: "desc" });
   const [page, setPage] = useState(1);
@@ -289,6 +294,7 @@ export default function ServiceProposalsPanel({
           sortDir: tableSort?.direction || "desc",
           listKind: isInvoices ? "invoices" : "proposals",
           status: statusFilter,
+          proposalType: isInvoices ? "" : proposalTypeFilter,
           from: dateFrom,
           to: dateTo,
         }),
@@ -340,6 +346,7 @@ export default function ServiceProposalsPanel({
     tableSort,
     isInvoices,
     statusFilter,
+    proposalTypeFilter,
     dateFrom,
     dateTo,
     user,
@@ -799,7 +806,24 @@ export default function ServiceProposalsPanel({
         render: (v, row) =>
           resolveEmployeeDisplayName(employees, v || row?.preparedBy) || "—",
       },
-      { key: "quoteType", label: "Quote Type", sortable: true },
+      ...(!isInvoices
+        ? [
+            {
+              key: "proposalType",
+              label: "Type",
+              sortable: true,
+              render: (v) => (
+                <Badge
+                  variant={proposalTypeBadgeVariant(v)}
+                  className="rounded-full px-2.5 py-0.5 text-xs"
+                >
+                  {proposalTypeLabel(v)}
+                </Badge>
+              ),
+            },
+          ]
+        : []),
+      { key: "quoteType", label: "Lead source", sortable: true },
       ...(canViewFinancials
         ? [
             {
@@ -1098,6 +1122,48 @@ export default function ServiceProposalsPanel({
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
         {statusSummaryCards.map(renderStatusCard)}
       </div>
+
+      {!isInvoices ? (
+        <div
+          className="mb-2 flex flex-wrap items-center gap-1"
+          role="group"
+          aria-label="Proposal type filter"
+        >
+          <button
+            type="button"
+            className={`inline-flex h-8 shrink-0 items-center border px-2.5 text-xs font-semibold ${
+              !proposalTypeFilter
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-card text-title hover:border-primary/40"
+            }`}
+            aria-pressed={!proposalTypeFilter}
+            onClick={() => {
+              setPage(1);
+              setProposalTypeFilter("");
+            }}
+          >
+            All types
+          </button>
+          {PROPOSAL_TYPE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`inline-flex h-8 shrink-0 items-center border px-2.5 text-xs font-semibold ${
+                proposalTypeFilter === opt.value
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-border bg-card text-title hover:border-primary/40"
+              }`}
+              aria-pressed={proposalTypeFilter === opt.value}
+              onClick={() => {
+                setPage(1);
+                setProposalTypeFilter(opt.value);
+              }}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table

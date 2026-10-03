@@ -3,10 +3,17 @@ import { connectDB } from "@/lib/db";
 import InventoryItem from "@/models/InventoryItem";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { LIMITS, clampString, clampStringCoerced } from "@/lib/validation";
+import {
+  parseInventoryMoney,
+  parseMarkupPercent,
+  sellUnitPriceFromCostMarkup,
+} from "@/lib/inventory-pricing";
 
 function toRow(doc) {
   const onHand = Number(doc.onHand) || 0;
   const reserved = Number(doc.reserved) || 0;
+  const unitCost = Math.max(0, Number(doc.unitCost) || 0);
+  const markupPercent = parseMarkupPercent(doc.markupPercent);
   return {
     id: doc._id.toString(),
     name: doc.name ?? "",
@@ -15,6 +22,10 @@ function toRow(doc) {
     reserved,
     available: onHand - reserved,
     threshold: Number(doc.threshold) || 0,
+    unitCost,
+    markupPercent,
+    sellUnitPrice: sellUnitPriceFromCostMarkup(unitCost, markupPercent),
+    preferredVendorId: String(doc.preferredVendorId || "").trim(),
     location: doc.location ?? "",
     uom: doc.uom ?? "ea",
     notes: doc.notes ?? "",
@@ -97,6 +108,9 @@ export async function POST(request) {
       onHand: Number.isFinite(onHand) ? Math.max(0, onHand) : 0,
       reserved: 0,
       threshold: Math.max(0, Number(body?.threshold) || 0),
+      unitCost: Math.max(0, parseInventoryMoney(body?.unitCost)),
+      markupPercent: parseMarkupPercent(body?.markupPercent),
+      preferredVendorId: clampString(body?.preferredVendorId, 64),
       location: clampString(body?.location, 120),
       notes: clampString(body?.notes, LIMITS.message.max),
     });

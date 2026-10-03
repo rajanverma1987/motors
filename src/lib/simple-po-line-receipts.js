@@ -6,6 +6,7 @@ import {
 } from "@/lib/inventory-service";
 import { SIMPLE_PO_RECEIVING_STATUS_RECEIVED } from "@/lib/simple-purchase-order-form";
 import { clampString, clampStringCoerced } from "@/lib/validation";
+import { parseInventoryMoney, parseMarkupPercent } from "@/lib/inventory-pricing";
 
 function normalizeReceivingStatus(raw) {
   const s = String(raw || "").trim();
@@ -59,6 +60,7 @@ export async function createInventoryItemFromPoLine(email, line) {
     "Part";
   const sku = clampString(line?.inventorySku || "", 100).trim();
   const uom = clampStringCoerced(line?.uom, 50).trim() || "ea";
+  const markupPercent = parseMarkupPercent(line?.inventoryMarkupPercent);
   const doc = await InventoryItem.create({
     createdByEmail: e,
     name,
@@ -67,6 +69,8 @@ export async function createInventoryItemFromPoLine(email, line) {
     onHand: 0,
     reserved: 0,
     threshold: 0,
+    unitCost: 0,
+    markupPercent,
     location: "",
     notes: "Created from purchase order receive",
   });
@@ -146,9 +150,16 @@ export async function applySimplePoInventoryReceipts(
         mutated = true;
       }
 
+      const lineCost = parseInventoryMoney(next.price);
+      const markupRaw = next.inventoryMarkupPercent;
+      const hasMarkup =
+        markupRaw != null && String(markupRaw).trim() !== "";
       const recv = await receiveInventoryFromPoLine(e, invId, qty, {
         ...metaBase,
         poLineId: String(next.id || "").trim(),
+        unitCost: lineCost,
+        updateCost: true,
+        ...(hasMarkup ? { markupPercent: parseMarkupPercent(markupRaw) } : {}),
       });
       if (!recv.ok) {
         throw new Error(recv.error || "Inventory receive failed");

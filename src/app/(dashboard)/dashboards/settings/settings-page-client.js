@@ -1066,6 +1066,34 @@ export default function SettingsPageClient() {
                 placeholder={"Shelf A1\nBin 12\nReceiving dock"}
               />
             </FormContainer>
+            <FormContainer>
+              <FormSectionTitle as="h2">Default inventory markup</FormSectionTitle>
+              <p className="mb-4 text-sm text-secondary">
+                Prefills Markup % when receiving shop PO lines into inventory and when creating new inventory parts.
+                Sell price is unit cost times (1 + markup%).
+              </p>
+              <label className="block text-xs font-bold text-title">
+                Default markup %
+                <input
+                  type="number"
+                  min={0}
+                  max={1000}
+                  step="0.01"
+                  className="mt-1 h-8 w-full max-w-xs border border-border bg-card px-2 text-sm text-title"
+                  value={
+                    draft.defaultInventoryMarkupPercent != null
+                      ? draft.defaultInventoryMarkupPercent
+                      : ""
+                  }
+                  onChange={(e) =>
+                    updateDraft({
+                      defaultInventoryMarkupPercent:
+                        e.target.value === "" ? 0 : Number(e.target.value),
+                    })
+                  }
+                />
+              </label>
+            </FormContainer>
           </div>
         ),
       },
@@ -1176,6 +1204,7 @@ export default function SettingsPageClient() {
       draft.controlledDropdowns,
       draft.productDropdowns,
       draft.inventoryLocations,
+      draft.defaultInventoryMarkupPercent,
       logoUploading,
       user?.email,
       user?.shopName,

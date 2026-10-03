@@ -12,6 +12,12 @@ const inventoryItemSchema = new mongoose.Schema(
     reserved: { type: Number, default: 0 },
     /** Alert when available (onHand − reserved) is at or below this */
     threshold: { type: Number, default: 0 },
+    /** Weighted-average unit cost (what the shop pays). */
+    unitCost: { type: Number, default: 0 },
+    /** Percent markup on unitCost for sell price (e.g. 20 = 20%). */
+    markupPercent: { type: Number, default: 0 },
+    /** Optional preferred vendor for reorders. */
+    preferredVendorId: { type: String, default: "", trim: true },
     location: { type: String, default: "", trim: true },
     notes: { type: String, default: "", trim: true },
     /** Import metadata for external system linking */

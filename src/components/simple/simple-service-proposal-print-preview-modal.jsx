@@ -175,6 +175,7 @@ export default function SimpleServiceProposalPrintPreviewModal({
         sendBodyExtra={{
           documentType: customerBundle?.documentType || documentType,
           documentLabel: customerBundle?.documentLabel || "",
+          kindLabel: customerBundle?.kindLabel || "",
           toEmail: sendMeta?.toEmail || "",
           toName: sendMeta?.toName || "",
           quote: customerBundle?.quote || null,

@@ -57,6 +57,8 @@ export const USER_SETTINGS_DEFAULTS = {
   invoiceThankYouNote: "Thank you for your business!",
   /** Bin / shelf labels for inventory items (dropdown on master inventory) */
   inventoryLocations: [],
+  /** Default markup % when receiving PO lines into inventory / new inventory parts */
+  defaultInventoryMarkupPercent: 0,
   /**
    * Work order status → tile preset index (string "0"…"n") for shop floor column headers.
    * Omitted statuses use automatic rotation by column order.
@@ -152,6 +154,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "invoicePaymentOptions",
   "invoiceThankYouNote",
   "inventoryLocations",
+  "defaultInventoryMarkupPercent",
   "workOrderStatusTileColors",
   "controlledDropdowns",
   "productDropdowns",
@@ -361,6 +364,11 @@ export function mergeUserSettings(stored) {
   );
 
   merged.inventoryLocations = normalizeInventoryLocations(merged.inventoryLocations);
+  {
+    const m = Number(merged.defaultInventoryMarkupPercent);
+    merged.defaultInventoryMarkupPercent =
+      Number.isFinite(m) && m >= 0 ? Math.min(1000, Math.round(m * 100) / 100) : 0;
+  }
   merged.tableColumnVisibility = normalizeTableColumnVisibility(merged.tableColumnVisibility);
   merged.productDropdowns = normalizeProductDropdowns(merged.productDropdowns);
   merged.prefixRepairJob = sanitizeDocumentNumberPrefix(merged.prefixRepairJob);
@@ -492,6 +500,12 @@ export function sanitizeUserSettingsPatch(body) {
     }
     if (key === "inventoryLocations") {
       out.inventoryLocations = normalizeInventoryLocations(body[key]);
+      continue;
+    }
+    if (key === "defaultInventoryMarkupPercent") {
+      const m = Number(body[key]);
+      out.defaultInventoryMarkupPercent =
+        Number.isFinite(m) && m >= 0 ? Math.min(1000, Math.round(m * 100) / 100) : 0;
       continue;
     }
     if (key === "tableColumnVisibility") {

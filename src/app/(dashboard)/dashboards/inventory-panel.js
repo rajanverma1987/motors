@@ -434,6 +434,48 @@ export default function InventoryPanel() {
         render: (v) => v || "ea",
       },
       {
+        key: "unitCost",
+        label: "Cost",
+        sortable: true,
+        align: "right",
+        render: (v) => {
+          const n = Number(v) || 0;
+          return n > 0 ? (
+            <span className="tabular-nums">{n.toFixed(2)}</span>
+          ) : (
+            <span className="text-secondary">-</span>
+          );
+        },
+      },
+      {
+        key: "markupPercent",
+        label: "Markup %",
+        sortable: true,
+        align: "right",
+        render: (v) => {
+          const n = Number(v) || 0;
+          return n > 0 ? (
+            <span className="tabular-nums">{n}</span>
+          ) : (
+            <span className="text-secondary">-</span>
+          );
+        },
+      },
+      {
+        key: "sellUnitPrice",
+        label: "Sell",
+        sortable: true,
+        align: "right",
+        render: (v) => {
+          const n = Number(v) || 0;
+          return n > 0 ? (
+            <span className="tabular-nums font-medium">{n.toFixed(2)}</span>
+          ) : (
+            <span className="text-secondary">-</span>
+          );
+        },
+      },
+      {
         key: "onHand",
         label: "On hand",
         sortable: true,

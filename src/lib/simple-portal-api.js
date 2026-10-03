@@ -64,6 +64,7 @@ export async function fetchSimpleServiceProposalsPage(query = {}) {
   }
   if (query.listKind) params.set("listKind", String(query.listKind));
   if (query.status) params.set("status", String(query.status));
+  if (query.proposalType) params.set("proposalType", String(query.proposalType));
   if (query.from) params.set("from", String(query.from).slice(0, 10));
   if (query.to) params.set("to", String(query.to).slice(0, 10));
   const data = await api(`${SP_API}?${params.toString()}`);
