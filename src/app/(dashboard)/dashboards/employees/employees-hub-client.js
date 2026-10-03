@@ -8,6 +8,8 @@ import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
+import Checkbox from "@/components/ui/checkbox";
+import Input from "@/components/ui/input";
 import { Form } from "@/components/ui/form-layout";
 import { useAlert } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
@@ -136,6 +138,10 @@ export default function EmployeesHubClient() {
   const [lng, setLng] = useState("");
   const [radiusM, setRadiusM] = useState(String(TIME_CLOCK_RADIUS_DEFAULT_M));
   const [savingGeo, setSavingGeo] = useState(false);
+  const [payrollEnabled, setPayrollEnabled] = useState(false);
+  const [payrollEmail, setPayrollEmail] = useState("");
+  const [payrollFrequency, setPayrollFrequency] = useState("daily");
+  const [savingPayroll, setSavingPayroll] = useState(false);
   const [punchReload, setPunchReload] = useState(0);
   const [addPunchOpen, setAddPunchOpen] = useState(false);
   const [addPunch, setAddPunch] = useState({ employeeId: "", type: "in", punchedAt: "" });
@@ -148,6 +154,11 @@ export default function EmployeesHubClient() {
     setLat(data.geofence?.lat != null ? String(data.geofence.lat) : "");
     setLng(data.geofence?.lng != null ? String(data.geofence.lng) : "");
     setRadiusM(String(data.geofence?.radiusM || TIME_CLOCK_RADIUS_DEFAULT_M));
+    setPayrollEnabled(Boolean(data.payrollCommunication?.enabled));
+    setPayrollEmail(String(data.payrollCommunication?.email || ""));
+    setPayrollFrequency(
+      data.payrollCommunication?.frequency === "weekly" ? "weekly" : "daily"
+    );
     return data;
   }, []);
 
@@ -246,6 +257,37 @@ export default function EmployeesHubClient() {
       await alert({ title: "Error", message: err.message || "Save failed", variant: "danger" });
     } finally {
       setSavingGeo(false);
+    }
+  };
+
+  const savePayrollCommunication = async () => {
+    setSavingPayroll(true);
+    try {
+      const res = await fetch("/api/dashboard/time-clock", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          payrollCommunication: {
+            enabled: payrollEnabled,
+            email: payrollEmail,
+            frequency: payrollFrequency,
+          },
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      await alert({
+        title: "Saved",
+        message: payrollEnabled
+          ? "Payroll communication is on. The Excel file is emailed after the last punch-out for the period."
+          : "Payroll communication is off.",
+      });
+      await loadMeta();
+    } catch (err) {
+      await alert({ title: "Error", message: err.message || "Save failed", variant: "danger" });
+    } finally {
+      setSavingPayroll(false);
     }
   };
 
@@ -512,6 +554,75 @@ export default function EmployeesHubClient() {
                 {savingGeo ? "Saving…" : "Save location"}
               </Button>
             </div>
+          </div>
+          <div className="space-y-3 border border-border bg-card p-4 lg:col-span-2">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-title">Payroll communication</h2>
+            <p className="text-sm text-secondary">
+              After the last employee punches out at the end of the day or shop week, email an Excel
+              file of punch in, punch out, clocked hours, and manual hours.
+            </p>
+            <Checkbox
+              name="payrollCommunicationEnabled"
+              label="Enable payroll communication"
+              checked={payrollEnabled}
+              onChange={(e) => setPayrollEnabled(e.target.checked)}
+            />
+            {payrollEnabled ? (
+              <>
+                <Input
+                  label="Notification email"
+                  type="email"
+                  name="payrollCommunicationEmail"
+                  required
+                  value={payrollEmail}
+                  onChange={(e) => setPayrollEmail(e.target.value)}
+                  placeholder="payroll@example.com"
+                  help="Excel file is sent to this address."
+                />
+                <div>
+                  <p className="mb-1 text-xs font-bold text-title">Send</p>
+                  <div className="flex flex-wrap gap-1" role="group" aria-label="Payroll send period">
+                    {[
+                      { id: "daily", label: "Daily" },
+                      { id: "weekly", label: "Weekly" },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`inline-flex h-8 shrink-0 items-center border px-2.5 text-xs font-semibold ${
+                          payrollFrequency === item.id
+                            ? "border-primary bg-primary/15 text-primary"
+                            : "border-border bg-card text-title hover:border-primary/40"
+                        }`}
+                        aria-pressed={payrollFrequency === item.id}
+                        onClick={() => setPayrollFrequency(item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-xs text-secondary">
+                    {payrollFrequency === "weekly"
+                      ? "Sends after the last punch-out on your shop week end day."
+                      : "Sends after the last punch-out each day."}
+                  </p>
+                </div>
+              </>
+            ) : null}
+            {meta?.payrollCommunication?.lastSentAt ? (
+              <p className="text-xs text-secondary">
+                Last sent: {new Date(meta.payrollCommunication.lastSentAt).toLocaleString()}
+              </p>
+            ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              disabled={savingPayroll}
+              onClick={() => void savePayrollCommunication()}
+            >
+              {savingPayroll ? "Saving…" : "Save payroll communication"}
+            </Button>
           </div>
         </div>
       ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCheck, FiTrash2 } from "react-icons/fi";
+import { FiCheck, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
@@ -216,6 +216,29 @@ function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore) {
   return map;
 }
 
+function sessionsAllPunchedOut(sessions) {
+  const list = Array.isArray(sessions) ? sessions : [];
+  if (list.length === 0) return false;
+  return list.every((session) => Boolean(session?.outAt) && !session?.open);
+}
+
+function weekSessionsAllPunchedOut(employee, weekDays) {
+  let foundOut = false;
+  for (const day of weekDays) {
+    const { sessions } = dayEntry(employee, day);
+    for (const session of sessions) {
+      if (!session?.outAt || session.open) return false;
+      foundOut = true;
+    }
+  }
+  return foundOut;
+}
+
+function dayHoursPaid(payEnabled, allocation) {
+  if (!payEnabled || allocation?.hours == null) return false;
+  return Boolean(allocation.fullyPaid) || Number(allocation.unpaidHours) <= 0.001;
+}
+
 function PaidBadge() {
   return (
     <span className="inline-flex w-fit items-center gap-1 rounded-sm bg-success/15 px-1 py-0.5 text-[11px] font-bold text-success">
@@ -225,9 +248,10 @@ function PaidBadge() {
   );
 }
 
-function PayStatus({ allocation, onMarkPaid, enabled = true }) {
+function PayStatus({ allocation, onMarkPaid, enabled = true, allowMarkPaid = true }) {
   if (!enabled || allocation?.hours == null) return null;
   if (allocation.fullyPaid || allocation.unpaidHours <= 0.001) return <PaidBadge />;
+  if (!allowMarkPaid) return null;
   return (
     <button
       type="button"
@@ -257,6 +281,9 @@ function DayCell({
     Array.isArray(manualJobNumbers) && manualJobNumbers.length > 0
       ? manualJobNumbers.join(", ")
       : "";
+  const hoursPaid = dayHoursPaid(payEnabled, allocation);
+  const allowMarkPaid = sessionsAllPunchedOut(sessions);
+  const showDelete = canDelete && sessions.length > 0 && !hoursPaid;
   return (
     <div className="flex flex-col gap-0.5 leading-tight">
       <div className="flex items-start justify-between gap-1">
@@ -267,19 +294,28 @@ function DayCell({
         ) : (
           <span />
         )}
-        {canDelete && sessions.length > 0 ? (
+        {showDelete ? (
           <button
             type="button"
-            className="shrink-0 p-0.5 text-danger hover:bg-danger/10"
+            className="relative z-[1] inline-flex h-7 w-7 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
             title="Delete day punches"
             aria-label="Delete day punches"
-            onClick={() => onDelete?.()}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete?.();
+            }}
           >
-            <FiTrash2 className="h-3.5 w-3.5" />
+            <FiX className="pointer-events-none h-3.5 w-3.5" />
           </button>
         ) : null}
       </div>
-      <PayStatus allocation={allocation} onMarkPaid={onMarkPaid} enabled={payEnabled} />
+      <PayStatus
+        allocation={allocation}
+        onMarkPaid={onMarkPaid}
+        enabled={payEnabled}
+        allowMarkPaid={allowMarkPaid}
+      />
       {sessions.map((session, index) => (
         <p key={`${session.inAt}-${index}`} className="tabular-nums text-title">
           {sessionLine(session, day)}
@@ -314,14 +350,19 @@ function DayCell({
   );
 }
 
-function WeekCell({ allocation, onMarkPaid, payEnabled }) {
+function WeekCell({ allocation, onMarkPaid, payEnabled, allowMarkPaid = true }) {
   if (allocation?.hours == null) return <span className="text-secondary">-</span>;
   return (
     <div className="flex flex-col gap-1 leading-tight">
       <p className="w-fit rounded-sm bg-primary/15 px-1 py-0.5 text-[11px] font-bold tabular-nums text-primary">
         {allocation.hours.toFixed(2)} hrs
       </p>
-      <PayStatus allocation={allocation} onMarkPaid={onMarkPaid} enabled={payEnabled} />
+      <PayStatus
+        allocation={allocation}
+        onMarkPaid={onMarkPaid}
+        enabled={payEnabled}
+        allowMarkPaid={allowMarkPaid}
+      />
     </div>
   );
 }
@@ -464,6 +505,16 @@ export default function SimplePunchesCalendar({
   };
 
   const deleteDay = async (employee, day) => {
+    const allocation = dayAllocations.get(employee.employeeId)?.get(day);
+    const hoursPaid = dayHoursPaid(employee.payType !== "salary", allocation);
+    if (hoursPaid) {
+      await alert({
+        title: "Cannot delete",
+        message: "This day's hours are paid. Remove or adjust the payment before deleting punches.",
+        variant: "danger",
+      });
+      return;
+    }
     const name = employee.employeeName || "this employee";
     const ok1 = await confirm({
       title: "Delete day punches",
@@ -716,16 +767,20 @@ export default function SimplePunchesCalendar({
                       ? weeks.map((week) => {
                           const allocation = weekMap?.get(week.key);
                           const coversToday = today >= week.from && today <= week.to;
+                          const weekDays = daysBetween(week.from, week.to).filter((day) =>
+                            days.includes(day)
+                          );
                           return (
                             <td
                               key={week.key}
-                              className={`min-w-[8rem] border-b border-r border-border px-1.5 py-1 align-top text-[11px] ${
+                              className={`min-w-[8rem] overflow-hidden border-b border-r border-border px-1.5 py-1 align-top text-[11px] ${
                                 coversToday ? "bg-primary/[0.06]" : ""
                               }`}
                             >
                               <WeekCell
                                 allocation={allocation}
                                 payEnabled={payEnabled}
+                                allowMarkPaid={weekSessionsAllPunchedOut(employee, weekDays)}
                                 onMarkPaid={(unpaid) =>
                                   markPaid(employee, unpaid, week.from, week.to)
                                 }
@@ -743,7 +798,7 @@ export default function SimplePunchesCalendar({
                           return (
                             <td
                               key={day}
-                              className={`min-w-[7.25rem] border-b border-r border-border px-1.5 py-1 align-top text-[11px] ${
+                              className={`min-w-[7.25rem] overflow-hidden border-b border-r border-border px-1.5 py-1 align-top text-[11px] ${
                                 day === today ? "bg-primary/[0.06]" : ""
                               }`}
                             >

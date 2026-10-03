@@ -18,6 +18,7 @@ import {
   serializePunch,
 } from "@/lib/time-clock-punches";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
 
 async function requireEmployeeSession(request, token) {
   const session = await getTimeClockSessionFromRequest(request);
@@ -228,6 +229,10 @@ export async function POST(request) {
     });
 
     const next = await getOpenPunchState(shop.ownerEmail, session.employeeId);
+    void maybeSendPayrollCommunicationAfterPunch({
+      ownerEmail: shop.ownerEmail,
+      punchType: type,
+    });
     const res = NextResponse.json({
       ok: true,
       punch: serializePunch(doc),

@@ -187,14 +187,18 @@ export default function SimpleEmployeePaymentHistoryModal({
       showClose={showClose}
       closeOnOutsideClick={false}
       actions={actions}
-      bodyClassName={hasLeftPanel ? "!relative !overflow-hidden !p-3 sm:!p-4" : ""}
+      bodyClassName={
+        hasLeftPanel
+          ? "!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
+          : ""
+      }
     >
       {hasLeftPanel ? (
         <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
           <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
             {leftPanel}
           </div>
-          <div className="flex min-h-0 min-w-0 flex-col gap-2 lg:overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-col gap-2 pb-4 lg:overflow-hidden lg:pb-0">
             <div className="shrink-0 border-b border-border pb-1.5">
               <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
               {titleNumber ? (
@@ -204,7 +208,7 @@ export default function SimpleEmployeePaymentHistoryModal({
                 </p>
               ) : null}
             </div>
-            <div className="min-h-0 flex-1 overflow-auto">{historyTable}</div>
+            <div className="min-h-0 flex-1 overflow-visible lg:overflow-auto">{historyTable}</div>
           </div>
         </div>
       ) : (

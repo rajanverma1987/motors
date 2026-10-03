@@ -1121,3 +1121,35 @@ export async function sendTrackVerifyEmail({ to, contactName, verifyUrl, code })
   `;
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html));
 }
+
+/**
+ * Payroll hours Excel to a shop notification address.
+ */
+export async function sendPayrollHoursWorkbookEmail({
+  to,
+  shopName = "",
+  periodLabel = "",
+  filename = "payroll-hours.xlsx",
+  buffer,
+}) {
+  const shop = String(shopName || "").trim() || "Shop";
+  const period = String(periodLabel || "").trim();
+  const subject = period
+    ? `${shop} payroll hours (${period})`
+    : `${shop} payroll hours`;
+  const html = `
+    <p>Payroll hours for <strong>${escHtmlEmail(shop)}</strong>${period ? ` for <strong>${escHtmlEmail(period)}</strong>` : ""}.</p>
+    <p>The attached Excel file includes punch in, punch out, clocked hours, breaks, and manual hours.</p>
+    <p>This was sent after the last employee punched out for the period.</p>
+  `;
+  const content = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
+  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
+    attachments: [
+      {
+        filename: String(filename || "payroll-hours.xlsx"),
+        content,
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      },
+    ],
+  });
+}

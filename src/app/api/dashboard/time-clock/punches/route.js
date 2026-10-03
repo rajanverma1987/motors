@@ -16,6 +16,7 @@ import {
 import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
 
 export async function GET(request) {
   try {
@@ -348,6 +349,10 @@ export async function POST(request) {
       punchedAt,
       source: "manager_edit",
       note: String(body.note || "").trim().slice(0, 500),
+    });
+    void maybeSendPayrollCommunicationAfterPunch({
+      ownerEmail: email,
+      punchType: type,
     });
     return NextResponse.json({ ok: true, punch: serializePunch(doc) }, { status: 201 });
   } catch (err) {

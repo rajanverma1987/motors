@@ -8,6 +8,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import {
   ensureTimeClockSettings,
   updateTimeClockGeofence,
+  updateTimeClockPayrollCommunication,
 } from "@/lib/time-clock-settings";
 import { getOpenPunchState, serializePunch } from "@/lib/time-clock-punches";
 import { toEmployeeJson } from "@/lib/employee-record";
@@ -94,6 +95,7 @@ export async function GET(request) {
         radiusM: settings.radiusM,
         configured: settings.lat != null && settings.lng != null,
       },
+      payrollCommunication: settings.payrollCommunication,
       floor,
       todayPunches: todayPunches.map(serializePunch),
       employeeCount: employees.length,
@@ -111,6 +113,13 @@ export async function PATCH(request) {
     if (auth.error) return auth.error;
     await connectDB();
     const body = await request.json().catch(() => ({}));
+    if (body.payrollCommunication && typeof body.payrollCommunication === "object") {
+      const settings = await updateTimeClockPayrollCommunication(auth.email, body.payrollCommunication);
+      return NextResponse.json({
+        ok: true,
+        payrollCommunication: settings.payrollCommunication,
+      });
+    }
     if (body.lat != null || body.lng != null || body.radiusM != null) {
       const settings = await updateTimeClockGeofence(auth.email, {
         lat: body.lat,

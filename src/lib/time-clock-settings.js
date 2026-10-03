@@ -4,6 +4,7 @@ import {
   normalizeTimeClockRadiusM,
   TIME_CLOCK_RADIUS_DEFAULT_M,
 } from "@/lib/time-clock-geo";
+import { payrollCommunicationFromSettings } from "@/lib/time-clock-payroll-communication";
 
 export async function uniqueTimeClockToken(excludeOwnerEmail) {
   for (let i = 0; i < 8; i++) {
@@ -61,6 +62,7 @@ export async function ensureTimeClockSettings(ownerEmail) {
     lng: Number.isFinite(lng) ? lng : null,
     radiusM: normalizeTimeClockRadiusM(s.timeClockRadiusM),
     shopName: "",
+    payrollCommunication: payrollCommunicationFromSettings(s),
   };
 }
 
@@ -100,6 +102,34 @@ export async function updateTimeClockGeofence(ownerEmail, { lat, lng, radiusM })
         "settings.timeClockLat": nextLat,
         "settings.timeClockLng": nextLng,
         "settings.timeClockRadiusM": normalizeTimeClockRadiusM(radiusM),
+      },
+    }
+  );
+  return ensureTimeClockSettings(email);
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export async function updateTimeClockPayrollCommunication(ownerEmail, raw) {
+  const email = String(ownerEmail || "").trim().toLowerCase();
+  await ensureTimeClockSettings(email);
+  const next = payrollCommunicationFromSettings({
+    payrollCommunicationEnabled: raw?.enabled,
+    payrollCommunicationEmail: raw?.email,
+    payrollCommunicationFrequency: raw?.frequency,
+  });
+  if (next.enabled) {
+    if (!EMAIL_RE.test(next.email)) {
+      throw new Error("Enter a valid email address for payroll communication.");
+    }
+  }
+  await UserSettings.updateOne(
+    { ownerEmail: email },
+    {
+      $set: {
+        "settings.payrollCommunicationEnabled": next.enabled,
+        "settings.payrollCommunicationEmail": next.enabled ? next.email : "",
+        "settings.payrollCommunicationFrequency": next.frequency,
       },
     }
   );
