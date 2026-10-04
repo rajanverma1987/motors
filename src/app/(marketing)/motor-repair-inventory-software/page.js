@@ -23,9 +23,9 @@ export const metadata = {
   title: TITLE,
   description: DESCRIPTION,
   keywords: [
-    "motor repair inventory software",
-    "motor repair parts inventory management",
-    "motor repair shop inventory management",
+    "electric motor repair inventory software",
+    "rewind shop parts inventory",
+    "electric motor shop inventory management",
   ],
   openGraph: {
     title: SOCIAL_TITLE,
@@ -60,6 +60,10 @@ const faqItems = [
   {
     q: "Do I have to use bin and aisle locations?",
     a: "No. Bin and aisle location fields are optional on the parts catalog. Shops that pick by location can fill them in; shops that run a simpler shelf system can leave them blank and still use on-hand, reserved, alerts, and automatic consumption.",
+  },
+  {
+    q: "How does cost and sell price update when I receive a PO?",
+    a: "When you receive against a vendor PO, you can apply a markup so sell price follows the cost on that receipt. If you already have stock at a different cost, unit cost updates as a weighted average of the mixed lots. Quotes that pull from the catalog then use that current cost and sell price.",
   },
 ];
 
@@ -169,6 +173,12 @@ export default function MotorRepairInventorySoftwarePage() {
               checking email threads for packing slips. When the parts land and on-hand increases, you are still in
               the same inventory and purchasing record set that started from the quote shortfall, not three systems
               that disagree by the end of the week.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              At receive you can apply a markup so the sell price on that part follows the cost you just paid, instead
+              of leaving yesterday’s price on a mixed shelf. When a new lot costs more or less than what is already
+              on hand, unit cost updates as a weighted average. Quotes that pull from the catalog then see a cost and
+              sell price that match how you actually bought the part, not a stale spreadsheet cell.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               This matters for repair shops because parts buys are job-driven, not forecast-driven like a retail

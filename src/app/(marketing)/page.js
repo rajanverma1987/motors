@@ -75,7 +75,11 @@ const workflowFeatures = [
   },
   {
     title: "Quote parts from shop inventory",
-    detail: "Add line items from your master parts catalog directly on the quote: see available quantity (on hand minus what’s reserved for other active jobs), order shortfalls with vendor POs when needed, and let reservations hold stock for the job until delivery. When the work order ships, consumed quantities come off inventory automatically so your books match the floor.",
+    detail: "Add line items from your master parts catalog directly on the quote: see available quantity (on hand minus what’s reserved for other active jobs), order shortfalls with vendor POs when needed, and let reservations hold stock for the job until delivery. When you receive a PO, you can apply a markup so sell price follows cost. Weighted average unit cost updates as mixed lots come in. When the work order ships, consumed quantities come off inventory automatically so your books match the floor.",
+  },
+  {
+    title: "Sales, Service, and Field Service proposals",
+    detail: "Mark each proposal as Sales, Service, or Field Service before you pick the customer. The type stays on the job so quoting, parts, and reporting match how the shop actually sells: counter sales, in-shop repair, or work at the customer site.",
   },
 ];
 
@@ -83,7 +87,11 @@ const managementFeatures = [
   {
     title: "Technician mobile app (shop-floor first)",
     href: "/technician-mobile-app-shop-floor-first",
-    detail: "Give technicians a dedicated mobile app to run jobs from the floor: scan Tag QR codes (job number), open assigned work orders, post live status updates, and record motor testing notes/values as work happens. Office and floor stay in sync in real time without extra calls, paper notes, or desk-only updates.",
+    detail: "Give technicians a dedicated mobile app to run jobs from the floor: scan Tag QR codes (job number), open assigned work orders, post live status updates, and record motor testing notes/values as work happens. On Time Clock, technicians with access also open assigned jobs, fill the machine datasheet, log hours against that job, and change work order status. Office and floor stay in sync in real time without extra calls, paper notes, or desk-only updates.",
+  },
+  {
+    title: "Time clock, job hours, and payroll",
+    detail: "Employees punch in and out at the shop with a posted Time Clock QR, passkey, and location. Managers see punches on a calendar, add manual hours (including hours tied to a job number), record payroll payments, and keep payment history on the employee record. Optional payroll communication emails an Excel file of punches, clocked hours, and manual hours after the last punch-out, daily or on your shop week-end day.",
   },
   {
     title: "Customer database and contacts",
@@ -103,7 +111,7 @@ const managementFeatures = [
   },
   {
     title: "Shop parts inventory and stock control",
-    detail: "Run a parts catalog with SKU, unit of measure, on-hand and reserved counts, low-stock alerts, and optional locations (bins or aisles from settings). Manual adds and adjustments keep day-to-day accurate; receiving against vendor POs in logistics bumps stock without double entry. Dashboard reports highlight low inventory so you reorder before jobs wait on parts.",
+    detail: "Run a parts catalog with SKU, unit of measure, on-hand and reserved counts, low-stock alerts, and optional locations (bins or aisles from settings). Manual adds and adjustments keep day-to-day accurate; receiving against vendor POs in logistics bumps stock without double entry. Apply a markup at receive so sell price tracks cost, and let mixed receipts land as a weighted average unit cost. Dashboard reports highlight low inventory so you reorder before jobs wait on parts.",
   },
   {
     title: "Receiving and shipping logistics",
@@ -191,7 +199,7 @@ export default function HomePage() {
               Built for motor repair shops
             </span>
             <h1 className="mt-6 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[3.25rem] lg:leading-[1.15]">
-              Motor Repair Shop Software, Proposals, Work Orders, Invoices & Inventory in One Place
+              Electric Motor Repair Shop Software, Proposals, Work Orders, Invoices & Inventory in One Place
             </h1>
             <p className="mt-6 text-pretty text-base text-secondary sm:text-lg lg:text-xl">
               From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
@@ -245,6 +253,10 @@ export default function HomePage() {
               </li>
               <li className="flex items-center gap-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+                Time clock, job hours & payroll
+              </li>
+              <li className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
                 Shop inventory, reservations &amp; low-stock alerts
               </li>
               <li className="flex items-center gap-2">
@@ -287,7 +299,7 @@ export default function HomePage() {
               </span>
               <h3 className="mt-4 font-semibold text-title">Floor and office in sync</h3>
               <p className="mt-2 text-sm text-secondary">
-                Technicians update status from the floor using mobile app; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is, the system stays current so scheduling and customer updates are accurate.
+                Technicians update status from the floor using the mobile app and Time Clock Jobs list; managers see it instantly on the same board. No more walking back to a desk to log progress or guessing where a motor is, the system stays current so scheduling and customer updates are accurate.
               </p>
             </div>
             <div className="rounded-xl border border-border bg-card p-6 text-center shadow-sm">

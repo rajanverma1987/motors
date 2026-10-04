@@ -11,7 +11,7 @@ import DemoBookingLink from "@/components/marketing/demo-booking-link";
 
 const productNav = {
   href: "/motor-repair-shop-management-software",
-  label: "Motor Shop Management Software",
+  label: "Electric Motor Shop Software",
 };
 
 function navPathBase(href) {

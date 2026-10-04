@@ -19,7 +19,7 @@ const path = SEO_SOFTWARE_COMPARISON_PATH;
 const TITLE = "Best Software for Electric Motor Repair Shops (2026)";
 const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
-  "An honest comparison of IQMotorBase, Spring Point, Aptean, and general auto-shop tools for electric motor and rewind shops.";
+  "Compare electric motor repair shop software for 2026: IQMotorBase, Spring Point, Aptean, and auto-shop tools. Built for rewind shops, not motorcycle dealers.";
 
 export const metadata = {
   title: TITLE,
@@ -138,7 +138,10 @@ export default function BlogBestSoftware2026Page() {
                   </tr>
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Mobile technician workflow</td>
-                    <td className="py-3 pr-3">Tag QR from Job Write-Up; scan opens work order; status + test notes</td>
+                    <td className="py-3 pr-3">
+                      Tag QR from Job Write-Up; Time Clock Jobs for datasheet, job hours, and status; punch in/out with
+                      shop QR and location
+                    </td>
                     <td className="py-3 pr-3">
                       Yes, Mobile Paperwork, QM Wizard (tablets/mobile), Time Clock, field-service mobile access
                     </td>
@@ -151,7 +154,8 @@ export default function BlogBestSoftware2026Page() {
                   <tr className="border-b border-border align-top">
                     <td className="py-3 pr-3 font-medium text-title">Inventory reservation</td>
                     <td className="py-3 pr-3">
-                      Yes, reserve on quote approval; ATP = on-hand − reserved; consume when work order ships
+                      Yes, reserve on quote approval; ATP = on-hand minus reserved; consume when work order ships;
+                      markup at PO receive; weighted average unit cost
                     </td>
                     <td className="py-3 pr-3">
                       Inventory control; available vs sold/allocated distinction (quote-approval “reserve” wording not

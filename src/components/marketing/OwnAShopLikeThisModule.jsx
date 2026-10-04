@@ -15,15 +15,15 @@ export default function OwnAShopLikeThisModule({ className = "" }) {
         Own a shop like this?
       </h2>
       <p className="mt-2 max-w-[57.6rem] text-sm leading-relaxed text-secondary sm:text-base">
-        Run job write-ups, work orders, inventory, invoicing, and repair leads in one system built for electric
-        motor repair shops, not adapted from auto repair software.
+        Run job write-ups, work orders, inventory, invoicing, time clock, and repair leads in one system built for
+        electric motor and rewind shops, not motorcycle or auto repair software.
       </p>
       <p className="mt-4">
         <Link
           href={SEO_SOFTWARE_PILLAR_PATH}
           className="text-sm font-semibold text-primary hover:underline sm:text-base"
         >
-          See motor repair shop management software →
+          See electric motor repair shop software
         </Link>
       </p>
     </aside>

@@ -14,7 +14,12 @@ export const HOME_FAQS = [
   {
     question: "Does IQMotorBase work on mobile for technicians?",
     answer:
-      "Yes. The technician mobile app lets floor staff scan job QR codes, update work order status, and log motor testing notes in real time, without going back to a desk.",
+      "Yes. The technician mobile app lets floor staff scan job QR codes, update work order status, and log motor testing notes in real time. Time Clock adds punch in and out at the shop, plus a Jobs list so assigned technicians can fill the datasheet, log hours on that job, and change work order status without a desk trip.",
+  },
+  {
+    question: "Can I track employee punches and payroll?",
+    answer:
+      "Yes. Time Clock uses a shop QR, passkey, and location for punches. Managers review a punch calendar, record payments, and keep payment history on the employee. You can email a daily or weekly Excel file of punches, clocked hours, and manual hours after the last employee punches out.",
   },
   {
     question: "How do repair leads work?",

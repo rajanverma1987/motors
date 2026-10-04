@@ -51,6 +51,10 @@ const faqItems = [
     a: "Yes. Invoices are generated from completed work orders and approved quote line items, so amounts match what was agreed. Extra charges or adjustments can be added after the fact and still link into accounts receivable, no rebuilding the bill from a paper quote or a separate spreadsheet.",
   },
   {
+    q: "Can I tell Sales quotes from Service and Field Service?",
+    a: "Yes. Each proposal is marked Sales, Service, or Field Service before you pick the customer. That type stays on the job so quoting, parts, and reporting match how the shop sold the work.",
+  },
+  {
     q: "Do quote line items show whether parts are actually available?",
     a: "Quote lines can pull from the shop’s parts catalog, which tracks SKU, unit of measure, on-hand, and reserved counts. Available-to-promise (on-hand minus reserved) is visible when you build the quote. Shortfalls can start a vendor purchase order from the quote screen instead of guessing stock elsewhere.",
   },
@@ -111,7 +115,9 @@ export default function MotorRepairInvoicingAndQuotingSoftwarePage() {
               inspection notes, preliminary and final quotes in the pipeline, customer send, job-level attachments,
               sales commission data, and shop actions such as print, generate work order, and generate Tag QR. Quotes
               are not a separate product bolted on later. A formal RFQ is started from the Job Write-Up so the quote
-              stays linked to the same job number the floor will use when the work order is cut.
+              stays linked to the same job number the floor will use when the work order is cut. You choose a proposal
+              type first: Sales, Service, or Field Service, so the quote is labeled the way the shop actually sells,
+              counter sales, in-shop repair, or work at the customer site.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               That link matters when purchasing asks which job a bearing is for, or when a customer calls about revision

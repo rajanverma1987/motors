@@ -44,7 +44,7 @@ const footerLinks = {
   ],
   Company: [
     { href: "/blog", label: "Blog" },
-    { href: "/motor-repair-shop-management-software", label: "Motor Shop Management Software" },
+    { href: "/motor-repair-shop-management-software", label: "Electric Motor Shop Software" },
     { href: "/#features", label: "Features & inventory" },
     { href: "/careers", label: "Careers: job postings" },
     { href: "/pricing", label: "Pricing" },

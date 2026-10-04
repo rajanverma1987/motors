@@ -813,20 +813,16 @@ export default function CostOfMotorRepairPage() {
           </section>
 
           <section className="mt-12 border-t border-border pt-12">
-            <h2 className="text-2xl font-bold text-title sm:text-3xl">For repair shop owners</h2>
+            <h2 className="text-2xl font-bold text-title sm:text-3xl">For electric motor repair shop owners</h2>
             <p className="mt-4 text-secondary">
-              If you run a motor repair or rewinding center, accurate quoting and job tracking protect margin and
-              customer trust. IQMotorBase.com offers{" "}
+              If you run an electric motor repair or rewind shop, quoting, work orders, inventory, and job hours
+              belong in one system. See{" "}
               <Link href="/motor-repair-shop-management-software" className="text-primary font-medium hover:underline">
-                shop management software
-              </Link>
-              ,{" "}
-              <Link href="/track-motor-repair-jobs" className="text-primary font-medium hover:underline">
-                job tracking
-              </Link>
-              , and{" "}
-              <Link href="/how-motor-repair-shops-get-more-customers" className="text-primary font-medium hover:underline">
-                lead generation
+                electric motor repair shop software
+              </Link>{" "}
+              for Job Write-Ups, the job board, Time Clock, and repair leads. Compare options in our{" "}
+              <Link href="/blog/best-software-for-repair-shop-2026" className="text-primary font-medium hover:underline">
+                2026 software comparison
               </Link>
               .{" "}
               <Link href="/list-your-electric-motor-services" className="text-primary font-medium hover:underline">

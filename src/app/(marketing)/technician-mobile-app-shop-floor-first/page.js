@@ -8,7 +8,7 @@ const path = "/technician-mobile-app-shop-floor-first";
 export const metadata = {
   title: "Technician Mobile App for Motor Repair Shops | Shop-Floor First",
   description:
-    "Give technicians a mobile app to scan job Tag QR codes (repair job number), update work order status, and capture testing data from the floor in real time.",
+    "Give technicians a mobile app to scan job Tag QR codes (repair job number), update work order status, fill the job datasheet, log hours, and capture testing data from the floor in real time.",
   keywords: [
     "technician mobile app motor repair",
     "shop floor work order app",
@@ -37,7 +37,7 @@ export default function TechnicianMobileAppPage() {
   return (
     <BlogPageLayout
       title="Technician mobile app (shop-floor first)"
-      description="Technicians should not need to walk back to an office terminal just to update progress. A shop-floor first app lets them scan tags, move jobs forward instantly, and capture testing data at the machine."
+      description="Technicians should not need to walk back to an office terminal just to update progress. A shop-floor first app lets them scan tags, move jobs forward instantly, fill the datasheet, log hours on the job, and capture testing data at the machine."
       breadcrumbLink={{ href: "/", label: "Home" }}
       canonicalPath={path}
       sidebarTitle="Move updates to the floor"
@@ -55,8 +55,28 @@ export default function TechnicianMobileAppPage() {
               Job Write-Up
             </Link>{" "}
             (it encodes the repair job number), open the assigned work order, update status, and attach testing
-            notes/readings. This reduces lag between floor activity and office visibility so dispatch, quotes, and
-            customer updates stay accurate.
+            notes/readings. Time Clock Jobs (for employees with technician access) shows open jobs where they are the
+            datasheet technician. They can fill the AC, DC, pump, or generator datasheet, record hours against that
+            job number, and change work order status so the job board updates. This reduces lag between floor activity
+            and office visibility so dispatch, quotes, and customer updates stay accurate.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mt-10 text-2xl font-bold text-title sm:text-3xl">
+            Time Clock: punch, jobs, and hours on one phone
+          </h2>
+          <p className="mt-4 leading-relaxed text-secondary">
+            Attendance stays separate from job work. Employees punch in and out with a posted shop QR, a passkey
+            (Face ID or fingerprint), and location at the shop. After they punch, technicians with access open the
+            Jobs tab: job number, customer, machine type, and current status. Hours they log on a job show up for
+            managers on the punch calendar with that job number, next to clocked time and manual hours.
+          </p>
+          <p className="mt-4 leading-relaxed text-secondary">
+            The office still assigns the technician on the job datasheet. That is the only assignment step. When you
+            set Prepared By / technician to the employee, the job appears on their Time Clock list until the work
+            order is closed. Payroll can email an Excel file of punches and hours after the last punch-out, daily or
+            at the end of the shop week.
           </p>
         </section>
 

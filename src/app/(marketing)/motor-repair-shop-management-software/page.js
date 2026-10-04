@@ -22,10 +22,10 @@ const path = SEO_SOFTWARE_PILLAR_PATH;
 
 // The root layout applies a "%s | IQMotorBase" template, so the brand suffix is
 // omitted here; SOCIAL_TITLE carries it because og:/twitter: titles skip the template.
-const TITLE = "Electric Motor Repair Shop Management Software";
+const TITLE = "Electric Motor Repair Shop Software";
 const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
-  "Run job write-ups, work orders, inventory, invoicing, QuickBooks Online sync, and repair leads in one system built for electric motor repair shops. Starts at $349/mo. Book a free demo.";
+  "Software for electric motor and rewind shops: job write-ups, work orders, inventory, invoicing, time clock, and repair leads. Not motorcycle or auto shop software. Starts at $349/mo.";
 
 const heroOg = heroDashboardTabletOgImage({
   alt: "IQMotorBase motor repair shop management software dashboard on a tablet, service proposals pipeline and job list",
@@ -35,10 +35,10 @@ export const metadata = {
   title: TITLE,
   description: DESCRIPTION,
   keywords: [
-    "motor repair shop management software",
+    "electric motor repair shop software",
+    "electric motor rewind shop software",
     "electric motor repair software",
-    "motor repair shop software",
-    "electric motor repair management software",
+    "rewind shop management software",
   ],
   openGraph: {
     title: SOCIAL_TITLE,
@@ -75,7 +75,7 @@ const faqItems = [
   },
   {
     q: "Does it work on mobile for technicians?",
-    a: "Yes. A Tag QR printed from the Job Write-Up encodes the job number. Technicians scan it with the mobile app to open the correct work order, update job status, and log motor testing notes and values from the floor. The office sees those updates on the same job board in real time.",
+    a: "Yes. A Tag QR printed from the Job Write-Up encodes the job number. Technicians scan it with the mobile app to open the correct work order, update job status, and log motor testing notes and values from the floor. Time Clock adds shop punches plus a Jobs list: assigned technicians fill the datasheet, log hours on that job, and change work order status. The office sees those updates on the same job board in real time.",
   },
   {
     q: "How is this different from general auto repair shop software?",
@@ -96,8 +96,8 @@ export default function MotorRepairShopManagementSoftwarePage() {
     <>
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
-        title="Motor repair shop management software for electric motor and rewind shops"
-        description="Job write-ups, work orders, inventory, invoicing, and repair leads in one system, built for motor repair, not adapted from auto repair. Starts at $349/mo. Book a free 30-min demo."
+        title="Electric motor repair shop software for rewind and service shops"
+        description="Job write-ups, work orders, inventory, invoicing, time clock, and repair leads in one system for electric motor shops, not motorcycle or auto repair. Starts at $349/mo. Book a free 30-min demo."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         wideSidebar
@@ -108,6 +108,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
         heroEyebrow="Built for motor repair shops"
         heroHighlights={[
           "Job Write-Ups & work orders",
+          "Time clock, job hours & payroll",
           "Inventory & QuickBooks Online",
           "Repair leads built in",
         ]}
@@ -131,8 +132,9 @@ export default function MotorRepairShopManagementSoftwarePage() {
         <article className="prose prose-neutral dark:prose-invert max-w-none">
           <section>
             <p className="mt-2 text-secondary leading-relaxed">
-              IQMotorBase is shop management software for electric motor repair and rewinding businesses, not general
-              auto repair, not generic field service. Every repair starts as a Job Write-Up with its own job number:
+              IQMotorBase is shop management software for electric motor repair and rewinding businesses. It is not
+              motorcycle shop software, not auto repair software, and not generic field service. Every repair starts as
+              a Job Write-Up with its own job number:
               intake, inspection notes, preliminary and final quotes, customer send, attachments, shop actions, and
               the path into work orders and invoices stay on that same record. You are not re-entering motor details
               and specs across disconnected screens.
@@ -149,7 +151,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
 
           <section>
             <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">
-              Built for motor repair, not adapted from auto repair
+              Built for electric motor repair, not adapted from auto repair
             </h2>
             <p className="mt-4 text-secondary leading-relaxed">
               Search “motor repair software” and you will still see tools built for cars, Tekmetric, Shop-Ware,
@@ -211,7 +213,9 @@ export default function MotorRepairShopManagementSoftwarePage() {
               the job board, status columns (for example Received, Inspection, Rewinding, Testing, Ready, configurable
               for the shop) show where work sits. Managers drag or tap a job between statuses. Technicians use Tag QR
               on the floor to open the work order, move status, and enter test values so the board stays current
-              without a second data entry pass at the end of the shift.
+              without a second data entry pass at the end of the shift. Technicians assigned on the datasheet can also
+              open that job from Time Clock, fill the sheet, log hours against the job number, and change status from
+              the same phone they use to punch.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               When the work order ships, consumed quantities deduct from inventory automatically, no manual
@@ -230,6 +234,15 @@ export default function MotorRepairShopManagementSoftwarePage() {
               configure, so the shop floor does not become a retyping station for accounting. An API is also available to
               sync customers, work orders, and quotes with other Shop Management System or ERP tools when the shop already relies on those
               apps, one source of truth for the repair job, not a mandate to rip out accounting overnight.
+            </p>
+            <p className="mt-4 text-secondary leading-relaxed">
+              Time Clock and payroll sit in the same Employees hub. Staff punch in and out with a posted QR, passkey,
+              and shop location. Managers review a punch calendar, add manual hours (including hours on a job number),
+              record payments, and keep history on the employee. Optional payroll communication emails an Excel file
+              of punches, clocked hours, and manual hours after the last punch-out, daily or on the shop week-end day.
+              Proposals can be Sales, Service, or Field Service so quoting and reporting match how the shop sells.
+              When you receive parts on a PO, markup can set sell price from cost, and mixed lots use a weighted
+              average unit cost.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               Low-stock alerts surface on the dashboard so purchasing is not waiting for someone to notice an empty
@@ -323,8 +336,18 @@ export default function MotorRepairShopManagementSoftwarePage() {
                     </td>
                   </tr>
                   <tr className="border-b border-border align-top">
+                    <td className="py-3 pr-4 font-medium text-title">Time clock, job hours, payroll</td>
+                    <td className="py-3 pr-4">
+                      Yes, QR + passkey punches, Jobs list for datasheet and hours, punch calendar, payment history,
+                      optional daily or weekly Excel email
+                    </td>
+                    <td className="py-3 pr-4">Timesheets / files</td>
+                    <td className="py-3 pr-4">Often a separate time app</td>
+                    <td className="py-3">Time Clock in their suite; not the same job-hours + datasheet punch app</td>
+                  </tr>
+                  <tr className="border-b border-border align-top">
                     <td className="py-3 pr-4 font-medium text-title">Inventory reservation on quote approval</td>
-                    <td className="py-3 pr-4">Yes, reserved vs on-hand; consume on ship</td>
+                    <td className="py-3 pr-4">Yes, reserved vs on-hand; consume on ship; markup at PO receive; weighted average cost</td>
                     <td className="py-3 pr-4">Manual</td>
                     <td className="py-3 pr-4">Often separate or absent</td>
                     <td className="py-3">

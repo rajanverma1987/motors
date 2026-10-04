@@ -52,7 +52,7 @@ const faqItems = [
   },
   {
     q: "Can technicians update work orders from the shop floor?",
-    a: "Yes. A Tag QR printed from the Job Write-Up encodes the job number. Technicians scan it with the mobile app to open the correct work order, update job status, and log motor testing notes and values from the floor. The office sees those updates on the same job board in real time.",
+    a: "Yes. A Tag QR printed from the Job Write-Up encodes the job number. Technicians scan it with the mobile app to open the correct work order, update job status, and log motor testing notes and values from the floor. Assigned technicians can also open the job from Time Clock, fill the datasheet, log hours on that job, and change status. The office sees those updates on the same job board in real time.",
   },
   {
     q: "What happens to inventory when a work order ships?",
@@ -197,7 +197,9 @@ export default function WorkOrderSoftwareForMotorRepairShopsPage() {
                 technician mobile app (shop floor first)
               </Link>
               . The Tag QR path described here is the same product mechanic: print from Job Write-Up, scan, open work
-              order, update status and testing notes without a desk trip.
+              order, update status and testing notes without a desk trip. Time Clock Jobs is the companion path for
+              hours and datasheet work: assign the technician on the datasheet, and that open job appears on their
+              punch app so they can log time against the job number and update status from the same phone.
             </p>
           </section>
 
