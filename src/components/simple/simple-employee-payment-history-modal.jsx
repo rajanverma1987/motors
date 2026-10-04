@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import { useAlert } from "@/components/confirm-provider";
 import { useFormatDate, useFormatMoney } from "@/contexts/user-settings-context";
 import { periodMonthBounds } from "@/lib/employee-payroll-payment";
+import SimpleEmployeePunchCalendar from "@/components/simple/simple-employee-punch-calendar";
+import SimpleEmployeeRecordPaymentModal from "@/components/simple/simple-employee-record-payment-modal";
 
 function monthLabel(ym) {
   const bounds = periodMonthBounds(ym);
@@ -25,6 +28,8 @@ export default function SimpleEmployeePaymentHistoryModal({
   employeeId,
   employeeName = "",
   employeeNumber = "",
+  payType = "hourly",
+  hourlyRate = "",
   leftPanel = null,
   actions = null,
   title: titleOverride = "",
@@ -35,6 +40,7 @@ export default function SimpleEmployeePaymentHistoryModal({
   const formatMoney = useFormatMoney();
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [payOpen, setPayOpen] = useState(false);
 
   const hasLeftPanel = leftPanel != null;
   const fmt = useCallback(
@@ -176,50 +182,103 @@ export default function SimpleEmployeePaymentHistoryModal({
     />
   );
 
+  const paymentHeader = (
+    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border pb-1.5">
+      <div className="min-w-0">
+        <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
+        {titleNumber ? (
+          <p className="mt-0.5 text-xs text-secondary">
+            {titleName}
+            {` · #${titleNumber}`}
+          </p>
+        ) : null}
+      </div>
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className="shrink-0"
+        disabled={!employeeId}
+        onClick={() => setPayOpen(true)}
+      >
+        Make payment
+      </Button>
+    </div>
+  );
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={modalTitle}
-      size={hasLeftPanel ? "7xl" : "5xl"}
-      width={hasLeftPanel ? "min(1680px, 98vw)" : "min(960px, 96vw)"}
-      height={hasLeftPanel ? "min(90vh, 880px)" : undefined}
-      showClose={showClose}
-      closeOnOutsideClick={false}
-      actions={actions}
-      bodyClassName={
-        hasLeftPanel
-          ? "!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
-          : ""
-      }
-    >
-      {hasLeftPanel ? (
-        <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
-          <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
-            {leftPanel}
-          </div>
-          <div className="flex min-h-0 min-w-0 flex-col gap-2 pb-4 lg:overflow-hidden lg:pb-0">
-            <div className="shrink-0 border-b border-border pb-1.5">
-              <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
-              {titleNumber ? (
-                <p className="mt-0.5 text-xs text-secondary">
-                  {titleName}
-                  {` · #${titleNumber}`}
-                </p>
-              ) : null}
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title={modalTitle}
+        size={hasLeftPanel ? "7xl" : "5xl"}
+        width={hasLeftPanel ? "min(1680px, 98vw)" : "min(960px, 96vw)"}
+        height={hasLeftPanel ? "min(90vh, 880px)" : undefined}
+        showClose={showClose}
+        closeOnOutsideClick={false}
+        actions={actions}
+        bodyClassName={
+          hasLeftPanel
+            ? "!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
+            : ""
+        }
+      >
+        {hasLeftPanel ? (
+          <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
+            <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
+              {leftPanel}
             </div>
-            <div className="min-h-0 flex-1 overflow-visible lg:overflow-auto">{historyTable}</div>
+            <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-visible pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pb-1">
+              <div className="flex shrink-0 flex-col gap-2">
+                {paymentHeader}
+                <div className="min-h-0">{historyTable}</div>
+              </div>
+              <SimpleEmployeePunchCalendar employeeId={employeeId} open={open} />
+            </div>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className="mb-3 text-sm text-secondary">
-            <span className="font-medium text-title">{titleName}</span>
-            {titleNumber ? ` · #${titleNumber}` : ""}
-          </div>
-          {historyTable}
-        </>
-      )}
-    </Modal>
+        ) : (
+          <>
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="text-sm text-secondary">
+                <span className="font-medium text-title">{titleName}</span>
+                {titleNumber ? ` · #${titleNumber}` : ""}
+              </div>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="shrink-0"
+                disabled={!employeeId}
+                onClick={() => setPayOpen(true)}
+              >
+                Make payment
+              </Button>
+            </div>
+            {historyTable}
+          </>
+        )}
+      </Modal>
+
+      <SimpleEmployeeRecordPaymentModal
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        employee={
+          payOpen && employeeId
+            ? {
+                employeeId,
+                employeeName: titleName,
+                employeeNumber: titleNumber,
+                payType,
+                hourlyRate,
+              }
+            : null
+        }
+        onSaved={() => {
+          setPayOpen(false);
+          void load();
+        }}
+      />
+    </>
   );
 }

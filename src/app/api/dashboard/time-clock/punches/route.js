@@ -56,8 +56,14 @@ export async function GET(request) {
       const beforeRangeEnd = new Date(fy, fm - 1, fd, 0, 0, 0, 0);
       beforeRangeEnd.setMilliseconds(-1);
 
+      const employeeFilter = {
+        createdByEmail: email,
+        ...(employeeId ? { _id: employeeId } : {}),
+      };
+      const punchEmployeeFilter = employeeId ? { employeeId } : {};
+
       const [employees, punches, manualsInRange, manualsBefore, payments] = await Promise.all([
-        Employee.find({ createdByEmail: email })
+        Employee.find(employeeFilter)
           .select("name employeeNumber department employmentStatus timeClockEnabled payType hourlyRate")
           .sort({ name: 1 })
           .lean(),
@@ -65,6 +71,7 @@ export async function GET(request) {
           createdByEmail: email,
           voidedAt: null,
           punchedAt: { $gte: rangeStart, $lte: rangeEnd },
+          ...punchEmployeeFilter,
         })
           .sort({ punchedAt: 1 })
           .lean(),
@@ -72,15 +79,18 @@ export async function GET(request) {
           createdByEmail: email,
           voidedAt: null,
           workDate: { $gte: from, $lte: to },
+          ...punchEmployeeFilter,
         }).lean(),
         TimeClockManualHours.find({
           createdByEmail: email,
           voidedAt: null,
           workDate: { $lt: from },
+          ...punchEmployeeFilter,
         }).lean(),
         EmployeePayrollPayment.find({
           createdByEmail: email,
           payType: "hourly",
+          ...punchEmployeeFilter,
         }).lean(),
       ]);
 
@@ -88,6 +98,7 @@ export async function GET(request) {
         createdByEmail: email,
         voidedAt: null,
         punchedAt: { $lte: beforeRangeEnd },
+        ...punchEmployeeFilter,
       })
         .sort({ punchedAt: 1 })
         .lean();
@@ -195,7 +206,7 @@ export async function GET(request) {
             days: byDay,
           };
         })
-        .filter((row) => Object.keys(row.days).length > 0);
+        .filter((row) => (employeeId ? true : Object.keys(row.days).length > 0));
 
       return NextResponse.json({ view: "calendar", from, to, days, employees: rows });
     }
