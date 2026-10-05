@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ListingDetailFaqSection from "./[slug]/listing-detail-faq-section";
 import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
+import FacebookFollowCta from "@/components/marketing/FacebookFollowCta";
 import { LISTINGS_DIRECTORY_FAQ_ITEMS } from "./listings-directory-seo-data";
 
 /**
@@ -153,6 +154,7 @@ export default function ListingsDirectorySeoContent({ total = 0 }) {
       </section>
 
       <OwnAShopLikeThisModule className="mt-10" />
+      <FacebookFollowCta className="mt-6" />
 
       <ListingDetailFaqSection
         items={LISTINGS_DIRECTORY_FAQ_ITEMS}

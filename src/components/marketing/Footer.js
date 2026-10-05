@@ -2,6 +2,7 @@ import Link from "next/link";
 import FooterNavLinks from "./FooterNavLinks";
 import BrandLogo from "@/components/marketing/brand-logo";
 import DemoBookingLink from "@/components/marketing/demo-booking-link";
+import FacebookFollowCta from "@/components/marketing/FacebookFollowCta";
 
 const footerLinks = {
   "For repair shops": [
@@ -110,9 +111,12 @@ export default function Footer() {
         <div className="mt-8 border-t border-border pt-6 sm:mt-10 sm:pt-8">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:gap-6">
             <FooterNavLinks />
-            <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
-              © {year} IQMotorBase.com. All rights reserved.
-            </p>
+            <div className="flex flex-col items-center gap-3 sm:items-end">
+              <FacebookFollowCta variant="compact" />
+              <p className="shrink-0 text-center text-sm text-secondary sm:text-right">
+                © {year} IQMotorBase.com. All rights reserved.
+              </p>
+            </div>
           </div>
         </div>
       </div>

@@ -24,6 +24,7 @@ import ListingDetailCta from "./listing-detail-cta";
 import ListingReviewsSidebar from "./listing-reviews-sidebar";
 import ListingDetailFaqSection from "./listing-detail-faq-section";
 import OwnAShopLikeThisModule from "@/components/marketing/OwnAShopLikeThisModule";
+import FacebookFollowCta from "@/components/marketing/FacebookFollowCta";
 import ListingGalleryLightbox from "./listing-gallery-lightbox";
 import ListingPageViewTracker from "@/components/listings/listing-page-view-tracker";
 import ContactReveal from "@/components/marketing/contact-reveal";
@@ -704,6 +705,7 @@ export default async function ListingDetailPage({ params }) {
                   listingId={listing.id}
                   listingPagePath={`/electric-motor-repair-shops-listings/${canonicalSlug}`}
                 />
+                <FacebookFollowCta />
               </div>
             </div>
           </div>
