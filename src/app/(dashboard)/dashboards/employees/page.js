@@ -1,7 +1,7 @@
 import EmployeesHubClient from "./employees-hub-client";
 
 export const metadata = {
-  title: "Employees | Time Clock",
+  title: "Employees",
 };
 
 export default function EmployeesHubPage() {

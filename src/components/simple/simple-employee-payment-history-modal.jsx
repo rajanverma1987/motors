@@ -82,9 +82,9 @@ export default function SimpleEmployeePaymentHistoryModal({
   }, [alert, employeeId]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || hasLeftPanel) return;
     void load();
-  }, [open, load]);
+  }, [open, hasLeftPanel, load]);
 
   const titleName = String(employeeName || "").trim() || "Employee";
   const titleNumber = String(employeeNumber || "").trim();
@@ -182,30 +182,6 @@ export default function SimpleEmployeePaymentHistoryModal({
     />
   );
 
-  const paymentHeader = (
-    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border pb-1.5">
-      <div className="min-w-0">
-        <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
-        {titleNumber ? (
-          <p className="mt-0.5 text-xs text-secondary">
-            {titleName}
-            {` · #${titleNumber}`}
-          </p>
-        ) : null}
-      </div>
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        className="shrink-0"
-        disabled={!employeeId}
-        onClick={() => setPayOpen(true)}
-      >
-        Make payment
-      </Button>
-    </div>
-  );
-
   return (
     <>
       <Modal
@@ -217,7 +193,23 @@ export default function SimpleEmployeePaymentHistoryModal({
         height={hasLeftPanel ? "min(90vh, 880px)" : undefined}
         showClose={showClose}
         closeOnOutsideClick={false}
-        actions={actions}
+        actions={
+          <>
+            {hasLeftPanel ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className="shrink-0"
+                disabled={!employeeId}
+                onClick={() => setPayOpen(true)}
+              >
+                Payment Record
+              </Button>
+            ) : null}
+            {actions}
+          </>
+        }
         bodyClassName={
           hasLeftPanel
             ? "!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
@@ -229,11 +221,7 @@ export default function SimpleEmployeePaymentHistoryModal({
             <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
               {leftPanel}
             </div>
-            <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-visible pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pb-1">
-              <div className="flex shrink-0 flex-col gap-2">
-                {paymentHeader}
-                <div className="min-h-0">{historyTable}</div>
-              </div>
+            <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pb-4 lg:pb-1">
               <SimpleEmployeePunchCalendar employeeId={employeeId} open={open} />
             </div>
           </div>
@@ -252,7 +240,7 @@ export default function SimpleEmployeePaymentHistoryModal({
                 disabled={!employeeId}
                 onClick={() => setPayOpen(true)}
               >
-                Make payment
+                Payment Record
               </Button>
             </div>
             {historyTable}
@@ -276,7 +264,7 @@ export default function SimpleEmployeePaymentHistoryModal({
         }
         onSaved={() => {
           setPayOpen(false);
-          void load();
+          if (!hasLeftPanel) void load();
         }}
       />
     </>

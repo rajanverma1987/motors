@@ -15,6 +15,7 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "master", label: "Master" },
   { id: "diagrams", label: "Diagrams" },
   { id: "job-board", label: "Shop Floor Job Board" },
+  { id: "time-clock", label: "Time Clock" },
   { id: "directory-listing", label: "Directory Listing" },
   { id: "marketplace", label: "Marketplace" },
   { id: "job-postings", label: "Job Postings" },

@@ -20,6 +20,7 @@ import SimpleSupportSection from "@/components/simple/settings/simple-support-se
 import SimpleApiIntegrationSection from "@/components/simple/settings/simple-api-integration-section";
 import SimpleDirectoryListingSection from "@/components/simple/settings/simple-directory-listing-section";
 import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
+import SimpleTimeClockSettingsSection from "@/components/simple/settings/simple-time-clock-settings-section";
 import SimpleMarketplaceSection from "@/components/simple/settings/simple-marketplace-section";
 import SimpleJobPostingsSection from "@/components/simple/settings/simple-job-postings-section";
 import SimpleAccessControlSection from "@/components/simple/settings/simple-access-control-section";
@@ -1116,6 +1117,11 @@ export default function SettingsPageClient() {
         id: "job-board",
         label: "Shop Floor Job Board",
         children: <SimpleJobBoardSection />,
+      },
+      {
+        id: "time-clock",
+        label: "Time Clock",
+        children: <SimpleTimeClockSettingsSection />,
       },
       {
         id: "directory-listing",
