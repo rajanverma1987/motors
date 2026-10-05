@@ -40,7 +40,7 @@ const nextConfig = {
       {
         source: "/:path*",
         has: [{ type: "host", value: "(?:www\\.)?motorswinding\\.com" }],
-        destination: "https://IQMotorBase.com/:path*",
+        destination: "https://iqmotorbase.com/:path*",
         permanent: true,
       },
       { source: "/motor-repair-near-me", destination: "/electric-motor-repair-near-me", permanent: true },
@@ -121,24 +121,44 @@ const nextConfig = {
         ],
       },
       {
-        source: "/dashboards",
-        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
-      },
-      {
-        source: "/dashboards/:path*",
+        source: "/login",
         headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
       },
       {
         source: "/dashboard",
-        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
       },
       {
         source: "/dashboard/:path*",
-        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
       },
       {
-        source: "/login",
-        headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }],
+        source: "/dashboards",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        source: "/dashboards/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        source: "/admin",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      },
+      {
+        source: "/admin/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
       },
       {
         source: "/:path*",

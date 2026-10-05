@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
-import { stopClarityCollect } from "@/lib/clarity-website";
+import { stopWebsiteAnalytics } from "@/lib/website-analytics";
 
 /**
- * Ensures Microsoft Clarity does not keep collecting after the user enters
- * dashboard / admin (script may still be in memory from a prior website visit).
+ * Ensures GA / Clarity do not keep collecting after the user enters
+ * dashboard / admin (scripts may still be in memory from a prior website visit).
  */
 export default function StopClarityOnApp() {
   useEffect(() => {
-    stopClarityCollect();
+    stopWebsiteAnalytics();
   }, []);
 
   return null;

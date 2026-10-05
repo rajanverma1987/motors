@@ -7,7 +7,11 @@ import { UserSettingsProvider } from "@/contexts/user-settings-context";
 import { TrialUpgradeProvider } from "@/contexts/trial-upgrade-context";
 
 export const metadata = {
-  robots: { index: false, follow: false },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false, noimageindex: true },
+  },
 };
 
 export default function DashboardLayout({ children }) {
