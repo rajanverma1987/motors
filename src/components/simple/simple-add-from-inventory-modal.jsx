@@ -6,7 +6,11 @@ import Button from "@/components/ui/button";
 import { useAlert } from "@/components/confirm-provider";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { emptyOtherLine } from "@/lib/simple-service-proposal-form";
-import { formatSellPriceForLine } from "@/lib/inventory-pricing";
+import {
+  formatSellPriceForLine,
+  parseMarkupPercent,
+  sellUnitPriceFromCostMarkup,
+} from "@/lib/inventory-pricing";
 
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -26,6 +30,8 @@ export default function SimpleAddFromInventoryModal({
   hint = "Enter quantity for each part to add. Unit price uses inventory cost and markup when set.",
   title = "Add from inventory",
   mode = "qty",
+  /** Show unit cost, markup %, and computed sell price (proposal Other Items). */
+  showPricing = false,
   zIndex = 140,
 }) {
   const alert = useAlert();
@@ -33,10 +39,12 @@ export default function SimpleAddFromInventoryModal({
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [pickerQty, setPickerQty] = useState({});
+  const [pickerPricing, setPickerPricing] = useState({});
 
   useEffect(() => {
     if (!open) {
       setPickerQty({});
+      setPickerPricing({});
       setSearch("");
       return;
     }
@@ -75,13 +83,45 @@ export default function SimpleAddFromInventoryModal({
     });
   }, [items, search]);
 
+  const rowPricing = (it) => {
+    const override = pickerPricing[it.id];
+    const unitCost =
+      override?.unitCost != null
+        ? override.unitCost
+        : it.unitCost != null && String(it.unitCost).trim() !== ""
+          ? String(it.unitCost)
+          : "";
+    const markupPercent =
+      override?.markupPercent != null
+        ? override.markupPercent
+        : it.markupPercent != null && String(it.markupPercent).trim() !== ""
+          ? String(it.markupPercent)
+          : "";
+    return { unitCost, markupPercent };
+  };
+
+  const patchPricing = (id, patch) => {
+    setPickerPricing((prev) => {
+      const it = items.find((row) => row.id === id);
+      const base = prev[id] || {
+        unitCost: it?.unitCost != null && String(it.unitCost).trim() !== "" ? String(it.unitCost) : "",
+        markupPercent:
+          it?.markupPercent != null && String(it.markupPercent).trim() !== ""
+            ? String(it.markupPercent)
+            : "",
+      };
+      return { ...prev, [id]: { ...base, ...patch } };
+    });
+  };
+
   const handleSubmit = async () => {
     const lines = [];
     for (const it of items) {
       const q = parseFloat(pickerQty[it.id] ?? "0");
       if (!Number.isFinite(q) || q <= 0) continue;
+      const pricing = rowPricing(it);
       if (typeof buildLine === "function") {
-        lines.push(buildLine(it, q));
+        lines.push(buildLine(it, q, pricing));
         continue;
       }
       const uom = (it.uom && String(it.uom).trim()) || "ea";
@@ -90,9 +130,11 @@ export default function SimpleAddFromInventoryModal({
         ...emptyOtherLine(),
         description: name,
         uom,
-        price: formatSellPriceForLine(it.unitCost, it.markupPercent),
+        price: formatSellPriceForLine(pricing.unitCost, pricing.markupPercent),
         qty: String(q),
         inventoryItemId: it.id,
+        unitCost: String(pricing.unitCost ?? "").trim(),
+        markupPercent: String(pricing.markupPercent ?? "").trim(),
       });
     }
     if (lines.length === 0) {
@@ -105,6 +147,7 @@ export default function SimpleAddFromInventoryModal({
     }
     onAddLines?.(lines);
     setPickerQty({});
+    setPickerPricing({});
     onClose?.();
   };
 
@@ -119,7 +162,7 @@ export default function SimpleAddFromInventoryModal({
       onClose={onClose}
       title={title}
       size="lg"
-      width="min(720px, 96vw)"
+      width={showPricing ? "min(1080px, 96vw)" : "min(720px, 96vw)"}
       zIndex={zIndex}
       closeOnOutsideClick={false}
       actions={
@@ -156,6 +199,13 @@ export default function SimpleAddFromInventoryModal({
                 <th className="px-2 py-1.5">Part</th>
                 <th className="w-16 px-2 py-1.5">UOM</th>
                 <th className="w-20 px-2 py-1.5 text-right">Available</th>
+                {showPricing && mode !== "linkOne" ? (
+                  <>
+                    <th className="w-24 px-2 py-1.5">Price</th>
+                    <th className="w-20 px-2 py-1.5">Markup %</th>
+                    <th className="w-24 px-2 py-1.5 text-right">Sell price</th>
+                  </>
+                ) : null}
                 {mode === "linkOne" ? (
                   <th className="w-20 px-2 py-1.5 text-center">Link</th>
                 ) : (
@@ -167,6 +217,11 @@ export default function SimpleAddFromInventoryModal({
               {filtered.map((it) => {
                 const avail = Number(it.available) || 0;
                 const low = it.threshold > 0 && avail <= it.threshold;
+                const pricing = showPricing ? rowPricing(it) : null;
+                const sell =
+                  pricing != null
+                    ? sellUnitPriceFromCostMarkup(pricing.unitCost, pricing.markupPercent)
+                    : 0;
                 return (
                   <tr key={it.id} className="border-b border-border last:border-b-0">
                     <td className="px-2 py-1.5">
@@ -181,6 +236,39 @@ export default function SimpleAddFromInventoryModal({
                     >
                       {avail}
                     </td>
+                    {showPricing && mode !== "linkOne" ? (
+                      <>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={pricing.unitCost}
+                            onChange={(e) => patchPricing(it.id, { unitCost: e.target.value })}
+                            className={`${FIELD_INPUT} tabular-nums`}
+                            placeholder="0.00"
+                            aria-label={`Price for ${it.name || "part"}`}
+                            title="Unit cost from inventory. Editable for this add."
+                          />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={pricing.markupPercent}
+                            onChange={(e) => patchPricing(it.id, { markupPercent: e.target.value })}
+                            className={`${FIELD_INPUT} tabular-nums`}
+                            placeholder="0"
+                            aria-label={`Markup percent for ${it.name || "part"}`}
+                            title={`Inventory markup ${parseMarkupPercent(it.markupPercent)}%. Editable for this add.`}
+                          />
+                        </td>
+                        <td className="px-2 py-1.5 text-right tabular-nums text-title">
+                          {sell > 0 ? sell.toFixed(2) : "-"}
+                        </td>
+                      </>
+                    ) : null}
                     <td className="px-2 py-1.5">
                       {mode === "linkOne" ? (
                         <div className="flex justify-center">

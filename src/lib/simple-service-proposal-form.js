@@ -18,6 +18,7 @@ import { isMongoObjectIdString, isShopAdminSelectValue } from "@/lib/technician-
 import { resolveMachineType } from "@/lib/machine-types";
 import { normalizeProposalType, PROPOSAL_TYPE_SERVICE } from "@/lib/proposal-types";
 import { proposalDocumentTitle } from "@/lib/quote-document-labels";
+import { parseMarkupPercent, sellUnitPriceFromCostMarkup } from "@/lib/inventory-pricing";
 
 export const RECORD_TYPE_RFQ = "RFQ";
 export const RECORD_TYPE_JOB = "JOB";
@@ -77,6 +78,10 @@ export function emptyOtherLine() {
     /** Optional — set when added from Inventory lookup */
     qty: "",
     inventoryItemId: "",
+    /** Cost basis for this proposal line (inventory unit cost). Not printed. */
+    unitCost: "",
+    /** Markup % for this proposal only. Not printed. */
+    markupPercent: "",
   };
 }
 
@@ -428,6 +433,33 @@ export function lineExtendedPrice(line) {
   return roundSpMoney(price * qty);
 }
 
+/** Apply markup % on this proposal line. Recalculates sell `price` from unit cost. */
+export function applyOtherLineMarkup(line, markupRaw) {
+  const next = line && typeof line === "object" ? { ...line } : emptyOtherLine();
+  const markup = parseMarkupPercent(markupRaw);
+  const storedCost = parseSpMoney(next.unitCost);
+  const currentSell = parseSpMoney(next.price);
+  const cost = storedCost > 0 ? storedCost : currentSell;
+  const sell = cost > 0 ? sellUnitPriceFromCostMarkup(cost, markup) : 0;
+  next.unitCost = cost > 0 ? String(cost) : String(next.unitCost || "").trim();
+  next.markupPercent = String(markupRaw ?? "").trim() === "" ? "" : String(markup);
+  next.price = sell > 0 ? String(sell) : next.price;
+  return next;
+}
+
+/** When sell price is typed, keep markup in sync if unit cost is known. */
+export function applyOtherLineSellPrice(line, priceRaw) {
+  const next = line && typeof line === "object" ? { ...line } : emptyOtherLine();
+  next.price = String(priceRaw ?? "");
+  const cost = parseSpMoney(next.unitCost);
+  const sell = parseSpMoney(next.price);
+  if (cost > 0 && sell >= 0) {
+    const pct = Math.max(0, roundSpMoney((sell / cost - 1) * 100));
+    next.markupPercent = String(pct);
+  }
+  return next;
+}
+
 /** Sum Other Items using qty × unit price. */
 export function sumOtherLinePrices(lines) {
   if (!Array.isArray(lines)) return 0;
@@ -717,6 +749,8 @@ export function simpleServiceProposalDocToForm(doc) {
           price: String(line?.price ?? "").trim(),
           qty: String(line?.qty ?? "").trim(),
           inventoryItemId: String(line?.inventoryItemId || "").trim(),
+          unitCost: String(line?.unitCost ?? "").trim(),
+          markupPercent: String(line?.markupPercent ?? "").trim(),
         }))
       : [emptyOtherLine()];
 

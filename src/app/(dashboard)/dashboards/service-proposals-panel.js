@@ -1123,48 +1123,6 @@ export default function ServiceProposalsPanel({
         {statusSummaryCards.map(renderStatusCard)}
       </div>
 
-      {!isInvoices ? (
-        <div
-          className="mb-2 flex flex-wrap items-center gap-1"
-          role="group"
-          aria-label="Proposal type filter"
-        >
-          <button
-            type="button"
-            className={`inline-flex h-8 shrink-0 items-center border px-2.5 text-xs font-semibold ${
-              !proposalTypeFilter
-                ? "border-primary bg-primary/15 text-primary"
-                : "border-border bg-card text-title hover:border-primary/40"
-            }`}
-            aria-pressed={!proposalTypeFilter}
-            onClick={() => {
-              setPage(1);
-              setProposalTypeFilter("");
-            }}
-          >
-            All types
-          </button>
-          {PROPOSAL_TYPE_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className={`inline-flex h-8 shrink-0 items-center border px-2.5 text-xs font-semibold ${
-                proposalTypeFilter === opt.value
-                  ? "border-primary bg-primary/15 text-primary"
-                  : "border-border bg-card text-title hover:border-primary/40"
-              }`}
-              aria-pressed={proposalTypeFilter === opt.value}
-              onClick={() => {
-                setPage(1);
-                setProposalTypeFilter(opt.value);
-              }}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
         <Table
           columns={columns}
@@ -1185,17 +1143,56 @@ export default function ServiceProposalsPanel({
           onRefresh={reload}
           columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
           toolbarBeforeRefresh={
-            isInvoices && canViewFinancials ? (
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="h-9 !rounded-none px-2.5"
-                onClick={() => setTaxesModalOpen(true)}
-              >
-                Taxes
-              </Button>
-            ) : null
+            <>
+              {!isInvoices ? (
+                <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Proposal type filter">
+                  <button
+                    type="button"
+                    className={`inline-flex h-9 shrink-0 items-center border px-2.5 text-xs font-semibold ${
+                      !proposalTypeFilter
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-card text-title hover:border-primary/40"
+                    }`}
+                    aria-pressed={!proposalTypeFilter}
+                    onClick={() => {
+                      setPage(1);
+                      setProposalTypeFilter("");
+                    }}
+                  >
+                    All types
+                  </button>
+                  {PROPOSAL_TYPE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`inline-flex h-9 shrink-0 items-center border px-2.5 text-xs font-semibold ${
+                        proposalTypeFilter === opt.value
+                          ? "border-primary bg-primary/15 text-primary"
+                          : "border-border bg-card text-title hover:border-primary/40"
+                      }`}
+                      aria-pressed={proposalTypeFilter === opt.value}
+                      onClick={() => {
+                        setPage(1);
+                        setProposalTypeFilter(opt.value);
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {isInvoices && canViewFinancials ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-9 !rounded-none px-2.5"
+                  onClick={() => setTaxesModalOpen(true)}
+                >
+                  Taxes
+                </Button>
+              ) : null}
+            </>
           }
           toolbarBeforeSearch={
             isInvoices ? null : (

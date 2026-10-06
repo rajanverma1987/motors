@@ -58,7 +58,7 @@ import {
 } from "@/lib/dropdown-catalog";
 import {
   buildEmployeeSelectOptions,
-  resolveEmployeeSelectValue,
+  resolveEmployeeDisplayName,
   resolveLoggedInEmployeeSelectValue,
   withShopAdminEmployee,
 } from "@/lib/technician-select-options";
@@ -95,6 +95,9 @@ import {
   simpleServiceProposalDocToForm,
   sumLinePrices,
   sumOtherLinePrices,
+  lineExtendedPrice,
+  applyOtherLineMarkup,
+  applyOtherLineSellPrice,
 } from "@/lib/simple-service-proposal-form";
 import {
   buildAcDatasheetFromProposal,
@@ -131,6 +134,7 @@ import {
 } from "@/lib/simple-purchase-order-form";
 import {
   applyCustomerLogisticsChargeToOtherItems,
+  isLogisticsChargeOtherLine,
   motorLogisticsFormToStored,
 } from "@/lib/simple-motor-logistics";
 
@@ -305,7 +309,7 @@ function LineItemsTable({
 
   return (
     <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col bg-card">
-      <div className="mt-[10px] flex items-center justify-between gap-2 bg-transparent px-2 py-1">
+      <div className="mt-[10px] flex h-9 items-center justify-between gap-2 bg-transparent px-2">
         <h4 className="min-w-0 text-sm font-bold uppercase tracking-wide text-black dark:text-title">
           {title}
         </h4>
@@ -317,9 +321,13 @@ function LineItemsTable({
             <tr className={`text-left ${SIMPLE_TABLE_HEAD}`}>
               <th className={LINE_HEAD}>Description</th>
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
-              {isOther ? <th className={`w-20 ${LINE_HEAD}`}>UOM</th> : null}
+              {isOther ? <th className={`w-16 ${LINE_HEAD}`}>UOM</th> : null}
               {!hidePrices ? (
-                <th className={`w-36 ${LINE_HEAD}`}>Price</th>
+                <>
+                  <th className={`w-24 ${LINE_HEAD}`}>Price</th>
+                  {isOther ? <th className={`w-20 ${LINE_HEAD}`}>Markup %</th> : null}
+                  {isOther ? <th className={`w-28 ${LINE_HEAD}`}>Total</th> : null}
+                </>
               ) : (
                 <th className={`w-12 text-center ${LINE_HEAD}`}>Action</th>
               )}
@@ -363,30 +371,87 @@ function LineItemsTable({
                     </td>
                   ) : null}
                   {!hidePrices ? (
-                    <td className={LINE_CELL}>
-                      <div className="flex min-w-0 items-center">
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          value={line.price}
-                          onChange={(e) => updateLine(line.id, { price: e.target.value })}
-                          className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
-                        />
-                        {!isBlankTrail ? (
-                          <button
-                            type="button"
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
-                            title="Remove line"
-                            aria-label="Remove line"
-                            onClick={() => removeLine(line.id)}
-                          >
-                            <FiX className="h-4 w-4 shrink-0" aria-hidden />
-                          </button>
-                        ) : (
-                          <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
-                        )}
-                      </div>
-                    </td>
+                    <>
+                      <td className={LINE_CELL}>
+                        <div className="flex min-w-0 items-center">
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={line.price}
+                            onChange={(e) =>
+                              updateLine(
+                                line.id,
+                                isOther ? applyOtherLineSellPrice(line, e.target.value) : { price: e.target.value }
+                              )
+                            }
+                            className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                            aria-label={isOther ? "Unit price" : "Price"}
+                          />
+                          {!isOther ? (
+                            !isBlankTrail ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                                title="Remove line"
+                                aria-label="Remove line"
+                                onClick={() => removeLine(line.id)}
+                              >
+                                <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            ) : (
+                              <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                            )
+                          ) : null}
+                        </div>
+                      </td>
+                      {isOther ? (
+                        <td className={LINE_CELL}>
+                          {isLogisticsChargeOtherLine(line) ? (
+                            <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
+                          ) : (
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              value={line.markupPercent ?? ""}
+                              onChange={(e) => updateLine(line.id, applyOtherLineMarkup(line, e.target.value))}
+                              className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                              placeholder="0"
+                              aria-label="Markup percent"
+                              title="Markup for this proposal only. Not shown on customer print."
+                            />
+                          )}
+                        </td>
+                      ) : null}
+                      {isOther ? (
+                        <td className={LINE_CELL}>
+                          <div className="flex min-w-0 items-center">
+                            <input
+                              readOnly
+                              value={
+                                lineHasContent(line, lineContentOpts)
+                                  ? formatMoney(lineExtendedPrice(line))
+                                  : ""
+                              }
+                              className={`${CELL_INPUT_MUTED} min-w-0 flex-1 text-right tabular-nums`}
+                              aria-label="Line total"
+                            />
+                            {!isBlankTrail ? (
+                              <button
+                                type="button"
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                                title="Remove line"
+                                aria-label="Remove line"
+                                onClick={() => removeLine(line.id)}
+                              >
+                                <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                              </button>
+                            ) : (
+                              <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                            )}
+                          </div>
+                        </td>
+                      ) : null}
+                    </>
                   ) : (
                     <td className={`${LINE_CELL} text-center`}>
                       {!isBlankTrail ? (
@@ -607,9 +672,7 @@ export default function ServiceProposalFormModal({
       if (fromOpts?.label && fromOpts.label !== "—" && fromOpts.label !== "Unknown employee") {
         return fromOpts.label;
       }
-      return (
-        buildEmployeeSelectOptions(employeesWithAdmin, id).find((o) => o.value === id)?.label || ""
-      );
+      return resolveEmployeeDisplayName(employeesWithAdmin, id) || id;
     },
     [employeesWithAdmin, preparedByOptions]
   );
@@ -700,17 +763,22 @@ export default function ServiceProposalFormModal({
   }, [open, initialForm?.id]);
 
   /**
-   * Map Prepared By to employee ids (or shop admin).
-   * If empty, default to the logged-in user once. Never overwrite a saved value with another viewer.
+   * Prepared By is free text. If empty, default to the logged-in user once.
+   * If a saved employee id is present, show the name. Never overwrite a typed value with another viewer id.
    * If Proposal Approved By was stored as an id, show the name.
    */
   useEffect(() => {
     if (!open || !employeesWithAdmin.length) return;
     setForm((f) => {
       const existingPreparedBy = String(f.preparedBy || "").trim();
+      const loggedInId = resolveLoggedInEmployeeSelectValue(user, employeesWithAdmin);
+      const loggedInName =
+        resolveEmployeeDisplayName(employeesWithAdmin, loggedInId) ||
+        String(user?.contactName || "").trim() ||
+        String(user?.shopName || "").trim();
       const preparedBy = existingPreparedBy
-        ? resolveEmployeeSelectValue(employeesWithAdmin, existingPreparedBy)
-        : resolveLoggedInEmployeeSelectValue(user, employeesWithAdmin);
+        ? resolveEmployeeDisplayName(employeesWithAdmin, existingPreparedBy) || existingPreparedBy
+        : loggedInName;
       const approvedRaw = String(f.proposalApprovedBy || "").trim();
       let proposalApprovedBy = approvedRaw;
       if (approvedRaw) {
@@ -1539,8 +1607,8 @@ export default function ServiceProposalFormModal({
             aria-hidden={loadingRecord || copying || undefined}
           >
           {/* Toolbar (title lives in modal header) */}
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
-            <div className="flex min-w-0 flex-wrap justify-start gap-1">
+          <div className="mb-2 flex flex-wrap items-end gap-2 border-b border-border pb-2">
+            <div className="flex shrink-0 flex-wrap items-end justify-start gap-1">
               {canViewFinancials ? (
                 <Button
                   type="button"
@@ -1614,7 +1682,83 @@ export default function ServiceProposalFormModal({
                 </>
               ) : null}
             </div>
-            <div className="flex flex-wrap justify-end gap-1">
+            <div className="flex min-w-0 flex-1 items-end gap-2">
+              <div className="w-[12rem] shrink-0">
+                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
+                  Proposal Type
+                </label>
+                <SimpleSelect
+                  id="sp-proposal-type"
+                  options={PROPOSAL_TYPE_OPTIONS}
+                  value={normalizeProposalType(form.proposalType)}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    patch("proposalType", nextType);
+                    if (nextType === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
+                  }}
+                  placeholder="Select…"
+                  aria-label="Proposal Type"
+                />
+              </div>
+              <div className="min-w-[10rem] flex-1">
+                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
+                  {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
+                </label>
+                <div
+                  className={`min-w-0 rounded-none border border-border ${
+                    proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+                  }`.trim()}
+                  style={proposalStatusSelectChrome.style}
+                >
+                  <SimpleSelect
+                    id="sp-proposal-status"
+                    options={statusOptions}
+                    value={form.status}
+                    onChange={(e) => {
+                      const nextStatus = e.target.value;
+                      setForm((f) => {
+                        const nextType = resolveRecordTypeOnSave(
+                          f.recordType,
+                          nextStatus,
+                          invoiceStatusValues,
+                          quoteStatusValues
+                        );
+                        return { ...f, status: nextStatus, recordType: nextType };
+                      });
+                    }}
+                    placeholder="Select…"
+                    searchable
+                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+                    aria-label={
+                      form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"
+                    }
+                  />
+                </div>
+              </div>
+              <div className="min-w-[10rem] flex-1">
+                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
+                  Status
+                </label>
+                <div
+                  className={`min-w-0 rounded-none border border-border ${
+                    jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+                  }`.trim()}
+                  style={jobStatusSelectChrome.style}
+                >
+                  <SimpleSelect
+                    id="sp-job-status"
+                    options={jobStatusOptions}
+                    value={form.jobStatus}
+                    onChange={(e) => patch("jobStatus", e.target.value)}
+                    placeholder="Select…"
+                    searchable
+                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+                    aria-label="Status"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1">
               <Button
                 type="button"
                 variant="primary"
@@ -1668,43 +1812,14 @@ export default function ServiceProposalFormModal({
             </div>
           ) : null}
 
-          {/* Columns: customer/motor | meta + status | notes + PO lines.
+          {/* Columns: customer/motor | meta | notes + PO lines.
               Tablet portrait (md): two side-by-side, third full-width below.
-              Desktop (lg+): three columns with wider right. */}
+              Desktop (lg+): 25 / 25 / 50 so the PO table has more room. */}
           <div
-            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,1.3fr)] lg:min-h-[min(28rem,42vh)]"
+            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] lg:min-h-[min(28rem,42vh)]"
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
-              <FieldRow label="Proposal type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                <div
-                  className="flex flex-wrap gap-1"
-                  role="group"
-                  aria-label="Proposal type"
-                >
-                  {PROPOSAL_TYPE_OPTIONS.map((opt) => {
-                    const selected = normalizeProposalType(form.proposalType) === opt.value;
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        aria-pressed={selected}
-                        className={`inline-flex h-7 shrink-0 items-center border px-2 text-xs font-semibold ${
-                          selected
-                            ? "border-primary bg-primary text-white"
-                            : "border-border bg-card text-title hover:border-primary/40"
-                        }`}
-                        onClick={() => {
-                          patch("proposalType", opt.value);
-                          if (opt.value === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
-                        }}
-                      >
-                        {opt.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </FieldRow>
               <FieldRow label="Customer" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   <div className="min-w-0 flex-1">
@@ -1917,7 +2032,7 @@ export default function ServiceProposalFormModal({
               )}
             </div>
 
-            {/* Column 2 — meta + status */}
+            {/* Column 2 — meta */}
             <div className="flex min-w-0 flex-col gap-2">
               <div className="flex flex-wrap justify-end gap-1">
                 <Button
@@ -1979,15 +2094,13 @@ export default function ServiceProposalFormModal({
                 />
               </FieldRow>
               <FieldRow label="Prepared By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <SimpleSelect
-                  options={preparedByOptions}
+                <input
+                  type="text"
                   value={form.preparedBy}
                   onChange={(e) => patch("preparedBy", e.target.value)}
-                  placeholder={loadingEmployees ? "Loading…" : "Select…"}
-                  disabled
-                  searchable
+                  className={FIELD_INPUT}
+                  placeholder="Name…"
                   aria-label="Prepared By"
-                  title="Prepared By is set to the employee who created this record"
                 />
               </FieldRow>
               <FieldRow label="Proposal Approved By" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
@@ -2053,65 +2166,6 @@ export default function ServiceProposalFormModal({
                   </FieldRow>
                 </>
               ) : null}
-              <FieldRow
-                label={
-                  form.recordType === RECORD_TYPE_INVOICE
-                    ? "Invoice Status"
-                    : "Proposal Status"
-                }
-                labelWidth="9.5rem"
-                controlClassName="min-w-0 flex-1"
-              >
-                <div
-                  className={`min-w-0 rounded-none border border-border ${
-                    proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
-                  }`.trim()}
-                  style={proposalStatusSelectChrome.style}
-                >
-                  <SimpleSelect
-                    options={statusOptions}
-                    value={form.status}
-                    onChange={(e) => {
-                      const nextStatus = e.target.value;
-                      setForm((f) => {
-                        const nextType = resolveRecordTypeOnSave(
-                          f.recordType,
-                          nextStatus,
-                          invoiceStatusValues,
-                          quoteStatusValues
-                        );
-                        return { ...f, status: nextStatus, recordType: nextType };
-                      });
-                    }}
-                    placeholder="Select…"
-                    searchable
-                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
-                    aria-label={
-                      form.recordType === RECORD_TYPE_INVOICE
-                        ? "Invoice Status"
-                        : "Proposal Status"
-                    }
-                  />
-                </div>
-              </FieldRow>
-              <FieldRow label="Status" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <div
-                  className={`min-w-0 rounded-none border border-border ${
-                    jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
-                  }`.trim()}
-                  style={jobStatusSelectChrome.style}
-                >
-                  <SimpleSelect
-                    options={jobStatusOptions}
-                    value={form.jobStatus}
-                    onChange={(e) => patch("jobStatus", e.target.value)}
-                    placeholder="Select…"
-                    searchable
-                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
-                    aria-label="Status"
-                  />
-                </div>
-              </FieldRow>
               {form.recordType === RECORD_TYPE_INVOICE && canViewFinancials ? (
                 <FieldRow
                   label=""
@@ -2528,7 +2582,8 @@ export default function ServiceProposalFormModal({
         open={addFromInventoryOpen}
         onClose={() => setAddFromInventoryOpen(false)}
         zIndex={140}
-        hint="Enter quantity for each part. Unit price is filled from inventory cost and markup when set."
+        showPricing={canViewFinancials}
+        hint="Enter quantity for each part. Price and markup come from inventory and can be edited. Sell price is cost times (1 + markup%)."
         onAddLines={(newLines) => {
           const existing = Array.isArray(form.otherItems) ? form.otherItems : [];
           const filled = existing.filter((line) =>
