@@ -1608,80 +1608,6 @@ export default function ServiceProposalFormModal({
           >
           {/* Toolbar (title lives in modal header) */}
           <div className="mb-2 flex flex-wrap items-end gap-2 border-b border-border pb-2">
-            <div className="flex shrink-0 flex-wrap items-end justify-start gap-1">
-              {canViewFinancials ? (
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  className={TOOLBAR_BTN}
-                  disabled={!canAddCommission || saving || copying}
-                  title={
-                    canAddCommission ? "Add sales commission" : "Save the record before adding commission"
-                  }
-                  onClick={() => setCommissionOpen(true)}
-                >
-                  {commissionCount > 0 ? `Add Commission (${commissionCount})` : "Add Commission"}
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={saving || copying}
-                onClick={handleCopyCreateNew}
-              >
-                {copying ? (
-                  <span className="inline-flex items-center gap-1.5">
-                    <span
-                      className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
-                      aria-hidden
-                    />
-                    Copying…
-                  </span>
-                ) : (
-                  "Copy & Create New"
-                )}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={TOOLBAR_BTN}
-                disabled={!canAttach}
-                title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
-                onClick={() => setAttachmentsOpen(true)}
-              >
-                {Array.isArray(form.attachments) && form.attachments.length > 0
-                  ? `Add Attachments (${form.attachments.length})`
-                  : "Add Attachments"}
-              </Button>
-              {canViewFinancials ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={TOOLBAR_BTN}
-                    disabled={saving || copying}
-                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
-                  >
-                    Internal Print
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={TOOLBAR_BTN}
-                    disabled={saving || copying}
-                    onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
-                  >
-                    Customer Print
-                  </Button>
-                </>
-              ) : null}
-            </div>
             <div className="flex min-w-0 flex-1 items-end gap-2">
               <div className="w-[12rem] shrink-0">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
@@ -1758,7 +1684,64 @@ export default function ServiceProposalFormModal({
                 </div>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1">
+            <div className="flex shrink-0 flex-wrap items-end justify-end gap-1">
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={saving || copying}
+                onClick={handleCopyCreateNew}
+              >
+                {copying ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="inline-block h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white"
+                      aria-hidden
+                    />
+                    Copying…
+                  </span>
+                ) : (
+                  "Copy & Create New"
+                )}
+              </Button>
+              {canViewFinancials ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
+                  >
+                    Internal Print
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
+                  >
+                    Customer Print
+                  </Button>
+                </>
+              ) : null}
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={TOOLBAR_BTN}
+                disabled={!canAttach}
+                title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
+                onClick={() => setAttachmentsOpen(true)}
+              >
+                {Array.isArray(form.attachments) && form.attachments.length > 0
+                  ? `Add Attachments (${form.attachments.length})`
+                  : "Add Attachments"}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -1816,7 +1799,7 @@ export default function ServiceProposalFormModal({
               Tablet portrait (md): two side-by-side, third full-width below.
               Desktop (lg+): 25 / 25 / 50 so the PO table has more room. */}
           <div
-            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,2fr)] lg:min-h-[min(28rem,42vh)]"
+            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.75fr)] lg:min-h-[min(28rem,42vh)]"
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
@@ -1874,9 +1857,9 @@ export default function ServiceProposalFormModal({
                   {salesMotorOpen ? (
                     <div className="flex flex-col gap-2 border-t border-border px-2 py-2">
                       <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
+                        <div className="flex flex-nowrap items-center gap-x-3" role="radiogroup" aria-label="Machine type">
                           {MACHINE_TYPES.map((opt) => (
-                            <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                            <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
                               <input
                                 type="radio"
                                 name="motorPower"
@@ -1954,9 +1937,9 @@ export default function ServiceProposalFormModal({
               ) : (
                 <>
                   <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5" role="radiogroup" aria-label="Machine type">
+                    <div className="flex flex-nowrap items-center gap-x-3" role="radiogroup" aria-label="Machine type">
                       {MACHINE_TYPES.map((opt) => (
-                        <label key={opt} className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
+                        <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
                           <input
                             type="radio"
                             name="motorPower"
@@ -2431,6 +2414,27 @@ export default function ServiceProposalFormModal({
               totalLabel="Total For Proposal:"
               formatMoney={formatMoney}
               hidePrices={!canViewFinancials}
+              headerAction={
+                canViewFinancials ? (
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className="h-7 !rounded-none px-2 text-[11px]"
+                    disabled={!canAddCommission || saving || copying}
+                    title={
+                      canAddCommission
+                        ? "Add sales commission"
+                        : "Save the record before adding commission"
+                    }
+                    onClick={() => setCommissionOpen(true)}
+                  >
+                    {commissionCount > 0
+                      ? `Add Commission (${commissionCount})`
+                      : "Add Commission"}
+                  </Button>
+                ) : null
+              }
             />
             <div className="flex min-w-0 flex-col gap-2">
               <LineItemsTable
