@@ -30,7 +30,20 @@ export default function PwaRegister() {
     let intervalId = null;
     let registration = null;
 
+    /**
+     * Whether this page was already under a service worker when it loaded.
+     *
+     * On a first-ever visit there is no controller, and sw.js activate calls
+     * clients.claim() — which fires controllerchange on this page even though
+     * nothing was updated. Reloading there re-loaded every new visitor's first
+     * page view and rewrote the referrer to the page's own URL, which wiped out
+     * referrer attribution in Clarity and GA. Only a genuine update (a new worker
+     * replacing an existing controller) needs the reload to pick up new bundles.
+     */
+    const hadController = Boolean(navigator.serviceWorker.controller);
+
     const onControllerChange = () => {
+      if (!hadController) return;
       if (refreshing) return;
       refreshing = true;
       window.location.reload();
