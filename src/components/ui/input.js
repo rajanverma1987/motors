@@ -17,6 +17,8 @@ export default function Input({
   autoComplete,
   /** Applied to the native input element (e.g. compact rows in spec grids). */
   inputClassName = "",
+  /** Optional control rendered inside the field, on the right. */
+  suffix = null,
 }) {
   const id = idProp ?? name;
   return (
@@ -27,21 +29,26 @@ export default function Input({
           <HelpIcon text={help} />
         </label>
       )}
-      <input
-        id={id}
-        type={type}
-        name={name}
-        value={value ?? ""}
-        placeholder={placeholder}
-        onChange={onChange}
-        readOnly={readOnly}
-        disabled={disabled}
-        tabIndex={disabled ? -1 : undefined}
-        required={required}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        className={`w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${inputClassName}`.trim()}
-      />
+      <div className="relative">
+        <input
+          id={id}
+          type={type}
+          name={name}
+          value={value ?? ""}
+          placeholder={placeholder}
+          onChange={onChange}
+          readOnly={readOnly}
+          disabled={disabled}
+          tabIndex={disabled ? -1 : undefined}
+          required={required}
+          maxLength={maxLength}
+          autoComplete={autoComplete}
+          className={`w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg px-3 py-2 text-text placeholder:text-sm placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30 disabled:opacity-60 disabled:cursor-not-allowed disabled:bg-card disabled:border-border/80 ${disabled ? "!opacity-60 !cursor-not-allowed !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${readOnly && !disabled ? "!opacity-60 !cursor-default !bg-card dark:!bg-form-bg !border-border select-none" : ""} ${suffix ? "pr-16" : ""} ${inputClassName}`.trim()}
+        />
+        {suffix ? (
+          <div className="absolute inset-y-0 right-1 flex items-center">{suffix}</div>
+        ) : null}
+      </div>
     </div>
   );
 }

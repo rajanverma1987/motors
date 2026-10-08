@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FiRotateCw, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
@@ -22,6 +22,55 @@ import {
   SEND_DOCUMENT_TO_EMAIL_MAX,
   isSendToEmail,
 } from "@/lib/send-document-custom-message";
+
+const SEND_EMAIL_DRAFT_PREFIX = "motors-send-email-draft:";
+const SEND_EMAIL_DRAFT_DEBOUNCE_MS = 400;
+
+function sendEmailDraftKey(documentType, documentId, label) {
+  const type = String(documentType || "").trim();
+  const id = String(documentId || label || "").trim();
+  if (!type || !id) return "";
+  return `${SEND_EMAIL_DRAFT_PREFIX}${type}:${id}`;
+}
+
+function readSendEmailDraft(key) {
+  if (!key || typeof localStorage === "undefined") return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "null");
+    if (!parsed || typeof parsed !== "object") return null;
+    return {
+      toEmail: String(parsed.toEmail || ""),
+      emailCc: String(parsed.emailCc || ""),
+      emailCustomMessage: String(parsed.emailCustomMessage || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeSendEmailDraft(key, draft, baselineTo) {
+  if (!key || typeof localStorage === "undefined" || !draft) return;
+  const toEmail = String(draft.toEmail || "");
+  const emailCc = String(draft.emailCc || "");
+  const emailCustomMessage = String(draft.emailCustomMessage || "");
+  const unchanged =
+    toEmail.trim() === String(baselineTo || "").trim() &&
+    !emailCc.trim() &&
+    !emailCustomMessage.trim();
+  if (unchanged) {
+    localStorage.removeItem(key);
+    return;
+  }
+  localStorage.setItem(
+    key,
+    JSON.stringify({ toEmail, emailCc, emailCustomMessage })
+  );
+}
+
+function clearSendEmailDraft(key) {
+  if (!key || typeof localStorage === "undefined") return;
+  localStorage.removeItem(key);
+}
 
 function sendMetaUrl(documentType, documentId) {
   if (!documentId) return null;
@@ -67,11 +116,47 @@ export default function SendDocumentPreviewModal({
   const [emailCustomMessage, setEmailCustomMessage] = useState("");
   const [emailCc, setEmailCc] = useState("");
   const [toEmail, setToEmail] = useState("");
+  const draftReadyRef = useRef(false);
+  const draftAppliedRef = useRef(false);
+  const sentRef = useRef(false);
+  const baselineToRef = useRef("");
+  const draftFieldsRef = useRef({ toEmail: "", emailCc: "", emailCustomMessage: "" });
 
   const useLocalDocument = Boolean(localQuote || localInvoicePayload || localPo);
+  const draftLabel = String(
+    sendBodyExtra?.documentLabel || sendBodyExtra?.poNumber || localSendMeta?.documentLabel || ""
+  ).trim();
+  const draftKey = sendEmailDraftKey(documentType, documentId, draftLabel);
+
+  draftFieldsRef.current = { toEmail, emailCc, emailCustomMessage };
+
+  const applyEmailDraft = (defaultTo) => {
+    const baseline = String(defaultTo || "").trim();
+    baselineToRef.current = baseline;
+    const draft = readSendEmailDraft(draftKey);
+    if (draft) {
+      setToEmail(draft.toEmail);
+      setEmailCc(draft.emailCc);
+      setEmailCustomMessage(draft.emailCustomMessage);
+    } else {
+      setToEmail(baseline);
+      setEmailCc("");
+      setEmailCustomMessage("");
+    }
+    draftReadyRef.current = Boolean(draftKey);
+  };
+
+  const flushEmailDraft = () => {
+    if (!draftReadyRef.current || sentRef.current) return;
+    writeSendEmailDraft(draftKey, draftFieldsRef.current, baselineToRef.current);
+  };
 
   useEffect(() => {
     if (!open || !documentType) {
+      if (draftAppliedRef.current) flushEmailDraft();
+      draftAppliedRef.current = false;
+      draftReadyRef.current = false;
+      sentRef.current = false;
       setLoadError("");
       setLoading(false);
       setSending(false);
@@ -95,9 +180,10 @@ export default function SendDocumentPreviewModal({
       setInvoicePayload(localInvoicePayload || null);
       setPo(localPo || null);
       setVendor(localVendor || null);
-      setEmailCustomMessage("");
-      setEmailCc("");
-      setToEmail(String(localSendMeta?.toEmail || "").trim());
+      if (!draftAppliedRef.current) {
+        applyEmailDraft(localSendMeta?.toEmail || "");
+        draftAppliedRef.current = true;
+      }
       return;
     }
 
@@ -151,7 +237,10 @@ export default function SendDocumentPreviewModal({
 
         const meta = results[0];
         setSendMeta(meta);
-        setToEmail(String(meta?.toEmail || "").trim());
+        if (!draftAppliedRef.current) {
+          applyEmailDraft(meta?.toEmail || "");
+          draftAppliedRef.current = true;
+        }
 
         if (documentType === "quote") {
           setQuote(results[1]);
@@ -188,7 +277,17 @@ export default function SendDocumentPreviewModal({
     accountSettings?.accountsPaymentTerms,
     accountSettings?.invoicePaymentOptions,
     accountSettings?.invoiceThankYouNote,
+    draftKey,
   ]);
+
+  useEffect(() => {
+    if (!open || !draftReadyRef.current || !draftKey || sentRef.current) return undefined;
+    const handle = setTimeout(() => {
+      if (!draftReadyRef.current || sentRef.current) return;
+      writeSendEmailDraft(draftKey, draftFieldsRef.current, baselineToRef.current);
+    }, SEND_EMAIL_DRAFT_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [open, draftKey, toEmail, emailCc, emailCustomMessage]);
 
   const handleSend = async () => {
     if (!sendUrl) return;
@@ -212,6 +311,9 @@ export default function SendDocumentPreviewModal({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to send");
+      sentRef.current = true;
+      draftReadyRef.current = false;
+      clearSendEmailDraft(draftKey);
       toast.success(data.message || "Email sent.");
       onSent?.(data);
       onClose?.();

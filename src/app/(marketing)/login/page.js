@@ -95,6 +95,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [redirecting, setRedirecting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     setNextRaw(readQueryParam("next"));
@@ -204,9 +205,9 @@ export default function LoginPage() {
                 </li>
               </ul>
               <p className="mt-6 text-sm text-secondary">
-                If you don&apos;t have an account yet, you can{" "}
-                <Link href="/register" className="font-medium text-primary hover:underline">
-                  Register your shop here
+                If you don&apos;t have an account yet,{" "}
+                <Link href="/contact" className="font-medium text-primary hover:underline">
+                  Contact us to get your account
                 </Link>
                 .
               </p>
@@ -243,12 +244,23 @@ export default function LoginPage() {
                 <Input
                   label="Password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Your password"
                   value={form.password}
                   onChange={handleChange}
                   required
                   autoComplete="current-password"
+                  suffix={
+                    <button
+                      type="button"
+                      className="px-2 text-xs font-medium text-primary hover:underline"
+                      onClick={() => setShowPassword((on) => !on)}
+                      aria-pressed={showPassword}
+                      aria-label={showPassword ? "Hide password" : "View password"}
+                    >
+                      {showPassword ? "Hide" : "View"}
+                    </button>
+                  }
                 />
                 <Checkbox
                   name="rememberMe"
@@ -272,9 +284,9 @@ export default function LoginPage() {
                     {submitting ? "Signing in…" : "Log in"}
                   </Button>
                   <p className="text-center text-sm text-secondary">
-                    Don't have an account?{" "}
-                    <Link href="/register" className="font-medium text-primary hover:underline">
-                      Register your center
+                    Don&apos;t have an account?{" "}
+                    <Link href="/contact" className="font-medium text-primary hover:underline">
+                      Contact us to get your account
                     </Link>
                   </p>
                 </div>

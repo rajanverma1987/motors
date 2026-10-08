@@ -138,10 +138,10 @@ export default function Navbar() {
                     Log in
                   </Link>
                   <Link
-                    href="/register"
+                    href="/contact"
                     className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg"
                   >
-                    Register
+                    Contact us
                   </Link>
                 </>
               )}
@@ -226,11 +226,11 @@ export default function Navbar() {
                     Log in
                   </Link>
                   <Link
-                    href="/register"
+                    href="/contact"
                     onClick={closeMobile}
                     className="flex min-h-12 touch-manipulation items-center justify-center rounded-md border border-border px-4 text-sm font-medium text-text transition-colors hover:bg-form-bg"
                   >
-                    Register
+                    Contact us
                   </Link>
                 </>
               )}

@@ -2,8 +2,8 @@ import { marketingPageMetadata } from "@/lib/marketing-page-metadata";
 
 export const metadata = marketingPageMetadata({
   path: "/register",
-  title: "Register your shop",
-  description: "Create your IQMotorBase.com center account.",
+  title: "Contact us",
+  description: "Contact IQMotorBase.com to get your center account.",
   index: false,
   follow: false,
 });
