@@ -1607,9 +1607,9 @@ export default function ServiceProposalFormModal({
             aria-hidden={loadingRecord || copying || undefined}
           >
           {/* Toolbar (title lives in modal header) */}
-          <div className="mb-2 flex flex-wrap items-end gap-2 border-b border-border pb-2">
-            <div className="flex min-w-0 flex-1 items-end gap-2">
-              <div className="w-[12rem] shrink-0">
+          <div className="mb-2 flex flex-col gap-2 border-b border-border pb-2 xl:flex-row xl:items-end">
+            <div className="grid w-full min-w-0 grid-cols-3 items-end gap-2 xl:flex xl:flex-1">
+              <div className="min-w-0 xl:w-[12rem] xl:shrink-0">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
                   Proposal Type
                 </label>
@@ -1626,7 +1626,7 @@ export default function ServiceProposalFormModal({
                   aria-label="Proposal Type"
                 />
               </div>
-              <div className="min-w-[10rem] flex-1">
+              <div className="min-w-0 xl:min-w-[10rem] xl:flex-1">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
                   {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
                 </label>
@@ -1661,7 +1661,7 @@ export default function ServiceProposalFormModal({
                   />
                 </div>
               </div>
-              <div className="min-w-[10rem] flex-1">
+              <div className="min-w-0 xl:min-w-[10rem] xl:flex-1">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
                   Status
                 </label>
@@ -1684,7 +1684,7 @@ export default function ServiceProposalFormModal({
                 </div>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap items-end justify-end gap-1">
+            <div className="flex w-full flex-wrap items-end gap-1 xl:w-auto xl:shrink-0 xl:justify-end">
               <Button
                 type="button"
                 variant="primary"
