@@ -43,6 +43,49 @@ function readUrlLocation() {
   return normalized;
 }
 
+function hasLocation(location) {
+  return Boolean(location?.city || location?.state || location?.zip);
+}
+
+function requestGpsPosition() {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve(position),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 }
+    );
+  });
+}
+
+async function locationFromGps() {
+  const position = await requestGpsPosition();
+  if (!position?.coords) return null;
+  const { latitude, longitude } = position.coords;
+  try {
+    const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
+    const data = await res.json();
+    const location = normalizeLocationInput(data);
+    if (!hasLocation(location)) return { latitude, longitude, location: null };
+    return { latitude, longitude, location };
+  } catch {
+    return { latitude, longitude, location: null };
+  }
+}
+
+async function locationFromIp() {
+  try {
+    const res = await fetch("/api/geo");
+    const data = await res.json();
+    const location = normalizeLocationInput(data);
+    return hasLocation(location) ? location : null;
+  } catch {
+    return null;
+  }
+}
+
 function persistLocation(location) {
   if (typeof window === "undefined") return;
   try {
@@ -75,6 +118,7 @@ export default function NearMeContent() {
   const [notifyEmail, setNotifyEmail] = useState("");
   const [notifySent, setNotifySent] = useState(false);
   const [notifySending, setNotifySending] = useState(false);
+  const coordsRef = useRef(null);
 
   const fetchListingsNear = useCallback(async (location) => {
     setSearching(true);
@@ -119,12 +163,17 @@ export default function NearMeContent() {
         const key = [location.city, location.state, location.zip].filter(Boolean).join("|");
         if (autoNotifiedRef.current !== key) {
           autoNotifiedRef.current = key;
+          const coords = coordsRef.current;
           fetch("/api/notify-no-listings-near-me", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               city: location.city || undefined,
               state: location.state || undefined,
+              zip: location.zip || undefined,
+              lat: coords?.latitude,
+              lng: coords?.longitude,
+              source: coords ? "gps" : "ip",
             }),
           }).catch((err) => console.error("Auto-notify no listings error:", err));
         }
@@ -150,18 +199,22 @@ export default function NearMeContent() {
     }
     setLocating(true);
     try {
-      const position = await new Promise((resolve, reject) => {
+      const gps = await new Promise((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: false,
-          timeout: 12000,
-          maximumAge: 300000,
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
         });
       });
-      const { latitude, longitude } = position.coords;
+      const { latitude, longitude } = gps.coords;
+      coordsRef.current = { latitude, longitude };
       const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
       const data = await res.json();
-      const location = normalizeLocationInput(data);
-      if (!location.city && !location.state && !location.zip) {
+      let location = normalizeLocationInput(data);
+      if (!hasLocation(location)) {
+        location = (await locationFromIp()) || location;
+      }
+      if (!hasLocation(location)) {
         toast.error("Could not determine your city from GPS. Enter it manually.");
         return;
       }
@@ -211,15 +264,35 @@ export default function NearMeContent() {
       }
 
       try {
-        const res = await fetch("/api/geo");
-        const data = await res.json();
-        const location = normalizeLocationInput(data);
-        if (location.city || location.state || location.zip) {
-          setSearchCity(location.city);
-          setSearchState(location.state);
-          setSearchZip(location.zip);
-          await runSearch(location, { notifyOnEmpty: true });
+        let permission = "prompt";
+        try {
+          if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+            const status = await navigator.permissions.query({ name: "geolocation" });
+            permission = status.state;
+          }
+        } catch {
+          permission = "prompt";
         }
+
+        const ipPromise = locationFromIp();
+        if (permission === "denied") {
+          const location = await ipPromise;
+          if (location) await runSearch(location, { notifyOnEmpty: true });
+          return;
+        }
+
+        const gpsPromise = locationFromGps();
+        if (permission !== "granted") {
+          const ipLocation = await ipPromise;
+          if (ipLocation) await runSearch(ipLocation, { notifyOnEmpty: false });
+        }
+
+        const gps = await gpsPromise;
+        if (gps?.latitude != null && gps?.longitude != null) {
+          coordsRef.current = { latitude: gps.latitude, longitude: gps.longitude };
+        }
+        const location = gps?.location || (await ipPromise);
+        if (location) await runSearch(location, { notifyOnEmpty: true });
       } catch {
         /* silent, manual entry fallback */
       } finally {

@@ -231,20 +231,31 @@ export async function sendCalculatorEstimatePdfToCustomer(params) {
 }
 
 /** Notify contact@IQMotorBase.com when a user has no listings in their area (near-me page). */
-export async function sendNoListingsNearMeNotification(city, state, zip) {
+export async function sendNoListingsNearMeNotification(city, state, zip, extra = {}) {
   const to = "contact@IQMotorBase.com";
   const subject = "IQMotorBase.com to No repair shops in this area (near-me page)";
+  const esc = (v) =>
+    v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const lat = Number(extra?.lat);
+  const lng = Number(extra?.lng);
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
   const locationParts = [city, state, zip].filter(Boolean);
-  const locationLine = locationParts.length ? locationParts.join(", ") : "Location not provided";
+  const locationLine = locationParts.length
+    ? locationParts.join(", ")
+    : hasCoords
+      ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+      : "Location not provided";
   const html = `
     <p>A visitor on the <strong>Electric motor repair shops near me</strong> page had no listings in their area.</p>
     <p><strong>Location details:</strong></p>
     <ul>
-      ${city ? `<li>City: ${city}</li>` : ""}
-      ${state ? `<li>State: ${state}</li>` : ""}
-      ${zip ? `<li>ZIP: ${zip}</li>` : ""}
+      ${city ? `<li>City: ${esc(city)}</li>` : ""}
+      ${state ? `<li>State: ${esc(state)}</li>` : ""}
+      ${zip ? `<li>ZIP: ${esc(zip)}</li>` : ""}
+      ${hasCoords ? `<li>Coordinates: ${esc(lat.toFixed(5))}, ${esc(lng.toFixed(5))}</li>` : ""}
+      ${extra?.source ? `<li>Source: ${esc(extra.source)}</li>` : ""}
     </ul>
-    <p><strong>Summary:</strong> ${locationLine}</p>
+    <p><strong>Summary:</strong> ${esc(locationLine)}</p>
     <p>Please look for motor repair shops in this area and encourage them to list on the directory.</p>
     <p>,  IQMotorBase.com (automated)</p>
   `;
