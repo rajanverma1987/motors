@@ -17,6 +17,9 @@ import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
 import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
+import UserSettings from "@/models/UserSettings";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { ianaTimeZoneForShop } from "@/lib/windows-time-zones";
 
 export async function GET(request) {
   try {
@@ -148,6 +151,10 @@ export async function GET(request) {
         }
       }
 
+      const settingsDoc = await UserSettings.findOne({ ownerEmail: email })
+        .select("settings.shopTimeZone")
+        .lean();
+      const timeZone = ianaTimeZoneForShop(mergeUserSettings(settingsDoc?.settings).shopTimeZone);
       const hiddenIds = await settledInactiveEmployeeIds(email);
       const rows = employees
         .filter((employee) => {
@@ -160,8 +167,8 @@ export async function GET(request) {
         })
         .map((employee) => {
           const id = String(employee._id);
-          const sessions = summarizePunchSessions(byEmployee.get(id) || []).filter((session) =>
-            daySet.has(session.date)
+          const sessions = summarizePunchSessions(byEmployee.get(id) || [], timeZone || undefined).filter(
+            (session) => daySet.has(session.date)
           );
           const byDay = {};
           const ensureDay = (date) => {
@@ -171,7 +178,7 @@ export async function GET(request) {
             return byDay[date];
           };
           for (const session of sessions) {
-            const metrics = punchSessionMetrics(session, now);
+            const metrics = punchSessionMetrics(session, now, timeZone || undefined);
             if (!metrics) continue;
             ensureDay(session.date).sessions.push(metrics);
           }

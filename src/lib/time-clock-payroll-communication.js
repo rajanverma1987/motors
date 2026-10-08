@@ -10,6 +10,7 @@ import { ianaTimeZoneForShop, normalizeShopTimeZone, windowsTimeZoneLabel } from
 import { shopWeekContaining } from "@/lib/shop-week";
 import {
   dateIsoInTimeZone,
+  formatClockInTimeZone,
   getOpenPunchState,
   punchSessionMetrics,
   serializePunch,
@@ -60,15 +61,7 @@ export function payrollCommunicationFromSettings(settings = {}) {
 }
 
 function formatClock(iso, timeZone) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(d);
+  return formatClockInTimeZone(iso, timeZone);
 }
 
 function formatDateTime(iso, timeZone) {
@@ -98,11 +91,17 @@ function formatBreaks(breaks, timeZone) {
     .join("; ");
 }
 
-function addSheet(workbook, name, headers, rows) {
+function addSheet(workbook, name, headers, rows, note) {
   const sheet = workbook.addWorksheet(String(name).replace(/[\\/*?:\[\]]/g, " ").slice(0, 31) || "Sheet");
   const cols = headers.map((h) => String(h ?? ""));
+  const headerRowNumber = note ? 2 : 1;
+  if (note) {
+    sheet.addRow([note]);
+    sheet.getRow(1).font = { bold: true };
+    if (cols.length > 1) sheet.mergeCells(1, 1, 1, cols.length);
+  }
   sheet.addRow(cols);
-  sheet.getRow(1).font = { bold: true };
+  sheet.getRow(headerRowNumber).font = { bold: true };
   for (const row of rows) {
     sheet.addRow(row.map((cell) => (cell == null ? "" : cell)));
   }
@@ -115,11 +114,11 @@ function addSheet(workbook, name, headers, rows) {
   });
   if (cols.length && rows.length) {
     sheet.autoFilter = {
-      from: { row: 1, column: 1 },
-      to: { row: rows.length + 1, column: cols.length },
+      from: { row: headerRowNumber, column: 1 },
+      to: { row: rows.length + headerRowNumber, column: cols.length },
     };
   }
-  sheet.views = [{ state: "frozen", ySplit: 1 }];
+  sheet.views = [{ state: "frozen", ySplit: headerRowNumber }];
 }
 
 async function shopHasAnyoneClockedIn(ownerEmail) {
@@ -267,6 +266,8 @@ async function buildPayrollWorkbook({ ownerEmail, from, to, timeZone }) {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "IQMotorBase";
   workbook.created = new Date();
+  const timeZoneLabel = windowsTimeZoneLabel(timeZone) || timeZone;
+  const timeZoneNote = timeZoneLabel ? `Timezone: ${timeZoneLabel}` : "";
   addSheet(
     workbook,
     "Hours",
@@ -282,19 +283,22 @@ async function buildPayrollWorkbook({ ownerEmail, from, to, timeZone }) {
       "Job",
       "Hours",
     ],
-    hoursRows
+    hoursRows,
+    timeZoneNote
   );
   addSheet(
     workbook,
     "Punches",
     ["Employee", "Number", "Date", "Type", "Time", "Source", "Note"],
-    punchRows
+    punchRows,
+    timeZoneNote
   );
   addSheet(
     workbook,
     "Manual hours",
     ["Employee", "Number", "Date", "Hours", "Job", "Note"],
-    manualRows
+    manualRows,
+    timeZoneNote
   );
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
@@ -367,6 +371,7 @@ export async function maybeSendPayrollCommunicationAfterPunch({ ownerEmail, punc
         timeZone: windowsTimeZoneLabel(shopTimeZone),
         filename,
         buffer,
+        userSettings: merged,
       });
       if (!sent?.ok) {
         throw new Error(sent?.error || "Email send failed");
@@ -436,6 +441,7 @@ export async function sendPayrollSheetNow({ ownerEmail }) {
     filename,
     buffer,
     manual: true,
+    userSettings: merged,
   });
   if (!sent?.ok) throw new Error(sent?.error || "Email send failed");
   return { email: payroll.email, period: period.label, timeZone: windowsTimeZoneLabel(shopTimeZone) };

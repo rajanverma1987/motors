@@ -1,7 +1,12 @@
 import { getTransporter } from "@/lib/email-transport";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { getBrandLogoAbsoluteUrl } from "@/lib/brand-logo";
-import { resolveCustomerMailDelivery } from "@/lib/workspace-smtp";
+import {
+  createWorkspaceSmtpTransport,
+  formatWorkspaceSmtpFrom,
+  resolveCustomerMailDelivery,
+} from "@/lib/workspace-smtp";
+import { normalizeWorkspaceSmtpFields, workspaceSmtpIsComplete } from "@/lib/workspace-smtp-fields";
 import {
   buildQuoteToCustomerEmailContent,
   buildInvoiceToCustomerEmailContent,
@@ -1144,10 +1149,26 @@ export async function sendPayrollHoursWorkbookEmail({
   filename = "payroll-hours.xlsx",
   buffer,
   manual = false,
+  userSettings,
 }) {
   const shop = String(shopName || "").trim() || "Shop";
   const period = String(periodLabel || "").trim();
   const zone = String(timeZone || "").trim();
+  const smtp = normalizeWorkspaceSmtpFields(userSettings);
+  if (!smtp.smtpEnabled || !workspaceSmtpIsComplete(smtp)) {
+    return {
+      ok: false,
+      error:
+        "Shop SMTP is required for the payroll sheet. Configure and enable your shop SMTP in Settings: Email Settings.",
+    };
+  }
+  const transport = createWorkspaceSmtpTransport(smtp);
+  if (!transport) {
+    return {
+      ok: false,
+      error: "Could not create shop SMTP. Check host, username, password, and from email in Settings: Email Settings.",
+    };
+  }
   const subject = period
     ? `${shop} payroll hours (${period})`
     : `${shop} payroll hours`;
@@ -1157,13 +1178,29 @@ export async function sendPayrollHoursWorkbookEmail({
     <p>${manual ? "This sheet was generated from the Employees page." : "This was sent after the last employee punched out for the period."}</p>
   `;
   const content = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
-  return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {
-    attachments: [
-      {
-        filename: String(filename || "payroll-hours.xlsx"),
-        content,
-        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      },
-    ],
-  });
+  try {
+    await transport.sendMail({
+      from: formatWorkspaceSmtpFrom(smtp.smtpFromName || shop, smtp.smtpFromEmail),
+      to,
+      subject,
+      html: sanitizeEmailBodyHtml(html),
+      attachments: [
+        {
+          filename: String(filename || "payroll-hours.xlsx"),
+          content,
+          contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        },
+      ],
+    });
+    return { ok: true };
+  } catch (err) {
+    console.error("Payroll sheet shop SMTP send failed:", err);
+    return { ok: false, error: err?.message || "Failed to send email via shop SMTP." };
+  } finally {
+    try {
+      transport.close();
+    } catch {
+      /* ignore */
+    }
+  }
 }

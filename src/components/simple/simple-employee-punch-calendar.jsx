@@ -5,6 +5,8 @@ import { FiCheck } from "react-icons/fi";
 import { useAlert } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { clampWeekday } from "@/lib/shop-week";
+import { dateIsoInTimeZone, formatClockInTimeZone } from "@/lib/time-clock-clock";
+import { ianaTimeZoneForShop } from "@/lib/windows-time-zones";
 
 const PERIODS = [
   { id: "this-month", label: "Current month" },
@@ -53,14 +55,12 @@ function dayCount(from, to) {
   return Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
 }
 
-function formatClock(iso) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+function formatClock(iso, timeZone) {
+  return formatClockInTimeZone(iso, timeZone);
 }
 
-function localDayOf(iso) {
+function localDayOf(iso, timeZone) {
+  if (timeZone) return dateIsoInTimeZone(iso, timeZone);
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return localIso(d);
@@ -130,10 +130,10 @@ function allocatePaid(buckets, lifetimePaidHours, workedHoursBefore) {
   return map;
 }
 
-function sessionLine(session, day) {
-  const inTime = formatClock(session.inAt);
-  const outTime = formatClock(session.outAt);
-  const nextDay = Boolean(session.outAt) && localDayOf(session.outAt) !== day;
+function sessionLine(session, day, timeZone) {
+  const inTime = formatClock(session.inAt, timeZone);
+  const outTime = formatClock(session.outAt, timeZone);
+  const nextDay = Boolean(session.outAt) && localDayOf(session.outAt, timeZone) !== day;
   if (session.outAt) return `${inTime} to ${outTime}${nextDay ? ", next day" : ""}`;
   if (session.open) return `${inTime}, still in`;
   return inTime || "-";
@@ -191,6 +191,7 @@ function OutlookDayCell({
   allocation,
   payEnabled,
   today,
+  timeZone,
 }) {
   const clocked = dayClockedHours(sessions);
   const total =
@@ -255,13 +256,13 @@ function OutlookDayCell({
 
       {sessions.map((session, index) => (
         <p key={`${session.inAt}-${index}`} className="text-[10px] tabular-nums text-title">
-          {sessionLine(session, cell.iso)}
+          {sessionLine(session, cell.iso, timeZone)}
         </p>
       ))}
       {sessions.flatMap((session, sessionIndex) =>
         (session.breaks || []).map((item, index) => {
-          const start = formatClock(item.start);
-          const end = formatClock(item.end);
+          const start = formatClock(item.start, timeZone);
+          const end = formatClock(item.end, timeZone);
           const label = end ? `${start} to ${end}` : `${start}, open`;
           return (
             <p
@@ -295,7 +296,8 @@ export default function SimpleEmployeePunchCalendar({
   const alert = useAlert();
   const { settings } = useUserSettings();
   const weekStartDay = clampWeekday(settings?.weekStartDay, 0);
-  const today = localIso(new Date());
+  const timeZone = ianaTimeZoneForShop(settings?.shopTimeZone);
+  const today = timeZone ? dateIsoInTimeZone(new Date(), timeZone) : localIso(new Date());
   const thisMonth = monthRange(today);
 
   const [period, setPeriod] = useState("this-month");
@@ -472,6 +474,7 @@ export default function SimpleEmployeePunchCalendar({
                     allocation={dayAllocations.get(cell.iso)}
                     payEnabled={payEnabled}
                     today={today}
+                    timeZone={timeZone}
                   />
                 );
               })
