@@ -6,10 +6,11 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { sendPayrollHoursWorkbookEmail } from "@/lib/email";
 import { mergeUserSettings } from "@/lib/user-settings";
+import { ianaTimeZoneForShop, normalizeShopTimeZone, windowsTimeZoneLabel } from "@/lib/windows-time-zones";
 import { shopWeekContaining } from "@/lib/shop-week";
 import {
+  dateIsoInTimeZone,
   getOpenPunchState,
-  localDateIso,
   punchSessionMetrics,
   serializePunch,
   summarizePunchSessions,
@@ -58,18 +59,38 @@ export function payrollCommunicationFromSettings(settings = {}) {
   });
 }
 
-function formatClock(iso) {
+function formatClock(iso, timeZone) {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
 }
 
-function formatBreaks(breaks) {
+function formatDateTime(iso, timeZone) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(d);
+}
+
+function formatBreaks(breaks, timeZone) {
   return (Array.isArray(breaks) ? breaks : [])
     .map((item) => {
-      const start = formatClock(item.start);
-      const end = formatClock(item.end);
+      const start = formatClock(item.start, timeZone);
+      const end = formatClock(item.end, timeZone);
       if (!start) return "";
       return end ? `${start} to ${end}` : `${start}, open`;
     })
@@ -116,8 +137,8 @@ async function shopHasAnyoneClockedIn(ownerEmail) {
   return false;
 }
 
-function periodForFrequency(frequency, now, weekStartDay, weekEndDay) {
-  const today = localDateIso(now);
+function periodForFrequency(frequency, now, weekStartDay, weekEndDay, timeZone) {
+  const today = dateIsoInTimeZone(now, timeZone);
   if (frequency === "weekly") {
     const week = shopWeekContaining(today, weekStartDay, weekEndDay);
     return {
@@ -137,7 +158,7 @@ function periodForFrequency(frequency, now, weekStartDay, weekEndDay) {
   };
 }
 
-async function buildPayrollWorkbook({ ownerEmail, from, to }) {
+async function buildPayrollWorkbook({ ownerEmail, from, to, timeZone }) {
   const fromDay = new Date(`${from}T00:00:00`);
   fromDay.setDate(fromDay.getDate() - 1);
   const toDay = new Date(`${to}T23:59:59.999`);
@@ -180,18 +201,18 @@ async function buildPayrollWorkbook({ ownerEmail, from, to }) {
   const punchRows = [];
 
   for (const group of byEmployee.values()) {
-    const sessions = summarizePunchSessions(group.punches);
+    const sessions = summarizePunchSessions(group.punches, timeZone);
     for (const session of sessions) {
       if (session.date < from || session.date > to) continue;
-      const metrics = punchSessionMetrics(session, now);
+      const metrics = punchSessionMetrics(session, now, timeZone);
       const clocked = metrics?.hours == null ? "" : Number(metrics.hours);
       hoursRows.push([
         group.employeeName,
         group.employeeNumber,
         session.date,
-        formatClock(session.inAt),
-        session.outAt ? formatClock(session.outAt) : session.open ? "Still in" : "",
-        formatBreaks(metrics?.breaks || session.breaks),
+        formatClock(session.inAt, timeZone),
+        session.outAt ? formatClock(session.outAt, timeZone) : session.open ? "Still in" : "",
+        formatBreaks(metrics?.breaks || session.breaks, timeZone),
         clocked,
         "",
         "",
@@ -200,14 +221,14 @@ async function buildPayrollWorkbook({ ownerEmail, from, to }) {
     }
     for (const punch of group.punches) {
       const row = serializePunch(punch);
-      const day = localDateIso(row.punchedAt);
+      const day = dateIsoInTimeZone(row.punchedAt, timeZone);
       if (day < from || day > to) continue;
       punchRows.push([
         group.employeeName,
         group.employeeNumber,
         day,
         row.type,
-        row.punchedAt ? new Date(row.punchedAt).toLocaleString() : "",
+        row.punchedAt ? formatDateTime(row.punchedAt, timeZone) : "",
         row.source,
         row.note,
       ]);
@@ -298,11 +319,15 @@ export async function maybeSendPayrollCommunicationAfterPunch({ ownerEmail, punc
 
     const merged = mergeUserSettings(settingsDoc?.settings);
     const now = new Date();
+    const shopTimeZone = normalizeShopTimeZone(merged.shopTimeZone);
+    const timeZone = ianaTimeZoneForShop(shopTimeZone);
+    if (!timeZone) return { sent: false, reason: "no-timezone" };
     const period = periodForFrequency(
       payroll.frequency,
       now,
       merged.weekStartDay,
-      merged.weekEndDay
+      merged.weekEndDay,
+      timeZone
     );
     if (!period.ready) return { sent: false, reason: "period-not-ended" };
     if (payroll.lastSentKey === period.key) return { sent: false, reason: "already-sent" };
@@ -326,7 +351,12 @@ export async function maybeSendPayrollCommunicationAfterPunch({ ownerEmail, punc
     const previousAt = String(claimed.settings?.payrollCommunicationLastSentAt || "");
 
     try {
-      const buffer = await buildPayrollWorkbook({ ownerEmail: email, from: period.from, to: period.to });
+      const buffer = await buildPayrollWorkbook({
+        ownerEmail: email,
+        from: period.from,
+        to: period.to,
+        timeZone,
+      });
       const userDoc = await User.findOne({ email }).select("shopName").lean();
       const shopName = String(userDoc?.shopName || "").trim() || "Shop";
       const filename = `payroll-hours-${period.from}${period.from === period.to ? "" : `_to_${period.to}`}.xlsx`;
@@ -334,6 +364,7 @@ export async function maybeSendPayrollCommunicationAfterPunch({ ownerEmail, punc
         to: payroll.email,
         shopName,
         periodLabel: period.label,
+        timeZone: windowsTimeZoneLabel(shopTimeZone),
         filename,
         buffer,
       });
@@ -358,4 +389,54 @@ export async function maybeSendPayrollCommunicationAfterPunch({ ownerEmail, punc
     console.error("Payroll communication error:", err);
     return { sent: false, reason: "error" };
   }
+}
+
+/**
+ * Email the payroll workbook now for the current daily or weekly period.
+ * Does not wait for the last punch-out.
+ */
+export async function sendPayrollSheetNow({ ownerEmail }) {
+  const email = String(ownerEmail || "").trim().toLowerCase();
+  if (!email) throw new Error("Shop account is required.");
+
+  const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+  const merged = mergeUserSettings(settingsDoc?.settings);
+  const payroll = payrollCommunicationFromSettings(merged);
+  const shopTimeZone = normalizeShopTimeZone(merged.shopTimeZone);
+  const timeZone = ianaTimeZoneForShop(shopTimeZone);
+  if (!timeZone) {
+    throw new Error("Set your timezone in Time Clock settings before generating a payroll sheet.");
+  }
+  if (!EMAIL_RE.test(payroll.email)) {
+    throw new Error("Set the payroll notification email in Time Clock settings.");
+  }
+
+  const now = new Date();
+  const period = periodForFrequency(
+    payroll.frequency,
+    now,
+    merged.weekStartDay,
+    merged.weekEndDay,
+    timeZone
+  );
+  const buffer = await buildPayrollWorkbook({
+    ownerEmail: email,
+    from: period.from,
+    to: period.to,
+    timeZone,
+  });
+  const userDoc = await User.findOne({ email }).select("shopName").lean();
+  const shopName = String(userDoc?.shopName || "").trim() || "Shop";
+  const filename = `payroll-hours-${period.from}${period.from === period.to ? "" : `_to_${period.to}`}.xlsx`;
+  const sent = await sendPayrollHoursWorkbookEmail({
+    to: payroll.email,
+    shopName,
+    periodLabel: period.label,
+    timeZone: windowsTimeZoneLabel(shopTimeZone),
+    filename,
+    buffer,
+    manual: true,
+  });
+  if (!sent?.ok) throw new Error(sent?.error || "Email send failed");
+  return { email: payroll.email, period: period.label, timeZone: windowsTimeZoneLabel(shopTimeZone) };
 }

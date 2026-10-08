@@ -5,6 +5,7 @@ import {
   TIME_CLOCK_RADIUS_DEFAULT_M,
 } from "@/lib/time-clock-geo";
 import { payrollCommunicationFromSettings } from "@/lib/time-clock-payroll-communication";
+import { normalizeShopTimeZone } from "@/lib/user-settings";
 
 export async function uniqueTimeClockToken(excludeOwnerEmail) {
   for (let i = 0; i < 8; i++) {
@@ -63,6 +64,7 @@ export async function ensureTimeClockSettings(ownerEmail) {
     radiusM: normalizeTimeClockRadiusM(s.timeClockRadiusM),
     shopName: "",
     payrollCommunication: payrollCommunicationFromSettings(s),
+    shopTimeZone: normalizeShopTimeZone(s.shopTimeZone),
   };
 }
 
@@ -118,18 +120,22 @@ export async function updateTimeClockPayrollCommunication(ownerEmail, raw) {
     payrollCommunicationEmail: raw?.email,
     payrollCommunicationFrequency: raw?.frequency,
   });
-  if (next.enabled) {
-    if (!EMAIL_RE.test(next.email)) {
-      throw new Error("Enter a valid email address for payroll communication.");
-    }
+  const shopTimeZone = normalizeShopTimeZone(raw?.timeZone);
+  if (!shopTimeZone) {
+    throw new Error("Select a timezone. Payroll times are sent in this timezone.");
+  }
+  const storedEmail = EMAIL_RE.test(next.email) ? next.email : "";
+  if (next.enabled && !storedEmail) {
+    throw new Error("Enter a valid email address for payroll communication.");
   }
   await UserSettings.updateOne(
     { ownerEmail: email },
     {
       $set: {
         "settings.payrollCommunicationEnabled": next.enabled,
-        "settings.payrollCommunicationEmail": next.enabled ? next.email : "",
+        "settings.payrollCommunicationEmail": storedEmail,
         "settings.payrollCommunicationFrequency": next.frequency,
+        "settings.shopTimeZone": shopTimeZone,
       },
     }
   );

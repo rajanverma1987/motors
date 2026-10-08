@@ -1140,18 +1140,21 @@ export async function sendPayrollHoursWorkbookEmail({
   to,
   shopName = "",
   periodLabel = "",
+  timeZone = "",
   filename = "payroll-hours.xlsx",
   buffer,
+  manual = false,
 }) {
   const shop = String(shopName || "").trim() || "Shop";
   const period = String(periodLabel || "").trim();
+  const zone = String(timeZone || "").trim();
   const subject = period
     ? `${shop} payroll hours (${period})`
     : `${shop} payroll hours`;
   const html = `
     <p>Payroll hours for <strong>${escHtmlEmail(shop)}</strong>${period ? ` for <strong>${escHtmlEmail(period)}</strong>` : ""}.</p>
-    <p>The attached Excel file includes punch in, punch out, clocked hours, breaks, and manual hours.</p>
-    <p>This was sent after the last employee punched out for the period.</p>
+    <p>The attached Excel file includes punch in, punch out, clocked hours, breaks, and manual hours${zone ? ` in <strong>${escHtmlEmail(zone)}</strong>` : ""}.</p>
+    <p>${manual ? "This sheet was generated from the Employees page." : "This was sent after the last employee punched out for the period."}</p>
   `;
   const content = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer || []);
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), {

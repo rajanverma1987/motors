@@ -7,12 +7,14 @@ import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Checkbox from "@/components/ui/checkbox";
 import Input from "@/components/ui/input";
+import SimpleSelect from "@/components/simple/simple-select";
 import { useAlert } from "@/components/confirm-provider";
 import {
   TIME_CLOCK_RADIUS_DEFAULT_M,
   TIME_CLOCK_RADIUS_MAX_M,
   TIME_CLOCK_RADIUS_MIN_M,
 } from "@/lib/time-clock-geo";
+import { windowsTimeZoneOptions } from "@/lib/windows-time-zones";
 
 function printQrDataUrl(dataUrl, title) {
   const safeTitle = String(title || "Time Clock")
@@ -107,6 +109,8 @@ export default function SimpleTimeClockSettingsSection() {
   const [payrollEnabled, setPayrollEnabled] = useState(false);
   const [payrollEmail, setPayrollEmail] = useState("");
   const [payrollFrequency, setPayrollFrequency] = useState("daily");
+  const [shopTimeZone, setShopTimeZone] = useState("");
+  const timeZoneOptions = windowsTimeZoneOptions();
   const [savingPayroll, setSavingPayroll] = useState(false);
   const [locating, setLocating] = useState(false);
 
@@ -123,6 +127,7 @@ export default function SimpleTimeClockSettingsSection() {
     setPayrollFrequency(
       data.payrollCommunication?.frequency === "weekly" ? "weekly" : "daily"
     );
+    setShopTimeZone(String(data.shopTimeZone || ""));
     return data;
   }, []);
 
@@ -218,6 +223,7 @@ export default function SimpleTimeClockSettingsSection() {
             enabled: payrollEnabled,
             email: payrollEmail,
             frequency: payrollFrequency,
+            timeZone: shopTimeZone,
           },
         }),
       });
@@ -354,9 +360,33 @@ export default function SimpleTimeClockSettingsSection() {
         <div className="space-y-3 border border-border bg-card p-4 lg:col-span-2">
           <h2 className="text-sm font-bold uppercase tracking-wide text-title">Payroll communication</h2>
           <p className="text-sm text-secondary">
-            After the last employee punches out at the end of the day or shop week, email an Excel
-            file of punch in, punch out, clocked hours, and manual hours.
+            Punch times and hours on the payroll sheet use this timezone. After the last employee
+            punches out at the end of the day or shop week, email an Excel file of punch in, punch
+            out, clocked hours, and manual hours.
           </p>
+          <div>
+            <p className="mb-1 text-xs font-bold text-title">Timezone</p>
+            <SimpleSelect
+              name="shopTimeZone"
+              searchable
+              placeholder="Select time zone"
+              options={timeZoneOptions}
+              value={shopTimeZone}
+              onChange={(e) => setShopTimeZone(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-secondary">
+              Clock in, clock out, and hours on the Excel sheet are shown in this timezone.
+            </p>
+          </div>
+          <Input
+            label="Notification email"
+            type="email"
+            name="payrollCommunicationEmail"
+            value={payrollEmail}
+            onChange={(e) => setPayrollEmail(e.target.value)}
+            placeholder="payroll@example.com"
+            help="Generate Payroll Sheet and automatic sends use this address."
+          />
           <Checkbox
             name="payrollCommunicationEnabled"
             label="Enable payroll communication"
@@ -365,16 +395,6 @@ export default function SimpleTimeClockSettingsSection() {
           />
           {payrollEnabled ? (
             <>
-              <Input
-                label="Notification email"
-                type="email"
-                name="payrollCommunicationEmail"
-                required
-                value={payrollEmail}
-                onChange={(e) => setPayrollEmail(e.target.value)}
-                placeholder="payroll@example.com"
-                help="Excel file is sent to this address."
-              />
               <div>
                 <p className="mb-1 text-xs font-bold text-title">Send</p>
                 <div className="flex flex-wrap gap-1" role="group" aria-label="Payroll send period">

@@ -19,6 +19,8 @@ export const USER_SETTINGS_DEFAULTS = {
    */
   weekStartDay: 0,
   weekEndDay: 6,
+  /** Windows time zone id for payroll sheet times and hours (for example Central Standard Time). */
+  shopTimeZone: "",
   /** ISO 4217 — how amounts are shown across the dashboard */
   currency: "USD",
   /** UI zoom for dashboard only (75–150, step 5). 100 = default browser-like size. */
@@ -129,6 +131,9 @@ import { normalizeQuickBooksJobClosedStatuses } from "@/lib/quickbooks/job-close
 import { normalizeProductDropdowns, sanitizeProductDropdownsPatch } from "@/lib/product-dropdown-catalog";
 import { normalizeShopFloorBoardDesign } from "@/lib/simple-job-board";
 import { normalizeShopWeek } from "@/lib/shop-week";
+import { normalizeShopTimeZone } from "@/lib/windows-time-zones";
+
+export { normalizeShopTimeZone };
 
 /** Keys the API will accept on PATCH (add new keys here when you add controls). */
 export const USER_SETTINGS_ALLOWED_KEYS = new Set([
@@ -139,6 +144,7 @@ export const USER_SETTINGS_ALLOWED_KEYS = new Set([
   "tableColumnVisibility",
   "weekStartDay",
   "weekEndDay",
+  "shopTimeZone",
   "currency",
   "zoomLevel",
   "fontSizeLevel",
@@ -415,6 +421,7 @@ export function mergeUserSettings(stored) {
     ? merged.financialAllowedRoles.map((s) => String(s || "").trim()).filter(Boolean)
     : ["Manager", "Office", "Supervisor"];
   merged.simulateFinancialRestriction = !!merged.simulateFinancialRestriction;
+  merged.shopTimeZone = normalizeShopTimeZone(merged.shopTimeZone);
   const smtp = normalizeWorkspaceSmtpFields(merged);
   Object.assign(merged, smtp);
   return merged;
@@ -437,6 +444,10 @@ export function sanitizeUserSettingsPatch(body) {
     if (key === "weekStartDay" || key === "weekEndDay") {
       const n = Number(body[key]);
       if (Number.isInteger(n) && n >= 0 && n <= 6) out[key] = n;
+      continue;
+    }
+    if (key === "shopTimeZone") {
+      out.shopTimeZone = normalizeShopTimeZone(body[key]);
       continue;
     }
     if (key === "currency") {

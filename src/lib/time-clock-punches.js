@@ -31,8 +31,27 @@ export function localDateIso(value = new Date()) {
   return `${y}-${m}-${day}`;
 }
 
-export function punchWorkDate(punchedAt) {
-  return localDateIso(punchedAt);
+/** Calendar date YYYY-MM-DD in an IANA timezone. */
+export function dateIsoInTimeZone(value, timeZone) {
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  const tz = String(timeZone || "").trim();
+  if (!tz) return localDateIso(d);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(d);
+  const year = parts.find((part) => part.type === "year")?.value || "";
+  const month = parts.find((part) => part.type === "month")?.value || "";
+  const day = parts.find((part) => part.type === "day")?.value || "";
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
+}
+
+export function punchWorkDate(punchedAt, timeZone) {
+  return timeZone ? dateIsoInTimeZone(punchedAt, timeZone) : localDateIso(punchedAt);
 }
 
 /**
@@ -180,7 +199,7 @@ function roundHours(ms) {
  * @param {Array} punches
  * @returns {Array<{ date: string, inAt: string, outAt: string|null, breaks: Array<{ start: string, end: string|null }> }>}
  */
-export function summarizePunchSessions(punches) {
+export function summarizePunchSessions(punches, timeZone) {
   const list = (Array.isArray(punches) ? punches : [])
     .filter((p) => !p?.voidedAt)
     .slice()
@@ -212,7 +231,7 @@ export function summarizePunchSessions(punches) {
         sessions.push(open);
       }
       open = {
-        date: punchWorkDate(atIso),
+        date: punchWorkDate(atIso, timeZone),
         inAt: atIso,
         outAt: null,
         breaks: [],
@@ -250,10 +269,10 @@ export function summarizePunchSessions(punches) {
  * Hours and break time for one session.
  * An open shift counts only through `now` when its clock-in day is today.
  */
-export function punchSessionMetrics(session, now = new Date()) {
+export function punchSessionMetrics(session, now = new Date(), timeZone) {
   const start = new Date(session?.inAt || "").getTime();
   if (!Number.isFinite(start)) return null;
-  const today = localDateIso(now);
+  const today = timeZone ? dateIsoInTimeZone(now, timeZone) : localDateIso(now);
   const open = !session.outAt;
   let end = session.outAt ? new Date(session.outAt).getTime() : null;
   if (!Number.isFinite(end) && session.date === today) end = now.getTime();

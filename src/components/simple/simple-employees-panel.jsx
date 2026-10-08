@@ -10,6 +10,7 @@ import SimpleSelect from "@/components/simple/simple-select";
 import SimpleEmployeePaymentHistoryModal from "@/components/simple/simple-employee-payment-history-modal";
 import SimpleEmployeeAttachments from "@/components/simple/simple-employee-attachments";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
+import { FiMail } from "react-icons/fi";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -411,6 +412,7 @@ const SimpleEmployeesPanel = forwardRef(function SimpleEmployeesPanel({ onChange
   const [createOpen, setCreateOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [sendingPayroll, setSendingPayroll] = useState(false);
   const [form, setForm] = useState(INITIAL_EMPLOYEE_FORM);
   const [detailEmployee, setDetailEmployee] = useState(null);
 
@@ -757,6 +759,30 @@ const SimpleEmployeesPanel = forwardRef(function SimpleEmployeesPanel({ onChange
     []
   );
 
+  const generatePayrollSheet = async () => {
+    setSendingPayroll(true);
+    try {
+      const res = await fetch("/api/dashboard/time-clock/payroll-sheet", {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send the payroll sheet.");
+      await alert({
+        title: "Payroll sheet sent",
+        message: data.message || "The payroll sheet was emailed.",
+      });
+    } catch (err) {
+      await alert({
+        title: "Could not send payroll sheet",
+        message: err.message || "Failed to send the payroll sheet.",
+        variant: "danger",
+      });
+    } finally {
+      setSendingPayroll(false);
+    }
+  };
+
   const formFieldProps = {
     form,
     setForm,
@@ -772,9 +798,21 @@ const SimpleEmployeesPanel = forwardRef(function SimpleEmployeesPanel({ onChange
         <p className="text-sm text-secondary">
           Click an employee name to edit their record and view payment history.
         </p>
-        <Button variant="primary" size="sm" onClick={openCreate} className="shrink-0">
-          Add Employee
-        </Button>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={sendingPayroll}
+            onClick={() => void generatePayrollSheet()}
+          >
+            <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+            {sendingPayroll ? "Sending…" : "Generate Payroll Sheet"}
+          </Button>
+          <Button variant="primary" size="sm" onClick={openCreate} className="shrink-0">
+            Add Employee
+          </Button>
+        </div>
       </div>
 
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>

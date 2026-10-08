@@ -96,6 +96,7 @@ export async function GET(request) {
         configured: settings.lat != null && settings.lng != null,
       },
       payrollCommunication: settings.payrollCommunication,
+      shopTimeZone: settings.shopTimeZone || "",
       floor,
       todayPunches: todayPunches.map(serializePunch),
       employeeCount: employees.length,
@@ -118,6 +119,7 @@ export async function PATCH(request) {
       return NextResponse.json({
         ok: true,
         payrollCommunication: settings.payrollCommunication,
+        shopTimeZone: settings.shopTimeZone || "",
       });
     }
     if (body.lat != null || body.lng != null || body.radiusM != null) {
