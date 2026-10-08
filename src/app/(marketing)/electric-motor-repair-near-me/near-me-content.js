@@ -4,86 +4,18 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { FiMapPin } from "react-icons/fi";
 import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
-import Select from "@/components/ui/select";
 import PublicListingCard from "@/components/listings/public-listing-card";
 import ListingsWithRepairFormLayout from "@/components/marketing/listings-with-repair-form-layout";
 import ListingsRepairFormSidebar from "@/components/marketing/listings-repair-form-sidebar";
 import { LISTINGS_GRID, LISTINGS_PAGE_CONTAINER } from "@/lib/listings-directory-layout";
-import { US_STATES } from "@/lib/directory-listing-constants";
 import { normalizeLocationInput } from "@/lib/us-state-normalize";
 import { useToast } from "@/components/toast-provider";
 
-const STATE_OPTIONS = [{ value: "", label: "Select state…" }, ...US_STATES.map((st) => ({ value: st, label: st }))];
 const STORAGE_KEY = "iqmotorbase_near_me_location";
-
-function readStoredLocation() {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const normalized = normalizeLocationInput(parsed);
-    if (!normalized.city && !normalized.state && !normalized.zip) return null;
-    return normalized;
-  } catch {
-    return null;
-  }
-}
-
-function readUrlLocation() {
-  if (typeof window === "undefined") return null;
-  const params = new URLSearchParams(window.location.search);
-  const normalized = normalizeLocationInput({
-    city: params.get("city"),
-    state: params.get("state"),
-    zip: params.get("zip"),
-  });
-  if (!normalized.city && !normalized.state && !normalized.zip) return null;
-  return normalized;
-}
+const ALL_LISTINGS_HREF = "/electric-motor-repair-shops-listings";
 
 function hasLocation(location) {
   return Boolean(location?.city || location?.state || location?.zip);
-}
-
-function requestGpsPosition() {
-  if (typeof navigator === "undefined" || !navigator.geolocation) {
-    return Promise.resolve(null);
-  }
-  return new Promise((resolve) => {
-    navigator.geolocation.getCurrentPosition(
-      (position) => resolve(position),
-      () => resolve(null),
-      { enableHighAccuracy: false, timeout: 12000, maximumAge: 120000 }
-    );
-  });
-}
-
-async function locationFromGps() {
-  const position = await requestGpsPosition();
-  if (!position?.coords) return null;
-  const { latitude, longitude } = position.coords;
-  try {
-    const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
-    const data = await res.json();
-    const location = normalizeLocationInput(data);
-    if (!hasLocation(location)) return { latitude, longitude, location: null };
-    return { latitude, longitude, location };
-  } catch {
-    return { latitude, longitude, location: null };
-  }
-}
-
-async function locationFromIp() {
-  try {
-    const res = await fetch("/api/geo");
-    const data = await res.json();
-    const location = normalizeLocationInput(data);
-    return hasLocation(location) ? location : null;
-  } catch {
-    return null;
-  }
 }
 
 function persistLocation(location) {
@@ -93,32 +25,30 @@ function persistLocation(location) {
   } catch {
     /* ignore quota errors */
   }
-  const params = new URLSearchParams();
-  if (location.city) params.set("city", location.city);
-  if (location.state) params.set("state", location.state);
-  if (location.zip) params.set("zip", location.zip);
-  const qs = params.toString();
-  const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
-  window.history.replaceState(null, "", nextUrl);
+}
+
+function requestGpsPosition() {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    return Promise.reject(Object.assign(new Error("unsupported"), { code: 0 }));
+  }
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 15000,
+      maximumAge: 60000,
+    });
+  });
 }
 
 export default function NearMeContent() {
   const toast = useToast();
   const autoNotifiedRef = useRef(null);
   const initStartedRef = useRef(false);
-  const [searchCity, setSearchCity] = useState("");
-  const [searchState, setSearchState] = useState("");
-  const [searchZip, setSearchZip] = useState("");
-  const [hasSearched, setHasSearched] = useState(false);
+  const coordsRef = useRef(null);
+  const [phase, setPhase] = useState("checking");
   const [searching, setSearching] = useState(false);
-  const [locating, setLocating] = useState(false);
-  const [prefilling, setPrefilling] = useState(true);
   const [userLocation, setUserLocation] = useState({ city: "", state: "", zip: "" });
   const [listings, setListings] = useState([]);
-  const [notifyEmail, setNotifyEmail] = useState("");
-  const [notifySent, setNotifySent] = useState(false);
-  const [notifySending, setNotifySending] = useState(false);
-  const coordsRef = useRef(null);
 
   const fetchListingsNear = useCallback(async (location) => {
     setSearching(true);
@@ -141,25 +71,18 @@ export default function NearMeContent() {
     }
   }, []);
 
-  const runSearch = useCallback(
-    async (rawLocation, { notifyOnEmpty = true } = {}) => {
+  const showShops = useCallback(
+    async (rawLocation) => {
       const location = normalizeLocationInput(rawLocation);
-      if (!location.city && !location.state && !location.zip) {
-        toast.error("Enter a city, state, or ZIP code to search.");
-        return 0;
+      if (!hasLocation(location)) {
+        setPhase("failed");
+        return;
       }
-
-      setSearchCity(location.city);
-      setSearchState(location.state);
-      setSearchZip(location.zip);
-      setNotifySent(false);
-      setHasSearched(true);
       setUserLocation(location);
       persistLocation(location);
-
+      setPhase("results");
       const count = await fetchListingsNear(location);
-
-      if (count === 0 && notifyOnEmpty) {
+      if (count === 0) {
         const key = [location.city, location.state, location.zip].filter(Boolean).join("|");
         if (autoNotifiedRef.current !== key) {
           autoNotifiedRef.current = key;
@@ -173,214 +96,119 @@ export default function NearMeContent() {
               zip: location.zip || undefined,
               lat: coords?.latitude,
               lng: coords?.longitude,
-              source: coords ? "gps" : "ip",
+              source: "gps",
             }),
           }).catch((err) => console.error("Auto-notify no listings error:", err));
         }
       }
-
-      return count;
     },
-    [fetchListingsNear, toast]
+    [fetchListingsNear]
   );
 
-  const searchByLocation = useCallback(
-    async (e) => {
-      e?.preventDefault?.();
-      await runSearch({ city: searchCity, state: searchState, zip: searchZip });
-    },
-    [runSearch, searchCity, searchState, searchZip]
-  );
-
-  const useMyLocation = useCallback(async () => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("Location is not supported in this browser.");
-      return;
-    }
-    setLocating(true);
+  const allowLocation = useCallback(async () => {
+    setPhase("locating");
     try {
-      const gps = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 15000,
-          maximumAge: 0,
-        });
-      });
+      const gps = await requestGpsPosition();
       const { latitude, longitude } = gps.coords;
       coordsRef.current = { latitude, longitude };
       const res = await fetch(`/api/geo/reverse?lat=${latitude}&lng=${longitude}`);
       const data = await res.json();
-      let location = normalizeLocationInput(data);
+      const location = normalizeLocationInput(data);
       if (!hasLocation(location)) {
-        location = (await locationFromIp()) || location;
-      }
-      if (!hasLocation(location)) {
-        toast.error("Could not determine your city from GPS. Enter it manually.");
+        setPhase("failed");
         return;
       }
-      const count = await runSearch(location);
-      if (count > 0) {
-        toast.success(`Showing shops near ${[location.city, location.state].filter(Boolean).join(", ")}`);
-      }
+      await showShops(location);
     } catch (err) {
-      const code = err?.code;
-      if (code === 1) {
-        toast.error("Location permission denied. Enter your city manually or allow location access.");
-      } else if (code === 2) {
-        toast.error("Location unavailable. Try entering your city and state.");
-      } else if (code === 3) {
-        toast.error("Location timed out. Try again or enter your city manually.");
-      } else {
-        toast.error("Could not use your location. Enter your city and state.");
+      if (err?.code === 1) {
+        setPhase("denied");
+        return;
       }
-    } finally {
-      setLocating(false);
+      if (err?.code === 0) {
+        toast.error("Location is not supported in this browser.");
+      }
+      setPhase("failed");
     }
-  }, [runSearch, toast]);
+  }, [showShops, toast]);
 
   useEffect(() => {
     if (initStartedRef.current) return;
     initStartedRef.current = true;
 
-    async function initLocation() {
-      const fromUrl = readUrlLocation();
-      if (fromUrl) {
-        setSearchCity(fromUrl.city);
-        setSearchState(fromUrl.state);
-        setSearchZip(fromUrl.zip);
-        setPrefilling(false);
-        await runSearch(fromUrl, { notifyOnEmpty: true });
-        return;
-      }
-
-      const stored = readStoredLocation();
-      if (stored) {
-        setSearchCity(stored.city);
-        setSearchState(stored.state);
-        setSearchZip(stored.zip);
-        setPrefilling(false);
-        await runSearch(stored, { notifyOnEmpty: false });
-        return;
-      }
-
+    async function init() {
+      let permission = "prompt";
       try {
-        let permission = "prompt";
-        try {
-          if (typeof navigator !== "undefined" && navigator.permissions?.query) {
-            const status = await navigator.permissions.query({ name: "geolocation" });
-            permission = status.state;
-          }
-        } catch {
-          permission = "prompt";
+        if (typeof navigator !== "undefined" && navigator.permissions?.query) {
+          const status = await navigator.permissions.query({ name: "geolocation" });
+          permission = status.state;
         }
-
-        const ipPromise = locationFromIp();
-        if (permission === "denied") {
-          const location = await ipPromise;
-          if (location) await runSearch(location, { notifyOnEmpty: true });
-          return;
-        }
-
-        const gpsPromise = locationFromGps();
-        if (permission !== "granted") {
-          const ipLocation = await ipPromise;
-          if (ipLocation) await runSearch(ipLocation, { notifyOnEmpty: false });
-        }
-
-        const gps = await gpsPromise;
-        if (gps?.latitude != null && gps?.longitude != null) {
-          coordsRef.current = { latitude: gps.latitude, longitude: gps.longitude };
-        }
-        const location = gps?.location || (await ipPromise);
-        if (location) await runSearch(location, { notifyOnEmpty: true });
       } catch {
-        /* silent, manual entry fallback */
-      } finally {
-        setPrefilling(false);
+        permission = "prompt";
       }
+
+      if (permission === "granted") {
+        await allowLocation();
+        return;
+      }
+      if (permission === "denied") {
+        setPhase("denied");
+        return;
+      }
+      setPhase("ask");
     }
 
-    initLocation();
-  }, [runSearch]);
+    init();
+  }, [allowLocation]);
 
   const locationLabel =
     [userLocation.city, userLocation.state].filter(Boolean).join(", ") ||
     (userLocation.zip ? `ZIP ${userLocation.zip}` : "your area");
 
-  const formBusy = searching || locating || prefilling;
+  const browseAll = (
+    <Link href={ALL_LISTINGS_HREF}>
+      <Button variant="primary" size="lg">
+        Browse all listings
+      </Button>
+    </Link>
+  );
 
   return (
-    <>
-      <div className="mt-8 rounded-xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <p className="text-lg font-semibold text-title">Find repair shops in your area</p>
-        <p className="mt-1 text-sm text-secondary">
-          We&apos;ll detect your area when possible, or enter city, state, and ZIP. Matching shops pre-fill your repair
-          request.
-        </p>
-        <form
-          className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_7rem_auto_auto]"
-          onSubmit={searchByLocation}
-        >
-          <Input
-            label="City"
-            name="nearMeCity"
-            autoComplete="address-level2"
-            placeholder="e.g. Houston"
-            value={searchCity}
-            onChange={(e) => setSearchCity(e.target.value)}
-          />
-          <Select
-            label="State"
-            name="nearMeState"
-            options={STATE_OPTIONS}
-            value={searchState}
-            onChange={(e) => setSearchState(e.target.value)}
-            searchable
-          />
-          <Input
-            label="ZIP"
-            name="nearMeZip"
-            autoComplete="postal-code"
-            placeholder="77001"
-            value={searchZip}
-            onChange={(e) => setSearchZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
-            inputClassName="font-mono tracking-wide"
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            disabled={formBusy}
-            className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto lg:min-w-[8.5rem] lg:self-end"
-          >
-            {searching ? "Searching…" : "Find shops"}
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            disabled={formBusy}
-            onClick={useMyLocation}
-            className="w-full sm:col-span-2 lg:col-span-1 lg:w-auto lg:self-end"
-          >
-            <FiMapPin className="h-4 w-4 shrink-0" aria-hidden />
-            {locating ? "Locating…" : "Use my location"}
-          </Button>
-        </form>
-        {prefilling && !hasSearched ? (
-          <p className="mt-3 text-sm text-secondary">Detecting your area…</p>
+    <section className="py-8 sm:py-12">
+      <div className={LISTINGS_PAGE_CONTAINER}>
+        {phase === "checking" || phase === "locating" ? (
+          <p className="py-16 text-center text-secondary">Finding repair shops near you…</p>
         ) : null}
-        <p className="mt-4 text-sm text-secondary">
-          Or{" "}
-          <Link href="/electric-motor-repair-shops-listings" className="font-medium text-primary hover:underline">
-            browse all repair shop listings
-          </Link>
-          .
-        </p>
-      </div>
 
-      <section className="py-10 sm:py-14">
-        <div className={LISTINGS_PAGE_CONTAINER}>
+        {phase === "ask" ? (
+          <div className="mx-auto max-w-lg rounded-xl border border-border bg-card px-6 py-12 text-center shadow-sm">
+            <FiMapPin className="mx-auto h-8 w-8 text-primary" aria-hidden />
+            <h1 className="mt-4 text-2xl font-bold text-title">Allow location access</h1>
+            <p className="mt-2 text-sm text-secondary">
+              Allow location access so we can show repair shops near you.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <Button type="button" variant="primary" size="lg" onClick={allowLocation}>
+                Allow location access
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {phase === "denied" || phase === "failed" ? (
+          <div className="mx-auto max-w-lg rounded-xl border border-border bg-card px-6 py-12 text-center shadow-sm">
+            <h1 className="text-2xl font-bold text-title">
+              {phase === "denied" ? "Location access is blocked" : "We could not read your location"}
+            </h1>
+            <p className="mt-2 text-sm text-secondary">
+              {phase === "denied"
+                ? "Turn on location access for this site in your browser, then reload this page. You can also browse every repair shop."
+                : "Browse every repair shop in the directory."}
+            </p>
+            <div className="mt-6 flex justify-center">{browseAll}</div>
+          </div>
+        ) : null}
+
+        {phase === "results" ? (
           <ListingsWithRepairFormLayout
             sidebar={
               <ListingsRepairFormSidebar
@@ -391,116 +219,37 @@ export default function NearMeContent() {
               />
             }
           >
-            {!hasSearched && !prefilling ? (
-              <div className="rounded-xl border border-dashed border-border bg-muted/30 px-6 py-14 text-center sm:px-10">
-                <p className="text-lg font-medium text-title">Enter your location above to see nearby shops</p>
-                <p className="mx-auto mt-2 max-w-md text-sm text-secondary">
-                  Search by city, state, or ZIP, or tap &ldquo;Use my location&rdquo;. Your repair request form will
-                  match the same area.
-                </p>
-              </div>
-            ) : null}
-
-            {prefilling && !hasSearched ? (
-              <p className="py-12 text-center text-secondary">Loading shops near you…</p>
-            ) : null}
-
-            {hasSearched && !searching ? (
-              <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-                <p className="text-sm text-secondary">
-                  Showing centers near <span className="font-medium text-title">{locationLabel}</span>
-                </p>
-                <p className="text-sm text-secondary">
-                  {listings.length} center{listings.length !== 1 ? "s" : ""} found
-                </p>
-              </div>
-            ) : null}
-
-            {searching ? <p className="py-12 text-center text-secondary">Searching for repair shops…</p> : null}
-
-            {hasSearched && !searching && listings.length === 0 ? (
+            <h1 className="mb-6 text-2xl font-bold tracking-tight text-title sm:text-3xl">
+              Repair shops near {locationLabel}
+            </h1>
+            {searching ? <p className="py-12 text-center text-secondary">Finding repair shops near you…</p> : null}
+            {!searching && listings.length === 0 ? (
               <div className="rounded-xl border border-border bg-card px-6 py-16 text-center">
                 <p className="font-medium text-title">No repair shops found near {locationLabel}</p>
-                <p className="mt-2 text-sm text-secondary">
-                  Try a nearby city, search by state only, or browse the full directory.
-                </p>
-                <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                  <Button type="button" variant="outline" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}>
-                    Change location
-                  </Button>
-                  <Link href="/electric-motor-repair-shops-listings">
-                    <Button variant="primary">Browse all listings</Button>
-                  </Link>
-                </div>
-                <div className="mx-auto mt-8 max-w-sm">
-                  <p className="text-sm font-medium text-title">Get notified when we add repair shops in your area</p>
-                  <p className="mt-1 text-xs text-secondary">
-                    We&apos;ll email you when listings are available near {locationLabel}.
-                  </p>
-                  {!notifySent ? (
-                    <form
-                      className="mt-4 flex flex-col gap-2 sm:flex-row"
-                      onSubmit={async (e) => {
-                        e.preventDefault();
-                        if (!notifyEmail.trim()) return;
-                        setNotifySending(true);
-                        try {
-                          const res = await fetch("/api/area-notify-request", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              email: notifyEmail.trim(),
-                              city: userLocation.city,
-                              state: userLocation.state,
-                            }),
-                          });
-                          const data = await res.json();
-                          if (!res.ok) throw new Error(data.error || "Failed to sign up");
-                          setNotifySent(true);
-                          toast.success("You're on the list. We'll email you when we add repair shops in your area.");
-                        } catch (err) {
-                          toast.error(err.message || "Could not sign up. Please try again.");
-                        } finally {
-                          setNotifySending(false);
-                        }
-                      }}
-                    >
-                      <Input
-                        type="email"
-                        placeholder="Your email"
-                        value={notifyEmail}
-                        onChange={(e) => setNotifyEmail(e.target.value)}
-                        className="min-w-0 flex-1"
-                        required
-                      />
-                      <Button type="submit" variant="primary" disabled={notifySending}>
-                        {notifySending ? "Sending…" : "Notify me"}
-                      </Button>
-                    </form>
-                  ) : (
-                    <p className="mt-4 text-sm text-success">
-                      You&apos;re on the list. We&apos;ll email you when we add repair shops here.
-                    </p>
-                  )}
-                </div>
+                <p className="mt-2 text-sm text-secondary">Browse every repair shop in the directory.</p>
+                <div className="mt-6 flex justify-center">{browseAll}</div>
               </div>
             ) : null}
-
-            {hasSearched && !searching && listings.length > 0 ? (
-              <div className={LISTINGS_GRID}>
-                {listings.map((listing, index) => (
-                  <PublicListingCard
-                    key={listing.id}
-                    listing={listing}
-                    imagePriority={index < 6}
-                    locationMatchType={listing.locationMatchType || null}
-                  />
-                ))}
-              </div>
+            {!searching && listings.length > 0 ? (
+              <>
+                <p className="mb-6 text-sm text-secondary">
+                  {listings.length} center{listings.length === 1 ? "" : "s"} near {locationLabel}
+                </p>
+                <div className={LISTINGS_GRID}>
+                  {listings.map((listing, index) => (
+                    <PublicListingCard
+                      key={listing.id}
+                      listing={listing}
+                      imagePriority={index < 6}
+                      locationMatchType={listing.locationMatchType || null}
+                    />
+                  ))}
+                </div>
+              </>
             ) : null}
           </ListingsWithRepairFormLayout>
-        </div>
-      </section>
-    </>
+        ) : null}
+      </div>
+    </section>
   );
 }
