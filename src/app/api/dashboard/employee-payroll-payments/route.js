@@ -13,6 +13,7 @@ import {
 import {
   hourlyUnpaidBalances,
   hourlyUnpaidHoursForEmployee,
+  hourlyUnpaidHoursForRange,
 } from "@/lib/payroll-hour-balance";
 
 let payrollIndexReady = null;
@@ -55,6 +56,26 @@ export async function GET(request) {
 
     await connectDB();
     await ensurePayrollIndexes();
+
+    if (searchParams.get("rangeUnpaid") === "1") {
+      const from = clampString(searchParams.get("from"), 10);
+      const to = clampString(searchParams.get("to"), 10);
+      if (!employeeId || !mongoose.isValidObjectId(employeeId)) {
+        return NextResponse.json({ error: "Invalid employee id" }, { status: 400 });
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+        return NextResponse.json({ error: "A valid pay period is required." }, { status: 400 });
+      }
+      const span =
+        Math.round(
+          (Date.parse(`${to}T00:00:00`) - Date.parse(`${from}T00:00:00`)) / 86400000
+        ) + 1;
+      if (span > 366) {
+        return NextResponse.json({ error: "Pay period cannot be longer than 366 days." }, { status: 400 });
+      }
+      const range = await hourlyUnpaidHoursForRange(owner, employeeId, from, to, new Date());
+      return NextResponse.json(range);
+    }
 
     if (searchParams.get("balances") === "1") {
       const rows = await hourlyUnpaidBalances(owner, new Date(), periodMonth);

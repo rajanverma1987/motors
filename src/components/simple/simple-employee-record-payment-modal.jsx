@@ -96,7 +96,6 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
 
   const [loadingUnpaid, setLoadingUnpaid] = useState(false);
   const [maxUnpaidHours, setMaxUnpaidHours] = useState(0);
-  const [monthUnpaidHours, setMonthUnpaidHours] = useState(0);
   const [payHours, setPayHours] = useState("");
   const [payAmount, setPayAmount] = useState("");
   const [payPaidAt, setPayPaidAt] = useState(localTodayIso);
@@ -154,7 +153,6 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
 
   useEffect(() => {
     if (!open || !employee?.employeeId) return;
-    let cancelled = false;
 
     const periodFrom = String(employee.periodFrom || "").slice(0, 10);
     const periodTo = String(employee.periodTo || "").slice(0, 10);
@@ -173,55 +171,56 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     setPayNotes("");
     setPayPendingFiles([]);
 
-    const forcedHours =
-      employee.hours != null && Number.isFinite(Number(employee.hours))
-        ? Number(employee.hours)
-        : null;
+    if (payType === "salary") {
+      setPayHours("");
+      setPayAmount(String(parsePayRate(hourlyRate) || 0));
+      setMaxUnpaidHours(0);
+    }
+  }, [open, employee?.employeeId, employee?.periodFrom, employee?.periodTo, payType, hourlyRate]);
 
-    (async () => {
+  useEffect(() => {
+    if (!open || !employeeId || payType !== "hourly") return undefined;
+    const from = String(payPeriodFrom || "").slice(0, 10);
+    const to = String(payPeriodTo || "").slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+      setMaxUnpaidHours(0);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
       setLoadingUnpaid(true);
       try {
-        let allUnpaid =
-          employee.allUnpaidHours != null ? Number(employee.allUnpaidHours) || 0 : null;
-        let monthUnpaid = 0;
-        if (payType === "hourly" && allUnpaid == null) {
-          const res = await fetch(
-            `/api/dashboard/employee-payroll-payments?balances=1&periodMonth=${encodeURIComponent(month)}`,
-            { credentials: "include", cache: "no-store" }
-          );
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || "Failed to load unpaid hours");
-          const balance = (Array.isArray(data.balances) ? data.balances : []).find(
-            (row) => String(row.employeeId) === String(employee.employeeId)
-          );
-          allUnpaid = Number(balance?.allUnpaidHours ?? balance?.unpaidHours) || 0;
-          monthUnpaid = Number(balance?.unpaidHours) || 0;
-        } else if (payType === "hourly") {
-          monthUnpaid = Number(employee.totalHours) || 0;
-        }
-
+        const params = new URLSearchParams({
+          rangeUnpaid: "1",
+          employeeId,
+          from,
+          to,
+        });
+        const res = await fetch(`/api/dashboard/employee-payroll-payments?${params}`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || "Failed to load unpaid hours");
         if (cancelled) return;
-        const maxHours = Math.max(0, allUnpaid || 0);
-        setMaxUnpaidHours(maxHours);
-        setMonthUnpaidHours(monthUnpaid);
-        if (payType === "hourly") {
-          const hours = forcedHours != null ? Math.min(forcedHours, maxHours || forcedHours) : maxHours;
-          const hoursStr = (Number(hours) || 0).toFixed(2);
-          setPayHours(hoursStr);
-          setPayAmount(amountForHours(hoursStr, hourlyRate));
-        } else {
-          setPayHours("");
-          setPayAmount(String(parsePayRate(hourlyRate) || 0));
-        }
+        const unpaid = Math.max(0, Number(data.unpaidHours) || 0);
+        const forcedHours =
+          employee?.hours != null && Number.isFinite(Number(employee.hours)) ? Number(employee.hours) : null;
+        const initialFrom = String(employee?.periodFrom || "").slice(0, 10);
+        const initialTo = String(employee?.periodTo || "").slice(0, 10);
+        const useForced =
+          forcedHours != null && (!initialFrom || from === initialFrom) && (!initialTo || to === initialTo);
+        const hours = useForced ? Math.min(forcedHours, unpaid || forcedHours) : unpaid;
+        const hoursStr = (Number(hours) || 0).toFixed(2);
+        setMaxUnpaidHours(unpaid);
+        setPayHours(hoursStr);
+        setPayAmount(amountForHours(hoursStr, hourlyRate));
       } catch (err) {
         if (cancelled) return;
-        setMaxUnpaidHours(forcedHours != null ? forcedHours : 0);
-        setMonthUnpaidHours(0);
-        if (payType === "hourly") {
-          const hoursStr = (forcedHours != null ? forcedHours : 0).toFixed(2);
-          setPayHours(hoursStr);
-          setPayAmount(amountForHours(hoursStr, hourlyRate));
-        }
+        setMaxUnpaidHours(0);
+        setPayHours("0.00");
+        setPayAmount(amountForHours("0", hourlyRate));
         await alert({
           title: "Error",
           message: err?.message || "Failed to load unpaid hours",
@@ -230,12 +229,24 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       } finally {
         if (!cancelled) setLoadingUnpaid(false);
       }
-    })();
+    }, 300);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [open, employee, payType, hourlyRate, alert]);
+  }, [
+    open,
+    employeeId,
+    employee?.hours,
+    employee?.periodFrom,
+    employee?.periodTo,
+    payType,
+    payPeriodFrom,
+    payPeriodTo,
+    hourlyRate,
+    alert,
+  ]);
 
   const close = () => {
     if (paySaving || payUploading) return;
@@ -265,10 +276,10 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
         await alert({ title: "Error", message: "Enter the hours to pay.", variant: "danger" });
         return;
       }
-      if (hoursToPay > maxUnpaidHours + 0.001 && maxUnpaidHours > 0) {
+      if (hoursToPay > maxUnpaidHours + 0.001) {
         await alert({
           title: "Error",
-          message: "Hours to pay cannot be more than all unpaid hours.",
+          message: "Hours to pay cannot be more than the unpaid hours in this pay period.",
           variant: "danger",
         });
         return;
@@ -452,7 +463,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
           <Form
             id={PAY_FORM_ID}
             onSubmit={handleSubmit}
-            className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+            className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !px-3 !py-1 !shadow-none sm:!px-4"
           >
             <div className="flex flex-col gap-2">
               <p className="text-xs font-bold uppercase tracking-wide text-secondary">New payment</p>
@@ -462,20 +473,6 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                 {" · "}
                 {payType === "salary" ? "Salary" : "Hourly"}
               </p>
-              {payType === "hourly" ? (
-                <p className="rounded-sm border border-warning/40 bg-warning/15 px-3 py-2 text-sm font-semibold text-title">
-                  {loadingUnpaid ? (
-                    "Loading unpaid hours…"
-                  ) : (
-                    <>
-                      <span className="tabular-nums">{(Number(monthUnpaidHours) || 0).toFixed(2)}</span>
-                      {" unpaid this month · "}
-                      <span className="tabular-nums">{(Number(maxUnpaidHours) || 0).toFixed(2)}</span>
-                      {" unpaid, all periods"}
-                    </>
-                  )}
-                </p>
-              ) : null}
             </div>
             <FieldRow label="Pay period">
               <div className="flex min-w-0 flex-nowrap items-center gap-2">
@@ -499,6 +496,19 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
               </div>
             </FieldRow>
             {payType === "hourly" ? (
+              <FieldRow label="Unpaid hours">
+                <input
+                  type="text"
+                  value={loadingUnpaid ? "Loading…" : (Number(maxUnpaidHours) || 0).toFixed(2)}
+                  readOnly
+                  disabled
+                  tabIndex={-1}
+                  aria-label="Unpaid hours"
+                  className={`${FIELD_INPUT} cursor-not-allowed !bg-card opacity-70 dark:!bg-form-bg`}
+                />
+              </FieldRow>
+            ) : null}
+            {payType === "hourly" ? (
               <FieldRow label="Hours to pay" className="items-start">
                 <input
                   type="number"
@@ -516,7 +526,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                   aria-label="Hours to pay"
                 />
                 <p className="mt-1 text-xs text-secondary">
-                  Prefilled with unpaid hours for this action. Lower it to pay part. The rest stays unpaid.
+                  Prefilled with unpaid hours for the selected pay period. Lower it to pay part. The rest stays unpaid.
                 </p>
               </FieldRow>
             ) : null}

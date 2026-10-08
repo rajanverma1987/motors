@@ -83,6 +83,75 @@ function lifetimePaidByEmployee(payments) {
   return { paidByEmployee, latestByEmployee };
 }
 
+function dateRangeWindow(fromRaw, toRaw, now) {
+  const from = String(fromRaw || "").slice(0, 10);
+  const to = String(toRaw || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
+    return null;
+  }
+  const [y, m, d] = from.split("-").map(Number);
+  const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const [ty, tm, td] = to.split("-").map(Number);
+  const rangeEnd = new Date(ty, tm - 1, td, 23, 59, 59, 999);
+  const until = now.getTime() < rangeEnd.getTime() ? now : rangeEnd;
+  let manualTo = localDateIso(until);
+  if (!manualTo || manualTo > to) manualTo = to;
+  if (manualTo < from) manualTo = from;
+  return {
+    from,
+    to,
+    manualTo,
+    after: new Date(start.getTime() - 1),
+    until: until.getTime() < start.getTime() ? new Date(start.getTime() - 1) : until,
+  };
+}
+
+/**
+ * Unpaid hourly hours inside one date range.
+ * Paid hours fill the oldest work first, same as the punch calendar.
+ * @returns {Promise<{ unpaidHours: number, workedHours: number }>}
+ */
+export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now = new Date()) {
+  const untilNow = now instanceof Date ? now : new Date(now);
+  const window = dateRangeWindow(from, to, untilNow);
+  const empty = { unpaidHours: 0, workedHours: 0 };
+  const id = String(employeeId || "").trim();
+  if (!window || !id) return empty;
+
+  const [punches, manuals, payments] = await Promise.all([
+    TimeClockPunch.find({
+      createdByEmail: owner,
+      employeeId: id,
+      voidedAt: null,
+      punchedAt: { $lte: window.until },
+    })
+      .sort({ punchedAt: 1 })
+      .lean(),
+    TimeClockManualHours.find({
+      createdByEmail: owner,
+      employeeId: id,
+      voidedAt: null,
+      workDate: { $lte: window.manualTo },
+    }).lean(),
+    EmployeePayrollPayment.find({
+      createdByEmail: owner,
+      employeeId: id,
+      payType: "hourly",
+    }).lean(),
+  ]);
+
+  const before = workedHoursAfter(punches, manuals, new Date(0), window.after);
+  const worked = workedHoursAfter(punches, manuals, window.after, window.until);
+  const { paidByEmployee } = lifetimePaidByEmployee(payments);
+  const lifetimePaid = paidByEmployee.get(id) || 0;
+  const paidIntoRange = Math.max(0, round2(lifetimePaid - before));
+  const paid = Math.min(worked, paidIntoRange);
+  return {
+    workedHours: round2(worked),
+    unpaidHours: Math.max(0, round2(worked - paid)),
+  };
+}
+
 /**
  * All unpaid hourly hours for one employee.
  * Hours worked in every period through `now`, minus hours already paid.
@@ -175,6 +244,7 @@ async function monthWorkedByEmployee(owner, window) {
 /**
  * Hour rows for the selected month, plus all unpaid hours for the Pay form.
  * workedHours, paidHours, and unpaidHours are the selected month only.
+ * Paid hours fill the oldest work first, matching the punch calendar.
  * allUnpaidHours is every period through now, minus hours already paid.
  * @returns {Array<{ employeeId: string, workedHours: number, paidHours: number, unpaidHours: number, allUnpaidHours: number, lastPayment: object|null }>}
  */
@@ -183,9 +253,10 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
   const window = monthWindow(periodMonth, until);
   if (!window) return [];
 
-  const [monthWorked, lifetimeWorked, payments] = await Promise.all([
+  const [monthWorked, lifetimeWorked, workedBeforeMonth, payments] = await Promise.all([
     monthWorkedByEmployee(owner, window),
     lifetimeWorkedByEmployee(owner, until),
+    lifetimeWorkedByEmployee(owner, window.after),
     EmployeePayrollPayment.find({
       createdByEmail: owner,
       payType: "hourly",
@@ -213,7 +284,10 @@ export async function hourlyUnpaidBalances(owner, now = new Date(), periodMonth)
   const rows = [];
   for (const employeeId of ids) {
     const worked = monthWorked.get(employeeId) || 0;
-    const paid = monthPaid.get(employeeId) || 0;
+    const lifetimePaid = paidByEmployee.get(employeeId) || 0;
+    const before = workedBeforeMonth.get(employeeId) || 0;
+    const paidIntoMonth = Math.max(0, round2(lifetimePaid - before));
+    const paid = Math.min(worked, paidIntoMonth);
     const unpaidHours = Math.max(0, round2(worked - paid));
     const allUnpaidHours = Math.max(
       0,
