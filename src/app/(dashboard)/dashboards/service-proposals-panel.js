@@ -378,6 +378,56 @@ export default function ServiceProposalsPanel({
     () => (editingId ? rows.find((r) => r.id === editingId) || null : null),
     [editingId, rows]
   );
+  const stickyEditingRowRef = useRef(null);
+  const recordNavTargetRef = useRef(null);
+  if (editingRow) stickyEditingRowRef.current = editingRow;
+
+  const formInitial = editingRow
+    || (recordNavTargetRef.current && stickyEditingRowRef.current)
+    || null;
+
+  useEffect(() => {
+    const target = recordNavTargetRef.current;
+    if (!modalOpen || !target || !ready || page !== target.page) return;
+    recordNavTargetRef.current = null;
+    if (!rows.length) return;
+    const row = target.edge === "last" ? rows[rows.length - 1] : rows[0];
+    if (row?.id) setEditingId(row.id);
+  }, [modalOpen, ready, page, rows]);
+
+  const recordNavigation = useMemo(() => {
+    if (!modalOpen || !editingId || totalCount < 2) return null;
+    const indexOnPage = rows.findIndex((r) => String(r.id) === String(editingId));
+    if (indexOnPage < 0) return null;
+    const globalIndex = (page - 1) * pageSize + indexOnPage;
+    const pageCount = Math.max(1, Math.ceil(totalCount / pageSize));
+    const goToPageEdge = (nextPage, edge) => {
+      recordNavTargetRef.current = { page: nextPage, edge };
+      setReady(false);
+      setPage(nextPage);
+    };
+    return {
+      label: isInvoices ? "Invoices" : "Proposals",
+      currentIndex: globalIndex,
+      total: totalCount,
+      canPrevious: globalIndex > 0,
+      canNext: globalIndex < totalCount - 1,
+      onPrevious: () => {
+        if (indexOnPage > 0) {
+          setEditingId(rows[indexOnPage - 1].id);
+          return;
+        }
+        if (page > 1) goToPageEdge(page - 1, "last");
+      },
+      onNext: () => {
+        if (indexOnPage < rows.length - 1) {
+          setEditingId(rows[indexOnPage + 1].id);
+          return;
+        }
+        if (page < pageCount) goToPageEdge(page + 1, "first");
+      },
+    };
+  }, [modalOpen, editingId, rows, page, pageSize, totalCount, isInvoices]);
 
   const openEdit = (row) => {
     setEditingId(row.id);
@@ -1242,11 +1292,13 @@ export default function ServiceProposalsPanel({
       <ServiceProposalFormModal
         open={modalOpen}
         onClose={() => {
+          recordNavTargetRef.current = null;
           setModalOpen(false);
           setEditingId(null);
         }}
-        initialForm={editingRow}
+        initialForm={formInitial}
         onSave={handleSave}
+        searchResultNavigation={recordNavigation}
         onAttachmentsChange={handleAttachmentsChange}
       />
 

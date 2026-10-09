@@ -560,9 +560,9 @@ export default function SimpleDatasheetModal({
               }}
               placeholder="Select…"
               searchable
-              disabled
+              disabled={saving || printing}
               aria-label="Technician"
-              title="Technician is set when the datasheet is first saved"
+              title="Reassign this job to another technician"
             />
           </div>
           <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />

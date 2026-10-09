@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FiChevronDown, FiChevronLeft, FiChevronRight, FiPlus, FiX } from "react-icons/fi";
+import { FiChevronDown, FiChevronLeft, FiChevronRight, FiMail, FiPlus, FiPrinter, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -541,6 +541,7 @@ export default function ServiceProposalFormModal({
   const [addFromInventoryOpen, setAddFromInventoryOpen] = useState(false);
   const [salesMotorOpen, setSalesMotorOpen] = useState(false);
   const [printOpen, setPrintOpen] = useState(false);
+  const [printStartSend, setPrintStartSend] = useState(false);
   const [printBundle, setPrintBundle] = useState(null);
   const [printSendMeta, setPrintSendMeta] = useState(null);
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
@@ -1259,6 +1260,7 @@ export default function ServiceProposalFormModal({
     setCopying(true);
     // Never leave Send/Print pointing at the previous job.
     setPrintOpen(false);
+    setPrintStartSend(false);
     setPrintBundle(null);
     setPrintSendMeta(null);
     setDatasheetOpen(false);
@@ -1376,6 +1378,7 @@ export default function ServiceProposalFormModal({
 
       setForm(applied);
       setPrintOpen(false);
+      setPrintStartSend(false);
       setPrintBundle(null);
       setPrintSendMeta(null);
       setAttachmentsOpen(false);
@@ -1390,8 +1393,9 @@ export default function ServiceProposalFormModal({
     }
   };
 
-  const openPrintPreview = async (notesMode) => {
+  const openPrintPreview = async (notesMode, { send = false } = {}) => {
     if (!canViewFinancials) {
+      setPrintStartSend(false);
       await alert({
         title: "Access Restricted",
         message: "Printing proposals and invoices is restricted for your employee role.",
@@ -1400,9 +1404,11 @@ export default function ServiceProposalFormModal({
       return;
     }
     if (!form.customerId) {
+      setPrintStartSend(false);
       await alert({ title: "Error", message: "Select a customer before printing.", variant: "danger" });
       return;
     }
+    setPrintStartSend(send);
     // Always rebuild from the live form so Send/Print never reuse a prior job snapshot.
     setPrintBundle(null);
     setPrintSendMeta(null);
@@ -1536,7 +1542,7 @@ export default function ServiceProposalFormModal({
       <div
         className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
         role="navigation"
-        aria-label="Search results"
+        aria-label={searchNav.label || "Records"}
       >
         <Button
           type="button"
@@ -1547,7 +1553,7 @@ export default function ServiceProposalFormModal({
           onClick={() => searchNav.onPrevious?.()}
         >
           <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Previous
+          Back
         </Button>
         <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
           {Number(searchNav.currentIndex) + 1} of {Number(searchNav.total)}
@@ -1608,7 +1614,7 @@ export default function ServiceProposalFormModal({
           >
           {/* Toolbar (title lives in modal header) */}
           <div className="mb-2 flex flex-col gap-2 border-b border-border pb-2 xl:flex-row xl:items-end">
-            <div className="grid w-full min-w-0 grid-cols-3 items-end gap-2 xl:flex xl:flex-1">
+            <div className="grid w-full min-w-0 grid-cols-3 items-end gap-2 xl:flex xl:w-auto xl:shrink-0 xl:justify-start">
               <div className="min-w-0 xl:w-[12rem] xl:shrink-0">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
                   Proposal Type
@@ -1626,7 +1632,7 @@ export default function ServiceProposalFormModal({
                   aria-label="Proposal Type"
                 />
               </div>
-              <div className="min-w-0 xl:min-w-[10rem] xl:flex-1">
+              <div className="min-w-0 xl:w-[13rem] xl:shrink-0">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
                   {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
                 </label>
@@ -1661,9 +1667,9 @@ export default function ServiceProposalFormModal({
                   />
                 </div>
               </div>
-              <div className="min-w-0 xl:min-w-[10rem] xl:flex-1">
+              <div className="min-w-0 xl:w-[13rem] xl:shrink-0">
                 <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
-                  Status
+                  Job Status
                 </label>
                 <div
                   className={`min-w-0 rounded-none border border-border ${
@@ -1679,12 +1685,12 @@ export default function ServiceProposalFormModal({
                     placeholder="Select…"
                     searchable
                     triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
-                    aria-label="Status"
+                    aria-label="Job Status"
                   />
                 </div>
               </div>
             </div>
-            <div className="flex w-full flex-wrap items-end gap-1 xl:w-auto xl:shrink-0 xl:justify-end">
+            <div className="flex w-full flex-wrap items-end gap-1 py-1.5 xl:ml-auto xl:w-auto xl:shrink-0 xl:justify-end">
               <Button
                 type="button"
                 variant="primary"
@@ -1716,16 +1722,6 @@ export default function ServiceProposalFormModal({
                     onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
                   >
                     Internal Print
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={TOOLBAR_BTN}
-                    disabled={saving || copying}
-                    onClick={() => openPrintPreview(PRINT_NOTES_CUSTOMER)}
-                  >
-                    Customer Print
                   </Button>
                 </>
               ) : null}
@@ -2017,7 +2013,7 @@ export default function ServiceProposalFormModal({
 
             {/* Column 2 — meta */}
             <div className="flex min-w-0 flex-col gap-2">
-              <div className="flex flex-wrap justify-end gap-1">
+              <div className="flex flex-wrap justify-end gap-1 py-1.5">
                 <Button
                   type="button"
                   variant="primary"
@@ -2040,13 +2036,43 @@ export default function ServiceProposalFormModal({
                 </Button>
               </div>
               <FieldRow label={docLabel} labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <input
-                  type="text"
-                  value={form.documentNumber}
-                  onChange={(e) => patch("documentNumber", e.target.value)}
-                  className={`${FIELD_INPUT} border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
-                  placeholder="Assigned on save"
-                />
+                <div className="flex min-w-0 items-center gap-1">
+                  <input
+                    type="text"
+                    value={form.documentNumber}
+                    onChange={(e) => patch("documentNumber", e.target.value)}
+                    className={`${FIELD_INPUT} min-w-0 flex-1 border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
+                    placeholder="Assigned on save"
+                  />
+                  {canViewFinancials ? (
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 shrink-0 px-0 text-primary hover:bg-primary/10"
+                        disabled={saving || copying}
+                        title="Email to client"
+                        aria-label="Email to client"
+                        onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
+                      >
+                        <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 w-7 shrink-0 px-0 text-primary hover:bg-primary/10"
+                        disabled={saving || copying}
+                        title="Customer Print"
+                        aria-label="Customer Print"
+                        onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
+                      >
+                        <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
               </FieldRow>
               <FieldRow label="Customer PO#" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
@@ -2610,11 +2636,13 @@ export default function ServiceProposalFormModal({
         open={printOpen}
         onClose={() => {
           setPrintOpen(false);
+          setPrintStartSend(false);
           setPrintBundle(null);
           setPrintSendMeta(null);
         }}
         bundle={printBundle}
         sendMeta={printSendMeta}
+        startOnSend={printStartSend}
         title={
           printBundle?.printNotesMode === PRINT_NOTES_INTERNAL
             ? "Internal print preview"

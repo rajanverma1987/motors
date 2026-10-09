@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FiPrinter, FiSend } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
@@ -29,12 +29,21 @@ export default function SimpleServiceProposalPrintPreviewModal({
   bundle,
   sendMeta = null,
   title = "Print preview",
+  startOnSend = false,
 }) {
   const fmt = useFormatMoney();
   const { canViewFinancials } = useFinancialAccess();
   const { settings: accountSettings } = useUserSettings();
   const [printing, setPrinting] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setSendOpen(false);
+      return;
+    }
+    if (startOnSend) setSendOpen(true);
+  }, [open, startOnSend]);
 
   const documentType = bundle?.documentType || "quote";
   const quote = bundle?.quote || null;
@@ -164,7 +173,10 @@ export default function SimpleServiceProposalPrintPreviewModal({
 
       <SendDocumentPreviewModal
         open={sendOpen}
-        onClose={() => setSendOpen(false)}
+        onClose={() => {
+          setSendOpen(false);
+          if (startOnSend) onClose?.();
+        }}
         title="Send to customer"
         documentType={customerBundle?.documentType || documentType}
         documentId={null}
