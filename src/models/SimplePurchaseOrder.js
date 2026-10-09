@@ -22,6 +22,9 @@ const simplePurchaseOrderSchema = new mongoose.Schema(
     importBatchId: { type: String, default: "", trim: true },
     importedAt: { type: Date, default: null },
     importStatus: { type: String, default: "", trim: true },
+    /** Set when the row is hidden from lists. Cleared on restore. */
+    removedAt: { type: Date, default: null },
+    removedByEmail: { type: String, default: "", trim: true },
   },
   { timestamps: true, strict: false }
 );
@@ -32,6 +35,7 @@ simplePurchaseOrderSchema.index({ createdByEmail: 1, serviceProposalId: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, jobNumber: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, vendorId: 1 });
 simplePurchaseOrderSchema.index({ createdByEmail: 1, poCutDate: -1 });
+simplePurchaseOrderSchema.index({ createdByEmail: 1, removedAt: -1 });
 simplePurchaseOrderSchema.index(
   { createdByEmail: 1, sourceSystem: 1, externalRef: 1 },
   { unique: true, partialFilterExpression: { externalRef: { $gt: "" } } }

@@ -5,6 +5,7 @@ import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { simpleSpToBoardJob } from "@/lib/simple-job-board";
+import { notRemovedClause } from "@/lib/removed-records";
 
 /** Authenticated Simple shop-floor board payload (JOB service proposals). */
 export async function GET(request) {
@@ -17,7 +18,7 @@ export async function GET(request) {
     const email = user.email.trim().toLowerCase();
 
     const [list, settingsDoc] = await Promise.all([
-      SimpleServiceProposal.find({ createdByEmail: email, recordType: "JOB" })
+      SimpleServiceProposal.find({ createdByEmail: email, recordType: "JOB", ...notRemovedClause() })
         .sort({ updatedAt: -1 })
         .lean(),
       UserSettings.findOne({ ownerEmail: email }).lean(),

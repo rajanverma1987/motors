@@ -26,6 +26,7 @@ import {
 } from "@/lib/track-proposal-hooks";
 import { getListingIdsForUser } from "@/lib/dashboard-leads-scope";
 import Listing from "@/models/Listing";
+import { actorFromPortalUser, activityChanges, recordActivity } from "@/lib/activity-log";
 
 /** Company name and listing id used when reporting back to IQMotorTrack (§9.8). */
 async function trackShopIdentity(email) {
@@ -111,6 +112,8 @@ export async function PUT(request, context) {
       date: payload.date ?? payload.dateCreated ?? null,
       companyName: String(payload.companyName ?? "").trim(),
     };
+    delete update.removedAt;
+    delete update.removedByEmail;
     const doc = await SimpleServiceProposal.findOneAndUpdate(
       { _id: id, createdByEmail: email },
       { $set: update },
@@ -148,6 +151,21 @@ export async function PUT(request, context) {
       previous,
       next: doc,
     });
+    const changes = activityChanges("proposal", previous, doc);
+    if (changes.length) {
+      const actor = actorFromPortalUser(user);
+      await recordActivity({
+        ownerEmail: email,
+        ...actor,
+        action: "saved",
+        recordKind: "proposal",
+        recordId: item.id,
+        recordNumber: String(doc.documentNumber || "").trim(),
+        partyName: String(doc.companyName || "").trim(),
+        summary: changes.map((c) => `${c.field}: ${c.from || "(empty)"} to ${c.to || "(empty)"}`).join(". "),
+        changes,
+      });
+    }
     if (String(doc.sourceSystem || "") === "IQMotorTrack") {
       const [identity, mergedSettings] = await Promise.all([
         trackShopIdentity(email),
@@ -181,6 +199,16 @@ export async function DELETE(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const existing = await SimpleServiceProposal.findOne({ _id: id, createdByEmail: email }).lean();
+    if (!existing) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (!existing.removedAt) {
+      return NextResponse.json(
+        { error: "Remove this record from the list before deleting it." },
+        { status: 400 }
+      );
+    }
 
     try {
       await releaseInventoryReservationsForSimple(email, id);
@@ -207,6 +235,18 @@ export async function DELETE(request, context) {
       void notifySimpleJobBoardDeleted(email, id);
     }
     await emitTrackProposalDeleted(deleted);
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "deleted",
+      recordKind: "proposal",
+      recordId: id,
+      recordNumber: String(deleted.documentNumber || "").trim(),
+      partyName: String(deleted.companyName || "").trim(),
+      summary: `Proposal ${String(deleted.documentNumber || id).trim()} deleted permanently.`,
+      snapshot: deleted,
+    });
     return NextResponse.json({ ok: true, id });
   } catch (err) {
     console.error("Dashboard delete simple service proposal error:", err);

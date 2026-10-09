@@ -12,6 +12,7 @@ import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
+import SimpleActivityLogPanel from "@/components/simple/simple-activity-log-panel";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
@@ -2549,6 +2550,7 @@ export default function ServiceProposalFormModal({
             </div>
           </div>
         </Form>
+        {recordId ? <SimpleActivityLogPanel recordKind="proposal" recordId={recordId} /> : null}
         </div>
       </Modal>
 

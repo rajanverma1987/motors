@@ -14,6 +14,8 @@ import { useAlert } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import SimpleDataUploadPanel from "@/components/simple/simple-data-upload-panel";
+import DeletedRecordsPanel from "../deleted-records-panel";
+import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
 import SimpleMasterSection from "@/components/simple/settings/simple-master-section";
 import SimpleSubscriptionSection from "@/components/simple/settings/simple-subscription-section";
 import SimpleSupportSection from "@/components/simple/settings/simple-support-section";
@@ -98,7 +100,7 @@ export default function SettingsPageClient() {
   const alert = useAlert();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, mounted, isEmployee } = useAuth();
+  const { user, mounted, isEmployee, canViewFinancials } = useAuth();
   const effectiveIsEmployee = isEmployee ?? Boolean(
     user?.isEmployee ?? (user?.authType === "employee" || Boolean(user?.employeeId))
   );
@@ -1144,6 +1146,15 @@ export default function SettingsPageClient() {
         children: <SimpleAccessControlSection />,
       },
       {
+        id: "deleted",
+        label: "Deleted",
+        children: (
+          <SimpleJobViewProvider>
+            <DeletedRecordsPanel canViewFinancials={canViewFinancials} />
+          </SimpleJobViewProvider>
+        ),
+      },
+      {
         id: "data-upload",
         label: "Data Upload",
         children: <SimpleDataUploadPanel />,
@@ -1223,6 +1234,7 @@ export default function SettingsPageClient() {
       masterTab,
       goSection,
       saving,
+      canViewFinancials,
     ]
   );
 

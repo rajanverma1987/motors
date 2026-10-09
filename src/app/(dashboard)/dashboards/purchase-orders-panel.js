@@ -33,7 +33,7 @@ import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashb
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
 import {
-  deleteSimplePurchaseOrder,
+  hideSimpleRecord,
   fetchSimplePurchaseOrder,
   fetchSimplePurchaseOrdersPage,
 } from "@/lib/simple-portal-api";
@@ -340,16 +340,19 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const handleDelete = useCallback(
     async (row) => {
       const ok = await confirm({
-        title: "Delete purchase order",
-        message: `Delete ${row.poNumber || "this purchase order"}? This cannot be undone.`,
-        confirmLabel: "Delete",
+        title: "Remove purchase order",
+        message: `Remove ${row.poNumber || "this purchase order"} from the list? You can open it again in Settings: Deleted.`,
+        confirmLabel: "Remove",
         variant: "danger",
       });
       if (!ok) return;
       try {
-        await deleteSimplePurchaseOrder(row.id);
+        await hideSimpleRecord("purchaseOrder", row.id);
         setRows((prev) => prev.filter((p) => p.id !== row.id));
-        await alert({ title: "Deleted", message: "Purchase order deleted." });
+        await alert({
+          title: "Removed",
+          message: "Removed from the list. Open Settings: Deleted to view or restore it.",
+        });
       } catch (err) {
         await alert({
           title: "Error",
@@ -372,8 +375,8 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           <button
             type="button"
             className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Delete"
-            aria-label="Delete"
+            title="Remove from list"
+            aria-label="Remove from list"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(row);

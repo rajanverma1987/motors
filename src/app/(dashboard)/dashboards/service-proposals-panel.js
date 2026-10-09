@@ -62,7 +62,7 @@ import {
 } from "@/lib/simple-service-proposal-form";
 import { proposalTypeBadgeVariant } from "@/lib/proposal-types";
 import {
-  deleteSimpleServiceProposal,
+  hideSimpleRecord,
   fetchSimpleServiceProposal,
   fetchSimpleServiceProposalsPage,
   saveSimpleServiceProposal,
@@ -519,17 +519,20 @@ export default function ServiceProposalsPanel({
   const handleDelete = useCallback(
     async (row) => {
       const ok = await confirm({
-        title: isInvoices ? "Delete invoice" : "Delete service proposal",
-        message: `Delete ${row.quote || "this record"}? This cannot be undone.`,
-        confirmLabel: "Delete",
+        title: isInvoices ? "Remove invoice" : "Remove service proposal",
+        message: `Remove ${row.quote || "this record"} from the list? You can open it again in Settings: Deleted.`,
+        confirmLabel: "Remove",
         variant: "danger",
       });
       if (!ok) return;
       try {
-        await deleteSimpleServiceProposal(row.id);
+        await hideSimpleRecord(isInvoices ? "invoice" : "proposal", row.id);
         setRows((prev) => prev.filter((r) => r.id !== row.id));
         setSelectedRowIds((prev) => prev.filter((id) => id !== row.id));
-        await alert({ title: "Deleted", message: isInvoices ? "Invoice deleted." : "Service proposal deleted." });
+        await alert({
+          title: "Removed",
+          message: "Removed from the list. Open Settings: Deleted to view or restore it.",
+        });
       } catch (err) {
         await alert({
           title: "Error",
@@ -1112,8 +1115,8 @@ export default function ServiceProposalsPanel({
           <button
             type="button"
             className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Delete"
-            aria-label="Delete"
+            title="Remove from list"
+            aria-label="Remove from list"
             onClick={(e) => {
               e.stopPropagation();
               handleDelete(row);

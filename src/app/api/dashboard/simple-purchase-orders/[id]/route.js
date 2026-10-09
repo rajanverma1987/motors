@@ -10,6 +10,7 @@ import {
 import { applySimplePoInventoryReceipts } from "@/lib/simple-po-line-receipts";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
+import { actorFromPortalUser, activityChanges, recordActivity } from "@/lib/activity-log";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -72,6 +73,8 @@ export async function PUT(request, context) {
       poCutDate: payload.poCutDate ?? null,
       dueDate: payload.dueDate ?? null,
     };
+    delete update.removedAt;
+    delete update.removedByEmail;
     const doc = await SimplePurchaseOrder.findOneAndUpdate(
       { _id: id, createdByEmail: email },
       { $set: update },
@@ -118,6 +121,21 @@ export async function PUT(request, context) {
       previous,
       next: doc,
     });
+    const changes = activityChanges("purchaseOrder", previous, doc);
+    if (changes.length) {
+      const actor = actorFromPortalUser(user);
+      await recordActivity({
+        ownerEmail: email,
+        ...actor,
+        action: "saved",
+        recordKind: "purchaseOrder",
+        recordId: item.id,
+        recordNumber: String(doc.poNumber || "").trim(),
+        partyName: String(doc.vendorName || "").trim(),
+        summary: changes.map((c) => `${c.field}: ${c.from || "(empty)"} to ${c.to || "(empty)"}`).join(". "),
+        changes,
+      });
+    }
     return NextResponse.json({ ok: true, item });
   } catch (err) {
     console.error("Dashboard update simple purchase order error:", err);
@@ -141,6 +159,12 @@ export async function DELETE(request, context) {
     const existing = await SimplePurchaseOrder.findOne({ _id: id, createdByEmail: email }).lean();
     if (!existing) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    if (!existing.removedAt) {
+      return NextResponse.json(
+        { error: "Remove this purchase order from the list before deleting it." },
+        { status: 400 }
+      );
     }
     try {
       // Treat delete as reverting all Received lines for inventory.
@@ -166,6 +190,18 @@ export async function DELETE(request, context) {
       action: "deleted",
       resourceId: id,
       data: serializeSimplePortalDoc(deleted),
+    });
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "deleted",
+      recordKind: "purchaseOrder",
+      recordId: id,
+      recordNumber: String(deleted.poNumber || "").trim(),
+      partyName: String(deleted.vendorName || "").trim(),
+      summary: `Purchase order ${String(deleted.poNumber || id).trim()} deleted permanently.`,
+      snapshot: deleted,
     });
     return NextResponse.json({ ok: true, id });
   } catch (err) {

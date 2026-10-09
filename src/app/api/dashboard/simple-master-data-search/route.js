@@ -10,6 +10,7 @@ import {
   collectFilledMasterDataCriteria,
   getDottedValue,
 } from "@/lib/master-data-search";
+import { notRemovedClause } from "@/lib/removed-records";
 
 const MAX_RESULTS = 200;
 
@@ -76,6 +77,7 @@ async function searchByCustomer(email, criteria) {
 
   const docs = await SimpleServiceProposal.find({
     createdByEmail: email,
+    ...notRemovedClause(),
     ...(andClauses.length ? { $and: andClauses } : {}),
   })
     .select({
@@ -197,6 +199,7 @@ export async function POST(request) {
     await connectDB();
     const docs = await SimpleServiceProposal.find({
       createdByEmail: email,
+      ...notRemovedClause(),
       $and: andClauses,
     })
       .select({

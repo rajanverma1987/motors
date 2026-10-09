@@ -18,6 +18,7 @@ import {
 } from "@/lib/quickbooks/mappers";
 import { parseSpMoney, roundSpMoney } from "@/lib/simple-service-proposal-form";
 import { parsePoMoney, roundPoMoney } from "@/lib/simple-purchase-order-form";
+import { notRemovedClause } from "@/lib/removed-records";
 
 async function writeLog({
   ownerEmail,
@@ -547,6 +548,7 @@ export async function syncJobClosedBundle(ownerEmail, jobDoc) {
   const pos = await SimplePurchaseOrder.find({
     createdByEmail: String(ownerEmail).toLowerCase(),
     serviceProposalId: spId,
+    ...notRemovedClause(),
   }).lean();
   for (const po of pos) {
     try {

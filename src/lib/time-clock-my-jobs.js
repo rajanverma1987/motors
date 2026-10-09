@@ -4,6 +4,7 @@
 
 import mongoose from "mongoose";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import { notRemovedClause } from "@/lib/removed-records";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
@@ -163,6 +164,7 @@ export async function findAssignedJob(ownerEmail, employeeId, proposalId) {
     _id: id,
     createdByEmail: String(ownerEmail || "").trim().toLowerCase(),
     recordType: RECORD_TYPE_JOB,
+    ...notRemovedClause(),
   }).lean();
   if (!doc) return null;
   if (!proposalAssignedToEmployee(doc, employeeId)) return null;

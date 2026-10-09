@@ -11,6 +11,7 @@ import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inv
 import SimplePoLineCancellationModal from "@/components/simple/simple-po-line-cancellation-modal";
 import SimplePoLineReturnModal from "@/components/simple/simple-po-line-return-modal";
 import SimplePurchaseOrderPrintPreviewModal from "@/components/simple/simple-purchase-order-print-preview-modal";
+import SimpleActivityLogPanel from "@/components/simple/simple-activity-log-panel";
 import SimplePurchaseOrderAttachmentsModal from "@/components/simple/simple-purchase-order-attachments-modal";
 import SimpleAttachmentPreviewModal, {
   resolveAttachmentHref,
@@ -2266,6 +2267,12 @@ export default function SimplePurchaseOrderFormModal({
           </>
           )}
         </Form>
+        {String(form?.id || initialPoId || "").trim() ? (
+          <SimpleActivityLogPanel
+            recordKind="purchaseOrder"
+            recordId={String(form?.id || initialPoId || "").trim()}
+          />
+        ) : null}
         </div>
       </Modal>
 

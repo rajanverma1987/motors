@@ -110,6 +110,20 @@ export async function deleteSimpleServiceProposal(id) {
   await api(`${SP_API}/${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
+export async function hideSimpleRecord(kind, id) {
+  await api("/api/dashboard/removed-records", {
+    method: "POST",
+    body: JSON.stringify({ kind, id, action: "remove" }),
+  });
+}
+
+export async function restoreSimpleRecord(kind, id) {
+  await api("/api/dashboard/removed-records", {
+    method: "POST",
+    body: JSON.stringify({ kind, id, action: "restore" }),
+  });
+}
+
 export async function saveSimpleServiceProposal(row, { forceNew = false } = {}) {
   const id = forceNew ? "" : String(row?.id || "").trim();
   if (id) return updateSimpleServiceProposal(id, row);

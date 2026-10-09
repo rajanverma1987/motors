@@ -1,4 +1,5 @@
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import { notRemovedClause } from "@/lib/removed-records";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SalesCommission from "@/models/SalesCommission";
 import UserSettings from "@/models/UserSettings";
@@ -100,8 +101,8 @@ export async function buildSimpleHubOverview(ownerEmail, options = {}) {
   const monthKeys = listMonthKeys(from, to);
 
   const [proposals, purchaseOrders, settingsDoc] = await Promise.all([
-    SimpleServiceProposal.find({ createdByEmail: email }).limit(FETCH_LIMIT).lean(),
-    SimplePurchaseOrder.find({ createdByEmail: email }).limit(FETCH_LIMIT).lean(),
+    SimpleServiceProposal.find({ createdByEmail: email, ...notRemovedClause() }).limit(FETCH_LIMIT).lean(),
+    SimplePurchaseOrder.find({ createdByEmail: email, ...notRemovedClause() }).limit(FETCH_LIMIT).lean(),
     UserSettings.findOne({ ownerEmail: email }).lean(),
   ]);
   const mergedSettings = mergeUserSettings(settingsDoc?.settings);

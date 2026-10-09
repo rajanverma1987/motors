@@ -44,6 +44,7 @@ import {
   SIMPLE_TAB_TRACK_RFQS,
 } from "@/lib/simple-portal-tabs";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
+import { simpleSettingsHref } from "@/lib/simple-settings-nav";
 import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
 import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -130,6 +131,11 @@ export default function DashboardsPageClient() {
     params.set("tab", SIMPLE_TAB_CALCULATORS);
     router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
   }, [calcOnly, router, searchParams, tabParam]);
+
+  useEffect(() => {
+    if (tabParam !== "deleted") return;
+    router.replace(simpleSettingsHref("deleted"), { scroll: false });
+  }, [router, tabParam]);
 
   // Old hub tab links: Motor Down RFQs now live under Customers → Leads.
   useEffect(() => {

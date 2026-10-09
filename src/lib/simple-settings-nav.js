@@ -20,6 +20,7 @@ export const SIMPLE_SETTINGS_SECTIONS = [
   { id: "marketplace", label: "Marketplace" },
   { id: "job-postings", label: "Job Postings" },
   { id: "access-controls", label: "Access Controls" },
+  { id: "deleted", label: "Deleted" },
   { id: "data-upload", label: "Data Upload" },
   { id: "api-integration", label: "API Integration" },
   { id: "subscription", label: "Subscription" },

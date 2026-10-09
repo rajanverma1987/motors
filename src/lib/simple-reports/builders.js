@@ -4,6 +4,7 @@ import SalesCommission from "@/models/SalesCommission";
 import SalesPerson from "@/models/SalesPerson";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
+import { notRemovedClause } from "@/lib/removed-records";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import {
@@ -309,14 +310,14 @@ async function loadOwnerSettings(ownerEmail) {
 }
 
 async function loadServiceProposals(ownerEmail) {
-  return SimpleServiceProposal.find({ createdByEmail: ownerEmail })
+  return SimpleServiceProposal.find({ createdByEmail: ownerEmail, ...notRemovedClause() })
     .sort({ updatedAt: -1 })
     .limit(FETCH_LIMIT)
     .lean();
 }
 
 async function loadPurchaseOrders(ownerEmail) {
-  return SimplePurchaseOrder.find({ createdByEmail: ownerEmail })
+  return SimplePurchaseOrder.find({ createdByEmail: ownerEmail, ...notRemovedClause() })
     .sort({ updatedAt: -1 })
     .limit(FETCH_LIMIT)
     .lean();
@@ -766,7 +767,7 @@ async function buildCustomers(ownerEmail, filters, reportOpts = {}) {
 
 async function buildSalesCommissions(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const [serviceProposals, salesPeople, mergedSettings] = await Promise.all([
-    SimpleServiceProposal.find({ createdByEmail: ownerEmail })
+    SimpleServiceProposal.find({ createdByEmail: ownerEmail, ...notRemovedClause() })
       .select("_id documentNumber quote companyName recordType status payments invoicePaidDate")
       .lean(),
     SalesPerson.find({ createdByEmail: ownerEmail }).select("_id name email phone").lean(),

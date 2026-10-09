@@ -26,6 +26,8 @@ import {
   assertSimplePortalJobNumberAvailable,
   createSimpleServiceProposalWithUniqueJobNumber,
 } from "@/lib/simple-portal-job-numbers";
+import { notRemovedClause } from "@/lib/removed-records";
+import { actorFromPortalUser, recordActivity } from "@/lib/activity-log";
 import {
   normalizeProposalType,
   PROPOSAL_TYPE_VALUES,
@@ -231,7 +233,12 @@ export async function GET(request) {
       };
     }
 
-    const baseMatch = andMongoClauses({ createdByEmail: email }, kindClause, dateClause);
+    const baseMatch = andMongoClauses(
+      { createdByEmail: email },
+      notRemovedClause(),
+      kindClause,
+      dateClause
+    );
     const listMatch = andMongoClauses(baseMatch, statusClause, proposalTypeClause, searchClause);
 
     const sortField = simpleSpSortField(sortBy);
@@ -363,6 +370,8 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     // A new proposal can never claim an IQMotorTrack link: only conversion sets those.
     const payload = stripTrackOwnedFields(sanitizeSimplePortalPayload(body));
+    delete payload.removedAt;
+    delete payload.removedByEmail;
     const mergedSettings = await loadMergedSettingsForEmail(email);
     const requestedNumber = String(payload.documentNumber || payload.quote || "").trim();
     if (requestedNumber) {
@@ -417,6 +426,17 @@ export async function POST(request) {
       trigger: "serviceProposal",
       previous: null,
       next: typeof doc.toObject === "function" ? doc.toObject() : doc,
+    });
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "saved",
+      recordKind: "proposal",
+      recordId: item.id,
+      recordNumber: String(item.documentNumber || item.quote || "").trim(),
+      partyName: String(item.companyName || "").trim(),
+      summary: `Saved ${String(item.documentNumber || item.quote || "proposal").trim()}.`,
     });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {

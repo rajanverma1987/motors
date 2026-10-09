@@ -8,6 +8,7 @@ import {
   requireTechnicianSession,
   serializeMyJobListRow,
 } from "@/lib/time-clock-my-jobs";
+import { notRemovedClause } from "@/lib/removed-records";
 
 export async function GET(request) {
   try {
@@ -25,8 +26,11 @@ export async function GET(request) {
     const mergedSettings = await loadShopMergedSettings(shop.ownerEmail);
 
     const list = await SimpleServiceProposal.find({
-      createdByEmail: shop.ownerEmail,
-      ...mongoMyJobsTechnicianClause(session.employeeId),
+      $and: [
+        { createdByEmail: shop.ownerEmail },
+        mongoMyJobsTechnicianClause(session.employeeId),
+        notRemovedClause(),
+      ],
     })
       .sort({ updatedAt: -1 })
       .limit(100)

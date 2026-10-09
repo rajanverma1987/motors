@@ -16,6 +16,7 @@ import {
 } from "@/lib/simple-portal-tabs";
 import { SIMPLE_OPEN_LEAD_PREFIX, simplePortalOpenHref } from "@/lib/simple-portal-open";
 import { isSimpleInvoiceRecord } from "@/lib/simple-service-proposal-form";
+import { notRemovedClause } from "@/lib/removed-records";
 
 function escapeRegex(s) {
   return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -57,8 +58,8 @@ export async function GET(request) {
     const [leadsRaw, customers, proposals, purchaseOrders, inventory, vendors] = await Promise.all([
       fetchLeadsForShopUser(email),
       Customer.find({ createdByEmail: email }).sort({ createdAt: -1 }).limit(400).lean(),
-      SimpleServiceProposal.find({ createdByEmail: email }).sort({ updatedAt: -1 }).limit(400).lean(),
-      SimplePurchaseOrder.find({ createdByEmail: email }).sort({ updatedAt: -1 }).limit(400).lean(),
+      SimpleServiceProposal.find({ createdByEmail: email, ...notRemovedClause() }).sort({ updatedAt: -1 }).limit(400).lean(),
+      SimplePurchaseOrder.find({ createdByEmail: email, ...notRemovedClause() }).sort({ updatedAt: -1 }).limit(400).lean(),
       InventoryItem.find({ createdByEmail: email }).sort({ updatedAt: -1 }).limit(400).lean(),
       Vendor.find({ createdByEmail: email }).sort({ createdAt: -1 }).limit(200).lean(),
     ]);

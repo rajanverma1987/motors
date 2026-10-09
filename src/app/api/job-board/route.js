@@ -4,6 +4,7 @@ import UserSettings from "@/models/UserSettings";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { simpleSpToBoardJob } from "@/lib/simple-job-board";
+import { notRemovedClause } from "@/lib/removed-records";
 
 export async function GET() {
   try {
@@ -35,6 +36,7 @@ export async function POST(request) {
     const list = await SimpleServiceProposal.find({
       createdByEmail: email,
       recordType: "JOB",
+      ...notRemovedClause(),
     })
       .sort({ updatedAt: -1 })
       .lean();

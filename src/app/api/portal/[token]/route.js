@@ -6,6 +6,7 @@ import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { buildSimplePortalPayload } from "@/lib/simple-customer-portal";
+import { notRemovedClause } from "@/lib/removed-records";
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -38,7 +39,7 @@ export async function GET(request, context) {
         ? User.findOne({ email: ownerEmail }).select("shopName contactName email").lean()
         : Promise.resolve(null),
       ownerEmail
-        ? SimpleServiceProposal.find({ createdByEmail: ownerEmail, customerId })
+        ? SimpleServiceProposal.find({ createdByEmail: ownerEmail, customerId, ...notRemovedClause() })
             .sort({ updatedAt: -1 })
             .limit(500)
             .lean()

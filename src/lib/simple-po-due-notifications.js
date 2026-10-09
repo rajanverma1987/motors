@@ -12,6 +12,7 @@ import { createWorkspaceSmtpTransport, formatWorkspaceSmtpFrom } from "@/lib/wor
 import { resolveShopEmailLogo } from "@/lib/shop-email-logo";
 import { shopEmailLogoInlineStyle } from "@/lib/logo-document-scale";
 import { toInputDateValue } from "@/lib/format-date";
+import { notRemovedClause } from "@/lib/removed-records";
 import {
   resolvePoStatus,
   SIMPLE_PO_RECEIVING_STATUS_RECEIVED,
@@ -146,6 +147,7 @@ export async function findDuePurchaseOrders({
   const docs = await SimplePurchaseOrder.find({
     createdByEmail: emailNorm,
     dueDate: { $ne: null },
+    ...notRemovedClause(),
   })
     .sort({ dueDate: 1 })
     .lean();

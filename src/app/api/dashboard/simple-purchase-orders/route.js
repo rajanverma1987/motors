@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/db";
 import SimplePurchaseOrder from "@/models/SimplePurchaseOrder";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
+import { notRemovedClause } from "@/lib/removed-records";
+import { actorFromPortalUser, recordActivity } from "@/lib/activity-log";
 import {
   isValidSimplePortalId,
   sanitizeSimplePortalPayload,
@@ -133,7 +135,7 @@ export async function GET(request) {
     const sort = { [sortField]: sortDir === "asc" ? 1 : -1, updatedAt: -1 };
 
     const q = { createdByEmail: email };
-    const andParts = [];
+    const andParts = [notRemovedClause()];
     if (vendorId) {
       andParts.push({ vendorId });
     }
@@ -218,7 +220,7 @@ export async function GET(request) {
     else if (andParts.length > 1) q.$and = andParts;
 
     const baseForCards = { createdByEmail: email };
-    const cardAnd = [];
+    const cardAnd = [notRemovedClause()];
     if (poTypeFilter === "job") {
       cardAnd.push({
         $and: [
@@ -329,6 +331,8 @@ export async function POST(request) {
     const email = user.email.trim().toLowerCase();
     const body = await request.json().catch(() => ({}));
     const payload = sanitizeSimplePortalPayload(body);
+    delete payload.removedAt;
+    delete payload.removedByEmail;
     const doc = await SimplePurchaseOrder.create({
       ...payload,
       createdByEmail: email,
@@ -355,6 +359,17 @@ export async function POST(request) {
       trigger: "purchaseOrder",
       previous: null,
       next: typeof doc.toObject === "function" ? doc.toObject() : doc,
+    });
+    const actor = actorFromPortalUser(user);
+    await recordActivity({
+      ownerEmail: email,
+      ...actor,
+      action: "saved",
+      recordKind: "purchaseOrder",
+      recordId: item.id,
+      recordNumber: String(item.poNumber || "").trim(),
+      partyName: String(item.vendorName || "").trim(),
+      summary: `Saved purchase order ${String(item.poNumber || "").trim()}.`,
     });
     return NextResponse.json({ ok: true, item }, { status: 201 });
   } catch (err) {

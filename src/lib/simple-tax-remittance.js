@@ -5,6 +5,7 @@ import {
   mongoInvoiceKindClause,
   mongoSpDateRangeClause,
 } from "@/lib/simple-service-proposal-list-query";
+import { notRemovedClause } from "@/lib/removed-records";
 
 function round2(v) {
   const n = Number(v);
@@ -93,6 +94,7 @@ export async function listUnpaidTaxRemittanceJobs(email, mergedSettings, fromYmd
 export async function listPaidTaxRemittanceJobs(email, mergedSettings, fromYmd, toYmd) {
   const match = andMongoClauses(
     { createdByEmail: email },
+    notRemovedClause(),
     mongoInvoiceKindClause(mergedSettings),
     { taxRemitted: true },
     mongoSpDateRangeClause(fromYmd, toYmd)
