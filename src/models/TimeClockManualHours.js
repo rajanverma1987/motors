@@ -18,6 +18,8 @@ const timeClockManualHoursSchema = new mongoose.Schema(
     proposalId: { type: String, default: "", trim: true },
     /** Denormalized JOB# / document number for display */
     documentNumber: { type: String, default: "", trim: true },
+    /** Job status on the proposal when these hours were recorded */
+    jobStatus: { type: String, default: "", trim: true },
     voidedAt: { type: Date, default: null },
     voidReason: { type: String, default: "", trim: true },
     createdByUserEmail: { type: String, default: "", trim: true, lowercase: true },

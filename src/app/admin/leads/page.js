@@ -627,26 +627,15 @@ export default function AdminLeadsPage() {
         showClose={!mailSending && !mailDraftLoading}
         closeOnOutsideClick={false}
         actions={
-          <>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={mailSending || mailDraftLoading}
-              onClick={closeMailModal}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form={FOLLOW_UP_FORM_ID}
-              variant="primary"
-              size="sm"
-              disabled={mailSending || mailDraftLoading || !mailReady}
-            >
-              {mailSending ? "Sending…" : "Send both emails"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form={FOLLOW_UP_FORM_ID}
+            variant="primary"
+            size="sm"
+            disabled={mailSending || mailDraftLoading || !mailReady}
+          >
+            {mailSending ? "Sending…" : "Send both emails"}
+          </Button>
         }
       >
         {mailDraftLoading ? (

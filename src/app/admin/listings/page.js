@@ -906,11 +906,6 @@ export default function AdminListingsPage() {
         onClose={() => setNewListingSearchOpen(false)}
         title="Find existing listing"
         size="lg"
-        actions={
-          <Button type="button" variant="outline" size="sm" onClick={() => setNewListingSearchOpen(false)}>
-            Close
-          </Button>
-        }
       >
         <p className="text-sm text-secondary">
           Search by email or phone, or paste listing JSON. We check for an existing listing by email, phone, and

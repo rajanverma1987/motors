@@ -281,14 +281,9 @@ export default function AdminCirMillsPage() {
         title={editing ? "Edit wire size" : "Add wire size"}
         width="min(480px, 92vw)"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id={FORM_ID} onSubmit={handleSave}>

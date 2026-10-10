@@ -101,15 +101,6 @@ export default function SimplePoDueNotificationsModal({
         <div className="flex items-center gap-2">
           <Button
             type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={sending}
-          >
-            Close
-          </Button>
-          <Button
-            type="button"
             variant="primary"
             size="sm"
             onClick={handleSendNotification}

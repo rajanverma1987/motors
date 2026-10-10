@@ -1,0 +1,12 @@
+---
+description: Modal headers use the X to close. Do not add Close or Cancel buttons.
+alwaysApply: true
+---
+
+# Modal header: no Close or Cancel
+
+- Every modal already has an X in the header that closes the form.
+- Do not put a Close button or a Cancel button in the modal header (`actions`).
+- Header actions are only for real work: Save, Submit, Send, Print, and similar.
+- Use `size="sm"` on those buttons.
+- For submit, use `<Button type="submit" form="your-form-id">` and set the same id on `<Form>`.

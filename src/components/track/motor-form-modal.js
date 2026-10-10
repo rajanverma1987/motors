@@ -159,14 +159,9 @@ export default function TrackMotorFormModal({ open, motor, onClose, onSaved }) {
       title={motor?.id ? "Edit motor" : "Add motor"}
       size="md"
       actions={
-        <>
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </>
+        <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
+          {saving ? "Saving…" : "Save"}
+        </Button>
       }
     >
       <div className="mb-4 flex items-center gap-1.5">

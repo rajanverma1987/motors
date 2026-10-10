@@ -529,6 +529,7 @@ export function serializeManualHours(doc) {
     note: String(p.note || ""),
     proposalId: String(p.proposalId || "").trim(),
     documentNumber: String(p.documentNumber || "").trim(),
+    jobStatus: String(p.jobStatus || "").trim(),
     voidedAt: p.voidedAt ? new Date(p.voidedAt).toISOString() : null,
     voidReason: String(p.voidReason || ""),
     createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : null,

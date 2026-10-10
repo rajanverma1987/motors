@@ -638,14 +638,9 @@ export default function TrackRfqsPanel({ embedded = false }) {
         title="Decline to quote"
         size="sm"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setDeclineOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="track-decline-form" size="sm" variant="danger" disabled={busy}>
-              {busy ? "Sending…" : "Decline"}
-            </Button>
-          </>
+          <Button type="submit" form="track-decline-form" size="sm" variant="danger" disabled={busy}>
+            {busy ? "Sending…" : "Decline"}
+          </Button>
         }
       >
         <Form id="track-decline-form" onSubmit={submitDecline} className="space-y-3">
@@ -672,14 +667,9 @@ export default function TrackRfqsPanel({ embedded = false }) {
         title="Send proposal to IQMotorTrack"
         size="lg"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setSendOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="track-send-form" size="sm" disabled={busy}>
-              {busy ? "Sending…" : "Send to customer"}
-            </Button>
-          </>
+          <Button type="submit" form="track-send-form" size="sm" disabled={busy}>
+            {busy ? "Sending…" : "Send to customer"}
+          </Button>
         }
       >
         <Form id="track-send-form" onSubmit={submitSend} className="grid gap-3 sm:grid-cols-2">

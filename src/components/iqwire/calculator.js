@@ -538,14 +538,9 @@ export default function CalculatorScreen({ pendingSaved, onConsumedSaved }) {
         title="Select original wires"
         size="md"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setPickerOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" size="sm" onClick={applyPicker}>
-              Apply selection
-            </Button>
-          </>
+          <Button type="button" size="sm" onClick={applyPicker}>
+            Apply selection
+          </Button>
         }
       >
         <UnitToggle value={pickerUnit} onChange={setPickerUnit} />
@@ -593,9 +588,6 @@ export default function CalculatorScreen({ pendingSaved, onConsumedSaved }) {
             <Button type="button" size="sm" variant="outline" onClick={emailResults} disabled={!results.length}>
               <FiMail className="h-4 w-4 shrink-0" />
               Email
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => setResultsOpen(false)}>
-              Close
             </Button>
           </>
         }
@@ -647,14 +639,9 @@ export default function CalculatorScreen({ pendingSaved, onConsumedSaved }) {
         title="Save calculation"
         size="sm"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setSaveOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" size="sm" form="iqwire-save-form" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" size="sm" form="iqwire-save-form" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id="iqwire-save-form" onSubmit={saveCalc} className="space-y-3 p-0 shadow-none ring-0">

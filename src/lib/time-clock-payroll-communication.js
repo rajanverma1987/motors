@@ -2,6 +2,7 @@ import ExcelJS from "exceljs";
 import Employee from "@/models/Employee";
 import TimeClockPunch from "@/models/TimeClockPunch";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 import User from "@/models/User";
 import UserSettings from "@/models/UserSettings";
 import { sendPayrollHoursWorkbookEmail } from "@/lib/email";
@@ -175,6 +176,7 @@ async function buildPayrollWorkbook({ ownerEmail, from, to, timeZone }) {
       createdByEmail: ownerEmail,
       voidedAt: null,
       workDate: { $gte: from, $lte: to },
+      ...payableManualHoursClause(),
     })
       .sort({ workDate: 1, employeeName: 1 })
       .lean(),

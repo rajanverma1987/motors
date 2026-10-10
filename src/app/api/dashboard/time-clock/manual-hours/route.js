@@ -8,6 +8,7 @@ import {
   parseManualHoursInput,
   serializeManualHours,
 } from "@/lib/time-clock-punches";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 
 export async function GET(request) {
   try {
@@ -31,6 +32,7 @@ export async function GET(request) {
 
     const q = {
       createdByEmail: email,
+      ...payableManualHoursClause(),
       ...(employeeId ? { employeeId } : {}),
       ...(includeVoided ? {} : { voidedAt: null }),
       ...(Object.keys(workDate).length ? { workDate } : {}),

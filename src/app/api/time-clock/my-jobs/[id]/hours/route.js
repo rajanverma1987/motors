@@ -92,6 +92,7 @@ export async function POST(request, context) {
       note: String(body.note || "").trim().slice(0, 500),
       proposalId: id,
       documentNumber,
+      jobStatus: String(job.jobStatus || "").trim(),
       createdByUserEmail: String(emp.email || "").trim().toLowerCase() || "",
     });
 

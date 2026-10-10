@@ -209,20 +209,15 @@ export default function SimpleDiagramDesignsSection() {
         title={editing ? "Edit diagram design" : "Add diagram design"}
         size="lg"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form={FORM_ID}
-              size="sm"
-              variant="primary"
-              disabled={saving || uploading || !imageUrl}
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button
+            type="submit"
+            form={FORM_ID}
+            size="sm"
+            variant="primary"
+            disabled={saving || uploading || !imageUrl}
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id={FORM_ID} onSubmit={handleSave} className="flex flex-col gap-4 !space-y-0">

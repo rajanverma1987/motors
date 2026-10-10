@@ -158,11 +158,6 @@ export default function PaypalSubscribeModal({ open, onClose, billingCycle = "mo
       onClose={onClose}
       title="Subscribe with PayPal"
       size="sm"
-      actions={
-        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       <p className="text-sm text-secondary">{priceLabel}. Billed through PayPal. Cancel anytime from Profile.</p>
       {status === "loading" ? <p className="mt-4 text-sm text-secondary">Preparing checkout…</p> : null}

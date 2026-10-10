@@ -576,14 +576,9 @@ export default function TrackRfqComparison({ rfqId, onBack, onChanged }) {
         title="Update invited shops"
         size="md"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setUpdateOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="track-rfq-update-form" size="sm" disabled={busy}>
-              {busy ? "Sending…" : "Send update"}
-            </Button>
-          </>
+          <Button type="submit" form="track-rfq-update-form" size="sm" disabled={busy}>
+            {busy ? "Sending…" : "Send update"}
+          </Button>
         }
       >
         <Form id="track-rfq-update-form" onSubmit={submitUpdate} className="space-y-3">
@@ -610,14 +605,9 @@ export default function TrackRfqComparison({ rfqId, onBack, onChanged }) {
         title="Invite more shops"
         size="md"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setInviteOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" size="sm" onClick={submitInvite} disabled={busy}>
-              {busy ? "Inviting…" : "Invite"}
-            </Button>
-          </>
+          <Button type="button" size="sm" onClick={submitInvite} disabled={busy}>
+            {busy ? "Inviting…" : "Invite"}
+          </Button>
         }
       >
         <p className="mb-3 text-xs text-secondary">

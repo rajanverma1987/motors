@@ -170,11 +170,7 @@ export default function TrackMotorDownFlow({ open, motor, onClose, onSent }) {
           {sending ? "Sending…" : "Send RFQ"}
         </Button>
       </>
-    ) : (
-      <Button type="button" size="sm" variant="outline" onClick={onClose}>
-        Cancel
-      </Button>
-    );
+    ) : null;
 
   const verified = session?.emailVerified !== false;
 

@@ -16,6 +16,7 @@ import {
 import { settledInactiveEmployeeIds } from "@/lib/payroll-hour-balance";
 import EmployeePayrollPayment from "@/models/EmployeePayrollPayment";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
 import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -82,12 +83,14 @@ export async function GET(request) {
           createdByEmail: email,
           voidedAt: null,
           workDate: { $gte: from, $lte: to },
+          ...payableManualHoursClause(),
           ...punchEmployeeFilter,
         }).lean(),
         TimeClockManualHours.find({
           createdByEmail: email,
           voidedAt: null,
           workDate: { $lt: from },
+          ...payableManualHoursClause(),
           ...punchEmployeeFilter,
         }).lean(),
         EmployeePayrollPayment.find({

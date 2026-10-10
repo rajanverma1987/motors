@@ -1161,14 +1161,9 @@ export default function Table({
           title="Column visibility"
           size="sm"
           actions={
-            <>
-              <Button size="sm" variant="secondary" onClick={() => setSettingsModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" variant="primary" onClick={saveColumnVisibility}>
-                Save
-              </Button>
-            </>
+            <Button size="sm" variant="primary" onClick={saveColumnVisibility}>
+              Save
+            </Button>
           }
         >
           <div className="flex flex-col gap-4">

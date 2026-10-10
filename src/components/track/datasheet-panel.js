@@ -172,14 +172,9 @@ export default function TrackDatasheetPanel({ motor, onChanged }) {
         title="Datasheet values"
         size="lg"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <p className="mb-3 text-xs text-secondary">

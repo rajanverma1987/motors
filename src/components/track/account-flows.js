@@ -80,14 +80,9 @@ export function TrackAccountLinkHandler() {
       title="Set a new password"
       size="sm"
       actions={
-        <>
-          <Button type="button" size="sm" variant="outline" onClick={() => setResetToken("")}>
-            Cancel
-          </Button>
-          <Button type="submit" form="track-reset-form" size="sm" disabled={busy}>
-            {busy ? "Saving…" : "Save password"}
-          </Button>
-        </>
+        <Button type="submit" form="track-reset-form" size="sm" disabled={busy}>
+          {busy ? "Saving…" : "Save password"}
+        </Button>
       }
     >
       <Form id="track-reset-form" onSubmit={submitReset} className="space-y-3">
@@ -179,14 +174,9 @@ export function TrackVerifyBanner() {
         title="Verify your email"
         size="sm"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setCodeOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form="track-verify-form" size="sm" disabled={busy}>
-              {busy ? "Checking…" : "Verify"}
-            </Button>
-          </>
+          <Button type="submit" form="track-verify-form" size="sm" disabled={busy}>
+            {busy ? "Checking…" : "Verify"}
+          </Button>
         }
       >
         <Form id="track-verify-form" onSubmit={submitCode} className="space-y-3">
@@ -236,14 +226,9 @@ export function TrackForgotPasswordModal({ open, onClose }) {
       title="Reset your password"
       size="sm"
       actions={
-        <>
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" form="track-forgot-form" size="sm" disabled={busy}>
-            {busy ? "Sending…" : "Send link"}
-          </Button>
-        </>
+        <Button type="submit" form="track-forgot-form" size="sm" disabled={busy}>
+          {busy ? "Sending…" : "Send link"}
+        </Button>
       }
     >
       <Form id="track-forgot-form" onSubmit={submit} className="space-y-3">

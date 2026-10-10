@@ -156,11 +156,6 @@ export default function TrackPaypalSubscribeModal({ open, onClose }) {
       onClose={onClose}
       title="Subscribe to Pro"
       size="sm"
-      actions={
-        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-          Close
-        </Button>
-      }
     >
       <p className="text-sm text-secondary">
         {priceLabel}. Unlimited motors. Billed through PayPal. Cancel anytime from Profile.

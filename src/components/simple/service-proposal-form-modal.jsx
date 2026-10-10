@@ -12,7 +12,6 @@ import SimpleDatasheetModal from "@/components/simple/simple-datasheet-modal";
 import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
 import SimpleServiceProposalAttachmentsModal from "@/components/simple/simple-service-proposal-attachments-modal";
 import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-service-proposal-print-preview-modal";
-import SimpleActivityLogPanel from "@/components/simple/simple-activity-log-panel";
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
@@ -21,6 +20,7 @@ import SimpleMotorLogisticsModal, {
   KIND_SHIPPING,
 } from "@/components/simple/simple-motor-logistics-modal";
 import SimpleAddFromInventoryModal from "@/components/simple/simple-add-from-inventory-modal";
+import SimpleProposalJobHours from "@/components/simple/simple-proposal-job-hours";
 import SimpleDoubleClickTextEditInput from "@/components/simple/simple-double-click-text-edit-input";
 import SimpleDoubleClickTextEditTextarea from "@/components/simple/simple-double-click-text-edit-textarea";
 import {
@@ -1538,38 +1538,73 @@ export default function ServiceProposalFormModal({
 
   const searchNav = searchResultNavigation;
   const navBusy = saving || copying || loadingRecord;
+  const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
   const headerCenter =
-    searchNav && Number(searchNav.total) > 1 ? (
-      <div
-        className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2"
-        role="navigation"
-        aria-label={searchNav.label || "Records"}
-      >
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex items-center gap-1 text-xs"
-          disabled={navBusy || !searchNav.canPrevious}
-          onClick={() => searchNav.onPrevious?.()}
-        >
-          <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          Back
-        </Button>
-        <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
-          {Number(searchNav.currentIndex) + 1} of {Number(searchNav.total)}
-        </span>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="inline-flex items-center gap-1 text-xs"
-          disabled={navBusy || !searchNav.canNext}
-          onClick={() => searchNav.onNext?.()}
-        >
-          Next
-          <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        </Button>
+    canViewFinancials || showSearchNav ? (
+      <div className="flex flex-nowrap items-center gap-1.5">
+        {canViewFinancials ? (
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || copying}
+              title="Email to client"
+              aria-label="Email to client"
+              onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
+            >
+              <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+              Email to client
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || copying}
+              title="Customer Print"
+              aria-label="Customer Print"
+              onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
+            >
+              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+              Customer Print
+            </Button>
+          </>
+        ) : null}
+        {showSearchNav ? (
+          <div
+            className="flex flex-nowrap items-center gap-1.5"
+            role="navigation"
+            aria-label={searchNav.label || "Records"}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex items-center gap-1 text-xs"
+              disabled={navBusy || !searchNav.canPrevious}
+              onClick={() => searchNav.onPrevious?.()}
+            >
+              <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Back
+            </Button>
+            <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
+              {Number(searchNav.currentIndex) + 1} of {Number(searchNav.total)}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="inline-flex items-center gap-1 text-xs"
+              disabled={navBusy || !searchNav.canNext}
+              onClick={() => searchNav.onNext?.()}
+            >
+              Next
+              <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            </Button>
+          </div>
+        ) : null}
       </div>
     ) : null;
 
@@ -2013,7 +2048,7 @@ export default function ServiceProposalFormModal({
             </div>
 
             {/* Column 2 — meta */}
-            <div className="flex min-w-0 flex-col gap-2">
+            <div className="flex h-full min-w-0 flex-col gap-2">
               <div className="flex flex-wrap justify-end gap-1 py-1.5">
                 <Button
                   type="button"
@@ -2037,43 +2072,13 @@ export default function ServiceProposalFormModal({
                 </Button>
               </div>
               <FieldRow label={docLabel} labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-1">
-                  <input
-                    type="text"
-                    value={form.documentNumber}
-                    onChange={(e) => patch("documentNumber", e.target.value)}
-                    className={`${FIELD_INPUT} min-w-0 flex-1 border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
-                    placeholder="Assigned on save"
-                  />
-                  {canViewFinancials ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 w-7 shrink-0 px-0 text-primary hover:bg-primary/10"
-                        disabled={saving || copying}
-                        title="Email to client"
-                        aria-label="Email to client"
-                        onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
-                      >
-                        <FiMail className="h-4 w-4 shrink-0" aria-hidden />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 w-7 shrink-0 px-0 text-primary hover:bg-primary/10"
-                        disabled={saving || copying}
-                        title="Customer Print"
-                        aria-label="Customer Print"
-                        onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
-                      >
-                        <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                      </Button>
-                    </>
-                  ) : null}
-                </div>
+                <input
+                  type="text"
+                  value={form.documentNumber}
+                  onChange={(e) => patch("documentNumber", e.target.value)}
+                  className={`${FIELD_INPUT} border-primary/40 bg-primary/15 font-semibold text-primary focus:border-primary dark:bg-primary/25 dark:text-primary`}
+                  placeholder="Assigned on save"
+                />
               </FieldRow>
               <FieldRow label="Customer PO#" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
@@ -2200,6 +2205,7 @@ export default function ServiceProposalFormModal({
                   </Button>
                 </FieldRow>
               ) : null}
+              {recordId ? <SimpleProposalJobHours recordId={recordId} /> : null}
             </div>
 
             {/* Column 3 — notes + purchase orders (full width under the first two on tablet) */}
@@ -2550,7 +2556,6 @@ export default function ServiceProposalFormModal({
             </div>
           </div>
         </Form>
-        {recordId ? <SimpleActivityLogPanel recordKind="proposal" recordId={recordId} /> : null}
         </div>
       </Modal>
 

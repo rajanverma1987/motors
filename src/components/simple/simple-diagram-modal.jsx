@@ -1078,9 +1078,6 @@ export default function SimpleDiagramModal({
           <FiPlus className="h-4 w-4 shrink-0" />
           Add diagram
         </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-          Close
-        </Button>
       </>
     ) : step === "view" ? (
       <>
@@ -1156,9 +1153,6 @@ export default function SimpleDiagramModal({
             All diagrams
           </Button>
         ) : null}
-        <Button type="button" size="sm" variant="outline" onClick={onClose}>
-          Close
-        </Button>
       </>
     );
 

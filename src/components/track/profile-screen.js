@@ -172,14 +172,9 @@ export default function TrackProfileScreen() {
         title="Facility details"
         size="md"
         actions={
-          <>
-            <Button type="button" size="sm" variant="outline" onClick={() => setEditOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" form={PROFILE_FORM_ID} size="sm" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={PROFILE_FORM_ID} size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         {form ? (

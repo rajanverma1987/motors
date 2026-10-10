@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import Employee from "@/models/Employee";
 import TimeClockPunch from "@/models/TimeClockPunch";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import {
   computeHoursFromPunches,
@@ -44,6 +45,7 @@ export async function GET(request) {
     const manualQ = {
       createdByEmail: email,
       voidedAt: null,
+      ...payableManualHoursClause(),
       ...(Object.keys(workDate).length ? { workDate } : {}),
       ...(employeeId ? { employeeId } : {}),
     };

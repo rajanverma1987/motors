@@ -82,14 +82,9 @@ export default function TrackServiceHistoryModal({ open, motorId, onClose, onSav
       title="Add service history"
       size="md"
       actions={
-        <>
-          <Button type="button" size="sm" variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </>
+        <Button type="submit" form={FORM_ID} size="sm" disabled={saving}>
+          {saving ? "Saving…" : "Save"}
+        </Button>
       }
     >
       <Form id={FORM_ID} onSubmit={submit} className="grid gap-3 sm:grid-cols-2">

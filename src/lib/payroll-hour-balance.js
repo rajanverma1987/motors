@@ -4,6 +4,7 @@ import TimeClockManualHours from "@/models/TimeClockManualHours";
 import TimeClockPunch from "@/models/TimeClockPunch";
 import { paidHoursAppliedToRange, parsePayRate, periodMonthBounds } from "@/lib/employee-payroll-payment";
 import { localDateIso, workedHoursAfter } from "@/lib/time-clock-punches";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 
 const LOOKBACK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -25,6 +26,7 @@ async function lifetimeWorkedByEmployee(owner, until, employeeId) {
   const manualQuery = {
     createdByEmail: owner,
     voidedAt: null,
+    ...payableManualHoursClause(),
     ...(day ? { workDate: { $lte: day } } : {}),
   };
   if (employeeId) {
@@ -132,6 +134,7 @@ export async function hourlyUnpaidHoursForRange(owner, employeeId, from, to, now
       employeeId: id,
       voidedAt: null,
       workDate: { $lte: window.manualTo },
+      ...payableManualHoursClause(),
     }).lean(),
     EmployeePayrollPayment.find({
       createdByEmail: owner,
@@ -208,6 +211,7 @@ async function monthWorkedByEmployee(owner, window) {
       createdByEmail: owner,
       voidedAt: null,
       workDate: { $gte: window.from, $lte: window.manualTo },
+      ...payableManualHoursClause(),
     }).lean(),
   ]);
 
@@ -335,6 +339,7 @@ export async function settledInactiveEmployeeIds(owner, now = new Date()) {
       createdByEmail: owner,
       employeeId: { $in: ids },
       voidedAt: null,
+      ...payableManualHoursClause(),
     }).lean(),
     EmployeePayrollPayment.find({
       createdByEmail: owner,

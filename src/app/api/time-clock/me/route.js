@@ -18,6 +18,7 @@ import {
   serializePunch,
 } from "@/lib/time-clock-punches";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import { payableManualHoursClause } from "@/lib/time-clock-payable-hours";
 import { maybeSendPayrollCommunicationAfterPunch } from "@/lib/time-clock-payroll-communication";
 
 async function requireEmployeeSession(request, token) {
@@ -112,6 +113,7 @@ export async function GET(request) {
           createdByEmail: shop.ownerEmail,
           employeeId: session.employeeId,
           voidedAt: null,
+          ...payableManualHoursClause(),
           ...(Object.keys(workDate).length ? { workDate } : {}),
         })
           .sort({ workDate: 1 })

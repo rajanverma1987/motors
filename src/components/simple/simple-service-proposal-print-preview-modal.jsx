@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiPrinter, FiSend } from "react-icons/fi";
+import { FiPrinter } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import { useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
@@ -11,10 +11,10 @@ import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-
 import QuotePrintSheetBody from "@/components/dashboard/quote-print-sheet-body";
 import InvoicePrintPreview from "@/components/dashboard/invoice-print-preview";
 import SendDocumentPreviewModal from "@/components/dashboard/send-document-preview-modal";
-import { PRINT_NOTES_CUSTOMER, PRINT_NOTES_INTERNAL } from "@/lib/simple-service-proposal-print";
+import { PRINT_NOTES_CUSTOMER } from "@/lib/simple-service-proposal-print";
 
 /**
- * Simple portal print preview (Classic RFQ / Invoice sheet) with Send To Customer.
+ * Simple portal print preview (Classic RFQ / Invoice sheet).
  * @param {{
  *   open: boolean,
  *   onClose: () => void,
@@ -50,7 +50,6 @@ export default function SimpleServiceProposalPrintPreviewModal({
   const invoicePayload = bundle?.invoicePayload || null;
   const documentReady =
     (documentType === "quote" && quote) || (documentType === "invoice" && invoicePayload);
-  const allowSend = bundle?.printNotesMode !== PRINT_NOTES_INTERNAL;
 
   const customerBundle = useMemo(() => {
     if (!bundle) return null;
@@ -98,19 +97,6 @@ export default function SimpleServiceProposalPrintPreviewModal({
         closeOnOutsideClick={false}
         actions={
           <>
-            {allowSend ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                disabled={!documentReady}
-                className="inline-flex items-center gap-1.5"
-                onClick={() => setSendOpen(true)}
-              >
-                <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                Send To Customer
-              </Button>
-            ) : null}
             {canViewFinancials ? (
               <Button
                 type="button"

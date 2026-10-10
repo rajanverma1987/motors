@@ -403,14 +403,9 @@ export default function AdminJobPostingsPage() {
         title="Post a job for a motor shop"
         size="3xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeCreate} disabled={saving}>
-              Cancel
-            </Button>
-            <Button type="submit" form={CREATE_FORM_ID} variant="primary" size="sm" disabled={saving}>
-              {saving ? "Posting…" : "Post job"}
-            </Button>
-          </>
+          <Button type="submit" form={CREATE_FORM_ID} variant="primary" size="sm" disabled={saving}>
+            {saving ? "Posting…" : "Post job"}
+          </Button>
         }
       >
         <Form id={CREATE_FORM_ID} onSubmit={handleCreate} className="space-y-4">
@@ -451,14 +446,9 @@ export default function AdminJobPostingsPage() {
         title="Edit job posting"
         size="3xl"
         actions={
-          <>
-            <Button type="button" variant="outline" size="sm" onClick={closeEdit} disabled={editSaving}>
-              Cancel
-            </Button>
-            <Button type="submit" form={EDIT_FORM_ID} variant="primary" size="sm" disabled={editSaving}>
-              {editSaving ? "Saving…" : "Save"}
-            </Button>
-          </>
+          <Button type="submit" form={EDIT_FORM_ID} variant="primary" size="sm" disabled={editSaving}>
+            {editSaving ? "Saving…" : "Save"}
+          </Button>
         }
       >
         <Form id={EDIT_FORM_ID} onSubmit={handleEdit} className="space-y-4">
