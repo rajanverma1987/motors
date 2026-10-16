@@ -22,9 +22,18 @@ export function DatasheetFieldRow({
   label,
   labelWidth = "7rem",
   inputMinWidth = "4.5rem",
+  stacked = false,
   children,
   className = "",
 }) {
+  if (stacked) {
+    return (
+      <div className={`flex min-w-0 flex-col gap-1 ${className}`}>
+        <label className="text-xs font-bold text-title">{label}</label>
+        <div className="min-w-0 w-full">{children}</div>
+      </div>
+    );
+  }
   return (
     <div
       className={`grid min-w-0 items-center gap-x-2 ${className}`}
@@ -56,6 +65,7 @@ export default function DatasheetFieldGrid({
   filledInputClassName = DATASHEET_FIELD_INPUT_FILLED,
   highlightFilled = false,
   dense = false,
+  stacked = false,
   editModalZIndex = 170,
 }) {
   const resolvedLabelWidth = labelWidth || (dense ? "6.5rem" : "7.5rem");
@@ -64,9 +74,11 @@ export default function DatasheetFieldGrid({
   return (
     <div
       className={
-        dense
-          ? "grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3"
-          : "grid grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-2 lg:grid-cols-3"
+        stacked
+          ? "grid grid-cols-1 gap-3"
+          : dense
+            ? "grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3"
+            : "grid grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-2 lg:grid-cols-3"
       }
     >
       {(Array.isArray(columns) ? columns : []).map((col, colIdx) => (
@@ -80,6 +92,7 @@ export default function DatasheetFieldGrid({
                 label={field.label}
                 labelWidth={resolvedLabelWidth}
                 inputMinWidth={resolvedInputMin}
+                stacked={stacked}
               >
                 <SimpleDoubleClickTextEditInput
                   label={field.label}

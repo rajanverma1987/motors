@@ -69,6 +69,10 @@ const FIELD_LABEL = "shrink-0 whitespace-nowrap text-right text-xs font-bold tex
 const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 const TAB_BTN =
   "h-7 shrink-0 rounded-none px-3 text-xs font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
+const TOUCH_FIELD_INPUT =
+  "h-11 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-3 text-base text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
+const TOUCH_TAB_BTN =
+  "min-h-11 shrink-0 px-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-primary/40";
 
 function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
   return (
@@ -81,17 +85,47 @@ function FieldRow({ label, labelWidth = "6.5rem", children, className = "" }) {
   );
 }
 
-function NotesPanel({ label, value, onChange, ariaLabel }) {
+function NotesPanel({ label, value, onChange, ariaLabel, touch = false }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-xs font-bold text-title">{label}</span>
+      <span className={touch ? "text-sm font-bold text-title" : "text-xs font-bold text-title"}>{label}</span>
       <textarea
-        rows={8}
+        rows={touch ? 5 : 8}
         value={value ?? ""}
         onChange={(e) => onChange(e.target.value)}
-        className={FIELD_TEXTAREA}
+        className={
+          touch
+            ? "min-h-[8rem] w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-3 py-2 text-base text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title"
+            : FIELD_TEXTAREA
+        }
         aria-label={ariaLabel || label}
       />
+    </div>
+  );
+}
+
+function SectionChoices({ label, options, value, onChange }) {
+  const list = Array.isArray(options) ? options : [];
+  return (
+    <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={label}>
+      {list.map((opt, index) => {
+        const active = value === opt;
+        const span = list.length % 2 === 1 && index === list.length - 1;
+        return (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            className={`min-h-11 px-2 text-sm font-semibold ${span ? "col-span-2" : ""} ${
+              active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+            }`}
+            onClick={() => onChange(opt)}
+          >
+            {opt}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -119,7 +153,10 @@ export default function SimpleDatasheetModal({
   jobStatus = "",
   onJobStatusChange,
   recordType = RECORD_TYPE_RFQ,
+  /** Punchin PWA: full-screen sheet with larger fields. */
+  variant = "default",
 }) {
+  const timeClock = variant === "timeClock";
   const alert = useAlert();
   const { user } = useAuth();
   const machineType = resolveMachineType(motorType);
@@ -394,19 +431,24 @@ export default function SimpleDatasheetModal({
       open={open && !printing}
       onClose={() => !saving && !printing && onClose?.()}
       title={
-        isPump
-          ? "Add/Edit Pump Fields"
-          : isGenerator
-            ? "Add/Edit Generator Fields"
-            : isDc
-              ? "Add/Edit DC Fields"
-              : "Add/Edit AC Fields"
+        timeClock
+          ? `${machineType} Datasheet`
+          : isPump
+            ? "Add/Edit Pump Fields"
+            : isGenerator
+              ? "Add/Edit Generator Fields"
+              : isDc
+                ? "Add/Edit DC Fields"
+                : "Add/Edit AC Fields"
       }
       size="6xl"
-      width="min(1100px, 96vw)"
-      height="min(90vh, 880px)"
+      width={timeClock ? undefined : "min(1100px, 96vw)"}
+      height={timeClock ? undefined : "min(90vh, 880px)"}
+      fullscreen={timeClock}
       showClose={!saving && !printing}
       closeOnOutsideClick={false}
+      headerClassName={timeClock ? "[&_h2]:!max-w-none [&_h2]:!whitespace-normal [&_h2]:text-base" : ""}
+      bodyClassName={timeClock ? "px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4" : ""}
       actions={headerActions}
     >
       <Form
@@ -414,7 +456,132 @@ export default function SimpleDatasheetModal({
         onSubmit={handleSubmit}
         className="flex min-h-0 flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
       >
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2">
+        {timeClock ? (
+          <div className="flex flex-col gap-3">
+            <SectionChoices
+              label={isDc ? "DC section" : isStructured ? "Machine section" : "AC section"}
+              options={
+                isDc
+                  ? DC_DATASHEET_SECTIONS
+                  : isPump
+                    ? PUMP_DATASHEET_SECTIONS
+                    : isGenerator
+                      ? GENERATOR_DATASHEET_SECTIONS
+                      : AC_DATASHEET_SECTIONS
+              }
+              value={form.section}
+              onChange={
+                isDc
+                  ? handleDcSectionChange
+                  : isStructured
+                    ? handleStructuredSectionChange
+                    : handleAcSectionChange
+              }
+            />
+            <div className="grid grid-cols-2 gap-3 border border-border bg-primary/[0.04] p-3 dark:bg-primary/10">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">Date</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">
+                  {String(form.date || "").slice(0, 10) || "-"}
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">{jobNumberLabel}</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">{form.jobNumber || "-"}</div>
+              </div>
+              <div className="col-span-2">
+                <div className="text-[11px] font-bold uppercase tracking-wide text-secondary">Company</div>
+                <div className="mt-0.5 text-sm font-semibold text-title">{form.company || "-"}</div>
+              </div>
+            </div>
+            <div>
+              <div className="mb-1 text-sm font-bold text-title">Technician</div>
+              <SimpleSelect
+                options={techOptions}
+                value={form.technician}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setForm((f) => {
+                    const updated = { ...f, technician: next };
+                    if (!isDc && f.assembly && typeof f.assembly === "object") {
+                      updated.assembly = { ...f.assembly, technicianName: next };
+                    }
+                    return updated;
+                  });
+                }}
+                placeholder="Select…"
+                searchable
+                disabled={saving || printing}
+                aria-label="Technician"
+                triggerClassName="!h-11 !px-3 !text-base"
+              />
+            </div>
+            {isDc && form.section === "Complete Motor" ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="DC datasheet tabs">
+                {dcVisibleTabs.map((tab) => {
+                  const active = tab === activeDcTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {showAcTabStripe ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="AC datasheet tabs">
+                {acVisibleTabs.map((tab) => {
+                  const active = tab === activeAcTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+            {showStructuredTabStripe ? (
+              <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="tablist" aria-label="Datasheet tabs">
+                {structuredVisibleTabs.map((tab) => {
+                  const active = tab === activeStructuredTab;
+                  return (
+                    <button
+                      key={tab}
+                      type="button"
+                      role="tab"
+                      aria-selected={active}
+                      className={`${TOUCH_TAB_BTN} ${
+                        active ? "bg-primary text-white" : "border border-border bg-primary/[0.06] text-title"
+                      }`}
+                      onClick={() => patch("activeTab", tab)}
+                    >
+                      {tab}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+        <div className={timeClock ? "hidden" : "flex flex-wrap items-center justify-between gap-2 border-b border-border pb-2"}>
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             {isDc ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="DC section">
@@ -528,7 +695,11 @@ export default function SimpleDatasheetModal({
         </div>
 
         <div
-          className="flex flex-col gap-2 border-b-2 border-primary/40 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
+          className={
+            timeClock
+              ? "hidden"
+              : "flex flex-col gap-2 border-b-2 border-primary/40 pb-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-5 sm:gap-y-2"
+          }
           aria-label="Shared job fields"
         >
           <div className="min-w-0 flex-1 basis-[10rem]">
@@ -591,7 +762,7 @@ export default function SimpleDatasheetModal({
           </div>
         </div>
 
-        {isDc && form.section === "Complete Motor" ? (
+        {isDc && form.section === "Complete Motor" && !timeClock ? (
           <div className="flex flex-wrap gap-1" role="tablist" aria-label="DC datasheet tabs">
             {dcVisibleTabs.map((tab) => {
               const active = tab === activeDcTab;
@@ -615,7 +786,7 @@ export default function SimpleDatasheetModal({
           </div>
         ) : null}
 
-        {showAcTabStripe ? (
+        {showAcTabStripe && !timeClock ? (
           <div className="flex flex-wrap gap-1" role="tablist" aria-label="AC datasheet tabs">
             {acVisibleTabs.map((tab) => {
               const active = tab === activeAcTab;
@@ -639,7 +810,7 @@ export default function SimpleDatasheetModal({
           </div>
         ) : null}
 
-        {showStructuredTabStripe ? (
+        {showStructuredTabStripe && !timeClock ? (
           <div className="flex flex-wrap gap-1" role="tablist" aria-label="Datasheet tabs">
             {structuredVisibleTabs.map((tab) => {
               const active = tab === activeStructuredTab;
@@ -663,6 +834,46 @@ export default function SimpleDatasheetModal({
           </div>
         ) : null}
 
+        <div className={timeClock ? "tc-ds flex flex-col gap-4" : "contents"}>
+        {timeClock ? (
+          <style>{`
+            .tc-ds .flex.items-center.gap-2:has(> label),
+            .tc-ds .flex.items-start.gap-2:has(> label) {
+              flex-direction: column;
+              align-items: stretch;
+              gap: 0.35rem;
+            }
+            .tc-ds .flex.items-center.gap-2 > label,
+            .tc-ds .flex.items-start.gap-2 > label {
+              width: 100% !important;
+              text-align: left !important;
+              white-space: normal !important;
+            }
+            .tc-ds .flex.items-center.gap-2 > div,
+            .tc-ds .flex.items-start.gap-2 > div {
+              width: 100%;
+              min-width: 0;
+            }
+            .tc-ds input[type="text"] {
+              height: 2.75rem !important;
+              width: 100% !important;
+              max-width: none !important;
+              font-size: 1rem !important;
+              padding-left: 0.75rem !important;
+              padding-right: 0.75rem !important;
+            }
+            .tc-ds textarea {
+              min-height: 7rem !important;
+              font-size: 1rem !important;
+              padding: 0.75rem !important;
+            }
+            .tc-ds input[type="radio"],
+            .tc-ds input[type="checkbox"] {
+              width: 1.25rem !important;
+              height: 1.25rem !important;
+            }
+          `}</style>
+        ) : null}
         {isStructured ? (
           activeStructuredTab === GENERATOR_TAB_ROTOR ? (
             <>
@@ -671,12 +882,15 @@ export default function SimpleDatasheetModal({
                 values={form.rotorExciter || {}}
                 onFieldChange={(key, value) => patchNested("rotorExciter", key, value)}
                 labelWidth="12rem"
+                stacked={timeClock}
+                inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
               />
               <NotesPanel
                 label="Notes:"
                 value={form.rotorExciter?.notes ?? ""}
                 onChange={(v) => patchNested("rotorExciter", "notes", v)}
                 ariaLabel="Rotor and exciter notes"
+                touch={timeClock}
               />
             </>
           ) : activeStructuredTab === GENERATOR_TAB_DISASSEMBLY || activeStructuredTab === "Disassembly" ? (
@@ -698,12 +912,15 @@ export default function SimpleDatasheetModal({
                 values={form.dataSheet || {}}
                 onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
                 labelWidth="11.5rem"
+                stacked={timeClock}
+                inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
               />
               <NotesPanel
                 label="Notes:"
                 value={form.dataSheet?.notes ?? ""}
                 onChange={(v) => patchNested("dataSheet", "notes", v)}
                 ariaLabel="DataSheet notes"
+                touch={timeClock}
               />
             </>
           )
@@ -713,12 +930,15 @@ export default function SimpleDatasheetModal({
               columns={dcColumns}
               values={dcBlock}
               onFieldChange={(key, value) => patchNested(dcBlockKey, key, value)}
+              stacked={timeClock}
+              inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
             />
             <NotesPanel
               label="Notes:"
               value={dcBlock.notes ?? ""}
               onChange={(v) => patchNested(dcBlockKey, "notes", v)}
               ariaLabel={`${activeDcTab || "DC"} notes`}
+              touch={timeClock}
             />
           </>
         ) : acBlockKey === "dataSheet" ? (
@@ -728,12 +948,15 @@ export default function SimpleDatasheetModal({
               values={acBlock}
               onFieldChange={(key, value) => patchNested("dataSheet", key, value)}
               labelWidth="10.5rem"
+              stacked={timeClock}
+              inputClassName={timeClock ? TOUCH_FIELD_INPUT : undefined}
             />
             <NotesPanel
               label="Notes:"
               value={acBlock.notes ?? ""}
               onChange={(v) => patchNested("dataSheet", "notes", v)}
               ariaLabel="DataSheet notes"
+              touch={timeClock}
             />
           </>
         ) : acBlockKey === "disassembly" ? (
@@ -750,6 +973,7 @@ export default function SimpleDatasheetModal({
             onChange={(key, value) => patchNested("assembly", key, value)}
           />
         )}
+        </div>
       </Form>
     </Modal>
 

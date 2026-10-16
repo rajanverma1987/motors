@@ -1,5 +1,7 @@
+import mongoose from "mongoose";
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import Customer from "@/models/Customer";
 import {
   findAssignedJob,
   loadShopMergedSettings,
@@ -33,7 +35,23 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "Job not found or not assigned to you." }, { status: 404 });
     }
     const mergedSettings = await loadShopMergedSettings(shop.ownerEmail);
-    return NextResponse.json({ job: serializeMyJobDetail(doc, mergedSettings) });
+    const customerId = String(doc.customerId || "").trim();
+    const customer =
+      customerId && mongoose.Types.ObjectId.isValid(customerId)
+        ? await Customer.findOne({ _id: customerId, createdByEmail: shop.ownerEmail })
+            .select("companyName primaryContactName")
+            .lean()
+        : null;
+    const job = serializeMyJobDetail(doc, mergedSettings);
+    const customerName = String(customer?.companyName || job.companyName || "").trim();
+    const contactName = String(customer?.primaryContactName || "").trim();
+    return NextResponse.json({
+      job: {
+        ...job,
+        companyName: customerName,
+        contactName,
+      },
+    });
   } catch (err) {
     console.error("Time clock my-jobs detail GET error:", err);
     return NextResponse.json({ error: "Failed to load job" }, { status: 500 });

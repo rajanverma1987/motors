@@ -200,10 +200,13 @@ function OutlookDayCell({
     Array.isArray(manualJobNumbers) && manualJobNumbers.length > 0
       ? manualJobNumbers.join(", ")
       : "";
+  const paidHours = Number(allocation?.paidHours) || 0;
+  const unpaidHours = Number(allocation?.unpaidHours) || 0;
   const hoursPaid =
     payEnabled &&
     allocation?.hours != null &&
-    (allocation.fullyPaid || Number(allocation.unpaidHours) <= 0.001);
+    (allocation.fullyPaid || unpaidHours <= 0.001);
+  const hoursPartial = payEnabled && allocation?.hours != null && !hoursPaid && paidHours > 0.001;
   const isToday = cell.iso === today;
   const muted = !cell.inRange;
 
@@ -246,6 +249,15 @@ function OutlookDayCell({
           <span className="inline-flex w-fit items-center gap-0.5 rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold text-success">
             <FiCheck className="h-2.5 w-2.5 shrink-0" aria-hidden />
             Paid
+          </span>
+        ) : hoursPartial ? (
+          <span className="flex w-fit flex-col gap-0.5">
+            <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[10px] font-bold tabular-nums text-success">
+              {paidHours.toFixed(2)} paid
+            </span>
+            <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold tabular-nums text-primary">
+              {unpaidHours.toFixed(2)} unpaid
+            </span>
           </span>
         ) : sessionsAllPunchedOut(sessions) ? (
           <span className="inline-flex w-fit rounded-sm border border-primary/30 bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">

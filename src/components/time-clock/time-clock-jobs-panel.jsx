@@ -273,8 +273,11 @@ export default function TimeClockJobsPanel({
             <p className="text-xs font-semibold uppercase tracking-wide text-[#945c2e]">
               {job.documentNumber || "JOB"}
             </p>
-            <h2 className="mt-1 text-lg font-bold">{job.companyName || "Customer"}</h2>
-            <p className="mt-1 text-sm text-neutral-600">
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-neutral-500">Customer name</p>
+            <h2 className="text-lg font-bold">{job.companyName || "-"}</h2>
+            <p className="mt-3 text-[11px] font-bold uppercase tracking-wide text-neutral-500">Contact name</p>
+            <p className="text-sm font-semibold text-neutral-800">{job.contactName || "-"}</p>
+            <p className="mt-3 text-sm text-neutral-600">
               {job.machineType}
               {job.motorLabel ? ` · ${job.motorLabel}` : ""}
             </p>
@@ -378,6 +381,7 @@ export default function TimeClockJobsPanel({
 
           <SimpleDatasheetModal
             open={datasheetOpen}
+            variant="timeClock"
             onClose={() => setDatasheetOpen(false)}
             onSave={handleSaveDatasheet}
             motorType={job.machineType}

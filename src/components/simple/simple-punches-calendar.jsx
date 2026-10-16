@@ -250,16 +250,31 @@ function PaidBadge() {
 
 function PayStatus({ allocation, onMarkPaid, enabled = true, allowMarkPaid = true }) {
   if (!enabled || allocation?.hours == null) return null;
-  if (allocation.fullyPaid || allocation.unpaidHours <= 0.001) return <PaidBadge />;
-  if (!allowMarkPaid) return null;
+  const paidHours = Number(allocation.paidHours) || 0;
+  const unpaidHours = Number(allocation.unpaidHours) || 0;
+  if (allocation.fullyPaid || unpaidHours <= 0.001) return <PaidBadge />;
+  const partial = paidHours > 0.001;
   return (
-    <button
-      type="button"
-      className="inline-flex w-fit items-center rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary hover:bg-primary/15"
-      onClick={() => onMarkPaid?.(allocation.unpaidHours)}
-    >
-      Mark paid
-    </button>
+    <div className="flex flex-col items-start gap-0.5">
+      {partial ? (
+        <span className="inline-flex w-fit rounded-sm bg-success/15 px-1 py-0.5 text-[11px] font-bold tabular-nums text-success">
+          {paidHours.toFixed(2)} paid
+        </span>
+      ) : null}
+      {allowMarkPaid ? (
+        <button
+          type="button"
+          className="inline-flex w-fit items-center rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-primary hover:bg-primary/15"
+          onClick={() => onMarkPaid?.(unpaidHours)}
+        >
+          {partial ? `Mark ${unpaidHours.toFixed(2)} paid` : "Mark paid"}
+        </button>
+      ) : partial ? (
+        <span className="inline-flex w-fit rounded-sm border border-primary/40 bg-primary/10 px-1 py-0.5 text-[11px] font-semibold tabular-nums text-primary">
+          {unpaidHours.toFixed(2)} unpaid
+        </span>
+      ) : null}
+    </div>
   );
 }
 

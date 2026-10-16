@@ -51,6 +51,8 @@ export default function Modal({
   zIndex: zIndexOverride,
   /** Optional id on the outer portal wrapper (e.g. for print CSS targeting). */
   hostId,
+  /** Fill the viewport. Used by the Punchin datasheet. */
+  fullscreen = false,
 }) {
   const stackContext = useModalStack();
   const { addModal, removeModal, getStackIndex } = stackContext || {};
@@ -64,6 +66,7 @@ export default function Modal({
   const dialogRef = useRef(null);
 
   const handleHeaderMouseDown = (e) => {
+    if (fullscreen) return;
     if (e.button !== 0) return;
     dragStartRef.current = {
       clientX: e.clientX,
@@ -214,15 +217,17 @@ export default function Modal({
       ? BASE_Z + stackIndex * STACK_STEP
       : zIndexOverride ?? BASE_Z;
 
-  const dialogStyle = {
-    ...(Object.keys(style).length ? style : {}),
-    transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-  };
+  const dialogStyle = fullscreen
+    ? undefined
+    : {
+        ...(Object.keys(style).length ? style : {}),
+        transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+      };
 
   const modalContent = (
     <div
       id={hostId ?? undefined}
-      className="fixed inset-0 p-4"
+      className={fullscreen ? "fixed inset-0 p-0" : "fixed inset-0 p-4"}
       style={{ zIndex }}
       role="dialog"
       aria-modal="true"
@@ -236,12 +241,18 @@ export default function Modal({
         ref={dialogRef}
         tabIndex={-1}
         style={dialogStyle}
-        className={`absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`}
+        className={
+          fullscreen
+            ? `absolute inset-0 flex h-[100dvh] max-h-none w-full min-w-0 flex-col rounded-none border-0 bg-card outline-none focus-visible:outline-none ${className}`
+            : `absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {(title != null || showClose || actions || headerCenter != null) && (
           <div
-            className={`min-h-11 min-w-0 border-b border-border px-4 py-2 select-none ${dragging ? "cursor-grabbing" : "cursor-grab"} ${headerClassName}`.trim()}
+            className={`min-h-11 min-w-0 border-b border-border px-4 py-2 select-none ${
+              fullscreen ? "" : dragging ? "cursor-grabbing" : "cursor-grab"
+            } ${headerClassName}`.trim()}
             onMouseDown={handleHeaderMouseDown}
           >
             {headerCenter != null ? (
