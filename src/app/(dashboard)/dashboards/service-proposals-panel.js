@@ -145,6 +145,21 @@ function resolveRowStatusPill(status, mergedSettings, quoteOpts, invoiceOpts) {
   return { style: pill.style, className: pill.className || "", label };
 }
 
+/** Native date controls follow color-scheme, not the cell text color. */
+function dateControlScheme(color) {
+  const hex = String(color || "").trim();
+  const match = hex.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!match) return "light";
+  let h = match[1];
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const n = parseInt(h, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return lum > 0.62 ? "dark" : "light";
+}
+
 /** Full-cell status highlight (flush to cell edges; keep control padding inside). */
 function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
   const resolved = resolveRowStatusPill(row?.status, mergedSettings, quoteOpts, invoiceOpts);
@@ -1014,19 +1029,24 @@ export default function ServiceProposalsPanel({
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
               getCellClassName: (_, row) =>
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
-              render: (v, row) => (
-                <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="date"
-                    value={toInputDateValue(v)}
-                    aria-label="Invoice Paid Date"
-                    className="h-7 w-full min-w-0 border-0 bg-transparent px-1 text-right text-xs font-semibold tabular-nums text-title outline-none [color-scheme:light] dark:[color-scheme:dark]"
-                    onChange={(e) =>
-                      handleRowFieldChange(row.id, { invoicePaidDate: e.target.value })
-                    }
-                  />
-                </div>
-              ),
+              render: (v, row) => {
+                const chrome = proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts);
+                const color = chrome.style?.color || "inherit";
+                return (
+                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="date"
+                      value={toInputDateValue(v)}
+                      aria-label="Invoice Paid Date"
+                      style={{ color, colorScheme: dateControlScheme(color) }}
+                      className="h-7 w-full min-w-0 border-0 bg-transparent px-1.5 text-right text-xs font-semibold tabular-nums outline-none"
+                      onChange={(e) =>
+                        handleRowFieldChange(row.id, { invoicePaidDate: e.target.value })
+                      }
+                    />
+                  </div>
+                );
+              },
             },
           ]
         : []),

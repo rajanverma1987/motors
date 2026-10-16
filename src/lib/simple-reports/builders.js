@@ -43,7 +43,7 @@ const VIEW_MAX_PAGE_SIZE = 200;
 const DEFAULT_SORT_COLUMN = {
   "overdue-status": 5, // Days overdue
   "jobs-pipeline": 6, // Date created
-  "invoices-ar": 4, // Date created
+  "invoices-ar": 6, // Invoice paid date
   "purchase-ap": 6, // PO date
   "vendor-spend": 2, // Ordered total
   "inventory-stock": 0, // Part
@@ -568,19 +568,20 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOp
   const sortKeys = [];
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
-    const day = resolveDocDay(doc, ["dateCreated", "invoiceSubmitDate", "date", "createdAt"]);
-    if (!dayInRange(day, from, to)) continue;
     const money = computeSpInvoiceMoney(doc);
+    const paidDay = toYmd(money.latestPaymentDate || doc.invoicePaidDate);
+    if (!dayInRange(paidDay, from, to)) continue;
     if (paymentFilter === "paid" && !money.isPaid) continue;
     if (paymentFilter === "unpaid" && money.isPaid) continue;
-    pushReportRow(rows, sortKeys, day, [
+    const createdDay = resolveDocDay(doc, ["dateCreated", "date", "createdAt"]);
+    pushReportRow(rows, sortKeys, paidDay, [
       String(doc.documentNumber || doc.quote || "").trim(),
       String(doc.companyName || "").trim(),
       String(doc.status || "").trim(),
       money.paymentStatus,
-      formatReportDate(day, currency),
+      formatReportDate(createdDay, currency),
       formatReportDate(doc.invoiceSubmitDate, currency),
-      formatReportDate(money.latestPaymentDate || doc.invoicePaidDate, currency),
+      formatReportDate(paidDay, currency),
       formatReportDate(doc.dueDate, currency),
       moneyCell(money.scopeTotal),
       moneyCell(money.otherTotal),
