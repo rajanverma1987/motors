@@ -34,6 +34,32 @@ function formatMoney(n) {
   return `$${value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+function roundMoney(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+/** Remaining balance after each payment, using payments on or before that date. */
+function balanceDueByPaymentId(payments, grandTotal) {
+  const rows = (Array.isArray(payments) ? payments : []).map((payment, index) => ({
+    payment,
+    index,
+  }));
+  rows.sort((a, b) => {
+    const left = String(a.payment?.date || "");
+    const right = String(b.payment?.date || "");
+    if (left !== right) return left < right ? -1 : 1;
+    return a.index - b.index;
+  });
+  const total = roundMoney(grandTotal);
+  let paid = 0;
+  const byId = new Map();
+  for (const row of rows) {
+    paid = roundMoney(paid + parseSpMoney(row.payment?.amount));
+    byId.set(String(row.payment?.id || ""), roundMoney(Math.max(0, total - paid)));
+  }
+  return byId;
+}
+
 function SummaryTile({ label, value, emphasize = false }) {
   return (
     <div className="min-w-0 flex-1 rounded-sm border border-border bg-card px-4 py-3">
@@ -79,6 +105,31 @@ export default function SimpleInvoicePaymentModal({
     () => computeInvoicePaymentSummary(paymentList, grandTotal),
     [paymentList, grandTotal]
   );
+  const balanceByPaymentId = useMemo(
+    () => balanceDueByPaymentId(paymentList, grandTotal),
+    [paymentList, grandTotal]
+  );
+  const historyRows = useMemo(() => {
+    return paymentList
+      .map((payment, index) => ({ payment, index }))
+      .sort((a, b) => {
+        const left = String(a.payment?.date || "");
+        const right = String(b.payment?.date || "");
+        if (left !== right) return left < right ? -1 : 1;
+        return a.index - b.index;
+      })
+      .map((row) => row.payment);
+  }, [paymentList]);
+  const draftBalanceDue = useMemo(() => {
+    const day = String(draft.date || "").trim();
+    let paid = 0;
+    for (const payment of paymentList) {
+      const paymentDay = String(payment?.date || "").trim();
+      if (!day || (paymentDay && paymentDay <= day)) paid += parseSpMoney(payment?.amount);
+    }
+    paid += parseSpMoney(draft.amount);
+    return roundMoney(Math.max(0, roundMoney(grandTotal) - paid));
+  }, [draft.amount, draft.date, grandTotal, paymentList]);
 
   const preferredMethod = String(customer?.preferredPaymentMethod || "").trim();
   const paymentTerms = String(customer?.paymentTerms || "").trim();
@@ -165,11 +216,13 @@ export default function SimpleInvoicePaymentModal({
       open={open}
       onClose={onClose}
       title={title}
-      size="5xl"
-      width="min(920px, 96vw)"
-      height="min(82vh, 760px)"
+      size="7xl"
+      width="min(1480px, 96vw)"
+      height="min(90vh, 920px)"
+      bodyClassName="!overflow-hidden"
     >
-      <div className="flex min-h-0 flex-col gap-6">
+      <div className="grid h-full min-h-0 grid-cols-1 gap-5 lg:grid-cols-[minmax(22rem,0.82fr)_minmax(0,1.18fr)]">
+        <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-auto pr-1">
         <section className="rounded-sm border border-border bg-primary/[0.03] px-4 py-3.5 dark:bg-primary/10">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
@@ -209,7 +262,7 @@ export default function SimpleInvoicePaymentModal({
           <p className="mb-4 text-xs font-bold uppercase tracking-wide text-secondary">
             Record payment
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="min-w-0">
               <label className={FIELD_LABEL} htmlFor="inv-pay-amount">
                 Amount
@@ -236,6 +289,7 @@ export default function SimpleInvoicePaymentModal({
                 placeholder="Select…"
                 searchable={false}
                 aria-label="Payment method"
+                triggerClassName="!h-9 !min-h-9 !px-2.5"
               />
             </div>
             <div className="min-w-0">
@@ -250,7 +304,21 @@ export default function SimpleInvoicePaymentModal({
                 className={FIELD_INPUT}
               />
             </div>
-            <div className="min-w-0 sm:col-span-2 lg:col-span-2">
+            <div className="min-w-0">
+              <label className={FIELD_LABEL} htmlFor="inv-pay-balance">
+                Balance due
+              </label>
+              <input
+                id="inv-pay-balance"
+                type="text"
+                readOnly
+                value={formatMoney(draftBalanceDue)}
+                className={`${FIELD_INPUT} text-right font-semibold tabular-nums`}
+                aria-label="Balance due at the payment date"
+                title="Balance still due on the payment date, after this amount"
+              />
+            </div>
+            <div className="min-w-0 sm:col-span-2">
               <label className={FIELD_LABEL} htmlFor="inv-pay-reference">
                 Payment reference number
               </label>
@@ -263,7 +331,7 @@ export default function SimpleInvoicePaymentModal({
                 placeholder="Check #, ACH ref, wire confirmation…"
               />
             </div>
-            <div className="min-w-0 sm:col-span-2 lg:col-span-3">
+            <div className="min-w-0 sm:col-span-2">
               <label className={FIELD_LABEL} htmlFor="inv-pay-notes">
                 Notes
               </label>
@@ -289,15 +357,11 @@ export default function SimpleInvoicePaymentModal({
             </Button>
           </div>
         </section>
+        </div>
 
-        <section className="flex min-h-0 flex-1 flex-col gap-2">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-bold uppercase tracking-wide text-secondary">
-              Payments ({paymentList.length})
-            </p>
-          </div>
-          <div className="min-h-[12rem] flex-1 overflow-auto rounded-sm border border-border">
-            <table className="w-full min-w-[42rem] border-collapse text-sm">
+        <div className="flex min-h-[18rem] min-w-0 flex-col lg:min-h-0">
+          <div className="min-h-0 flex-1 overflow-auto rounded-sm border border-border">
+            <table className="w-full min-w-[28rem] border-collapse text-sm">
               <thead className="sticky top-0 z-[1] bg-primary/[0.06] text-title dark:bg-primary/10">
                 <tr className="border-b border-border">
                   <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
@@ -305,6 +369,9 @@ export default function SimpleInvoicePaymentModal({
                   </th>
                   <th className="border-r border-border px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide">
                     Amount
+                  </th>
+                  <th className="border-r border-border px-3 py-2.5 text-right text-xs font-semibold uppercase tracking-wide">
+                    Balance due
                   </th>
                   <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                     Method
@@ -321,18 +388,21 @@ export default function SimpleInvoicePaymentModal({
               <tbody>
                 {paymentList.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-10 text-center text-sm text-secondary">
-                      No payments recorded yet. Add one above.
+                    <td colSpan={7} className="px-4 py-10 text-center text-sm text-secondary">
+                      No payments recorded yet.
                     </td>
                   </tr>
                 ) : (
-                  paymentList.map((p) => (
+                  historyRows.map((p) => (
                     <tr key={p.id} className="border-t border-border bg-card hover:bg-primary/[0.03]">
                       <td className="border-r border-border px-3 py-2.5 text-title">
                         {p.date ? formatDate(p.date) : "—"}
                       </td>
                       <td className="border-r border-border px-3 py-2.5 text-right text-base font-semibold tabular-nums text-title">
                         {formatMoney(parseSpMoney(p.amount))}
+                      </td>
+                      <td className="border-r border-border px-3 py-2.5 text-right font-semibold tabular-nums text-title">
+                        {formatMoney(balanceByPaymentId.get(String(p.id)) ?? summary.balance)}
                       </td>
                       <td className="border-r border-border px-3 py-2.5 text-title">{p.method || "—"}</td>
                       <td className="border-r border-border px-3 py-2.5 text-title">
@@ -356,10 +426,7 @@ export default function SimpleInvoicePaymentModal({
               </tbody>
             </table>
           </div>
-          <p className="text-xs text-secondary">
-            Payment status updates automatically. Invoice status is saved when you add or remove a payment.
-          </p>
-        </section>
+        </div>
       </div>
     </Modal>
   );

@@ -235,7 +235,7 @@ export const SIMPLE_REPORT_CATALOG = [
     id: "invoices-ar",
     category: "Accounting",
     title: "Invoices / AR",
-    description: "Invoice records in the date range by invoice paid date, with billed totals and unpaid balance.",
+    description: "Invoice records with a payment recorded in the date range. Paid is the total of those payments. Unpaid is the balance still due.",
     usesDateRange: true,
     filters: SIMPLE_REPORT_FILTERS["invoices-ar"],
   },

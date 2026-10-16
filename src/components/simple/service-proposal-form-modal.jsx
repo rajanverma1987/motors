@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FiChevronDown, FiChevronLeft, FiChevronRight, FiMail, FiPlus, FiPrinter, FiX } from "react-icons/fi";
+import dynamic from "next/dynamic";
+import { FiChevronDown, FiChevronLeft, FiChevronRight, FiEye, FiMail, FiPlus, FiPrinter, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -15,6 +16,11 @@ import SimpleServiceProposalPrintPreviewModal from "@/components/simple/simple-s
 import SimpleSalesCommissionModal from "@/components/simple/simple-sales-commission-modal";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
+
+/** Loaded on demand so this form and CustomerViewModal do not import each other at startup. */
+const CustomerViewModal = dynamic(() => import("@/components/dashboard/customer-view-modal"), {
+  ssr: false,
+});
 import SimpleMotorLogisticsModal, {
   KIND_RECEIVING,
   KIND_SHIPPING,
@@ -96,6 +102,7 @@ import {
   simpleServiceProposalDocToForm,
   sumLinePrices,
   sumOtherLinePrices,
+  sumTaxableOtherLinePrices,
   lineExtendedPrice,
   applyOtherLineMarkup,
   applyOtherLineSellPrice,
@@ -264,8 +271,10 @@ function LineItemsTable({
   formatMoney,
   headerAction = null,
   hidePrices = false,
+  showTaxColumn = false,
 }) {
   const isOther = title.toLowerCase().includes("other");
+  const showLineTax = isOther && !hidePrices && showTaxColumn;
   const total = isOther ? sumOtherLinePrices(lines) : sumLinePrices(lines);
   const newEmptyLine = () => (isOther ? emptyOtherLine() : emptyScopeLine());
   const lineContentOpts = { withUom: isOther, withQty: isOther };
@@ -323,6 +332,11 @@ function LineItemsTable({
               <th className={LINE_HEAD}>Description</th>
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>Qty</th> : null}
               {isOther ? <th className={`w-16 ${LINE_HEAD}`}>UOM</th> : null}
+              {showLineTax ? (
+                <th className={`w-16 text-center ${LINE_HEAD}`} title="Apply the proposal tax percent">
+                  Taxable?
+                </th>
+              ) : null}
               {!hidePrices ? (
                 <>
                   <th className={`w-24 ${LINE_HEAD}`}>Price</th>
@@ -368,6 +382,19 @@ function LineItemsTable({
                         onChange={(e) => updateLine(line.id, { uom: e.target.value })}
                         className={CELL_INPUT}
                         aria-label="UOM"
+                      />
+                    </td>
+                  ) : null}
+                  {showLineTax ? (
+                    <td className={`${LINE_CELL} text-center`}>
+                      <input
+                        type="checkbox"
+                        checked={line.taxable === true}
+                        disabled={isBlankTrail}
+                        onChange={(e) => updateLine(line.id, { taxable: e.target.checked })}
+                        className="h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                        aria-label="Taxable"
+                        title="Tax this item at the same tax percent as the proposal breakdown"
                       />
                     </td>
                   ) : null}
@@ -551,6 +578,7 @@ export default function ServiceProposalFormModal({
   const [datasheetOpen, setDatasheetOpen] = useState(false);
   const [emailDatasheetOpen, setEmailDatasheetOpen] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [customerViewOpen, setCustomerViewOpen] = useState(false);
   /** Skip one initialForm hydrate (Copy & Create New applies its own form snapshot). */
   const skipHydrateFromInitialRef = useRef(false);
 
@@ -1449,12 +1477,14 @@ export default function ServiceProposalFormModal({
 
   const scopeTotal = sumLinePrices(form.scopeDetails);
   const otherTotal = sumOtherLinePrices(form.otherItems);
+  const taxableOtherTotal = sumTaxableOtherLinePrices(form.otherItems);
   const totalAmount = scopeTotal + otherTotal;
   const showTax = form.customerTaxExempt === false;
   const taxPct = showTax
     ? Number.parseFloat(String(form.taxPercent ?? "").replace(/[^0-9.-]/g, ""))
     : 0;
-  const taxAmount = showTax && Number.isFinite(taxPct) ? (scopeTotal * taxPct) / 100 : 0;
+  const taxAmount =
+    showTax && Number.isFinite(taxPct) ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
   const billingTotal = totalAmount + taxAmount;
   const invoicePaymentSummary = useMemo(
     () => computeInvoicePaymentSummary(form.payments, billingTotal),
@@ -1835,7 +1865,25 @@ export default function ServiceProposalFormModal({
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
-              <FieldRow label="Customer" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
+              <FieldRow
+                label={
+                  <span className="inline-flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                      title="Open customer"
+                      aria-label="Open customer"
+                      disabled={!String(form.customerId || "").trim()}
+                      onClick={() => setCustomerViewOpen(true)}
+                    >
+                      <FiEye className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                    Customer
+                  </span>
+                }
+                labelWidth="7.75rem"
+                controlClassName="min-w-0 flex-1"
+              >
                 <div className="flex min-w-0 items-center gap-1.5">
                   <div className="min-w-0 flex-1">
                     <SimpleSelect
@@ -2171,41 +2219,25 @@ export default function ServiceProposalFormModal({
                       className={FIELD_INPUT}
                     />
                   </FieldRow>
-                  <FieldRow label="Invoice Paid Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                    <input
-                      type="date"
-                      value={form.invoicePaidDate}
-                      onChange={(e) => patch("invoicePaidDate", e.target.value)}
-                      className={FIELD_INPUT}
-                    />
-                  </FieldRow>
+                  {canViewFinancials ? (
+                    <button
+                      type="button"
+                      className="w-full border border-border bg-bg px-3 py-2 text-left text-sm font-semibold text-primary hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => setPaymentModalOpen(true)}
+                      disabled={saving || copying}
+                    >
+                      <span className="block">View / Edit Payment Record</span>
+                      <span className="mt-1 block text-base font-bold tabular-nums text-title">
+                        Paid {formatMoney(invoicePaymentSummary.amountPaid)}, balance{" "}
+                        {formatMoney(invoicePaymentSummary.balance)}
+                      </span>
+                    </button>
+                  ) : null}
                 </>
               ) : null}
-              {form.recordType === RECORD_TYPE_INVOICE && canViewFinancials ? (
-                <FieldRow
-                  label=""
-                  labelWidth="9.5rem"
-                  controlClassName="min-w-0 flex-1"
-                  className="mt-5"
-                >
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN} w-full justify-center`}
-                    onClick={() => setPaymentModalOpen(true)}
-                    disabled={saving || copying}
-                  >
-                    Add/Edit Payment Record
-                    {invoicePaymentSummary.amountPaid > 0 ? (
-                      <span className="ml-1 tabular-nums opacity-90">
-                        ({invoicePaymentSummary.paymentStatus})
-                      </span>
-                    ) : null}
-                  </Button>
-                </FieldRow>
+              {recordId ? (
+                <SimpleProposalJobHours recordId={recordId} employees={employeesWithAdmin} />
               ) : null}
-              {recordId ? <SimpleProposalJobHours recordId={recordId} /> : null}
             </div>
 
             {/* Column 3 — notes + purchase orders (full width under the first two on tablet) */}
@@ -2471,12 +2503,13 @@ export default function ServiceProposalFormModal({
             />
             <div className="flex min-w-0 flex-col gap-2">
               <LineItemsTable
-                title="OTHER ITEMS (Non taxable items)"
+                title="OTHER ITEMS"
                 lines={form.otherItems}
                 onChange={(otherItems) => patch("otherItems", otherItems)}
                 totalLabel="Total:"
                 formatMoney={formatMoney}
                 hidePrices={!canViewFinancials}
+                showTaxColumn={showTax}
                 headerAction={
                   <Button
                     type="button"
@@ -2724,6 +2757,37 @@ export default function ServiceProposalFormModal({
           jobStatus: form.jobStatus,
         }}
       />
+
+      {customerViewOpen && String(form.customerId || "").trim() ? (
+      <CustomerViewModal
+        open
+        customerId={String(form.customerId || "").trim()}
+        onClose={() => setCustomerViewOpen(false)}
+        portal="simple"
+        onCustomerUpdated={(customer) => {
+          const cid = String(customer?.id || customer?._id || form.customerId || "").trim();
+          if (!cid) return;
+          setCustomers((prev) => {
+            const idx = prev.findIndex((row) => String(row.id || row._id || "") === cid);
+            if (idx < 0) return [...prev, { ...customer, id: cid }];
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...customer, id: cid };
+            return next;
+          });
+          setForm((current) => {
+            if (String(current.customerId || "") !== cid) return current;
+            return {
+              ...current,
+              companyName: String(
+                customer?.companyName || customer?.primaryContactName || current.companyName || ""
+              ).trim(),
+              customerEmail: customer?.email ?? current.customerEmail,
+              customerPhone: customer?.phone ?? current.customerPhone,
+            };
+          });
+        }}
+      />
+      ) : null}
 
       <SimpleInvoicePaymentModal
         open={paymentModalOpen && form.recordType === RECORD_TYPE_INVOICE}

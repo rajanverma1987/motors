@@ -83,9 +83,16 @@ export function mongoProposalKindClause(mergedSettings) {
   return { $nor: [mongoInvoiceKindClause(mergedSettings)] };
 }
 
-export function mongoSpDateRangeClause(fromYmd, toYmd) {
+/**
+ * Date window for a list. Pass the field for that tab.
+ * Service proposals: proposalSubmitDate. Invoices: invoiceSubmitDate.
+ * With no field, matches date or dateCreated (tax remittance and older callers).
+ */
+export function mongoSpDateRangeClause(fromYmd, toYmd, field = "") {
+  const name = String(field || "").trim();
+  if (name) return mongoFieldInCalendarRange(name, fromYmd, toYmd);
   const clauses = ["date", "dateCreated"]
-    .map((field) => mongoFieldInCalendarRange(field, fromYmd, toYmd))
+    .map((key) => mongoFieldInCalendarRange(key, fromYmd, toYmd))
     .filter(Boolean);
   if (!clauses.length) return null;
   return { $or: clauses.flatMap((clause) => clause.$or) };

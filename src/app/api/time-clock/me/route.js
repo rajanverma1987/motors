@@ -149,6 +149,7 @@ export async function GET(request) {
         technicianAppAccess: Boolean(emp.technicianAppAccess),
       },
       technicianAppAccess: Boolean(emp.technicianAppAccess),
+      geofenceEnabled: shop.geofenceEnabled !== false,
       geofenceConfigured: shop.lat != null && shop.lng != null,
       wallScanAuthorized,
       ...state,
@@ -184,19 +185,22 @@ export async function POST(request) {
       );
     }
 
-    if (shop.lat == null || shop.lng == null) {
-      return NextResponse.json(
-        { error: "Shop punch location is not configured. Ask your manager." },
-        { status: 403 }
+    const geofenceOn = shop.geofenceEnabled !== false;
+    let geo = { ok: true, distanceM: null, accuracyM: null };
+    if (geofenceOn) {
+      if (shop.lat == null || shop.lng == null) {
+        return NextResponse.json(
+          { error: "Shop punch location is not configured. Ask your manager." },
+          { status: 403 }
+        );
+      }
+      geo = evaluatePunchGeofence(
+        { lat: body.lat, lng: body.lng, accuracy: body.accuracy },
+        { lat: shop.lat, lng: shop.lng, radiusM: shop.radiusM }
       );
-    }
-
-    const geo = evaluatePunchGeofence(
-      { lat: body.lat, lng: body.lng, accuracy: body.accuracy },
-      { lat: shop.lat, lng: shop.lng, radiusM: shop.radiusM }
-    );
-    if (!geo.ok) {
-      return NextResponse.json({ error: geo.error }, { status: 403 });
+      if (!geo.ok) {
+        return NextResponse.json({ error: geo.error }, { status: 403 });
+      }
     }
 
     const emp = await Employee.findOne({
@@ -223,8 +227,8 @@ export async function POST(request) {
       type,
       punchedAt: new Date(),
       source: "qr_passkey",
-      lat: Number(body.lat),
-      lng: Number(body.lng),
+      lat: Number.isFinite(Number(body.lat)) ? Number(body.lat) : null,
+      lng: Number.isFinite(Number(body.lng)) ? Number(body.lng) : null,
       accuracyM: geo.accuracyM,
       distanceM: geo.distanceM,
       userAgent: String(request.headers.get("user-agent") || "").slice(0, 300),

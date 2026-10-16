@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
@@ -8,7 +8,7 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import SimpleSelect from "@/components/simple/simple-select";
-import { useAlert } from "@/components/confirm-provider";
+import { useAlert, useConfirm } from "@/components/confirm-provider";
 import {
   useFormatDate,
   useFormatMoney,
@@ -36,6 +36,13 @@ function FieldRow({ label, labelWidth = "6.75rem", children, className = "" }) {
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
+}
+
+function toLocalInputDate(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function localTodayIso() {
@@ -76,6 +83,7 @@ function monthLabel(ym) {
  */
 export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSaved, employee }) {
   const alert = useAlert();
+  const confirm = useConfirm();
   const formatDate = useFormatDate();
   const formatMoney = useFormatMoney();
   const { settings } = useUserSettings();
@@ -108,6 +116,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
   const [payUploading, setPayUploading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [editingPayment, setEditingPayment] = useState(null);
 
   const fmt = useCallback(
     (n) => {
@@ -170,6 +179,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     setPayMethod("");
     setPayNotes("");
     setPayPendingFiles([]);
+    setEditingPayment(null);
 
     if (payType === "salary") {
       setPayHours("");
@@ -205,6 +215,23 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
         if (!res.ok) throw new Error(data.error || "Failed to load unpaid hours");
         if (cancelled) return;
         const unpaid = Math.max(0, Number(data.unpaidHours) || 0);
+        const editingSamePeriod =
+          editingPayment &&
+          String(editingPayment.periodFrom || "").slice(0, 10) === from &&
+          String(editingPayment.periodTo || "").slice(0, 10) === to;
+        const editingHours = editingSamePeriod ? Number(editingPayment.hours) || 0 : 0;
+        const available = unpaid + editingHours;
+        if (editingSamePeriod) {
+          const hoursStr = editingHours.toFixed(2);
+          setMaxUnpaidHours(available);
+          setPayHours(hoursStr);
+          setPayAmount(
+            editingPayment.amount != null && editingPayment.amount !== ""
+              ? String(editingPayment.amount)
+              : amountForHours(hoursStr, hourlyRate)
+          );
+          return;
+        }
         const forcedHours =
           employee?.hours != null && Number.isFinite(Number(employee.hours)) ? Number(employee.hours) : null;
         const initialFrom = String(employee?.periodFrom || "").slice(0, 10);
@@ -246,11 +273,33 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     payPeriodTo,
     hourlyRate,
     alert,
+    editingPayment,
   ]);
 
   const close = () => {
     if (paySaving || payUploading) return;
     onClose?.();
+  };
+
+  const startEdit = (row) => {
+    if (!row?.id || paySaving || payUploading) return;
+    setEditingPayment(row);
+    setPayPeriodFrom(String(row.periodFrom || "").slice(0, 10));
+    setPayPeriodTo(String(row.periodTo || "").slice(0, 10));
+    setPayPaidAt(toLocalInputDate(row.paidAt) || localTodayIso());
+    setPayMethod(String(row.paymentMethod || "").trim());
+    setPayNotes(String(row.notes || ""));
+    setPayHours((Number(row.hours) || 0).toFixed(2));
+    setPayAmount(String(row.amount ?? ""));
+    setPayPendingFiles([]);
+  };
+
+  const cancelEdit = () => {
+    setEditingPayment(null);
+    setPayPaidAt(localTodayIso());
+    setPayMethod("");
+    setPayNotes("");
+    setPayPendingFiles([]);
   };
 
   const handleSubmit = async (e) => {
@@ -312,28 +361,64 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       String(payPeriodTo || "").slice(0, 7) ||
       currentMonthValue();
 
+    const summaryRows = [
+      ["Employee", name],
+      employeeNumber ? ["Employee number", employeeNumber] : null,
+      ["Pay period", `${formatDate(payPeriodFrom.trim())} to ${formatDate(payPeriodTo.trim())}`],
+      payType === "hourly" ? ["Hours to pay", hoursToPay.toFixed(2)] : ["Pay type", "Salary"],
+      ["Amount", fmt(amount)],
+      ["Paid date", formatDate(payPaidAt.trim())],
+      ["Mode of payment", String(payMethod || "").trim()],
+      payNotes.trim() ? ["Notes", payNotes.trim()] : null,
+      payPendingFiles.length ? ["New documents", String(payPendingFiles.length)] : null,
+    ].filter(Boolean);
+    const approved = await confirm({
+      title: editingPayment ? "Save payment changes" : "Confirm payment",
+      message: (
+        <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-6 gap-y-2">
+          {summaryRows.map(([label, value]) => (
+            <Fragment key={label}>
+              <dt className="text-secondary">{label}</dt>
+              <dd className="font-semibold text-title">{value}</dd>
+            </Fragment>
+          ))}
+        </dl>
+      ),
+      confirmLabel: editingPayment ? "Save payment" : "Record payment",
+      cancelLabel: "Go back",
+      variant: "primary",
+    });
+    if (!approved) return;
+
     setPaySaving(true);
     try {
-      const res = await fetch("/api/dashboard/employee-payroll-payments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          employeeId,
-          periodMonth,
-          periodFrom: payPeriodFrom.trim(),
-          periodTo: payPeriodTo.trim(),
-          payType,
-          hourlyRate,
-          hours: payType === "hourly" ? hoursToPay : 0,
-          amount,
-          paidAt: paidAtIso,
-          paymentMethod: String(payMethod || "").trim(),
-          notes: payNotes.trim(),
-        }),
-      });
+      const payload = {
+        employeeId,
+        periodMonth,
+        periodFrom: payPeriodFrom.trim(),
+        periodTo: payPeriodTo.trim(),
+        payType,
+        hourlyRate,
+        hours: payType === "hourly" ? hoursToPay : 0,
+        amount,
+        paidAt: paidAtIso,
+        paymentMethod: String(payMethod || "").trim(),
+        notes: payNotes.trim(),
+      };
+      const editingId = String(editingPayment?.id || "").trim();
+      const res = await fetch(
+        editingId
+          ? `/api/dashboard/employee-payroll-payments/${encodeURIComponent(editingId)}`
+          : "/api/dashboard/employee-payroll-payments",
+        {
+          method: editingId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        }
+      );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Failed to record payment");
+      if (!res.ok) throw new Error(data.error || (editingId ? "Failed to update payment" : "Failed to record payment"));
 
       const paymentId = data.payment?.id;
       if (paymentId && payPendingFiles.length > 0) {
@@ -353,7 +438,9 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       if (typeof onSaved === "function") onSaved();
       await alert({
         title: "Saved",
-        message: `Payroll payment recorded for ${name}.`,
+        message: editingId
+          ? `Payroll payment updated for ${name}.`
+          : `Payroll payment recorded for ${name}.`,
       });
     } catch (err) {
       await alert({
@@ -452,13 +539,13 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       onClose={close}
       title="Payment Record"
       size="7xl"
-      width="min(1680px, 98vw)"
+      width="min(2100px, 98vw)"
       height="min(90vh, 880px)"
       showClose={!paySaving && !payUploading}
       closeOnOutsideClick={false}
       bodyClassName="!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
     >
-      <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
+      <div className="relative flex min-h-0 flex-col gap-4 lg:absolute lg:inset-0 lg:grid lg:grid-cols-[minmax(20rem,0.72fr)_minmax(0,1.7fr)] lg:gap-5 lg:overflow-hidden lg:p-1">
         <div className="min-w-0 lg:min-h-0 lg:overflow-y-auto lg:overscroll-contain lg:pr-1">
           <Form
             id={PAY_FORM_ID}
@@ -466,7 +553,9 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
             className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !px-3 !py-1 !shadow-none sm:!px-4"
           >
             <div className="flex flex-col gap-2">
-              <p className="text-xs font-bold uppercase tracking-wide text-secondary">New payment</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-secondary">
+                {editingPayment ? "Edit payment" : "New payment"}
+              </p>
               <p className="text-sm text-secondary">
                 <span className="font-medium text-title">{name}</span>
                 {employeeNumber ? ` · #${employeeNumber}` : ""}
@@ -575,7 +664,19 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                 aria-label="Notes"
               />
             </FieldRow>
-            <div className="flex justify-end pl-[calc(6.75rem+0.625rem)]">
+            <div className="flex justify-end gap-2 pl-[calc(6.75rem+0.625rem)]">
+              {editingPayment ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className={TOOLBAR_BTN}
+                  disabled={paySaving || payUploading}
+                  onClick={cancelEdit}
+                >
+                  Cancel edit
+                </Button>
+              ) : null}
               <Button
                 type="submit"
                 variant="primary"
@@ -583,7 +684,11 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
                 className={TOOLBAR_BTN}
                 disabled={paySaving || payUploading || loadingUnpaid}
               >
-                {paySaving || payUploading ? "Saving…" : "Confirm payment"}
+                {paySaving || payUploading
+                  ? "Saving…"
+                  : editingPayment
+                    ? "Save payment"
+                    : "Confirm payment"}
               </Button>
             </div>
             <VendorAttachmentsPanel
@@ -619,6 +724,8 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
               data={payments}
               rowKey="id"
               loading={historyLoading}
+              onEdit={startEdit}
+              actionsColumnLabel=""
               emptyMessage={
                 historyLoading ? "Loading…" : "No payroll payments recorded for this employee."
               }

@@ -28,7 +28,7 @@ export default function Button({
       type={type}
       onClick={onClick}
       form={form}
-      className={`inline-flex min-w-0 max-w-full items-center justify-center gap-1.5 whitespace-normal text-center text-pretty rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
+      className={`inline-flex min-w-0 max-w-full cursor-pointer items-center justify-center gap-1.5 whitespace-normal text-center text-pretty rounded-md transition-opacity ${variants[variant]} ${sizes[size]} ${className} disabled:opacity-50 disabled:cursor-not-allowed`}
       {...rest}
       disabled={disabled}
       tabIndex={disabled ? -1 : tabIndex}

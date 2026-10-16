@@ -8,6 +8,7 @@ import { getPublicSiteUrl } from "@/lib/public-site-url";
 import {
   ensureTimeClockSettings,
   updateTimeClockGeofence,
+  updateTimeClockGeofenceEnabled,
   updateTimeClockPayrollCommunication,
 } from "@/lib/time-clock-settings";
 import { getOpenPunchState, serializePunch } from "@/lib/time-clock-punches";
@@ -93,6 +94,7 @@ export async function GET(request) {
         lat: settings.lat,
         lng: settings.lng,
         radiusM: settings.radiusM,
+        enabled: settings.geofenceEnabled !== false,
         configured: settings.lat != null && settings.lng != null,
       },
       payrollCommunication: settings.payrollCommunication,
@@ -122,6 +124,19 @@ export async function PATCH(request) {
         shopTimeZone: settings.shopTimeZone || "",
       });
     }
+    if (typeof body.geofenceEnabled === "boolean" && body.lat == null && body.lng == null) {
+      const settings = await updateTimeClockGeofenceEnabled(auth.email, body.geofenceEnabled);
+      return NextResponse.json({
+        ok: true,
+        geofence: {
+          lat: settings.lat,
+          lng: settings.lng,
+          radiusM: settings.radiusM,
+          enabled: settings.geofenceEnabled !== false,
+          configured: settings.lat != null && settings.lng != null,
+        },
+      });
+    }
     if (body.lat != null || body.lng != null || body.radiusM != null) {
       const settings = await updateTimeClockGeofence(auth.email, {
         lat: body.lat,
@@ -134,6 +149,7 @@ export async function PATCH(request) {
           lat: settings.lat,
           lng: settings.lng,
           radiusM: settings.radiusM,
+          enabled: settings.geofenceEnabled !== false,
           configured: settings.lat != null && settings.lng != null,
         },
       });

@@ -62,9 +62,16 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
   const { from: appliedFrom, to: appliedTo } = parseAllJobsDateRange(searchParams);
   const isAllDates = !appliedFrom && !appliedTo;
   const isCurrentFy = isAllJobsCurrentFinancialYear(appliedFrom, appliedTo);
+  const urlMode = isAllDates ? "all" : isCurrentFy ? "fy" : "custom";
+  const [pickingCustom, setPickingCustom] = useState(false);
+  const showCustom = urlMode === "custom" || pickingCustom;
 
   const [draftFrom, setDraftFrom] = useState(() => toInputDateValue(appliedFrom || fyDefault.from));
   const [draftTo, setDraftTo] = useState(() => toInputDateValue(appliedTo || fyDefault.to));
+
+  useEffect(() => {
+    if (urlMode === "custom") setPickingCustom(false);
+  }, [urlMode]);
 
   useEffect(() => {
     if (isAllDates) {
@@ -119,49 +126,67 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
     >
       <button
         type="button"
-        className={dateFilterPillClass(isCurrentFy)}
-        aria-pressed={isCurrentFy}
-        onClick={() => applyDateRange(fyDefault.from, fyDefault.to)}
+        className={dateFilterPillClass(urlMode === "all" && !pickingCustom)}
+        aria-pressed={urlMode === "all" && !pickingCustom}
+        onClick={() => {
+          setPickingCustom(false);
+          applyDateRange("", "");
+        }}
+      >
+        All
+      </button>
+      <button
+        type="button"
+        className={dateFilterPillClass(urlMode === "fy" && !pickingCustom)}
+        aria-pressed={urlMode === "fy" && !pickingCustom}
+        onClick={() => {
+          setPickingCustom(false);
+          applyDateRange(fyDefault.from, fyDefault.to);
+        }}
       >
         FY
       </button>
       <button
         type="button"
-        className={dateFilterPillClass(isAllDates)}
-        aria-pressed={isAllDates}
-        onClick={() => applyDateRange("", "")}
+        className={dateFilterPillClass(showCustom)}
+        aria-pressed={showCustom}
+        onClick={() => setPickingCustom(true)}
       >
-        All
+        Custom Dates
       </button>
-      <div title={fromTitle || undefined}>
-        <Input
-          label="From"
-          type="date"
-          value={draftFrom}
-          onChange={(e) => setDraftFrom(e.target.value)}
-          className={DATE_FILTER_INPUT_CLASS}
-          inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-        />
-      </div>
-      <div title={toTitle || undefined}>
-        <Input
-          label="To"
-          type="date"
-          value={draftTo}
-          onChange={(e) => setDraftTo(e.target.value)}
-          className={DATE_FILTER_INPUT_CLASS}
-          inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
-        />
-      </div>
-      <Button
-        type="button"
-        variant="primary"
-        size="sm"
-        className={DATE_FILTER_BUTTON_CLASS}
-        onClick={() => applyDateRange(draftFrom, draftTo)}
-      >
-        Go
-      </Button>
+      {showCustom ? (
+        <>
+          <div title={fromTitle || undefined}>
+            <Input
+              label="From"
+              type="date"
+              value={draftFrom}
+              onChange={(e) => setDraftFrom(e.target.value)}
+              className={DATE_FILTER_INPUT_CLASS}
+              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+            />
+          </div>
+          <div title={toTitle || undefined}>
+            <Input
+              label="To"
+              type="date"
+              value={draftTo}
+              onChange={(e) => setDraftTo(e.target.value)}
+              className={DATE_FILTER_INPUT_CLASS}
+              inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className={DATE_FILTER_BUTTON_CLASS}
+            onClick={() => applyDateRange(draftFrom, draftTo)}
+          >
+            Go
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 }

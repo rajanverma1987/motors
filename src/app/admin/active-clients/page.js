@@ -18,6 +18,11 @@ function formatDateTime(val) {
   });
 }
 
+function formatUsedDate(val) {
+  if (!val) return "—";
+  return new Date(val).toLocaleDateString(undefined, { dateStyle: "medium" });
+}
+
 function subscriptionStateVariant(state) {
   if (state === "active" || state === "trialing") return "success";
   if (state === "past_due") return "warning";
@@ -32,7 +37,7 @@ function ClientDetailModal({ client, open, onClose }) {
     { label: "Email", value: client.email },
     { label: "Shop name", value: client.shopName || "—" },
     { label: "Contact name", value: client.contactName || "—" },
-    { label: "Last login", value: formatDateTime(client.lastLoginAt) },
+    { label: "Last used", value: formatUsedDate(client.lastLoginAt) },
     {
       label: "Account type",
       value: client.calculatorOnlyAccount
@@ -211,9 +216,9 @@ export default function AdminActiveClientsPage() {
     { key: "contactName", label: "Contact name", sortable: true },
     {
       key: "lastLoginAt",
-      label: "Last login",
+      label: "Last used",
       sortable: true,
-      render: (val) => formatDateTime(val),
+      render: (val) => formatUsedDate(val),
     },
     {
       key: "subscriptionSummary",
@@ -270,8 +275,8 @@ export default function AdminActiveClientsPage() {
       <div className="shrink-0 border-b border-border pb-4">
         <h1 className="text-2xl font-bold text-title">Active clients</h1>
         <p className="text-sm text-secondary">
-          Shops that have signed in to the portal at least once. Sorted by most recent login. Clients appear here
-          after their next login if they registered before this was tracked.
+          Shops that have used the portal at least once. Sorted by most recent use. The date updates once per day.
+          Clients appear here after their next use if they registered before this was tracked.
         </p>
       </div>
 
@@ -281,7 +286,7 @@ export default function AdminActiveClientsPage() {
           data={users}
           rowKey="id"
           loading={loading}
-          emptyMessage="No clients have logged in yet."
+          emptyMessage="No clients have used the portal yet."
           searchable
           onSearch={(q) => {
             setPage(1);

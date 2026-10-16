@@ -6,6 +6,7 @@ import {
   recordTypeDocumentLabel,
   sumLinePrices,
   sumOtherLinePrices,
+  sumTaxableOtherLinePrices,
 } from "@/lib/simple-service-proposal-form";
 import { isLogisticsChargeOtherLine } from "@/lib/simple-motor-logistics";
 import { resolveEmployeeDisplayName } from "@/lib/technician-select-options";
@@ -160,6 +161,7 @@ export function buildSimpleServiceProposalPrintBundle({
     partsLines,
     laborTotal: laborTotal ? String(laborTotal) : "",
     partsTotal: partsTotal ? String(partsTotal) : "",
+    taxablePartsTotal: String(sumTaxableOtherLinePrices(form?.otherItems) || ""),
     customerTaxExempt: form?.customerTaxExempt !== false,
     customerTaxPercent: String(form?.taxPercent ?? "").trim(),
     notes,

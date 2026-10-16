@@ -38,6 +38,8 @@ export default function SimpleSelect({
   triggerClassName = "",
   triggerStyle,
   variant = "field",
+  /** When true, value is a string array and choosing an option toggles it. */
+  multiple = false,
   "aria-label": ariaLabel,
 }) {
   const uid = useId();
@@ -50,6 +52,14 @@ export default function SimpleSelect({
   const triggerRef = useRef(null);
   const listRef = useRef(null);
   const searchRef = useRef(null);
+
+  const selectedValues = useMemo(() => {
+    if (multiple) {
+      const list = Array.isArray(value) ? value : value ? [value] : [];
+      return list.map((item) => String(item));
+    }
+    return value == null || value === "" ? [] : [String(value)];
+  }, [multiple, value]);
 
   const selected = useMemo(
     () => options.find((o) => String(o.value) === String(value)) || null,
@@ -185,9 +195,9 @@ export default function SimpleSelect({
       setHighlight(-1);
       return;
     }
-    const idx = filtered.findIndex((o) => String(o.value) === String(value));
+    const idx = filtered.findIndex((o) => selectedValues.includes(String(o.value)));
     setHighlight(idx >= 0 ? idx : 0);
-  }, [open, filtered, value]);
+  }, [open, filtered, selectedValues]);
 
   useEffect(() => {
     if (!open || highlight < 0 || !listRef.current) return;
@@ -200,6 +210,12 @@ export default function SimpleSelect({
   };
 
   const pick = (opt) => {
+    if (multiple) {
+      const picked = String(opt.value);
+      const has = selectedValues.includes(picked);
+      emit(has ? selectedValues.filter((item) => item !== picked) : [...selectedValues, picked]);
+      return;
+    }
     emit(opt.value);
     closeList({ restoreFocus: true });
   };
@@ -260,8 +276,11 @@ export default function SimpleSelect({
     }
   };
 
-  const display = selected?.label || placeholder;
-  const isPlaceholder = !selected;
+  const selectedOptions = options.filter((option) => selectedValues.includes(String(option.value)));
+  const display = multiple
+    ? selectedOptions.map((option) => option.label).filter(Boolean).join(", ") || placeholder
+    : selected?.label || placeholder;
+  const isPlaceholder = multiple ? selectedOptions.length === 0 : !selected;
   const triggerClasses =
     variant === "pill"
       ? `${PILL_TRIGGER} ${triggerClassName}`.trim()
@@ -357,7 +376,7 @@ export default function SimpleSelect({
                   <li className="px-2 py-1.5 text-sm text-secondary">No options</li>
                 ) : (
                   filtered.map((opt, idx) => {
-                    const active = String(opt.value) === String(value);
+                    const active = selectedValues.includes(String(opt.value));
                     const hi = idx === highlight;
                     return (
                       <li key={String(opt.value)} role="presentation">
@@ -382,6 +401,11 @@ export default function SimpleSelect({
                           }}
                           onClick={() => pick(opt)}
                         >
+                          {multiple ? (
+                            <span className="mr-2 inline-block w-3 shrink-0" aria-hidden>
+                              {active ? "✓" : ""}
+                            </span>
+                          ) : null}
                           {opt.label}
                         </button>
                       </li>

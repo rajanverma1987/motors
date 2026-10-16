@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import {
+  FiAlertTriangle,
   FiCheckCircle,
   FiClipboard,
   FiFileText,
@@ -22,6 +23,7 @@ import Textarea from "@/components/ui/textarea";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import SimpleInvoicePaymentModal from "@/components/simple/simple-invoice-payment-modal";
 import SimpleInvoiceTaxesModal from "@/components/simple/simple-invoice-taxes-modal";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
@@ -33,7 +35,6 @@ import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
-import { toInputDateValue } from "@/lib/format-date";
 import {
   invoiceStatusSelectOptionsFromMerged,
   invoiceStatusTileColorForValue,
@@ -55,6 +56,7 @@ import {
   formatSimpleMoney,
   formToServiceProposalListRow,
   toSimpleServiceProposalListRow,
+  resolveSimpleInvoiceStatusFromPayments,
   isSimpleInvoiceRecord,
   RECORD_TYPE_RFQ,
   resolveRecordTypeOnSave,
@@ -145,21 +147,6 @@ function resolveRowStatusPill(status, mergedSettings, quoteOpts, invoiceOpts) {
   return { style: pill.style, className: pill.className || "", label };
 }
 
-/** Native date controls follow color-scheme, not the cell text color. */
-function dateControlScheme(color) {
-  const hex = String(color || "").trim();
-  const match = hex.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
-  if (!match) return "light";
-  let h = match[1];
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
-  const n = parseInt(h, 16);
-  const r = (n >> 16) & 255;
-  const g = (n >> 8) & 255;
-  const b = n & 255;
-  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return lum > 0.62 ? "dark" : "light";
-}
-
 /** Full-cell status highlight (flush to cell edges; keep control padding inside). */
 function proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts) {
   const resolved = resolveRowStatusPill(row?.status, mergedSettings, quoteOpts, invoiceOpts);
@@ -227,6 +214,7 @@ export default function ServiceProposalsPanel({
   });
   const [invoiceFinance, setInvoiceFinance] = useState(EMPTY_INVOICE_FINANCE);
   const [taxesModalOpen, setTaxesModalOpen] = useState(false);
+  const [invoicePayment, setInvoicePayment] = useState(null);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
   const listRequestRef = useRef(0);
@@ -562,6 +550,63 @@ export default function ServiceProposalsPanel({
       }
     },
     [confirm, alert, isInvoices]
+  );
+
+  const openInvoicePayments = useCallback(
+    async (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      try {
+        const doc = await fetchSimpleServiceProposal(id);
+        if (!doc) throw new Error("Invoice not found");
+        setInvoicePayment(
+          toSimpleServiceProposalListRow(doc, {
+            companyName: customerName(doc.customerId) || doc.companyName || row.companyName || "",
+          })
+        );
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to open payment records.",
+          variant: "danger",
+        });
+      }
+    },
+    [alert, customerName]
+  );
+
+  const handleInvoicePaymentsChange = useCallback(
+    async (applied) => {
+      const current = invoicePayment;
+      if (!current?.id) return;
+      const grandTotal = Number(current.total) || 0;
+      const nextStatus = resolveSimpleInvoiceStatusFromPayments({
+        payments: applied.payments,
+        grandTotal,
+        currentStatus: current.status,
+        mergedSettings,
+      });
+      const next = {
+        ...current,
+        payments: applied.payments,
+        invoicePaidDate: applied.invoicePaidDate,
+        status: nextStatus,
+      };
+      setInvoicePayment(next);
+      try {
+        const saved = await saveSimpleServiceProposal(next);
+        const sid = String(saved?.id || current.id).trim();
+        setRows((prev) => prev.map((r) => (r.id === sid ? { ...r, ...saved } : r)));
+        setInvoicePayment((open) => (open && open.id === sid ? { ...open, ...saved, ...next } : open));
+      } catch (err) {
+        await alert({
+          title: "Error",
+          message: err?.message || "Failed to save payment.",
+          variant: "danger",
+        });
+      }
+    },
+    [alert, invoicePayment, mergedSettings]
   );
 
   const handleRowFieldChange = useCallback((rowId, patch) => {
@@ -1029,22 +1074,47 @@ export default function ServiceProposalsPanel({
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
               getCellClassName: (_, row) =>
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
-              render: (v, row) => {
+              render: (_, row) => {
                 const chrome = proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts);
                 const color = chrome.style?.color || "inherit";
+                const statusBare = String(row?.status || "")
+                  .trim()
+                  .toLowerCase()
+                  .replace(/^invoice:/, "")
+                  .replace(/[\s-]+/g, "_");
+                const statusIsPaid =
+                  statusBare === "paid" ||
+                  statusBare === "fully_paid" ||
+                  statusBare.endsWith("_fully_paid") ||
+                  (statusBare.includes("paid") &&
+                    !statusBare.includes("partial") &&
+                    !statusBare.includes("unpaid"));
+                const payments = Array.isArray(row?.payments) ? row.payments : [];
+                const paidWithoutRecord = statusIsPaid && payments.length === 0;
                 return (
-                  <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="date"
-                      value={toInputDateValue(v)}
-                      aria-label="Invoice Paid Date"
-                      style={{ color, colorScheme: dateControlScheme(color) }}
-                      className="h-7 w-full min-w-0 border-0 bg-transparent px-1.5 text-right text-xs font-semibold tabular-nums outline-none"
-                      onChange={(e) =>
-                        handleRowFieldChange(row.id, { invoicePaidDate: e.target.value })
-                      }
-                    />
-                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex w-full cursor-pointer items-center justify-end gap-1 bg-transparent px-1.5 py-1 text-right text-xs font-semibold underline decoration-current/50 hover:decoration-current"
+                    style={{ color }}
+                    aria-label={
+                      paidWithoutRecord
+                        ? "Paid with no payment record. Open payment records"
+                        : "Open payment records"
+                    }
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void openInvoicePayments(row);
+                    }}
+                  >
+                    {paidWithoutRecord ? (
+                      <FiAlertTriangle
+                        className="h-3.5 w-3.5 shrink-0 text-danger"
+                        title="Status is paid, but there is no payment record"
+                        aria-hidden
+                      />
+                    ) : null}
+                    Click to View
+                  </button>
                 );
               },
             },
@@ -1157,6 +1227,7 @@ export default function ServiceProposalsPanel({
     [
       handleDelete,
       handleRowFieldChange,
+      openInvoicePayments,
       handleRowStatusChange,
       handleRowJobStatusChange,
       openNotesEdit,
@@ -1319,6 +1390,22 @@ export default function ServiceProposalsPanel({
           }}
         />
       </div>
+
+      <SimpleInvoicePaymentModal
+        open={Boolean(invoicePayment)}
+        onClose={() => setInvoicePayment(null)}
+        payments={Array.isArray(invoicePayment?.payments) ? invoicePayment.payments : []}
+        grandTotal={Number(invoicePayment?.total) || 0}
+        customer={
+          customers.find(
+            (c) => String(c.id || c._id || "") === String(invoicePayment?.customerId || "")
+          ) || null
+        }
+        invoiceNumber={String(invoicePayment?.documentNumber || invoicePayment?.quote || "").trim()}
+        onChange={(applied) => {
+          void handleInvoicePaymentsChange(applied);
+        }}
+      />
 
       <ServiceProposalFormModal
         open={modalOpen}

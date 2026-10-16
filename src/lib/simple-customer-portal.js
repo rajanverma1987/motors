@@ -10,6 +10,7 @@ import {
   recordTypeDocumentLabel,
   sumLinePrices,
   sumOtherLinePrices,
+  sumTaxableOtherLinePrices,
 } from "@/lib/simple-service-proposal-form";
 import { matchPipelineStatusBucket } from "@/lib/simple-reports/helpers";
 import {
@@ -62,9 +63,10 @@ function motorLabelFromSp(doc) {
 function computeSpTotals(doc) {
   const scopeTotal = sumLinePrices(doc?.scopeDetails);
   const otherTotal = sumOtherLinePrices(doc?.otherItems);
+  const taxableOtherTotal = sumTaxableOtherLinePrices(doc?.otherItems);
   const showTax = doc?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(doc?.taxPercent) : 0;
-  const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;
+  const taxAmount = showTax ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
   const subtotal = scopeTotal + otherTotal;
   const grandTotal = subtotal + taxAmount;
   return { scopeTotal, otherTotal, subtotal, taxAmount, grandTotal };

@@ -21,6 +21,15 @@ export function normalizeTaxPercent(value) {
   return Math.min(100, roundMoney(num));
 }
 
+/** Print label: percent after Tax, for example "Tax (7%)". */
+export function formatTaxLineLabel(taxPercent, taxExempt) {
+  if (normalizeTaxExempt(taxExempt)) return "Tax";
+  const pct = normalizeTaxPercent(taxPercent);
+  if (pct <= 0) return "Tax";
+  const text = Number.isInteger(pct) ? String(pct) : String(pct);
+  return `Tax (${text}%)`;
+}
+
 export function computeTaxAmount(subtotal, taxExempt, taxPercent) {
   const base = roundMoney(subtotal);
   if (normalizeTaxExempt(taxExempt)) return 0;
@@ -35,17 +44,19 @@ export function computeGrandTotal(subtotal, taxExempt, taxPercent) {
   return roundMoney(base + tax);
 }
 
-/** laborTotal = scope sum; partsTotal = other cost. Tax applies to scope only. */
+/** laborTotal = scope sum; partsTotal = other cost. Tax applies to scope plus taxable other lines. */
 export function computeTotalsFromLaborAndParts({
   laborTotal,
   partsTotal,
+  taxablePartsTotal = 0,
   taxExempt,
   taxPercent,
 }) {
   const labor = roundMoney(toNumber(laborTotal));
   const parts = roundMoney(toNumber(partsTotal));
+  const taxableParts = roundMoney(toNumber(taxablePartsTotal));
   const subtotal = roundMoney(labor + parts);
-  const taxAmount = computeTaxAmount(labor, taxExempt, taxPercent);
+  const taxAmount = computeTaxAmount(roundMoney(labor + taxableParts), taxExempt, taxPercent);
   return {
     subtotal,
     taxAmount,

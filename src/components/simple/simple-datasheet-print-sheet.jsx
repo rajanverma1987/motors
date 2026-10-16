@@ -784,7 +784,9 @@ export default function SimpleDatasheetPrintSheet({
   const customerPo = String(printContext.customerPo || "").trim();
   const dateRaw = String(datasheet?.date || "").trim();
   const date = dateRaw ? formatDate(dateRaw) : "-";
-  const technician = String(technicianLabel || datasheet?.technician || "").trim();
+  const storedTechnician = String(datasheet?.technician || "").trim();
+  const technician =
+    String(technicianLabel || "").trim() || (storedTechnician === "__all__" ? "All" : storedTechnician);
   const printedAt = formatDate(new Date());
 
   const headerProps = {

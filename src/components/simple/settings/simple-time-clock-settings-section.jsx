@@ -105,7 +105,9 @@ export default function SimpleTimeClockSettingsSection() {
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
   const [radiusM, setRadiusM] = useState(String(TIME_CLOCK_RADIUS_DEFAULT_M));
+  const [geofenceEnabled, setGeofenceEnabled] = useState(true);
   const [savingGeo, setSavingGeo] = useState(false);
+  const [savingGeofenceToggle, setSavingGeofenceToggle] = useState(false);
   const [payrollEnabled, setPayrollEnabled] = useState(false);
   const [payrollEmail, setPayrollEmail] = useState("");
   const [payrollFrequency, setPayrollFrequency] = useState("daily");
@@ -122,6 +124,7 @@ export default function SimpleTimeClockSettingsSection() {
     setLat(data.geofence?.lat != null ? String(data.geofence.lat) : "");
     setLng(data.geofence?.lng != null ? String(data.geofence.lng) : "");
     setRadiusM(String(data.geofence?.radiusM || TIME_CLOCK_RADIUS_DEFAULT_M));
+    setGeofenceEnabled(data.geofence?.enabled !== false);
     setPayrollEnabled(Boolean(data.payrollCommunication?.enabled));
     setPayrollEmail(String(data.payrollCommunication?.email || ""));
     setPayrollFrequency(
@@ -185,6 +188,30 @@ export default function SimpleTimeClockSettingsSection() {
       },
       { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
     );
+  };
+
+  const saveGeofenceEnabled = async (enabled) => {
+    setGeofenceEnabled(enabled);
+    setSavingGeofenceToggle(true);
+    try {
+      const res = await fetch("/api/dashboard/time-clock", {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ geofenceEnabled: enabled }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Save failed");
+      setMeta((current) => ({
+        ...current,
+        geofence: { ...(current?.geofence || {}), ...(data.geofence || {}), enabled },
+      }));
+    } catch (err) {
+      setGeofenceEnabled(!enabled);
+      await alert({ title: "Error", message: err.message || "Save failed", variant: "danger" });
+    } finally {
+      setSavingGeofenceToggle(false);
+    }
   };
 
   const saveGeofence = async () => {
@@ -296,9 +323,17 @@ export default function SimpleTimeClockSettingsSection() {
         </div>
         <div className="space-y-3 border border-border bg-card p-4">
           <h2 className="text-sm font-bold uppercase tracking-wide text-title">Geofence</h2>
+          <Checkbox
+            name="timeClockGeofenceEnabled"
+            label="Enable geofence for punch in and punch out"
+            checked={geofenceEnabled}
+            disabled={savingGeofenceToggle}
+            onChange={(e) => void saveGeofenceEnabled(e.target.checked)}
+          />
           <p className="text-sm text-secondary">
-            Punches are rejected without location or outside this radius (default{" "}
-            {TIME_CLOCK_RADIUS_DEFAULT_M} m).
+            {geofenceEnabled
+              ? `Punches are rejected without location or outside this radius (default ${TIME_CLOCK_RADIUS_DEFAULT_M} m).`
+              : "Geofence is off. Employees can punch in and punch out without being at the shop."}
           </p>
           {!meta?.geofence?.configured ? (
             <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">

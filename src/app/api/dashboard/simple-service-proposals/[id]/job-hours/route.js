@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import Employee from "@/models/Employee";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
@@ -63,6 +64,63 @@ async function ownedJobHoursEntry(email, proposalId, entryId) {
   });
   if (!doc) return { error: "Not found", status: 404 };
   return { doc };
+}
+
+export async function POST(request, context) {
+  try {
+    const user = await getPortalUserFromRequest(request);
+    if (!user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const params = await getParams(context);
+    const proposalId = String(params?.id || "").trim();
+    if (!isValidSimplePortalId(proposalId)) {
+      return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+    }
+    const body = await request.json().catch(() => ({}));
+    const employeeId = String(body.employeeId || "").trim();
+    if (!employeeId) {
+      return NextResponse.json({ error: "Technician is required" }, { status: 400 });
+    }
+    const parsed = parseManualHoursInput({
+      workDate: body.workDate || body.date,
+      hours: body.hours,
+    });
+    if (parsed.error) {
+      return NextResponse.json({ error: parsed.error }, { status: 400 });
+    }
+    await connectDB();
+    const email = user.email.trim().toLowerCase();
+    const proposal = await SimpleServiceProposal.findOne({ _id: proposalId, createdByEmail: email })
+      .select({ documentNumber: 1, quote: 1, jobStatus: 1 })
+      .lean();
+    if (!proposal) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const employee = await Employee.findOne({ _id: employeeId, createdByEmail: email })
+      .select({ name: 1, employeeNumber: 1, email: 1 })
+      .lean();
+    if (!employee) {
+      return NextResponse.json({ error: "Technician not found" }, { status: 404 });
+    }
+    const doc = await TimeClockManualHours.create({
+      createdByEmail: email,
+      employeeId,
+      employeeName: employee.name || "",
+      employeeNumber: employee.employeeNumber || "",
+      workDate: parsed.workDate,
+      hours: parsed.hours,
+      note: String(body.note || "").trim().slice(0, 500),
+      proposalId,
+      documentNumber: String(proposal.documentNumber || proposal.quote || "").trim(),
+      jobStatus: String(proposal.jobStatus || "").trim(),
+      createdByUserEmail: email,
+    });
+    return NextResponse.json({ ok: true, entry: serializeManualHours(doc) }, { status: 201 });
+  } catch (err) {
+    console.error("Proposal job hours POST error:", err);
+    return NextResponse.json({ error: err.message || "Failed to save hours" }, { status: 500 });
+  }
 }
 
 export async function PATCH(request, context) {

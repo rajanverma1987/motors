@@ -3,6 +3,10 @@
  */
 
 import { todayISODate } from "@/lib/simple-service-proposal-form";
+import {
+  datasheetTechnicianIds,
+  datasheetTechniciansForSave,
+} from "@/lib/datasheet-technicians";
 
 function blankFieldMap(columns) {
   const out = {};
@@ -38,11 +42,15 @@ function fillBlankFields(target, source) {
 
 function bindHeader(base, proposalForm, meta) {
   const f = proposalForm || {};
+  const savedTech = datasheetTechniciansForSave(
+    datasheetTechnicianIds(base).length
+      ? datasheetTechnicianIds(base)
+      : [meta.technicianValue || meta.technicianLabel || f.preparedBy || ""]
+  );
   return {
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(
-      base.technician || meta.technicianValue || meta.technicianLabel || f.preparedBy || ""
-    ).trim(),
+    technician: savedTech.technician,
+    technicians: savedTech.technicians,
     jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
   };

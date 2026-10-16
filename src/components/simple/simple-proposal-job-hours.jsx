@@ -4,8 +4,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
+import { Form } from "@/components/ui/form-layout";
 import Modal from "@/components/ui/modal";
 import Table from "@/components/ui/table";
+import SimpleSelect from "@/components/simple/simple-select";
+import { buildTechnicianSelectOptions, isShopAdminSelectValue } from "@/lib/technician-select-options";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useFormatDate } from "@/contexts/user-settings-context";
 
@@ -15,7 +18,14 @@ function formatHours(value) {
   return n.toFixed(2);
 }
 
-export default function SimpleProposalJobHours({ recordId }) {
+function todayIso() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+export default function SimpleProposalJobHours({ recordId, employees = [] }) {
   const formatDate = useFormatDate();
   const confirm = useConfirm();
   const alert = useAlert();
@@ -23,6 +33,8 @@ export default function SimpleProposalJobHours({ recordId }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordForm, setRecordForm] = useState({ employeeId: "", workDate: "", hours: "", note: "" });
   const [editing, setEditing] = useState(null);
   const [editDate, setEditDate] = useState("");
   const [editHours, setEditHours] = useState("");
@@ -56,6 +68,54 @@ export default function SimpleProposalJobHours({ recordId }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const technicianOptions = useMemo(
+    () =>
+      buildTechnicianSelectOptions(employees).filter(
+        (option) => option.value && !isShopAdminSelectValue(option.value)
+      ),
+    [employees]
+  );
+
+  const openRecord = useCallback(() => {
+    setRecordForm({
+      employeeId: technicianOptions[0]?.value || "",
+      workDate: todayIso(),
+      hours: "",
+      note: "",
+    });
+    setRecording(true);
+  }, [technicianOptions]);
+
+  const saveRecord = useCallback(async () => {
+    const id = String(recordId || "").trim();
+    if (!id) return;
+    if (!String(recordForm.employeeId || "").trim()) {
+      await alert({ title: "Error", message: "Technician is required.", variant: "danger" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/dashboard/simple-service-proposals/${encodeURIComponent(id)}/job-hours`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(recordForm),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to record hours");
+      setRecording(false);
+      await load();
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to record hours.",
+        variant: "danger",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [alert, load, recordForm, recordId]);
 
   const startEdit = useCallback((row) => {
     setEditing(row);
@@ -204,6 +264,11 @@ export default function SimpleProposalJobHours({ recordId }) {
         onClose={() => setOpen(false)}
         title="Recorded hours"
         size="xl"
+        actions={
+          <Button type="button" variant="primary" size="sm" onClick={openRecord}>
+            Record Hours
+          </Button>
+        }
       >
         <p className="mb-3 text-sm text-secondary">
           Total recorded job hours: <span className="font-semibold text-title">{formatHours(totalHours)}</span>
@@ -216,6 +281,75 @@ export default function SimpleProposalJobHours({ recordId }) {
           dense
           emptyMessage="No job hours recorded yet."
         />
+      </Modal>
+      <Modal
+        open={recording}
+        onClose={() => !saving && setRecording(false)}
+        title="Record Hours"
+        size="sm"
+        zIndex={140}
+        showClose={!saving}
+        closeOnOutsideClick={false}
+        actions={
+          <Button type="submit" form="proposal-job-hours-record" variant="primary" size="sm" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <Form
+          id="proposal-job-hours-record"
+          className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void saveRecord();
+          }}
+        >
+          <label className="block text-sm font-semibold text-title">
+            Technician
+            <SimpleSelect
+              className="mt-1"
+              options={technicianOptions}
+              value={recordForm.employeeId}
+              onChange={(e) => setRecordForm((form) => ({ ...form, employeeId: e.target.value }))}
+              placeholder="Select…"
+              searchable
+              aria-label="Technician"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-title">
+            Date
+            <input
+              type="date"
+              required
+              value={recordForm.workDate}
+              onChange={(e) => setRecordForm((form) => ({ ...form, workDate: e.target.value }))}
+              className="mt-1 h-9 w-full border border-border bg-background px-2 text-sm font-normal text-title"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-title">
+            Hours
+            <input
+              type="number"
+              required
+              min="0.01"
+              max="24"
+              step="0.01"
+              value={recordForm.hours}
+              onChange={(e) => setRecordForm((form) => ({ ...form, hours: e.target.value }))}
+              className="mt-1 h-9 w-full border border-border bg-background px-2 text-sm font-normal text-title"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-title">
+            Note (optional)
+            <textarea
+              rows={2}
+              maxLength={500}
+              value={recordForm.note}
+              onChange={(e) => setRecordForm((form) => ({ ...form, note: e.target.value }))}
+              className="mt-1 w-full border border-border bg-background px-2 py-1.5 text-sm font-normal text-title"
+            />
+          </label>
+        </Form>
       </Modal>
       <Modal
         open={Boolean(editing)}

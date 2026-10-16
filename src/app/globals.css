@@ -13,6 +13,38 @@ html {
   }
 }
 
+/* Clickable controls use the hand pointer. Utilities such as cursor-not-allowed still win. */
+@layer base {
+  button:not(:disabled),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  [type="checkbox"]:not(:disabled),
+  [type="radio"]:not(:disabled),
+  [type="file"]:not(:disabled),
+  select:not(:disabled),
+  summary,
+  a[href],
+  label[for],
+  label:has(input, select, button, a),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="link"],
+  [role="tab"],
+  [role="menuitem"],
+  [role="option"],
+  [role="switch"],
+  [role="checkbox"],
+  [role="radio"] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
+}
+
 /* Marketing pages: prevent horizontal rubber-band scroll from wide children / 100vw quirks */
 .marketing-shell {
   width: 100%;

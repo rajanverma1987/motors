@@ -5,7 +5,7 @@ import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import PrintSheetContinuedNotes from "@/components/dashboard/print-sheet-continued-notes";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
 import { formatMoney } from "@/lib/format-currency";
-import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import { computeTotalsFromLaborAndParts, formatTaxLineLabel } from "@/lib/quote-invoice-totals";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 import { printPartsLineQty, printPartsLineTotal } from "@/lib/simple-service-proposal-print";
@@ -41,6 +41,7 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
     partsTotal: q.partsTotal,
+    taxablePartsTotal: q.taxablePartsTotal,
     taxExempt: q.customerTaxExempt,
     taxPercent: q.customerTaxPercent,
   });
@@ -220,7 +221,9 @@ export default function QuotePrintSheetBody({ quote: q, fmt }) {
               <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Tax</td>
+              <td className="px-2 py-1.5 text-neutral-800">
+                {formatTaxLineLabel(q.customerTaxPercent, q.customerTaxExempt)}
+              </td>
               <td className="px-2 py-1.5 text-right text-neutral-900">{format(totals.taxAmount)}</td>
             </tr>
             <tr className="bg-neutral-100">

@@ -419,7 +419,7 @@ export default function TimeClockApp({ token }) {
     }
     setBusy(true);
     try {
-      const coords = await getPosition();
+      const coords = status?.geofenceEnabled === false ? {} : await getPosition();
       const res = await fetch("/api/time-clock/me", {
         method: "POST",
         credentials: "include",
@@ -454,7 +454,7 @@ export default function TimeClockApp({ token }) {
     setMessage("");
     try {
       await mintWallScanFromQr();
-      const coords = await getPosition();
+      const coords = status?.geofenceEnabled === false ? {} : await getPosition();
       const res = await fetch("/api/time-clock/me", {
         method: "POST",
         credentials: "include",
@@ -478,7 +478,7 @@ export default function TimeClockApp({ token }) {
     } finally {
       setBusy(false);
     }
-  }, [mintWallScanFromQr, token]);
+  }, [mintWallScanFromQr, status?.geofenceEnabled, token]);
 
   if (loading) {
     return (
@@ -605,7 +605,9 @@ export default function TimeClockApp({ token }) {
               </div>
             ) : (
               <div className="border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-                Shop QR unlocked. Confirm location to finish this punch.
+                {status?.geofenceEnabled === false
+                  ? "Shop QR unlocked. Confirm to finish this punch."
+                  : "Shop QR unlocked. Confirm location to finish this punch."}
               </div>
             )}
             <button
@@ -621,7 +623,9 @@ export default function TimeClockApp({ token }) {
                   : `Scan QR to ${status?.nextPunchLabel || "Punch"}`}
             </button>
             <p className="text-center text-xs text-neutral-600">
-              Each punch opens the camera for the shop QR, then requires location inside the geofence.
+              {status?.geofenceEnabled === false
+                ? "Each punch opens the camera for the shop QR."
+                : "Each punch opens the camera for the shop QR, then requires location inside the geofence."}
             </p>
           </div>
         ) : null}

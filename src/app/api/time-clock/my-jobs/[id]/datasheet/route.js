@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { datasheetStorageKey, resolveMachineType } from "@/lib/machine-types";
+import { datasheetTechnicianIds } from "@/lib/datasheet-technicians";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
@@ -48,8 +49,9 @@ export async function PUT(request, context) {
     const documentNumber = String(previous.documentNumber || previous.quote || "").trim();
     const datasheet = normalizeDatasheetForMachine(machineType, body?.datasheet || body, documentNumber);
     // Keep assignment on this technician unless they explicitly change (still must stay assignable)
-    if (!String(datasheet.technician || "").trim()) {
+    if (!datasheetTechnicianIds(datasheet).length) {
       datasheet.technician = session.employeeId;
+      datasheet.technicians = [session.employeeId];
     }
 
     const doc = await SimpleServiceProposal.findOneAndUpdate(

@@ -190,7 +190,11 @@ export async function GET(request) {
         : listKind === "proposals" || listKind === "proposal"
           ? mongoProposalKindClause(mergedSettings)
           : null;
-    const dateClause = mongoSpDateRangeClause(from, to);
+    const dateClause = mongoSpDateRangeClause(
+      from,
+      to,
+      isInvoices ? "invoiceSubmitDate" : "proposalSubmitDate"
+    );
     const statusClause = mongoStatusFilterClause(statusFilter, mergedSettings, { isInvoices });
     let proposalTypeClause = null;
     if (proposalTypeFilter && PROPOSAL_TYPE_VALUES.includes(normalizeProposalType(proposalTypeFilter))) {

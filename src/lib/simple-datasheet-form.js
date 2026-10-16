@@ -2,6 +2,10 @@
 
 import { todayISODate } from "@/lib/simple-service-proposal-form";
 import {
+  datasheetTechnicianIds,
+  datasheetTechniciansForSave,
+} from "@/lib/datasheet-technicians";
+import {
   GENERATOR_DATASHEET_FIELD_COLUMNS,
   GENERATOR_ROTOR_COLUMNS,
   PUMP_DATASHEET_FIELD_COLUMNS,
@@ -353,6 +357,7 @@ export function normalizeDcDatasheet(raw) {
   return createEmptyDcDatasheet({
     date: raw.date,
     technician: raw.technician,
+    technicians: raw.technicians,
     jobNumber: raw.jobNumber,
     company: raw.company,
     section: raw.section || "Complete Motor",
@@ -497,6 +502,7 @@ export function normalizeAcDatasheet(raw) {
   return createEmptyAcDatasheet({
     date: raw.date,
     technician: raw.technician,
+    technicians: raw.technicians,
     jobNumber: raw.jobNumber,
     company: raw.company,
     section: raw.section || "Complete Motor",
@@ -699,12 +705,16 @@ export function buildAcDatasheetFromProposal(proposalForm, meta = {}) {
     rpm: String(f.rpm || "").trim(),
   });
 
+  const acTech = datasheetTechniciansForSave(
+    datasheetTechnicianIds(base).length
+      ? datasheetTechnicianIds(base)
+      : [meta.technicianValue || meta.technicianLabel || f.preparedBy || ""]
+  );
   return normalizeAcDatasheet({
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(
-      base.technician || meta.technicianValue || meta.technicianLabel || f.preparedBy || ""
-    ).trim(),
+    technician: acTech.technician,
+    technicians: acTech.technicians,
     // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
     jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),
@@ -736,12 +746,16 @@ export function buildDcDatasheetFromProposal(proposalForm, meta = {}) {
     iron_diam: String(f.cd || "").trim(),
   });
 
+  const dcTech = datasheetTechniciansForSave(
+    datasheetTechnicianIds(base).length
+      ? datasheetTechnicianIds(base)
+      : [meta.technicianValue || meta.technicianLabel || f.preparedBy || ""]
+  );
   return normalizeDcDatasheet({
     ...base,
     date: String(base.date || f.dateCreated || todayISODate()).slice(0, 10),
-    technician: String(
-      base.technician || meta.technicianValue || meta.technicianLabel || f.preparedBy || ""
-    ).trim(),
+    technician: dcTech.technician,
+    technicians: dcTech.technicians,
     // Always bind to the current proposal document # (fixes Copy & Create New stale job #).
     jobNumber: String(f.documentNumber || "").trim() || String(base.jobNumber || "").trim(),
     company: String(base.company || meta.companyName || "").trim(),

@@ -5,6 +5,13 @@ import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
 import SimpleSelect from "@/components/simple/simple-select";
+import {
+  DATASHEET_TECHNICIAN_ALL,
+  datasheetTechnicianIds,
+  datasheetTechnicianLabel,
+  datasheetTechniciansForSave,
+  reconcileDatasheetTechnicians,
+} from "@/lib/datasheet-technicians";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
 import SimpleDatasheetPrintSheet from "@/components/simple/simple-datasheet-print-sheet";
 import SimpleSendDatasheetModal from "@/components/simple/simple-send-datasheet-modal";
@@ -184,24 +191,25 @@ export default function SimpleDatasheetModal({
 
   const canAttach = Boolean(String(recordId || "").trim());
 
-  const resolveTechnicianValue = (raw) => {
-    const value = String(raw || "").trim();
+  const resolveTechnicianSelection = (sheet) => {
     const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
-    if (!value) {
-      const preferred = String(defaultTechnicianValue || "").trim();
-      if (preferred && opts.some((o) => String(o.value) === preferred)) return preferred;
-      const loggedIn = resolveLoggedInEmployeeSelectValue(user, []);
-      if (loggedIn && opts.some((o) => String(o.value) === loggedIn)) return loggedIn;
-      if (preferred) return preferred;
-      return loggedIn || "";
-    }
-    const byValue = opts.find((o) => String(o.value) === value);
-    if (byValue) return String(byValue.value);
-    const byLabel = opts.find(
-      (o) => String(o.label || "").trim().toLowerCase() === value.toLowerCase()
-    );
-    if (byLabel) return String(byLabel.value);
-    return value;
+    const stored = datasheetTechnicianIds(sheet);
+    if (stored.includes(DATASHEET_TECHNICIAN_ALL)) return [DATASHEET_TECHNICIAN_ALL];
+    const resolved = stored.map((id) => {
+      const byValue = opts.find((option) => String(option.value) === id);
+      if (byValue) return String(byValue.value);
+      const byLabel = opts.find(
+        (option) => String(option.label || "").trim().toLowerCase() === id.toLowerCase()
+      );
+      return byLabel ? String(byLabel.value) : id;
+    });
+    if (resolved.length) return resolved;
+    const preferred = String(defaultTechnicianValue || "").trim();
+    if (preferred && opts.some((option) => String(option.value) === preferred)) return [preferred];
+    const loggedIn = resolveLoggedInEmployeeSelectValue(user, []);
+    if (loggedIn && opts.some((option) => String(option.value) === loggedIn)) return [loggedIn];
+    if (preferred) return [preferred];
+    return loggedIn ? [loggedIn] : [];
   };
 
   useEffect(() => {
@@ -213,12 +221,14 @@ export default function SimpleDatasheetModal({
           : isDc
             ? normalizeDcDatasheet(initialDatasheet || {})
             : normalizeAcDatasheet(initialDatasheet || {});
-      next.technician = resolveTechnicianValue(next.technician);
+      const savedTech = datasheetTechniciansForSave(resolveTechnicianSelection(next));
+      next.technician = savedTech.technician;
+      next.technicians = savedTech.technicians;
       if (!isDc) {
         const asm = next.assembly && typeof next.assembly === "object" ? next.assembly : {};
         if (!String(asm.date || "").trim()) asm.date = String(next.date || "").slice(0, 10);
         if (!String(asm.technicianName || "").trim()) {
-          asm.technicianName = String(next.technician || "").trim();
+          asm.technicianName = datasheetTechnicianLabel(next.technicians, technicianOptions);
         }
         next.assembly = asm;
       }
@@ -345,19 +355,16 @@ export default function SimpleDatasheetModal({
 
   const techOptions = useMemo(() => {
     const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
-    const value = String(form.technician || "").trim();
-    if (value && !opts.some((o) => String(o.value) === value || String(o.label) === value)) {
-      return [{ value, label: value }, ...opts];
-    }
-    return opts;
-  }, [technicianOptions, form.technician]);
+    const extra = datasheetTechnicianIds(form)
+      .filter((id) => id !== DATASHEET_TECHNICIAN_ALL)
+      .filter((id) => !opts.some((option) => String(option.value) === id || String(option.label) === id))
+      .map((id) => ({ value: id, label: id }));
+    return [...extra, ...opts];
+  }, [technicianOptions, form]);
 
   const technicianLabel = useMemo(() => {
-    const value = String(form.technician || "").trim();
-    if (!value) return "";
-    const match = techOptions.find((o) => String(o.value) === value || String(o.label) === value);
-    return match?.label || value;
-  }, [techOptions, form.technician]);
+    return datasheetTechnicianLabel(datasheetTechnicianIds(form), techOptions);
+  }, [techOptions, form]);
 
   const resolvedPrintContext = useMemo(() => {
     const ctx = printContext && typeof printContext === "object" ? printContext : {};
@@ -497,19 +504,22 @@ export default function SimpleDatasheetModal({
             <div>
               <div className="mb-1 text-sm font-bold text-title">Technician</div>
               <SimpleSelect
-                options={techOptions}
-                value={form.technician}
+                multiple
+                options={[{ value: DATASHEET_TECHNICIAN_ALL, label: "All" }, ...techOptions]}
+                value={datasheetTechnicianIds(form)}
                 onChange={(e) => {
-                  const next = e.target.value;
+                  const nextIds = reconcileDatasheetTechnicians(datasheetTechnicianIds(form), e.target.value);
+                  const saved = datasheetTechniciansForSave(nextIds);
+                  const label = datasheetTechnicianLabel(saved.technicians, techOptions);
                   setForm((f) => {
-                    const updated = { ...f, technician: next };
+                    const updated = { ...f, technician: saved.technician, technicians: saved.technicians };
                     if (!isDc && f.assembly && typeof f.assembly === "object") {
-                      updated.assembly = { ...f.assembly, technicianName: next };
+                      updated.assembly = { ...f.assembly, technicianName: label };
                     }
                     return updated;
                   });
                 }}
-                placeholder="Select…"
+                placeholder="Select technicians"
                 searchable
                 disabled={saving || printing}
                 aria-label="Technician"
@@ -717,23 +727,26 @@ export default function SimpleDatasheetModal({
           <div className="min-w-0 flex-[1.2] basis-[12rem]">
             <div className="mb-1 text-sm font-bold text-title">Technician</div>
             <SimpleSelect
-              options={techOptions}
-              value={form.technician}
+              multiple
+              options={[{ value: DATASHEET_TECHNICIAN_ALL, label: "All" }, ...techOptions]}
+              value={datasheetTechnicianIds(form)}
               onChange={(e) => {
-                const next = e.target.value;
+                const nextIds = reconcileDatasheetTechnicians(datasheetTechnicianIds(form), e.target.value);
+                const saved = datasheetTechniciansForSave(nextIds);
+                const label = datasheetTechnicianLabel(saved.technicians, techOptions);
                 setForm((f) => {
-                  const updated = { ...f, technician: next };
+                  const updated = { ...f, technician: saved.technician, technicians: saved.technicians };
                   if (!isDc && f.assembly && typeof f.assembly === "object") {
-                    updated.assembly = { ...f.assembly, technicianName: next };
+                    updated.assembly = { ...f.assembly, technicianName: label };
                   }
                   return updated;
                 });
               }}
-              placeholder="Select…"
+              placeholder="Select technicians"
               searchable
               disabled={saving || printing}
               aria-label="Technician"
-              title="Reassign this job to another technician"
+              title="Choose technicians. All shows this job to every technician."
             />
           </div>
           <div className="hidden h-8 w-px shrink-0 bg-border sm:block" aria-hidden />

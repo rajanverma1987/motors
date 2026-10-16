@@ -82,6 +82,8 @@ export function emptyOtherLine() {
     unitCost: "",
     /** Markup % for this proposal only. Not printed. */
     markupPercent: "",
+    /** When true, this line uses the same tax percent as proposal breakdown lines. */
+    taxable: false,
   };
 }
 
@@ -466,6 +468,17 @@ export function sumOtherLinePrices(lines) {
   return roundSpMoney(lines.reduce((sum, line) => sum + lineExtendedPrice(line), 0));
 }
 
+/** Other Items marked taxable. Uses the proposal tax percent. */
+export function sumTaxableOtherLinePrices(lines) {
+  if (!Array.isArray(lines)) return 0;
+  return roundSpMoney(
+    lines.reduce((sum, line) => {
+      if (line?.taxable !== true) return sum;
+      return sum + lineExtendedPrice(line);
+    }, 0)
+  );
+}
+
 /**
  * Display title for the form / modal heading.
  * @param {string} recordType
@@ -568,10 +581,11 @@ export function formatSimpleMoney(n) {
 export function computeSimpleServiceProposalTotals(form) {
   const scopeTotal = sumLinePrices(form?.scopeDetails);
   const otherTotal = sumOtherLinePrices(form?.otherItems);
+  const taxableOtherTotal = sumTaxableOtherLinePrices(form?.otherItems);
   const subtotal = scopeTotal + otherTotal;
   const showTax = form?.customerTaxExempt === false;
   const taxPct = showTax ? parseMoneyInput(form?.taxPercent) : 0;
-  const taxAmount = showTax ? (scopeTotal * taxPct) / 100 : 0;
+  const taxAmount = showTax ? ((scopeTotal + taxableOtherTotal) * taxPct) / 100 : 0;
   return {
     proposalTotal: subtotal,
     taxCollected: taxAmount,
@@ -751,6 +765,7 @@ export function simpleServiceProposalDocToForm(doc) {
           inventoryItemId: String(line?.inventoryItemId || "").trim(),
           unitCost: String(line?.unitCost ?? "").trim(),
           markupPercent: String(line?.markupPercent ?? "").trim(),
+          taxable: line?.taxable === true,
         }))
       : [emptyOtherLine()];
 

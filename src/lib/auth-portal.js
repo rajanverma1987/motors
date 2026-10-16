@@ -8,6 +8,7 @@ import UserSettings from "@/models/UserSettings";
 import { mergeUserSettings } from "@/lib/user-settings";
 import { computeEffectiveFinancialAccess } from "@/lib/financial-access";
 import { normalizePortalUi, PORTAL_UI_COOKIE, PORTAL_UI_SIMPLE } from "@/lib/portal-view";
+import { recordPortalDailyUse } from "@/lib/portal-login-audit";
 
 let _portalSecret = null;
 function getPortalJwtSecret() {
@@ -154,6 +155,11 @@ export async function getPortalUserFromRequest(request) {
       .lean();
     if (!emp || emp.employmentStatus !== "Active" || !emp.canLogin) return null;
   }
+  try {
+    await recordPortalDailyUse(payload.email);
+  } catch (_) {
+    /* usage stamp must not block the request */
+  }
   return {
     email: payload.email,
     shopName: payload.shopName || "",
@@ -231,6 +237,11 @@ export async function getTechnicianFromRequest(request) {
     .select("employmentStatus technicianAppAccess")
     .lean();
   if (!emp || emp.employmentStatus !== "Active" || !emp.technicianAppAccess) return null;
+  try {
+    await recordPortalDailyUse(tech.shopEmail);
+  } catch (_) {
+    /* usage stamp must not block the request */
+  }
   return tech;
 }
 

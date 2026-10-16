@@ -48,7 +48,15 @@ export default function ConfirmDialog({
         <h2 id="confirm-title" className="mb-2 text-lg font-semibold text-title">
           {title}
         </h2>
-        {message ? <p className="mb-6 text-sm text-text whitespace-pre-wrap">{message}</p> : <div className="mb-6" />}
+        {message ? (
+          typeof message === "string" || typeof message === "number" ? (
+            <p className="mb-6 whitespace-pre-wrap text-sm text-text">{message}</p>
+          ) : (
+            <div className="mb-6 text-sm text-text">{message}</div>
+          )
+        ) : (
+          <div className="mb-6" />
+        )}
         <div className="flex justify-end gap-3">
           {showCancel ? (
             <Button variant="outline" onClick={onCancel}>

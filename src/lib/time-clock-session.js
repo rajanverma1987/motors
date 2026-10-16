@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { recordPortalDailyUse } from "@/lib/portal-login-audit";
 
 const COOKIE_NAME = "motors_time_clock";
 const TYP = "motors_time_clock";
@@ -63,5 +64,12 @@ export async function getTimeClockSessionFromRequest(request) {
   const cookie = request.headers.get("cookie") || "";
   const match = cookie.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
   if (!match) return null;
-  return verifyTimeClockSessionToken(decodeURIComponent(match[1]));
+  const session = await verifyTimeClockSessionToken(decodeURIComponent(match[1]));
+  if (!session) return null;
+  try {
+    await recordPortalDailyUse(session.shopEmail);
+  } catch (_) {
+    /* usage stamp must not block the request */
+  }
+  return session;
 }

@@ -566,11 +566,23 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOp
   ];
   const rows = [];
   const sortKeys = [];
+  const hasRange = Boolean(toYmd(from) || toYmd(to));
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
     const money = computeSpInvoiceMoney(doc);
-    const paidDay = toYmd(money.latestPaymentDate || doc.invoicePaidDate);
-    if (!dayInRange(paidDay, from, to)) continue;
+    const recorded = normalizeInvoicePayments(doc.payments).filter((payment) =>
+      dayInRange(payment.date, from, to)
+    );
+    if (hasRange && recorded.length === 0) continue;
+    let rangePaid = 0;
+    let rangeLatest = "";
+    for (const payment of recorded) {
+      rangePaid += parseMoneyInput(payment.amount);
+      const day = toYmd(payment.date);
+      if (day && (!rangeLatest || day > rangeLatest)) rangeLatest = day;
+    }
+    const paidDay = hasRange ? rangeLatest : toYmd(money.latestPaymentDate || doc.invoicePaidDate);
+    const paidAmount = hasRange ? rangePaid : money.amountPaid;
     if (paymentFilter === "paid" && !money.isPaid) continue;
     if (paymentFilter === "unpaid" && money.isPaid) continue;
     const createdDay = resolveDocDay(doc, ["dateCreated", "date", "createdAt"]);
@@ -587,7 +599,7 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOp
       moneyCell(money.otherTotal),
       moneyCell(money.taxAmount),
       moneyCell(money.grandTotal),
-      moneyCell(money.amountPaid),
+      moneyCell(paidAmount),
       moneyCell(money.unpaid),
     ]);
   }

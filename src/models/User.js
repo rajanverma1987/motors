@@ -14,7 +14,7 @@ const userSchema = new mongoose.Schema(
     listingOnlyAccount: { type: Boolean, default: false },
     /** Signup from calculators marketing: calculators-only portal until CalculatorEntitlement is active. */
     calculatorOnlyAccount: { type: Boolean, default: false },
-    /** Last successful portal sign-in (owner or employee session for this shop). */
+    /** Last UTC day this shop used the portal, Punchin, or technician app. Written once per day. */
     lastLoginAt: { type: Date, default: null },
   },
   { timestamps: true }

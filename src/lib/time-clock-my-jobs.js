@@ -25,12 +25,19 @@ import { RECORD_TYPE_JOB } from "@/lib/simple-service-proposal-form";
 import { findShopByTimeClockToken } from "@/lib/time-clock-settings";
 import { getTimeClockSessionFromRequest } from "@/lib/time-clock-session";
 import Employee from "@/models/Employee";
+import {
+  DATASHEET_TECHNICIAN_ALL,
+  datasheetTechnicianIds,
+  datasheetTechniciansForSave,
+  technicianSheetMatchesEmployee,
+} from "@/lib/datasheet-technicians";
 
 export function technicianMatchesEmployee(sheetTechnician, employeeId) {
-  const tech = String(sheetTechnician || "").trim();
-  const emp = String(employeeId || "").trim();
-  if (!tech || !emp) return false;
-  return tech === emp || tech.toLowerCase() === emp.toLowerCase();
+  const sheet =
+    sheetTechnician && typeof sheetTechnician === "object"
+      ? sheetTechnician
+      : { technician: sheetTechnician };
+  return technicianSheetMatchesEmployee(sheet, employeeId);
 }
 
 export function proposalAssignedToEmployee(doc, employeeId) {
@@ -38,7 +45,7 @@ export function proposalAssignedToEmployee(doc, employeeId) {
   const key = datasheetStorageKey(machineType);
   const sheet = doc?.[key];
   if (!sheet || typeof sheet !== "object") return false;
-  return technicianMatchesEmployee(sheet.technician, employeeId);
+  return technicianSheetMatchesEmployee(sheet, employeeId);
 }
 
 export function normalizeDatasheetForMachine(machineType, raw, documentNumber) {
@@ -48,6 +55,9 @@ export function normalizeDatasheetForMachine(machineType, raw, documentNumber) {
   else if (type === "Pump") sheet = normalizePumpDatasheet(raw || {});
   else if (type === "Generator") sheet = normalizeGeneratorDatasheet(raw || {});
   else sheet = normalizeAcDatasheet(raw || {});
+  const saved = datasheetTechniciansForSave(datasheetTechnicianIds(sheet));
+  sheet.technician = saved.technician;
+  sheet.technicians = saved.technicians;
   return syncDatasheetJobNumber(sheet, documentNumber);
 }
 
@@ -81,12 +91,12 @@ export function mongoMyJobsTechnicianClause(employeeId) {
   if (!id) return { _id: null };
   return {
     recordType: RECORD_TYPE_JOB,
-    $or: [
-      { "acDatasheet.technician": id },
-      { "dcDatasheet.technician": id },
-      { "pumpDatasheet.technician": id },
-      { "generatorDatasheet.technician": id },
-    ],
+    $or: ["acDatasheet", "dcDatasheet", "pumpDatasheet", "generatorDatasheet"].flatMap((key) => [
+      { [`${key}.technician`]: id },
+      { [`${key}.technician`]: DATASHEET_TECHNICIAN_ALL },
+      { [`${key}.technicians`]: id },
+      { [`${key}.technicians`]: DATASHEET_TECHNICIAN_ALL },
+    ]),
   };
 }
 

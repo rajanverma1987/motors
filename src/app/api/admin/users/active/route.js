@@ -16,7 +16,7 @@ const ACTIVE_CLIENT_SORT_KEYS = [
 ];
 const ACTIVE_CLIENT_MONGO_SORT_KEYS = ["email", "shopName", "contactName", "lastLoginAt", "createdAt"];
 
-/** GET: portal users who have signed in at least once (lastLoginAt set). */
+/** GET: portal users who have used the product at least once (lastLoginAt set). */
 export async function GET(request) {
   try {
     const admin = await getAdminFromRequest(request);

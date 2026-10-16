@@ -537,7 +537,8 @@ export default function CustomerViewModal({
         title="Customer details"
         size="7xl"
         width="min(1480px, 98vw)"
-        height="min(90vh, 920px)"
+        height="min(99vh, 1012px)"
+        className="!max-h-[min(99vh,calc(100vh-2rem))]"
         zIndex={zIndex}
         actions={
           customer ? (

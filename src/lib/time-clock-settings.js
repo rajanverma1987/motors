@@ -62,6 +62,7 @@ export async function ensureTimeClockSettings(ownerEmail) {
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     radiusM: normalizeTimeClockRadiusM(s.timeClockRadiusM),
+    geofenceEnabled: s.timeClockGeofenceEnabled !== false,
     shopName: "",
     payrollCommunication: payrollCommunicationFromSettings(s),
     shopTimeZone: normalizeShopTimeZone(s.shopTimeZone),
@@ -82,8 +83,19 @@ export async function findShopByTimeClockToken(token) {
     lat: Number.isFinite(lat) ? lat : null,
     lng: Number.isFinite(lng) ? lng : null,
     radiusM: normalizeTimeClockRadiusM(s.timeClockRadiusM),
+    geofenceEnabled: s.timeClockGeofenceEnabled !== false,
     logoUrl: String(s.logoUrl || "").trim(),
   };
+}
+
+export async function updateTimeClockGeofenceEnabled(ownerEmail, enabled) {
+  const email = String(ownerEmail || "").trim().toLowerCase();
+  await ensureTimeClockSettings(email);
+  await UserSettings.updateOne(
+    { ownerEmail: email },
+    { $set: { "settings.timeClockGeofenceEnabled": enabled !== false } }
+  );
+  return ensureTimeClockSettings(email);
 }
 
 export async function updateTimeClockGeofence(ownerEmail, { lat, lng, radiusM }) {

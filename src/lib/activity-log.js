@@ -28,6 +28,7 @@ function technicianOf(doc) {
   const sheets = [doc?.dcDatasheet, doc?.acDatasheet, doc?.pumpDatasheet, doc?.generatorDatasheet];
   for (const sheet of sheets) {
     const name = text(sheet?.technician);
+    if (name === "__all__") return "All";
     if (name) return name;
   }
   return "";

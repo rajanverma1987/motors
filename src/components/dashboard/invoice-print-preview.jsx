@@ -6,7 +6,7 @@ import { InvoicePaymentFooterPrint } from "@/components/dashboard/invoice-paymen
 import { PrintShopLogo } from "@/components/dashboard/print-shop-logo";
 import PrintSheetContinuedNotes from "@/components/dashboard/print-sheet-continued-notes";
 import MotorSummaryBlock from "@/components/dashboard/motor-summary-block";
-import { computeTotalsFromLaborAndParts } from "@/lib/quote-invoice-totals";
+import { computeTotalsFromLaborAndParts, formatTaxLineLabel } from "@/lib/quote-invoice-totals";
 import { SERVICE_PROPOSAL_DOCUMENT_TITLE } from "@/lib/quote-document-labels";
 import { printPartsLineQty, printPartsLineTotal } from "@/lib/simple-service-proposal-print";
 
@@ -60,6 +60,7 @@ export default function InvoicePrintPreview({
   const totals = computeTotalsFromLaborAndParts({
     laborTotal: q.laborTotal,
     partsTotal: q.partsTotal,
+    taxablePartsTotal: q.taxablePartsTotal,
     taxExempt: q.customerTaxExempt,
     taxPercent: q.customerTaxPercent,
   });
@@ -237,7 +238,9 @@ export default function InvoicePrintPreview({
               <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.subtotal)}</td>
             </tr>
             <tr className="border-b border-neutral-200">
-              <td className="px-2 py-1.5 text-neutral-800">Tax</td>
+              <td className="px-2 py-1.5 text-neutral-800">
+                {formatTaxLineLabel(q.customerTaxPercent, q.customerTaxExempt)}
+              </td>
               <td className="px-2 py-1.5 text-right text-neutral-900">{fmt(totals.taxAmount)}</td>
             </tr>
             <tr className="bg-neutral-100">

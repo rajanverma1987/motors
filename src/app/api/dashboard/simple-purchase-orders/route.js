@@ -19,11 +19,7 @@ import {
 } from "@/lib/simple-purchase-order-form";
 
 function poDateRangeClause(from, to) {
-  const clauses = ["poCutDate", "dueDate", "date"]
-    .map((field) => mongoFieldInCalendarRange(field, from, to))
-    .filter(Boolean);
-  if (!clauses.length) return null;
-  return { $or: clauses.flatMap((clause) => clause.$or) };
+  return mongoFieldInCalendarRange("poCutDate", from, to);
 }
 
 /**
