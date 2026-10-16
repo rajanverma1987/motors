@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
+import { Form } from "@/components/ui/form-layout";
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import { useAlert } from "@/components/confirm-provider";
@@ -41,6 +42,10 @@ export default function SimpleEmployeePaymentHistoryModal({
   const [loading, setLoading] = useState(false);
   const [payments, setPayments] = useState([]);
   const [payOpen, setPayOpen] = useState(false);
+  const [hoursOpen, setHoursOpen] = useState(false);
+  const [savingHours, setSavingHours] = useState(false);
+  const [calendarReload, setCalendarReload] = useState(0);
+  const [hoursForm, setHoursForm] = useState({ workDate: "", hours: "", note: "" });
 
   const hasLeftPanel = leftPanel != null;
   const fmt = useCallback(
@@ -85,6 +90,45 @@ export default function SimpleEmployeePaymentHistoryModal({
     if (!open || hasLeftPanel) return;
     void load();
   }, [open, hasLeftPanel, load]);
+
+  const openManualHours = () => {
+    const now = new Date();
+    const workDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    setHoursForm({ workDate, hours: "", note: "" });
+    setHoursOpen(true);
+  };
+
+  const submitManualHours = async (e) => {
+    e.preventDefault();
+    const id = String(employeeId || "").trim();
+    if (!id) return;
+    setSavingHours(true);
+    try {
+      const res = await fetch("/api/dashboard/time-clock/manual-hours", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          employeeId: id,
+          workDate: hoursForm.workDate,
+          hours: Number(hoursForm.hours),
+          note: hoursForm.note,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to save hours");
+      setHoursOpen(false);
+      setCalendarReload((n) => n + 1);
+    } catch (err) {
+      await alert({
+        title: "Error",
+        message: err?.message || "Failed to save hours",
+        variant: "danger",
+      });
+    } finally {
+      setSavingHours(false);
+    }
+  };
 
   const titleName = String(employeeName || "").trim() || "Employee";
   const titleNumber = String(employeeNumber || "").trim();
@@ -196,16 +240,28 @@ export default function SimpleEmployeePaymentHistoryModal({
         actions={
           <>
             {hasLeftPanel ? (
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className="shrink-0"
-                disabled={!employeeId}
-                onClick={() => setPayOpen(true)}
-              >
-                Payment Record
-              </Button>
+              <>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={!employeeId}
+                  onClick={openManualHours}
+                >
+                  Manual hours
+                </Button>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="shrink-0"
+                  disabled={!employeeId}
+                  onClick={() => setPayOpen(true)}
+                >
+                  Payment Record
+                </Button>
+              </>
             ) : null}
             {actions}
           </>
@@ -222,7 +278,11 @@ export default function SimpleEmployeePaymentHistoryModal({
               {leftPanel}
             </div>
             <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain pb-4 lg:pb-1">
-              <SimpleEmployeePunchCalendar employeeId={employeeId} open={open} />
+              <SimpleEmployeePunchCalendar
+                employeeId={employeeId}
+                open={open}
+                reloadToken={calendarReload}
+              />
             </div>
           </div>
         ) : (
@@ -246,6 +306,65 @@ export default function SimpleEmployeePaymentHistoryModal({
             {historyTable}
           </>
         )}
+      </Modal>
+
+      <Modal
+        open={hoursOpen}
+        onClose={() => !savingHours && setHoursOpen(false)}
+        title="Manual hours"
+        size="md"
+        showClose={!savingHours}
+        closeOnOutsideClick={false}
+        actions={
+          <Button type="submit" form="employee-manual-hours-form" variant="primary" size="sm" disabled={savingHours}>
+            {savingHours ? "Saving…" : "Save"}
+          </Button>
+        }
+      >
+        <Form
+          id="employee-manual-hours-form"
+          onSubmit={submitManualHours}
+          className="flex flex-col gap-3 !space-y-0 !border-0 !p-0 !shadow-none"
+        >
+          <label className="text-xs font-bold text-title">
+            Date
+            <input
+              type="date"
+              required
+              className="mt-1 h-8 w-full border border-border bg-card px-2 text-sm text-title"
+              value={hoursForm.workDate}
+              onChange={(e) => setHoursForm((f) => ({ ...f, workDate: e.target.value }))}
+              disabled={savingHours}
+            />
+          </label>
+          <label className="text-xs font-bold text-title">
+            Hours
+            <input
+              type="number"
+              required
+              min="0.01"
+              max="24"
+              step="0.01"
+              className="mt-1 h-8 w-full border border-border bg-card px-2 text-sm text-title"
+              value={hoursForm.hours}
+              onChange={(e) => setHoursForm((f) => ({ ...f, hours: e.target.value }))}
+              placeholder="e.g. 8"
+              disabled={savingHours}
+            />
+          </label>
+          <label className="text-xs font-bold text-title">
+            Note (optional)
+            <textarea
+              rows={3}
+              maxLength={500}
+              className="mt-1 w-full border border-border bg-card px-2 py-1.5 text-sm text-title"
+              value={hoursForm.note}
+              onChange={(e) => setHoursForm((f) => ({ ...f, note: e.target.value }))}
+              placeholder="Reason or description…"
+              disabled={savingHours}
+            />
+          </label>
+        </Form>
       </Modal>
 
       <SimpleEmployeeRecordPaymentModal

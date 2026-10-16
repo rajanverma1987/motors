@@ -304,6 +304,7 @@ function OutlookDayCell({
 export default function SimpleEmployeePunchCalendar({
   employeeId,
   open = true,
+  reloadToken = 0,
 }) {
   const alert = useAlert();
   const { settings } = useUserSettings();
@@ -374,7 +375,7 @@ export default function SimpleEmployeePunchCalendar({
     } finally {
       setLoading(false);
     }
-  }, [alert, employeeId, fetchFrom, fetchTo, open, rangeOk]);
+  }, [alert, employeeId, fetchFrom, fetchTo, open, rangeOk, reloadToken]);
 
   useEffect(() => {
     void load();
