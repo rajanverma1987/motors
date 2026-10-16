@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCheck } from "react-icons/fi";
 import { useAlert } from "@/components/confirm-provider";
 import { useUserSettings } from "@/contexts/user-settings-context";
@@ -318,6 +318,7 @@ export default function SimpleEmployeePunchCalendar({
   const [customTo, setCustomTo] = useState(thisMonth.to);
   const [loading, setLoading] = useState(false);
   const [employee, setEmployee] = useState(null);
+  const requestSeq = useRef(0);
 
   const range = useMemo(() => {
     if (period === "prev-month") return monthRange(shiftMonth(today, -1));
@@ -332,21 +333,19 @@ export default function SimpleEmployeePunchCalendar({
     [range.from, range.to, rangeOk, weekStartDay]
   );
 
-  const fetchFrom = weeks[0]?.[0]?.iso || range.from;
-  const fetchTo = weeks[weeks.length - 1]?.[6]?.iso || range.to;
-
   const load = useCallback(async () => {
     const id = String(employeeId || "").trim();
+    const seq = ++requestSeq.current;
     if (!id || !open || !rangeOk) {
-      setEmployee(null);
+      if (seq === requestSeq.current) setEmployee(null);
       return;
     }
     setLoading(true);
     try {
       const params = new URLSearchParams({
         view: "calendar",
-        from: fetchFrom,
-        to: fetchTo,
+        from: range.from,
+        to: range.to,
         employeeId: id,
       });
       const res = await fetch(`/api/dashboard/time-clock/punches?${params}`, {
@@ -354,6 +353,7 @@ export default function SimpleEmployeePunchCalendar({
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
       if (!res.ok) throw new Error(data.error || "Failed to load punches");
       const list = Array.isArray(data.employees) ? data.employees : [];
       setEmployee(
@@ -366,6 +366,7 @@ export default function SimpleEmployeePunchCalendar({
         }
       );
     } catch (err) {
+      if (seq !== requestSeq.current) return;
       setEmployee(null);
       await alert({
         title: "Error",
@@ -373,9 +374,9 @@ export default function SimpleEmployeePunchCalendar({
         variant: "danger",
       });
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [alert, employeeId, fetchFrom, fetchTo, open, rangeOk, reloadToken]);
+  }, [alert, employeeId, open, range.from, range.to, rangeOk, reloadToken]);
 
   useEffect(() => {
     void load();
@@ -476,7 +477,10 @@ export default function SimpleEmployeePunchCalendar({
           <div className="grid grid-cols-7">
             {weeks.flatMap((week) =>
               week.map((cell) => {
-                const { sessions, manualHours, manualJobNumbers } = dayEntry(daysMap, cell.iso);
+                const entry = cell.inRange
+                  ? dayEntry(daysMap, cell.iso)
+                  : { sessions: [], manualHours: 0, manualJobNumbers: [] };
+                const { sessions, manualHours, manualJobNumbers } = entry;
                 return (
                   <OutlookDayCell
                     key={cell.iso}

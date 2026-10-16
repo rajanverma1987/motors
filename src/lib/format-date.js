@@ -242,6 +242,25 @@ export function mongoCalendarDateRange(fromYmd, toYmd) {
 }
 
 /**
+ * Match a calendar field stored as a BSON Date or as YYYY-MM-DD text.
+ * @param {string} field
+ * @param {string} fromYmd
+ * @param {string} toYmd
+ * @returns {{ $or: object[] } | null}
+ */
+export function mongoFieldInCalendarRange(field, fromYmd, toYmd) {
+  const dateRange = mongoCalendarDateRange(fromYmd, toYmd);
+  if (!dateRange || !field) return null;
+  const from = toInputDateValue(fromYmd);
+  const to = toInputDateValue(toYmd);
+  /** @type {{ $gte?: string, $lte?: string }} */
+  const stringRange = {};
+  if (from) stringRange.$gte = from;
+  if (to) stringRange.$lte = to;
+  return { $or: [{ [field]: dateRange }, { [field]: stringRange }] };
+}
+
+/**
  * Parse a locale-styled date typed in a filter (e.g. 07/08/2026) to YYYY-MM-DD.
  * @param {unknown} value
  * @param {string} [locale]

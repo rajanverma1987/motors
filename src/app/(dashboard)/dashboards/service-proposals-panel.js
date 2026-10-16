@@ -33,6 +33,7 @@ import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatDate, usePreferredTablePageSize, useUserSettings } from "@/contexts/user-settings-context";
+import { toInputDateValue } from "@/lib/format-date";
 import {
   invoiceStatusSelectOptionsFromMerged,
   invoiceStatusTileColorForValue,
@@ -213,6 +214,7 @@ export default function ServiceProposalsPanel({
   const [taxesModalOpen, setTaxesModalOpen] = useState(false);
   /** Ignore stale createNonce when Tabs remount this panel on tab switch. */
   const lastHandledCreateNonceRef = useRef(createNonce);
+  const listRequestRef = useRef(0);
 
   const quoteOpts = useMemo(
     () => quoteStatusSelectOptionsFromMerged(mergedSettings),
@@ -283,6 +285,7 @@ export default function ServiceProposalsPanel({
   }, [createNonce, isInvoices, openCreate]);
 
   const reload = useCallback(async () => {
+    const seq = ++listRequestRef.current;
     setReady(false);
     try {
       const [pageData, cust, emps] = await Promise.all([
@@ -301,6 +304,7 @@ export default function ServiceProposalsPanel({
         fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
       ]);
+      if (seq !== listRequestRef.current) return;
       const customersList = Array.isArray(cust) ? cust : [];
       const byId = new Map(customersList.map((c) => [String(c.id || ""), c]));
       const employeesList = withShopAdminEmployee(Array.isArray(emps) ? emps : [], user);
@@ -330,13 +334,14 @@ export default function ServiceProposalsPanel({
       setCustomers(customersList);
       setEmployees(employeesList);
     } catch {
+      if (seq !== listRequestRef.current) return;
       setRows([]);
       setTotalCount(0);
       setStatusBuckets([]);
       setListTotals({ total: 0, taxCollected: 0, logisticCharges: 0, count: 0 });
       setInvoiceFinance(EMPTY_INVOICE_FINANCE);
     } finally {
-      setReady(true);
+      if (seq === listRequestRef.current) setReady(true);
     }
   }, [
     mergedSettings,
@@ -1009,17 +1014,19 @@ export default function ServiceProposalsPanel({
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
               getCellClassName: (_, row) =>
                 proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
-              render: (v) => {
-                const text = formatDate(v);
-                const shown = text && text !== "-" ? text : "";
-                return (
-                  <span
-                    className={`block px-1.5 py-1 text-right tabular-nums ${shown ? "font-semibold" : "font-normal"}`}
-                  >
-                    {shown || "-"}
-                  </span>
-                );
-              },
+              render: (v, row) => (
+                <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="date"
+                    value={toInputDateValue(v)}
+                    aria-label="Invoice Paid Date"
+                    className="h-7 w-full min-w-0 border-0 bg-transparent px-1 text-right text-xs font-semibold tabular-nums text-title outline-none [color-scheme:light] dark:[color-scheme:dark]"
+                    onChange={(e) =>
+                      handleRowFieldChange(row.id, { invoicePaidDate: e.target.value })
+                    }
+                  />
+                </div>
+              ),
             },
           ]
         : []),
@@ -1129,6 +1136,7 @@ export default function ServiceProposalsPanel({
     ],
     [
       handleDelete,
+      handleRowFieldChange,
       handleRowStatusChange,
       handleRowJobStatusChange,
       openNotesEdit,

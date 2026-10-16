@@ -11,7 +11,7 @@ import {
   quoteStatusSelectOptionsFromMerged,
   quoteStatusSortOrderForValue,
 } from "@/lib/dropdown-catalog";
-import { mongoCalendarDateRange } from "@/lib/format-date";
+import { mongoFieldInCalendarRange } from "@/lib/format-date";
 import { RECORD_TYPE_INVOICE } from "@/lib/simple-service-proposal-form";
 import {
   INVOICE_FILTER_AMOUNT_RECEIVABLE,
@@ -84,11 +84,11 @@ export function mongoProposalKindClause(mergedSettings) {
 }
 
 export function mongoSpDateRangeClause(fromYmd, toYmd) {
-  const range = mongoCalendarDateRange(fromYmd, toYmd);
-  if (!range) return null;
-  return {
-    $or: [{ date: range }, { dateCreated: range }],
-  };
+  const clauses = ["date", "dateCreated"]
+    .map((field) => mongoFieldInCalendarRange(field, fromYmd, toYmd))
+    .filter(Boolean);
+  if (!clauses.length) return null;
+  return { $or: clauses.flatMap((clause) => clause.$or) };
 }
 
 export function andMongoClauses(...parts) {

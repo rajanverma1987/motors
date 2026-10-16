@@ -116,6 +116,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [dueNotificationLoading, setDueNotificationLoading] = useState(false);
   const [dueNotificationModalOpen, setDueNotificationModalOpen] = useState(false);
   const lastHandledCreateNonceRef = useRef(createNonce);
+  const listRequestRef = useRef(0);
 
   const fetchDueNotifications = useCallback(async (autoCheck = false) => {
     try {
@@ -139,6 +140,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   }, [fetchDueNotifications]);
 
   const reload = useCallback(async () => {
+    const seq = ++listRequestRef.current;
     setLoading(true);
     try {
       const pageData = await fetchSimplePurchaseOrdersPage({
@@ -152,15 +154,17 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         from: dateFrom,
         to: dateTo,
       });
+      if (seq !== listRequestRef.current) return;
       setRows(Array.isArray(pageData.items) ? pageData.items : []);
       setTotalCount(Number(pageData.totalCount) || 0);
       setPaymentBuckets(Array.isArray(pageData.paymentBuckets) ? pageData.paymentBuckets : []);
     } catch {
+      if (seq !== listRequestRef.current) return;
       setRows([]);
       setTotalCount(0);
       setPaymentBuckets([]);
     } finally {
-      setLoading(false);
+      if (seq === listRequestRef.current) setLoading(false);
     }
   }, [page, pageSize, searchQuery, tableSort, paymentFilter, poTypeTab, dateFrom, dateTo]);
 

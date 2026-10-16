@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiCheck, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
@@ -403,6 +403,7 @@ export default function SimplePunchesCalendar({
   const [customFrom, setCustomFrom] = useState(initialWeek.from);
   const [customTo, setCustomTo] = useState(initialWeek.to);
   const [loading, setLoading] = useState(true);
+  const requestSeq = useRef(0);
   const [days, setDays] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [payEmployee, setPayEmployee] = useState(null);
@@ -427,7 +428,9 @@ export default function SimplePunchesCalendar({
   );
 
   const load = useCallback(async () => {
+    const seq = ++requestSeq.current;
     if (!rangeOk) {
+      if (seq !== requestSeq.current) return;
       setDays([]);
       setEmployees([]);
       setLoading(false);
@@ -445,10 +448,12 @@ export default function SimplePunchesCalendar({
         cache: "no-store",
       });
       const data = await res.json().catch(() => ({}));
+      if (seq !== requestSeq.current) return;
       if (!res.ok) throw new Error(data.error || "Failed to load punches");
       setDays(Array.isArray(data.days) ? data.days : []);
       setEmployees(Array.isArray(data.employees) ? data.employees : []);
     } catch (err) {
+      if (seq !== requestSeq.current) return;
       setDays([]);
       setEmployees([]);
       await alert({
@@ -457,7 +462,7 @@ export default function SimplePunchesCalendar({
         variant: "danger",
       });
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, [alert, range.from, range.to, rangeOk]);
 

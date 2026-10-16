@@ -10,13 +10,21 @@ import {
   sanitizeSimplePortalPayload,
   serializeSimplePortalDoc,
 } from "@/lib/simple-portal-mongo";
-import { mongoCalendarDateRange } from "@/lib/format-date";
+import { mongoFieldInCalendarRange } from "@/lib/format-date";
 import { emitCrmResourceEvent } from "@/lib/integration-webhooks";
 import { enqueueQuickBooksSync } from "@/lib/quickbooks/triggers";
 import {
   resolveSimplePoType,
   SIMPLE_PO_TYPE_JOB,
 } from "@/lib/simple-purchase-order-form";
+
+function poDateRangeClause(from, to) {
+  const clauses = ["poCutDate", "dueDate", "date"]
+    .map((field) => mongoFieldInCalendarRange(field, from, to))
+    .filter(Boolean);
+  if (!clauses.length) return null;
+  return { $or: clauses.flatMap((clause) => clause.$or) };
+}
 
 /**
  * Attach customerName / customerId (and resolve serviceProposalId) from the linked Job.
@@ -198,12 +206,8 @@ export async function GET(request) {
       });
     }
     if (from || to) {
-      const range = mongoCalendarDateRange(from, to);
-      if (range) {
-        andParts.push({
-          $or: [{ poCutDate: range }, { dueDate: range }, { date: range }],
-        });
-      }
+      const dateClause = poDateRangeClause(from, to);
+      if (dateClause) andParts.push(dateClause);
     }
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
@@ -267,12 +271,8 @@ export async function GET(request) {
       });
     }
     if (from || to) {
-      const range = mongoCalendarDateRange(from, to);
-      if (range) {
-        cardAnd.push({
-          $or: [{ poCutDate: range }, { dueDate: range }, { date: range }],
-        });
-      }
+      const dateClause = poDateRangeClause(from, to);
+      if (dateClause) cardAnd.push(dateClause);
     }
     if (qText) {
       const rx = new RegExp(qText.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
