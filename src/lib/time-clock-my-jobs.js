@@ -12,6 +12,7 @@ import {
   workOrderStatusSelectOptionsFromMerged,
 } from "@/lib/dropdown-catalog";
 import { datasheetStorageKey, resolveMachineType } from "@/lib/machine-types";
+import { normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import {
   normalizeAcDatasheet,
   normalizeDcDatasheet,
@@ -135,6 +136,7 @@ export function serializeMyJobDetail(doc, mergedSettings) {
     hpKw: String(doc?.hpKw || "").trim(),
     datasheetKey: key,
     datasheet,
+    cmCalculation: normalizeCmJobCalculation(doc?.cmCalculation),
     statusOptions,
   };
 }

@@ -206,6 +206,24 @@ export default function TimeClockJobsPanel({
     return true;
   };
 
+  const handleSaveCmCalculation = async (snapshot) => {
+    if (!job?.id) throw new Error("No job selected");
+    const res = await fetch(
+      `/api/time-clock/my-jobs/${encodeURIComponent(job.id)}/datasheet?token=${encodeURIComponent(token)}`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cmCalculation: snapshot }),
+      }
+    );
+    const data = await readJson(res);
+    if (!res.ok) throw new Error(data.error || "Failed to save circular mills result");
+    setJob(data.job || null);
+    onMessage?.("Circular mills result saved to this job.");
+    return true;
+  };
+
   if (loading) {
     return <p className="text-sm text-neutral-600">Loading your jobs…</p>;
   }
@@ -394,6 +412,8 @@ export default function TimeClockJobsPanel({
             jobStatusOptions={job.statusOptions || []}
             jobStatus={job.jobStatus || ""}
             onJobStatusChange={(next) => void handleStatusChange(next)}
+            cmCalculation={job.cmCalculation || null}
+            onSaveCmCalculation={handleSaveCmCalculation}
             recordType={RECORD_TYPE_JOB}
             printContext={{
               documentLabel: "JOB#",

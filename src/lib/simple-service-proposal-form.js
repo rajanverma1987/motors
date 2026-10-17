@@ -16,6 +16,7 @@ import {
 import { normalizeJobDiagrams } from "@/lib/diagram-templates-shared";
 import { isMongoObjectIdString, isShopAdminSelectValue } from "@/lib/technician-select-options";
 import { resolveMachineType } from "@/lib/machine-types";
+import { normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import { normalizeProposalType, PROPOSAL_TYPE_SERVICE } from "@/lib/proposal-types";
 import { proposalDocumentTitle } from "@/lib/quote-document-labels";
 import { parseMarkupPercent, sellUnitPriceFromCostMarkup } from "@/lib/inventory-pricing";
@@ -308,6 +309,8 @@ export function createEmptyServiceProposalForm(overrides = {}) {
     otherItems: [emptyOtherLine()],
     attachments: [],
     jobDiagrams: [],
+    /** Saved CM Best Match inputs and the chosen result for this job. */
+    cmCalculation: null,
     ...overrides,
   };
 }
@@ -771,6 +774,7 @@ export function simpleServiceProposalDocToForm(doc) {
 
   next.attachments = Array.isArray(d.attachments) ? d.attachments : [];
   next.jobDiagrams = normalizeJobDiagrams(d.jobDiagrams, d.jobDiagram);
+  next.cmCalculation = normalizeCmJobCalculation(d.cmCalculation);
   next.payments = normalizeInvoicePayments(d.payments);
   const docNumberForSheets = String(next.documentNumber || d.documentNumber || d.quote || "").trim();
   next.acDatasheet =

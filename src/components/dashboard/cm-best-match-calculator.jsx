@@ -7,6 +7,7 @@ import Input from "@/components/ui/input";
 import Modal from "@/components/ui/modal";
 import { useConfirm } from "@/components/confirm-provider";
 import { calculateCMBestMatch } from "@/lib/cm-calculator";
+import { cmJobResultKey, formatCmJobResultSummary, normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import {
   CIR_MILLS_UNIT_AWG,
   CIR_MILLS_UNIT_METRIC,
@@ -104,7 +105,14 @@ function WireUnitToggle({ wireUnit, onUnitChange, disabled = false }) {
 }
 
 /** Printable + on-screen results: variables + table (id required for print CSS) */
-function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
+function CmBestMatchResultsBody({
+  results,
+  resultContext,
+  generatedLabel,
+  onSaveRow,
+  savingRow = false,
+  savedResultKey = "",
+}) {
   const [page, setPage] = useState(1);
 
   const totalCount = results?.length || 0;
@@ -193,6 +201,9 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
         <table className="cm-results-table w-full min-w-[920px] border-collapse text-sm">
           <thead>
             <tr className="border-b border-border bg-primary text-white dark:bg-primary/90">
+              {onSaveRow ? (
+                <th className="cm-print-hide w-16 px-2 py-2.5 text-left text-sm font-semibold">Save</th>
+              ) : null}
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold">Wire Size</th>
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold"># Wires</th>
               <th className="whitespace-nowrap px-2 py-2.5 text-left text-sm font-semibold">Wire Size 2</th>
@@ -213,6 +224,21 @@ function CmBestMatchResultsBody({ results, resultContext, generatedLabel }) {
                 key={`${startItem + idx}-${row.totalCM}-${row.wiresInHand}-${row.percentDifference}`}
                 className={`border-b border-border last:border-b-0 ${resultRowClass(row.percentDifference)} ${resultRowPrintClass(row.percentDifference)}`}
               >
+                {onSaveRow ? (
+                  <td className="cm-print-hide px-2 py-1.5">
+                    <Button
+                      type="button"
+                      variant={savedResultKey && savedResultKey === cmJobResultKey(row) ? "outline" : "primary"}
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      disabled={savingRow}
+                      title="Save this match on the job"
+                      onClick={() => onSaveRow(row)}
+                    >
+                      {savedResultKey && savedResultKey === cmJobResultKey(row) ? "Saved" : "Save"}
+                    </Button>
+                  </td>
+                ) : null}
                 <td className="px-2 py-2 tabular-nums text-title">{slotSize(row, 1)}</td>
                 <td className="px-2 py-2 tabular-nums text-secondary">{slotQty(row, 1)}</td>
                 <td className="px-2 py-2 tabular-nums text-title">{slotSize(row, 2)}</td>
@@ -484,19 +510,27 @@ function OriginalWiresSelectModal({
   );
 }
 
-export default function CmBestMatchCalculator() {
+export default function CmBestMatchCalculator({
+  initialCalculation = null,
+  onSaveToJob,
+  savingToJob = false,
+}) {
   const toast = useToast();
   const confirm = useConfirm();
   const formatDateTime = useFormatDateTime();
-  const [selected, setSelected] = useState(() => new Set());
-  const [originalWiredInHand, setOriginalWiredInHand] = useState("");
-  const [originalWireSize, setOriginalWireSize] = useState("");
-  const [originalCM, setOriginalCM] = useState("");
-  const [targetedCM, setTargetedCM] = useState("");
-  const [minWires, setMinWires] = useState("3");
-  const [maxWires, setMaxWires] = useState("10");
+  const seeded = normalizeCmJobCalculation(initialCalculation);
+  const [selected, setSelected] = useState(() => new Set(seeded?.selectedWireIds || []));
+  const [originalWiredInHand, setOriginalWiredInHand] = useState(seeded?.originalWiredInHand || "");
+  const [originalWireSize, setOriginalWireSize] = useState(seeded?.originalWireSize || "");
+  const [originalCM, setOriginalCM] = useState(seeded?.originalCM || "");
+  const [targetedCM, setTargetedCM] = useState(seeded?.targetedCM || "");
+  const [minWires, setMinWires] = useState(seeded?.minWires || "3");
+  const [maxWires, setMaxWires] = useState(seeded?.maxWires || "10");
+  const [originalWireQtys, setOriginalWireQtys] = useState(seeded?.originalWireQtys || {});
+  const [catalogWireUnit, setCatalogWireUnit] = useState(seeded?.catalogWireUnit || CIR_MILLS_UNIT_AWG);
   const [results, setResults] = useState([]);
-  const [resultContext, setResultContext] = useState(null);
+  const [resultContext, setResultContext] = useState(seeded?.resultContext || null);
+  const [savedSnapshot, setSavedSnapshot] = useState(seeded);
   const [resultsModalOpen, setResultsModalOpen] = useState(false);
   const [catalogsByUnit, setCatalogsByUnit] = useState(() => ({
     [CIR_MILLS_UNIT_AWG]: getCirMillsSessionCatalog(CIR_MILLS_UNIT_AWG),
@@ -504,8 +538,6 @@ export default function CmBestMatchCalculator() {
   }));
   const [cirMillsLoading, setCirMillsLoading] = useState(() => !hasCirMillsSessionCatalogs());
   const [originalWiresModalOpen, setOriginalWiresModalOpen] = useState(false);
-  const [originalWireQtys, setOriginalWireQtys] = useState({});
-  const [catalogWireUnit, setCatalogWireUnit] = useState(CIR_MILLS_UNIT_AWG);
   const [shopWireRows, setShopWireRows] = useState([]);
   const [shopWiresLoading, setShopWiresLoading] = useState(true);
   const [newSize, setNewSize] = useState("");
@@ -925,8 +957,52 @@ export default function CmBestMatchCalculator() {
     }
   };
 
+  const saveResultToJob = async (row) => {
+    if (typeof onSaveToJob !== "function") return;
+    if (!row) {
+      toast.warning("Calculate, then save a match to this job.");
+      return;
+    }
+    const snapshot = normalizeCmJobCalculation({
+      savedAt: new Date().toISOString(),
+      catalogWireUnit,
+      selectedWireIds: [...selected],
+      originalWiredInHand,
+      originalWireSize,
+      originalCM,
+      targetedCM,
+      minWires,
+      maxWires,
+      originalWireQtys,
+      resultContext,
+      selectedResult: row,
+    });
+    if (!snapshot?.selectedResult) {
+      toast.warning("That match could not be saved.");
+      return;
+    }
+    try {
+      const ok = await onSaveToJob(snapshot);
+      if (ok) setSavedSnapshot(snapshot);
+    } catch (err) {
+      toast.error(err?.message || "Could not save this calculation.");
+    }
+  };
+
+  const savedSummary = formatCmJobResultSummary(savedSnapshot);
+  const savedResultKey = cmJobResultKey(savedSnapshot?.selectedResult);
+
   return (
     <div className="flex w-full max-w-[1600px] flex-col gap-6">
+      {savedSummary ? (
+        <div className="rounded-md border border-border bg-primary/[0.06] px-3 py-2 dark:bg-primary/10">
+          <p className="text-xs font-bold uppercase tracking-wide text-secondary">Saved on this job</p>
+          <p className="mt-0.5 text-sm font-semibold text-title">{savedSummary}</p>
+          {savedSnapshot?.savedAt ? (
+            <p className="mt-0.5 text-xs text-secondary">Saved {formatDateTime(savedSnapshot.savedAt)}</p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="grid min-h-0 gap-6 lg:grid-cols-2 lg:items-start">
         {/* Left: Wire catalog (shared Cir Mills) */}
         <section className="flex min-h-0 min-w-0 flex-col rounded-lg border border-border bg-card p-5 shadow-sm dark:shadow-black/20">
@@ -1159,6 +1235,11 @@ export default function CmBestMatchCalculator() {
               Calculate Best Match
             </Button>
           </div>
+          {typeof onSaveToJob === "function" ? (
+            <p className="mb-4 text-xs text-secondary">
+              After you calculate, open the results and save the match you want to keep on this job.
+            </p>
+          ) : null}
 
           <div
             className="mb-4 rounded-md border border-border bg-muted/20 p-3 text-xs leading-relaxed text-secondary dark:bg-muted/10"
@@ -1226,6 +1307,9 @@ export default function CmBestMatchCalculator() {
             results={results}
             resultContext={resultContext}
             generatedLabel={formatDateTime(new Date())}
+            onSaveRow={typeof onSaveToJob === "function" ? saveResultToJob : undefined}
+            savingRow={savingToJob}
+            savedResultKey={savedResultKey}
           />
         </Modal>
       ) : null}

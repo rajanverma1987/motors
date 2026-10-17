@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import { Form } from "@/components/ui/form-layout";
@@ -63,12 +64,16 @@ import {
   pumpDatasheetVisibleTabs,
 } from "@/lib/simple-datasheet-extra";
 import { machineTypeDiagramsEnabled, resolveMachineType } from "@/lib/machine-types";
+import { formatCmJobResultSummary } from "@/lib/cm-job-calculation";
 import { RECORD_TYPE_RFQ, recordTypeJobNumberLabel } from "@/lib/simple-service-proposal-form";
 import {
   resolveLoggedInEmployeeSelectValue,
 } from "@/lib/technician-select-options";
 
 const FORM_ID = "simple-datasheet-form";
+const CmBestMatchCalculator = dynamic(() => import("@/components/dashboard/cm-best-match-calculator"), {
+  ssr: false,
+});
 const FIELD_INPUT = DATASHEET_FIELD_INPUT;
 const FIELD_TEXTAREA =
   "w-full min-w-0 resize-y rounded-none border border-border bg-primary/[0.04] px-1.5 py-1 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -159,6 +164,10 @@ export default function SimpleDatasheetModal({
   jobStatusOptions = [],
   jobStatus = "",
   onJobStatusChange,
+  /** Saved CM Best Match for this job, if any. */
+  cmCalculation = null,
+  /** Persist a chosen CM match on the job. Return true when saved. */
+  onSaveCmCalculation,
   recordType = RECORD_TYPE_RFQ,
   /** Punchin PWA: full-screen sheet with larger fields. */
   variant = "default",
@@ -183,6 +192,8 @@ export default function SimpleDatasheetModal({
   const [emailOpen, setEmailOpen] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [diagramOpen, setDiagramOpen] = useState(false);
+  const [cmOpen, setCmOpen] = useState(false);
+  const [savingCm, setSavingCm] = useState(false);
   const wasOpenRef = useRef(false);
   const formRef = useRef(form);
   formRef.current = form;
@@ -190,6 +201,7 @@ export default function SimpleDatasheetModal({
   const jobNumberLabel = useMemo(() => recordTypeJobNumberLabel(recordType), [recordType]);
 
   const canAttach = Boolean(String(recordId || "").trim());
+  const cmSummary = formatCmJobResultSummary(cmCalculation);
 
   const resolveTechnicianSelection = (sheet) => {
     const opts = Array.isArray(technicianOptions) ? technicianOptions : [];
@@ -237,6 +249,7 @@ export default function SimpleDatasheetModal({
       setEmailOpen(false);
       setAttachmentsOpen(false);
       setDiagramOpen(false);
+      setCmOpen(false);
     }
     wasOpenRef.current = open;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once per open
@@ -431,6 +444,17 @@ export default function SimpleDatasheetModal({
       {saving ? "Saving…" : "Save"}
     </Button>
   );
+
+  const handleSaveCmCalculation = async (snapshot) => {
+    if (typeof onSaveCmCalculation !== "function") return false;
+    setSavingCm(true);
+    try {
+      const ok = await onSaveCmCalculation(snapshot);
+      return Boolean(ok);
+    } finally {
+      setSavingCm(false);
+    }
+  };
 
   return (
     <>
@@ -701,8 +725,28 @@ export default function SimpleDatasheetModal({
                 : "Draw/View Diagram"}
             </Button>
             ) : null}
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className={TOOLBAR_BTN}
+              disabled={saving || printing}
+              title={
+                typeof onSaveCmCalculation === "function"
+                  ? cmSummary
+                    ? "Open the circular mills calculator. A match is saved on this job."
+                    : "Open the circular mills calculator"
+                  : "Circular mills calculator"
+              }
+              onClick={() => setCmOpen(true)}
+            >
+              {cmSummary ? "Circular Mills (saved)" : "Circular Mills"}
+            </Button>
           </div>
         </div>
+        {cmSummary ? (
+          <p className="text-xs text-secondary">Saved circular mills match: {cmSummary}</p>
+        ) : null}
 
         <div
           className={
@@ -1022,6 +1066,25 @@ export default function SimpleDatasheetModal({
         onDiagramsChange?.(Array.isArray(nextDiagrams) ? nextDiagrams : []);
       }}
     />
+
+    <Modal
+      open={cmOpen}
+      onClose={() => !savingCm && setCmOpen(false)}
+      title="Circular mills calculator"
+      size="7xl"
+      width="min(1600px, 98vw)"
+      height="min(92vh, 960px)"
+      showClose={!savingCm}
+      closeOnOutsideClick={false}
+    >
+      {cmOpen ? (
+        <CmBestMatchCalculator
+          initialCalculation={cmCalculation}
+          onSaveToJob={typeof onSaveCmCalculation === "function" ? handleSaveCmCalculation : undefined}
+          savingToJob={savingCm}
+        />
+      ) : null}
+    </Modal>
 
     <SimpleSendDatasheetModal
       open={emailOpen}

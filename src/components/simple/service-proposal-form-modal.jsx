@@ -1272,6 +1272,15 @@ export default function ServiceProposalFormModal({
     }));
   };
 
+  const handleSaveCmCalculation = async (snapshot) => {
+    const nextForm = { ...form, cmCalculation: snapshot };
+    setForm(nextForm);
+    const saved = await saveForm(nextForm, {
+      successMessage: "Circular mills result saved to this job.",
+    });
+    return Boolean(saved);
+  };
+
   const handleCopyCreateNew = async () => {
     if (!form.customerId) {
       await alert({ title: "Error", message: "Select a customer before copying.", variant: "danger" });
@@ -1569,39 +1578,87 @@ export default function ServiceProposalFormModal({
   const searchNav = searchResultNavigation;
   const navBusy = saving || copying || loadingRecord;
   const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
-  const headerCenter =
-    canViewFinancials || showSearchNav ? (
-      <div className="flex flex-nowrap items-center gap-1.5">
-        {canViewFinancials ? (
-          <>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className={TOOLBAR_BTN}
-              disabled={saving || copying}
-              title="Email to client"
-              aria-label="Email to client"
-              onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
-            >
-              <FiMail className="h-4 w-4 shrink-0" aria-hidden />
-              Email to client
-            </Button>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              className={TOOLBAR_BTN}
-              disabled={saving || copying}
-              title="Customer Print"
-              aria-label="Customer Print"
-              onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
-            >
-              <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-              Customer Print
-            </Button>
-          </>
-        ) : null}
+  const headerStatusSelects = (
+    <div className="flex min-w-0 flex-nowrap items-end gap-2">
+      <div className="w-[11rem] min-w-[8.5rem] shrink">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
+          Proposal Type
+        </label>
+        <SimpleSelect
+          id="sp-proposal-type"
+          options={PROPOSAL_TYPE_OPTIONS}
+          value={normalizeProposalType(form.proposalType)}
+          onChange={(e) => {
+            const nextType = e.target.value;
+            patch("proposalType", nextType);
+            if (nextType === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
+          }}
+          placeholder="Select…"
+          aria-label="Proposal Type"
+        />
+      </div>
+      <div className="w-[12rem] min-w-[9rem] shrink">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
+          {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
+        </label>
+        <div
+          className={`min-w-0 rounded-none border border-border ${
+            proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+          }`.trim()}
+          style={proposalStatusSelectChrome.style}
+        >
+          <SimpleSelect
+            id="sp-proposal-status"
+            options={statusOptions}
+            value={form.status}
+            onChange={(e) => {
+              const nextStatus = e.target.value;
+              setForm((f) => {
+                const nextType = resolveRecordTypeOnSave(
+                  f.recordType,
+                  nextStatus,
+                  invoiceStatusValues,
+                  quoteStatusValues
+                );
+                return { ...f, status: nextStatus, recordType: nextType };
+              });
+            }}
+            placeholder="Select…"
+            searchable
+            triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+            aria-label={
+              form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"
+            }
+          />
+        </div>
+      </div>
+      <div className="w-[12rem] min-w-[9rem] shrink">
+        <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
+          Job Status
+        </label>
+        <div
+          className={`min-w-0 rounded-none border border-border ${
+            jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
+          }`.trim()}
+          style={jobStatusSelectChrome.style}
+        >
+          <SimpleSelect
+            id="sp-job-status"
+            options={jobStatusOptions}
+            value={form.jobStatus}
+            onChange={(e) => patch("jobStatus", e.target.value)}
+            placeholder="Select…"
+            searchable
+            triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
+            aria-label="Job Status"
+          />
+        </div>
+      </div>
+    </div>
+  );
+  const headerCenter = (
+      <div className="flex cursor-auto flex-nowrap items-end gap-2">
+        {headerStatusSelects}
         {showSearchNav ? (
           <div
             className="flex flex-nowrap items-center gap-1.5"
@@ -1636,7 +1693,7 @@ export default function ServiceProposalFormModal({
           </div>
         ) : null}
       </div>
-    ) : null;
+  );
 
   return (
     <>
@@ -1650,7 +1707,7 @@ export default function ServiceProposalFormModal({
         zIndex={zIndex}
         showClose={!saving && !copying && !loadingRecord}
         closeOnOutsideClick={false}
-        headerClassName="[&_h2]:max-w-none [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-none"
+        headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem] [&>div]:overflow-x-auto [&>div>div:nth-child(2)]:min-w-0"
         headerCenter={headerCenter}
         actions={headerActions}
       >
@@ -1678,85 +1735,38 @@ export default function ServiceProposalFormModal({
             className="!space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
             aria-hidden={loadingRecord || copying || undefined}
           >
-          {/* Toolbar (title lives in modal header) */}
-          <div className="mb-2 flex flex-col gap-2 border-b border-border pb-2 xl:flex-row xl:items-end">
-            <div className="grid w-full min-w-0 grid-cols-3 items-end gap-2 xl:flex xl:w-auto xl:shrink-0 xl:justify-start">
-              <div className="min-w-0 xl:w-[12rem] xl:shrink-0">
-                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
-                  Proposal Type
-                </label>
-                <SimpleSelect
-                  id="sp-proposal-type"
-                  options={PROPOSAL_TYPE_OPTIONS}
-                  value={normalizeProposalType(form.proposalType)}
-                  onChange={(e) => {
-                    const nextType = e.target.value;
-                    patch("proposalType", nextType);
-                    if (nextType === PROPOSAL_TYPE_SALES) setSalesMotorOpen(false);
-                  }}
-                  placeholder="Select…"
-                  aria-label="Proposal Type"
-                />
-              </div>
-              <div className="min-w-0 xl:w-[13rem] xl:shrink-0">
-                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
-                  {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
-                </label>
-                <div
-                  className={`min-w-0 rounded-none border border-border ${
-                    proposalStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
-                  }`.trim()}
-                  style={proposalStatusSelectChrome.style}
-                >
-                  <SimpleSelect
-                    id="sp-proposal-status"
-                    options={statusOptions}
-                    value={form.status}
-                    onChange={(e) => {
-                      const nextStatus = e.target.value;
-                      setForm((f) => {
-                        const nextType = resolveRecordTypeOnSave(
-                          f.recordType,
-                          nextStatus,
-                          invoiceStatusValues,
-                          quoteStatusValues
-                        );
-                        return { ...f, status: nextStatus, recordType: nextType };
-                      });
-                    }}
-                    placeholder="Select…"
-                    searchable
-                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
-                    aria-label={
-                      form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"
-                    }
-                  />
-                </div>
-              </div>
-              <div className="min-w-0 xl:w-[13rem] xl:shrink-0">
-                <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
-                  Job Status
-                </label>
-                <div
-                  className={`min-w-0 rounded-none border border-border ${
-                    jobStatusSelectChrome.className || "bg-primary/[0.04] dark:bg-primary/10"
-                  }`.trim()}
-                  style={jobStatusSelectChrome.style}
-                >
-                  <SimpleSelect
-                    id="sp-job-status"
-                    options={jobStatusOptions}
-                    value={form.jobStatus}
-                    onChange={(e) => patch("jobStatus", e.target.value)}
-                    placeholder="Select…"
-                    searchable
-                    triggerClassName="w-full border-0 bg-transparent shadow-none ring-0 dark:bg-transparent !text-[inherit] [&>span]:!text-[inherit] [&>svg]:!text-[inherit]"
-                    aria-label="Job Status"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex w-full flex-wrap items-end gap-1 py-1.5 xl:ml-auto xl:w-auto xl:shrink-0 xl:justify-end">
+          {/* Toolbar (title and status dropdowns live in modal header) */}
+          <div className="mb-2 flex flex-wrap items-end justify-end gap-1 border-b border-border py-1.5">
+              {canViewFinancials ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    title="Email to client"
+                    aria-label="Email to client"
+                    onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
+                  >
+                    <FiMail className="h-4 w-4 shrink-0" aria-hidden />
+                    Email to client
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={TOOLBAR_BTN}
+                    disabled={saving || copying}
+                    title="Customer Print"
+                    aria-label="Customer Print"
+                    onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
+                  >
+                    <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
+                    Customer Print
+                  </Button>
+                </>
+              ) : null}
               <Button
                 type="button"
                 variant="primary"
@@ -1819,7 +1829,6 @@ export default function ServiceProposalFormModal({
               >
                 Receiving / Shipping
               </Button>
-            </div>
           </div>
 
           {trackLink ? (
@@ -1870,13 +1879,13 @@ export default function ServiceProposalFormModal({
                   <span className="inline-flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
+                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
                       title="Open customer"
                       aria-label="Open customer"
                       disabled={!String(form.customerId || "").trim()}
                       onClick={() => setCustomerViewOpen(true)}
                     >
-                      <FiEye className="h-3.5 w-3.5" aria-hidden />
+                      <FiEye className="h-5 w-5" aria-hidden />
                     </button>
                     Customer
                   </span>
@@ -2737,6 +2746,8 @@ export default function ServiceProposalFormModal({
         jobStatusOptions={jobStatusOptions}
         jobStatus={form.jobStatus}
         onJobStatusChange={(next) => patch("jobStatus", next)}
+        cmCalculation={form.cmCalculation}
+        onSaveCmCalculation={handleSaveCmCalculation}
         printContext={{
           customerName:
             selectedCustomer?.companyName ||

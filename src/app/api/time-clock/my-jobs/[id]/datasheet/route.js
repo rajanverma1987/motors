@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import { datasheetStorageKey, resolveMachineType } from "@/lib/machine-types";
+import { normalizeCmJobCalculation } from "@/lib/cm-job-calculation";
 import { datasheetTechnicianIds } from "@/lib/datasheet-technicians";
 import { notifySimpleJobBoardFromSp } from "@/lib/job-board-emit";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -47,16 +48,25 @@ export async function PUT(request, context) {
     const machineType = resolveMachineType(previous.motorPower, "AC");
     const key = datasheetStorageKey(machineType);
     const documentNumber = String(previous.documentNumber || previous.quote || "").trim();
-    const datasheet = normalizeDatasheetForMachine(machineType, body?.datasheet || body, documentNumber);
-    // Keep assignment on this technician unless they explicitly change (still must stay assignable)
-    if (!datasheetTechnicianIds(datasheet).length) {
-      datasheet.technician = session.employeeId;
-      datasheet.technicians = [session.employeeId];
+    const updates = {};
+    if (body && Object.prototype.hasOwnProperty.call(body, "datasheet")) {
+      const datasheet = normalizeDatasheetForMachine(machineType, body.datasheet || {}, documentNumber);
+      if (!datasheetTechnicianIds(datasheet).length) {
+        datasheet.technician = session.employeeId;
+        datasheet.technicians = [session.employeeId];
+      }
+      updates[key] = datasheet;
+    }
+    if (body && Object.prototype.hasOwnProperty.call(body, "cmCalculation")) {
+      updates.cmCalculation = normalizeCmJobCalculation(body.cmCalculation);
+    }
+    if (!Object.keys(updates).length) {
+      return NextResponse.json({ error: "Nothing to save." }, { status: 400 });
     }
 
     const doc = await SimpleServiceProposal.findOneAndUpdate(
       { _id: id, createdByEmail: shop.ownerEmail },
-      { $set: { [key]: datasheet } },
+      { $set: updates },
       { new: true }
     ).lean();
     if (!doc) {
