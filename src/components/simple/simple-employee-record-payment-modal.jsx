@@ -8,6 +8,7 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import VendorAttachmentsPanel from "@/components/dashboard/vendor-attachments-panel";
 import SimpleSelect from "@/components/simple/simple-select";
+import SimpleEmployeePunchCalendar from "@/components/simple/simple-employee-punch-calendar";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import {
   useFormatDate,
@@ -18,8 +19,10 @@ import { mergeUserSettings } from "@/lib/user-settings";
 import { productDropdownSelectOptions } from "@/lib/product-dropdown-catalog";
 import { SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS } from "@/lib/simple-service-proposal-form";
 import { parsePayRate, periodMonthBounds } from "@/lib/employee-payroll-payment";
+import { shopWeekContaining } from "@/lib/shop-week";
 
 const PAY_FORM_ID = "simple-employee-record-payment-form";
+const HISTORY_PAGE_SIZE = 4;
 const TOOLBAR_BTN = "h-7 shrink-0 rounded-none px-2.5 text-xs font-semibold";
 const FIELD_INPUT =
   "h-7 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-1.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
@@ -116,6 +119,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
   const [payUploading, setPayUploading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [payments, setPayments] = useState([]);
+  const [historyPage, setHistoryPage] = useState(1);
   const [editingPayment, setEditingPayment] = useState(null);
 
   const fmt = useCallback(
@@ -161,17 +165,22 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
   }, [open, employeeId, loadHistory]);
 
   useEffect(() => {
+    const pages = Math.max(1, Math.ceil(payments.length / HISTORY_PAGE_SIZE) || 1);
+    if (historyPage > pages) setHistoryPage(pages);
+  }, [payments.length, historyPage]);
+
+  useEffect(() => {
     if (!open || !employee?.employeeId) return;
 
     const periodFrom = String(employee.periodFrom || "").slice(0, 10);
     const periodTo = String(employee.periodTo || "").slice(0, 10);
-    const month =
-      (periodFrom && periodFrom.slice(0, 7)) ||
-      (periodTo && periodTo.slice(0, 7)) ||
-      currentMonthValue();
-    const bounds = periodMonthBounds(month);
-    const nextFrom = periodFrom || bounds?.from || "";
-    const nextTo = periodTo || bounds?.to || "";
+    const week = shopWeekContaining(
+      localTodayIso(),
+      mergedSettings.weekStartDay,
+      mergedSettings.weekEndDay
+    );
+    const nextFrom = periodFrom || week.from;
+    const nextTo = periodTo || week.to;
 
     setPayPeriodFrom(nextFrom);
     setPayPeriodTo(nextTo);
@@ -180,13 +189,23 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
     setPayNotes("");
     setPayPendingFiles([]);
     setEditingPayment(null);
+    setHistoryPage(1);
 
     if (payType === "salary") {
       setPayHours("");
       setPayAmount(String(parsePayRate(hourlyRate) || 0));
       setMaxUnpaidHours(0);
     }
-  }, [open, employee?.employeeId, employee?.periodFrom, employee?.periodTo, payType, hourlyRate]);
+  }, [
+    open,
+    employee?.employeeId,
+    employee?.periodFrom,
+    employee?.periodTo,
+    payType,
+    hourlyRate,
+    mergedSettings.weekStartDay,
+    mergedSettings.weekEndDay,
+  ]);
 
   useEffect(() => {
     if (!open || !employeeId || payType !== "hourly") return undefined;
@@ -540,7 +559,7 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
       title="Payment Record"
       size="7xl"
       width="min(2100px, 98vw)"
-      height="min(90vh, 880px)"
+      height="min(98vh, 1180px)"
       showClose={!paySaving && !payUploading}
       closeOnOutsideClick={false}
       bodyClassName="!relative !overflow-y-auto !overscroll-contain !p-3 sm:!p-4 lg:!overflow-hidden"
@@ -706,31 +725,43 @@ export default function SimpleEmployeeRecordPaymentModal({ open, onClose, onSave
           </Form>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-visible pb-4 lg:overflow-y-auto lg:overscroll-contain lg:pb-1">
-          <div className="shrink-0 border-b border-border pb-1.5">
-            <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
-            {employeeNumber ? (
-              <p className="mt-0.5 text-xs text-secondary">
-                {name}
-                {` · #${employeeNumber}`}
-              </p>
-            ) : (
-              <p className="mt-0.5 text-xs text-secondary">{name}</p>
-            )}
-          </div>
-          <div className="min-h-0">
+        <div className="flex min-h-0 min-w-0 flex-col gap-3 overflow-visible pb-4 lg:overflow-hidden lg:pb-1">
+          <div className="shrink-0">
+            <div className="border-b border-border pb-1.5">
+              <p className="text-xs font-bold uppercase tracking-wide text-secondary">Payment history</p>
+              {employeeNumber ? (
+                <p className="mt-0.5 text-xs text-secondary">
+                  {name}
+                  {` · #${employeeNumber}`}
+                </p>
+              ) : (
+                <p className="mt-0.5 text-xs text-secondary">{name}</p>
+              )}
+            </div>
             <Table
               columns={historyColumns}
-              data={payments}
+              data={payments.slice((historyPage - 1) * HISTORY_PAGE_SIZE, historyPage * HISTORY_PAGE_SIZE)}
               rowKey="id"
               loading={historyLoading}
               onEdit={startEdit}
               actionsColumnLabel=""
+              fillHeight={false}
+              paginateClientSide={false}
+              pagination={{
+                page: historyPage,
+                pageSize: HISTORY_PAGE_SIZE,
+                totalCount: payments.length,
+              }}
+              pageSizeOptions={[{ value: String(HISTORY_PAGE_SIZE), label: String(HISTORY_PAGE_SIZE) }]}
+              onPageChange={(nextPage) => setHistoryPage(Math.max(1, Number(nextPage) || 1))}
               emptyMessage={
                 historyLoading ? "Loading…" : "No payroll payments recorded for this employee."
               }
               responsive
             />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <SimpleEmployeePunchCalendar employeeId={employeeId} open={open} />
           </div>
         </div>
       </div>

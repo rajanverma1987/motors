@@ -10,7 +10,9 @@ import Table from "@/components/ui/table";
 import SimpleSelect from "@/components/simple/simple-select";
 import { buildTechnicianSelectOptions, isShopAdminSelectValue } from "@/lib/technician-select-options";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
-import { useFormatDate } from "@/contexts/user-settings-context";
+import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { workOrderStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
 
 function formatHours(value) {
   const n = Number(value);
@@ -27,17 +29,29 @@ function todayIso() {
 
 export default function SimpleProposalJobHours({ recordId, employees = [] }) {
   const formatDate = useFormatDate();
+  const { settings } = useUserSettings();
   const confirm = useConfirm();
   const alert = useAlert();
+  const jobStatusOptions = useMemo(
+    () => workOrderStatusSelectOptionsFromMerged(mergeUserSettings(settings)),
+    [settings]
+  );
   const [totalHours, setTotalHours] = useState(0);
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
-  const [recordForm, setRecordForm] = useState({ employeeId: "", workDate: "", hours: "", note: "" });
+  const [recordForm, setRecordForm] = useState({
+    employeeId: "",
+    workDate: "",
+    hours: "",
+    note: "",
+    jobStatus: "",
+  });
   const [editing, setEditing] = useState(null);
   const [editDate, setEditDate] = useState("");
   const [editHours, setEditHours] = useState("");
+  const [editJobStatus, setEditJobStatus] = useState("");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -83,6 +97,7 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
       workDate: todayIso(),
       hours: "",
       note: "",
+      jobStatus: "",
     });
     setRecording(true);
   }, [technicianOptions]);
@@ -92,6 +107,10 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
     if (!id) return;
     if (!String(recordForm.employeeId || "").trim()) {
       await alert({ title: "Error", message: "Technician is required.", variant: "danger" });
+      return;
+    }
+    if (!String(recordForm.jobStatus || "").trim()) {
+      await alert({ title: "Error", message: "Job status is required.", variant: "danger" });
       return;
     }
     setSaving(true);
@@ -121,19 +140,29 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
     setEditing(row);
     setEditDate(String(row.workDate || "").slice(0, 10));
     setEditHours(String(row.hours ?? ""));
+    setEditJobStatus(String(row.jobStatus || "").trim());
   }, []);
 
   const saveEdit = useCallback(async () => {
     const id = String(recordId || "").trim();
     const entryId = String(editing?.id || "").trim();
     if (!id || !entryId) return;
+    if (!String(editJobStatus || "").trim()) {
+      await alert({ title: "Error", message: "Job status is required.", variant: "danger" });
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/dashboard/simple-service-proposals/${encodeURIComponent(id)}/job-hours`, {
         method: "PATCH",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: entryId, workDate: editDate, hours: editHours }),
+        body: JSON.stringify({
+          id: entryId,
+          workDate: editDate,
+          hours: editHours,
+          jobStatus: editJobStatus,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed to update recorded hours");
@@ -148,7 +177,7 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
     } finally {
       setSaving(false);
     }
-  }, [alert, editDate, editHours, editing, load, recordId]);
+  }, [alert, editDate, editHours, editJobStatus, editing, load, recordId]);
 
   const removeEntry = useCallback(
     async (row) => {
@@ -247,6 +276,58 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
     [formatDate, removeEntry, startEdit]
   );
 
+  const statusTotals = useMemo(() => {
+    const totals = new Map();
+    for (const row of items) {
+      const status = String(row?.jobStatus || "").trim();
+      totals.set(status, (totals.get(status) || 0) + (Number(row?.hours) || 0));
+    }
+    const rows = [];
+    const seen = new Set();
+    for (const option of jobStatusOptions) {
+      if (!totals.has(option.value)) continue;
+      seen.add(option.value);
+      rows.push({
+        id: option.value,
+        jobStatus: option.label || option.value,
+        hours: totals.get(option.value),
+      });
+    }
+    for (const [status, hours] of totals) {
+      if (seen.has(status)) continue;
+      rows.push({
+        id: status || "__none__",
+        jobStatus: status,
+        hours,
+      });
+    }
+    return rows;
+  }, [items, jobStatusOptions]);
+
+  const statusColumns = useMemo(
+    () => [
+      {
+        key: "jobStatus",
+        label: "Job status",
+        render: (value) =>
+          value ? (
+            <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+              {value}
+            </Badge>
+          ) : (
+            "-"
+          ),
+      },
+      {
+        key: "hours",
+        label: "Hours",
+        align: "right",
+        render: (value) => formatHours(value),
+      },
+    ],
+    []
+  );
+
   return (
     <>
       <button
@@ -263,24 +344,40 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
         open={open}
         onClose={() => setOpen(false)}
         title="Recorded hours"
-        size="xl"
+        size="6xl"
         actions={
           <Button type="button" variant="primary" size="sm" onClick={openRecord}>
             Record Hours
           </Button>
         }
       >
-        <p className="mb-3 text-sm text-secondary">
-          Total recorded job hours: <span className="font-semibold text-title">{formatHours(totalHours)}</span>
-        </p>
-        <Table
-          columns={columns}
-          data={items}
-          rowKey="id"
-          loading={loading}
-          dense
-          emptyMessage="No job hours recorded yet."
-        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(16rem,0.7fr)]">
+          <div className="min-w-0">
+            <p className="mb-3 text-sm text-secondary">
+              Total recorded job hours: <span className="font-semibold text-title">{formatHours(totalHours)}</span>
+            </p>
+            <Table
+              columns={columns}
+              data={items}
+              rowKey="id"
+              loading={loading}
+              dense
+              emptyMessage="No job hours recorded yet."
+            />
+          </div>
+          <div className="min-w-0">
+            <p className="mb-3 text-sm font-semibold text-title">Hours by job status</p>
+            <Table
+              columns={statusColumns}
+              data={statusTotals}
+              rowKey="id"
+              loading={loading}
+              dense
+              paginateClientSide={false}
+              emptyMessage="No job hours recorded yet."
+            />
+          </div>
+        </div>
       </Modal>
       <Modal
         open={recording}
@@ -314,6 +411,18 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
               placeholder="Select…"
               searchable
               aria-label="Technician"
+            />
+          </label>
+          <label className="block text-sm font-semibold text-title">
+            Job Status
+            <SimpleSelect
+              className="mt-1"
+              options={jobStatusOptions}
+              value={recordForm.jobStatus}
+              onChange={(e) => setRecordForm((form) => ({ ...form, jobStatus: e.target.value }))}
+              placeholder="Select…"
+              searchable
+              aria-label="Job Status"
             />
           </label>
           <label className="block text-sm font-semibold text-title">
@@ -371,6 +480,18 @@ export default function SimpleProposalJobHours({ recordId, employees = [] }) {
             void saveEdit();
           }}
         >
+          <label className="block text-sm font-semibold text-title">
+            Job Status
+            <SimpleSelect
+              className="mt-1"
+              options={jobStatusOptions}
+              value={editJobStatus}
+              onChange={(e) => setEditJobStatus(e.target.value)}
+              placeholder="Select…"
+              searchable
+              aria-label="Job Status"
+            />
+          </label>
           <label className="block text-sm font-semibold text-title">
             Date
             <input

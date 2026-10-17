@@ -90,7 +90,6 @@ export async function POST(request) {
       return NextResponse.json({ error: ccError }, { status: 400 });
     }
     const toEmail = String(body?.toEmail || "").trim();
-    const toName = String(body?.toName || "").trim();
     const documentLabel = String(body?.documentLabel || "").trim() || "Service proposal";
     const documentType = String(body?.documentType || "quote").trim().toLowerCase();
     if (!toEmail) {
@@ -117,7 +116,6 @@ export async function POST(request) {
         : String(body?.kindLabel || "").trim() || "service proposal";
     const kindLabel = kindLabelRaw;
     const html = withDashboardOutboundEmailFooter(`
-      <p>Hello${toName ? ` ${esc(toName)}` : ""},</p>
       <p>Please review your ${esc(kindLabel)} <strong>${esc(documentLabel)}</strong>. The document is attached as a PDF.</p>
       ${noteHtml}
       <p>If you have questions, reply to this email or contact us.</p>

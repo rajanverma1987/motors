@@ -3,9 +3,20 @@ import { connectDB } from "@/lib/db";
 import Employee from "@/models/Employee";
 import SimpleServiceProposal from "@/models/SimpleServiceProposal";
 import TimeClockManualHours from "@/models/TimeClockManualHours";
+import UserSettings from "@/models/UserSettings";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { isValidSimplePortalId } from "@/lib/simple-portal-mongo";
 import { parseManualHoursInput, serializeManualHours } from "@/lib/time-clock-punches";
+import { mergeUserSettings } from "@/lib/user-settings";
+import { workOrderStatusSelectOptionsFromMerged } from "@/lib/dropdown-catalog";
+
+async function hoursJobStatusForShop(email, raw) {
+  const settingsDoc = await UserSettings.findOne({ ownerEmail: email }).lean();
+  const options = workOrderStatusSelectOptionsFromMerged(mergeUserSettings(settingsDoc?.settings));
+  const value = String(raw || "").trim();
+  const hit = options.find((option) => option.value === value);
+  return hit ? hit.value : "";
+}
 
 function getParams(context) {
   return typeof context.params?.then === "function"
@@ -92,10 +103,14 @@ export async function POST(request, context) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const proposal = await SimpleServiceProposal.findOne({ _id: proposalId, createdByEmail: email })
-      .select({ documentNumber: 1, quote: 1, jobStatus: 1 })
+      .select({ documentNumber: 1, quote: 1 })
       .lean();
     if (!proposal) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const jobStatus = await hoursJobStatusForShop(email, body.jobStatus);
+    if (!jobStatus) {
+      return NextResponse.json({ error: "Job status is required." }, { status: 400 });
     }
     const employee = await Employee.findOne({ _id: employeeId, createdByEmail: email })
       .select({ name: 1, employeeNumber: 1, email: 1 })
@@ -113,7 +128,7 @@ export async function POST(request, context) {
       note: String(body.note || "").trim().slice(0, 500),
       proposalId,
       documentNumber: String(proposal.documentNumber || proposal.quote || "").trim(),
-      jobStatus: String(proposal.jobStatus || "").trim(),
+      jobStatus,
       createdByUserEmail: email,
     });
     return NextResponse.json({ ok: true, entry: serializeManualHours(doc) }, { status: 201 });
@@ -148,8 +163,13 @@ export async function PATCH(request, context) {
     if (parsed.error) {
       return NextResponse.json({ error: parsed.error }, { status: 400 });
     }
+    const jobStatus = await hoursJobStatusForShop(email, body.jobStatus);
+    if (!jobStatus) {
+      return NextResponse.json({ error: "Job status is required." }, { status: 400 });
+    }
     owned.doc.workDate = parsed.workDate;
     owned.doc.hours = parsed.hours;
+    owned.doc.jobStatus = jobStatus;
     await owned.doc.save();
     return NextResponse.json({ ok: true, entry: serializeManualHours(owned.doc) });
   } catch (err) {

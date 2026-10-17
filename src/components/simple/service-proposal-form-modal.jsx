@@ -2503,7 +2503,7 @@ export default function ServiceProposalFormModal({
             />
             <div className="flex min-w-0 flex-col gap-2">
               <LineItemsTable
-                title="OTHER ITEMS"
+                title="OTHER ITEMS (NON TAXABLE)"
                 lines={form.otherItems}
                 onChange={(otherItems) => patch("otherItems", otherItems)}
                 totalLabel="Total:"
