@@ -22,7 +22,6 @@ import {
 import {
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_IDS,
-  SIMPLE_TAB_REPORTS,
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 
@@ -219,8 +218,6 @@ export default function SimpleHubDateFilter({ className = "", placement = "repor
 
   const fromTitle = draftFrom ? formatDateLocale(draftFrom, dateLocale) : "";
   const toTitle = draftTo ? formatDateLocale(draftTo, dateLocale) : "";
-
-  if (activeTab !== SIMPLE_TAB_REPORTS) return null;
 
   const placementClass =
     placement === "below"
