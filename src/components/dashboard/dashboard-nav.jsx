@@ -1,15 +1,13 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FiLogOut, FiSearch, FiSettings, FiUsers } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
-import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
 import { useAuth } from "@/contexts/auth-context";
 import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath, portalLandingPath, settingsPathForPortalUi } from "@/lib/portal-view";
-import { SIMPLE_PORTAL_PATH } from "@/lib/simple-portal-tabs";
 import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
 import PwaInstallButton from "@/components/pwa-install-button";
 
@@ -25,7 +23,6 @@ export default function DashboardNav() {
   const settingsMenuRef = useRef(null);
   const calculatorOnly = !!user?.calculatorOnlyAccount;
   const simplePortal = isSimplePortalPath(pathname);
-  const onSimpleHub = simplePortal && pathname === SIMPLE_PORTAL_PATH && !calculatorOnly;
   const homeHref = portalLandingPath({
     calculatorOnlyAccount: calculatorOnly,
     portalUi: user?.portalUi,
@@ -104,11 +101,6 @@ export default function DashboardNav() {
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
           {!calculatorOnly ? (
             <>
-              {onSimpleHub ? (
-                <Suspense fallback={null}>
-                  <SimpleHubDateFilter placement="nav" />
-                </Suspense>
-              ) : null}
               <button
                 type="button"
                 onClick={() => setSearchOpen(true)}
@@ -202,13 +194,6 @@ export default function DashboardNav() {
           </button>
         </div>
       </div>
-      {onSimpleHub ? (
-        <div className="relative z-30 mt-2 flex w-full justify-end lg:hidden">
-          <Suspense fallback={null}>
-            <SimpleHubDateFilter placement="below" />
-          </Suspense>
-        </div>
-      ) : null}
     </nav>
   );
 }

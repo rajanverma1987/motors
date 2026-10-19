@@ -6,6 +6,7 @@ import { FiDownload, FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import SimpleSelect from "@/components/simple/simple-select";
 import SimpleReportViewModal from "@/components/simple/simple-report-view-modal";
+import SimpleHubDateFilter from "@/components/simple/simple-hub-date-filter";
 import { useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { SIMPLE_REPORT_CATALOG } from "@/lib/simple-reports/catalog";
@@ -338,12 +339,15 @@ export default function ReportsPanel() {
 
   return (
     <div className={`${SIMPLE_PORTAL_ROOT_CLASS} flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto`}>
-      <div className="mb-4 shrink-0">
-        <h2 className="text-lg font-semibold tracking-tight text-title">Reports</h2>
-        <p className="mt-1 text-sm text-secondary">
-          View or download Excel reports for your shop data. Date-filtered reports use Date Range:{" "}
-          <span className="font-medium text-title">{rangeLabel}</span>.
-        </p>
+      <div className="mb-4 flex shrink-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold tracking-tight text-title">Reports</h2>
+          <p className="mt-1 text-sm text-secondary">
+            View or download Excel reports for your shop data. Date-filtered reports use Date Range:{" "}
+            <span className="font-medium text-title">{rangeLabel}</span>.
+          </p>
+        </div>
+        <SimpleHubDateFilter placement="reports" />
       </div>
 
       <div className="flex flex-col gap-8">

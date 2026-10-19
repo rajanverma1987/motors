@@ -375,6 +375,14 @@ body.simple-dashboards-square-inputs .diagram-color-swatch {
   width: 100%;
 }
 
+/* Reports tab header */
+.simple-hub-date-bar--reports {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  width: auto;
+  max-width: 100%;
+}
+
 /* Continuous hub tab stripe — strong, one-bar navigation */
 .simple-portal .simple-hub-tablist {
   position: relative;

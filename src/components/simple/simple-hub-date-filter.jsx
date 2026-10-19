@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
@@ -19,9 +19,7 @@ import {
 } from "@/lib/format-date";
 import {
   SIMPLE_PORTAL_PATH,
-  SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_IDS,
-  SIMPLE_TAB_JOB_BOARD,
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 
@@ -44,9 +42,9 @@ function dateFilterPillClass(active) {
 /**
  * Hub date range controls for Simple `/dashboards`.
  * Native calendar via type="date" (ISO value); title shows Settings country format.
- * @param {{ className?: string, placement?: "nav" | "below" }} props
+ * @param {{ className?: string, placement?: "nav" | "below" | "reports" }} props
  */
-export default function SimpleHubDateFilter({ className = "", placement = "nav" }) {
+export default function SimpleHubDateFilter({ className = "", placement = "reports" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { settings } = useUserSettings();
@@ -68,12 +66,26 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
 
   const [draftFrom, setDraftFrom] = useState(() => toInputDateValue(appliedFrom || fyDefault.from));
   const [draftTo, setDraftTo] = useState(() => toInputDateValue(appliedTo || fyDefault.to));
+  const barRef = useRef(null);
+  const fromWrapRef = useRef(null);
+  const toWrapRef = useRef(null);
+  const draftRef = useRef({ from: draftFrom, to: draftTo });
+  const activeTabRef = useRef(activeTab);
+  const routerRef = useRef(router);
+  const mutateQueueRef = useRef([]);
+  const flushScheduledRef = useRef(false);
+  const replaceGenRef = useRef(0);
+  activeTabRef.current = activeTab;
+  routerRef.current = router;
+  draftRef.current = { from: draftFrom, to: draftTo };
 
   useEffect(() => {
     if (urlMode === "custom") setPickingCustom(false);
   }, [urlMode]);
 
   useEffect(() => {
+    const active = document.activeElement;
+    if (fromWrapRef.current?.contains(active) || toWrapRef.current?.contains(active)) return;
     if (isAllDates) {
       setDraftFrom(toInputDateValue(fyDefault.from));
       setDraftTo(toInputDateValue(fyDefault.to));
@@ -83,15 +95,29 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
     setDraftTo(toInputDateValue(appliedTo));
   }, [appliedFrom, appliedTo, isAllDates, fyDefault.from, fyDefault.to]);
 
-  const replaceSearchParams = useCallback(
-    (mutate) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (!params.get("tab")) params.set("tab", activeTab);
-      mutate(params);
-      router.replace(`${SIMPLE_PORTAL_PATH}?${params.toString()}`, { scroll: false });
-    },
-    [activeTab, router, searchParams]
-  );
+  const replaceSearchParams = useCallback((mutate) => {
+    mutateQueueRef.current.push(mutate);
+    if (flushScheduledRef.current) return;
+    flushScheduledRef.current = true;
+    queueMicrotask(() => {
+      flushScheduledRef.current = false;
+      const queue = mutateQueueRef.current.splice(0);
+      const params = new URLSearchParams(window.location.search);
+      if (!params.get("tab")) params.set("tab", activeTabRef.current);
+      for (const fn of queue) fn(params);
+      const next = `${SIMPLE_PORTAL_PATH}?${params.toString()}`;
+      const current = `${window.location.pathname}${window.location.search}`;
+      if (next === current) return;
+      const gen = ++replaceGenRef.current;
+      routerRef.current.replace(next, { scroll: false });
+      window.setTimeout(() => {
+        if (replaceGenRef.current !== gen) return;
+        const now = `${window.location.pathname}${window.location.search}`;
+        if (now === next) return;
+        routerRef.current.replace(next, { scroll: false });
+      }, 80);
+    });
+  }, []);
 
   const applyDateRange = useCallback(
     (from, to) => {
@@ -107,19 +133,48 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
     [replaceSearchParams]
   );
 
+  const readWrapDate = (wrap, fallback) => {
+    const raw = wrap?.querySelector("input")?.value;
+    const next = toInputDateValue(raw);
+    if (next) return next;
+    return toInputDateValue(fallback) || "";
+  };
+
+  const applyVisibleCustomRange = () => {
+    let from = readWrapDate(fromWrapRef.current, draftRef.current.from);
+    let to = readWrapDate(toWrapRef.current, draftRef.current.to);
+    if (from && to && from > to) {
+      const swap = from;
+      from = to;
+      to = swap;
+    }
+    setDraftFrom(from);
+    setDraftTo(to);
+    applyDateRange(from, to);
+  };
+
+  const onCustomDateBlur = (event) => {
+    const next = event.relatedTarget;
+    if (next && barRef.current?.contains(next)) return;
+    applyVisibleCustomRange();
+  };
+
   const fromTitle = draftFrom ? formatDateLocale(draftFrom, dateLocale) : "";
   const toTitle = draftTo ? formatDateLocale(draftTo, dateLocale) : "";
 
-  if (activeTab === SIMPLE_TAB_CALCULATORS || tabParam === SIMPLE_TAB_JOB_BOARD) return null;
-
   const placementClass =
-    placement === "below" ? "simple-hub-date-bar--below" : "simple-hub-date-bar--nav";
+    placement === "below"
+      ? "simple-hub-date-bar--below"
+      : placement === "nav"
+        ? "simple-hub-date-bar--nav"
+        : "simple-hub-date-bar--reports";
 
   /** Do not combine bare `flex` with `hidden` — Tailwind conflict shows both bars on tablet. */
   const visibilityClass = placement === "nav" ? "hidden lg:flex" : "flex";
 
   return (
     <div
+      ref={barRef}
       className={`simple-hub-date-bar ${placementClass} ${visibilityClass} relative z-30 shrink-0 pointer-events-auto ${className}`.trim()}
       role="group"
       aria-label="Hub date range"
@@ -156,22 +211,30 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
       </button>
       {showCustom ? (
         <>
-          <div title={fromTitle || undefined}>
+          <div ref={fromWrapRef} title={fromTitle || undefined} className="relative z-0">
             <Input
               label="From"
               type="date"
               value={draftFrom}
-              onChange={(e) => setDraftFrom(e.target.value)}
+              onChange={(e) => {
+                setDraftFrom(e.target.value);
+                applyVisibleCustomRange();
+              }}
+              onBlur={onCustomDateBlur}
               className={DATE_FILTER_INPUT_CLASS}
               inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
             />
           </div>
-          <div title={toTitle || undefined}>
+          <div ref={toWrapRef} title={toTitle || undefined} className="relative z-0">
             <Input
               label="To"
               type="date"
               value={draftTo}
-              onChange={(e) => setDraftTo(e.target.value)}
+              onChange={(e) => {
+                setDraftTo(e.target.value);
+                applyVisibleCustomRange();
+              }}
+              onBlur={onCustomDateBlur}
               className={DATE_FILTER_INPUT_CLASS}
               inputClassName={DATE_FILTER_INPUT_FIELD_CLASS}
             />
@@ -180,8 +243,12 @@ export default function SimpleHubDateFilter({ className = "", placement = "nav" 
             type="button"
             variant="primary"
             size="sm"
-            className={DATE_FILTER_BUTTON_CLASS}
-            onClick={() => applyDateRange(draftFrom, draftTo)}
+            className={`${DATE_FILTER_BUTTON_CLASS} relative z-10`}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              applyVisibleCustomRange();
+            }}
+            onClick={applyVisibleCustomRange}
           >
             Go
           </Button>

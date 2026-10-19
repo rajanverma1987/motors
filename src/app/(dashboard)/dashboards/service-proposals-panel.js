@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import {
   FiAlertTriangle,
@@ -51,7 +50,6 @@ import { resolveStatusTileProps, resolveWorkOrderStatusTileProps } from "@/lib/w
 import { mergeUserSettings } from "@/lib/user-settings";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveEmployeeDisplayName, withShopAdminEmployee } from "@/lib/technician-select-options";
-import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import {
   formatSimpleMoney,
   formToServiceProposalListRow,
@@ -183,11 +181,9 @@ export default function ServiceProposalsPanel({
   const confirm = useConfirm();
   const { canViewFinancials } = useFinancialAccess();
   const { user } = useAuth();
-  const searchParams = useSearchParams();
   const { settings } = useUserSettings();
   const formatDate = useFormatDate();
   const mergedSettings = useMemo(() => mergeUserSettings(settings), [settings]);
-  const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
 
   const [rows, setRows] = useState([]);
   const [ready, setReady] = useState(false);
@@ -301,8 +297,6 @@ export default function ServiceProposalsPanel({
           listKind: isInvoices ? "invoices" : "proposals",
           status: statusFilter,
           proposalType: isInvoices ? "" : proposalTypeFilter,
-          from: dateFrom,
-          to: dateTo,
         }),
         fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
@@ -355,18 +349,12 @@ export default function ServiceProposalsPanel({
     isInvoices,
     statusFilter,
     proposalTypeFilter,
-    dateFrom,
-    dateTo,
     user,
   ]);
 
   useEffect(() => {
     void reload();
   }, [reload]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [dateFrom, dateTo]);
 
   const employeeLabel = useCallback(
     (id) => resolveEmployeeDisplayName(employees, id),
@@ -1098,7 +1086,7 @@ export default function ServiceProposalsPanel({
             },
             {
               key: "invoicePaidDate",
-              label: "Invoice Paid Date",
+              label: "Payment Record",
               sortable: true,
               align: "right",
               headerWrap: true,
@@ -1400,11 +1388,7 @@ export default function ServiceProposalsPanel({
                       ? "No open invoices with an amount receivable."
                       : statusFilter
                         ? "No records with this status."
-                        : dateFrom || dateTo
-                          ? isInvoices
-                            ? "No invoices in this date range."
-                            : "No service proposals in this date range."
-                          : isInvoices
+                        : isInvoices
                             ? "No invoices yet. Convert a proposal to an invoice status to see it here."
                             : "No service proposals yet. Click Add New to create one."
               : isInvoices
@@ -1458,8 +1442,6 @@ export default function ServiceProposalsPanel({
         <SimpleInvoiceTaxesModal
           open={taxesModalOpen}
           onClose={() => setTaxesModalOpen(false)}
-          dateFrom={dateFrom}
-          dateTo={dateTo}
           onSaved={() => {
             void reload();
           }}

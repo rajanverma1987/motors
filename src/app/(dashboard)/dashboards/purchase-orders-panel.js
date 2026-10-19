@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import {
   FiBell,
   FiCheckCircle,
@@ -28,7 +27,6 @@ import {
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
-import { parseAllJobsDateRange } from "@/lib/all-jobs-date-filter";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import { resolveStatusTileProps } from "@/lib/work-order-status-tiles";
 import { formatSimpleMoney } from "@/lib/simple-service-proposal-form";
@@ -90,8 +88,6 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const { settings: mergedSettings } = useUserSettings();
-  const searchParams = useSearchParams();
-  const { from: dateFrom, to: dateTo } = parseAllJobsDateRange(searchParams);
   const jobView = useSimpleJobView();
 
   const [poTypeTab, setPoTypeTab] = useState(SIMPLE_PO_TYPE_JOB);
@@ -151,8 +147,6 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortDir: tableSort?.direction || "desc",
         paymentStatus: paymentFilter || "",
         poType: poTypeTab,
-        from: dateFrom,
-        to: dateTo,
       });
       if (seq !== listRequestRef.current) return;
       setRows(Array.isArray(pageData.items) ? pageData.items : []);
@@ -166,7 +160,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     } finally {
       if (seq === listRequestRef.current) setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort, paymentFilter, poTypeTab, dateFrom, dateTo]);
+  }, [page, pageSize, searchQuery, tableSort, paymentFilter, poTypeTab]);
 
   useEffect(() => {
     void reload();
@@ -177,10 +171,6 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     setPaymentFilter(FILTER_ALL);
     setSearchQuery("");
   }, [poTypeTab]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [dateFrom, dateTo]);
 
   useEffect(() => {
     let cancelled = false;
@@ -674,9 +664,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
                 ? `No ${isJobTab ? "job" : "shop"} purchase orders match your search.`
                 : paymentFilter
                   ? `No ${paymentFilter.toLowerCase()} ${isJobTab ? "job" : "shop"} purchase orders.`
-                  : dateFrom || dateTo
-                    ? `No ${isJobTab ? "job" : "shop"} purchase orders in this date range.`
-                    : isJobTab
+                  : isJobTab
                       ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
                       : "No shop purchase orders yet. Click Add New to create one."
               : `No ${isJobTab ? "job" : "shop"} purchase orders yet.`

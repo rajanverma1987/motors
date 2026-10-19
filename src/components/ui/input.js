@@ -7,6 +7,7 @@ export default function Input({
   placeholder,
   value,
   onChange,
+  onBlur,
   type = "text",
   name,
   className = "",
@@ -37,6 +38,7 @@ export default function Input({
           value={value ?? ""}
           placeholder={placeholder}
           onChange={onChange}
+          onBlur={onBlur}
           readOnly={readOnly}
           disabled={disabled}
           tabIndex={disabled ? -1 : undefined}
