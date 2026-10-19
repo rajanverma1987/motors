@@ -456,6 +456,20 @@ export default function ReportsPanel() {
         sharing={busyId === viewReportId && busyAction === "share"}
         onDownload={viewReportId ? () => downloadReport(viewReportId) : undefined}
         onShare={viewReportId ? () => shareReportPdf(viewReportId) : undefined}
+        getPrintSearchParams={
+          viewReportId
+            ? () => {
+                const params = buildReportParams(viewReportId);
+                if (viewSortBy != null && Number.isFinite(Number(viewSortBy))) {
+                  params.set("sortBy", String(Number(viewSortBy)));
+                }
+                if (viewSortDir === "asc" || viewSortDir === "desc") {
+                  params.set("sortDir", viewSortDir);
+                }
+                return params;
+              }
+            : undefined
+        }
       />
     </div>
   );

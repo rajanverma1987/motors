@@ -977,6 +977,16 @@ function OverdueWorkTrackerCard({ overdueWork, loading, formatMoney, canViewFina
         downloading={reportBusyAction === "download"}
         sharing={reportBusyAction === "share"}
         onDownload={canViewFinancials ? downloadOverdueReport : undefined}
+        getPrintSearchParams={() => {
+          const params = buildOverdueReportParams();
+          if (reportSortBy != null && Number.isFinite(Number(reportSortBy))) {
+            params.set("sortBy", String(Number(reportSortBy)));
+          }
+          if (reportSortDir === "asc" || reportSortDir === "desc") {
+            params.set("sortDir", reportSortDir);
+          }
+          return params;
+        }}
         onShare={shareOverdueReportPdf}
       />
     </div>

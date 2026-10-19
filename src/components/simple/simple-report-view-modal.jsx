@@ -1,15 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiChevronDown, FiChevronUp, FiDownload, FiShare2 } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiDownload, FiPrinter, FiShare2 } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
+import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import { useAlert } from "@/components/confirm-provider";
 import { SIMPLE_TOOLBAR_BTN } from "@/lib/simple-typography";
 import {
   shouldShowReportShareButton,
 } from "@/lib/mobile-native-share";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100];
+const PRINT_PAGE_SIZE = 200;
 
 function formatCell(value, isAmount) {
   if (value == null || value === "") return "";
@@ -19,6 +22,97 @@ function formatCell(value, isAmount) {
       : String(value);
   }
   return String(value);
+}
+
+/** Load every page of a report view so print is not limited to the current page. */
+async function fetchAllReportViewRows(searchParams) {
+  const params = new URLSearchParams(searchParams);
+  const allRows = [];
+  let page = 1;
+  let headers = [];
+  let amountColumns = [];
+  let amountTotals = [];
+  let sheetName = "";
+  let rowCount = 0;
+
+  while (page < 100) {
+    params.set("page", String(page));
+    params.set("pageSize", String(PRINT_PAGE_SIZE));
+    const res = await fetch(`/api/dashboard/simple-reports/view?${params.toString()}`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || "Failed to load report");
+    if (page === 1) {
+      headers = Array.isArray(data.headers) ? data.headers : [];
+      amountColumns = Array.isArray(data.amountColumns) ? data.amountColumns : [];
+      amountTotals = Array.isArray(data.amountTotals) ? data.amountTotals : [];
+      sheetName = String(data.sheetName || "");
+      rowCount = Number(data.rowCount) || 0;
+    }
+    const chunk = Array.isArray(data.rows) ? data.rows : [];
+    allRows.push(...chunk);
+    if (!chunk.length || allRows.length >= rowCount) break;
+    page += 1;
+  }
+
+  return { headers, rows: allRows, amountColumns, amountTotals, sheetName };
+}
+
+function ReportPrintSheet({ title, headers, rows, amountColumns, amountTotals }) {
+  const amountSet = new Set(amountColumns || []);
+  const cellStyle = (colIdx, headerCell) => ({
+    borderBottom: "1px solid #d4d4d4",
+    padding: "3px 6px",
+    textAlign: amountSet.has(colIdx) && !headerCell ? "right" : "left",
+    verticalAlign: "top",
+    whiteSpace: "normal",
+    fontWeight: headerCell ? 700 : 400,
+  });
+
+  return (
+    <div style={{ background: "#ffffff", color: "#111111", fontSize: "9px" }}>
+      <style>{`@media print { @page { size: letter landscape; margin: 0.4in; } }`}</style>
+      <h1 style={{ margin: "0 0 4px", fontSize: "16px", fontWeight: 700 }}>{title || "Report"}</h1>
+      <p style={{ margin: "0 0 10px", color: "#444444" }}>
+        {rows.length} row{rows.length === 1 ? "" : "s"}
+      </p>
+      <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <thead style={{ display: "table-header-group" }}>
+          <tr>
+            {(headers || []).map((header, colIdx) => (
+              <th key={`ps-${colIdx}`} style={{ ...cellStyle(colIdx, true), background: "#e8eef5" }}>
+                {colIdx === 0
+                  ? "Subtotal (all rows)"
+                  : amountSet.has(colIdx)
+                    ? formatCell(amountTotals?.[colIdx] ?? 0, true)
+                    : ""}
+              </th>
+            ))}
+          </tr>
+          <tr>
+            {(headers || []).map((header, colIdx) => (
+              <th key={`ph-${colIdx}`} style={{ ...cellStyle(colIdx, true), background: "#f3f4f6" }}>
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(rows || []).map((row, rowIdx) => (
+            <tr key={`pr-${rowIdx}`}>
+              {(headers || []).map((_, colIdx) => (
+                <td key={`pc-${rowIdx}-${colIdx}`} style={cellStyle(colIdx, false)}>
+                  {formatCell(row?.[colIdx], amountSet.has(colIdx))}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 /**
@@ -49,10 +143,15 @@ export default function SimpleReportViewModal({
   downloading = false,
   onShare,
   sharing = false,
+  /** Returns URLSearchParams for the report view API (without page). Used to print every row. */
+  getPrintSearchParams,
 }) {
   const amountSet = useMemo(() => new Set(amountColumns || []), [amountColumns]);
   const [jumpPage, setJumpPage] = useState(String(page || 1));
   const [showShare, setShowShare] = useState(false);
+  const [preparingPrint, setPreparingPrint] = useState(false);
+  const [printPack, setPrintPack] = useState(null);
+  const alert = useAlert();
 
   useEffect(() => {
     setJumpPage(String(page || 1));
@@ -81,8 +180,55 @@ export default function SimpleReportViewModal({
   const startItem = rowCount === 0 ? 0 : (page - 1) * pageSize + 1;
   const endItem = Math.min(page * pageSize, rowCount);
 
+  const handlePrint = async () => {
+    if (loading || preparingPrint || error || !headers?.length) return;
+    setPreparingPrint(true);
+    try {
+      const loadedAll = (rows || []).length >= rowCount && rowCount > 0;
+      if (loadedAll || typeof getPrintSearchParams !== "function") {
+        setPrintPack({
+          title: title || sheetName || "Report",
+          headers,
+          rows: rows || [],
+          amountColumns,
+          amountTotals,
+        });
+        return;
+      }
+      const params = getPrintSearchParams();
+      const full = await fetchAllReportViewRows(params);
+      setPrintPack({
+        title: title || full.sheetName || "Report",
+        headers: full.headers.length ? full.headers : headers,
+        rows: full.rows,
+        amountColumns: full.amountColumns,
+        amountTotals: full.amountTotals,
+      });
+    } catch (err) {
+      await alert({
+        title: "Print failed",
+        message: err?.message || "Could not prepare this report.",
+        variant: "danger",
+      });
+    } finally {
+      setPreparingPrint(false);
+    }
+  };
+
   const headerActions = (
     <div className="flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className={SIMPLE_TOOLBAR_BTN}
+        disabled={loading || preparingPrint || Boolean(printPack) || Boolean(error) || !headers?.length}
+        onClick={() => void handlePrint()}
+        title="Print report"
+      >
+        <FiPrinter className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        {preparingPrint ? "…" : "Print"}
+      </Button>
       {typeof onDownload === "function" ? (
         <Button
           type="button"
@@ -114,6 +260,7 @@ export default function SimpleReportViewModal({
   );
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -318,5 +465,17 @@ export default function SimpleReportViewModal({
         )}
       </div>
     </Modal>
+    {printPack ? (
+      <DocumentPrintOffscreenPortal open onClose={() => setPrintPack(null)}>
+        <ReportPrintSheet
+          title={printPack.title}
+          headers={printPack.headers}
+          rows={printPack.rows}
+          amountColumns={printPack.amountColumns}
+          amountTotals={printPack.amountTotals}
+        />
+      </DocumentPrintOffscreenPortal>
+    ) : null}
+    </>
   );
 }
