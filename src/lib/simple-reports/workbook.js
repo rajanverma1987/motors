@@ -26,6 +26,7 @@ export function isReportAmountHeader(header) {
     .toLowerCase()
     .replace(/\s+/g, " ");
   if (!s) return false;
+  if (s === "taxable base" || s === "tax base") return true;
   if (s.includes("%") || /\bpercent\b|\brate\b/.test(s)) return false;
   if (
     /\b(date|status|type|vendor|customer|company|name|sku|uom|location|bucket|person|job|invoice|city|state|email|phone|ein|contact|payment|receiving|low stock|days|method|#)\b/.test(
