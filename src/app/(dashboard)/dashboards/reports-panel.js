@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FiDownload, FiEye } from "react-icons/fi";
 import Button from "@/components/ui/button";
@@ -42,7 +42,15 @@ export default function ReportsPanel() {
   const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const searchParams = useSearchParams();
-  const { from, to } = parseAllJobsDateRange(searchParams);
+  const urlRange = parseAllJobsDateRange(searchParams);
+  const [appliedRange, setAppliedRange] = useState(() => ({
+    from: urlRange.from,
+    to: urlRange.to,
+  }));
+  const from = appliedRange.from;
+  const to = appliedRange.to;
+  const rangeRef = useRef(appliedRange);
+  rangeRef.current = appliedRange;
   const [busyId, setBusyId] = useState("");
   const [busyAction, setBusyAction] = useState("");
   const [filtersByReport, setFiltersByReport] = useState(emptyFiltersForCatalog);
@@ -55,6 +63,23 @@ export default function ReportsPanel() {
   const [viewPageSize, setViewPageSize] = useState(50);
   const [viewSortBy, setViewSortBy] = useState(null);
   const [viewSortDir, setViewSortDir] = useState("desc");
+  const viewOpenRef = useRef(false);
+  const viewReportIdRef = useRef("");
+  const viewPageSizeRef = useRef(50);
+  const viewSortByRef = useRef(null);
+  const viewSortDirRef = useRef("desc");
+  viewOpenRef.current = viewOpen;
+  viewReportIdRef.current = viewReportId;
+  viewPageSizeRef.current = viewPageSize;
+  viewSortByRef.current = viewSortBy;
+  viewSortDirRef.current = viewSortDir;
+
+  useEffect(() => {
+    setAppliedRange((prev) => {
+      if (prev.from === urlRange.from && prev.to === urlRange.to) return prev;
+      return { from: urlRange.from, to: urlRange.to };
+    });
+  }, [urlRange.from, urlRange.to]);
 
   const setFilter = useCallback((reportId, key, value) => {
     setFiltersByReport((prev) => ({
@@ -70,15 +95,16 @@ export default function ReportsPanel() {
     (reportId) => {
       const id = String(reportId || "").trim();
       const params = new URLSearchParams({ report: id });
-      if (from) params.set(ALL_JOBS_DATE_FROM_PARAM, from);
-      if (to) params.set(ALL_JOBS_DATE_TO_PARAM, to);
+      const range = rangeRef.current;
+      if (range.from) params.set(ALL_JOBS_DATE_FROM_PARAM, range.from);
+      if (range.to) params.set(ALL_JOBS_DATE_TO_PARAM, range.to);
       const reportFilters = filtersByReport[id] || {};
       for (const [key, value] of Object.entries(reportFilters)) {
         if (value) params.set(key, value);
       }
       return params;
     },
-    [filtersByReport, from, to]
+    [filtersByReport]
   );
 
   const downloadReport = useCallback(
@@ -211,6 +237,27 @@ export default function ReportsPanel() {
       }
     },
     [buildReportParams]
+  );
+
+  const handleRangeApplied = useCallback(
+    (next) => {
+      const range = {
+        from: String(next?.from || ""),
+        to: String(next?.to || ""),
+      };
+      rangeRef.current = range;
+      setAppliedRange(range);
+      const id = viewReportIdRef.current;
+      if (!viewOpenRef.current || !id) return;
+      void loadViewPage(id, {
+        page: 1,
+        pageSize: viewPageSizeRef.current,
+        sortBy: viewSortByRef.current,
+        sortDir: viewSortDirRef.current,
+        showBusy: false,
+      });
+    },
+    [loadViewPage]
   );
 
   const viewReport = useCallback(
@@ -347,7 +394,7 @@ export default function ReportsPanel() {
             <span className="font-medium text-title">{rangeLabel}</span>.
           </p>
         </div>
-        <SimpleHubDateFilter placement="reports" />
+        <SimpleHubDateFilter placement="reports" onApplied={handleRangeApplied} />
       </div>
 
       <div className="flex flex-col gap-8">

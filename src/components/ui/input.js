@@ -8,7 +8,9 @@ export default function Input({
   value,
   onChange,
   onBlur,
+  onKeyDown,
   type = "text",
+  inputMode,
   name,
   className = "",
   readOnly = false,
@@ -39,6 +41,8 @@ export default function Input({
           placeholder={placeholder}
           onChange={onChange}
           onBlur={onBlur}
+          onKeyDown={onKeyDown}
+          inputMode={inputMode}
           readOnly={readOnly}
           disabled={disabled}
           tabIndex={disabled ? -1 : undefined}
