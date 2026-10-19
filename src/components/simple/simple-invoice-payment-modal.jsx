@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiX } from "react-icons/fi";
+import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Modal from "@/components/ui/modal";
 import SimpleSelect from "@/components/simple/simple-select";
+import { Form } from "@/components/ui/form-layout";
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useFormatDate, useUserSettings } from "@/contexts/user-settings-context";
 import { mergeUserSettings } from "@/lib/user-settings";
@@ -21,6 +22,7 @@ import {
 const FIELD_INPUT =
   "h-9 w-full min-w-0 rounded-none border border-border bg-primary/[0.04] px-2.5 text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary dark:bg-primary/10 dark:text-title";
 const FIELD_LABEL = "mb-1.5 block text-xs font-bold uppercase tracking-wide text-secondary";
+const EDIT_FORM_ID = "invoice-payment-edit-form";
 
 function paymentStatusBadgeVariant(status) {
   const s = String(status || "").toLowerCase();
@@ -99,6 +101,7 @@ export default function SimpleInvoicePaymentModal({
     return fromSettings.length ? fromSettings : SIMPLE_INVOICE_PAYMENT_METHOD_OPTIONS;
   }, [mergedSettings]);
   const [draft, setDraft] = useState(() => emptyInvoicePayment());
+  const [editing, setEditing] = useState(null);
 
   const paymentList = Array.isArray(payments) ? payments : [];
   const summary = useMemo(
@@ -131,6 +134,19 @@ export default function SimpleInvoicePaymentModal({
     return roundMoney(Math.max(0, roundMoney(grandTotal) - paid));
   }, [draft.amount, draft.date, grandTotal, paymentList]);
 
+  const editBalanceDue = useMemo(() => {
+    if (!editing) return 0;
+    const day = String(editing.date || "").trim();
+    let paid = 0;
+    for (const payment of paymentList) {
+      if (String(payment?.id) === String(editing.id)) continue;
+      const paymentDay = String(payment?.date || "").trim();
+      if (!day || (paymentDay && paymentDay <= day)) paid += parseSpMoney(payment?.amount);
+    }
+    paid += parseSpMoney(editing.amount);
+    return roundMoney(Math.max(0, roundMoney(grandTotal) - paid));
+  }, [editing, grandTotal, paymentList]);
+
   const preferredMethod = String(customer?.preferredPaymentMethod || "").trim();
   const paymentTerms = String(customer?.paymentTerms || "").trim();
   const customerName =
@@ -148,6 +164,7 @@ export default function SimpleInvoicePaymentModal({
         method: methodHit?.value || "",
       })
     );
+    setEditing(null);
   }, [open, preferredMethod, paymentMethodOptions]);
 
   const commitPayments = (nextPayments) => {
@@ -196,6 +213,57 @@ export default function SimpleInvoicePaymentModal({
     setDraft(emptyInvoicePayment({ method: methodHit?.value || "" }));
   };
 
+  const openEdit = (payment) => {
+    setEditing({
+      id: payment.id,
+      date: String(payment.date || "").slice(0, 10),
+      amount: String(payment.amount ?? ""),
+      method: String(payment.method || ""),
+      reference: String(payment.reference || ""),
+      notes: String(payment.notes || ""),
+    });
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    if (!editing) return;
+    const amount = parseSpMoney(editing.amount);
+    if (!(amount > 0)) {
+      await alert({
+        title: "Amount required",
+        message: "Enter a payment amount greater than zero.",
+        variant: "danger",
+      });
+      return;
+    }
+    if (!String(editing.date || "").trim()) {
+      await alert({ title: "Date required", message: "Enter the payment date.", variant: "danger" });
+      return;
+    }
+    if (!String(editing.method || "").trim()) {
+      await alert({
+        title: "Payment method",
+        message: "Select a payment method.",
+        variant: "danger",
+      });
+      return;
+    }
+    const next = paymentList.map((payment) =>
+      String(payment.id) === String(editing.id)
+        ? {
+            ...payment,
+            date: String(editing.date || "").trim(),
+            amount: String(amount),
+            method: String(editing.method || "").trim(),
+            reference: String(editing.reference || "").trim(),
+            notes: String(editing.notes || "").trim(),
+          }
+        : payment
+    );
+    commitPayments(next);
+    setEditing(null);
+  };
+
   const handleDelete = async (paymentId) => {
     const ok = await confirm({
       title: "Delete payment",
@@ -212,6 +280,7 @@ export default function SimpleInvoicePaymentModal({
     : "Add/Edit Payment Record";
 
   return (
+    <>
     <Modal
       open={open}
       onClose={onClose}
@@ -364,6 +433,7 @@ export default function SimpleInvoicePaymentModal({
             <table className="w-full min-w-[28rem] border-collapse text-sm">
               <thead className="sticky top-0 z-[1] bg-primary/[0.06] text-title dark:bg-primary/10">
                 <tr className="border-b border-border">
+                  <th className="w-20 border-r border-border px-2 py-2.5" />
                   <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                     Date
                   </th>
@@ -379,10 +449,9 @@ export default function SimpleInvoicePaymentModal({
                   <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                     Reference #
                   </th>
-                  <th className="border-r border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
+                  <th className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide">
                     Notes
                   </th>
-                  <th className="w-12 px-2 py-2.5" />
                 </tr>
               </thead>
               <tbody>
@@ -395,8 +464,30 @@ export default function SimpleInvoicePaymentModal({
                 ) : (
                   historyRows.map((p) => (
                     <tr key={p.id} className="border-t border-border bg-card hover:bg-primary/[0.03]">
+                      <td className="border-r border-border px-1 py-1.5 text-center">
+                        <div className="inline-flex items-center justify-center gap-0.5">
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded text-danger hover:bg-danger/10"
+                            title="Delete payment"
+                            aria-label="Delete payment"
+                            onClick={() => void handleDelete(p.id)}
+                          >
+                            <FiTrash2 className="h-4 w-4 shrink-0" aria-hidden />
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded text-primary hover:bg-primary/10"
+                            title="Edit payment"
+                            aria-label="Edit payment"
+                            onClick={() => openEdit(p)}
+                          >
+                            <FiEdit2 className="h-4 w-4 shrink-0" aria-hidden />
+                          </button>
+                        </div>
+                      </td>
                       <td className="border-r border-border px-3 py-2.5 text-title">
-                        {p.date ? formatDate(p.date) : "—"}
+                        {p.date ? formatDate(p.date) : "-"}
                       </td>
                       <td className="border-r border-border px-3 py-2.5 text-right text-base font-semibold tabular-nums text-title">
                         {formatMoney(parseSpMoney(p.amount))}
@@ -404,22 +495,11 @@ export default function SimpleInvoicePaymentModal({
                       <td className="border-r border-border px-3 py-2.5 text-right font-semibold tabular-nums text-title">
                         {formatMoney(balanceByPaymentId.get(String(p.id)) ?? summary.balance)}
                       </td>
-                      <td className="border-r border-border px-3 py-2.5 text-title">{p.method || "—"}</td>
+                      <td className="border-r border-border px-3 py-2.5 text-title">{p.method || "-"}</td>
                       <td className="border-r border-border px-3 py-2.5 text-title">
-                        {p.reference || "—"}
+                        {p.reference || "-"}
                       </td>
-                      <td className="border-r border-border px-3 py-2.5 text-title">{p.notes || "—"}</td>
-                      <td className="px-2 py-2 text-center">
-                        <button
-                          type="button"
-                          className="rounded p-1 text-danger hover:bg-danger/10"
-                          title="Delete payment"
-                          aria-label="Delete payment"
-                          onClick={() => void handleDelete(p.id)}
-                        >
-                          <FiX className="h-4 w-4" aria-hidden />
-                        </button>
-                      </td>
+                      <td className="px-3 py-2.5 text-title">{p.notes || "-"}</td>
                     </tr>
                   ))
                 )}
@@ -429,5 +509,110 @@ export default function SimpleInvoicePaymentModal({
         </div>
       </div>
     </Modal>
+
+    <Modal
+      open={Boolean(editing)}
+      onClose={() => setEditing(null)}
+      title="Edit payment"
+      size="lg"
+      width="min(640px, 96vw)"
+      showClose
+      closeOnOutsideClick={false}
+      actions={
+        <Button type="submit" form={EDIT_FORM_ID} variant="primary" size="sm">
+          Save
+        </Button>
+      }
+    >
+      {editing ? (
+        <Form
+          id={EDIT_FORM_ID}
+          onSubmit={handleSaveEdit}
+          className="grid gap-4 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none sm:grid-cols-2"
+        >
+          <div className="min-w-0">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-amount">
+              Amount
+            </label>
+            <input
+              id="inv-pay-edit-amount"
+              type="text"
+              inputMode="decimal"
+              value={editing.amount}
+              onChange={(e) => setEditing((row) => ({ ...row, amount: e.target.value }))}
+              className={`${FIELD_INPUT} text-right tabular-nums`}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="min-w-0">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-method">
+              Payment method
+            </label>
+            <SimpleSelect
+              id="inv-pay-edit-method"
+              options={paymentMethodOptions}
+              value={editing.method}
+              onChange={(e) => setEditing((row) => ({ ...row, method: e.target.value }))}
+              placeholder="Select…"
+              searchable={false}
+              aria-label="Payment method"
+              triggerClassName="!h-9 !min-h-9 !px-2.5"
+            />
+          </div>
+          <div className="min-w-0">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-date">
+              Date
+            </label>
+            <input
+              id="inv-pay-edit-date"
+              type="date"
+              value={editing.date}
+              onChange={(e) => setEditing((row) => ({ ...row, date: e.target.value }))}
+              className={FIELD_INPUT}
+            />
+          </div>
+          <div className="min-w-0">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-balance">
+              Balance due
+            </label>
+            <input
+              id="inv-pay-edit-balance"
+              type="text"
+              readOnly
+              value={formatMoney(editBalanceDue)}
+              className={`${FIELD_INPUT} text-right font-semibold tabular-nums`}
+              aria-label="Balance due at the payment date"
+            />
+          </div>
+          <div className="min-w-0 sm:col-span-2">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-reference">
+              Payment reference number
+            </label>
+            <input
+              id="inv-pay-edit-reference"
+              type="text"
+              value={editing.reference}
+              onChange={(e) => setEditing((row) => ({ ...row, reference: e.target.value }))}
+              className={FIELD_INPUT}
+              placeholder="Check #, ACH ref, wire confirmation…"
+            />
+          </div>
+          <div className="min-w-0 sm:col-span-2">
+            <label className={FIELD_LABEL} htmlFor="inv-pay-edit-notes">
+              Notes
+            </label>
+            <input
+              id="inv-pay-edit-notes"
+              type="text"
+              value={editing.notes}
+              onChange={(e) => setEditing((row) => ({ ...row, notes: e.target.value }))}
+              className={FIELD_INPUT}
+              placeholder="Optional reference or memo"
+            />
+          </div>
+        </Form>
+      ) : null}
+    </Modal>
+    </>
   );
 }
