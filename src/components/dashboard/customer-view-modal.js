@@ -46,7 +46,7 @@ const TD_MUTED_CLASS =
 const TD_STATUS_INNER =
   "block px-2 py-1.5 text-[12px] font-semibold leading-snug whitespace-nowrap";
 const TABLE_WRAP = "min-h-0 flex-1 overflow-auto rounded-sm border border-border";
-const TABLE_CLASS = "w-full min-w-[28rem] border-separate border-spacing-0 text-[12px]";
+const TABLE_CLASS = "w-full table-fixed min-w-[28rem] border-separate border-spacing-0 text-[12px]";
 const THEAD_ROW = "";
 const ACTIVITY_PANEL =
   "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card";
@@ -174,6 +174,14 @@ function statusAmountSummary(rows, getAmount, normalizeKey) {
   }));
 }
 
+function paymentRecordDates(source) {
+  const payments = Array.isArray(source?.payments) ? source.payments : [];
+  return payments
+    .map((payment) => String(payment?.date || "").trim().slice(0, 10))
+    .filter(Boolean)
+    .sort();
+}
+
 function activityRowAmount(row) {
   const direct = Number(row?.total);
   if (Number.isFinite(direct)) return direct;
@@ -221,6 +229,7 @@ export default function CustomerViewModal({
   const [activityLoading, setActivityLoading] = useState(false);
   const [activity, setActivity] = useState({ quotes: [], invoices: [] });
   const [activityStatusFilter, setActivityStatusFilter] = useState(null);
+  const [activitySort, setActivitySort] = useState({ key: "date", dir: "desc" });
 
   const [openInvoiceId, setOpenInvoiceId] = useState(null);
   const [openQuoteId, setOpenQuoteId] = useState(null);
@@ -357,6 +366,7 @@ export default function CustomerViewModal({
       status: inv.status,
       jobStatus: inv.jobStatus || "",
       amount: activityRowAmount(inv),
+      paymentDates: paymentRecordDates(inv),
       raw: inv,
     }));
     const quoteRows = (Array.isArray(activity.quotes) ? activity.quotes : []).map((q) => ({
@@ -369,6 +379,7 @@ export default function CustomerViewModal({
       status: q.status,
       jobStatus: q.jobStatus || "",
       amount: activityRowAmount(q),
+      paymentDates: paymentRecordDates(q),
       raw: q,
     }));
     return [...invoiceRows, ...quoteRows].sort((a, b) => {
@@ -441,6 +452,45 @@ export default function CustomerViewModal({
       }, 0),
     [filteredActivityRows]
   );
+
+  const displayedActivityRows = useMemo(() => {
+    const dir = activitySort.dir === "asc" ? 1 : -1;
+    const valueOf = (row) => {
+      if (activitySort.key === "docNumber") return String(row.docNumber || "");
+      if (activitySort.key === "status") {
+        return docStatusCellChrome(row.kind, row.status, mergedSettings).label || "";
+      }
+      if (activitySort.key === "jobStatus") {
+        return jobStatusCellChrome(row.jobStatus, mergedSettings).label || "";
+      }
+      if (activitySort.key === "amount") {
+        const n = Number(row.amount);
+        return Number.isFinite(n) ? n : 0;
+      }
+      if (activitySort.key === "paymentDates") {
+        return (row.paymentDates || []).join(", ");
+      }
+      return Date.parse(String(row.dateRaw || "")) || 0;
+    };
+    return [...filteredActivityRows].sort((a, b) => {
+      const left = valueOf(a);
+      const right = valueOf(b);
+      if (typeof left === "number" && typeof right === "number") return (left - right) * dir;
+      return (
+        String(left).localeCompare(String(right), undefined, { numeric: true, sensitivity: "base" }) * dir
+      );
+    });
+  }, [activitySort.dir, activitySort.key, filteredActivityRows, mergedSettings]);
+
+  const toggleActivitySort = (key) => {
+    setActivitySort((prev) => {
+      if (prev.key === key) {
+        return { key, dir: prev.dir === "asc" ? "desc" : "asc" };
+      }
+      const textKey = key === "docNumber" || key === "status" || key === "jobStatus";
+      return { key, dir: textKey ? "asc" : "desc" };
+    });
+  };
 
   const openSimpleProposal = (row) => {
     const id = String(row?.id || "").trim();
@@ -641,15 +691,52 @@ export default function CustomerViewModal({
                       <table className={TABLE_CLASS}>
                         <thead>
                           <tr className={THEAD_ROW}>
-                            <th className={TH_CLASS}>Job#/Invoice#</th>
-                            <th className={TH_CLASS}>Date</th>
-                            <th className={TH_CLASS}>Status</th>
-                            <th className={TH_CLASS}>Job Status</th>
-                            {canViewFinancials ? <th className={`${TH_CLASS} text-right`}>Total</th> : null}
+                            {[
+                              { key: "docNumber", label: "Job#/Invoice#", width: "6.5rem" },
+                              { key: "date", label: "Date", width: "5.25rem" },
+                              { key: "paymentDates", label: "Payment Dates" },
+                              { key: "status", label: "Status" },
+                              { key: "jobStatus", label: "Job Status" },
+                              ...(canViewFinancials ? [{ key: "amount", label: "Total", align: "right" }] : []),
+                            ].map((col) => {
+                              const active = activitySort.key === col.key;
+                              return (
+                                <th
+                                  key={col.key}
+                                  className={`${TH_CLASS} ${col.align === "right" ? "text-right" : ""}`}
+                                  style={col.width ? { width: col.width, maxWidth: col.width } : undefined}
+                                  aria-sort={
+                                    active
+                                      ? activitySort.dir === "asc"
+                                        ? "ascending"
+                                        : "descending"
+                                      : "none"
+                                  }
+                                >
+                                  <button
+                                    type="button"
+                                    className={`inline-flex items-center gap-1 uppercase tracking-[0.05em] hover:text-title ${
+                                      col.align === "right" ? "ml-auto" : ""
+                                    }`}
+                                    onClick={() => toggleActivitySort(col.key)}
+                                    title={`Sort by ${col.label}`}
+                                  >
+                                    {col.label}
+                                    <span className="text-secondary" aria-hidden>
+                                      {active
+                                        ? activitySort.dir === "asc"
+                                          ? " ↑"
+                                          : " ↓"
+                                        : " ⇅"}
+                                    </span>
+                                  </button>
+                                </th>
+                              );
+                            })}
                           </tr>
                         </thead>
                         <tbody>
-                          {filteredActivityRows.map((row) => {
+                          {displayedActivityRows.map((row) => {
                             const isInvoice = row.kind === "invoice";
                             const statusChrome = docStatusCellChrome(
                               row.kind,
@@ -665,7 +752,7 @@ export default function CustomerViewModal({
                                 key={`${row.kind}-${row.id || row.docNumber}`}
                                 className="hover:bg-muted/25 last:[&>td]:border-b-0"
                               >
-                                <td className={TD_CLASS}>
+                                <td className={`${TD_CLASS} w-[6.5rem] max-w-[6.5rem]`}>
                                   {row.id ? (
                                     !isSimple && isInvoice && !canViewFinancials ? (
                                       <span className="font-mono text-[12px] text-secondary">
@@ -701,8 +788,19 @@ export default function CustomerViewModal({
                                     <span className="font-mono text-[12px]">{row.docNumber}</span>
                                   )}
                                 </td>
-                                <td className={TD_MUTED_CLASS}>
-                                  {formatDate(row.dateRaw) || "—"}
+                                <td className={`${TD_MUTED_CLASS} w-[5.25rem] max-w-[5.25rem]`}>
+                                  {formatDate(row.dateRaw) || "-"}
+                                </td>
+                                <td className="border-b border-border px-2 py-1.5 text-[11px] font-medium leading-snug text-secondary">
+                                  <span className="block whitespace-normal">
+                                    {(row.paymentDates || [])
+                                      .map((day) => {
+                                        const text = formatDate(day);
+                                        return text && text !== "-" ? text : "";
+                                      })
+                                      .filter(Boolean)
+                                      .join(", ") || "-"}
+                                  </span>
                                 </td>
                                 <td
                                   className={`border-b border-border ${statusChrome.className}`}

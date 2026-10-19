@@ -1063,6 +1063,40 @@ export default function ServiceProposalsPanel({
               },
             },
             {
+              key: "paymentDates",
+              label: "Payment Dates",
+              sortable: false,
+              headerWrap: true,
+              minWidth: 120,
+              className: "max-w-[14rem]",
+              getCellStyle: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
+              getCellClassName: (_, row) =>
+                proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
+              render: (_, row) => {
+                const chrome = proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts);
+                const payments = Array.isArray(row?.payments) ? row.payments : [];
+                const shown = payments
+                  .map((payment) => String(payment?.date || "").trim())
+                  .filter(Boolean)
+                  .sort()
+                  .map((day) => {
+                    const text = formatDate(day);
+                    return text && text !== "-" ? text : "";
+                  })
+                  .filter(Boolean)
+                  .join(", ");
+                return (
+                  <span
+                    className="block whitespace-normal px-1.5 py-1 text-xs font-semibold tabular-nums"
+                    style={{ color: chrome.style?.color || "inherit" }}
+                  >
+                    {shown || "-"}
+                  </span>
+                );
+              },
+            },
+            {
               key: "invoicePaidDate",
               label: "Invoice Paid Date",
               sortable: true,
