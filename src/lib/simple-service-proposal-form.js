@@ -452,6 +452,21 @@ export function applyOtherLineMarkup(line, markupRaw) {
   return next;
 }
 
+/** Original / unit cost. Recalculates sell `price` from cost × markup. */
+export function applyOtherLineUnitCost(line, costRaw) {
+  const next = line && typeof line === "object" ? { ...line } : emptyOtherLine();
+  next.unitCost = String(costRaw ?? "");
+  const cost = parseSpMoney(next.unitCost);
+  const markup = parseMarkupPercent(next.markupPercent);
+  if (cost > 0) {
+    const sell = sellUnitPriceFromCostMarkup(cost, markup);
+    next.price = sell > 0 ? String(sell) : "";
+  } else if (String(costRaw ?? "").trim() === "") {
+    next.price = markup > 0 ? next.price : "";
+  }
+  return next;
+}
+
 /** When sell price is typed, keep markup in sync if unit cost is known. */
 export function applyOtherLineSellPrice(line, priceRaw) {
   const next = line && typeof line === "object" ? { ...line } : emptyOtherLine();
@@ -461,6 +476,9 @@ export function applyOtherLineSellPrice(line, priceRaw) {
   if (cost > 0 && sell >= 0) {
     const pct = Math.max(0, roundSpMoney((sell / cost - 1) * 100));
     next.markupPercent = String(pct);
+  } else if (cost <= 0 && sell > 0) {
+    next.unitCost = String(sell);
+    next.markupPercent = next.markupPercent === "" ? "0" : next.markupPercent;
   }
   return next;
 }

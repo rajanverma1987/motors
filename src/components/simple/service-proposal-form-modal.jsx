@@ -106,6 +106,7 @@ import {
   lineExtendedPrice,
   applyOtherLineMarkup,
   applyOtherLineSellPrice,
+  applyOtherLineUnitCost,
 } from "@/lib/simple-service-proposal-form";
 import {
   buildAcDatasheetFromProposal,
@@ -339,9 +340,20 @@ function LineItemsTable({
               ) : null}
               {!hidePrices ? (
                 <>
-                  <th className={`w-24 ${LINE_HEAD}`}>Price</th>
-                  {isOther ? <th className={`w-20 ${LINE_HEAD}`}>Markup %</th> : null}
-                  {isOther ? <th className={`w-28 ${LINE_HEAD}`}>Total</th> : null}
+                  {isOther ? (
+                    <>
+                      <th className={`w-24 ${LINE_HEAD}`} title="Unit price before markup">
+                        Price
+                      </th>
+                      <th className={`w-20 ${LINE_HEAD}`}>Markup %</th>
+                      <th className={`w-24 ${LINE_HEAD}`} title="Unit price after markup">
+                        Markup Price
+                      </th>
+                      <th className={`w-28 ${LINE_HEAD}`}>Total</th>
+                    </>
+                  ) : (
+                    <th className={`w-24 ${LINE_HEAD}`}>Price</th>
+                  )}
                 </>
               ) : (
                 <th className={`w-12 text-center ${LINE_HEAD}`}>Action</th>
@@ -400,68 +412,98 @@ function LineItemsTable({
                   ) : null}
                   {!hidePrices ? (
                     <>
-                      <td className={LINE_CELL}>
-                        <div className="flex min-w-0 items-center">
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            value={line.price}
-                            onChange={(e) =>
-                              updateLine(
-                                line.id,
-                                isOther ? applyOtherLineSellPrice(line, e.target.value) : { price: e.target.value }
-                              )
-                            }
-                            className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
-                            aria-label={isOther ? "Unit price" : "Price"}
-                          />
-                          {!isOther ? (
-                            !isBlankTrail ? (
-                              <button
-                                type="button"
-                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
-                                title="Remove line"
-                                aria-label="Remove line"
-                                onClick={() => removeLine(line.id)}
-                              >
-                                <FiX className="h-4 w-4 shrink-0" aria-hidden />
-                              </button>
-                            ) : (
-                              <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
-                            )
-                          ) : null}
-                        </div>
-                      </td>
                       {isOther ? (
-                        <td className={LINE_CELL}>
-                          {isLogisticsChargeOtherLine(line) ? (
-                            <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
-                          ) : (
+                        <>
+                          <td className={LINE_CELL}>
+                            {isLogisticsChargeOtherLine(line) ? (
+                              <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={
+                                  String(line.unitCost ?? "").trim() !== ""
+                                    ? String(line.unitCost)
+                                    : String(line.price ?? "")
+                                }
+                                onChange={(e) =>
+                                  updateLine(line.id, applyOtherLineUnitCost(line, e.target.value))
+                                }
+                                className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                                aria-label="Price"
+                                title="Unit price before markup"
+                              />
+                            )}
+                          </td>
+                          <td className={LINE_CELL}>
+                            {isLogisticsChargeOtherLine(line) ? (
+                              <span className="block h-8 px-1 text-right text-xs text-secondary">-</span>
+                            ) : (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={line.markupPercent ?? ""}
+                                onChange={(e) =>
+                                  updateLine(line.id, applyOtherLineMarkup(line, e.target.value))
+                                }
+                                className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                                placeholder="0"
+                                aria-label="Markup percent"
+                                title="Markup for this proposal only. Not shown on customer print."
+                              />
+                            )}
+                          </td>
+                          <td className={LINE_CELL}>
                             <input
                               type="text"
                               inputMode="decimal"
-                              value={line.markupPercent ?? ""}
-                              onChange={(e) => updateLine(line.id, applyOtherLineMarkup(line, e.target.value))}
+                              value={line.price}
+                              onChange={(e) =>
+                                updateLine(line.id, applyOtherLineSellPrice(line, e.target.value))
+                              }
                               className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
-                              placeholder="0"
-                              aria-label="Markup percent"
-                              title="Markup for this proposal only. Not shown on customer print."
+                              aria-label="Markup Price"
+                              title="Unit price after markup. Same as Price when markup is 0."
                             />
-                          )}
-                        </td>
-                      ) : null}
-                      {isOther ? (
+                          </td>
+                          <td className={LINE_CELL}>
+                            <div className="flex min-w-0 items-center">
+                              <input
+                                readOnly
+                                value={
+                                  lineHasContent(line, lineContentOpts)
+                                    ? formatMoney(lineExtendedPrice(line))
+                                    : ""
+                                }
+                                className={`${CELL_INPUT_MUTED} min-w-0 flex-1 text-right tabular-nums`}
+                                aria-label="Line total"
+                              />
+                              {!isBlankTrail ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center text-danger hover:bg-danger/10"
+                                  title="Remove line"
+                                  aria-label="Remove line"
+                                  onClick={() => removeLine(line.id)}
+                                >
+                                  <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                                </button>
+                              ) : (
+                                <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+                              )}
+                            </div>
+                          </td>
+                        </>
+                      ) : (
                         <td className={LINE_CELL}>
                           <div className="flex min-w-0 items-center">
                             <input
-                              readOnly
-                              value={
-                                lineHasContent(line, lineContentOpts)
-                                  ? formatMoney(lineExtendedPrice(line))
-                                  : ""
-                              }
-                              className={`${CELL_INPUT_MUTED} min-w-0 flex-1 text-right tabular-nums`}
-                              aria-label="Line total"
+                              type="text"
+                              inputMode="decimal"
+                              value={line.price}
+                              onChange={(e) => updateLine(line.id, { price: e.target.value })}
+                              className={`${CELL_INPUT} min-w-0 flex-1 text-right tabular-nums`}
+                              aria-label="Price"
                             />
                             {!isBlankTrail ? (
                               <button
@@ -478,7 +520,7 @@ function LineItemsTable({
                             )}
                           </div>
                         </td>
-                      ) : null}
+                      )}
                     </>
                   ) : (
                     <td className={`${LINE_CELL} text-center`}>
