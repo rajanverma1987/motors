@@ -1090,7 +1090,7 @@ export default function DashboardOverviewPanel() {
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-auto px-4 py-8">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-auto px-2 py-4 sm:px-4 sm:py-8">
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-title sm:text-2xl">Dashboard</h1>

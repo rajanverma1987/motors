@@ -29,7 +29,9 @@ export function DatasheetFieldRow({
   if (stacked) {
     return (
       <div className={`flex min-w-0 flex-col gap-1 ${className}`}>
-        <label className="text-xs font-bold text-title">{label}</label>
+        <label className="text-left text-xs font-semibold uppercase tracking-wide text-secondary">
+          {label}
+        </label>
         <div className="min-w-0 w-full">{children}</div>
       </div>
     );
@@ -51,8 +53,10 @@ export function DatasheetFieldRow({
  * @param {{ key: string, label: string }[][]} columns
  * @param {Record<string, string>} values
  * @param {(key: string, value: string) => void} onFieldChange
- * @param {boolean} [highlightFilled] — when true, non-empty inputs use a filled highlight style
- * @param {boolean} [dense] — tighter labels / wider inputs (Master Data Search side panel)
+ * @param {boolean} [highlightFilled] when true, non-empty inputs use a filled highlight style
+ * @param {boolean} [dense] tighter labels / wider inputs (Master Data Search side panel)
+ * @param {boolean} [stacked] label above input; flattens columns into one responsive field grid
+ * @param {number} [stackedCols] column count when stacked (default 2)
  * @param {number} [editModalZIndex]
  */
 export default function DatasheetFieldGrid({
@@ -66,46 +70,64 @@ export default function DatasheetFieldGrid({
   highlightFilled = false,
   dense = false,
   stacked = false,
+  stackedCols = 2,
   editModalZIndex = 170,
 }) {
   const resolvedLabelWidth = labelWidth || (dense ? "6.5rem" : "7.5rem");
   const resolvedInputMin = inputMinWidth || (dense ? "5.5rem" : "4.5rem");
+  const stackedInputClass = stacked
+    ? `${inputClassName} !h-10 !px-2.5 !text-base`
+    : inputClassName;
+  const stackedFilledClass = stacked
+    ? `${filledInputClassName} !h-10 !px-2.5 !text-base`
+    : filledInputClassName;
+
+  const renderField = (field) => {
+    const value = values?.[field.key] ?? "";
+    const isFilled = highlightFilled && String(value).trim() !== "";
+    return (
+      <DatasheetFieldRow
+        key={field.key}
+        label={field.label}
+        labelWidth={resolvedLabelWidth}
+        inputMinWidth={resolvedInputMin}
+        stacked={stacked}
+      >
+        <SimpleDoubleClickTextEditInput
+          label={field.label}
+          value={value}
+          onChange={(next) => onFieldChange(field.key, next)}
+          className={isFilled ? stackedFilledClass : stackedInputClass}
+          aria-label={field.label}
+          data-filled={isFilled ? "true" : undefined}
+          zIndex={editModalZIndex}
+        />
+      </DatasheetFieldRow>
+    );
+  };
+
+  if (stacked) {
+    const flatFields = (Array.isArray(columns) ? columns : []).flatMap((col) =>
+      Array.isArray(col) ? col : []
+    );
+    const colClass =
+      Number(stackedCols) >= 3
+        ? "grid grid-cols-2 gap-x-3 gap-y-3 sm:grid-cols-3"
+        : "grid grid-cols-2 gap-x-3 gap-y-3";
+    return <div className={colClass}>{flatFields.map((field) => renderField(field))}</div>;
+  }
 
   return (
     <div
       className={
-        stacked
-          ? "grid grid-cols-1 gap-3"
-          : dense
-            ? "grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3"
-            : "grid grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-2 lg:grid-cols-3"
+        dense
+          ? "grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2 xl:grid-cols-3"
+          : "grid grid-cols-1 gap-x-4 gap-y-1.5 md:grid-cols-2 lg:grid-cols-3"
       }
     >
       {(Array.isArray(columns) ? columns : []).map((col, colIdx) => (
         <div key={colIdx} className="flex min-w-0 flex-col gap-1.5">
-          {(Array.isArray(col) ? col : []).map((field) => {
-            const value = values?.[field.key] ?? "";
-            const isFilled = highlightFilled && String(value).trim() !== "";
-            return (
-              <DatasheetFieldRow
-                key={field.key}
-                label={field.label}
-                labelWidth={resolvedLabelWidth}
-                inputMinWidth={resolvedInputMin}
-                stacked={stacked}
-              >
-                <SimpleDoubleClickTextEditInput
-                  label={field.label}
-                  value={value}
-                  onChange={(next) => onFieldChange(field.key, next)}
-                  className={isFilled ? filledInputClassName : inputClassName}
-                  aria-label={field.label}
-                  data-filled={isFilled ? "true" : undefined}
-                  zIndex={editModalZIndex}
-                />
-              </DatasheetFieldRow>
-            );
-          })}
+          {(Array.isArray(col) ? col : []).map((field) => renderField(field))}
         </div>
       ))}
     </div>

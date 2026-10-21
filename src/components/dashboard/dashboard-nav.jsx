@@ -3,16 +3,19 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { FiLogOut, FiSearch, FiSettings, FiUsers } from "react-icons/fi";
+import { FiLogOut, FiMenu, FiSearch, FiSettings, FiUsers } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 import GlobalSearchModal from "@/components/dashboard/global-search-modal";
 import { useAuth } from "@/contexts/auth-context";
 import { CLASSIC_PORTAL_UI_ENABLED, isSimplePortalPath, portalLandingPath, settingsPathForPortalUi } from "@/lib/portal-view";
 import DashboardViewSwitcher from "@/components/dashboard/dashboard-view-switcher";
 import PwaInstallButton from "@/components/pwa-install-button";
+import { useSimplePhoneChrome } from "@/components/simple/simple-phone-chrome-context";
+import { SIMPLE_PHONE_TAB_TITLES } from "@/lib/simple-phone-nav";
 
 export default function DashboardNav() {
-  const { user, logout, isOwner, isEmployee } = useAuth();
+  const { user, logout, isOwner } = useAuth();
+  const { isPhone, openDrawer, hubChrome, showBottomNav } = useSimplePhoneChrome();
   const effectiveIsOwner =
     isOwner ??
     Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
@@ -23,6 +26,7 @@ export default function DashboardNav() {
   const settingsMenuRef = useRef(null);
   const calculatorOnly = !!user?.calculatorOnlyAccount;
   const simplePortal = isSimplePortalPath(pathname);
+  /** CSS (`md:`) hides/shows phone chrome; `isPhone` only refines the title once mounted. */
   const homeHref = portalLandingPath({
     calculatorOnlyAccount: calculatorOnly,
     portalUi: user?.portalUi,
@@ -31,6 +35,10 @@ export default function DashboardNav() {
     ? "/dashboards?tab=calculators"
     : settingsPathForPortalUi(user?.portalUi);
   const companyName = String(user?.shopName || "").trim() || "Dashboard";
+  const sectionTitle =
+    simplePortal && isPhone && hubChrome?.activeTab
+      ? SIMPLE_PHONE_TAB_TITLES[hubChrome.activeTab] || companyName
+      : companyName;
   const userDisplayName =
     String(user?.contactName || "").trim() || String(user?.email || "").trim() || "";
   const iconBtnClass = `inline-flex h-9 w-9 items-center justify-center border border-border bg-card text-text transition-colors hover:bg-primary hover:text-white ${
@@ -80,25 +88,42 @@ export default function DashboardNav() {
       }`}
     >
       <div className="flex w-full items-center justify-between gap-3 sm:gap-4">
-        <Link
-          href={homeHref}
-          className="flex min-w-0 max-w-[min(100%,14rem)] shrink-0 items-center gap-3 sm:max-w-[min(100%,18rem)]"
-          title={companyName}
-        >
-          <span
-            className={`truncate font-semibold text-title hover:text-primary ${
-              simplePortal ? "text-base tracking-tight" : "text-lg"
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {simplePortal ? (
+            <button
+              type="button"
+              onClick={openDrawer}
+              className={`${iconBtnClass} md:hidden`}
+              title="Open menu"
+              aria-label="Open menu"
+            >
+              <FiMenu className="h-5 w-5" aria-hidden />
+            </button>
+          ) : null}
+          <Link
+            href={homeHref}
+            className="flex min-w-0 max-w-[min(100%,14rem)] shrink items-center gap-3 sm:max-w-[min(100%,18rem)]"
+            title={companyName}
+          >
+            <span
+              className={`truncate font-semibold text-title hover:text-primary ${
+                simplePortal ? "text-base tracking-tight" : "text-lg"
+              }`}
+            >
+              {simplePortal && showBottomNav ? sectionTitle : companyName}
+            </span>
+          </Link>
+        </div>
+        {CLASSIC_PORTAL_UI_ENABLED ? (
+          <div
+            className={`min-w-0 shrink-0 items-center gap-2 sm:gap-3 ${
+              simplePortal ? "hidden md:flex" : "flex"
             }`}
           >
-            {companyName}
-          </span>
-        </Link>
-        {CLASSIC_PORTAL_UI_ENABLED ? (
-          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
             <DashboardViewSwitcher />
           </div>
         ) : null}
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-2 sm:gap-3">
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-2 sm:gap-3">
           {!calculatorOnly ? (
             <>
               <button
@@ -113,7 +138,7 @@ export default function DashboardNav() {
               <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
               {simplePortal ? (
                 effectiveIsOwner ? (
-                  <div className="relative" ref={settingsMenuRef}>
+                  <div className="relative hidden md:block" ref={settingsMenuRef}>
                     <button
                       type="button"
                       onClick={() => setSettingsMenuOpen((o) => !o)}
@@ -154,14 +179,15 @@ export default function DashboardNav() {
                 ) : (
                   <Link
                     href="/dashboards/employees"
-                    className={iconBtnClass}
+                    className={`${iconBtnClass} hidden md:inline-flex`}
                     title="Employees"
                     aria-label="Employees"
                   >
                     <FiUsers className="h-5 w-5" aria-hidden />
                   </Link>
                 )
-              ) : effectiveIsOwner ? (
+              ) : null}
+              {!simplePortal && effectiveIsOwner ? (
                 <Link
                   href={settingsHref}
                   className={iconBtnClass}
@@ -173,25 +199,31 @@ export default function DashboardNav() {
               ) : null}
             </>
           ) : null}
-          <PwaInstallButton className="hidden sm:inline-flex" />
-          <ThemeToggle />
-          {userDisplayName ? (
-            <span
-              className="hidden min-w-0 max-w-[10rem] truncate text-sm font-medium text-title sm:inline"
-              title={userDisplayName}
-            >
-              {userDisplayName}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={iconBtnClass}
-            title="Log out"
-            aria-label="Log out"
+          <div
+            className={`items-center gap-2 sm:gap-3 ${
+              simplePortal ? "hidden md:flex" : "flex"
+            }`}
           >
-            <FiLogOut className="h-5 w-5" aria-hidden />
-          </button>
+            <PwaInstallButton className="hidden sm:inline-flex" />
+            <ThemeToggle />
+            {userDisplayName ? (
+              <span
+                className="hidden min-w-0 max-w-[10rem] truncate text-sm font-medium text-title sm:inline"
+                title={userDisplayName}
+              >
+                {userDisplayName}
+              </span>
+            ) : null}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={iconBtnClass}
+              title="Log out"
+              aria-label="Log out"
+            >
+              <FiLogOut className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
     </nav>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { FiSearch } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import DatasheetFieldGrid from "@/components/simple/simple-datasheet-field-grid"
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert } from "@/components/confirm-provider";
+import { useIsPhone } from "@/hooks/use-media-query";
 import {
   MASTER_DATA_SEARCH_FORMS,
   createEmptyDatasheetCriteria,
@@ -26,6 +28,12 @@ import {
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
+import {
+  saveMasterDataSearchSession,
+  SIMPLE_MASTER_DATA_SEARCH_RESULTS_PATH,
+} from "@/lib/simple-master-data-search-session";
+import { simpleServiceProposalFormHref } from "@/lib/simple-portal-tabs";
+
 
 function emptyCriteriaForForm(formId) {
   const form = MASTER_DATA_SEARCH_FORMS[formId];
@@ -60,6 +68,8 @@ function formatRecordType(recordType) {
  */
 export default function MasterDataSearchPanel() {
   const alert = useAlert();
+  const router = useRouter();
+  const isPhone = useIsPhone();
   const [formId, setFormId] = useState("ac");
   const [criteriaByForm, setCriteriaByForm] = useState(() => ({
     ac: emptyCriteriaForForm("ac"),
@@ -127,13 +137,23 @@ export default function MasterDataSearchPanel() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Search failed");
-      setRows(Array.isArray(data.rows) ? data.rows : []);
-      setResultMeta({
+      const nextRows = Array.isArray(data.rows) ? data.rows : [];
+      const nextMeta = {
         searchedFields: Array.isArray(data.searchedFields) ? data.searchedFields : [],
         truncated: Boolean(data.truncated),
         limit: Number(data.limit) || 200,
         searchType: String(data.searchType || "").trim(),
-      });
+      };
+      setRows(nextRows);
+      setResultMeta(nextMeta);
+      if (isPhone) {
+        saveMasterDataSearchSession({
+          rows: nextRows,
+          resultMeta: nextMeta,
+          formId,
+        });
+        router.push(SIMPLE_MASTER_DATA_SEARCH_RESULTS_PATH);
+      }
     } catch (err) {
       setRows([]);
       setResultMeta(null);
@@ -145,13 +165,20 @@ export default function MasterDataSearchPanel() {
     } finally {
       setSearching(false);
     }
-  }, [alert, criteriaByForm, formId, searching]);
+  }, [alert, criteriaByForm, formId, isPhone, router, searching]);
 
-  const openProposal = useCallback((row) => {
-    const id = String(row?.id || "").trim();
-    if (!id) return;
-    setOpenProposalId(id);
-  }, []);
+  const openProposal = useCallback(
+    (row) => {
+      const id = String(row?.id || "").trim();
+      if (!id) return;
+      if (isPhone) {
+        router.push(simpleServiceProposalFormHref(id));
+        return;
+      }
+      setOpenProposalId(id);
+    },
+    [isPhone, router]
+  );
 
   const openCustomer = useCallback((row) => {
     const id = String(row?.customerId || "").trim();
@@ -294,7 +321,13 @@ export default function MasterDataSearchPanel() {
         label: f.label,
         children:
           f.searchType === "customer" ? (
-            <div className="flex min-w-0 max-w-md flex-col gap-4 pt-3">
+            <div
+              className={
+                isPhone
+                  ? "grid min-w-0 grid-cols-1 gap-3 pt-3"
+                  : "flex min-w-0 max-w-md flex-col gap-4 pt-3"
+              }
+            >
               <Input
                 label="Customer Name"
                 value={criteriaByForm.customer?.companyName ?? ""}
@@ -303,43 +336,57 @@ export default function MasterDataSearchPanel() {
                 inputClassName={
                   highlightFilledFields && String(criteriaByForm.customer?.companyName || "").trim()
                     ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                    : ""
+                    : isPhone
+                      ? "!h-10 !text-base"
+                      : ""
                 }
               />
-              <Input
-                label="Contact Name"
-                value={criteriaByForm.customer?.primaryContactName ?? ""}
-                onChange={(e) => patchCustomerField("primaryContactName", e.target.value)}
-                placeholder="e.g. *Smith* or exact name"
-                inputClassName={
-                  highlightFilledFields && String(criteriaByForm.customer?.primaryContactName || "").trim()
-                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                    : ""
-                }
-              />
-              <Input
-                label="RFQ#/Job#/Invoice#"
-                value={criteriaByForm.customer?.documentNumber ?? ""}
-                onChange={(e) => patchCustomerField("documentNumber", e.target.value)}
-                placeholder="e.g. *123* or exact number"
-                inputClassName={
-                  highlightFilledFields && String(criteriaByForm.customer?.documentNumber || "").trim()
-                    ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                    : ""
-                }
-              />
-              <p className="text-xs text-secondary">
-                Use <span className="font-medium text-title">*</span> wildcards — e.g.{" "}
+              <div className={isPhone ? "grid grid-cols-2 gap-3" : "contents"}>
+                <Input
+                  label="Contact Name"
+                  value={criteriaByForm.customer?.primaryContactName ?? ""}
+                  onChange={(e) => patchCustomerField("primaryContactName", e.target.value)}
+                  placeholder="e.g. *Smith* or exact name"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.primaryContactName || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhone
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+                <Input
+                  label="RFQ#/Job#/Invoice#"
+                  value={criteriaByForm.customer?.documentNumber ?? ""}
+                  onChange={(e) => patchCustomerField("documentNumber", e.target.value)}
+                  placeholder="e.g. *123* or exact number"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.documentNumber || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhone
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+              </div>
+              <p className="text-xs text-secondary col-span-full">
+                Use <span className="font-medium text-title">*</span> wildcards, e.g.{" "}
                 <span className="font-mono text-title">*abb*</span> or{" "}
                 <span className="font-mono text-title">Smith*</span>. Filled fields are combined with AND.
               </p>
             </div>
           ) : (
-            <div className="flex min-w-0 flex-col gap-4 pt-3">
+            <div className={`flex min-w-0 flex-col ${isPhone ? "gap-5 pt-2" : "gap-4 pt-3"}`}>
               {(f.blocks || []).map((block) => (
                 <div key={block.id} className="min-w-0">
                   {f.blocks.length > 1 ? (
-                    <p className="mb-2 border-b border-primary/25 pb-1 text-sm font-bold uppercase tracking-wide text-primary">
+                    <p
+                      className={`mb-2 border-b border-primary/25 pb-1 font-bold uppercase tracking-wide text-primary ${
+                        isPhone ? "text-xs" : "text-sm"
+                      }`}
+                    >
                       {block.label}
                     </p>
                   ) : null}
@@ -348,7 +395,9 @@ export default function MasterDataSearchPanel() {
                     values={criteriaByForm[f.id]?.[block.id] || {}}
                     onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
                     highlightFilled={highlightFilledFields && f.id === formId}
-                    dense
+                    dense={!isPhone}
+                    stacked={isPhone}
+                    stackedCols={2}
                   />
                 </div>
               ))}
@@ -359,6 +408,7 @@ export default function MasterDataSearchPanel() {
       criteriaByForm,
       formId,
       highlightFilledFields,
+      isPhone,
       patchCustomerField,
       patchField,
     ]
@@ -396,11 +446,11 @@ export default function MasterDataSearchPanel() {
 
   return (
     <div className={`${SIMPLE_SCREEN_PANEL_CLASS} flex min-h-0 flex-1 flex-col gap-3 overflow-hidden`}>
-      <div className="shrink-0 border-b border-border pb-3">
+      <div className="hidden shrink-0 border-b border-border pb-3 md:block">
         <h2 className="text-lg font-semibold text-title">Master Data Search</h2>
         <p className="mt-1 text-sm text-secondary">
           Search jobs by datasheet fields (same fields as the Service Proposal DataSheet). Use{" "}
-          <span className="font-medium text-title">*</span> wildcards — e.g.{" "}
+          <span className="font-medium text-title">*</span> wildcards, e.g.{" "}
           <span className="font-mono text-xs text-title">*abb*</span>,{" "}
           <span className="font-mono text-xs text-title">10*</span>, or exact{" "}
           <span className="font-mono text-xs text-title">text</span>. Multiple fields are combined with AND.
@@ -408,13 +458,13 @@ export default function MasterDataSearchPanel() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden lg:flex-row">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-2">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card max-md:border-0 max-md:bg-transparent">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-2.5 max-md:bg-card">
             <span className="text-xs font-bold uppercase tracking-wide text-secondary">
               Search criteria
             </span>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={clearForm} disabled={searching}>
+              <Button type="button" variant="outline" size="sm" className="!rounded-none" onClick={clearForm} disabled={searching}>
                 Clear
               </Button>
               <Button
@@ -423,14 +473,14 @@ export default function MasterDataSearchPanel() {
                 size="sm"
                 onClick={() => void runSearch()}
                 disabled={searching}
-                className="inline-flex items-center gap-1.5"
+                className="inline-flex items-center gap-1.5 !rounded-none"
               >
                 <FiSearch className="h-3.5 w-3.5 shrink-0" aria-hidden />
                 {searching ? "Searching…" : "Search"}
               </Button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-md:px-2">
             <Tabs
               tabs={formTabs}
               value={formId}
@@ -445,7 +495,7 @@ export default function MasterDataSearchPanel() {
           </div>
         </div>
 
-        <div className="flex min-h-0 min-w-0 flex-[1.15] flex-col overflow-hidden rounded-sm border border-border bg-card">
+        <div className="hidden min-h-0 min-w-0 flex-[1.15] flex-col overflow-hidden rounded-sm border border-border bg-card md:flex">
           <div className="shrink-0 border-b border-border bg-primary/[0.04] px-3 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-secondary">
               Results

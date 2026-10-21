@@ -43,3 +43,27 @@ export const SIMPLE_TAB_IDS = [
 export function simplePortalTabHref(tab) {
   return `${SIMPLE_PORTAL_PATH}?tab=${encodeURIComponent(tab)}`;
 }
+
+/** Full-page Service Proposal form (phone). */
+export const SIMPLE_SERVICE_PROPOSAL_FORM_BASE = `${SIMPLE_PORTAL_PATH}/service-proposals`;
+
+/**
+ * @param {string} [id] blank or "new" → create URL
+ */
+export function simpleServiceProposalFormHref(id = "") {
+  const raw = String(id || "").trim();
+  if (!raw || raw === "new") return `${SIMPLE_SERVICE_PROPOSAL_FORM_BASE}/new`;
+  return `${SIMPLE_SERVICE_PROPOSAL_FORM_BASE}/${encodeURIComponent(raw)}`;
+}
+
+/** Full-page Purchase Order form (phone). */
+export const SIMPLE_PURCHASE_ORDER_FORM_BASE = `${SIMPLE_PORTAL_PATH}/purchase-orders`;
+
+/**
+ * @param {string} [id] blank or "new" → create URL
+ */
+export function simplePurchaseOrderFormHref(id = "") {
+  const raw = String(id || "").trim();
+  if (!raw || raw === "new") return `${SIMPLE_PURCHASE_ORDER_FORM_BASE}/new`;
+  return `${SIMPLE_PURCHASE_ORDER_FORM_BASE}/${encodeURIComponent(raw)}`;
+}

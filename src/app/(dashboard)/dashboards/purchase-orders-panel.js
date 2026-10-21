@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   FiBell,
   FiCheckCircle,
@@ -12,7 +13,6 @@ import {
 import Table from "@/components/ui/table";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
-import Tabs from "@/components/ui/tabs";
 import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-button";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimplePoDueNotificationsModal from "@/components/simple/simple-po-due-notifications-modal";
@@ -22,6 +22,7 @@ import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
+import { useIsPhone } from "@/hooks/use-media-query";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
   SIMPLE_SCREEN_PANEL_CLASS,
@@ -50,6 +51,7 @@ import {
 } from "@/lib/dropdown-catalog";
 import { useUserSettings } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { simplePurchaseOrderFormHref } from "@/lib/simple-portal-tabs";
 
 const FILTER_ALL = "";
 const FILTER_PAID = "Paid";
@@ -85,6 +87,8 @@ function paymentFilterIcon(label) {
 export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const alert = useAlert();
   const confirm = useConfirm();
+  const router = useRouter();
+  const isPhone = useIsPhone();
   const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const { settings: mergedSettings } = useUserSettings();
@@ -92,6 +96,9 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
 
   const [poTypeTab, setPoTypeTab] = useState(SIMPLE_PO_TYPE_JOB);
   const isJobTab = poTypeTab === SIMPLE_PO_TYPE_JOB;
+  /** Phone: no Job/Shop filter; list every purchase order. */
+  const listPoType = isPhone ? "" : poTypeTab;
+  const showJobColumns = isPhone || isJobTab;
 
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +153,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         sortBy: tableSort?.key || "poCutDate",
         sortDir: tableSort?.direction || "desc",
         paymentStatus: paymentFilter || "",
-        poType: poTypeTab,
+        poType: listPoType,
       });
       if (seq !== listRequestRef.current) return;
       setRows(Array.isArray(pageData.items) ? pageData.items : []);
@@ -160,7 +167,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     } finally {
       if (seq === listRequestRef.current) setLoading(false);
     }
-  }, [page, pageSize, searchQuery, tableSort, paymentFilter, poTypeTab]);
+  }, [page, pageSize, searchQuery, tableSort, paymentFilter, listPoType]);
 
   useEffect(() => {
     void reload();
@@ -197,11 +204,27 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     };
   }, []);
 
+  const phoneFormHref = useCallback(
+    (id = "", type = poTypeTab) => {
+      const base = simplePurchaseOrderFormHref(id);
+      if (!id || id === "new") {
+        const t = type === SIMPLE_PO_TYPE_SHOP ? "shop" : "job";
+        return `${base}?type=${t}`;
+      }
+      return base;
+    },
+    [poTypeTab]
+  );
+
   const openCreate = useCallback(() => {
+    if (isPhone) {
+      router.push(phoneFormHref("new"));
+      return;
+    }
     setEditingPo(null);
     setModalMode("create");
     setModalOpen(true);
-  }, []);
+  }, [isPhone, phoneFormHref, router]);
 
   useEffect(() => {
     if (!createNonce) return;
@@ -284,17 +307,31 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
 
   const displayRows = enrichedRows;
 
-  const openEdit = (row) => {
-    if (row) setPoTypeTab(resolveSimplePoType(row));
-    setEditingPo(row);
-    setModalMode("edit");
-    setModalOpen(true);
-  };
+  const openEdit = useCallback(
+    (row) => {
+      if (!row) return;
+      if (isPhone) {
+        const id = String(row.id || "").trim();
+        if (!id) return;
+        router.push(phoneFormHref(id));
+        return;
+      }
+      setPoTypeTab(resolveSimplePoType(row));
+      setEditingPo(row);
+      setModalMode("edit");
+      setModalOpen(true);
+    },
+    [isPhone, phoneFormHref, router]
+  );
 
   useSimpleOpenParam({
     ready: !loading,
     onOpen: useCallback(
       async (openId) => {
+        if (isPhone) {
+          router.push(phoneFormHref(openId));
+          return true;
+        }
         const row = rows.find((r) => String(r.id) === openId);
         if (row) {
           openEdit(row);
@@ -311,7 +348,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         }
         return true;
       },
-      [rows]
+      [isPhone, openEdit, phoneFormHref, router, rows]
     ),
   });
 
@@ -394,12 +431,13 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           </button>
         ),
       },
-      ...(isJobTab
+      ...(showJobColumns
         ? [
             {
               key: "customerName",
               label: "Customer",
               sortable: false,
+              phoneHidden: true,
               render: (v, row) => {
                 const customerId = String(row.customerId || "").trim();
                 const name = String(v || "").trim() || "-";
@@ -446,7 +484,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         : []),
       {
         key: "vendorName",
-        label: "Vendor Name",
+        label: "Vendor",
         sortable: true,
         render: (v, row) => {
           const vendorId = String(row.vendorId || "").trim();
@@ -471,12 +509,14 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         key: "vendorPhone",
         label: "Phone",
         sortable: true,
+        phoneHidden: true,
         render: (v) => v || "-",
       },
       {
         key: "poCutDate",
         label: "PO Date",
         sortable: true,
+        phoneHidden: true,
         render: (v) => {
           const text = formatDate(v);
           return text && text !== "-" ? text : "-";
@@ -484,7 +524,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
       },
       {
         key: "dueDate",
-        label: "Due Date",
+        label: "Due",
         sortable: true,
         render: (v) => {
           const text = formatDate(v);
@@ -510,7 +550,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
       },
       {
         key: "paymentStatus",
-        label: "Payment Status",
+        label: "Payment",
         sortable: true,
         render: (v) => {
           const raw = String(v || "").trim() || "-";
@@ -549,7 +589,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         ? [
             {
               key: "grandTotal",
-              label: "Grand Total",
+              label: "Total",
               sortable: true,
               align: "right",
               render: (v) => formatSimpleMoney(Number(v) || 0),
@@ -559,6 +599,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
               label: "Paid Amount",
               sortable: true,
               align: "right",
+              phoneHidden: true,
               render: (v) => formatSimpleMoney(Number(v) || 0),
             },
             {
@@ -566,12 +607,14 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
               label: "Unpaid Amount",
               sortable: true,
               align: "right",
+              phoneHidden: true,
               render: (v) => formatSimpleMoney(Number(v) || 0),
             },
             {
               key: "lastPaymentDate",
               label: "Last Payment Date",
               sortable: true,
+              phoneHidden: true,
               render: (v) => {
                 const text = formatDate(v);
                 return text && text !== "-" ? text : "-";
@@ -580,10 +623,66 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
           ]
         : []),
     ],
-    [canViewFinancials, formatDate, handleDelete, isJobTab, jobView, mergedSettings]
+    [canViewFinancials, formatDate, handleDelete, showJobColumns, jobView, mergedSettings]
   );
 
   const isCreate = modalMode === "create";
+
+  const emptyMessage =
+    totalCount === 0
+      ? searchQuery.trim()
+        ? isPhone
+          ? "No purchase orders match your search."
+          : `No ${isJobTab ? "job" : "shop"} purchase orders match your search.`
+        : paymentFilter
+          ? isPhone
+            ? `No ${paymentFilter.toLowerCase()} purchase orders.`
+            : `No ${paymentFilter.toLowerCase()} ${isJobTab ? "job" : "shop"} purchase orders.`
+          : isPhone
+            ? "No purchase orders yet. Click Add New to create one."
+            : isJobTab
+              ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
+              : "No shop purchase orders yet. Click Add New to create one."
+      : isPhone
+        ? "No purchase orders yet."
+        : `No ${isJobTab ? "job" : "shop"} purchase orders yet.`;
+
+  const poToolbar = (
+    <div className="simple-po-toolbar flex min-w-0 flex-nowrap items-center gap-1 md:gap-2">
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+        onClick={openCreate}
+      >
+        <FiPlus className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" aria-hidden />
+        Add New
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="inline-flex !h-7 !min-h-0 shrink-0 items-center gap-1 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:gap-1.5 md:!px-2.5 md:!text-sm"
+        onClick={() => {
+          setDueNotificationModalOpen(true);
+          void fetchDueNotifications(false);
+        }}
+        title="Purchase order expected delivery due notifications"
+      >
+        <FiBell className="h-3.5 w-3.5 shrink-0 text-secondary md:h-4 md:w-4" aria-hidden />
+        <span className="whitespace-nowrap">Due Alerts</span>
+        {dueNotificationData?.totalCount > 0 ? (
+          <Badge
+            variant={dueNotificationData?.overdueCount > 0 ? "danger" : "warning"}
+            className="ml-0.5 rounded-full px-1 py-0 text-[9px] font-bold md:px-1.5 md:text-[10px]"
+          >
+            {dueNotificationData.totalCount}
+          </Badge>
+        ) : null}
+      </Button>
+    </div>
+  );
 
   const listPanel = (
     <>
@@ -610,101 +709,111 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
       </div>
 
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-        <Table
-          columns={columns}
-          data={displayRows}
-          rowKey="id"
-          loading={loading}
-          searchable
-          onSearch={(q) => {
-            setPage(1);
-            setSearchQuery(q);
-          }}
-          searchPlaceholder={isJobTab ? "Search job purchase orders…" : "Search shop purchase orders…"}
-          sortState={tableSort}
-          onSort={(key, direction) => {
-            setPage(1);
-            setTableSort({ key, direction });
-          }}
-          onRefresh={reload}
-          columnSettingsKey={isJobTab ? "simple-purchase-orders-job" : "simple-purchase-orders-shop"}
-          toolbarBeforeSearch={
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
-                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-                Add New
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-9 !rounded-none px-2.5 inline-flex items-center gap-1.5"
-                onClick={() => {
-                  setDueNotificationModalOpen(true);
-                  void fetchDueNotifications(false);
-                }}
-                title="Purchase order expected delivery due notifications"
-              >
-                <FiBell className="h-4 w-4 shrink-0 text-secondary" aria-hidden />
-                <span>Due Alerts</span>
-                {dueNotificationData?.totalCount > 0 ? (
-                  <Badge
-                    variant={dueNotificationData?.overdueCount > 0 ? "danger" : "warning"}
-                    className="ml-0.5 rounded-full px-1.5 py-0 text-[10px] font-bold"
-                  >
-                    {dueNotificationData.totalCount}
-                  </Badge>
-                ) : null}
-              </Button>
-            </div>
-          }
-          emptyMessage={
-            totalCount === 0
-              ? searchQuery.trim()
-                ? `No ${isJobTab ? "job" : "shop"} purchase orders match your search.`
-                : paymentFilter
-                  ? `No ${paymentFilter.toLowerCase()} ${isJobTab ? "job" : "shop"} purchase orders.`
-                  : isJobTab
-                      ? "No job purchase orders yet. Create one from a service proposal, or click Add New."
-                      : "No shop purchase orders yet. Click Add New to create one."
-              : `No ${isJobTab ? "job" : "shop"} purchase orders yet.`
-          }
-          fillHeight
-          responsive
-          dense
-          textSize="xs"
-          stickyColumns
-          paginateClientSide={false}
-          pagination={{ page, pageSize, totalCount }}
-          onPageChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
-          }}
-        />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Table
+            columns={columns}
+            data={displayRows}
+            rowKey="id"
+            loading={loading}
+            searchable
+            onSearch={(q) => {
+              setPage(1);
+              setSearchQuery(q);
+            }}
+            searchPlaceholder={
+              isPhone
+                ? "Search purchase orders…"
+                : isJobTab
+                  ? "Search job purchase orders…"
+                  : "Search shop purchase orders…"
+            }
+            sortState={tableSort}
+            onSort={(key, direction) => {
+              setPage(1);
+              setTableSort({ key, direction });
+            }}
+            onRefresh={reload}
+            columnSettingsKey={
+              isPhone
+                ? "simple-purchase-orders-all"
+                : isJobTab
+                  ? "simple-purchase-orders-job"
+                  : "simple-purchase-orders-shop"
+            }
+            toolbarBeforeSearch={poToolbar}
+            emptyMessage={emptyMessage}
+            fillHeight
+            responsive
+            dense
+            textSize="xs"
+            stickyColumns
+            paginateClientSide={false}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+          />
+        </div>
       </div>
     </>
   );
 
+  const typeSwitchBtn =
+    "inline-flex h-7 min-w-0 flex-1 items-center justify-center border-0 px-2 text-[11px] font-bold leading-none tracking-wide transition-colors md:h-8 md:text-xs";
+
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
-      <Tabs
-        className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-        value={poTypeTab}
-        onChange={(id) => {
-          const next = id === SIMPLE_PO_TYPE_SHOP ? SIMPLE_PO_TYPE_SHOP : SIMPLE_PO_TYPE_JOB;
-          if (next === poTypeTab) return;
-          setPoTypeTab(next);
-        }}
-        animatePanel={false}
-        listClassName="mx-0 shrink-0 !rounded-none"
-        tabButtonClassName="!rounded-none"
-        panelClassName="flex min-h-0 flex-1 flex-col overflow-hidden pt-3"
-        ariaLabel="Purchase order type"
-        tabs={[
-          { id: SIMPLE_PO_TYPE_JOB, label: "Job PO", children: listPanel },
-          { id: SIMPLE_PO_TYPE_SHOP, label: "Shop PO", children: listPanel },
-        ]}
-      />
+      {!isPhone ? (
+        <div
+          className="mx-auto grid h-7 w-full max-w-[12.5rem] shrink-0 grid-cols-2 overflow-hidden border border-border bg-[hsl(var(--form-bg))] md:mx-0 md:h-8 md:max-w-[14rem]"
+          role="tablist"
+          aria-label="Purchase order type"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={isJobTab}
+            className={`${typeSwitchBtn} ${
+              isJobTab
+                ? "bg-primary text-white"
+                : "bg-transparent text-secondary hover:bg-primary/10 hover:text-primary"
+            }`}
+            onClick={() => {
+              if (poTypeTab === SIMPLE_PO_TYPE_JOB) return;
+              setPoTypeTab(SIMPLE_PO_TYPE_JOB);
+              setPage(1);
+            }}
+          >
+            Job PO
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!isJobTab}
+            className={`${typeSwitchBtn} border-l border-border ${
+              !isJobTab
+                ? "bg-primary text-white"
+                : "bg-transparent text-secondary hover:bg-primary/10 hover:text-primary"
+            }`}
+            onClick={() => {
+              if (poTypeTab === SIMPLE_PO_TYPE_SHOP) return;
+              setPoTypeTab(SIMPLE_PO_TYPE_SHOP);
+              setPage(1);
+            }}
+          >
+            Shop PO
+          </button>
+        </div>
+      ) : null}
+
+      <div
+        className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+          isPhone ? "pt-0" : "pt-2 md:pt-3"
+        }`}
+      >
+        {listPanel}
+      </div>
 
       <SimplePurchaseOrderFormModal
         open={modalOpen && (isCreate || !!editingPo)}

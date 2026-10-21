@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
+import { useIsPhone } from "@/hooks/use-media-query";
 import {
   FiAlertTriangle,
   FiCheckCircle,
@@ -58,7 +60,6 @@ import {
   isSimpleInvoiceRecord,
   RECORD_TYPE_RFQ,
   resolveRecordTypeOnSave,
-  PROPOSAL_TYPE_OPTIONS,
   proposalTypeLabel,
 } from "@/lib/simple-service-proposal-form";
 import { proposalTypeBadgeVariant } from "@/lib/proposal-types";
@@ -68,6 +69,7 @@ import {
   fetchSimpleServiceProposalsPage,
   saveSimpleServiceProposal,
 } from "@/lib/simple-portal-api";
+import { simpleServiceProposalFormHref } from "@/lib/simple-portal-tabs";
 import {
   INVOICE_FILTER_AMOUNT_RECEIVABLE,
   INVOICE_FILTER_TAX_COLLECTED,
@@ -177,6 +179,8 @@ export default function ServiceProposalsPanel({
   createNonce = 0,
 }) {
   const isInvoices = variant === SIMPLE_LIST_VARIANT_INVOICES;
+  const router = useRouter();
+  const isPhone = useIsPhone();
   const alert = useAlert();
   const confirm = useConfirm();
   const { canViewFinancials } = useFinancialAccess();
@@ -195,7 +199,6 @@ export default function ServiceProposalsPanel({
   const [customers, setCustomers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [statusFilter, setStatusFilter] = useState("");
-  const [proposalTypeFilter, setProposalTypeFilter] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [tableSort, setTableSort] = useState({ key: "date", direction: "desc" });
   const [page, setPage] = useState(1);
@@ -271,10 +274,22 @@ export default function ServiceProposalsPanel({
     [mergedSettings]
   );
 
+  const phoneFormHref = useCallback(
+    (id = "") => {
+      const base = simpleServiceProposalFormHref(id);
+      return isInvoices ? `${base}?from=invoices` : base;
+    },
+    [isInvoices]
+  );
+
   const openCreate = useCallback(() => {
+    if (isPhone) {
+      router.push(phoneFormHref("new"));
+      return;
+    }
     setEditingId(null);
     setModalOpen(true);
-  }, []);
+  }, [isPhone, phoneFormHref, router]);
 
   useEffect(() => {
     if (!createNonce || isInvoices) return;
@@ -296,7 +311,7 @@ export default function ServiceProposalsPanel({
           sortDir: tableSort?.direction || "desc",
           listKind: isInvoices ? "invoices" : "proposals",
           status: statusFilter,
-          proposalType: isInvoices ? "" : proposalTypeFilter,
+          proposalType: "",
         }),
         fetchAllPaginatedDashboardItems("/api/dashboard/customers"),
         fetchAllPaginatedDashboardItems("/api/dashboard/employees"),
@@ -348,7 +363,6 @@ export default function ServiceProposalsPanel({
     tableSort,
     isInvoices,
     statusFilter,
-    proposalTypeFilter,
     user,
   ]);
 
@@ -426,6 +440,10 @@ export default function ServiceProposalsPanel({
   }, [modalOpen, editingId, rows, page, pageSize, totalCount, isInvoices]);
 
   const openEdit = (row) => {
+    if (isPhone) {
+      router.push(phoneFormHref(row.id));
+      return;
+    }
     setEditingId(row.id);
     setModalOpen(true);
   };
@@ -835,7 +853,7 @@ export default function ServiceProposalsPanel({
   const currencySubtotalBadge = useCallback((title, amount) => {
     return (
       <span
-        className="flex w-full items-center justify-end rounded-none border border-primary/25 bg-primary/[0.1] px-2 py-2 text-sm font-bold leading-none tabular-nums text-primary dark:bg-primary/20"
+        className="ui-table-header-subtotal flex w-full items-center justify-end rounded-none border border-primary/25 bg-primary/[0.1] px-1 py-0.5 text-[10px] font-bold leading-none tabular-nums text-primary dark:bg-primary/20 md:px-2 md:py-2 md:text-sm"
         title={`${title} subtotal`}
       >
         {formatSimpleMoney(amount)}
@@ -845,6 +863,26 @@ export default function ServiceProposalsPanel({
 
   const columns = useMemo(
     () => [
+      {
+        key: "actions",
+        label: "",
+        sortable: false,
+        className: "w-10",
+        render: (_, row) => (
+          <button
+            type="button"
+            className="rounded p-0.5 text-danger hover:bg-danger/10"
+            title="Remove from list"
+            aria-label="Remove from list"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete(row);
+            }}
+          >
+            <FiX className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ),
+      },
       {
         key: "quote",
         label: isInvoices ? "Invoice#" : "Quote/Job",
@@ -866,6 +904,7 @@ export default function ServiceProposalsPanel({
               label: "Job Type",
               sortable: true,
               align: "center",
+              phoneHidden: true,
               render: (_, row) => resolveMachineType(row?.motorPower, "AC"),
             },
           ]
@@ -882,7 +921,7 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "companyName",
-        label: "Company Name",
+        label: "Company",
         sortable: true,
         render: (v, row) => {
           const customerId = String(row.customerId || "").trim();
@@ -903,12 +942,15 @@ export default function ServiceProposalsPanel({
           );
         },
       },
-      ...(!isInvoices ? [{ key: "phone", label: "Phone", sortable: true }] : []),
-      { key: "email", label: "Email", sortable: true },
+      ...(!isInvoices
+        ? [{ key: "phone", label: "Phone", sortable: true, phoneHidden: true }]
+        : []),
+      { key: "email", label: "Email", sortable: true, phoneHidden: true },
       {
         key: "quotedBy",
         label: "Quoted By",
         sortable: true,
+        phoneHidden: true,
         render: (v, row) =>
           resolveEmployeeDisplayName(employees, v || row?.preparedBy) || "—",
       },
@@ -918,6 +960,7 @@ export default function ServiceProposalsPanel({
               key: "proposalType",
               label: "Type",
               sortable: true,
+              phoneHidden: true,
               render: (v) => (
                 <Badge
                   variant={proposalTypeBadgeVariant(v)}
@@ -929,7 +972,7 @@ export default function ServiceProposalsPanel({
             },
           ]
         : []),
-      { key: "quoteType", label: "Lead source", sortable: true },
+      { key: "quoteType", label: "Lead source", sortable: true, phoneHidden: true },
       ...(canViewFinancials
         ? [
             {
@@ -949,6 +992,7 @@ export default function ServiceProposalsPanel({
               ),
               sortable: true,
               align: "right",
+              phoneHidden: true,
               render: (v, row) =>
                 formatSimpleMoney(
                   Number(v) || proposalLogisticsChargesTotal(row) || 0
@@ -960,6 +1004,7 @@ export default function ServiceProposalsPanel({
               headerSubtotal: currencySubtotalBadge("Tax", currencySubtotals.taxCollected),
               sortable: true,
               align: "right",
+              phoneHidden: true,
               render: (v) => formatSimpleMoney(Number(v) || 0),
             },
           ]
@@ -968,7 +1013,7 @@ export default function ServiceProposalsPanel({
         ? [
             {
               key: "paidAmount",
-              label: "Paid Amount",
+              label: "Paid",
               sortable: false,
               align: "right",
               render: (_, row) =>
@@ -981,6 +1026,7 @@ export default function ServiceProposalsPanel({
         label: isInvoices ? "Proposal Submit Date" : "Submit date",
         sortable: true,
         align: "right",
+        phoneHidden: true,
         headerWrap: isInvoices,
         minWidth: isInvoices ? 88 : undefined,
         className: isInvoices ? "max-w-[6.5rem]" : undefined,
@@ -1005,6 +1051,7 @@ export default function ServiceProposalsPanel({
         label: isInvoices ? "Proposal Accept Date" : "Accept Date",
         sortable: true,
         align: "right",
+        phoneHidden: true,
         headerWrap: isInvoices,
         minWidth: isInvoices ? 88 : undefined,
         className: isInvoices ? "max-w-[6.5rem]" : undefined,
@@ -1031,6 +1078,7 @@ export default function ServiceProposalsPanel({
               label: "Invoice Sent Date",
               sortable: true,
               align: "right",
+              phoneHidden: true,
               headerWrap: true,
               minWidth: 88,
               className: "max-w-[6.5rem]",
@@ -1054,6 +1102,7 @@ export default function ServiceProposalsPanel({
               key: "paymentDates",
               label: "Payment Dates",
               sortable: false,
+              phoneHidden: true,
               headerWrap: true,
               minWidth: 120,
               className: "max-w-[14rem]",
@@ -1089,6 +1138,7 @@ export default function ServiceProposalsPanel({
               label: "Payment Record",
               sortable: true,
               align: "right",
+              phoneHidden: true,
               headerWrap: true,
               minWidth: 88,
               className: "max-w-[6.5rem]",
@@ -1146,14 +1196,14 @@ export default function ServiceProposalsPanel({
         key: "status",
         label: isInvoices ? "Invoice Status" : "Proposal Status",
         sortable: true,
-        className: "min-w-[10rem]",
+        className: "min-w-[7.5rem] md:min-w-[10rem]",
         getCellStyle: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).style,
         getCellClassName: (_, row) =>
           proposalStatusCellChrome(row, mergedSettings, quoteOpts, invoiceOpts).className,
         render: (v, row) => {
           return (
-            <div className="min-w-[8rem] max-w-[14rem]" onClick={(e) => e.stopPropagation()}>
+            <div className="min-w-[6.5rem] max-w-[12rem] md:min-w-[8rem] md:max-w-[14rem]" onClick={(e) => e.stopPropagation()}>
               <SimpleSelect
                 variant="pill"
                 className="w-full"
@@ -1175,9 +1225,9 @@ export default function ServiceProposalsPanel({
       },
       {
         key: "jobStatus",
-        label: "Status",
+        label: "Job Status",
         sortable: true,
-        className: "min-w-[9rem]",
+        className: "min-w-[7rem] md:min-w-[9rem]",
         getCellStyle: (_, row) =>
           jobStatusCellChrome(row, jobStatusOptions, mergedSettings.workOrderStatusTileColors)
             .style,
@@ -1187,7 +1237,7 @@ export default function ServiceProposalsPanel({
         render: (v, row) => {
           const current = String(v || "").trim();
           return (
-            <div className="min-w-[7rem] max-w-[12rem]" onClick={(e) => e.stopPropagation()}>
+            <div className="min-w-[6rem] max-w-[10rem] md:min-w-[7rem] md:max-w-[12rem]" onClick={(e) => e.stopPropagation()}>
               <SimpleSelect
                 variant="pill"
                 className="w-full"
@@ -1197,7 +1247,7 @@ export default function ServiceProposalsPanel({
                 triggerClassName="w-full rounded-none border-0 bg-transparent shadow-none ring-0"
                 placeholder="Select…"
                 searchable
-                aria-label="Status"
+                aria-label="Job Status"
               />
             </div>
           );
@@ -1207,6 +1257,7 @@ export default function ServiceProposalsPanel({
         key: "notes",
         label: "Notes",
         sortable: false,
+        phoneHidden: true,
         className: "min-w-[12rem] max-w-[20rem]",
         render: (v, row) => {
           const text = String(v || "").trim();
@@ -1224,26 +1275,6 @@ export default function ServiceProposalsPanel({
             </button>
           );
         },
-      },
-      {
-        key: "actions",
-        label: "",
-        sortable: false,
-        className: "w-12",
-        render: (_, row) => (
-          <button
-            type="button"
-            className="rounded p-0.5 text-danger hover:bg-danger/10"
-            title="Remove from list"
-            aria-label="Remove from list"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete(row);
-            }}
-          >
-            <FiX className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ),
       },
     ],
     [
@@ -1291,6 +1322,25 @@ export default function ServiceProposalsPanel({
     />
   );
 
+  const emptyMessage =
+    totalCount === 0
+      ? searchQuery.trim()
+        ? "No records match your search."
+        : statusFilter === FILTER_TAX_COLLECTED
+          ? "No fully paid invoices with tax collected."
+          : statusFilter === FILTER_TAX_TO_COLLECT
+            ? "No open invoices with tax still to collect."
+            : statusFilter === FILTER_AMOUNT_RECEIVABLE
+              ? "No open invoices with an amount receivable."
+              : statusFilter
+                ? "No records with this status."
+                : isInvoices
+                  ? "No invoices yet. Convert a proposal to an invoice status to see it here."
+                  : "No service proposals yet. Click Add New to create one."
+      : isInvoices
+        ? "No invoices yet."
+        : "No service proposals yet. Click Add New to create one.";
+
   return (
     <div className={SIMPLE_SCREEN_PANEL_CLASS}>
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
@@ -1298,115 +1348,66 @@ export default function ServiceProposalsPanel({
       </div>
 
       <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-        <Table
-          columns={columns}
-          data={displayRows}
-          rowKey="id"
-          loading={!ready}
-          searchable
-          onSearch={(q) => {
-            setPage(1);
-            setSearchQuery(q);
-          }}
-          searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
-          sortState={tableSort}
-          onSort={(key, direction) => {
-            setPage(1);
-            setTableSort({ key, direction });
-          }}
-          onRefresh={reload}
-          columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
-          toolbarBeforeRefresh={
-            <>
-              {!isInvoices ? (
-                <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Proposal type filter">
-                  <button
-                    type="button"
-                    className={`inline-flex h-9 shrink-0 items-center border px-2.5 text-xs font-semibold ${
-                      !proposalTypeFilter
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border bg-card text-title hover:border-primary/40"
-                    }`}
-                    aria-pressed={!proposalTypeFilter}
-                    onClick={() => {
-                      setPage(1);
-                      setProposalTypeFilter("");
-                    }}
-                  >
-                    All types
-                  </button>
-                  {PROPOSAL_TYPE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      className={`inline-flex h-9 shrink-0 items-center border px-2.5 text-xs font-semibold ${
-                        proposalTypeFilter === opt.value
-                          ? "border-primary bg-primary/15 text-primary"
-                          : "border-border bg-card text-title hover:border-primary/40"
-                      }`}
-                      aria-pressed={proposalTypeFilter === opt.value}
-                      onClick={() => {
-                        setPage(1);
-                        setProposalTypeFilter(opt.value);
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {isInvoices && canViewFinancials ? (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <Table
+            columns={columns}
+            data={displayRows}
+            rowKey="id"
+            loading={!ready}
+            searchable
+            onSearch={(q) => {
+              setPage(1);
+              setSearchQuery(q);
+            }}
+            searchPlaceholder={isInvoices ? "Search invoices…" : "Search proposals…"}
+            sortState={tableSort}
+            onSort={(key, direction) => {
+              setPage(1);
+              setTableSort({ key, direction });
+            }}
+            onRefresh={reload}
+            columnSettingsKey={isInvoices ? "simple-invoices" : "simple-service-proposals"}
+            toolbarBeforeRefresh={
+              isInvoices && canViewFinancials ? (
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="h-9 !rounded-none px-2.5"
+                  className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
                   onClick={() => setTaxesModalOpen(true)}
                 >
                   Taxes
                 </Button>
-              ) : null}
-            </>
-          }
-          toolbarBeforeSearch={
-            isInvoices ? null : (
-              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
-                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-                Add New
-              </Button>
-            )
-          }
-          emptyMessage={
-            totalCount === 0
-              ? searchQuery.trim()
-                ? "No records match your search."
-                : statusFilter === FILTER_TAX_COLLECTED
-                  ? "No fully paid invoices with tax collected."
-                  : statusFilter === FILTER_TAX_TO_COLLECT
-                    ? "No open invoices with tax still to collect."
-                    : statusFilter === FILTER_AMOUNT_RECEIVABLE
-                      ? "No open invoices with an amount receivable."
-                      : statusFilter
-                        ? "No records with this status."
-                        : isInvoices
-                            ? "No invoices yet. Convert a proposal to an invoice status to see it here."
-                            : "No service proposals yet. Click Add New to create one."
-              : isInvoices
-                ? "No invoices yet."
-                : "No service proposals yet. Click Add New to create one."
-          }
-          fillHeight
-          responsive
-          dense
-          textSize="xs"
-          stickyColumns
-          paginateClientSide={false}
-          pagination={{ page, pageSize, totalCount }}
-          onPageChange={(nextPage, nextPageSize) => {
-            setPage(nextPage);
-            setPageSize(nextPageSize);
-          }}
-        />
+              ) : null
+            }
+            toolbarBeforeSearch={
+              isInvoices ? null : (
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="sm"
+                  className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+                  onClick={openCreate}
+                >
+                  <FiPlus className="h-3.5 w-3.5 shrink-0 md:h-4 md:w-4" aria-hidden />
+                  Add New
+                </Button>
+              )
+            }
+            emptyMessage={emptyMessage}
+            fillHeight
+            responsive
+            dense
+            textSize="xs"
+            stickyColumns
+            paginateClientSide={false}
+            pagination={{ page, pageSize, totalCount }}
+            onPageChange={(nextPage, nextPageSize) => {
+              setPage(nextPage);
+              setPageSize(nextPageSize);
+            }}
+          />
+        </div>
       </div>
 
       <SimpleInvoicePaymentModal

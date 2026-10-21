@@ -35,6 +35,8 @@ import {
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
+import SimplePhoneListCard from "@/components/simple/simple-phone-list-card";
+import SimplePhoneRecordList from "@/components/simple/simple-phone-record-list";
 import TrackRfqsPanel from "./track-rfqs-panel";
 
 const CUSTOMER_FORM_ID = "simple-customers-panel-form";
@@ -831,78 +833,185 @@ export default function CustomersPanel({ createNonce = 0 }) {
             </div>
           ) : (
             <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-              <Table
-                columns={columns}
-                data={displayRows}
-                rowKey="rowKey"
+              <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+                <Table
+                  columns={columns}
+                  data={displayRows}
+                  rowKey="rowKey"
+                  loading={loading}
+                  searchable
+                  onSearch={(q) => {
+                    setPage(1);
+                    setSearchQuery(q);
+                  }}
+                  searchPlaceholder="Search company, contact, email…"
+                  sortState={tableSort}
+                  onSort={(key, direction) => {
+                    setPage(1);
+                    setTableSort({ key, direction });
+                  }}
+                  onRefresh={() => loadAll({ showError: true })}
+                  columnSettingsKey="simple-customers-base-leads"
+                  emptyMessage={emptyMessage}
+                  fillHeight
+                  responsive
+                  dense
+                  textSize="xs"
+                  stickyColumns
+                  paginateClientSide={false}
+                  pagination={{ page, pageSize, totalCount }}
+                  onPageChange={(nextPage, nextPageSize) => {
+                    setPage(nextPage);
+                    setPageSize(nextPageSize);
+                  }}
+                />
+              </div>
+              <SimplePhoneRecordList
+                rows={displayRows}
                 loading={loading}
-                searchable
+                emptyMessage={emptyMessage}
+                searchPlaceholder="Search company, contact, email…"
+                searchQuery={searchQuery}
                 onSearch={(q) => {
                   setPage(1);
                   setSearchQuery(q);
                 }}
-                searchPlaceholder="Search company, contact, email…"
-                sortState={tableSort}
-                onSort={(key, direction) => {
-                  setPage(1);
-                  setTableSort({ key, direction });
-                }}
                 onRefresh={() => loadAll({ showError: true })}
-                columnSettingsKey="simple-customers-base-leads"
-                emptyMessage={emptyMessage}
-                fillHeight
-                responsive
-                dense
-                textSize="xs"
-                stickyColumns
-                paginateClientSide={false}
                 pagination={{ page, pageSize, totalCount }}
                 onPageChange={(nextPage, nextPageSize) => {
                   setPage(nextPage);
                   setPageSize(nextPageSize);
                 }}
+                rowKey="rowKey"
+                renderCard={(row) => (
+                  <SimplePhoneListCard
+                    title={row.companyName || "—"}
+                    subtitle={row.primaryContactName || row.email || "—"}
+                    badge={
+                      <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                        Lead
+                      </Badge>
+                    }
+                    meta={
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                        {row.phone ? <span>{row.phone}</span> : null}
+                        {row.city ? <span>{row.city}</span> : null}
+                      </div>
+                    }
+                    actions={
+                      <button
+                        type="button"
+                        className="inline-flex h-8 w-8 items-center justify-center text-danger hover:bg-danger/10"
+                        title="Delete lead"
+                        aria-label="Delete lead"
+                        onClick={() => void handleDelete(row)}
+                      >
+                        <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                      </button>
+                    }
+                    onClick={() => openRow(row)}
+                  />
+                )}
               />
             </div>
           )}
         </div>
       ) : (
         <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-          <Table
-            columns={columns}
-            data={displayRows}
-            rowKey="rowKey"
+          <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+            <Table
+              columns={columns}
+              data={displayRows}
+              rowKey="rowKey"
+              loading={loading}
+              searchable
+              onSearch={(q) => {
+                setPage(1);
+                setSearchQuery(q);
+              }}
+              searchPlaceholder="Search company, contact, email, type…"
+              sortState={tableSort}
+              onSort={(key, direction) => {
+                setPage(1);
+                setTableSort({ key, direction });
+              }}
+              onRefresh={() => loadAll({ showError: true })}
+              columnSettingsKey="simple-customers"
+              toolbarBeforeSearch={
+                <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+                  <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                  Add New
+                </Button>
+              }
+              emptyMessage={emptyMessage}
+              fillHeight
+              responsive
+              dense
+              textSize="xs"
+              stickyColumns
+              paginateClientSide={false}
+              pagination={{ page, pageSize, totalCount }}
+              onPageChange={(nextPage, nextPageSize) => {
+                setPage(nextPage);
+                setPageSize(nextPageSize);
+              }}
+            />
+          </div>
+          <SimplePhoneRecordList
+            rows={displayRows}
             loading={loading}
-            searchable
+            emptyMessage={emptyMessage}
+            searchPlaceholder="Search company, contact, email, type…"
+            searchQuery={searchQuery}
             onSearch={(q) => {
               setPage(1);
               setSearchQuery(q);
             }}
-            searchPlaceholder="Search company, contact, email, type…"
-            sortState={tableSort}
-            onSort={(key, direction) => {
-              setPage(1);
-              setTableSort({ key, direction });
-            }}
             onRefresh={() => loadAll({ showError: true })}
-            columnSettingsKey="simple-customers"
-            toolbarBeforeSearch={
-              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
-                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-                Add New
-              </Button>
-            }
-            emptyMessage={emptyMessage}
-            fillHeight
-            responsive
-            dense
-            textSize="xs"
-            stickyColumns
-            paginateClientSide={false}
             pagination={{ page, pageSize, totalCount }}
             onPageChange={(nextPage, nextPageSize) => {
               setPage(nextPage);
               setPageSize(nextPageSize);
             }}
+            rowKey="rowKey"
+            toolbar={
+              <Button type="button" variant="primary" size="sm" className="h-9 !rounded-none px-2.5" onClick={openCreate}>
+                <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+                Add New
+              </Button>
+            }
+            renderCard={(row) => (
+              <SimplePhoneListCard
+                title={row.companyName || "—"}
+                subtitle={row.primaryContactName || row.email || "—"}
+                badge={
+                  row.customerType ? (
+                    <Badge variant="default" className="rounded-full px-2.5 py-0.5 text-xs">
+                      {row.customerType}
+                    </Badge>
+                  ) : null
+                }
+                meta={
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                    {row.customerNumber ? <span>#{row.customerNumber}</span> : null}
+                    {row.phone ? <span>{row.phone}</span> : null}
+                    {row.city ? <span>{row.city}</span> : null}
+                  </div>
+                }
+                actions={
+                  <button
+                    type="button"
+                    className="inline-flex h-8 w-8 items-center justify-center text-danger hover:bg-danger/10"
+                    title="Delete"
+                    aria-label="Delete"
+                    onClick={() => void handleDelete(row)}
+                  >
+                    <FiX className="h-4 w-4 shrink-0" aria-hidden />
+                  </button>
+                }
+                onClick={() => openRow(row)}
+              />
+            )}
           />
         </div>
       )}

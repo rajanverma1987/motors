@@ -43,11 +43,14 @@ import {
   SIMPLE_TAB_SERVICE_PROPOSALS,
   SIMPLE_TAB_TRACK_RFQS,
 } from "@/lib/simple-portal-tabs";
+import { SIMPLE_PHONE_DRAWER_TAB_META } from "@/lib/simple-phone-nav";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 import { simpleSettingsHref } from "@/lib/simple-settings-nav";
 import SimpleJobViewProvider from "@/components/simple/simple-job-view-provider";
 import SimpleJobBoardSection from "@/components/simple/settings/simple-job-board-section";
 import { useUserSettings } from "@/contexts/user-settings-context";
+import { useSimplePhoneChrome } from "@/components/simple/simple-phone-chrome-context";
+import SimplePhoneBottomNav from "@/components/simple/simple-phone-bottom-nav";
 
 /** Square UI — only used on Simple `/dashboards`. */
 const DASHBOARDS_SQUARE_UI_CLASS = [
@@ -59,7 +62,7 @@ const DASHBOARDS_SQUARE_UI_CLASS = [
   "[&_.status-filter-pill_span]:!rounded-none",
 ].join(" ");
 const DASHBOARDS_TAB_LIST_CLASS =
-  "simple-hub-tablist shrink-0 !flex-nowrap !gap-[2px] !overflow-x-auto !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent";
+  "simple-hub-tablist shrink-0 !flex-nowrap !gap-[2px] !overflow-x-auto !rounded-none !border-0 !bg-transparent !p-0 dark:!bg-transparent max-md:!hidden";
 const DASHBOARDS_TAB_BUTTON_CLASS =
   "!box-border !flex !h-[4.75rem] !min-w-0 !flex-1 !flex-col !items-center !justify-center !rounded-none !px-1 !py-2 sm:!h-[5.25rem]";
 
@@ -79,6 +82,7 @@ export default function DashboardsPageClient() {
   const searchParams = useSearchParams();
   const { user, isOwner, canViewFinancials, isSimulatedFinancialRestriction } = useAuth();
   const { settings, loading: settingsLoading } = useUserSettings();
+  const { setHubChrome, clearHubChrome } = useSimplePhoneChrome();
   const effectiveIsOwner =
     isOwner ??
     Boolean(user && !(user?.isEmployee || user?.authType === "employee" || Boolean(user?.employeeId)));
@@ -123,6 +127,34 @@ export default function DashboardsPageClient() {
     },
     [activeTab, calcOnly, router, searchParams]
   );
+
+  const drawerItems = useMemo(() => {
+    if (calcOnly) return [];
+    return SIMPLE_PHONE_DRAWER_TAB_META.filter((item) => {
+      if (item.id === SIMPLE_TAB_JOB_BOARD) return showJobBoard;
+      if (item.id === SIMPLE_TAB_INVOICES) return canViewFinancials;
+      return true;
+    });
+  }, [calcOnly, canViewFinancials, showJobBoard]);
+
+  useEffect(() => {
+    if (calcOnly) {
+      setHubChrome({
+        showBottomNav: false,
+        activeTab,
+        drawerItems: [],
+        onSelectTab: handleTabChange,
+      });
+    } else {
+      setHubChrome({
+        showBottomNav: true,
+        activeTab,
+        drawerItems,
+        onSelectTab: handleTabChange,
+      });
+    }
+    return () => clearHubChrome();
+  }, [calcOnly, activeTab, drawerItems, handleTabChange, setHubChrome, clearHubChrome]);
 
   useEffect(() => {
     if (!calcOnly) return;
@@ -218,12 +250,14 @@ export default function DashboardsPageClient() {
   return (
     <SimpleJobViewProvider>
     <div
-      className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS}`}
+      className={`${SIMPLE_PORTAL_ROOT_CLASS} flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden ${DASHBOARDS_SQUARE_UI_CLASS} ${
+        calcOnly ? "" : "max-md:pb-[calc(3.75rem+env(safe-area-inset-bottom))]"
+      }`}
     >
       {isSimulatedFinancialRestriction ? (
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-warning/40 bg-warning/10 px-4 py-2 text-xs text-title">
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2 w-2 rounded-full bg-warning" aria-hidden />
+        <div className="flex shrink-0 flex-col gap-2 border-b border-warning/40 bg-warning/10 px-3 py-2 text-xs text-title sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-4">
+          <div className="flex items-start gap-2 sm:items-center">
+            <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full bg-warning sm:mt-0" aria-hidden />
             <span>
               <strong>Restricted financial simulation active:</strong> Costs, pricing, margins,
               invoices, and AP / AR are hidden as viewed by restricted floor staff.
@@ -233,7 +267,7 @@ export default function DashboardsPageClient() {
             <button
               type="button"
               onClick={() => router.push("/dashboards/settings?section=access-controls")}
-              className="shrink-0 font-bold text-primary hover:underline"
+              className="shrink-0 self-start font-bold text-primary hover:underline sm:self-auto"
             >
               Manage in Settings
             </button>
@@ -252,6 +286,9 @@ export default function DashboardsPageClient() {
         keepMounted
         animatePanel={false}
       />
+      {!calcOnly ? (
+        <SimplePhoneBottomNav activeTab={activeTab} onSelectTab={handleTabChange} />
+      ) : null}
     </div>
     </SimpleJobViewProvider>
   );

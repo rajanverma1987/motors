@@ -11,6 +11,9 @@ import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { usePreferredTablePageSize } from "@/contexts/user-settings-context";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
 import { SIMPLE_SCREEN_TABLE_WRAP_CLASS } from "@/lib/simple-screen-ui";
+import SimplePhoneListCard from "@/components/simple/simple-phone-list-card";
+import SimplePhoneRecordList from "@/components/simple/simple-phone-record-list";
+import Badge from "@/components/ui/badge";
 
 const ADJUST_FORM_ID = "simple-inventory-adjust-form";
 const ISSUE_FORM_ID = "simple-inventory-issue-form";
@@ -540,95 +543,180 @@ export default function InventoryPanel() {
 
   const hasSelection = selectedIds.length > 0;
 
+  const emptyMessage =
+    totalCount === 0
+      ? searchQuery.trim()
+        ? "No parts match your search."
+        : "No parts yet. Click Add New, or receive stock on a vendor PO."
+      : "No parts yet. Click Add New, or receive stock on a vendor PO.";
+
+  const inventoryBulkToolbar = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={TOOLBAR_BTN}
+        disabled={!hasSelection}
+        onClick={() => void openIssue()}
+      >
+        <FiTool className="h-4 w-4 shrink-0" aria-hidden />
+        Issue
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={TOOLBAR_BTN}
+        disabled={!hasSelection}
+        onClick={() => void openReturn()}
+      >
+        <FiRotateCcw className="h-4 w-4 shrink-0" aria-hidden />
+        Return
+      </Button>
+      <Button
+        type="button"
+        variant="danger"
+        size="sm"
+        className={TOOLBAR_BTN}
+        disabled={!hasSelection}
+        onClick={() => void handleDeleteSelected()}
+      >
+        <FiX className="h-4 w-4 shrink-0" aria-hidden />
+        Delete
+      </Button>
+    </div>
+  );
+
+  const toggleSelected = (id) => {
+    const key = String(id);
+    setSelectedIds((prev) => {
+      const set = new Set((prev || []).map(String));
+      if (set.has(key)) set.delete(key);
+      else set.add(key);
+      return Array.from(set);
+    });
+  };
+
   return (
     <div className={SIMPLE_SCREEN_TABLE_WRAP_CLASS}>
-      <Table
-        columns={columns}
-        data={displayRows}
-        rowKey="id"
+      <div className="hidden min-h-0 min-w-0 flex-1 flex-col md:flex">
+        <Table
+          columns={columns}
+          data={displayRows}
+          rowKey="id"
+          loading={loading}
+          searchable
+          selectable
+          selectedRowIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+          onSearch={(q) => {
+            setPage(1);
+            setSearchQuery(q);
+          }}
+          searchPlaceholder="Search part, SKU, UOM, location, qty…"
+          sortState={tableSort}
+          onSort={(key, direction) => {
+            setPage(1);
+            setTableSort({ key, direction });
+          }}
+          onRefresh={load}
+          columnSettingsKey="simple-inventory"
+          toolbarBeforeSearch={
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="h-9 !rounded-none px-2.5"
+              onClick={openCreate}
+            >
+              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+              Add New
+            </Button>
+          }
+          toolbarAfterRefresh={inventoryBulkToolbar}
+          emptyMessage={emptyMessage}
+          fillHeight
+          responsive
+          dense
+          textSize="xs"
+          stickyColumns
+          paginateClientSide={false}
+          pagination={{ page, pageSize, totalCount }}
+          onPageChange={(nextPage, nextPageSize) => {
+            setPage(nextPage);
+            setPageSize(nextPageSize);
+          }}
+        />
+      </div>
+      <SimplePhoneRecordList
+        rows={displayRows}
         loading={loading}
-        searchable
-        selectable
-        selectedRowIds={selectedIds}
-        onSelectionChange={setSelectedIds}
+        emptyMessage={emptyMessage}
+        searchPlaceholder="Search part, SKU, UOM, location, qty…"
+        searchQuery={searchQuery}
         onSearch={(q) => {
           setPage(1);
           setSearchQuery(q);
         }}
-        searchPlaceholder="Search part, SKU, UOM, location, qty…"
-        sortState={tableSort}
-        onSort={(key, direction) => {
-          setPage(1);
-          setTableSort({ key, direction });
-        }}
         onRefresh={load}
-        columnSettingsKey="simple-inventory"
-        toolbarBeforeSearch={
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            className="h-9 !rounded-none px-2.5"
-            onClick={openCreate}
-          >
-            <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
-            Add New
-          </Button>
-        }
-        toolbarAfterRefresh={
-          <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={TOOLBAR_BTN}
-              disabled={!hasSelection}
-              onClick={() => void openIssue()}
-            >
-              <FiTool className="h-4 w-4 shrink-0" aria-hidden />
-              Issue inventory
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className={TOOLBAR_BTN}
-              disabled={!hasSelection}
-              onClick={() => void openReturn()}
-            >
-              <FiRotateCcw className="h-4 w-4 shrink-0" aria-hidden />
-              Return
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              size="sm"
-              className={TOOLBAR_BTN}
-              disabled={!hasSelection}
-              onClick={() => void handleDeleteSelected()}
-            >
-              <FiX className="h-4 w-4 shrink-0" aria-hidden />
-              Delete
-            </Button>
-          </div>
-        }
-        emptyMessage={
-          totalCount === 0
-            ? searchQuery.trim()
-              ? "No parts match your search."
-              : "No parts yet. Click Add New, or receive stock on a vendor PO."
-            : "No parts yet. Click Add New, or receive stock on a vendor PO."
-        }
-        fillHeight
-        responsive
-        dense
-        textSize="xs"
-        stickyColumns
-        paginateClientSide={false}
         pagination={{ page, pageSize, totalCount }}
         onPageChange={(nextPage, nextPageSize) => {
           setPage(nextPage);
           setPageSize(nextPageSize);
+        }}
+        toolbar={
+          <>
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              className="h-9 !rounded-none px-2.5"
+              onClick={openCreate}
+            >
+              <FiPlus className="h-4 w-4 shrink-0" aria-hidden />
+              Add New
+            </Button>
+            {inventoryBulkToolbar}
+          </>
+        }
+        renderCard={(row) => {
+          const id = String(row.id);
+          const selected = selectedIds.map(String).includes(id);
+          const avail = Number(row.available) || 0;
+          const low = row.threshold > 0 && avail <= row.threshold;
+          return (
+            <SimplePhoneListCard
+              title={row.name || "Part"}
+              subtitle={row.sku || row.uom || "—"}
+              badge={
+                low ? (
+                  <Badge variant="warning" className="rounded-full px-2.5 py-0.5 text-xs">
+                    Low
+                  </Badge>
+                ) : null
+              }
+              meta={
+                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                  <span className={low ? "font-semibold text-warning" : "font-semibold text-title"}>
+                    Avail {avail}
+                  </span>
+                  {row.location ? <span>{row.location}</span> : null}
+                  {row.onHand != null ? <span>On hand {row.onHand}</span> : null}
+                </div>
+              }
+              actions={
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-primary"
+                  checked={selected}
+                  onChange={() => toggleSelected(row.id)}
+                  aria-label={`Select ${row.name || "part"}`}
+                />
+              }
+              onClick={() => openEdit(row)}
+            />
+          );
         }}
       />
 

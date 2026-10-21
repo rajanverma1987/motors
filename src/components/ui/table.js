@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
-import { FiEdit2, FiX, FiRotateCw, FiDownload, FiSearch } from "react-icons/fi";
+import {
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiEdit2,
+  FiX,
+  FiRotateCw,
+  FiDownload,
+  FiSearch,
+} from "react-icons/fi";
 import { FaGripLinesVertical } from "react-icons/fa6";
 import Button from "./button";
 import Checkbox from "./checkbox";
@@ -13,6 +22,7 @@ import {
   SIMPLE_HUB_STICKY_COLUMN_COUNT,
   SIMPLE_HUB_STICKY_COLUMNS_MQ,
 } from "@/lib/simple-screen-ui";
+import { useIsPhone } from "@/hooks/use-media-query";
 
 /** Column keys that hold calendar dates (not timestamps) when no custom render is set. */
 const TABLE_DATE_COLUMN_KEYS = new Set([
@@ -212,9 +222,12 @@ export default function Table({
   /** Media query for when sticky columns apply (default: tablet / ≤1400px). Pass "" to always freeze. */
   stickyColumnsMediaQuery = SIMPLE_HUB_STICKY_COLUMNS_MQ,
 }) {
+  const isPhone = useIsPhone();
   const stickyColumnCount =
     stickyColumns === true
-      ? SIMPLE_HUB_STICKY_COLUMN_COUNT
+      ? isPhone
+        ? Math.min(2, SIMPLE_HUB_STICKY_COLUMN_COUNT)
+        : SIMPLE_HUB_STICKY_COLUMN_COUNT
       : typeof stickyColumns === "number" && stickyColumns > 0
         ? Math.floor(stickyColumns)
         : 0;
@@ -494,7 +507,11 @@ export default function Table({
       ]
     : [];
 
-  const visibleDataColumns = columns.filter((c) => !effectiveHiddenColumnKeys.includes(c.key));
+  const visibleDataColumns = columns.filter((c) => {
+    if (effectiveHiddenColumnKeys.includes(c.key)) return false;
+    if (isPhone && c.phoneHidden) return false;
+    return true;
+  });
   const displayColumns = [...selectColumn, ...visibleDataColumns, ...actionsColumn];
 
   const tableRef = useRef(null);
@@ -808,7 +825,10 @@ export default function Table({
       {colgroup}
       <thead className="border-b-2 border-border bg-card outline-none">
         {hasHeaderSubtotals ? (
-          <tr ref={headerSubtotalRowRef} className="border-b border-border bg-[hsl(var(--form-bg))]">
+          <tr
+            ref={headerSubtotalRowRef}
+            className="ui-table-subtotal-row border-b border-border bg-[hsl(var(--form-bg))]"
+          >
             {displayColumns.map((col, i) => {
               const style = getEffectiveColStyle(col);
               const stickyCls = stickyColClassName(i);
@@ -822,7 +842,7 @@ export default function Table({
                 <th
                   key={`subtotal-${col.key ?? i}`}
                   scope="col"
-                  className={`p-1 ${headerText} leading-none text-title outline-none whitespace-nowrap ${cellBorderClass}${stickyCls ? ` ${stickyCls}` : ""} transition-colors ${cellHoverClass(-1, i)}`}
+                  className={`${isPhone ? "p-0.5" : "p-1"} ${headerText} leading-none text-title outline-none whitespace-nowrap ${cellBorderClass}${stickyCls ? ` ${stickyCls}` : ""} transition-colors ${cellHoverClass(-1, i)}`}
                   style={
                     effectiveStickyHeader
                       ? thStyle
@@ -833,7 +853,14 @@ export default function Table({
                   }
                   onMouseEnter={() => setCellHover({ row: -1, col: i })}
                 >
-                  {hasValue ? col.headerSubtotal : <span className="block min-h-[2.25rem]" aria-hidden />}
+                  {hasValue ? (
+                    col.headerSubtotal
+                  ) : (
+                    <span
+                      className={`block ${isPhone ? "min-h-[1.15rem]" : "min-h-[2.25rem]"}`}
+                      aria-hidden
+                    />
+                  )}
                 </th>
               );
             })}
@@ -1071,7 +1098,7 @@ export default function Table({
     : "table-scroll-x min-h-0 overflow-auto";
 
   return (
-    <div className={fillHeight ? "flex min-h-0 flex-1 flex-col gap-4" : "space-y-4"}>
+    <div className={fillHeight ? `flex min-h-0 flex-1 flex-col ${isPhone ? "gap-2" : "gap-4"}` : "space-y-4"}>
       {(hasSearch ||
         hasRefresh ||
         hasToolbarBeforeSearch ||
@@ -1079,12 +1106,18 @@ export default function Table({
         loading ||
         (exportable && data.length > 0) ||
         hasColumnSettings) && (
-        <div className={`flex min-w-0 flex-nowrap items-center gap-2 ${fillHeight ? "shrink-0" : ""}`}>
+        <div
+          className={`flex min-w-0 flex-nowrap items-center ${isPhone ? "gap-1" : "gap-2"} ${
+            fillHeight ? "shrink-0" : ""
+          }`}
+        >
           {hasToolbarBeforeSearch ? <div className="shrink-0">{toolbarBeforeSearch}</div> : null}
           {hasSearch && (
-            <div className="relative min-w-0 max-w-xs flex-1">
+            <div className={`relative min-w-0 flex-1 ${isPhone ? "max-w-none" : "max-w-xs"}`}>
               <FiSearch
-                className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-secondary"
+                className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-secondary ${
+                  isPhone ? "left-2 h-3.5 w-3.5" : "left-2.5 h-4 w-4"
+                }`}
                 aria-hidden
               />
               <input
@@ -1092,12 +1125,16 @@ export default function Table({
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder={searchPlaceholder}
-                className="w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg py-2 pl-8 pr-3 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                className={
+                  isPhone
+                    ? "h-7 w-full min-w-0 rounded-none border-[0.5px] border-border bg-bg py-0 pl-7 pr-2 text-[11px] text-text placeholder:text-[11px] placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                    : "w-full min-w-0 rounded-md border-[0.5px] border-border bg-bg py-2 pl-8 pr-3 text-sm text-text placeholder:text-secondary focus:outline-none focus:ring-[0.5px] focus:ring-primary focus:border-primary/30"
+                }
                 aria-label="Search table"
               />
             </div>
           )}
-          <div className="ml-auto flex shrink-0 items-center gap-1">
+          <div className={`ml-auto flex shrink-0 items-center ${isPhone ? "gap-0.5" : "gap-1"}`}>
             {hasToolbarBeforeRefresh ? (
               <div className="flex shrink-0 items-center gap-1">{toolbarBeforeRefresh}</div>
             ) : null}
@@ -1106,11 +1143,15 @@ export default function Table({
                 type="button"
                 onClick={() => onRefresh()}
                 disabled={loading}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                className={
+                  isPhone
+                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                    : "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                }
                 aria-label="Refresh table"
                 title="Refresh"
               >
-                <FiRotateCw className={`h-5 w-5 ${loading ? "animate-spin" : ""}`} aria-hidden />
+                <FiRotateCw className={`${isPhone ? "h-3.5 w-3.5" : "h-5 w-5"} ${loading ? "animate-spin" : ""}`} aria-hidden />
               </button>
             )}
             {hasToolbarAfterRefresh ? <div className="flex shrink-0 items-center gap-1">{toolbarAfterRefresh}</div> : null}
@@ -1118,11 +1159,21 @@ export default function Table({
               <button
                 type="button"
                 onClick={openSettingsModal}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                className={
+                  isPhone
+                    ? "flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary"
+                    : "flex h-9 w-9 shrink-0 items-center justify-center rounded border border-border bg-card text-secondary hover:bg-bg hover:text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                }
                 aria-label="Table column settings"
                 title="Column settings"
               >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                <svg
+                  className={isPhone ? "h-3.5 w-3.5" : "h-5 w-5"}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -1225,20 +1276,23 @@ export default function Table({
         )}
       </div>
 
-      {showPaginationBar && (
-        <div
-          className={`flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 ${isCompact ? "py-2" : "py-3"} ${fillHeight ? "shrink-0" : ""}`}
-        >
-          <div className="flex flex-wrap items-center gap-4">
-            <span className="text-sm text-title">
-              Showing {startItem}–{endItem} of {totalCount}
+      {showPaginationBar &&
+        (isPhone ? (
+          <div
+            className={`ui-table-pagination ui-table-pagination--phone flex shrink-0 items-center border border-border bg-[hsl(var(--form-bg))] ${
+              fillHeight ? "shrink-0" : ""
+            }`}
+          >
+            <span className="ui-table-pagination__page min-w-0 truncate tabular-nums text-secondary">
+              {startItem}–{endItem} of {totalCount}
             </span>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-title">Per page</span>
+            <label className="relative inline-flex shrink-0 items-center">
+              <span className="sr-only">Rows per page</span>
               <select
                 value={String(pageSize)}
                 onChange={handlePageSizeChange}
-                className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="Rows per page"
+                className="ui-table-pagination__size box-border cursor-pointer appearance-none border border-border bg-card tabular-nums text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary"
               >
                 {pageSizeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1246,33 +1300,80 @@ export default function Table({
                   </option>
                 ))}
               </select>
+              <FiChevronDown
+                className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-secondary"
+                aria-hidden
+              />
+            </label>
+            <div className="ui-table-pagination__nav ml-auto flex shrink-0 items-stretch overflow-hidden border border-border bg-card">
+              <button
+                type="button"
+                onClick={handlePrev}
+                disabled={page <= 1}
+                aria-label="Previous page"
+                className="inline-flex items-center justify-center text-title hover:bg-primary/10 disabled:cursor-not-allowed disabled:text-secondary/40"
+              >
+                <FiChevronLeft className="h-3.5 w-3.5" aria-hidden />
+              </button>
+              <span className="ui-table-pagination__page inline-flex min-w-[2.75rem] items-center justify-center border-x border-border px-1.5 tabular-nums text-title">
+                {page}/{totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={page >= totalPages}
+                aria-label="Next page"
+                className="inline-flex items-center justify-center text-title hover:bg-primary/10 disabled:cursor-not-allowed disabled:text-secondary/40"
+              >
+                <FiChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handlePrev}
-              disabled={page <= 1}
-            >
-              Previous
-            </Button>
-            <span className="text-sm text-title min-w-[4rem] text-center">
-              Page {page} of {totalPages}
-            </span>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={handleNext}
-              disabled={page >= totalPages}
-            >
-              Next
-            </Button>
+        ) : (
+          <div
+            className={`ui-table-pagination flex flex-wrap items-center justify-between gap-4 rounded-lg border border-border bg-card px-4 ${
+              isCompact ? "py-2" : "py-3"
+            } ${fillHeight ? "shrink-0" : ""}`}
+          >
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="text-sm text-title">
+                Showing {startItem}–{endItem} of {totalCount}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-title">Per page</span>
+                <select
+                  value={String(pageSize)}
+                  onChange={handlePageSizeChange}
+                  aria-label="Rows per page"
+                  className="rounded-md border border-border bg-bg px-2 py-1.5 text-sm text-text outline-none focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  {pageSizeOptions.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={handlePrev} disabled={page <= 1}>
+                Previous
+              </Button>
+              <span className="min-w-[4rem] text-center text-sm text-title">
+                Page {page} of {totalPages}
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleNext}
+                disabled={page >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        ))}
     </div>
   );
 }

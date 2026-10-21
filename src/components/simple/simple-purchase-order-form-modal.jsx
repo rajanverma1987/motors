@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
+import { FiArrowLeft, FiCornerUpLeft, FiDownload, FiEdit2, FiEye, FiPaperclip, FiPlus, FiPrinter, FiSend, FiX, FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -118,9 +118,16 @@ function FieldRow({
   labelClassName = "",
   style,
 }) {
+  const stacked = /\bflex-col\b/.test(className);
   return (
-    <div className={`flex min-w-0 items-center gap-2.5 ${className}`} style={style}>
-      <label className={`${FIELD_LABEL} ${labelClassName}`} style={{ width: labelWidth }}>
+    <div
+      className={`flex min-w-0 gap-2.5 ${stacked ? "items-stretch" : "items-center"} ${className}`}
+      style={style}
+    >
+      <label
+        className={`${FIELD_LABEL} ${labelClassName}`}
+        style={stacked ? undefined : { width: labelWidth }}
+      >
         {label}
       </label>
       <div className={`min-w-0 ${controlClassName || "flex-1"}`}>{children}</div>
@@ -175,6 +182,7 @@ function applyPaymentFields(formLike, payments) {
  *   onSaved?: (row: object) => void,
  *   listNavigation?: { currentIndex: number, total: number, canPrevious: boolean, canNext: boolean, onPrevious?: () => void, onNext?: () => void } | null,
  *   zIndex?: number,
+ *   presentation?: "modal" | "page",
  * }} props
  */
 export default function SimplePurchaseOrderFormModal({
@@ -191,7 +199,10 @@ export default function SimplePurchaseOrderFormModal({
   /** When opened from a vendor/job list — show Previous / Next in modal header center. */
   listNavigation = null,
   zIndex,
+  /** `page` = full-screen editor (phone route). `modal` = desktop/tablet dialog. */
+  presentation = "modal",
 }) {
+  const isPage = presentation === "page";
   const alert = useAlert();
   const confirm = useConfirm();
   const { user, canViewFinancials } = useAuth();
@@ -1084,7 +1095,11 @@ export default function SimplePurchaseOrderFormModal({
       }
       await alert({ title: "Saved", message: `Purchase order ${saved.poNumber} saved.` });
       if (!isViewMode && !isEditMode) {
-        onClose?.();
+        if (isPage) {
+          setForm(storedPoToForm(saved));
+        } else {
+          onClose?.();
+        }
       } else {
         setForm(storedPoToForm(saved));
       }
@@ -1140,7 +1155,7 @@ export default function SimplePurchaseOrderFormModal({
   const listNav = listNavigation;
   const navBusy = saving || loadingForm || loadingMeta;
   const headerCenter =
-    listNav && Number(listNav.total) > 1 ? (
+    !isPage && listNav && Number(listNav.total) > 1 ? (
       <div
         className="flex shrink-0 flex-nowrap items-center justify-center gap-1 sm:gap-1.5"
         role="navigation"
@@ -1178,99 +1193,113 @@ export default function SimplePurchaseOrderFormModal({
       </div>
     ) : null;
 
-  return (
+  const saveButton = (
+    <Button
+      type="submit"
+      form={FORM_ID}
+      variant="primary"
+      size="sm"
+      className="shrink-0 whitespace-nowrap"
+      disabled={saving || loadingForm || loadingMeta || (isExistingPoMode && !form.id)}
+    >
+      {saving ? "Saving…" : "Save"}
+    </Button>
+  );
+
+  const secondaryHeaderActions = showViewEmptyState ? null : (
     <>
-      <Modal
-        open={open}
-        onClose={() => !saving && onClose?.()}
-        title={modalTitle}
-        size="6xl"
-        width="min(1440px, 98vw)"
-        height={PO_MODAL_HEIGHT}
-        zIndex={zIndex}
-        showClose={!saving && !loadingForm}
-        closeOnOutsideClick={false}
-        headerCenter={headerCenter}
-        actions={
-          showViewEmptyState ? null : (
-          <>
-            {!showJobContextRow && sentToVendorLabel ? (
-              <div
-                className="mr-1 inline-flex min-h-7 shrink-0 items-center px-1 text-sm font-extrabold text-emerald-800 dark:text-emerald-400"
-                title={
-                  form.sentToVendorEmail
-                    ? `Email sent to ${form.sentToVendorEmail}`
-                    : undefined
-                }
-                role="status"
-              >
-                {sentToVendorLabel}
-              </div>
-            ) : null}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-              disabled={saving || loadingForm || loadingMeta || !String(form.id || "").trim()}
-              title={
-                String(form.id || "").trim()
-                  ? "Add vendor invoices and documents"
-                  : "Save the purchase order before adding attachments"
-              }
-              onClick={() => setAttachmentsOpen(true)}
-            >
-              <FiPaperclip className="h-4 w-4 shrink-0" aria-hidden />
-              Attachments
-              {(form.vendorDocuments || []).length > 0 ? (
-                <Badge variant="primary" className="rounded-full px-1.5 py-0 text-xs">
-                  {(form.vendorDocuments || []).length}
-                </Badge>
-              ) : null}
-            </Button>
-            {canViewFinancials ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-                  disabled={saving || loadingForm || loadingMeta || !form.id}
-                  title={!form.id ? "Save the purchase order first" : undefined}
-                  onClick={openPrintPreview}
-                >
-                  <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                  Print
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
-                  disabled={saving || loadingForm || loadingMeta || !form.id}
-                  title={!form.id ? "Save the purchase order first" : undefined}
-                  onClick={openPrintPreview}
-                >
-                  <FiSend className="h-4 w-4 shrink-0" aria-hidden />
-                  Send To Vendor
-                </Button>
-              </>
-            ) : null}
-            <Button
-              type="submit"
-              form={FORM_ID}
-              variant="primary"
-              size="sm"
-              className="shrink-0 whitespace-nowrap"
-              disabled={saving || loadingForm || loadingMeta || (isExistingPoMode && !form.id)}
-            >
-              {saving ? "Saving…" : "Save"}
-            </Button>
-          </>
-          )
+      {!showJobContextRow && sentToVendorLabel ? (
+        <div
+          className="mr-1 inline-flex min-h-7 shrink-0 items-center px-1 text-sm font-extrabold text-emerald-800 dark:text-emerald-400"
+          title={
+            form.sentToVendorEmail
+              ? `Email sent to ${form.sentToVendorEmail}`
+              : undefined
+          }
+          role="status"
+        >
+          {sentToVendorLabel}
+        </div>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={
+          isPage
+            ? "inline-flex !h-8 !min-h-0 flex-1 items-center justify-center gap-1 !rounded-none !px-2 !text-[11px] font-semibold"
+            : "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
         }
+        disabled={saving || loadingForm || loadingMeta || !String(form.id || "").trim()}
+        title={
+          String(form.id || "").trim()
+            ? "Add vendor invoices and documents"
+            : "Save the purchase order before adding attachments"
+        }
+        onClick={() => setAttachmentsOpen(true)}
       >
-        <div className="relative min-h-[calc(min(84.6vh,828px)-4.75rem)]">
+        <FiPaperclip className={isPage ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} aria-hidden />
+        {isPage ? "Files" : "Attachments"}
+        {(form.vendorDocuments || []).length > 0 ? (
+          <Badge variant="primary" className="rounded-full px-1.5 py-0 text-[10px]">
+            {(form.vendorDocuments || []).length}
+          </Badge>
+        ) : null}
+      </Button>
+      {canViewFinancials ? (
+        <>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={
+              isPage
+                ? "inline-flex !h-8 !min-h-0 flex-1 items-center justify-center gap-1 !rounded-none !px-2 !text-[11px] font-semibold"
+                : "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+            }
+            disabled={saving || loadingForm || loadingMeta || !form.id}
+            title={!form.id ? "Save the purchase order first" : undefined}
+            onClick={openPrintPreview}
+          >
+            <FiPrinter className={isPage ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} aria-hidden />
+            Print
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={
+              isPage
+                ? "inline-flex !h-8 !min-h-0 flex-1 items-center justify-center gap-1 !rounded-none !px-2 !text-[11px] font-semibold"
+                : "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap"
+            }
+            disabled={saving || loadingForm || loadingMeta || !form.id}
+            title={!form.id ? "Save the purchase order first" : undefined}
+            onClick={openPrintPreview}
+          >
+            <FiSend className={isPage ? "h-3.5 w-3.5 shrink-0" : "h-4 w-4 shrink-0"} aria-hidden />
+            {isPage ? "Send" : "Send To Vendor"}
+          </Button>
+        </>
+      ) : null}
+    </>
+  );
+
+  const modalHeaderActions = showViewEmptyState ? null : (
+    <>
+      {secondaryHeaderActions}
+      {saveButton}
+    </>
+  );
+
+  const formScrollBody = (
+        <div
+          className={
+            isPage
+              ? "relative min-h-0 flex-1"
+              : "relative min-h-[calc(min(84.6vh,828px)-4.75rem)]"
+          }
+        >
           {loadingForm ? (
             <div
               className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-card/80 backdrop-blur-[1px]"
@@ -1287,9 +1316,16 @@ export default function SimplePurchaseOrderFormModal({
         <Form
           id={FORM_ID}
           onSubmit={handleSubmit}
-          className="flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          className={
+            isPage
+              ? "simple-po-form-page flex min-h-0 flex-col gap-4 overflow-x-hidden !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none px-3 py-3"
+              : "flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+          }
           aria-hidden={loadingForm || undefined}
         >
+          {isPage && secondaryHeaderActions ? (
+            <div className="grid grid-cols-3 gap-1.5">{secondaryHeaderActions}</div>
+          ) : null}
           {showViewEmptyState ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-4 py-16 text-center">
               <p className="text-base font-semibold text-title">No purchase order found</p>
@@ -1300,20 +1336,30 @@ export default function SimplePurchaseOrderFormModal({
           ) : (
           <>
           {showJobContextRow ? (
-            <div className="flex w-full shrink-0 flex-wrap items-end gap-3">
+            <div
+              className={
+                isPage
+                  ? "grid w-full grid-cols-2 gap-x-3 gap-y-3"
+                  : "flex w-full shrink-0 flex-wrap items-end gap-3"
+              }
+            >
               <FieldRow
                 label="Customer Name"
                 labelWidth="100%"
-                labelClassName="!text-left !text-sm"
-                className="shrink-0 flex-col items-stretch gap-1"
+                labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : "!text-sm"}`}
+                className={
+                  isPage
+                    ? "col-span-2 flex min-w-0 flex-col items-stretch gap-1"
+                    : "shrink-0 flex-col items-stretch gap-1"
+                }
                 controlClassName="w-full min-w-0"
-                style={{ width: `${customerNameFieldWidthCh}ch` }}
+                style={isPage ? undefined : { width: `${customerNameFieldWidthCh}ch` }}
               >
                 <input
                   type="text"
                   readOnly
                   tabIndex={-1}
-                  value={jobContext?.companyName || "—"}
+                  value={jobContext?.companyName || "-"}
                   title={jobContext?.companyName || ""}
                   className={`${FIELD_INPUT} !bg-muted font-semibold`}
                   aria-label="Customer Name"
@@ -1323,8 +1369,12 @@ export default function SimplePurchaseOrderFormModal({
                 <FieldRow
                   label="Proposal Amount"
                   labelWidth="100%"
-                  labelClassName="!text-left !text-sm"
-                  className="w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+                  labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : "!text-sm"}`}
+                  className={
+                    isPage
+                      ? "flex min-w-0 flex-col items-stretch gap-1"
+                      : "w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+                  }
                   controlClassName="w-full min-w-0"
                 >
                   <input
@@ -1334,7 +1384,7 @@ export default function SimplePurchaseOrderFormModal({
                     value={
                       jobContext && Number.isFinite(jobContext.amount)
                         ? formatMoney(jobContext.amount)
-                        : "—"
+                        : "-"
                     }
                     className={`${FIELD_INPUT} !bg-muted text-right font-semibold tabular-nums`}
                     aria-label="Proposal Amount"
@@ -1342,10 +1392,16 @@ export default function SimplePurchaseOrderFormModal({
                 </FieldRow>
               ) : null}
               {sentToVendorLabel || !hideViewJobButton ? (
-                <div className="ml-auto flex shrink-0 items-end gap-3 self-end">
+                <div
+                  className={
+                    isPage
+                      ? "flex min-w-0 flex-col justify-end gap-1"
+                      : "ml-auto flex shrink-0 items-end gap-3 self-end"
+                  }
+                >
                   {sentToVendorLabel ? (
                     <div
-                      className="text-right"
+                      className={isPage ? "text-left" : "text-right"}
                       title={
                         form.sentToVendorEmail
                           ? `Email sent to ${form.sentToVendorEmail}`
@@ -1353,7 +1409,9 @@ export default function SimplePurchaseOrderFormModal({
                       }
                     >
                       <div
-                        className="inline-flex min-h-7 items-center px-1 text-right text-sm font-extrabold text-emerald-800 dark:text-emerald-400"
+                        className={`inline-flex min-h-7 items-center px-1 font-extrabold text-emerald-800 dark:text-emerald-400 ${
+                          isPage ? "text-[11px]" : "text-right text-sm"
+                        }`}
                         role="status"
                       >
                         {sentToVendorLabel}
@@ -1365,7 +1423,11 @@ export default function SimplePurchaseOrderFormModal({
                       type="button"
                       variant="primary"
                       size="sm"
-                      className="h-7 shrink-0"
+                      className={
+                        isPage
+                          ? "!h-10 w-full !min-h-0 !rounded-none !text-xs font-semibold"
+                          : "h-7 shrink-0"
+                      }
                       disabled={!linkedJobId || saving}
                       onClick={handleViewJob}
                     >
@@ -1377,13 +1439,23 @@ export default function SimplePurchaseOrderFormModal({
               ) : null}
             </div>
           ) : null}
-          <div className="flex w-full shrink-0 flex-wrap items-end gap-x-3 gap-y-2 pb-0.5">
+          <div
+            className={
+              isPage
+                ? "grid w-full grid-cols-2 gap-x-3 gap-y-3"
+                : "flex w-full shrink-0 flex-wrap items-end gap-x-3 gap-y-2 pb-0.5"
+            }
+          >
             {showTypeSelect ? (
               <FieldRow
                 label="Type"
                 labelWidth="100%"
-                labelClassName="!text-left"
-                className="w-[8.5rem] shrink-0 flex-col items-stretch gap-1"
+                labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+                className={
+                  isPage
+                    ? "flex min-w-0 flex-col items-stretch gap-1"
+                    : "w-[8.5rem] shrink-0 flex-col items-stretch gap-1"
+                }
                 controlClassName="w-full min-w-0"
               >
                 <SimpleSelect
@@ -1399,8 +1471,12 @@ export default function SimplePurchaseOrderFormModal({
               <FieldRow
                 label="Job#"
                 labelWidth="100%"
-                labelClassName="!text-left"
-                className="w-[11rem] shrink-0 flex-col items-stretch gap-1"
+                labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+                className={
+                  isPage
+                    ? "flex min-w-0 flex-col items-stretch gap-1"
+                    : "w-[11rem] shrink-0 flex-col items-stretch gap-1"
+                }
                 controlClassName="w-full min-w-0"
               >
                 <SimpleSelect
@@ -1419,8 +1495,12 @@ export default function SimplePurchaseOrderFormModal({
               <FieldRow
                 label="Job"
                 labelWidth="100%"
-                labelClassName="!text-left"
-                className="w-[9.5rem] shrink-0 flex-col items-stretch gap-1"
+                labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+                className={
+                  isPage
+                    ? "flex min-w-0 flex-col items-stretch gap-1"
+                    : "w-[9.5rem] shrink-0 flex-col items-stretch gap-1"
+                }
                 controlClassName="w-full min-w-0"
               >
                 <input
@@ -1441,8 +1521,12 @@ export default function SimplePurchaseOrderFormModal({
             <FieldRow
               label="PO#"
               labelWidth="100%"
-              labelClassName="!text-left"
-              className="w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+              labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+              className={
+                isPage
+                  ? "flex min-w-0 flex-col items-stretch gap-1"
+                  : "w-[10.5rem] shrink-0 flex-col items-stretch gap-1"
+              }
               controlClassName="w-full min-w-0"
             >
               {isViewMode ? (
@@ -1472,12 +1556,19 @@ export default function SimplePurchaseOrderFormModal({
             <FieldRow
               label="Vendor"
               labelWidth="100%"
-              labelClassName="!text-left"
-              className="shrink-0 flex-col items-stretch gap-1"
-              controlClassName="w-fit min-w-0"
+              labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+              className={
+                isPage
+                  ? "col-span-2 flex min-w-0 flex-col items-stretch gap-1"
+                  : "shrink-0 flex-col items-stretch gap-1"
+              }
+              controlClassName={isPage ? "w-full min-w-0" : "w-fit min-w-0"}
             >
               <div className="flex min-w-0 items-center gap-1.5">
-                <div className="shrink-0" style={{ width: `${vendorFieldWidthCh}ch` }}>
+                <div
+                  className={isPage ? "min-w-0 flex-1" : "shrink-0"}
+                  style={isPage ? undefined : { width: `${vendorFieldWidthCh}ch` }}
+                >
                   <SimpleSelect
                     options={vendorOptions}
                     value={form.vendorId}
@@ -1490,7 +1581,9 @@ export default function SimplePurchaseOrderFormModal({
                 </div>
                 <button
                   type="button"
-                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90 disabled:opacity-60"
+                  className={`inline-flex shrink-0 items-center justify-center rounded-none border border-border bg-primary text-white hover:opacity-90 disabled:opacity-60 ${
+                    isPage ? "h-10 w-10" : "h-7 w-7"
+                  }`}
                   title="Add new vendor"
                   aria-label="Add new vendor"
                   onClick={() => {
@@ -1506,8 +1599,12 @@ export default function SimplePurchaseOrderFormModal({
             <FieldRow
               label="PO Date"
               labelWidth="100%"
-              labelClassName="!text-left"
-              className="w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+              labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+              className={
+                isPage
+                  ? "flex min-w-0 flex-col items-stretch gap-1"
+                  : "w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+              }
               controlClassName="w-full min-w-0"
             >
               <input
@@ -1521,8 +1618,12 @@ export default function SimplePurchaseOrderFormModal({
             <FieldRow
               label="Due Date"
               labelWidth="100%"
-              labelClassName="!text-left"
-              className="w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+              labelClassName={`!text-left ${isPage ? "!text-[11px] !font-semibold uppercase tracking-wide !text-secondary" : ""}`}
+              className={
+                isPage
+                  ? "flex min-w-0 flex-col items-stretch gap-1"
+                  : "w-[10.25rem] shrink-0 flex-col items-stretch gap-1"
+              }
               controlClassName="w-full min-w-0"
             >
               <input
@@ -1539,13 +1640,24 @@ export default function SimplePurchaseOrderFormModal({
             value={isExistingPoMode ? (!canViewFinancials && activeTab === TAB_PAYMENT ? TAB_PO : activeTab) : TAB_PO}
             onChange={setActiveTab}
             className="flex min-h-0 flex-1 flex-col"
-            listClassName={isExistingPoMode ? "shrink-0" : "hidden"}
-            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isExistingPoMode ? "pt-3" : ""}`}
+            listClassName={
+              isExistingPoMode
+                ? isPage
+                  ? "simple-po-page-tabs shrink-0 !grid !w-full !grid-cols-3 !gap-0 !rounded-none !p-0"
+                  : "shrink-0"
+                : "hidden"
+            }
+            tabButtonClassName={
+              isPage
+                ? "!min-w-0 !flex-1 !rounded-none !px-1 !py-2 !text-[11px] !font-bold"
+                : undefined
+            }
+            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isExistingPoMode ? (isPage ? "pt-2" : "pt-3") : ""}`}
             ariaLabel="Purchase order sections"
             tabs={[
               {
                 id: TAB_PO,
-                label: "Purchase Order",
+                label: isPage ? "PO" : "Purchase Order",
                 children: (
                   <>
                     {!isViewMode && isShopPo ? (
@@ -1809,7 +1921,7 @@ export default function SimplePurchaseOrderFormModal({
               },
               {
                 id: TAB_RECEIVING,
-                label: "Material Receiving",
+                label: isPage ? "Receiving" : "Material Receiving",
                 children: (
                   <>
                     {contentLines.length === 0 ? (
@@ -2010,7 +2122,7 @@ export default function SimplePurchaseOrderFormModal({
                 ? [
                     {
                       id: TAB_PAYMENT,
-                      label: "Payment",
+                      label: isPage ? "Pay" : "Payment",
                       children: (
                         <div className="flex flex-col gap-4">
                     <div className="flex flex-wrap items-center gap-4">
@@ -2274,7 +2386,50 @@ export default function SimplePurchaseOrderFormModal({
           />
         ) : null}
         </div>
-      </Modal>
+  );
+
+  return (
+    <>
+      {isPage ? (
+        <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-bg">
+          <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => !saving && onClose?.()}
+              disabled={saving || loadingForm}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-border bg-card text-title hover:bg-primary/10 disabled:opacity-50"
+              aria-label="Back"
+            >
+              <FiArrowLeft className="h-5 w-5" aria-hidden />
+            </button>
+            <h1 className="min-w-0 flex-1 truncate text-base font-bold text-title">{modalTitle}</h1>
+            {showViewEmptyState ? null : (
+              <div className="shrink-0 [&_button]:!h-11 [&_button]:!min-h-[2.75rem] [&_button]:!px-4 [&_button]:!text-sm [&_button]:!font-semibold">
+                {saveButton}
+              </div>
+            )}
+          </header>
+          <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {formScrollBody}
+          </div>
+        </div>
+      ) : (
+        <Modal
+          open={open}
+          onClose={() => !saving && onClose?.()}
+          title={modalTitle}
+          size="6xl"
+          width="min(1440px, 98vw)"
+          height={PO_MODAL_HEIGHT}
+          zIndex={zIndex}
+          showClose={!saving && !loadingForm}
+          closeOnOutsideClick={false}
+          headerCenter={headerCenter}
+          actions={modalHeaderActions}
+        >
+          {formScrollBody}
+        </Modal>
+      )}
 
       <SimplePurchaseOrderAttachmentsModal
         open={attachmentsOpen}

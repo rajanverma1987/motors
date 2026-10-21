@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { FiChevronDown, FiChevronLeft, FiChevronRight, FiEye, FiMail, FiPlus, FiPrinter, FiX } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiChevronDown,
+  FiChevronLeft,
+  FiChevronRight,
+  FiEye,
+  FiMail,
+  FiPlus,
+  FiPrinter,
+  FiX,
+} from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Modal from "@/components/ui/modal";
@@ -246,8 +256,14 @@ function FieldRow({
   labelClassName = "",
 }) {
   return (
-    <div className={`flex min-w-0 items-center gap-2.5 ${className}`}>
-      <label className={`${FIELD_LABEL} ${labelClassName}`} style={{ width: labelWidth }}>
+    <div
+      className={`simple-sp-field flex min-w-0 items-center gap-2.5 ${className}`}
+      data-label-width={labelWidth}
+    >
+      <label
+        className={`simple-sp-field-label ${FIELD_LABEL} ${labelClassName}`}
+        style={{ width: labelWidth, maxWidth: "100%" }}
+      >
         {label}
       </label>
       <div className={`min-w-0 ${controlClassName || "flex-1"}`}>{children}</div>
@@ -319,15 +335,15 @@ function LineItemsTable({
   };
 
   return (
-    <div className="flex min-h-[16rem] min-w-0 flex-1 flex-col bg-card">
-      <div className="mt-[10px] flex h-9 items-center justify-between gap-2 bg-transparent px-2">
-        <h4 className="min-w-0 text-sm font-bold uppercase tracking-wide text-black dark:text-title">
+    <div className="flex min-h-[16rem] min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-card">
+      <div className="mt-[10px] flex h-9 min-w-0 items-center justify-between gap-2 bg-transparent px-2">
+        <h4 className="min-w-0 truncate text-sm font-bold uppercase tracking-wide text-black dark:text-title">
           {title}
         </h4>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <table className={`w-full border-collapse border-spacing-0 ${SIMPLE_TABLE_TEXT} font-semibold`}>
+      <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain">
+        <table className={`w-full min-w-[28rem] border-collapse border-spacing-0 ${SIMPLE_TABLE_TEXT} font-semibold`}>
           <thead>
             <tr className={`text-left ${SIMPLE_TABLE_HEAD}`}>
               <th className={LINE_HEAD}>Description</th>
@@ -575,7 +591,10 @@ export default function ServiceProposalFormModal({
   /** When opened from a search results list — show Previous / Next in modal header center. */
   searchResultNavigation = null,
   zIndex = 100,
+  /** `page` = full-screen editor (phone route). `modal` = desktop/tablet dialog. */
+  presentation = "modal",
 }) {
+  const isPage = presentation === "page";
   const alert = useAlert();
   const confirm = useConfirm();
   const { user, canViewFinancials } = useAuth();
@@ -1621,8 +1640,14 @@ export default function ServiceProposalFormModal({
   const navBusy = saving || copying || loadingRecord;
   const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
   const headerStatusSelects = (
-    <div className="flex min-w-0 flex-nowrap items-end gap-2">
-      <div className="w-[11rem] min-w-[8.5rem] shrink">
+    <div
+      className={
+        isPage
+          ? "grid w-full grid-cols-1 gap-3"
+          : "flex min-w-0 flex-nowrap items-end gap-2"
+      }
+    >
+      <div className={isPage ? "min-w-0" : "w-[11rem] min-w-[8.5rem] shrink"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
           Proposal Type
         </label>
@@ -1639,7 +1664,7 @@ export default function ServiceProposalFormModal({
           aria-label="Proposal Type"
         />
       </div>
-      <div className="w-[12rem] min-w-[9rem] shrink">
+      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
           {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
         </label>
@@ -1674,7 +1699,7 @@ export default function ServiceProposalFormModal({
           />
         </div>
       </div>
-      <div className="w-[12rem] min-w-[9rem] shrink">
+      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
           Job Status
         </label>
@@ -1698,7 +1723,7 @@ export default function ServiceProposalFormModal({
       </div>
     </div>
   );
-  const headerCenter = (
+  const headerCenter = isPage ? null : (
       <div className="flex cursor-auto flex-nowrap items-end gap-2">
         {headerStatusSelects}
         {showSearchNav ? (
@@ -1737,23 +1762,12 @@ export default function ServiceProposalFormModal({
       </div>
   );
 
-  return (
-    <>
-      <Modal
-        open={open}
-        onClose={() => !saving && !copying && onClose?.()}
-        title={displayTitle}
-        size="7xl"
-        width="95vw"
-        height="min(94vh, 920px)"
-        zIndex={zIndex}
-        showClose={!saving && !copying && !loadingRecord}
-        closeOnOutsideClick={false}
-        headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem] [&>div]:overflow-x-auto [&>div>div:nth-child(2)]:min-w-0"
-        headerCenter={headerCenter}
-        actions={headerActions}
-      >
-        <div className="relative min-h-[12rem]">
+  const formScrollBody = (
+        <div
+          className={`relative min-h-[12rem] min-w-0 max-w-full ${
+            isPage ? "simple-sp-form-page overflow-x-hidden px-4 py-4" : ""
+          }`}
+        >
           {loadingRecord || copying ? (
             <div
               className="absolute inset-0 z-20 bg-card/80 backdrop-blur-[1px]"
@@ -1774,38 +1788,53 @@ export default function ServiceProposalFormModal({
           <Form
             id={FORM_ID}
             onSubmit={handleSubmit}
-            className="!space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+            className={`min-w-0 max-w-full !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none${
+              isPage
+                ? " overflow-x-hidden [&_.simple-sp-field]:flex-col [&_.simple-sp-field]:items-stretch"
+                : ""
+            }`}
             aria-hidden={loadingRecord || copying || undefined}
           >
+          {isPage ? (
+            <div className="simple-sp-page-status border-b border-border">
+              {headerStatusSelects}
+            </div>
+          ) : null}
           {/* Toolbar (title and status dropdowns live in modal header) */}
-          <div className="mb-2 flex flex-wrap items-end justify-end gap-1 border-b border-border py-1.5">
+          <div
+            className={`mb-2 flex flex-wrap gap-1.5 border-b border-border py-1.5 ${
+              isPage
+                ? "simple-sp-page-toolbar items-stretch justify-start"
+                : "items-end justify-end"
+            }`}
+          >
               {canViewFinancials ? (
                 <>
                   <Button
                     type="button"
                     variant="primary"
                     size="sm"
-                    className={TOOLBAR_BTN}
+                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                     disabled={saving || copying}
                     title="Email to client"
                     aria-label="Email to client"
                     onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER, { send: true })}
                   >
                     <FiMail className="h-4 w-4 shrink-0" aria-hidden />
-                    Email to client
+                    Email
                   </Button>
                   <Button
                     type="button"
                     variant="primary"
                     size="sm"
-                    className={TOOLBAR_BTN}
+                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                     disabled={saving || copying}
                     title="Customer Print"
                     aria-label="Customer Print"
                     onClick={() => void openPrintPreview(PRINT_NOTES_CUSTOMER)}
                   >
                     <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
-                    Customer Print
+                    {isPage ? "Print" : "Customer Print"}
                   </Button>
                 </>
               ) : null}
@@ -1813,7 +1842,7 @@ export default function ServiceProposalFormModal({
                 type="button"
                 variant="primary"
                 size="sm"
-                className={TOOLBAR_BTN}
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                 disabled={saving || copying}
                 onClick={handleCopyCreateNew}
               >
@@ -1825,6 +1854,8 @@ export default function ServiceProposalFormModal({
                     />
                     Copying…
                   </span>
+                ) : isPage ? (
+                  "Copy new"
                 ) : (
                   "Copy & Create New"
                 )}
@@ -1835,11 +1866,11 @@ export default function ServiceProposalFormModal({
                     type="button"
                     variant="primary"
                     size="sm"
-                    className={TOOLBAR_BTN}
+                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                     disabled={saving || copying}
                     onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
                   >
-                    Internal Print
+                    {isPage ? "Internal" : "Internal Print"}
                   </Button>
                 </>
               ) : null}
@@ -1847,20 +1878,24 @@ export default function ServiceProposalFormModal({
                 type="button"
                 variant="primary"
                 size="sm"
-                className={TOOLBAR_BTN}
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                 disabled={!canAttach}
                 title={canAttach ? "Add attachments" : "Save the record before adding attachments"}
                 onClick={() => setAttachmentsOpen(true)}
               >
                 {Array.isArray(form.attachments) && form.attachments.length > 0
-                  ? `Add Attachments (${form.attachments.length})`
-                  : "Add Attachments"}
+                  ? isPage
+                    ? `Files (${form.attachments.length})`
+                    : `Add Attachments (${form.attachments.length})`
+                  : isPage
+                    ? "Files"
+                    : "Add Attachments"}
               </Button>
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
-                className={TOOLBAR_BTN}
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
                 disabled={!canOpenLogistics || saving || copying}
                 title={
                   canOpenLogistics
@@ -1869,7 +1904,7 @@ export default function ServiceProposalFormModal({
                 }
                 onClick={() => openLogistics(KIND_RECEIVING)}
               >
-                Receiving / Shipping
+                {isPage ? "Ship / Recv" : "Receiving / Shipping"}
               </Button>
           </div>
 
@@ -1912,7 +1947,9 @@ export default function ServiceProposalFormModal({
               Tablet portrait (md): two side-by-side, third full-width below.
               Desktop (lg+): 25 / 25 / 50 so the PO table has more room. */}
           <div
-            className="mb-2 grid grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.75fr)] lg:min-h-[min(28rem,42vh)]"
+            className={`mb-2 grid min-w-0 max-w-full grid-cols-1 items-start gap-4 pt-3 md:grid-cols-2 md:items-stretch lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,1.75fr)] lg:min-h-[min(28rem,42vh)]${
+              isPage ? " simple-sp-page-columns" : ""
+            }`}
           >
             {/* Column 1 */}
             <div className="flex min-w-0 flex-col gap-2">
@@ -1988,7 +2025,7 @@ export default function ServiceProposalFormModal({
                   {salesMotorOpen ? (
                     <div className="flex flex-col gap-2 border-t border-border px-2 py-2">
                       <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                        <div className="flex flex-nowrap items-center gap-x-3" role="radiogroup" aria-label="Machine type">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine type">
                           {MACHINE_TYPES.map((opt) => (
                             <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
                               <input
@@ -2068,7 +2105,7 @@ export default function ServiceProposalFormModal({
               ) : (
                 <>
                   <FieldRow label="Machine Type" labelWidth="7.75rem" controlClassName="min-w-0 flex-1">
-                    <div className="flex flex-nowrap items-center gap-x-3" role="radiogroup" aria-label="Machine type">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1" role="radiogroup" aria-label="Machine type">
                       {MACHINE_TYPES.map((opt) => (
                         <label key={opt} className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 text-xs font-bold text-title">
                           <input
@@ -2349,7 +2386,7 @@ export default function ServiceProposalFormModal({
                       : "Save the record with a document number to see purchase orders."}
                   </p>
                 ) : (
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto border border-border">
+                  <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-auto overflow-y-auto overscroll-x-contain border border-border">
                     <div
                       className={`sticky top-0 z-[1] ${canViewFinancials ? PROPOSAL_PO_HEADER_GRID : "grid grid-cols-[1.75rem_minmax(4.25rem,0.9fr)_minmax(4.75rem,1fr)_minmax(3.75rem,0.7fr)_minmax(4.25rem,0.85fr)] gap-x-2"} border-b border-border bg-form-bg px-2 py-1 dark:bg-form-bg ${SIMPLE_TABLE_HEAD}`}
                     >
@@ -2641,7 +2678,51 @@ export default function ServiceProposalFormModal({
           </div>
         </Form>
         </div>
-      </Modal>
+  );
+
+  return (
+    <>
+      {isPage ? (
+        <div className="flex h-full min-h-0 w-full min-w-0 max-w-full flex-col overflow-x-hidden overflow-y-hidden bg-bg">
+          <header className="flex min-w-0 shrink-0 items-center gap-2 border-b border-border bg-card px-3 py-2.5">
+            <button
+              type="button"
+              onClick={() => !saving && !copying && onClose?.()}
+              disabled={saving || copying || loadingRecord}
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-none border border-border bg-card text-title hover:bg-primary/10 disabled:opacity-50"
+              aria-label="Back"
+            >
+              <FiArrowLeft className="h-5 w-5" aria-hidden />
+            </button>
+            <h1 className="simple-sp-page-header-title min-w-0 flex-1 truncate text-title">
+              {displayTitle}
+            </h1>
+            <div className="shrink-0 [&_button]:!h-11 [&_button]:!min-h-[2.75rem] [&_button]:!px-4 [&_button]:!text-sm [&_button]:!font-semibold">
+              {headerActions}
+            </div>
+          </header>
+          <div className="min-h-0 min-w-0 max-w-full flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            {formScrollBody}
+          </div>
+        </div>
+      ) : (
+        <Modal
+          open={open}
+          onClose={() => !saving && !copying && onClose?.()}
+          title={displayTitle}
+          size="7xl"
+          width="95vw"
+          height="min(94vh, 920px)"
+          zIndex={zIndex}
+          showClose={!saving && !copying && !loadingRecord}
+          closeOnOutsideClick={false}
+          headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem] [&>div]:overflow-x-auto [&>div>div:nth-child(2)]:min-w-0"
+          headerCenter={headerCenter}
+          actions={headerActions}
+        >
+          {formScrollBody}
+        </Modal>
+      )}
 
       <SimpleSalesCommissionModal
         open={commissionOpen && !!commissionPreset?.quoteId}

@@ -7,7 +7,7 @@ import { mapRectForBodyFixedPosition } from "@/lib/apply-dashboard-zoom";
 import { getFocusableElements } from "@/lib/focusable-elements";
 
 const TRIGGER =
-  "flex h-7 w-full min-w-0 items-center gap-1 rounded-none border border-border bg-primary/[0.04] px-1.5 text-left text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary/10";
+  "simple-select-trigger flex h-7 w-full min-w-0 items-center gap-1 rounded-none border border-border bg-primary/[0.04] px-1.5 text-left text-sm text-title outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary/10";
 
 const PILL_TRIGGER =
   "inline-flex h-auto min-h-0 w-full max-w-full items-center gap-1 rounded-none border border-border bg-transparent px-2.5 py-0.5 text-left text-xs font-medium outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:cursor-not-allowed disabled:opacity-60";
