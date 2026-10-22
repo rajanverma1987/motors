@@ -150,6 +150,7 @@ import {
   suggestReceivingStatus,
   computePoFormTotals,
   computePoPaymentSummary,
+  roundPoMoney,
 } from "@/lib/simple-purchase-order-form";
 import {
   applyCustomerLogisticsChargeToOtherItems,
@@ -1130,6 +1131,15 @@ export default function ServiceProposalFormModal({
     () => buildProposalPoTableGroups(jobPurchaseOrders),
     [jobPurchaseOrders]
   );
+
+  const jobPurchaseOrdersTotal = useMemo(() => {
+    let sum = 0;
+    for (const po of Array.isArray(jobPurchaseOrders) ? jobPurchaseOrders : []) {
+      const totals = computePoFormTotals(po?.lineItems, po?.shippingCharge);
+      sum = roundPoMoney(sum + totals.grandTotal);
+    }
+    return sum;
+  }, [jobPurchaseOrders]);
 
   const [expandedPoIds, setExpandedPoIds] = useState(() => new Set());
 
@@ -2353,9 +2363,20 @@ export default function ServiceProposalFormModal({
               </div>
               <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 border-t border-border pt-2">
                 <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wide text-secondary">
-                    Purchase orders
-                  </span>
+                  <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <span className="text-xs font-bold uppercase tracking-wide text-secondary">
+                      Purchase orders
+                    </span>
+                    {canViewFinancials && proposalPoTableGroups.length > 0 ? (
+                      <Badge
+                        variant="primary"
+                        className="rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums"
+                        title="Sum of purchase order totals for this job"
+                      >
+                        {formatMoney(jobPurchaseOrdersTotal)}
+                      </Badge>
+                    ) : null}
+                  </div>
                   <Button
                     type="button"
                     variant="primary"
