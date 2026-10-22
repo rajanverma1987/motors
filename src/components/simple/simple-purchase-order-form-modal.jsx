@@ -1157,7 +1157,7 @@ export default function SimplePurchaseOrderFormModal({
   const headerCenter =
     !isPage && listNav && Number(listNav.total) > 1 ? (
       <div
-        className="flex shrink-0 flex-nowrap items-center justify-center gap-1 sm:gap-1.5"
+        className="inline-flex items-center rounded-full border border-border bg-bg p-1 shadow-sm dark:bg-card"
         role="navigation"
         aria-label="Purchase order list"
       >
@@ -1165,30 +1165,30 @@ export default function SimplePurchaseOrderFormModal({
           type="button"
           variant="outline"
           size="sm"
-          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 text-xs sm:px-3"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
           disabled={navBusy || !listNav.canPrevious}
           onClick={() => listNav.onPrevious?.()}
           title="Previous"
           aria-label="Previous"
         >
-          <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          <span className="hidden sm:inline">Previous</span>
+          <FiChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
         </Button>
-        <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
-          {Number(listNav.currentIndex) + 1}/{Number(listNav.total)}
+        <span className="min-w-[4.75rem] select-none px-1.5 text-center text-sm font-semibold tabular-nums tracking-wide text-title">
+          <span className="text-primary">{Number(listNav.currentIndex) + 1}</span>
+          <span className="mx-1 font-normal text-secondary">of</span>
+          <span className="text-secondary">{Number(listNav.total)}</span>
         </span>
         <Button
           type="button"
           variant="outline"
           size="sm"
-          className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap px-2 text-xs sm:px-3"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
           disabled={navBusy || !listNav.canNext}
           onClick={() => listNav.onNext?.()}
           title="Next"
           aria-label="Next"
         >
-          <span className="hidden sm:inline">Next</span>
-          <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <FiChevronRight className="h-4 w-4 shrink-0" aria-hidden />
         </Button>
       </div>
     ) : null;

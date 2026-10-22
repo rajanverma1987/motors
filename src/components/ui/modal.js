@@ -41,7 +41,9 @@ export default function Modal({
   className = "",
   /** Actions (e.g. Save) rendered in header right, before close. Use size="sm" buttons. */
   actions,
-  /** Optional centered header content (e.g. result navigation). */
+  /** Optional content after the title on the left (e.g. status selects). */
+  headerLeading,
+  /** Optional centered header content (e.g. result navigation). Truly centered in the header. */
   headerCenter,
   /** Optional class on header row (e.g. flex-wrap). */
   headerClassName = "",
@@ -248,7 +250,11 @@ export default function Modal({
         }
         onClick={(e) => e.stopPropagation()}
       >
-        {(title != null || showClose || actions || headerCenter != null) && (
+        {(title != null ||
+          showClose ||
+          actions ||
+          headerCenter != null ||
+          headerLeading != null) && (
           <div
             className={`min-h-11 min-w-0 border-b border-border px-4 py-2 select-none ${
               fullscreen ? "" : dragging ? "cursor-grabbing" : "cursor-grab"
@@ -256,31 +262,82 @@ export default function Modal({
             onMouseDown={handleHeaderMouseDown}
           >
             {headerCenter != null ? (
+              <div className="relative flex w-full min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
+                <div className="z-[1] flex min-w-0 flex-1 flex-nowrap items-end gap-2 sm:gap-3">
+                  {title != null ? (
+                    <h2
+                      id="modal-title"
+                      className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                    >
+                      {title}
+                    </h2>
+                  ) : null}
+                  {headerLeading != null ? (
+                    <div
+                      className="pointer-events-auto min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      {headerLeading}
+                    </div>
+                  ) : (
+                    <span className="min-w-0 flex-1" aria-hidden />
+                  )}
+                </div>
+                <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
+                  <div
+                    className="pointer-events-auto"
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    {headerCenter}
+                  </div>
+                </div>
+                <div className="z-[1] flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1 sm:gap-1.5">
+                  {actions != null ? (
+                    <div className="pointer-events-auto flex min-w-0 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
+                      <div className="ml-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:shrink-0 [&_button]:cursor-pointer [&_button]:items-center [&_button]:whitespace-nowrap [&_button:disabled]:cursor-not-allowed">
+                        {actions}
+                      </div>
+                    </div>
+                  ) : null}
+                  {showClose && (
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded p-1.5 text-secondary hover:bg-bg hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label="Close"
+                    >
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : headerLeading != null ? (
               <div className="flex w-full min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
                 {title != null ? (
                   <h2
                     id="modal-title"
-                    className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
+                    className="pointer-events-none max-w-[min(9rem,28vw)] shrink-0 self-center truncate text-base font-semibold leading-snug text-title sm:max-w-[12rem] sm:text-lg md:max-w-[14rem]"
                   >
                     {title}
                   </h2>
                 ) : null}
                 <div
-                  className="pointer-events-auto shrink-0"
+                  className="pointer-events-auto min-w-0 flex-1 overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]"
                   onMouseDown={(e) => e.stopPropagation()}
                 >
-                  {headerCenter}
+                  {headerLeading}
                 </div>
-                <div className="flex min-w-0 flex-1 items-center justify-end gap-1 sm:gap-1.5">
+                <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5">
                   {actions != null ? (
-                    <div className="pointer-events-auto flex min-w-0 flex-1 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
-                      <div className="ml-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:shrink-0 [&_button]:cursor-pointer [&_button]:items-center [&_button]:whitespace-nowrap [&_button:disabled]:cursor-not-allowed">
+                    <div className="pointer-events-auto flex min-w-0 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
+                      <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:shrink-0 [&_button]:cursor-pointer [&_button]:items-center [&_button]:whitespace-nowrap [&_button:disabled]:cursor-not-allowed">
                         {actions}
                       </div>
                     </div>
-                  ) : (
-                    <span className="min-w-0 flex-1" aria-hidden />
-                  )}
+                  ) : null}
                   {showClose && (
                     <button
                       type="button"

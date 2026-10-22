@@ -1723,44 +1723,45 @@ export default function ServiceProposalFormModal({
       </div>
     </div>
   );
-  const headerCenter = isPage ? null : (
-      <div className="flex cursor-auto flex-nowrap items-end gap-2">
-        {headerStatusSelects}
-        {showSearchNav ? (
-          <div
-            className="flex flex-nowrap items-center gap-1.5"
-            role="navigation"
-            aria-label={searchNav.label || "Records"}
-          >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex items-center gap-1 text-xs"
-              disabled={navBusy || !searchNav.canPrevious}
-              onClick={() => searchNav.onPrevious?.()}
-            >
-              <FiChevronLeft className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Back
-            </Button>
-            <span className="whitespace-nowrap px-0.5 text-xs font-medium text-secondary">
-              {Number(searchNav.currentIndex) + 1} of {Number(searchNav.total)}
-            </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="inline-flex items-center gap-1 text-xs"
-              disabled={navBusy || !searchNav.canNext}
-              onClick={() => searchNav.onNext?.()}
-            >
-              Next
-              <FiChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            </Button>
-          </div>
-        ) : null}
+  const headerLeading = isPage ? null : headerStatusSelects;
+  const headerCenter =
+    !isPage && showSearchNav ? (
+      <div
+        className="inline-flex items-center rounded-full border border-border bg-bg p-1 shadow-sm dark:bg-card"
+        role="navigation"
+        aria-label={searchNav.label || "Records"}
+      >
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
+          disabled={navBusy || !searchNav.canPrevious}
+          onClick={() => searchNav.onPrevious?.()}
+          title="Previous"
+          aria-label="Previous"
+        >
+          <FiChevronLeft className="h-4 w-4 shrink-0" aria-hidden />
+        </Button>
+        <span className="min-w-[4.75rem] select-none px-1.5 text-center text-sm font-semibold tabular-nums tracking-wide text-title">
+          <span className="text-primary">{Number(searchNav.currentIndex) + 1}</span>
+          <span className="mx-1 font-normal text-secondary">of</span>
+          <span className="text-secondary">{Number(searchNav.total)}</span>
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="!h-8 !min-h-0 !w-8 !rounded-full !border-0 !bg-transparent !p-0 text-title hover:!bg-primary/10 hover:!text-primary"
+          disabled={navBusy || !searchNav.canNext}
+          onClick={() => searchNav.onNext?.()}
+          title="Next"
+          aria-label="Next"
+        >
+          <FiChevronRight className="h-4 w-4 shrink-0" aria-hidden />
+        </Button>
       </div>
-  );
+    ) : null;
 
   const formScrollBody = (
         <div
@@ -1836,6 +1837,16 @@ export default function ServiceProposalFormModal({
                     <FiPrinter className="h-4 w-4 shrink-0" aria-hidden />
                     {isPage ? "Print" : "Customer Print"}
                   </Button>
+                  <Button
+                    type="button"
+                    variant="primary"
+                    size="sm"
+                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
+                    disabled={saving || copying}
+                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
+                  >
+                    {isPage ? "Internal" : "Internal Print"}
+                  </Button>
                 </>
               ) : null}
               <Button
@@ -1860,20 +1871,21 @@ export default function ServiceProposalFormModal({
                   "Copy & Create New"
                 )}
               </Button>
-              {canViewFinancials ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="primary"
-                    size="sm"
-                    className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
-                    disabled={saving || copying}
-                    onClick={() => openPrintPreview(PRINT_NOTES_INTERNAL)}
-                  >
-                    {isPage ? "Internal" : "Internal Print"}
-                  </Button>
-                </>
-              ) : null}
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
+                disabled={!canOpenLogistics || saving || copying}
+                title={
+                  canOpenLogistics
+                    ? "Motor receiving and shipping"
+                    : "Save the record with a document number before receiving / shipping"
+                }
+                onClick={() => openLogistics(KIND_RECEIVING)}
+              >
+                {isPage ? "Ship / Recv" : "Receiving / Shipping"}
+              </Button>
               <Button
                 type="button"
                 variant="primary"
@@ -1890,21 +1902,6 @@ export default function ServiceProposalFormModal({
                   : isPage
                     ? "Files"
                     : "Add Attachments"}
-              </Button>
-              <Button
-                type="button"
-                variant="primary"
-                size="sm"
-                className={`${TOOLBAR_BTN}${isPage ? " min-w-0 flex-1 basis-[calc(50%-0.25rem)]" : ""}`}
-                disabled={!canOpenLogistics || saving || copying}
-                title={
-                  canOpenLogistics
-                    ? "Motor receiving and shipping"
-                    : "Save the record with a document number before receiving / shipping"
-                }
-                onClick={() => openLogistics(KIND_RECEIVING)}
-              >
-                {isPage ? "Ship / Recv" : "Receiving / Shipping"}
               </Button>
           </div>
 
@@ -2273,14 +2270,6 @@ export default function ServiceProposalFormModal({
                   aria-label="Lead source"
                 />
               </FieldRow>
-              <FieldRow label="Due Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
-                <input
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) => patch("dueDate", e.target.value)}
-                  className={FIELD_INPUT}
-                />
-              </FieldRow>
               <FieldRow label="Proposal Submit Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
                 <input
                   type="date"
@@ -2294,6 +2283,14 @@ export default function ServiceProposalFormModal({
                   type="date"
                   value={form.proposalAcceptedDate}
                   onChange={(e) => patch("proposalAcceptedDate", e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FieldRow>
+              <FieldRow label="Due Date" labelWidth="9.5rem" controlClassName="min-w-0 flex-1">
+                <input
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => patch("dueDate", e.target.value)}
                   className={FIELD_INPUT}
                 />
               </FieldRow>
@@ -2716,7 +2713,8 @@ export default function ServiceProposalFormModal({
           zIndex={zIndex}
           showClose={!saving && !copying && !loadingRecord}
           closeOnOutsideClick={false}
-          headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem] [&>div]:overflow-x-auto [&>div>div:nth-child(2)]:min-w-0"
+          headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem]"
+          headerLeading={headerLeading}
           headerCenter={headerCenter}
           actions={headerActions}
         >
