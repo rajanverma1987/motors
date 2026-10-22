@@ -618,6 +618,8 @@ export default function ServiceProposalFormModal({
   const [saving, setSaving] = useState(false);
   const [copying, setCopying] = useState(false);
   const [loadingRecord, setLoadingRecord] = useState(false);
+  /** In-flight fetch while paging records (disables nav, no overlay). */
+  const [pagingRecord, setPagingRecord] = useState(false);
   const [attachmentsOpen, setAttachmentsOpen] = useState(false);
   const [commissionOpen, setCommissionOpen] = useState(false);
   const [commissionCount, setCommissionCount] = useState(0);
@@ -643,6 +645,8 @@ export default function ServiceProposalFormModal({
   const [customerViewOpen, setCustomerViewOpen] = useState(false);
   /** Skip one initialForm hydrate (Copy & Create New applies its own form snapshot). */
   const skipHydrateFromInitialRef = useRef(false);
+  /** True after the first successful hydrate while the modal is open (keeps UI stable when paging records). */
+  const hasHydratedRecordRef = useRef(false);
 
   const formatMoney = useCallback((n) => {
     const value = Number.isFinite(n) ? n : 0;
@@ -796,8 +800,17 @@ export default function ServiceProposalFormModal({
   }, [alert]);
 
   useEffect(() => {
+    if (!open) return;
+    loadCustomers();
+    loadEmployees();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load lists once per open, not on every record page
+  }, [open]);
+
+  useEffect(() => {
     if (!open) {
       setLoadingRecord(false);
+      setPagingRecord(false);
+      hasHydratedRecordRef.current = false;
       return;
     }
     let cancelled = false;
@@ -805,12 +818,12 @@ export default function ServiceProposalFormModal({
     setCommissionOpen(false);
     setDatasheetOpen(false);
     setPaymentModalOpen(false);
-    loadCustomers();
-    loadEmployees();
 
     if (skipHydrateFromInitialRef.current) {
       skipHydrateFromInitialRef.current = false;
       setLoadingRecord(false);
+      setPagingRecord(false);
+      hasHydratedRecordRef.current = true;
       return;
     }
 
@@ -819,13 +832,19 @@ export default function ServiceProposalFormModal({
       next.status = resolveConfiguredStatusSlug(next.status, mergedSettings) || next.status;
       next.jobStatus = String(next.jobStatus || "").trim();
       setForm(next);
+      hasHydratedRecordRef.current = true;
     };
 
     (async () => {
       const id = String(initialForm?.id || "").trim();
       if (id) {
-        setLoadingRecord(true);
-        setForm(createEmptyServiceProposalForm());
+        const keepPreviousUi = hasHydratedRecordRef.current;
+        if (!keepPreviousUi) {
+          setLoadingRecord(true);
+          setForm(createEmptyServiceProposalForm());
+        } else {
+          setPagingRecord(true);
+        }
         try {
           const item = await fetchSimpleServiceProposal(id);
           if (!cancelled && item) {
@@ -835,13 +854,17 @@ export default function ServiceProposalFormModal({
         } catch {
           /* fall back to list row */
         } finally {
-          if (!cancelled) setLoadingRecord(false);
+          if (!cancelled) {
+            setLoadingRecord(false);
+            setPagingRecord(false);
+          }
         }
         if (!cancelled) applyDoc(initialForm || {});
         return;
       }
       if (!cancelled) {
         setLoadingRecord(false);
+        setPagingRecord(false);
         applyDoc(initialForm || {});
       }
     })();
@@ -1073,19 +1096,19 @@ export default function ServiceProposalFormModal({
   const canAddCommission = Boolean(recordId);
   const canCreatePurchaseOrder = Boolean(recordId && jobNumber);
 
-  const refreshJobPurchaseOrders = useCallback(async () => {
+  const refreshJobPurchaseOrders = useCallback(async ({ silent = false } = {}) => {
     if (!recordId && !jobNumber) {
       setJobPurchaseOrders([]);
       return;
     }
-    setLoadingJobPurchaseOrders(true);
+    if (!silent) setLoadingJobPurchaseOrders(true);
     try {
       const items = await listSimplePurchaseOrdersForJobApi(recordId, jobNumber);
       setJobPurchaseOrders(Array.isArray(items) ? items : []);
     } catch {
       setJobPurchaseOrders([]);
     } finally {
-      setLoadingJobPurchaseOrders(false);
+      if (!silent) setLoadingJobPurchaseOrders(false);
     }
   }, [recordId, jobNumber]);
 
@@ -1095,7 +1118,8 @@ export default function ServiceProposalFormModal({
       setLoadingJobPurchaseOrders(false);
       return;
     }
-    refreshJobPurchaseOrders();
+    // Keep previous PO rows visible while the next record loads (avoids list flicker when paging).
+    void refreshJobPurchaseOrders({ silent: true });
   }, [open, refreshJobPurchaseOrders]);
 
   const loadCommissionCount = useCallback(async () => {
@@ -1633,21 +1657,8 @@ export default function ServiceProposalFormModal({
     }
   };
 
-  const headerActions = (
-    <Button
-      type="submit"
-      form={FORM_ID}
-      variant="primary"
-      size="sm"
-      className="text-xs"
-      disabled={saving || copying || loadingRecord}
-    >
-      {saving ? "Saving…" : "Save"}
-    </Button>
-  );
-
   const searchNav = searchResultNavigation;
-  const navBusy = saving || copying || loadingRecord;
+  const navBusy = saving || copying || loadingRecord || pagingRecord;
   const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
   const headerStatusSelects = (
     <div
@@ -1657,7 +1668,7 @@ export default function ServiceProposalFormModal({
           : "flex min-w-0 flex-nowrap items-end gap-2"
       }
     >
-      <div className={isPage ? "min-w-0" : "w-[11rem] min-w-[8.5rem] shrink"}>
+      <div className={isPage ? "min-w-0" : "w-[11rem] min-w-[8.5rem] shrink-0"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
           Proposal Type
         </label>
@@ -1674,7 +1685,7 @@ export default function ServiceProposalFormModal({
           aria-label="Proposal Type"
         />
       </div>
-      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink"}>
+      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink-0"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
           {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
         </label>
@@ -1709,7 +1720,7 @@ export default function ServiceProposalFormModal({
           />
         </div>
       </div>
-      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink"}>
+      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink-0"}>
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
           Job Status
         </label>
@@ -1734,10 +1745,10 @@ export default function ServiceProposalFormModal({
     </div>
   );
   const headerLeading = isPage ? null : headerStatusSelects;
-  const headerCenter =
+  const headerRecordNav =
     !isPage && showSearchNav ? (
       <div
-        className="inline-flex items-center rounded-full border border-border bg-bg p-1 shadow-sm dark:bg-card"
+        className="inline-flex shrink-0 items-center rounded-full border border-border bg-bg p-1 shadow-sm dark:bg-card"
         role="navigation"
         aria-label={searchNav.label || "Records"}
       >
@@ -1772,6 +1783,21 @@ export default function ServiceProposalFormModal({
         </Button>
       </div>
     ) : null;
+  const headerActions = (
+    <>
+      {headerRecordNav ? <div className="mr-5 shrink-0">{headerRecordNav}</div> : null}
+      <Button
+        type="submit"
+        form={FORM_ID}
+        variant="primary"
+        size="sm"
+        className="text-xs"
+        disabled={saving || copying || loadingRecord || pagingRecord}
+      >
+        {saving ? "Saving…" : "Save"}
+      </Button>
+    </>
+  );
 
   const formScrollBody = (
         <div
@@ -2732,11 +2758,10 @@ export default function ServiceProposalFormModal({
           width="95vw"
           height="min(94vh, 920px)"
           zIndex={zIndex}
-          showClose={!saving && !copying && !loadingRecord}
+          showClose={!saving && !copying}
           closeOnOutsideClick={false}
           headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem]"
           headerLeading={headerLeading}
-          headerCenter={headerCenter}
           actions={headerActions}
         >
           {formScrollBody}

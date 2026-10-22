@@ -262,8 +262,8 @@ export default function Modal({
             onMouseDown={handleHeaderMouseDown}
           >
             {headerCenter != null ? (
-              <div className="relative flex w-full min-w-0 flex-nowrap items-center gap-2 sm:gap-3">
-                <div className="z-[1] flex min-w-0 flex-1 flex-nowrap items-end gap-2 sm:gap-3">
+              <div className="grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+                <div className="flex min-w-0 flex-nowrap items-end justify-self-start gap-2 overflow-hidden sm:gap-3">
                   {title != null ? (
                     <h2
                       id="modal-title"
@@ -279,19 +279,15 @@ export default function Modal({
                     >
                       {headerLeading}
                     </div>
-                  ) : (
-                    <span className="min-w-0 flex-1" aria-hidden />
-                  )}
+                  ) : null}
                 </div>
-                <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center">
-                  <div
-                    className="pointer-events-auto"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    {headerCenter}
-                  </div>
+                <div
+                  className="pointer-events-auto shrink-0 justify-self-center"
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  {headerCenter}
                 </div>
-                <div className="z-[1] flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1 sm:gap-1.5">
+                <div className="flex min-w-0 flex-nowrap items-center justify-end justify-self-end gap-1 sm:gap-1.5">
                   {actions != null ? (
                     <div className="pointer-events-auto flex min-w-0 items-center overflow-x-auto overscroll-x-contain [-ms-overflow-style:auto] [scrollbar-width:thin]">
                       <div className="ml-auto flex min-w-0 flex-nowrap items-center justify-end gap-1 sm:gap-1.5 [&>span]:inline-flex [&>span]:items-center [&_button]:inline-flex [&_button]:shrink-0 [&_button]:cursor-pointer [&_button]:items-center [&_button]:whitespace-nowrap [&_button:disabled]:cursor-not-allowed">
