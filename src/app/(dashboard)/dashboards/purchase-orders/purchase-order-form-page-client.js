@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
 import {
   SIMPLE_TAB_PURCHASE_ORDERS,
   simplePortalTabHref,
@@ -16,11 +17,14 @@ import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 
 /**
  * Full-page Purchase Order editor for phones.
+ * Tablets/desktop that hit this URL are sent to the hub modal instead.
  * @param {{ recordId?: string }} props
  */
 export default function PurchaseOrderFormPageClient({ recordId = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isPhoneForm = useIsPhoneForm();
+  const [mqReady, setMqReady] = useState(false);
   const id = String(recordId || "").trim();
   const isNew = !id || id === "new";
   const typeParam = String(searchParams.get("type") || "").trim().toLowerCase();
@@ -33,6 +37,19 @@ export default function PurchaseOrderFormPageClient({ recordId = "" }) {
     () => simplePortalTabHref(SIMPLE_TAB_PURCHASE_ORDERS),
     []
   );
+
+  useEffect(() => {
+    setMqReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mqReady || isPhoneForm) return;
+    if (isNew) {
+      router.replace(listHref);
+      return;
+    }
+    router.replace(`${listHref}&open=${encodeURIComponent(id)}`);
+  }, [id, isNew, isPhoneForm, listHref, mqReady, router]);
 
   const handleClose = useCallback(() => {
     if (typeof window !== "undefined" && window.history.length > 1) {
@@ -51,6 +68,14 @@ export default function PurchaseOrderFormPageClient({ recordId = "" }) {
     },
     [isNew, router]
   );
+
+  if (!mqReady || !isPhoneForm) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-secondary">
+        Loading…
+      </div>
+    );
+  }
 
   return (
     <div

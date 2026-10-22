@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useSimpleOpenParam } from "@/hooks/use-simple-open-param";
-import { useIsPhone } from "@/hooks/use-media-query";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
 import {
   FiAlertTriangle,
   FiCheckCircle,
@@ -180,7 +180,7 @@ export default function ServiceProposalsPanel({
 }) {
   const isInvoices = variant === SIMPLE_LIST_VARIANT_INVOICES;
   const router = useRouter();
-  const isPhone = useIsPhone();
+  const isPhoneForm = useIsPhoneForm();
   const alert = useAlert();
   const confirm = useConfirm();
   const { canViewFinancials } = useFinancialAccess();
@@ -283,13 +283,13 @@ export default function ServiceProposalsPanel({
   );
 
   const openCreate = useCallback(() => {
-    if (isPhone) {
+    if (isPhoneForm) {
       router.push(phoneFormHref("new"));
       return;
     }
     setEditingId(null);
     setModalOpen(true);
-  }, [isPhone, phoneFormHref, router]);
+  }, [isPhoneForm, phoneFormHref, router]);
 
   useEffect(() => {
     if (!createNonce || isInvoices) return;
@@ -440,7 +440,7 @@ export default function ServiceProposalsPanel({
   }, [modalOpen, editingId, rows, page, pageSize, totalCount, isInvoices]);
 
   const openEdit = (row) => {
-    if (isPhone) {
+    if (isPhoneForm) {
       router.push(phoneFormHref(row.id));
       return;
     }

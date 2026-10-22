@@ -22,7 +22,7 @@ import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
 import { useFinancialAccess } from "@/hooks/use-financial-access";
 import { useFormatDate, usePreferredTablePageSize } from "@/contexts/user-settings-context";
-import { useIsPhone } from "@/hooks/use-media-query";
+import { useIsPhone, useIsPhoneForm } from "@/hooks/use-media-query";
 import {
   SIMPLE_SCREEN_FILTERS_CLASS,
   SIMPLE_SCREEN_PANEL_CLASS,
@@ -89,6 +89,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const confirm = useConfirm();
   const router = useRouter();
   const isPhone = useIsPhone();
+  const isPhoneForm = useIsPhoneForm();
   const { canViewFinancials } = useFinancialAccess();
   const formatDate = useFormatDate();
   const { settings: mergedSettings } = useUserSettings();
@@ -217,14 +218,14 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   );
 
   const openCreate = useCallback(() => {
-    if (isPhone) {
+    if (isPhoneForm) {
       router.push(phoneFormHref("new"));
       return;
     }
     setEditingPo(null);
     setModalMode("create");
     setModalOpen(true);
-  }, [isPhone, phoneFormHref, router]);
+  }, [isPhoneForm, phoneFormHref, router]);
 
   useEffect(() => {
     if (!createNonce) return;
@@ -310,7 +311,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const openEdit = useCallback(
     (row) => {
       if (!row) return;
-      if (isPhone) {
+      if (isPhoneForm) {
         const id = String(row.id || "").trim();
         if (!id) return;
         router.push(phoneFormHref(id));
@@ -321,14 +322,14 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
       setModalMode("edit");
       setModalOpen(true);
     },
-    [isPhone, phoneFormHref, router]
+    [isPhoneForm, phoneFormHref, router]
   );
 
   useSimpleOpenParam({
     ready: !loading,
     onOpen: useCallback(
       async (openId) => {
-        if (isPhone) {
+        if (isPhoneForm) {
           router.push(phoneFormHref(openId));
           return true;
         }
@@ -348,7 +349,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
         }
         return true;
       },
-      [isPhone, openEdit, phoneFormHref, router, rows]
+      [isPhoneForm, openEdit, phoneFormHref, router, rows]
     ),
   });
 

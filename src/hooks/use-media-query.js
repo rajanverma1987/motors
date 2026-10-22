@@ -26,9 +26,22 @@ export default function useMediaQuery(query) {
   return matches;
 }
 
-/** Tailwind `md` boundary: phone is below 768px. */
+/**
+ * Phone chrome (bottom nav / drawer): below Tailwind `md` (768px).
+ * Some small tablets (e.g. iPad mini portrait ~744px) still match this.
+ */
 export const PHONE_MAX_MQ = "(max-width: 767px)";
 
 export function useIsPhone() {
   return useMediaQuery(PHONE_MAX_MQ);
+}
+
+/**
+ * Full-page form routes (Service Proposal, PO, etc.): handsets only.
+ * Below Tailwind `sm` (640px) so tablets keep desktop modal / web form UI in PWA.
+ */
+export const PHONE_FORM_MAX_MQ = "(max-width: 639px)";
+
+export function useIsPhoneForm() {
+  return useMediaQuery(PHONE_FORM_MAX_MQ);
 }

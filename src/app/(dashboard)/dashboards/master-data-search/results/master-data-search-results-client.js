@@ -6,6 +6,7 @@ import { FiArrowLeft } from "react-icons/fi";
 import Badge from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import SimplePhoneListCard from "@/components/simple/simple-phone-list-card";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
 import { loadMasterDataSearchSession } from "@/lib/simple-master-data-search-session";
 import {
   SIMPLE_TAB_MASTER_DATA_SEARCH,
@@ -35,11 +36,23 @@ function formatRecordType(recordType) {
 
 export default function MasterDataSearchResultsClient() {
   const router = useRouter();
+  const isPhoneForm = useIsPhoneForm();
+  const [mqReady, setMqReady] = useState(false);
   const [ready, setReady] = useState(false);
   const [rows, setRows] = useState([]);
   const [resultMeta, setResultMeta] = useState(null);
 
   useEffect(() => {
+    setMqReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mqReady || isPhoneForm) return;
+    router.replace(simplePortalTabHref(SIMPLE_TAB_MASTER_DATA_SEARCH));
+  }, [isPhoneForm, mqReady, router]);
+
+  useEffect(() => {
+    if (!mqReady || !isPhoneForm) return;
     const session = loadMasterDataSearchSession();
     if (!session?.resultMeta) {
       router.replace(simplePortalTabHref(SIMPLE_TAB_MASTER_DATA_SEARCH));
@@ -48,7 +61,7 @@ export default function MasterDataSearchResultsClient() {
     setRows(session.rows);
     setResultMeta(session.resultMeta);
     setReady(true);
-  }, [router]);
+  }, [isPhoneForm, mqReady, router]);
 
   const emptyMessage =
     resultMeta?.searchType === "customer"

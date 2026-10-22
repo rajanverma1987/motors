@@ -12,7 +12,7 @@ import DatasheetFieldGrid from "@/components/simple/simple-datasheet-field-grid"
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useAlert } from "@/components/confirm-provider";
-import { useIsPhone } from "@/hooks/use-media-query";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
 import {
   MASTER_DATA_SEARCH_FORMS,
   createEmptyDatasheetCriteria,
@@ -69,7 +69,7 @@ function formatRecordType(recordType) {
 export default function MasterDataSearchPanel() {
   const alert = useAlert();
   const router = useRouter();
-  const isPhone = useIsPhone();
+  const isPhoneForm = useIsPhoneForm();
   const [formId, setFormId] = useState("ac");
   const [criteriaByForm, setCriteriaByForm] = useState(() => ({
     ac: emptyCriteriaForForm("ac"),
@@ -146,7 +146,7 @@ export default function MasterDataSearchPanel() {
       };
       setRows(nextRows);
       setResultMeta(nextMeta);
-      if (isPhone) {
+      if (isPhoneForm) {
         saveMasterDataSearchSession({
           rows: nextRows,
           resultMeta: nextMeta,
@@ -165,19 +165,19 @@ export default function MasterDataSearchPanel() {
     } finally {
       setSearching(false);
     }
-  }, [alert, criteriaByForm, formId, isPhone, router, searching]);
+  }, [alert, criteriaByForm, formId, isPhoneForm, router, searching]);
 
   const openProposal = useCallback(
     (row) => {
       const id = String(row?.id || "").trim();
       if (!id) return;
-      if (isPhone) {
+      if (isPhoneForm) {
         router.push(simpleServiceProposalFormHref(id));
         return;
       }
       setOpenProposalId(id);
     },
-    [isPhone, router]
+    [isPhoneForm, router]
   );
 
   const openCustomer = useCallback((row) => {
@@ -323,7 +323,7 @@ export default function MasterDataSearchPanel() {
           f.searchType === "customer" ? (
             <div
               className={
-                isPhone
+                isPhoneForm
                   ? "grid min-w-0 grid-cols-1 gap-3 pt-3"
                   : "flex min-w-0 max-w-md flex-col gap-4 pt-3"
               }
@@ -336,12 +336,12 @@ export default function MasterDataSearchPanel() {
                 inputClassName={
                   highlightFilledFields && String(criteriaByForm.customer?.companyName || "").trim()
                     ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                    : isPhone
+                    : isPhoneForm
                       ? "!h-10 !text-base"
                       : ""
                 }
               />
-              <div className={isPhone ? "grid grid-cols-2 gap-3" : "contents"}>
+              <div className={isPhoneForm ? "grid grid-cols-2 gap-3" : "contents"}>
                 <Input
                   label="Contact Name"
                   value={criteriaByForm.customer?.primaryContactName ?? ""}
@@ -351,7 +351,7 @@ export default function MasterDataSearchPanel() {
                     highlightFilledFields &&
                     String(criteriaByForm.customer?.primaryContactName || "").trim()
                       ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                      : isPhone
+                      : isPhoneForm
                         ? "!h-10 !text-base"
                         : ""
                   }
@@ -365,7 +365,7 @@ export default function MasterDataSearchPanel() {
                     highlightFilledFields &&
                     String(criteriaByForm.customer?.documentNumber || "").trim()
                       ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
-                      : isPhone
+                      : isPhoneForm
                         ? "!h-10 !text-base"
                         : ""
                   }
@@ -378,13 +378,13 @@ export default function MasterDataSearchPanel() {
               </p>
             </div>
           ) : (
-            <div className={`flex min-w-0 flex-col ${isPhone ? "gap-5 pt-2" : "gap-4 pt-3"}`}>
+            <div className={`flex min-w-0 flex-col ${isPhoneForm ? "gap-5 pt-2" : "gap-4 pt-3"}`}>
               {(f.blocks || []).map((block) => (
                 <div key={block.id} className="min-w-0">
                   {f.blocks.length > 1 ? (
                     <p
                       className={`mb-2 border-b border-primary/25 pb-1 font-bold uppercase tracking-wide text-primary ${
-                        isPhone ? "text-xs" : "text-sm"
+                        isPhoneForm ? "text-xs" : "text-sm"
                       }`}
                     >
                       {block.label}
@@ -395,8 +395,8 @@ export default function MasterDataSearchPanel() {
                     values={criteriaByForm[f.id]?.[block.id] || {}}
                     onFieldChange={(key, value) => patchField(f.id, block.id, key, value)}
                     highlightFilled={highlightFilledFields && f.id === formId}
-                    dense={!isPhone}
-                    stacked={isPhone}
+                    dense={!isPhoneForm}
+                    stacked={isPhoneForm}
                     stackedCols={2}
                   />
                 </div>
@@ -408,7 +408,7 @@ export default function MasterDataSearchPanel() {
       criteriaByForm,
       formId,
       highlightFilledFields,
-      isPhone,
+      isPhoneForm,
       patchCustomerField,
       patchField,
     ]
@@ -446,7 +446,7 @@ export default function MasterDataSearchPanel() {
 
   return (
     <div className={`${SIMPLE_SCREEN_PANEL_CLASS} flex min-h-0 flex-1 flex-col gap-3 overflow-hidden`}>
-      <div className="hidden shrink-0 border-b border-border pb-3 md:block">
+      <div className="hidden shrink-0 border-b border-border pb-3 sm:block">
         <h2 className="text-lg font-semibold text-title">Master Data Search</h2>
         <p className="mt-1 text-sm text-secondary">
           Search jobs by datasheet fields (same fields as the Service Proposal DataSheet). Use{" "}
@@ -458,8 +458,8 @@ export default function MasterDataSearchPanel() {
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden lg:flex-row">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card max-md:border-0 max-md:bg-transparent">
-          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-2.5 max-md:bg-card">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-sm border border-border bg-card max-sm:border-0 max-sm:bg-transparent">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-border bg-primary/[0.04] px-3 py-2.5 max-sm:bg-card">
             <span className="text-xs font-bold uppercase tracking-wide text-secondary">
               Search criteria
             </span>
@@ -480,7 +480,7 @@ export default function MasterDataSearchPanel() {
               </Button>
             </div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-md:px-2">
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 max-sm:px-2">
             <Tabs
               tabs={formTabs}
               value={formId}
@@ -495,7 +495,7 @@ export default function MasterDataSearchPanel() {
           </div>
         </div>
 
-        <div className="hidden min-h-0 min-w-0 flex-[1.15] flex-col overflow-hidden rounded-sm border border-border bg-card md:flex">
+        <div className="hidden min-h-0 min-w-0 flex-[1.15] flex-col overflow-hidden rounded-sm border border-border bg-card sm:flex">
           <div className="shrink-0 border-b border-border bg-primary/[0.04] px-3 py-2">
             <p className="text-xs font-bold uppercase tracking-wide text-secondary">
               Results

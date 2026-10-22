@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ServiceProposalFormModal from "@/components/simple/service-proposal-form-modal";
+import { useIsPhoneForm } from "@/hooks/use-media-query";
 import {
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_SERVICE_PROPOSALS,
@@ -18,11 +19,14 @@ import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 
 /**
  * Full-page Service Proposal / Invoice editor for phones.
+ * Tablets/desktop that hit this URL are sent to the hub modal instead.
  * @param {{ recordId?: string }} props
  */
 export default function ServiceProposalFormPageClient({ recordId = "" }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isPhoneForm = useIsPhoneForm();
+  const [mqReady, setMqReady] = useState(false);
   const id = String(recordId || "").trim();
   const isNew = !id || id === "new";
   const returnTab =
@@ -31,6 +35,19 @@ export default function ServiceProposalFormPageClient({ recordId = "" }) {
       : SIMPLE_TAB_SERVICE_PROPOSALS;
 
   const listHref = useMemo(() => simplePortalTabHref(returnTab), [returnTab]);
+
+  useEffect(() => {
+    setMqReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mqReady || isPhoneForm) return;
+    if (isNew) {
+      router.replace(listHref);
+      return;
+    }
+    router.replace(`${listHref}&open=${encodeURIComponent(id)}`);
+  }, [id, isNew, isPhoneForm, listHref, mqReady, router]);
 
   const initialForm = useMemo(() => (isNew ? null : { id }), [isNew, id]);
 
@@ -72,6 +89,14 @@ export default function ServiceProposalFormPageClient({ recordId = "" }) {
     },
     [id, isNew, returnTab, router]
   );
+
+  if (!mqReady || !isPhoneForm) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center text-sm text-secondary">
+        Loading…
+      </div>
+    );
+  }
 
   return (
     <div
