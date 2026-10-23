@@ -46,20 +46,28 @@ export async function POST(request) {
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await connectDB();
 
+    const body = await request.json().catch(() => ({}));
+    const requestedLimit = Number(body?.dailyLimit);
+    const dailyLimit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.floor(requestedLimit), 5000)
+        : LISTING_MARKETING_DAILY_LIMIT;
+
     const now = new Date();
     const dayStart = startOfUtcDay(now);
     const sentToday = await ListingMarketingEmail.countDocuments({
       status: "sent",
       sentAt: { $gte: dayStart },
     });
-    const quota = Math.max(0, LISTING_MARKETING_DAILY_LIMIT - sentToday);
+    const quota = Math.max(0, dailyLimit - sentToday);
     if (quota <= 0) {
       return NextResponse.json({
         ok: true,
         sent: 0,
         skipped: 0,
         remainingToday: 0,
-        message: `Daily limit of ${LISTING_MARKETING_DAILY_LIMIT} emails already reached (UTC day).`,
+        dailyLimit,
+        message: `Daily limit of ${dailyLimit} emails already reached (UTC day).`,
       });
     }
 
@@ -191,12 +199,13 @@ export async function POST(request) {
       sent++;
     }
 
-    const remainingToday = Math.max(0, LISTING_MARKETING_DAILY_LIMIT - (sentToday + sent));
+    const remainingToday = Math.max(0, dailyLimit - (sentToday + sent));
     return NextResponse.json({
       ok: true,
       sent,
       attempted: queue.length,
       remainingToday,
+      dailyLimit,
       errors: errors.length ? errors : undefined,
     });
   } catch (err) {

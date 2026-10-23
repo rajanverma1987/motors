@@ -162,6 +162,18 @@ export default function AdminMarketingPage() {
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [testEmail, setTestEmail] = useState("contact@iqmotorbase.com");
   const [sendingTest, setSendingTest] = useState(false);
+  const [dailyLimitOverride, setDailyLimitOverride] = useState("100");
+
+  const effectiveDailyLimit = useMemo(() => {
+    const n = Number(dailyLimitOverride);
+    if (!Number.isFinite(n) || n <= 0) return summary?.dailyLimit || 100;
+    return Math.min(Math.floor(n), 5000);
+  }, [dailyLimitOverride, summary?.dailyLimit]);
+
+  const remainingToday = useMemo(() => {
+    const sent = Number(summary?.sentToday || 0);
+    return Math.max(0, effectiveDailyLimit - sent);
+  }, [effectiveDailyLimit, summary?.sentToday]);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -271,10 +283,9 @@ export default function AdminMarketingPage() {
   };
 
   const runBatch = async () => {
-    const remaining = summary?.remainingToday ?? 0;
     const ok = await confirm({
       title: "Run marketing batch?",
-      message: `Send up to ${remaining} emails (daily limit ${summary?.dailyLimit || 100}, UTC). Follow-ups due after ${summary?.followUpDays || 3} days are prioritized, then new initials, then restarts.`,
+      message: `Send up to ${remainingToday} emails (daily limit ${effectiveDailyLimit}, UTC). Follow-ups due after ${summary?.followUpDays || 3} days are prioritized, then new initials, then restarts.`,
       confirmLabel: "Send batch",
       variant: "primary",
     });
@@ -285,7 +296,7 @@ export default function AdminMarketingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ dailyLimit: effectiveDailyLimit }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Batch failed");
@@ -433,11 +444,21 @@ export default function AdminMarketingPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Listing marketing</h1>
           <p className="mt-1 text-sm text-secondary">
-            Email approved directory listings via Resend. Auto batch up to 100/day (UTC), follow-up after 3
-            days, max 3 follow-ups. Every email includes an unsubscribe link.
+            Email approved directory listings via Resend. Default batch limit 100/day (UTC), override below.
+            Follow-up after 3 days, max 3 follow-ups. Every email includes an unsubscribe link.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="w-[7.5rem]">
+            <Input
+              label="Daily limit"
+              type="number"
+              min={1}
+              max={5000}
+              value={dailyLimitOverride}
+              onChange={(e) => setDailyLimitOverride(e.target.value)}
+            />
+          </div>
           <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
             Email templates
           </Button>
@@ -451,7 +472,7 @@ export default function AdminMarketingPage() {
             Restart selected
           </Button>
           <Button type="button" variant="primary" size="sm" disabled={sending} onClick={() => void runBatch()}>
-            {sending ? "Sending…" : `Run batch (${summary?.remainingToday ?? "…"} left today)`}
+            {sending ? "Sending…" : `Run batch (${remainingToday} left today)`}
           </Button>
         </div>
       </div>
@@ -461,7 +482,7 @@ export default function AdminMarketingPage() {
           <div className="rounded-md border border-border bg-card p-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Sent today (UTC)</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-title">
-              {summary.sentToday}/{summary.dailyLimit}
+              {summary.sentToday}/{effectiveDailyLimit}
             </p>
           </div>
           <div className="rounded-md border border-border bg-card p-3">
