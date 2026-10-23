@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+vendor/**/node_modules
+vendor/**/package-lock.json
 /.pnp
 .pnp.*
 .yarn/*
