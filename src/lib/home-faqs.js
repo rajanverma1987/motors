@@ -17,6 +17,16 @@ export const HOME_FAQS = [
       "Yes. The technician mobile app lets floor staff scan job QR codes, update work order status, and log motor testing notes in real time. Time Clock adds punch in and out at the shop, plus a Jobs list so assigned technicians can fill the datasheet, log hours on that job, and change work order status without a desk trip.",
   },
   {
+    question: "Can office staff run the shop from a phone or tablet?",
+    answer:
+      "Yes. The Simple dashboard is built for phone and tablet and can be installed as a Progressive Web App from the browser. On phones you get bottom navigation for proposals, invoices, purchases, and Master Data Search, with full-page forms for touch. Tablets keep the full web form layout. Proposals, job POs, inventory, reports, and calculators stay in the same system as the desktop.",
+  },
+  {
+    question: "What is Master Data Search?",
+    answer:
+      "Master Data Search finds past jobs by customer fields or datasheet criteria (manufacturer, HP, volts, frame, and more) using wildcards. Results open the matching service proposal so you can reuse motor history instead of starting from a blank form.",
+  },
+  {
     question: "Can I track employee punches and payroll?",
     answer:
       "Yes. Time Clock uses a shop QR, passkey, and location for punches. Managers review a punch calendar, record payments, and keep payment history on the employee. You can email a daily or weekly Excel file of punches, clocked hours, and manual hours after the last employee punches out.",

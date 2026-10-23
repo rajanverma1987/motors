@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import DemoRequest from "@/models/DemoRequest";
 import { sendDemoRequestToAdmin, sendDemoRequestThankYou } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
@@ -60,13 +62,19 @@ export async function POST(request) {
       sourcePage,
     };
 
+    // Persist before notifying. If SMTP is down the lead still survives in admin,
+    // which is what previously made these requests vanish without a trace.
+    let record = null;
+    try {
+      await connectDB();
+      record = await DemoRequest.create({ ...fields, formType: "demo" });
+    } catch (dbErr) {
+      console.error("Demo request save failed:", dbErr);
+    }
+
     const adminResult = await sendDemoRequestToAdmin(fields);
     if (!adminResult.ok) {
       console.error("Demo request admin email failed:", adminResult.error);
-      return NextResponse.json(
-        { error: "Failed to send your request. Please try again or email us directly." },
-        { status: 500 }
-      );
     }
 
     const thankYouResult = await sendDemoRequestThankYou(name, email, {
@@ -76,7 +84,25 @@ export async function POST(request) {
     });
     if (!thankYouResult.ok) {
       console.warn("Demo request thank-you email failed:", thankYouResult.error);
-      // Still return success; admin got the lead
+    }
+
+    if (record) {
+      try {
+        record.notifyEmailStatus = adminResult.ok ? "sent" : "failed";
+        record.notifyEmailError = adminResult.ok ? "" : String(adminResult.error || "").slice(0, 500);
+        record.thankYouEmailStatus = thankYouResult.ok ? "sent" : "failed";
+        await record.save();
+      } catch (statusErr) {
+        console.error("Demo request email-status update failed:", statusErr);
+      }
+    }
+
+    // Only a lead that reached neither the database nor the mailbox is a real failure.
+    if (!record && !adminResult.ok) {
+      return NextResponse.json(
+        { error: "Failed to send your request. Please try again or email us directly." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ ok: true });

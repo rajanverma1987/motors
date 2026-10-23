@@ -93,12 +93,14 @@ export default function AboutPage() {
             <div>
               <dt>Shop management software</dt>
               <dd>
-                A purpose-built CRM and operations platform for electric motor repair shops. Features include digital job
-                write-ups with full motor nameplate data (HP, voltage, RPM, frame, enclosure, insulation class, winding
-                specifications), work order tracking from intake through testing to delivery, customer and motor history
-                registry, shop parts inventory with job reservations, invoicing, accounts receivable, vendor purchase
-                orders, accounts payable, QuickBooks Online sync, and API access. Technician mobile app is in
-                development. Pricing starts at $349 per month for unlimited users.
+                A purpose-built CRM and operations platform for electric motor repair shops. Features include the Simple
+                dashboard (installable on phone and tablet as a PWA) with service proposals, Master Data Search, and job
+                purchase orders; digital job write-ups with full motor nameplate data (HP, voltage, RPM, frame,
+                enclosure, insulation class, winding specifications); work order tracking from intake through testing to
+                delivery; customer and motor history registry; shop parts inventory with job reservations; invoicing;
+                accounts receivable; vendor purchase orders; accounts payable; QuickBooks Online sync; API access; and a
+                technician mobile app for floor status and testing. Pricing starts at $349 per month for unlimited
+                users.
               </dd>
             </div>
             <div>

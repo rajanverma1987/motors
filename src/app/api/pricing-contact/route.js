@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import DemoRequest from "@/models/DemoRequest";
 import { sendDemoRequestToAdmin, sendDemoRequestThankYou } from "@/lib/email";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { isValidEmail, LIMITS, clampString } from "@/lib/validation";
@@ -46,6 +48,24 @@ export async function POST(request) {
     const sourcePage =
       requestType === "founder" ? "/pricing (founder pricing request)" : "/pricing (general inquiry)";
 
+    // Same lead stream as /api/contact-demo (identical notification path), so it is
+    // persisted the same way — otherwise pricing inquiries would be missing from admin.
+    let record = null;
+    try {
+      await connectDB();
+      record = await DemoRequest.create({
+        formType: requestType === "founder" ? "pricing_founder" : "pricing_general",
+        name,
+        email,
+        phone,
+        businessName,
+        mainProblem: message,
+        sourcePage,
+      });
+    } catch (dbErr) {
+      console.error("Pricing contact save failed:", dbErr);
+    }
+
     const adminResult = await sendDemoRequestToAdmin({
       name,
       email,
@@ -57,15 +77,29 @@ export async function POST(request) {
 
     if (!adminResult.ok) {
       console.error("Pricing contact admin email failed:", adminResult.error);
-      return NextResponse.json(
-        { success: false, message: "Unable to process. Please try again." },
-        { status: 502 }
-      );
     }
 
     const thankYouResult = await sendDemoRequestThankYou(name, email, {});
     if (!thankYouResult.ok) {
       console.warn("Pricing contact thank-you email failed:", thankYouResult.error);
+    }
+
+    if (record) {
+      try {
+        record.notifyEmailStatus = adminResult.ok ? "sent" : "failed";
+        record.notifyEmailError = adminResult.ok ? "" : String(adminResult.error || "").slice(0, 500);
+        record.thankYouEmailStatus = thankYouResult.ok ? "sent" : "failed";
+        await record.save();
+      } catch (statusErr) {
+        console.error("Pricing contact email-status update failed:", statusErr);
+      }
+    }
+
+    if (!record && !adminResult.ok) {
+      return NextResponse.json(
+        { success: false, message: "Unable to process. Please try again." },
+        { status: 502 }
+      );
     }
 
     return NextResponse.json({ success: true });

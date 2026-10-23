@@ -16,7 +16,7 @@ import {
 
 const HOME_TITLE = "Motor Repair Shop Software, Work Orders, Leads & Inventory | IQMotorBase";
 const HOME_DESCRIPTION =
-  "Manage work orders, leads, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop, all in one platform. Book a free demo today.";
+  "Manage service proposals, work orders, purchase orders, inventory, invoicing, and QuickBooks Online sync for your electric motor repair shop. Install the Simple dashboard as a phone or tablet app. Book a free demo today.";
 
 const heroOg = heroDashboardTabletOgImage();
 
@@ -81,9 +81,29 @@ const workflowFeatures = [
     title: "Sales, Service, and Field Service proposals",
     detail: "Mark each proposal as Sales, Service, or Field Service before you pick the customer. The type stays on the job so quoting, parts, and reporting match how the shop actually sells: counter sales, in-shop repair, or work at the customer site.",
   },
+  {
+    title: "Simple service proposals: RFQ, Job, and Invoice on one record",
+    detail:
+      "The Simple dashboard centers proposals, invoices, and job purchase orders on one continuous record. Convert RFQ to Job and Job to Invoice without retyping the motor, scope, or customer. Email or print customer and internal versions, attach files, and open receiving or shipping from the same form.",
+  },
+  {
+    title: "Master Data Search across jobs and datasheets",
+    detail:
+      "Find past jobs by customer name, contact, document number, or datasheet fields (manufacturer, HP, volts, frame, and more) with wildcard search. Open a matching proposal in one tap so rewind history and nameplate data are ready when the next motor walks in.",
+  },
+  {
+    title: "Job purchase orders on the proposal",
+    detail:
+      "Create and open vendor POs from the service proposal. See PO number, vendor, date, status, and payment on the job, expand line items when you need detail, and see the summed PO total for that job next to Purchase Orders so parts cost stays visible while you quote and bill.",
+  },
 ];
 
 const managementFeatures = [
+  {
+    title: "Simple dashboard on phone and tablet (installable PWA)",
+    detail:
+      "Run the shop from the Simple portal on a phone or tablet: bottom navigation for proposals, invoices, purchases, and Master Search, with customers, inventory, reports, and calculators in the drawer. Install to the home screen as a Progressive Web App. Phones get full-page forms built for touch; tablets keep the full web modal layout so office work stays productive on larger screens.",
+  },
   {
     title: "Technician mobile app (shop-floor first)",
     href: "/technician-mobile-app-shop-floor-first",
@@ -203,7 +223,8 @@ export default function HomePage() {
             </h1>
             <p className="mt-6 text-pretty text-base text-secondary sm:text-lg lg:text-xl">
               From first lead through cash collection, vendor buying, payables, sales commissions, and QuickBooks
-              Online sync, one connected workflow instead of scattered spreadsheets and apps. Job Write-Up, job board,
+              Online sync, one connected workflow instead of scattered spreadsheets and apps. The Simple dashboard
+              runs on phone and tablet (installable as an app), with service proposals, Master Data Search, job board,
               inventory, invoicing, repair leads,{" "}
               <Link href="/careers" className="font-medium text-primary hover:underline">
                 hiring
@@ -212,7 +233,7 @@ export default function HomePage() {
               <Link href="/marketplace" className="font-medium text-primary hover:underline">
                 marketplace
               </Link>{" "}
-              are built in too.
+              built in.
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
               <DemoBookingLink className="w-full min-w-0 sm:w-auto">
@@ -339,7 +360,8 @@ export default function HomePage() {
               Features
             </h2>
             <p className="mt-4 text-lg text-secondary">
-              Everything you need to run and grow your motor repair center, workflow, operations,{" "}
+              Everything you need to run and grow your motor repair center: Simple service proposals and purchase
+              orders, Master Data Search, phone and tablet dashboard (installable PWA), workflow, operations,{" "}
               <strong className="font-medium text-title">shop parts inventory</strong> (on-hand, reserved, locations,
               low-stock), leads,{" "}
               <Link href="/careers" className="font-medium text-primary hover:underline">

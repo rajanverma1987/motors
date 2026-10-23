@@ -10,6 +10,9 @@ const FOUNDER_SPOTS_TAKEN = 1;
 const FOUNDER_SPOTS_LEFT = FOUNDER_SPOTS_TOTAL - FOUNDER_SPOTS_TAKEN;
 
 const STANDARD_FEATURES = [
+  "Simple service proposals: RFQ, Job, and Invoice",
+  "Master Data Search across jobs and datasheets",
+  "Simple dashboard on phone and tablet (installable PWA)",
   "Digital job write-ups with motor nameplate data",
   "Work order tracking: intake to delivery",
   "Customer and motor history registry",
@@ -21,7 +24,7 @@ const STANDARD_FEATURES = [
   "Marketplace and careers board",
   "Unlimited users",
   "API access",
-  "Technician mobile app, coming soon",
+  "Technician mobile app for the shop floor",
 ];
 
 const FOUNDER_FEATURES = [

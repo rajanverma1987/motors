@@ -138,6 +138,21 @@ const faqSchema = {
 
 const INCLUDED_FEATURES = [
   {
+    title: "Simple service proposals",
+    description:
+      "Run RFQ, Job, and Invoice on one record in the Simple dashboard. Email or print customer and internal proposals, attach files, convert stages without retyping, and keep job purchase orders visible on the same form with a summed PO total.",
+  },
+  {
+    title: "Master Data Search",
+    description:
+      "Search past jobs by customer or datasheet fields (manufacturer, HP, volts, frame, and more) with wildcards. Open the matching proposal so rewind history is ready when the motor comes back.",
+  },
+  {
+    title: "Phone and tablet Simple dashboard (PWA)",
+    description:
+      "Install the Simple portal to a phone or tablet home screen. Phones get touch-first navigation and full-page forms for proposals and POs. Tablets keep the full web form layout. Proposals, invoices, purchases, and Master Search stay one tap away.",
+  },
+  {
     title: "Digital job write-ups",
     description:
       "Create job write-ups with full motor nameplate data: HP, voltage, RPM, frame, enclosure, insulation class, winding data. Every job starts with a complete motor record, not a blank form.",
@@ -190,7 +205,7 @@ const INCLUDED_FEATURES = [
   {
     title: "Technician mobile app",
     description:
-      "Coming soon. Technicians will be able to scan job QR codes, update work order status, and log motor testing data from the shop floor, without going back to a desk.",
+      "Technicians scan job QR codes, update work order status, and log motor testing data from the shop floor, without going back to a desk. Time Clock Jobs list supports datasheet, hours, and status on assigned work.",
   },
 ];
 

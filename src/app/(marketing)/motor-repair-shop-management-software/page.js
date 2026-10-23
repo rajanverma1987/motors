@@ -78,6 +78,10 @@ const faqItems = [
     a: "Yes. A Tag QR printed from the Job Write-Up encodes the job number. Technicians scan it with the mobile app to open the correct work order, update job status, and log motor testing notes and values from the floor. Time Clock adds shop punches plus a Jobs list: assigned technicians fill the datasheet, log hours on that job, and change work order status. The office sees those updates on the same job board in real time.",
   },
   {
+    q: "Can managers run proposals and POs from a phone or tablet?",
+    a: "Yes. The Simple dashboard installs as a Progressive Web App. On phones, bottom navigation covers proposals, invoices, purchases, and Master Data Search, with full-page forms for touch. Tablets keep the full web form layout. Job purchase orders stay on the service proposal with a summed PO total, so buying and quoting stay on the same record away from the desk.",
+  },
+  {
     q: "How is this different from general auto repair shop software?",
     a: "IQMotorBase is built for electric motor and rewind shops, not cars. Motor and customer registries carry serial numbers, specs, service history, and test results across visits. Work orders carry motor details and quote-backed line items. Tag QR floor updates and inventory reservation are tied to that same job path. Auto-shop tools are built for oil changes and vehicle RO workflows; they do not replace a motor-specific record.",
   },
@@ -136,8 +140,10 @@ export default function MotorRepairShopManagementSoftwarePage() {
               motorcycle shop software, not auto repair software, and not generic field service. Every repair starts as
               a Job Write-Up with its own job number:
               intake, inspection notes, preliminary and final quotes, customer send, attachments, shop actions, and
-              the path into work orders and invoices stay on that same record. You are not re-entering motor details
-              and specs across disconnected screens.
+              the path into work orders and invoices stay on that same record. The Simple dashboard adds touch-first
+              service proposals, Master Data Search, and job purchase orders on phone and tablet (installable as a PWA),
+              so office work does not stop when you leave the desk. You are not re-entering motor details and specs
+              across disconnected screens.
             </p>
             <p className="mt-4 text-secondary leading-relaxed">
               The one-sentence difference versus almost every competitor in “motor repair software” search results:
