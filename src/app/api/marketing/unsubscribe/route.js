@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { connectDB } from "@/lib/db";
+import Listing from "@/models/Listing";
+import ListingMarketingState from "@/models/ListingMarketingState";
 import MarketingContact from "@/models/MarketingContact";
-import crypto from "crypto";
-
-const UNSUB_SECRET = process.env.MARKETING_UNSUBSCRIBE_SECRET || process.env.AUTH_SECRET;
-
-function getUnsubscribeToken(email) {
-  if (!UNSUB_SECRET) return null;
-  const normalized = (email || "").trim().toLowerCase();
-  return crypto.createHmac("sha256", UNSUB_SECRET).update(normalized).digest("base64url");
-}
+import { verifyListingMarketingUnsubscribeToken } from "@/lib/listing-marketing-unsubscribe";
 
 export function GET(request) {
   return handleUnsubscribe(request);
@@ -27,11 +21,29 @@ export async function handleUnsubscribe(request) {
     if (!email) {
       return NextResponse.redirect(`${baseUrl}/unsubscribe/success?error=missing`);
     }
-    if (UNSUB_SECRET && token !== getUnsubscribeToken(email)) {
+    if (!verifyListingMarketingUnsubscribeToken(email, token)) {
       return NextResponse.redirect(`${baseUrl}/unsubscribe/success?error=invalid`);
     }
 
     await connectDB();
+    const now = new Date();
+
+    const listings = await Listing.find({ email }).select("_id").lean();
+    for (const listing of listings) {
+      await ListingMarketingState.findOneAndUpdate(
+        { listingId: listing._id },
+        {
+          $set: {
+            listingId: listing._id,
+            unsubscribedAt: now,
+            awaitingRestartTemplate: false,
+          },
+        },
+        { upsert: true }
+      );
+    }
+
+    // Legacy contacts collection (no longer used by admin UI).
     const contact = await MarketingContact.findOne({ email });
     if (contact) {
       contact.status = "unsubscribed";

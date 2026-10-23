@@ -2,54 +2,61 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
+import {
+  LISTING_MARKETING_TEMPLATE_KEYS,
+  LISTING_MARKETING_TEMPLATE_META,
+} from "@/lib/listing-marketing-constants";
+import { DEFAULT_LISTING_MARKETING_TEMPLATES } from "@/lib/listing-marketing-defaults";
 
-const DEFAULT_INITIAL = {
-  type: "initial",
-  subject: "List your motor repair shop on IQMotorBase.com",
-  body: `<div style="font-family: sans-serif; max-width: 560px; line-height: 1.5;">
-<p style="margin: 0 0 1em 0;">Hi,</p>
-<p style="margin: 0 0 1em 0;">We’d like to invite you to list your motor repair shop on <strong>IQMotorBase.com</strong> so customers in your area can find you.</p>
-<ul style="margin: 1em 0; padding-left: 1.25em;">
-<li>Listing is <strong>free</strong></li>
-<li>Add your services and get more leads</li>
-<li>Manage your presence in one place</li>
-</ul>
-<p style="margin: 1.25em 0;">
-<a href="https://IQMotorBase.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
-</p>
-<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">IQMotorBase.com</p>
-<hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />
-<p style="margin: 0; font-size: 12px; color: #94a3b8;">Don’t want to receive these emails? <a href="{{unsubscribe_url}}" style="color: #64748b;">Unsubscribe</a>.</p>
-</div>`,
-};
+function normalizeTemplateDoc(doc, key) {
+  const defaults = DEFAULT_LISTING_MARKETING_TEMPLATES[key];
+  const meta = LISTING_MARKETING_TEMPLATE_META[key];
+  if (!doc) {
+    return {
+      key,
+      name: meta?.name || defaults.name,
+      subject: defaults.subject,
+      bodyHtml: defaults.bodyHtml,
+    };
+  }
+  const bodyHtml = String(doc.bodyHtml || doc.body || "").trim() || defaults.bodyHtml;
+  return {
+    key,
+    name: String(doc.name || meta?.name || defaults.name).trim(),
+    subject: String(doc.subject || "").trim() || defaults.subject,
+    bodyHtml,
+  };
+}
 
-const DEFAULT_FOLLOWUP = {
-  type: "followup",
-  subject: "Quick follow-up – list your motor repair shop",
-  body: `<div style="font-family: sans-serif; max-width: 560px; line-height: 1.5;">
-<p style="margin: 0 0 1em 0;">Hi,</p>
-<p style="margin: 0 0 1em 0;">Just following up on our previous message about listing your shop on <strong>IQMotorBase.com</strong>.</p>
-<p style="margin: 0 0 1em 0;">If you have a moment, you can add your shop here. It&apos;s free and only takes a few minutes.</p>
-<p style="margin: 1.25em 0;">
-<a href="https://IQMotorBase.com/list-your-electric-motor-services" style="display: inline-block; padding: 10px 18px; background: #9a5d33; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">List your shop</a>
-</p>
-<p style="margin: 1.5em 0 0 0; font-size: 13px; color: #64748b;">IQMotorBase.com</p>
-<hr style="margin: 1.5em 0; border: none; border-top: 1px solid #e2e8f0;" />
-<p style="margin: 0; font-size: 12px; color: #94a3b8;">Don’t want to receive these emails? <a href="{{unsubscribe_url}}" style="color: #64748b;">Unsubscribe</a>.</p>
-</div>`,
-};
+/** One-time style migration for pre-Resend template docs (type=initial|followup). */
+async function migrateLegacyTemplates() {
+  await MarketingTemplate.updateOne(
+    { type: "initial", $or: [{ key: { $exists: false } }, { key: null }, { key: "" }] },
+    { $set: { key: "initial", type: "initial", name: "Initial" } }
+  );
+  await MarketingTemplate.updateOne(
+    { type: "followup", $or: [{ key: { $exists: false } }, { key: null }, { key: "" }] },
+    { $set: { key: "followup1", type: "followup1", name: "Follow-up 1" } }
+  );
+}
 
 export async function GET(request) {
   try {
     const admin = await getAdminFromRequest(request);
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await connectDB();
-    const initial = await MarketingTemplate.findOne({ type: "initial" }).lean();
-    const followup = await MarketingTemplate.findOne({ type: "followup" }).lean();
-    return NextResponse.json({
-      initial: initial || DEFAULT_INITIAL,
-      followup: followup || DEFAULT_FOLLOWUP,
-    });
+    await migrateLegacyTemplates();
+
+    const docs = await MarketingTemplate.find({
+      key: { $in: LISTING_MARKETING_TEMPLATE_KEYS },
+    }).lean();
+    const byKey = Object.fromEntries(docs.map((d) => [d.key, d]));
+
+    const templates = LISTING_MARKETING_TEMPLATE_KEYS.map((key) =>
+      normalizeTemplateDoc(byKey[key], key)
+    );
+
+    return NextResponse.json({ templates });
   } catch (err) {
     console.error("Marketing templates get error:", err);
     return NextResponse.json({ error: err.message || "Failed to load" }, { status: 500 });
@@ -61,29 +68,40 @@ export async function PUT(request) {
     const admin = await getAdminFromRequest(request);
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await connectDB();
+    await migrateLegacyTemplates();
     const body = await request.json();
-    const { initial, followup } = body;
-    if (initial) {
+    const list = Array.isArray(body?.templates) ? body.templates : [];
+
+    for (const item of list) {
+      const key = String(item?.key || "").trim();
+      if (!LISTING_MARKETING_TEMPLATE_KEYS.includes(key)) continue;
+      const meta = LISTING_MARKETING_TEMPLATE_META[key];
       await MarketingTemplate.findOneAndUpdate(
-        { type: "initial" },
-        { $set: { subject: initial.subject || "", body: initial.body || "" } },
+        { key },
+        {
+          $set: {
+            key,
+            // Keep `type` aligned with `key` so legacy unique indexes on `type` stay valid.
+            type: key,
+            name: String(item.name || meta?.name || key).trim(),
+            subject: String(item.subject || "").trim(),
+            bodyHtml: String(item.bodyHtml || item.body || ""),
+          },
+          $unset: { body: 1 },
+        },
         { upsert: true, new: true }
       );
     }
-    if (followup) {
-      await MarketingTemplate.findOneAndUpdate(
-        { type: "followup" },
-        { $set: { subject: followup.subject || "", body: followup.body || "" } },
-        { upsert: true, new: true }
-      );
-    }
-    const initialDoc = await MarketingTemplate.findOne({ type: "initial" }).lean();
-    const followupDoc = await MarketingTemplate.findOne({ type: "followup" }).lean();
-    return NextResponse.json({
-      ok: true,
-      initial: initialDoc || DEFAULT_INITIAL,
-      followup: followupDoc || DEFAULT_FOLLOWUP,
-    });
+
+    const docs = await MarketingTemplate.find({
+      key: { $in: LISTING_MARKETING_TEMPLATE_KEYS },
+    }).lean();
+    const byKey = Object.fromEntries(docs.map((d) => [d.key, d]));
+    const templates = LISTING_MARKETING_TEMPLATE_KEYS.map((key) =>
+      normalizeTemplateDoc(byKey[key], key)
+    );
+
+    return NextResponse.json({ ok: true, templates });
   } catch (err) {
     console.error("Marketing templates update error:", err);
     return NextResponse.json({ error: err.message || "Failed to save" }, { status: 500 });

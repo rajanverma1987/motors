@@ -1,32 +1,43 @@
 import { NextResponse } from "next/server";
-import crypto from "crypto";
 import { connectDB } from "@/lib/db";
-import MarketingContact from "@/models/MarketingContact";
+import Listing from "@/models/Listing";
+import ListingMarketingState from "@/models/ListingMarketingState";
+import ListingMarketingEmail from "@/models/ListingMarketingEmail";
 import MarketingTemplate from "@/models/MarketingTemplate";
 import { getAdminFromRequest } from "@/lib/auth-admin";
-import { sendMarketingEmail } from "@/lib/email";
-import { getPublicSiteUrl } from "@/lib/public-site-url";
+import { sendListingMarketingEmailViaResend } from "@/lib/resend-marketing";
+import {
+  LISTING_MARKETING_DAILY_LIMIT,
+  LISTING_MARKETING_FOLLOW_UP_DAYS,
+  LISTING_MARKETING_MAX_EMAILS_IN_CYCLE,
+  LISTING_MARKETING_TEMPLATE_KEYS,
+  templateKeyForEmailsInCycle,
+} from "@/lib/listing-marketing-constants";
+import { DEFAULT_LISTING_MARKETING_TEMPLATES } from "@/lib/listing-marketing-defaults";
+import {
+  listingMarketingContextFromListing,
+  renderListingMarketingHtml,
+  renderListingMarketingSubject,
+} from "@/lib/listing-marketing-render";
 
-const FOLLOW_UP_DAYS = 5;
-const MAX_BATCH = 50;
-const UNSUB_SECRET = process.env.MARKETING_UNSUBSCRIBE_SECRET || process.env.AUTH_SECRET;
-
-function getUnsubscribeToken(email) {
-  if (!UNSUB_SECRET) return "";
-  const normalized = (email || "").trim().toLowerCase();
-  return crypto.createHmac("sha256", UNSUB_SECRET).update(normalized).digest("base64url");
+function startOfUtcDay(d = new Date()) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
-function renderBody(body, contact) {
-  if (!body) return "";
-  const name = (contact.name || "").trim();
-  const email = (contact.email || "").trim();
-  const company = (contact.companyName || "").trim();
-  return body
-    .replace(/\{\{name\}\}/g, name || "")
-    .replace(/\{\{email\}\}/g, email)
-    .replace(/\{\{companyName\}\}/g, company || "")
-    .replace(/\{\{#name\}\}([\s\S]*?)\{\{\/name\}\}/g, name ? "$1" : "");
+async function loadTemplatesByKey() {
+  const docs = await MarketingTemplate.find({
+    key: { $in: LISTING_MARKETING_TEMPLATE_KEYS },
+  }).lean();
+  const byKey = {};
+  for (const key of LISTING_MARKETING_TEMPLATE_KEYS) {
+    const defaults = DEFAULT_LISTING_MARKETING_TEMPLATES[key];
+    const doc = docs.find((d) => d.key === key);
+    byKey[key] = {
+      subject: String(doc?.subject || defaults.subject).trim(),
+      bodyHtml: String(doc?.bodyHtml || doc?.body || defaults.bodyHtml),
+    };
+  }
+  return byKey;
 }
 
 export async function POST(request) {
@@ -34,72 +45,158 @@ export async function POST(request) {
     const admin = await getAdminFromRequest(request);
     if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     await connectDB();
-    const body = await request.json();
-    const batchSize = Math.min(Math.max(1, parseInt(body?.batchSize, 10) || 10), MAX_BATCH);
 
     const now = new Date();
-    const followUpCutoff = new Date(now.getTime() - FOLLOW_UP_DAYS * 24 * 60 * 60 * 1000);
-
-    const sendable = await MarketingContact.find({
-      status: { $nin: ["listed", "do_not_contact", "unsubscribed"] },
-    })
-      .sort({ lastEmailSentAt: 1, firstEmailSentAt: 1, createdAt: 1 })
-      .lean();
-
-    const toSend = [];
-    for (const c of sendable) {
-      if (toSend.length >= batchSize) break;
-      const isNew = !c.firstEmailSentAt;
-      const needsFollowUp = c.lastEmailSentAt && new Date(c.lastEmailSentAt) <= followUpCutoff;
-      if (isNew) toSend.push({ ...c, sendType: "initial" });
-      else if (needsFollowUp) toSend.push({ ...c, sendType: "followup" });
+    const dayStart = startOfUtcDay(now);
+    const sentToday = await ListingMarketingEmail.countDocuments({
+      status: "sent",
+      sentAt: { $gte: dayStart },
+    });
+    const quota = Math.max(0, LISTING_MARKETING_DAILY_LIMIT - sentToday);
+    if (quota <= 0) {
+      return NextResponse.json({
+        ok: true,
+        sent: 0,
+        skipped: 0,
+        remainingToday: 0,
+        message: `Daily limit of ${LISTING_MARKETING_DAILY_LIMIT} emails already reached (UTC day).`,
+      });
     }
 
-    const initialDoc = await MarketingTemplate.findOne({ type: "initial" }).lean();
-    const followupDoc = await MarketingTemplate.findOne({ type: "followup" }).lean();
-    const initialSubject = (initialDoc?.subject || "List your motor repair shop on IQMotorBase.com").trim();
-    const initialBody = (initialDoc?.body || "").trim();
-    const followupSubject = (followupDoc?.subject || "Quick follow-up – list your motor repair shop").trim();
-    const followupBody = (followupDoc?.body || "").trim();
+    const followUpCutoff = new Date(
+      now.getTime() - LISTING_MARKETING_FOLLOW_UP_DAYS * 24 * 60 * 60 * 1000
+    );
 
-    const baseUrl = getPublicSiteUrl();
-    const linkReplacer = (html) =>
-      html
-        .replace(/https:\/\/iqmotorbase\.com\//gi, `${baseUrl}/`)
-        .replace(/(?:https?:\/\/)?(?:www\.)?motorswinding\.com\/?/gi, `${baseUrl}/`);
+    const listings = await Listing.find({
+      status: "approved",
+      email: { $exists: true, $nin: [null, ""] },
+    })
+      .select("companyName email primaryContactPerson")
+      .lean();
 
+    const states = await ListingMarketingState.find({
+      listingId: { $in: listings.map((l) => l._id) },
+    }).lean();
+    const stateById = Object.fromEntries(states.map((s) => [String(s.listingId), s]));
+
+    const followUps = [];
+    const initials = [];
+    const restarts = [];
+
+    for (const listing of listings) {
+      const id = String(listing._id);
+      const state = stateById[id];
+      if (state?.unsubscribedAt) continue;
+
+      const emailsInCycle = Number(state?.emailsInCycle || 0);
+      const awaitingRestart = Boolean(state?.awaitingRestartTemplate);
+      const lastSent = state?.lastEmailSentAt ? new Date(state.lastEmailSentAt) : null;
+
+      if (awaitingRestart) {
+        restarts.push({ listing, state });
+        continue;
+      }
+
+      if (emailsInCycle <= 0) {
+        initials.push({ listing, state });
+        continue;
+      }
+
+      if (
+        emailsInCycle < LISTING_MARKETING_MAX_EMAILS_IN_CYCLE &&
+        lastSent &&
+        lastSent <= followUpCutoff
+      ) {
+        followUps.push({ listing, state });
+      }
+    }
+
+    const queue = [...followUps, ...initials, ...restarts].slice(0, quota);
+    const templates = await loadTemplatesByKey();
     let sent = 0;
     const errors = [];
 
-    for (const c of toSend) {
-      const contact = { name: c.name, email: c.email, companyName: c.companyName };
-      const isInitial = c.sendType === "initial";
-      const subject = isInitial ? initialSubject : followupSubject;
-      const rawBody = isInitial ? initialBody : followupBody;
-      const unsubscribeUrl = `${baseUrl}/api/marketing/unsubscribe?email=${encodeURIComponent(c.email)}&token=${getUnsubscribeToken(c.email)}`;
-      let html = linkReplacer(renderBody(rawBody, contact)).replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
-      if (!html.includes(unsubscribeUrl)) {
-        html += `<p style="margin-top:2em;font-size:12px;color:#666">You received this because your business was contacted for listing. <a href="${unsubscribeUrl}">Unsubscribe</a> from these emails.</p>`;
+    for (const item of queue) {
+      const listing = item.listing;
+      const state = item.state;
+      const emailsInCycle = Number(state?.emailsInCycle || 0);
+      const awaitingRestart = Boolean(state?.awaitingRestartTemplate);
+      const templateKey = templateKeyForEmailsInCycle(emailsInCycle, awaitingRestart);
+      if (!templateKey) continue;
+
+      const tpl = templates[templateKey];
+      const ctx = listingMarketingContextFromListing(listing, request);
+      if (!ctx.email) continue;
+
+      const subject = renderListingMarketingSubject(tpl.subject, ctx);
+      const html = renderListingMarketingHtml(tpl.bodyHtml, ctx);
+      const cycleId = Number(state?.cycleId || 1);
+
+      const result = await sendListingMarketingEmailViaResend({
+        to: ctx.email,
+        subject,
+        html,
+        tags: {
+          listingId: String(listing._id),
+          cycleId: String(cycleId),
+          templateKey,
+        },
+      });
+
+      if (!result.ok) {
+        await ListingMarketingEmail.create({
+          listingId: listing._id,
+          cycleId,
+          templateKey,
+          to: ctx.email,
+          subject,
+          html,
+          sentAt: now,
+          status: "failed",
+          error: result.error || "Send failed",
+        });
+        errors.push({ email: ctx.email, error: result.error || "Send failed" });
+        continue;
       }
-      const result = await sendMarketingEmail(c.email, subject, html);
-      if (result.ok) {
-        const updates = {
-          lastEmailSentAt: now,
-          followUpCount: (c.followUpCount || 0) + (isInitial ? 0 : 1),
-          status: "contacted",
-        };
-        if (!c.firstEmailSentAt) updates.firstEmailSentAt = now;
-        await MarketingContact.updateOne({ _id: c._id }, { $set: updates });
-        sent++;
-      } else {
-        errors.push({ email: c.email, error: result.error });
-      }
+
+      await ListingMarketingEmail.create({
+        listingId: listing._id,
+        cycleId,
+        templateKey,
+        to: ctx.email,
+        subject,
+        html,
+        sentAt: now,
+        resendId: result.id || "",
+        status: "sent",
+        lastEventType: "email.sent",
+        lastEventAt: now,
+        events: [{ type: "email.sent", at: now }],
+      });
+
+      const nextEmailsInCycle = awaitingRestart || emailsInCycle <= 0 ? 1 : emailsInCycle + 1;
+      await ListingMarketingState.findOneAndUpdate(
+        { listingId: listing._id },
+        {
+          $set: {
+            listingId: listing._id,
+            cycleId,
+            emailsInCycle: nextEmailsInCycle,
+            lastEmailSentAt: now,
+            awaitingRestartTemplate: false,
+          },
+        },
+        { upsert: true, new: true }
+      );
+      sent++;
     }
 
+    const remainingToday = Math.max(0, LISTING_MARKETING_DAILY_LIMIT - (sentToday + sent));
     return NextResponse.json({
       ok: true,
       sent,
-      total: toSend.length,
+      attempted: queue.length,
+      remainingToday,
       errors: errors.length ? errors : undefined,
     });
   } catch (err) {

@@ -1,118 +1,146 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { FiEdit2, FiTrash2 } from "react-icons/fi";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { FiEye, FiRotateCcw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
 import Modal from "@/components/ui/modal";
 import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
-import Select from "@/components/ui/select";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
-import { useAdminTableSort } from "@/hooks/use-admin-table-sort";
-import { appendAdminSortParams } from "@/lib/admin-table-sort";
+import SimpleRichTextEditor from "@/components/admin/simple-rich-text-editor";
+import { LISTING_MARKETING_TEMPLATE_META } from "@/lib/listing-marketing-constants";
 
-const STATUS_OPTIONS = [
-  { value: "all", label: "All" },
-  { value: "pending", label: "Pending" },
-  { value: "contacted", label: "Contacted" },
-  { value: "replied", label: "Replied" },
-  { value: "listed", label: "Listed" },
-  { value: "do_not_contact", label: "Do not contact" },
-  { value: "unsubscribed", label: "Unsubscribed" },
-];
+const TEMPLATE_KEYS = ["initial", "followup1", "followup2", "followup3", "restart"];
 
-const BATCH_SIZES = [5, 10, 15, 20, 25, 30];
-
-function parsePastedEmails(text) {
-  const lines = text
-    .split(/\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
-  const contacts = [];
-  for (const line of lines) {
-    const parts = line.split(",").map((p) => p.trim()).filter(Boolean);
-    const withAt = parts.find((p) => p.includes("@"));
-    if (withAt) {
-      const email = withAt;
-      const rest = parts.filter((p) => p !== email);
-      contacts.push({
-        email,
-        name: rest[0] || "",
-        companyName: rest[1] || "",
-      });
-    } else if (line.includes("@")) {
-      contacts.push({ email: line, name: "", companyName: "" });
-    }
-  }
-  return contacts;
+function deliveryBadgeVariant(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "opened" || s === "clicked" || s === "delivered") return "success";
+  if (s === "bounced" || s === "complained" || s === "failed" || s === "suppressed") return "danger";
+  if (s === "delayed" || s === "sent") return "warning";
+  return "default";
 }
 
-function EditContactModal({ contact, open, onClose, onSaved }) {
-  const [status, setStatus] = useState(contact?.status || "pending");
-  const [notes, setNotes] = useState(contact?.notes || "");
-  const [saving, setSaving] = useState(false);
+function campaignBadgeVariant(status) {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("unsubscribed")) return "danger";
+  if (s.includes("completed")) return "success";
+  if (s.includes("restart")) return "warning";
+  if (s.includes("cycle")) return "primary";
+  return "default";
+}
+
+function formatWhen(value) {
+  if (!value) return "-";
+  try {
+    return new Date(value).toLocaleString();
+  } catch {
+    return "-";
+  }
+}
+
+function HistoryModal({ listingId, open, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState(null);
+  const toast = useToast();
 
   useEffect(() => {
-    setStatus(contact?.status || "pending");
-    setNotes(contact?.notes || "");
-  }, [contact]);
-
-  const handleSave = async () => {
-    if (!contact?.id) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`/api/admin/marketing/contacts/${contact.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ status, notes }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to update");
-      onSaved?.(data.contact);
-      onClose();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (!contact) return null;
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Update contact"
-      size="md"
-      actions={
-        <>
-          <Button type="button" variant="primary" size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-        </>
+    if (!open || !listingId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/admin/marketing/listings/${listingId}/history`, {
+          credentials: "include",
+          cache: "no-store",
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to load history");
+        if (!cancelled) setData(json);
+      } catch (err) {
+        toast.error(err.message || "Failed to load history");
+        if (!cancelled) setData(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-    >
-      <div className="space-y-4">
-        <p className="text-sm text-secondary">{contact.email}</p>
-        <Select
-          label="Status"
-          options={STATUS_OPTIONS.filter((o) => o.value !== "all")}
-          value={status}
-          onChange={(e) => setStatus(e.target.value ?? "")}
-          searchable={false}
-        />
-        <Textarea
-          label="Notes"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          placeholder="e.g. Replied, listed on 3/1"
-        />
-      </div>
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, listingId, toast]);
+
+  return (
+    <Modal open={open} onClose={onClose} title="Email history" size="3xl" showClose>
+      {loading ? (
+        <p className="text-sm text-secondary">Loading…</p>
+      ) : !data ? (
+        <p className="text-sm text-secondary">No history.</p>
+      ) : (
+        <div className="space-y-4">
+          <div>
+            <p className="font-semibold text-title">{data.listing?.companyName}</p>
+            <p className="text-sm text-secondary">{data.listing?.email}</p>
+          </div>
+          {(data.emails || []).length === 0 ? (
+            <p className="text-sm text-secondary">No emails sent yet.</p>
+          ) : (
+            <ul className="max-h-[28rem] space-y-3 overflow-y-auto">
+              {data.emails.map((email) => (
+                <li key={email.id} className="rounded-md border border-border bg-bg p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="primary" className="rounded-full px-2.5 py-0.5 text-xs">
+                      {email.templateKey}
+                    </Badge>
+                    <Badge
+                      variant={email.status === "failed" ? "danger" : "success"}
+                      className="rounded-full px-2.5 py-0.5 text-xs"
+                    >
+                      {email.status}
+                    </Badge>
+                    <span className="text-xs text-secondary">Cycle {email.cycleId}</span>
+                    <span className="text-xs text-secondary">{formatWhen(email.sentAt)}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-title">{email.subject}</p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[
+                      ["Delivered", email.deliveredAt],
+                      ["Opened", email.openedAt],
+                      ["Clicked", email.clickedAt],
+                      ["Bounced", email.bouncedAt],
+                      ["Complained", email.complainedAt],
+                      ["Failed", email.failedAt],
+                      ["Delayed", email.delayedAt],
+                      ["Suppressed", email.suppressedAt],
+                    ]
+                      .filter(([, at]) => at)
+                      .map(([label, at]) => (
+                        <Badge
+                          key={label}
+                          variant={
+                            label === "Bounced" || label === "Complained" || label === "Failed"
+                              ? "danger"
+                              : "success"
+                          }
+                          className="rounded-full px-2.5 py-0.5 text-xs"
+                        >
+                          {label}: {formatWhen(at)}
+                        </Badge>
+                      ))}
+                  </div>
+                  {email.clickCount > 0 ? (
+                    <p className="mt-1 text-xs text-secondary">Clicks: {email.clickCount}</p>
+                  ) : null}
+                  {email.bounceMessage ? (
+                    <p className="mt-1 text-xs text-danger">{email.bounceMessage}</p>
+                  ) : null}
+                  {email.error ? <p className="mt-1 text-xs text-danger">{email.error}</p> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }
@@ -120,462 +148,453 @@ function EditContactModal({ contact, open, onClose, onSaved }) {
 export default function AdminMarketingPage() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [contacts, setContacts] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [pasteText, setPasteText] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [editContact, setEditContact] = useState(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [templates, setTemplates] = useState({ initial: {}, followup: {} });
-  const [templatesLoading, setTemplatesLoading] = useState(true);
-  const [templatesSaving, setTemplatesSaving] = useState(false);
-  const [initialSubject, setInitialSubject] = useState("");
-  const [initialBody, setInitialBody] = useState("");
-  const [followupSubject, setFollowupSubject] = useState("");
-  const [followupBody, setFollowupBody] = useState("");
-  const [batchSize, setBatchSize] = useState(10);
+  const [q, setQ] = useState("");
+  const [selectedIds, setSelectedIds] = useState([]);
   const [sending, setSending] = useState(false);
-  const [lastSendResult, setLastSendResult] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [addContactsOpen, setAddContactsOpen] = useState(false);
-  const [sendBatchOpen, setSendBatchOpen] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+  const [historyId, setHistoryId] = useState("");
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
-  const [totalCount, setTotalCount] = useState(0);
-  const { tableSort, handleTableSort } = useAdminTableSort("createdAt", "desc");
+  const [templates, setTemplates] = useState([]);
+  const [activeTemplateKey, setActiveTemplateKey] = useState("initial");
+  const [savingTemplates, setSavingTemplates] = useState(false);
+  const [testEmail, setTestEmail] = useState("contact@iqmotorbase.com");
+  const [sendingTest, setSendingTest] = useState(false);
 
-  const onTableSort = useCallback(
-    (key, direction) => {
-      setPage(1);
-      handleTableSort(key, direction);
-    },
-    [handleTableSort]
+  const loadListings = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (q.trim()) params.set("q", q.trim());
+      const res = await fetch(`/api/admin/marketing/listings?${params}`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load listings");
+      setRows(Array.isArray(data.rows) ? data.rows : []);
+      setSummary(data.summary || null);
+    } catch (err) {
+      toast.error(err.message || "Failed to load listings");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [q, toast]);
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/marketing/templates", {
+        credentials: "include",
+        cache: "no-store",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to load templates");
+      setTemplates(Array.isArray(data.templates) ? data.templates : []);
+    } catch (err) {
+      toast.error(err.message || "Failed to load templates");
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    void loadListings();
+  }, [loadListings]);
+
+  useEffect(() => {
+    void loadTemplates();
+  }, [loadTemplates]);
+
+  const activeTemplate = useMemo(
+    () => templates.find((t) => t.key === activeTemplateKey) || null,
+    [templates, activeTemplateKey]
   );
 
-  const fetchContacts = useCallback(() => {
-    const params = new URLSearchParams({
-      page: String(page),
-      pageSize: String(pageSize),
-    });
-    appendAdminSortParams(params, tableSort);
-    if (statusFilter !== "all") params.set("status", statusFilter);
-    if (searchQuery.trim()) params.set("q", searchQuery.trim());
-    const url = `/api/admin/marketing/contacts?${params.toString()}`;
-    return fetch(url, { credentials: "include", cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        setContacts(Array.isArray(data?.items) ? data.items : []);
-        setTotalCount(Number(data?.totalCount) || 0);
-      })
-      .catch(() => {
-        setContacts([]);
-        setTotalCount(0);
-      })
-      .finally(() => setLoading(false));
-  }, [statusFilter, searchQuery, page, pageSize, tableSort]);
+  const patchTemplate = (key, patch) => {
+    setTemplates((prev) =>
+      prev.map((t) => (t.key === key ? { ...t, ...patch } : t))
+    );
+  };
 
-  useEffect(() => {
-    setLoading(true);
-    fetchContacts();
-  }, [fetchContacts]);
-
-  useEffect(() => {
-    fetch("/api/admin/marketing/templates", { credentials: "include", cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        setTemplates(data);
-        setInitialSubject(data.initial?.subject ?? "");
-        setInitialBody(data.initial?.body ?? "");
-        setFollowupSubject(data.followup?.subject ?? "");
-        setFollowupBody(data.followup?.body ?? "");
-      })
-      .catch(() => {})
-      .finally(() => setTemplatesLoading(false));
-  }, []);
-
-  const handleSaveTemplates = async () => {
-    setTemplatesSaving(true);
+  const saveTemplates = async () => {
+    setSavingTemplates(true);
     try {
       const res = await fetch("/api/admin/marketing/templates", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          initial: { subject: initialSubject, body: initialBody },
-          followup: { subject: followupSubject, body: followupBody },
-        }),
+        body: JSON.stringify({ templates }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Save failed");
-      setTemplates(data);
+      if (!res.ok) throw new Error(data.error || "Failed to save templates");
+      setTemplates(Array.isArray(data.templates) ? data.templates : templates);
       toast.success("Templates saved.");
     } catch (err) {
-      toast.error(err.message || "Save failed");
+      toast.error(err.message || "Failed to save templates");
     } finally {
-      setTemplatesSaving(false);
+      setSavingTemplates(false);
     }
   };
 
-  const handleSendBatch = async () => {
+  const sendTestEmail = async () => {
+    const to = String(testEmail || "").trim();
+    if (!to || !to.includes("@")) {
+      toast.warning("Enter a valid test email address.");
+      return;
+    }
+    if (!activeTemplate) {
+      toast.warning("Select a template first.");
+      return;
+    }
+    setSendingTest(true);
+    try {
+      const res = await fetch("/api/admin/marketing/send-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          to,
+          templateKey: activeTemplate.key,
+          subject: activeTemplate.subject,
+          bodyHtml: activeTemplate.bodyHtml,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Test send failed");
+      toast.success(`Test email sent to ${data.to || to}.`);
+    } catch (err) {
+      toast.error(err.message || "Test send failed");
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
+  const runBatch = async () => {
+    const remaining = summary?.remainingToday ?? 0;
+    const ok = await confirm({
+      title: "Run marketing batch?",
+      message: `Send up to ${remaining} emails (daily limit ${summary?.dailyLimit || 100}, UTC). Follow-ups due after ${summary?.followUpDays || 3} days are prioritized, then new initials, then restarts.`,
+      confirmLabel: "Send batch",
+      variant: "primary",
+    });
+    if (!ok) return;
     setSending(true);
-    setLastSendResult(null);
     try {
       const res = await fetch("/api/admin/marketing/send-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ batchSize }),
+        body: JSON.stringify({}),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Send failed");
-      setLastSendResult(data);
-      toast.success(`Sent ${data.sent} email(s).`);
-      fetchContacts();
+      if (!res.ok) throw new Error(data.error || "Batch failed");
+      toast.success(
+        data.message ||
+          `Sent ${data.sent || 0} email(s). Remaining today: ${data.remainingToday ?? "-"}.`
+      );
+      if (Array.isArray(data.errors) && data.errors.length) {
+        toast.warning(`${data.errors.length} send error(s). Check history for details.`);
+      }
+      await loadListings();
     } catch (err) {
-      toast.error(err.message || "Send failed");
+      toast.error(err.message || "Batch failed");
     } finally {
       setSending(false);
     }
   };
 
-  const openEdit = (c) => {
-    setEditContact(c);
-    setEditModalOpen(true);
-  };
-
-  const handleEditSaved = (updated) => {
-    setContacts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  const restartSelected = async (ids) => {
+    const list = (ids || []).filter(Boolean);
+    if (!list.length) {
+      toast.warning("Select at least one listing.");
+      return;
+    }
+    const first = await confirm({
+      title: "Restart email cycle?",
+      message: `Restart campaign for ${list.length} listing(s). The next batch will use the Restart template, then up to 3 follow-ups.`,
+      confirmLabel: "Continue",
+      variant: "danger",
+    });
+    if (!first) return;
+    const second = await confirm({
+      title: "Confirm restart",
+      message: "This clears the current cycle counters for the selected listings. Continue?",
+      confirmLabel: "Restart",
+      variant: "danger",
+    });
+    if (!second) return;
+    setRestarting(true);
+    try {
+      const res = await fetch("/api/admin/marketing/listings/restart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ listingIds: list }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Restart failed");
+      toast.success(`Restarted ${data.restarted || 0} listing(s).`);
+      setSelectedIds([]);
+      await loadListings();
+    } catch (err) {
+      toast.error(err.message || "Restart failed");
+    } finally {
+      setRestarting(false);
+    }
   };
 
   const columns = [
     {
       key: "actions",
-      label: "",
+      label: "Actions",
+      sortable: false,
       render: (_, row) => (
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             type="button"
-            onClick={() => openEdit(row)}
-            className="rounded p-1.5 text-primary hover:bg-primary/10 focus:outline-none focus:ring-2 focus:ring-primary"
-            aria-label="Edit"
+            className="rounded p-1.5 text-primary hover:bg-primary/10"
+            title="History"
+            aria-label="View email history"
+            onClick={() => setHistoryId(row.id)}
           >
-            <FiEdit2 className="h-4 w-4" />
+            <FiEye className="h-4 w-4" aria-hidden />
           </button>
           <button
             type="button"
-            onClick={async () => {
-              const confirmed = await confirm({
-                title: "Remove contact",
-                message: `Remove ${row.email} from the list?`,
-                confirmLabel: "Remove",
-                cancelLabel: "Cancel",
-                variant: "danger",
-              });
-              if (!confirmed) return;
-              try {
-                const res = await fetch(`/api/admin/marketing/contacts/${row.id}`, { method: "DELETE", credentials: "include" });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || "Delete failed");
-                toast.success("Contact removed.");
-                fetchContacts();
-              } catch (err) {
-                toast.error(err.message || "Delete failed");
-              }
-            }}
-            className="rounded p-1.5 text-danger hover:bg-danger/10 focus:outline-none focus:ring-2 focus:ring-danger"
-            aria-label="Delete"
+            className="rounded p-1.5 text-primary hover:bg-primary/10"
+            title="Restart cycle"
+            aria-label="Restart email cycle"
+            disabled={restarting}
+            onClick={() => void restartSelected([row.id])}
           >
-            <FiTrash2 className="h-4 w-4" />
+            <FiRotateCcw className="h-4 w-4" aria-hidden />
           </button>
         </div>
       ),
     },
-    { key: "email", label: "Email", sortable: true },
-    { key: "name", label: "Name", sortable: true, render: (v) => v || "—" },
-    { key: "companyName", label: "Company", sortable: true, render: (v) => v || "—" },
     {
-      key: "status",
-      label: "Status",
+      key: "companyName",
+      label: "Company",
+      sortable: true,
+      render: (v) => <span className="font-medium text-title">{v || "-"}</span>,
+    },
+    { key: "email", label: "Email", sortable: true },
+    {
+      key: "primaryContactPerson",
+      label: "Contact",
+      sortable: true,
+      render: (v) => v || "-",
+    },
+    {
+      key: "location",
+      label: "Location",
+      sortable: false,
+      render: (_, row) =>
+        [row.city, row.state].filter(Boolean).join(", ") || "-",
+    },
+    {
+      key: "campaignStatus",
+      label: "Campaign",
       sortable: true,
       render: (v) => (
         <Badge
-          variant={
-            v === "listed" ? "success" : v === "do_not_contact" || v === "unsubscribed" ? "danger" : v === "replied" ? "default" : "warning"
-          }
+          variant={campaignBadgeVariant(v)}
+          className="rounded-full px-2.5 py-0.5 text-xs"
         >
           {v}
         </Badge>
       ),
     },
     {
-      key: "firstEmailSentAt",
-      label: "First sent",
+      key: "deliveryStatus",
+      label: "Last delivery",
       sortable: true,
-      render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
+      render: (v) => (
+        <Badge
+          variant={deliveryBadgeVariant(v)}
+          className="rounded-full px-2.5 py-0.5 text-xs"
+        >
+          {v}
+        </Badge>
+      ),
     },
     {
       key: "lastEmailSentAt",
-      label: "Last sent",
+      label: "Last emailed",
       sortable: true,
-      render: (v) => (v ? new Date(v).toLocaleDateString() : "—"),
+      render: (v) => <span className="text-xs text-secondary">{formatWhen(v)}</span>,
     },
-    { key: "followUpCount", label: "Follow-ups", sortable: true, render: (v) => v ?? 0 },
-    { key: "notes", label: "Notes", render: (v) => (v ? String(v).slice(0, 30) + (v.length > 30 ? "…" : "") : "—") },
   ];
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+    <div className="w-full min-w-0 space-y-8 px-4 py-8 sm:px-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-title">Marketing emails</h1>
-          <p className="text-sm text-secondary">
-            Follow-ups go out 5 days after last email. Mark as &quot;Listed&quot; or &quot;Unsubscribed&quot; to stop emails.
+          <h1 className="text-2xl font-bold text-title">Listing marketing</h1>
+          <p className="mt-1 text-sm text-secondary">
+            Email approved directory listings via Resend. Auto batch up to 100/day (UTC), follow-up after 3
+            days, max 3 follow-ups. Every email includes an unsubscribe link.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setAddContactsOpen(true)}>
-            Add contacts
+          <Button type="button" variant="outline" size="sm" onClick={() => setTemplatesOpen(true)}>
+            Email templates
           </Button>
-          <Button variant="outline" onClick={() => setSendBatchOpen(true)}>
-            Send batch
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={restarting || selectedIds.length === 0}
+            onClick={() => void restartSelected(selectedIds)}
+          >
+            Restart selected
           </Button>
-          <Button variant="outline" onClick={() => setTemplatesOpen(true)}>
-            Templates
+          <Button type="button" variant="primary" size="sm" disabled={sending} onClick={() => void runBatch()}>
+            {sending ? "Sending…" : `Run batch (${summary?.remainingToday ?? "…"} left today)`}
           </Button>
         </div>
       </div>
 
-      {/* Contacts table only on main page */}
-      <div className="mt-6 flex min-h-0 min-w-0 flex-1 flex-col gap-4">
-        <div className="flex shrink-0 flex-wrap items-center gap-4">
+      {summary ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Sent today (UTC)</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-title">
+              {summary.sentToday}/{summary.dailyLimit}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Delivered (30d)</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-title">
+              {summary.last30Days?.delivered ?? 0}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Opened (30d)</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-title">
+              {summary.last30Days?.opened ?? 0}
+            </p>
+          </div>
+          <div className="rounded-md border border-border bg-card p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Clicked (30d)</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-title">
+              {summary.last30Days?.clicked ?? 0}
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap items-end gap-2">
+        <div className="min-w-[14rem] flex-1">
           <Input
-            type="search"
-            placeholder="Search email, name, company, notes…"
-            value={searchQuery}
-            onChange={(e) => {
-              setPage(1);
-              setSearchQuery(e.target.value);
-            }}
-            className="w-64"
-          />
-          <Select
-            options={STATUS_OPTIONS}
-            value={statusFilter}
-            onChange={(e) => {
-              setPage(1);
-              setStatusFilter(e.target.value ?? "all");
-            }}
-            searchable={false}
-            className="w-40"
+            label="Search"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Company, email, contact, city…"
           />
         </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <Table
-            columns={columns}
-            data={contacts}
-            rowKey="id"
-            loading={loading}
-            emptyMessage="No contacts. Click Add contacts to paste emails."
-            responsive
-            sortState={tableSort}
-            onSort={onTableSort}
-            pagination={{ page, pageSize, totalCount }}
-            onPageChange={(nextPage, nextPageSize) => {
-              setPage(nextPage);
-              setPageSize(nextPageSize);
-            }}
-            paginateClientSide={false}
-          />
-        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => void loadListings()} disabled={loading}>
+          Refresh
+        </Button>
       </div>
 
-      {/* Add contacts popup */}
-      <Modal
-        open={addContactsOpen}
-        onClose={() => setAddContactsOpen(false)}
-        title="Add contacts"
-        size="md"
-        actions={
-          <>
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={async () => {
-                const list = parsePastedEmails(pasteText);
-                if (list.length === 0) {
-                  toast.warning("Paste one email per line.");
-                  return;
-                }
-                setUploading(true);
-                try {
-                  const res = await fetch("/api/admin/marketing/contacts", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify({ contacts: list }),
-                  });
-                  const data = await res.json();
-                  if (!res.ok) throw new Error(data.error || "Upload failed");
-                  toast.success(`Added ${data.added} new contact(s). ${data.total - data.added} already existed.`);
-                  setPasteText("");
-                  setAddContactsOpen(false);
-                  fetchContacts();
-                } catch (err) {
-                  toast.error(err.message || "Upload failed");
-                } finally {
-                  setUploading(false);
-                }
-              }}
-              disabled={uploading || !pasteText.trim()}
-            >
-              {uploading ? "Adding…" : "Add"}
-            </Button>
-          </>
-        }
-      >
-        <p className="mb-3 text-sm text-secondary">
-          One email per line. Names and company are optional (emails only is fine).
-        </p>
-        <Textarea
-          placeholder="shop1@example.com&#10;shop2@example.com&#10;contact@motorshop.com"
-          value={pasteText}
-          onChange={(e) => setPasteText(e.target.value)}
-          rows={6}
-          className="font-mono text-sm"
-        />
-      </Modal>
+      <Table
+        columns={columns}
+        data={rows}
+        loading={loading}
+        emptyMessage="No approved listings with email."
+        rowKey="id"
+        selectable
+        selectedRowIds={selectedIds}
+        onSelectionChange={setSelectedIds}
+      />
 
-      {/* Send batch popup */}
-      <Modal
-        open={sendBatchOpen}
-        onClose={() => setSendBatchOpen(false)}
-        title="Send batch"
-        size="md"
-        actions={
-          <Button type="button" variant="primary" size="sm" onClick={handleSendBatch} disabled={sending}>
-            {sending ? "Sending…" : "Send batch"}
-          </Button>
-        }
-      >
-        <p className="mb-3 text-sm text-secondary">
-          Sends new emails to pending contacts, or follow-ups to contacted ones (5+ days since last email). Listed, Do not contact, and Unsubscribed are skipped.
-        </p>
-        <div className="flex flex-wrap items-center gap-4">
-          <Select
-            label="Batch size"
-            options={BATCH_SIZES.map((n) => ({ value: String(n), label: String(n) }))}
-            value={String(batchSize)}
-            onChange={(e) => setBatchSize(Number(e.target.value) || 10)}
-            searchable={false}
-            className="w-24"
-          />
-        </div>
-        {lastSendResult && (
-          <p className="mt-4 text-sm text-secondary">
-            Last run: sent {lastSendResult.sent} of {lastSendResult.total}.
-            {lastSendResult.errors?.length ? ` ${lastSendResult.errors.length} failed.` : ""}
-          </p>
-        )}
-      </Modal>
-
-      {/* Templates popup */}
       <Modal
         open={templatesOpen}
         onClose={() => setTemplatesOpen(false)}
         title="Email templates"
-        size="4xl"
+        size="3xl"
+        showClose
         actions={
-          !templatesLoading && (
-            <Button
-              type="button"
-              variant="primary"
-              size="sm"
-              onClick={async () => {
-                await handleSaveTemplates();
-                setTemplatesOpen(false);
-              }}
-              disabled={templatesSaving}
-            >
-              {templatesSaving ? "Saving…" : "Save"}
-            </Button>
-          )
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={savingTemplates}
+            onClick={() => void saveTemplates()}
+          >
+            {savingTemplates ? "Saving…" : "Save templates"}
+          </Button>
         }
       >
-        <p className="mb-3 text-sm text-secondary">
-          Use {"{{unsubscribe_url}}"} in body for the unsubscribe link. Preview updates as you type.
-        </p>
-        {!templatesLoading && (
-          <div className="space-y-8 max-h-[75vh] overflow-y-auto pr-2">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <h3 className="text-sm font-semibold text-title mb-3">Initial email</h3>
-                <Input
-                  label="Subject"
-                  value={initialSubject}
-                  onChange={(e) => setInitialSubject(e.target.value)}
-                  className="mt-2"
-                />
-                <Textarea
-                  label="Body (HTML)"
-                  value={initialBody}
-                  onChange={(e) => setInitialBody(e.target.value)}
-                  rows={6}
-                  className="mt-2 font-mono text-sm"
-                />
-                <p className="mt-2 text-xs text-secondary font-medium">Preview</p>
-                <div
-                  className="mt-1 rounded-lg border border-border bg-card p-4 max-h-64 overflow-auto text-left"
-                  dangerouslySetInnerHTML={{
-                    __html: (initialBody || "")
-                      .replace(/\{\{unsubscribe_url\}\}/g, "#")
-                      .replace(/\{\{name\}\}/g, "")
-                      .replace(/\{\{email\}\}/g, "")
-                      .replace(/\{\{companyName\}\}/g, "")
-                      .replace(/\{\{#name\}\}[\s\S]*?\{\{\/name\}\}/g, ""),
-                  }}
-                />
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-title mb-3">Follow-up email (after 5 days)</h3>
-                <Input
-                  label="Subject"
-                  value={followupSubject}
-                  onChange={(e) => setFollowupSubject(e.target.value)}
-                  className="mt-2"
-                />
-                <Textarea
-                  label="Body (HTML)"
-                  value={followupBody}
-                  onChange={(e) => setFollowupBody(e.target.value)}
-                  rows={6}
-                  className="mt-2 font-mono text-sm"
-                />
-                <p className="mt-2 text-xs text-secondary font-medium">Preview</p>
-                <div
-                  className="mt-1 rounded-lg border border-border bg-card p-4 max-h-64 overflow-auto text-left"
-                  dangerouslySetInnerHTML={{
-                    __html: (followupBody || "")
-                      .replace(/\{\{unsubscribe_url\}\}/g, "#")
-                      .replace(/\{\{name\}\}/g, "")
-                      .replace(/\{\{email\}\}/g, "")
-                      .replace(/\{\{companyName\}\}/g, "")
-                      .replace(/\{\{#name\}\}[\s\S]*?\{\{\/name\}\}/g, ""),
-                  }}
-                />
-              </div>
-            </div>
+        <div className="space-y-4">
+          <p className="text-sm text-secondary">
+            Placeholders: {"{{companyName}}"}, {"{{name}}"}, {"{{email}}"}, {"{{unsubscribe_url}}"}.
+            Unsubscribe is appended automatically if missing.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {TEMPLATE_KEYS.map((key) => (
+              <Button
+                key={key}
+                type="button"
+                size="sm"
+                variant={activeTemplateKey === key ? "primary" : "outline"}
+                onClick={() => setActiveTemplateKey(key)}
+              >
+                {LISTING_MARKETING_TEMPLATE_META[key]?.label || key}
+              </Button>
+            ))}
           </div>
-        )}
+          {activeTemplate ? (
+            <div className="space-y-3">
+              <Input
+                label="Subject"
+                value={activeTemplate.subject || ""}
+                onChange={(e) => patchTemplate(activeTemplate.key, { subject: e.target.value })}
+              />
+              <div>
+                <label className="mb-1 block text-sm font-medium text-title">Body</label>
+                <SimpleRichTextEditor
+                  value={activeTemplate.bodyHtml || ""}
+                  onChange={(html) => patchTemplate(activeTemplate.key, { bodyHtml: html })}
+                />
+              </div>
+              <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3">
+                <div className="min-w-[16rem] flex-1">
+                  <Input
+                    label="Send test to"
+                    type="email"
+                    value={testEmail}
+                    onChange={(e) => setTestEmail(e.target.value)}
+                    placeholder="contact@iqmotorbase.com"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={sendingTest}
+                  onClick={() => void sendTestEmail()}
+                >
+                  {sendingTest ? "Sending test…" : "Send test email"}
+                </Button>
+              </div>
+              <p className="text-xs text-secondary">
+                Sends the currently selected template (including unsaved edits). Subject is prefixed with
+                [TEST]. Does not count toward the daily batch limit.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-secondary">Loading templates…</p>
+          )}
+        </div>
       </Modal>
 
-      <EditContactModal
-        contact={editContact}
-        open={editModalOpen}
-        onClose={() => { setEditModalOpen(false); setEditContact(null); }}
-        onSaved={handleEditSaved}
+      <HistoryModal
+        listingId={historyId}
+        open={Boolean(historyId)}
+        onClose={() => setHistoryId("")}
       />
     </div>
   );
