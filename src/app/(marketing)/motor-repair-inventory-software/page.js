@@ -17,7 +17,7 @@ const path = SEO_SOFTWARE_INVENTORY_PATH;
 const TITLE = "Electric Motor Repair Shop Inventory Software";
 const SOCIAL_TITLE = `${TITLE} | IQMotorBase`;
 const DESCRIPTION =
-  "Track on-hand and reserved parts, get low-stock alerts, and let inventory update itself when a work order ships. Built for motor repair shops.";
+  "Track on-hand and reserved parts, get low-stock alerts, and let inventory update itself when a work order ships. Built for electric motor repair shops.";
 
 export const metadata = {
   title: TITLE,
