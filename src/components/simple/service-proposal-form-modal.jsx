@@ -1661,14 +1661,8 @@ export default function ServiceProposalFormModal({
   const navBusy = saving || copying || loadingRecord || pagingRecord;
   const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
   const headerStatusSelects = (
-    <div
-      className={
-        isPage
-          ? "grid w-full grid-cols-1 gap-3"
-          : "flex min-w-0 flex-nowrap items-end gap-2"
-      }
-    >
-      <div className={isPage ? "min-w-0" : "w-[11rem] min-w-[8.5rem] shrink-0"}>
+    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
           Proposal Type
         </label>
@@ -1685,7 +1679,7 @@ export default function ServiceProposalFormModal({
           aria-label="Proposal Type"
         />
       </div>
-      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink-0"}>
+      <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-status">
           {form.recordType === RECORD_TYPE_INVOICE ? "Invoice Status" : "Proposal Status"}
         </label>
@@ -1720,7 +1714,7 @@ export default function ServiceProposalFormModal({
           />
         </div>
       </div>
-      <div className={isPage ? "min-w-0" : "w-[12rem] min-w-[9rem] shrink-0"}>
+      <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-job-status">
           Job Status
         </label>
@@ -1744,7 +1738,6 @@ export default function ServiceProposalFormModal({
       </div>
     </div>
   );
-  const headerLeading = isPage ? null : headerStatusSelects;
   const headerRecordNav =
     !isPage && showSearchNav ? (
       <div
@@ -1832,12 +1825,14 @@ export default function ServiceProposalFormModal({
             }`}
             aria-hidden={loadingRecord || copying || undefined}
           >
-          {isPage ? (
-            <div className="simple-sp-page-status border-b border-border">
-              {headerStatusSelects}
-            </div>
-          ) : null}
-          {/* Toolbar (title and status dropdowns live in modal header) */}
+          <div
+            className={`simple-sp-page-status border-b border-border ${
+              isPage ? "" : "mb-2 pb-2"
+            }`}
+          >
+            {headerStatusSelects}
+          </div>
+          {/* Toolbar buttons (status dropdowns are above) */}
           <div
             className={`mb-2 flex flex-wrap gap-1.5 border-b border-border py-1.5 ${
               isPage
@@ -2761,7 +2756,6 @@ export default function ServiceProposalFormModal({
           showClose={!saving && !copying}
           closeOnOutsideClick={false}
           headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem]"
-          headerLeading={headerLeading}
           actions={headerActions}
         >
           {formScrollBody}
