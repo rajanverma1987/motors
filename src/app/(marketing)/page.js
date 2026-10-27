@@ -216,7 +216,7 @@ export default function HomePage() {
         <div className="relative z-10 mx-auto flex min-h-[min(92vh,52rem)] max-w-[86.4rem] items-center px-4 py-14 sm:px-6 sm:py-20 lg:py-24">
           <div className="w-full max-w-xl min-w-0 lg:max-w-[36rem]">
             <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm">
-              Built for motor repair shops
+              Built for electric motor repair shops
             </span>
             <h1 className="mt-6 text-balance break-words text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[3.25rem] lg:leading-[1.15]">
               Electric Motor Repair Shop Software, Proposals, Work Orders, Invoices & Inventory in One Place

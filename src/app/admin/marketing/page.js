@@ -40,6 +40,35 @@ function formatWhen(value) {
   }
 }
 
+function startOfUtcDay(d = new Date()) {
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+}
+
+function rowMatchesCardFilter(row, filter) {
+  if (!filter) return true;
+  const delivery = String(row?.deliveryStatus || "").toLowerCase();
+  if (filter === "sentToday") {
+    if (!row?.lastEmailSentAt) return false;
+    return new Date(row.lastEmailSentAt) >= startOfUtcDay();
+  }
+  if (filter === "delivered") {
+    return ["delivered", "opened", "clicked"].includes(delivery);
+  }
+  if (filter === "opened") {
+    return delivery === "opened" || delivery === "clicked";
+  }
+  if (filter === "clicked") {
+    return delivery === "clicked";
+  }
+  if (filter === "bounced") {
+    return delivery === "bounced";
+  }
+  if (filter === "unsubscribed") {
+    return Boolean(row?.unsubscribedAt) || String(row?.campaignStatus || "").toLowerCase() === "unsubscribed";
+  }
+  return true;
+}
+
 function HistoryModal({ listingId, open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState(null);
@@ -163,6 +192,7 @@ export default function AdminMarketingPage() {
   const [testEmail, setTestEmail] = useState("contact@iqmotorbase.com");
   const [sendingTest, setSendingTest] = useState(false);
   const [dailyLimitOverride, setDailyLimitOverride] = useState("100");
+  const [cardFilter, setCardFilter] = useState("");
 
   const effectiveDailyLimit = useMemo(() => {
     const n = Number(dailyLimitOverride);
@@ -174,6 +204,16 @@ export default function AdminMarketingPage() {
     const sent = Number(summary?.sentToday || 0);
     return Math.max(0, effectiveDailyLimit - sent);
   }, [effectiveDailyLimit, summary?.sentToday]);
+
+  const filteredRows = useMemo(
+    () => rows.filter((row) => rowMatchesCardFilter(row, cardFilter)),
+    [rows, cardFilter]
+  );
+
+  const toggleCardFilter = (key) => {
+    setCardFilter((prev) => (prev === key ? "" : key));
+    setSelectedIds([]);
+  };
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -478,31 +518,69 @@ export default function AdminMarketingPage() {
       </div>
 
       {summary ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-md border border-border bg-card p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Sent today (UTC)</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-title">
-              {summary.sentToday}/{effectiveDailyLimit}
-            </p>
+        <div className="space-y-2">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {[
+              {
+                key: "sentToday",
+                label: "Sent today (UTC)",
+                value: `${summary.sentToday}/${effectiveDailyLimit}`,
+              },
+              {
+                key: "delivered",
+                label: "Delivered (30d)",
+                value: summary.last30Days?.delivered ?? 0,
+              },
+              {
+                key: "opened",
+                label: "Opened (30d)",
+                value: summary.last30Days?.opened ?? 0,
+              },
+              {
+                key: "clicked",
+                label: "Clicked (30d)",
+                value: summary.last30Days?.clicked ?? 0,
+              },
+              {
+                key: "bounced",
+                label: "Bounced (30d)",
+                value: summary.last30Days?.bounced ?? 0,
+              },
+              {
+                key: "unsubscribed",
+                label: "Unsubscribed",
+                value: summary.unsubscribed ?? 0,
+              },
+            ].map((card) => {
+              const active = cardFilter === card.key;
+              return (
+                <button
+                  key={card.key}
+                  type="button"
+                  onClick={() => toggleCardFilter(card.key)}
+                  aria-pressed={active}
+                  className={`rounded-md border p-3 text-left transition-colors ${
+                    active
+                      ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                      : "border-border bg-card hover:border-primary/40 hover:bg-primary/[0.04]"
+                  }`}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-wide text-secondary">
+                    {card.label}
+                  </p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-title">{card.value}</p>
+                  <p className="mt-1 text-[11px] text-secondary">
+                    {active ? "Filter on. Click to clear." : "Click to filter table"}
+                  </p>
+                </button>
+              );
+            })}
           </div>
-          <div className="rounded-md border border-border bg-card p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Delivered (30d)</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-title">
-              {summary.last30Days?.delivered ?? 0}
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-card p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Opened (30d)</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-title">
-              {summary.last30Days?.opened ?? 0}
-            </p>
-          </div>
-          <div className="rounded-md border border-border bg-card p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-secondary">Clicked (30d)</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-title">
-              {summary.last30Days?.clicked ?? 0}
-            </p>
-          </div>
+          <p className="text-xs text-secondary">
+            Opened stays at 0 until Resend domain open tracking is enabled (Domains, Configuration:
+            open tracking plus a verified tracking subdomain), and the webhook includes{" "}
+            <code className="text-title">email.opened</code>. Clicks also count as opens.
+          </p>
         </div>
       ) : null}
 
@@ -515,6 +593,11 @@ export default function AdminMarketingPage() {
             placeholder="Company, email, contact, city…"
           />
         </div>
+        {cardFilter ? (
+          <Button type="button" variant="outline" size="sm" onClick={() => setCardFilter("")}>
+            Clear filter
+          </Button>
+        ) : null}
         <Button type="button" variant="outline" size="sm" onClick={() => void loadListings()} disabled={loading}>
           Refresh
         </Button>
@@ -522,9 +605,13 @@ export default function AdminMarketingPage() {
 
       <Table
         columns={columns}
-        data={rows}
+        data={filteredRows}
         loading={loading}
-        emptyMessage="No approved listings with email."
+        emptyMessage={
+          cardFilter
+            ? "No listings match this filter."
+            : "No approved listings with email."
+        }
         rowKey="id"
         selectable
         selectedRowIds={selectedIds}

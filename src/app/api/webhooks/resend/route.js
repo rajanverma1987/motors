@@ -63,6 +63,11 @@ export async function POST(request) {
       setOps[field] = at;
     }
 
+    // Clicks imply the message was opened (many clients block open pixels).
+    if (type === "email.clicked" && !doc.openedAt) {
+      setOps.openedAt = at;
+    }
+
     if (type === "email.bounced") {
       setOps.bounceType = String(data.bounce?.type || "");
       setOps.bounceMessage = String(data.bounce?.message || "");

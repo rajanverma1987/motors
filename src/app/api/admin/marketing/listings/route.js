@@ -101,15 +101,19 @@ export async function GET(request) {
       .select("deliveredAt openedAt clickedAt bouncedAt complainedAt")
       .lean();
 
+    const unsubscribedCount = states.filter((s) => s?.unsubscribedAt).length;
+
     const summary = {
       sentToday,
       dailyLimit: LISTING_MARKETING_DAILY_LIMIT,
       remainingToday: Math.max(0, LISTING_MARKETING_DAILY_LIMIT - sentToday),
       followUpDays: LISTING_MARKETING_FOLLOW_UP_DAYS,
+      unsubscribed: unsubscribedCount,
       last30Days: {
         sent: recent.length,
-        delivered: recent.filter((e) => e.deliveredAt).length,
-        opened: recent.filter((e) => e.openedAt).length,
+        delivered: recent.filter((e) => e.deliveredAt || e.openedAt || e.clickedAt).length,
+        // Click without open pixel still counts as opened.
+        opened: recent.filter((e) => e.openedAt || e.clickedAt).length,
         clicked: recent.filter((e) => e.clickedAt).length,
         bounced: recent.filter((e) => e.bouncedAt).length,
         complained: recent.filter((e) => e.complainedAt).length,

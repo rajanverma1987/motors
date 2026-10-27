@@ -109,7 +109,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
         stickySidebar
         heroImage={HERO_DASHBOARD_TABLET_PATH}
         heroImageAlt={HERO_DASHBOARD_TABLET_ALT}
-        heroEyebrow="Built for motor repair shops"
+        heroEyebrow="Built for electric motor repair shops"
         heroHighlights={[
           "Job Write-Ups & work orders",
           "Time clock, job hours & payroll",
