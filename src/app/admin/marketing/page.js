@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiEye, FiRotateCcw } from "react-icons/fi";
+import { FiDownload, FiEye, FiRotateCcw } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -67,6 +67,58 @@ function rowMatchesCardFilter(row, filter) {
     return Boolean(row?.unsubscribedAt) || String(row?.campaignStatus || "").toLowerCase() === "unsubscribed";
   }
   return true;
+}
+
+function csvEscape(value) {
+  const s = value == null ? "" : String(value);
+  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+  return s;
+}
+
+function downloadMarketingListCsv(list, filterKey) {
+  const headers = [
+    "Company",
+    "Email",
+    "Contact",
+    "City",
+    "State",
+    "Phone",
+    "Campaign",
+    "Last delivery",
+    "Last emailed",
+    "Emails in cycle",
+    "Cycle",
+    "Last template",
+    "Unsubscribed at",
+  ];
+  const lines = [headers.join(",")];
+  for (const row of list || []) {
+    lines.push(
+      [
+        csvEscape(row.companyName),
+        csvEscape(row.email),
+        csvEscape(row.primaryContactPerson),
+        csvEscape(row.city),
+        csvEscape(row.state),
+        csvEscape(row.phone),
+        csvEscape(row.campaignStatus),
+        csvEscape(row.deliveryStatus),
+        csvEscape(row.lastEmailSentAt ? new Date(row.lastEmailSentAt).toISOString() : ""),
+        csvEscape(row.emailsInCycle ?? ""),
+        csvEscape(row.cycleId ?? ""),
+        csvEscape(row.lastTemplateKey),
+        csvEscape(row.unsubscribedAt ? new Date(row.unsubscribedAt).toISOString() : ""),
+      ].join(",")
+    );
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  const suffix = filterKey ? `-${filterKey}` : "";
+  const blob = new Blob([`\uFEFF${lines.join("\n")}`], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `listing-marketing${suffix}-${stamp}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function HistoryModal({ listingId, open, onClose }) {
@@ -598,6 +650,19 @@ export default function AdminMarketingPage() {
             Clear filter
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={loading || filteredRows.length === 0}
+          onClick={() => {
+            downloadMarketingListCsv(filteredRows, cardFilter);
+            toast.success(`Downloaded ${filteredRows.length} row(s).`);
+          }}
+        >
+          <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
+          Download CSV
+        </Button>
         <Button type="button" variant="outline" size="sm" onClick={() => void loadListings()} disabled={loading}>
           Refresh
         </Button>
