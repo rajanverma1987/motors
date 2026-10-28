@@ -135,7 +135,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <span className="text-title">Motor repair marketplace</span>
           </nav>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-            Motor repair marketplace for <<EMS_PLURAL_L>>, list surplus parts &amp; equipment from your Shop Management System
+            Motor repair marketplace for electric motor shops, list surplus parts &amp; equipment from your Shop Management System
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
             IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}

@@ -9,7 +9,7 @@ export async function generateMetadata() {
   const base = getPublicSiteUrl();
   const canonical = `${base}${PAGE_PATH}`;
   const title =
-    "Benefits of a Motor Repair Directory, Leads, Trust & Visibility for <<EMS_PLURAL_U>> | IQMotorBase.com";
+    "Benefits of a Motor Repair Directory, Leads, Trust & Visibility for Electric Motor Shops | IQMotorBase.com";
   const description =
     "Why electric motor repair and rewinding shops list in a dedicated directory: qualified buyer intent, niche SEO visibility, credibility, lower cost than broad ads, and reach beyond word-of-mouth. USA-focused guide for industrial motor service businesses.";
   return {
