@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiDownload, FiEdit2, FiMail } from "react-icons/fi";
+import { FiDownload, FiEdit2, FiMail, FiUserPlus } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import Badge from "@/components/ui/badge";
 import Table from "@/components/ui/table";
@@ -12,6 +12,15 @@ import { Form } from "@/components/ui/form-layout";
 import { useToast } from "@/components/toast-provider";
 import { useConfirm } from "@/components/confirm-provider";
 import { TALENT_AVAILABILITY_LABELS, TALENT_STATUS } from "@/lib/talent-constants";
+
+const INVITE_DEFAULT_SUBJECT = "You're invited: free electric motor shop talent profile";
+const INVITE_DEFAULT_BODY = `Hi,
+
+We're inviting you to create a free electric motor shop talent profile on IQMotorBase.
+
+Shops hire winders, technicians, machinists, and field service pros through our Talent directory and Careers jobs. Sign in with a 6-digit email code (no password), add your skills and preferred states, and get location-matched job alerts.
+
+It only takes a few minutes, and it's free for job seekers.`;
 
 function csvEscape(value) {
   const s = value == null ? "" : String(value);
@@ -45,6 +54,11 @@ export default function AdminTalentPage() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailSubject, setEmailSubject] = useState("");
   const [emailHtml, setEmailHtml] = useState("");
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteTo, setInviteTo] = useState("");
+  const [inviteSubject, setInviteSubject] = useState(INVITE_DEFAULT_SUBJECT);
+  const [inviteBody, setInviteBody] = useState(INVITE_DEFAULT_BODY);
+  const [inviteSending, setInviteSending] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -214,6 +228,38 @@ export default function AdminTalentPage() {
     }
   };
 
+  const openInvite = () => {
+    setInviteTo("");
+    setInviteSubject(INVITE_DEFAULT_SUBJECT);
+    setInviteBody(INVITE_DEFAULT_BODY);
+    setInviteOpen(true);
+  };
+
+  const sendInvite = async (e) => {
+    e.preventDefault();
+    setInviteSending(true);
+    try {
+      const res = await fetch("/api/admin/talent/invite", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: inviteTo,
+          subject: inviteSubject,
+          bodyText: inviteBody,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invite failed");
+      toast.success(data.message || "Invite sent.");
+      setInviteOpen(false);
+    } catch (err) {
+      toast.error(err.message || "Invite failed");
+    } finally {
+      setInviteSending(false);
+    }
+  };
+
   const columns = useMemo(
     () => [
       {
@@ -313,13 +359,19 @@ export default function AdminTalentPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Talent profiles</h1>
           <p className="mt-1 text-sm text-secondary">
-            Free job seeker profiles. Public at /talent. Ban, pause, export, or email individuals.
+            Free job seeker profiles. Public at /talent. Invite, ban, pause, export, or email individuals.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" disabled={!rows.length} onClick={downloadCsv}>
-          <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
-          Download CSV
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="primary" size="sm" onClick={openInvite}>
+            <FiUserPlus className="h-4 w-4 shrink-0" aria-hidden />
+            Invite to create profile
+          </Button>
+          <Button type="button" variant="outline" size="sm" disabled={!rows.length} onClick={downloadCsv}>
+            <FiDownload className="h-4 w-4 shrink-0" aria-hidden />
+            Download CSV
+          </Button>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap items-end gap-2">
@@ -483,6 +535,55 @@ export default function AdminTalentPage() {
             rows={6}
             required
           />
+        </Form>
+      </Modal>
+
+      <Modal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        title="Invite to create profile"
+        size="lg"
+        showClose
+        actions={
+          <Button
+            type="submit"
+            form="admin-talent-invite"
+            variant="primary"
+            size="sm"
+            disabled={inviteSending}
+          >
+            {inviteSending ? "Sending…" : "Send invite"}
+          </Button>
+        }
+      >
+        <Form id="admin-talent-invite" onSubmit={sendInvite} className="space-y-3">
+          <Input
+            label="To (email) *"
+            type="text"
+            value={inviteTo}
+            onChange={(e) => setInviteTo(e.target.value)}
+            placeholder="name@example.com"
+            help="Comma-separate up to 25 emails for a batch invite."
+            required
+          />
+          <Input
+            label="Subject *"
+            value={inviteSubject}
+            onChange={(e) => setInviteSubject(e.target.value)}
+            required
+          />
+          <Textarea
+            label="Message body (editable) *"
+            value={inviteBody}
+            onChange={(e) => setInviteBody(e.target.value)}
+            rows={10}
+            required
+            help="Plain text. Blank lines become paragraphs. The Create free profile button and guide link are added automatically."
+          />
+          <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-secondary">
+            Fixed footer in every invite: branded &quot;Create free profile&quot; button to /talent/login, plus a
+            link to the technician profile guide. Body text above stays editable.
+          </div>
         </Form>
       </Modal>
     </div>

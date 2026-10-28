@@ -92,6 +92,59 @@ export function talentPublicProfileUrl(slug, request) {
   return `${base}/talent/${encodeURIComponent(slug)}`;
 }
 
+export function talentCreateProfileUrl(request) {
+  return `${getPublicSiteUrl(request)}/talent/login`;
+}
+
+export const TALENT_INVITE_DEFAULT_SUBJECT =
+  "You're invited: free electric motor shop talent profile";
+
+export const TALENT_INVITE_DEFAULT_BODY = `Hi,
+
+We're inviting you to create a free electric motor shop talent profile on IQMotorBase.
+
+Shops hire winders, technicians, machinists, and field service pros through our Talent directory and Careers jobs. Sign in with a 6-digit email code (no password), add your skills and preferred states, and get location-matched job alerts.
+
+It only takes a few minutes, and it's free for job seekers.`;
+
+/** Build branded invite HTML: editable body + fixed create-profile CTA. */
+export function buildTalentInviteEmailHtml(bodyText, request) {
+  const createUrl = talentCreateProfileUrl(request);
+  const blogUrl = `${getPublicSiteUrl(request)}/blog/create-free-electric-motor-shop-technician-profile`;
+  const paragraphs = String(bodyText || "")
+    .trim()
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .filter(Boolean)
+    .map((block) => `<p>${escapeHtml(block).replace(/\n/g, "<br/>")}</p>`)
+    .join("\n");
+
+  return `
+    ${paragraphs || "<p>You're invited to create a free talent profile on IQMotorBase.</p>"}
+    <p style="margin:24px 0;">
+      <a href="${escapeHtml(createUrl)}"
+         style="display:inline-block;background:#0b5fff;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:600;">
+        Create free profile
+      </a>
+    </p>
+    <p style="font-size:13px;color:#555;">
+      Or open <a href="${escapeHtml(createUrl)}">${escapeHtml(createUrl)}</a>
+    </p>
+    <p style="font-size:12px;color:#666;">
+      How it works: <a href="${escapeHtml(blogUrl)}">Create a free electric motor shop technician profile</a>
+    </p>
+  `;
+}
+
+export async function sendTalentInviteEmail({ to, subject, bodyText, request }) {
+  const html = buildTalentInviteEmailHtml(bodyText, request);
+  return sendMarketingEmail(
+    to,
+    String(subject || TALENT_INVITE_DEFAULT_SUBJECT).slice(0, 200),
+    html
+  );
+}
+
 function escapeHtml(s) {
   return String(s || "")
     .replace(/&/g, "&amp;")
