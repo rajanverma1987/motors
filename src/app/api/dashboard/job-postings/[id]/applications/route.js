@@ -30,6 +30,10 @@ export async function GET(request, context) {
         ...a,
         id: a._id.toString(),
         jobPostingId: String(a.jobPostingId),
+        seekerProfileId: a.seekerProfileId ? String(a.seekerProfileId) : "",
+        seekerSlug: a.seekerSlug || "",
+        resumeUrl: a.resumeUrl || "",
+        profileUrl: a.seekerSlug ? `/talent/${a.seekerSlug}` : "",
         _id: undefined,
       }))
     );

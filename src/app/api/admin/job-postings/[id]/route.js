@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/db";
 import JobPosting from "@/models/JobPosting";
 import { getAdminFromRequest } from "@/lib/auth-admin";
 import { clampString, LIMITS } from "@/lib/validation";
+import { scheduleJobSeekerAlerts } from "@/lib/talent-alerts";
 
 function bodyFields(body) {
   return {
@@ -57,11 +58,16 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: "Job posting not found" }, { status: 404 });
     }
 
+    const wasLive = doc.status === "open" && doc.listedOnMarketingSite;
     Object.assign(doc, f);
     if (body?.listedOnMarketingSite !== undefined) {
       doc.listedOnMarketingSite = body.listedOnMarketingSite !== false;
     }
     await doc.save();
+    const isLive = doc.status === "open" && doc.listedOnMarketingSite;
+    if ((isLive && !wasLive) || (isLive && !doc.seekerAlertsSentAt)) {
+      scheduleJobSeekerAlerts(doc._id, request);
+    }
 
     return NextResponse.json({
       ok: true,

@@ -22,9 +22,15 @@ export default async function CareersPage() {
       <div className="border-b border-border pb-8">
         <h1 className="text-3xl font-bold tracking-tight text-title sm:text-4xl">Careers</h1>
         <p className="mt-3 text-lg text-secondary">
-          Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Shop owners create and manage
-          listings in the Shop Management System, each role appears here with an SEO-friendly page; candidates select a job to read details and
-          apply with contact information and experience.
+          Open positions posted by motor repair and rewinding shops on IQMotorBase.com. Apply with a free{" "}
+          <Link href="/talent" className="font-medium text-primary hover:underline">
+            talent profile
+          </Link>{" "}
+          (email OTP). Shops review your public profile when you apply. Create yours at{" "}
+          <Link href="/talent/login" className="font-medium text-primary hover:underline">
+            talent sign-in
+          </Link>
+          .
         </p>
       </div>
 

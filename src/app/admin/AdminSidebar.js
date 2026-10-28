@@ -22,6 +22,7 @@ import {
   FiBriefcase,
   FiEdit2,
   FiCalendar,
+  FiUserPlus,
 } from "react-icons/fi";
 import ThemeToggle from "@/components/theme-toggle";
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { href: "/admin/listings", label: "Listings", icon: FiList },
   { href: "/admin/stats", label: "Listing stats", icon: FiBarChart2 },
   { href: "/admin/job-postings", label: "Job postings", icon: FiBriefcase },
+  { href: "/admin/talent", label: "Talent", icon: FiUserPlus },
   { href: "/admin/leads", label: "Leads", icon: FiInbox },
   { href: "/admin/demo-requests", label: "Demo requests", icon: FiCalendar },
   { href: "/admin/clients", label: "Clients", icon: FiUsers },

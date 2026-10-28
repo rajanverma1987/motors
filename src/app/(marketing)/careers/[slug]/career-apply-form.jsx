@@ -1,44 +1,52 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
-import Textarea from "@/components/ui/textarea";
-import { Form } from "@/components/ui/form-layout";
+import TalentOtpLoginForm from "@/components/talent/talent-otp-login-form";
 
 export default function CareerApplyForm({ slug, headingId = "apply-heading" }) {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [experience, setExperience] = useState("");
+  const [me, setMe] = useState(null);
+  const [loadingMe, setLoadingMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [showLogin, setShowLogin] = useState(false);
 
-  async function handleSubmit(e) {
-    e.preventDefault();
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingMe(true);
+      try {
+        const res = await fetch("/api/talent/me", { credentials: "include", cache: "no-store" });
+        if (!res.ok) {
+          if (!cancelled) setMe(null);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled) setMe(data.profile || null);
+      } catch {
+        if (!cancelled) setMe(null);
+      } finally {
+        if (!cancelled) setLoadingMe(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function applyWithProfile() {
     setError("");
-    if (!name.trim() || !email.trim()) {
-      setError("Name and email are required.");
-      return;
-    }
-    if (experience.trim().length < 20) {
-      setError("Please enter at least 20 characters about your experience.");
-      return;
-    }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/public/job-postings/${encodeURIComponent(slug)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicantName: name.trim(),
-          applicantEmail: email.trim(),
-          applicantPhone: phone.trim(),
-          experienceText: experience.trim(),
-        }),
+        credentials: "include",
+        body: JSON.stringify({}),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Could not submit application");
@@ -56,49 +64,78 @@ export default function CareerApplyForm({ slug, headingId = "apply-heading" }) {
       <div className="rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-6 text-center">
         <p className="font-semibold text-title">Application received</p>
         <p className="mt-2 text-sm text-secondary">
-          The shop will contact you if there&apos;s a fit. You can close this page or apply to another role.
+          The shop can review your public talent profile. We emailed you a confirmation. You can apply to
+          another role anytime.
         </p>
+        <Link href="/talent/profile" className="mt-4 inline-block text-sm font-medium text-primary hover:underline">
+          Update your profile
+        </Link>
       </div>
     );
   }
 
   return (
-    <Form onSubmit={handleSubmit} className="w-full max-w-none space-y-5">
+    <div className="w-full max-w-none space-y-5">
       <div>
         <h3 id={headingId} className="text-xl font-semibold text-title sm:text-2xl">
           Apply for this role
         </h3>
         <p className="mt-2 max-w-[57.6rem] text-sm text-secondary sm:text-base">
-          Enter your contact details and a short summary of your relevant experience (motor repair, rewinding, electrical,
-          machining, etc.).
+          Applications require a free talent profile (email OTP sign-in). Shops see your public profile when you
+          apply.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Input label="Full name *" value={name} onChange={(e) => setName(e.target.value)} required autoComplete="name" />
-        <Input
-          label="Email *"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-        />
-        <div className="sm:col-span-2 lg:col-span-1">
-          <Input label="Phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" />
+
+      {loadingMe ? (
+        <p className="text-sm text-secondary">Checking sign-in…</p>
+      ) : me ? (
+        <div className="space-y-4 rounded-xl border border-border bg-card p-4">
+          <p className="text-sm text-title">
+            Signed in as <span className="font-semibold">{me.fullName || me.email}</span>
+          </p>
+          <p className="text-xs text-secondary">
+            Completeness {me.profileScore || 0}%.{" "}
+            <Link href="/talent/profile" className="text-primary hover:underline">
+              Edit profile
+            </Link>{" "}
+            before applying for a stronger application.
+          </p>
+          {error ? <p className="text-sm text-danger">{error}</p> : null}
+          <Button
+            type="button"
+            variant="primary"
+            disabled={submitting || !(me.fullName || "").trim()}
+            onClick={() => void applyWithProfile()}
+            className="w-full sm:w-auto sm:min-w-[12rem]"
+          >
+            {submitting ? "Submitting…" : "Apply with profile"}
+          </Button>
+          {!(me.fullName || "").trim() ? (
+            <p className="text-sm text-danger">Add your full name on your profile before applying.</p>
+          ) : null}
         </div>
-      </div>
-      <Textarea
-        label="Experience *"
-        value={experience}
-        onChange={(e) => setExperience(e.target.value)}
-        rows={8}
-        placeholder="Years in trade, certifications, equipment you’ve worked on, shift availability…"
-        required
-      />
-      {error ? <p className="text-sm text-danger">{error}</p> : null}
-      <Button type="submit" variant="primary" disabled={submitting} className="w-full sm:w-auto sm:min-w-[12rem]">
-        {submitting ? "Submitting…" : "Submit application"}
-      </Button>
-    </Form>
+      ) : showLogin ? (
+        <div className="rounded-xl border border-border bg-card p-4 sm:p-6">
+          <TalentOtpLoginForm
+            redirectTo={`/careers/${slug}#apply`}
+            title="Sign in to apply"
+            subtitle="Enter your email for a 6-digit code. Creating a free profile takes a minute."
+          />
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <Button type="button" variant="primary" onClick={() => setShowLogin(true)}>
+            Sign in with email to apply
+          </Button>
+          <p className="text-sm text-secondary">
+            New here?{" "}
+            <Link href="/talent/login" className="font-medium text-primary hover:underline">
+              Create a free talent profile
+            </Link>
+            .
+          </p>
+        </div>
+      )}
+    </div>
   );
 }

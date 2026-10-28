@@ -12,7 +12,11 @@ export async function POST(request) {
     }
 
     await connectDB();
-    const doc = await VerificationCode.findOne({ email, code });
+    const doc = await VerificationCode.findOne({
+      email,
+      code,
+      $or: [{ purpose: "listing" }, { purpose: { $exists: false } }, { purpose: null }],
+    });
     if (!doc) {
       return NextResponse.json({ error: "Invalid or expired verification code." }, { status: 400 });
     }

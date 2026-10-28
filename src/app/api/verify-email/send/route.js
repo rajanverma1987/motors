@@ -26,8 +26,8 @@ export async function POST(request) {
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000);
 
     await connectDB();
-    await VerificationCode.deleteMany({ email });
-    await VerificationCode.create({ email, code, expiresAt });
+    await VerificationCode.deleteMany({ email, purpose: { $in: ["listing", null] } });
+    await VerificationCode.create({ email, code, expiresAt, purpose: "listing" });
 
     const result = await sendVerificationCodeEmail(email, code);
     if (!result.ok) {

@@ -4,6 +4,7 @@ import JobPosting from "@/models/JobPosting";
 import JobApplication from "@/models/JobApplication";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { generateUniqueJobSlug } from "@/lib/job-posting-slug";
+import { scheduleJobSeekerAlerts } from "@/lib/talent-alerts";
 import { clampString, LIMITS } from "@/lib/validation";
 
 function bodyFields(body) {
@@ -78,12 +79,16 @@ export async function POST(request) {
     await connectDB();
     const email = user.email.trim().toLowerCase();
     const slug = await generateUniqueJobSlug(f.title);
+    const listed = body?.listedOnMarketingSite !== false;
     const doc = await JobPosting.create({
       ownerEmail: email,
       slug,
       ...f,
-      listedOnMarketingSite: body?.listedOnMarketingSite !== false,
+      listedOnMarketingSite: listed,
     });
+    if (doc.status === "open" && listed) {
+      scheduleJobSeekerAlerts(doc._id, request);
+    }
     return NextResponse.json({
       ok: true,
       job: {

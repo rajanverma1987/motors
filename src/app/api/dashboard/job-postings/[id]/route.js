@@ -6,6 +6,7 @@ import JobApplication from "@/models/JobApplication";
 import { getPortalUserFromRequest } from "@/lib/auth-portal";
 import { clampString } from "@/lib/validation";
 import { LIMITS } from "@/lib/validation";
+import { scheduleJobSeekerAlerts } from "@/lib/talent-alerts";
 
 function bodyFields(body) {
   return {
@@ -83,6 +84,9 @@ export async function PATCH(request, context) {
     }
     await connectDB();
     const email = user.email.trim().toLowerCase();
+    const previous = await JobPosting.findOne({ _id: id, ownerEmail: email })
+      .select("status listedOnMarketingSite seekerAlertsSentAt")
+      .lean();
     const doc = await JobPosting.findOneAndUpdate(
       { _id: id, ownerEmail: email },
       { $set: patch },
@@ -90,6 +94,13 @@ export async function PATCH(request, context) {
     ).lean();
     if (!doc) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+    const becameLive =
+      doc.status === "open" &&
+      doc.listedOnMarketingSite &&
+      !(previous?.status === "open" && previous?.listedOnMarketingSite);
+    if (becameLive || (doc.status === "open" && doc.listedOnMarketingSite && !doc.seekerAlertsSentAt)) {
+      scheduleJobSeekerAlerts(doc._id, request);
     }
     return NextResponse.json({
       ok: true,

@@ -438,6 +438,27 @@ export default function SimpleJobPostingsSection() {
   );
   const handleAppSort = useCallback((key, direction) => setAppSort({ key, direction }), []);
 
+  const updateAppStatus = useCallback(
+    async (applicationId, status) => {
+      if (!applicantsJobId) return;
+      const res = await fetch(
+        `/api/dashboard/job-postings/${applicantsJobId}/applications/${applicationId}`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update");
+      setApplications((prev) =>
+        prev.map((a) => (a.id === applicationId ? { ...a, status } : a))
+      );
+    },
+    [applicantsJobId]
+  );
+
   const appColumns = useMemo(
     () => [
       {
@@ -450,28 +471,68 @@ export default function SimpleJobPostingsSection() {
             <a href={`mailto:${row.applicantEmail}`} className="text-sm text-primary hover:underline">
               {row.applicantEmail}
             </a>
+            {row.profileUrl ? (
+              <div>
+                <a
+                  href={row.profileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-medium text-primary hover:underline"
+                >
+                  View talent profile
+                </a>
+              </div>
+            ) : null}
+            {row.resumeUrl ? (
+              <div>
+                <a
+                  href={row.resumeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-secondary hover:underline"
+                >
+                  Resume
+                </a>
+              </div>
+            ) : null}
           </div>
         ),
       },
-      { key: "applicantPhone", label: "Phone", sortable: true, render: (v) => v || "—" },
+      { key: "applicantPhone", label: "Phone", sortable: true, render: (v) => v || "-" },
       {
         key: "experienceText",
         label: "Experience",
         sortable: true,
         render: (v) => (
           <p className="line-clamp-4 max-w-[33.6rem] whitespace-pre-wrap text-sm text-secondary" title={v}>
-            {v || "—"}
+            {v || "-"}
           </p>
+        ),
+      },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        render: (v, row) => (
+          <select
+            className="rounded-md border border-border bg-bg px-2 py-1 text-xs text-title"
+            value={v || "new"}
+            onChange={(e) => void updateAppStatus(row.id, e.target.value).catch(() => {})}
+          >
+            <option value="new">New</option>
+            <option value="reviewed">Reviewed</option>
+            <option value="archived">Archived</option>
+          </select>
         ),
       },
       {
         key: "createdAt",
         label: "Applied",
         sortable: true,
-        render: (v) => (v ? formatDateTime(v) : "—"),
+        render: (v) => (v ? formatDateTime(v) : "-"),
       },
     ],
-    [formatDateTime]
+    [formatDateTime, updateAppStatus]
   );
 
   if (applicantsJobId) {

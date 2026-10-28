@@ -3,6 +3,7 @@ import { getAllPublishedSlugs } from "@/lib/marketplace";
 import { getPublicSiteUrl } from "@/lib/public-site-url";
 import { SEO_USA_HUB_PATH, SEO_USA_STATES, getAllSeoCityEntries } from "@/lib/seo-usa-config";
 import { getPublicJobPostingSlugs } from "@/lib/job-postings-public";
+import { getPublicTalentSlugs } from "@/lib/talent-public";
 import { connectDB } from "@/lib/db";
 import Listing from "@/models/Listing";
 import { ensureApprovedListingsHaveUrlSlug } from "@/lib/listing-url-slug";
@@ -219,6 +220,13 @@ export async function getSitemapEntries() {
       priority: 0.8,
     },
     { url: `${baseUrl}/careers`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.75 },
+    { url: `${baseUrl}/talent`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
+    {
+      url: `${baseUrl}/blog/create-free-motor-shop-technician-profile`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.78,
+    },
     {
       url: `${baseUrl}/types-of-electric-motor-repair-services`,
       lastModified: new Date(),
@@ -316,6 +324,19 @@ export async function getSitemapEntries() {
     console.error("Sitemap careers jobs error:", err);
   }
 
+  let talentProfiles = [];
+  try {
+    const talent = await getPublicTalentSlugs();
+    talentProfiles = talent.map((row) => ({
+      url: `${baseUrl}/talent/${row.slug}`,
+      lastModified: row.updatedAt ? new Date(row.updatedAt) : new Date(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+  } catch (err) {
+    console.error("Sitemap talent profiles error:", err);
+  }
+
   let listingPages = [];
   try {
     await connectDB();
@@ -342,6 +363,7 @@ export async function getSitemapEntries() {
     ...locationPages,
     ...marketplaceItems,
     ...careerJobs,
+    ...talentProfiles,
     ...listingPages,
   ];
 }

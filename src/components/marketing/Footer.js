@@ -8,6 +8,7 @@ const footerLinks = {
   "For repair shops": [
     { href: "/usa/motor-repair-business-listing", label: "USA: list + Shop Management System (SEO hub)" },
     { href: "/careers", label: "Careers: hire technicians (public job posts)" },
+    { href: "/talent", label: "Talent: free seeker profiles" },
     { href: "/blog", label: "Blog: shop guides & calculators" },
     { href: "/iqwirecalculator", label: "IQWireCalculator: CM Best Match app" },
     { href: "/motor-maintenance-and-repair", label: "IQMotorTrack: motor maintenance and repair" },
@@ -48,6 +49,8 @@ const footerLinks = {
     { href: "/motor-repair-shop-management-software", label: "Electric Motor Shop Software" },
     { href: "/#features", label: "Features & inventory" },
     { href: "/careers", label: "Careers: job postings" },
+    { href: "/talent", label: "Talent directory" },
+    { href: "/talent/login", label: "Create free talent profile" },
     { href: "/pricing", label: "Pricing" },
     { href: "demo-booking", label: "Book a free demo", booking: true },
     { href: "/contact", label: "Contact" },

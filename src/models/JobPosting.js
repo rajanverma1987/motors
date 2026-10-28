@@ -33,6 +33,9 @@ const jobPostingSchema = new mongoose.Schema(
     status: { type: String, enum: ["draft", "open", "closed"], default: "draft" },
     /** When true and status is open, job appears on public /careers */
     listedOnMarketingSite: { type: Boolean, default: true },
+    /** When set, location-matched talent alerts already went out for this live posting. */
+    seekerAlertsSentAt: { type: Date, default: null },
+    seekerAlertsSentCount: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
