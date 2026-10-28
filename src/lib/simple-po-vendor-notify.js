@@ -94,7 +94,7 @@ export function buildPoCancellationVendorEmailHtml(opts = {}) {
  */
 export function buildPoCancellationVendorEmailSubject(opts = {}) {
   const po = String(opts.poNumber || "").trim();
-  const shop = String(opts.shopCompanyName || "Motor Shop").trim();
+  const shop = String(opts.shopCompanyName || "Electric Motor Shop").trim();
   if (opts.entirePo) {
     return `Purchase order ${po ? `${po} ` : ""}cancelled – ${shop}`;
   }

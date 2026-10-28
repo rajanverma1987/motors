@@ -11,8 +11,8 @@ import Button from "@/components/ui/button";
  */
 export default function TalentShareButtons({
   profileUrl,
-  shareTitle = "My motor shop talent profile",
-  shareText = "Check out my free motor shop talent profile on IQMotorBase.",
+  shareTitle = "My electric motor shop talent profile",
+  shareText = "Check out my free electric motor shop talent profile on IQMotorBase.",
   compact = false,
 }) {
   const [copied, setCopied] = useState(false);

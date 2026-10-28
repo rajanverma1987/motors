@@ -12,18 +12,18 @@ const path = SEO_USA_HUB_PATH;
 export const metadata = {
   title: "Motor Repair Business Listing in the USA | Free + Shop Management System",
   description:
-    "List your motor repair or rewinding business in the United States. Get more customers and manage jobs with our free system built for motor shops, not a passive directory.",
+    "List your motor repair or rewinding business in the United States. Get more customers and manage jobs with our free system built for electric motor shops, not a passive directory.",
   keywords: [
     "motor repair business listing USA",
     "electric motor repair leads",
     "motor rewinding shop management system",
     "industrial motor repair marketing",
-    "motor shop job management",
+    "electric motor shop job management",
   ],
   openGraph: {
     title: "Motor Repair Business Listing in the USA | IQMotorBase.com",
     description:
-      "Get more repair jobs and manage your workshop. List your motor shop and run quotes, jobs, and billing in one place.",
+      "Get more repair jobs and manage your workshop. List your electric motor shop and run quotes, jobs, and billing in one place.",
     url: path,
     type: "website",
     siteName: "IQMotorBase.com",

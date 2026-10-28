@@ -226,7 +226,7 @@ export default function MotorRepairWorkOrderTemplatePage() {
           <section>
             <p className="mt-2 text-secondary leading-relaxed">
               Most work order templates you find online are generic repair-order forms with a box for
-              &ldquo;description of work.&rdquo; They do not survive contact with a motor shop. A rewind job needs
+              &ldquo;description of work.&rdquo; They do not survive contact with an electric motor shop. A rewind job needs
               nameplate data captured before the plate is cleaned off, incoming megohm and winding-resistance readings
               recorded as numbers rather than a checkmark, and an authorization structure that admits you cannot quote
               the repair until you have stripped the core.

@@ -11,7 +11,7 @@ import TalentProfileForm from "@/components/talent/talent-profile-form";
 export const metadata = marketingPageMetadata({
   path: "/talent/profile",
   title: "Edit talent profile | IQMotorBase",
-  description: "Complete your free motor shop talent profile to get job alerts and apply to careers.",
+  description: "Complete your free electric motor shop talent profile to get job alerts and apply to careers.",
   index: false,
   follow: false,
 });

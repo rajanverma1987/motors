@@ -11,7 +11,7 @@ export const revalidate = 120;
 
 export const metadata = marketingPageMetadata({
   path: "/talent",
-  title: "Motor Shop Talent Directory | Hire Technicians & Winders",
+  title: "Electric Motor Shop Talent Directory | Hire Technicians & Winders",
   description:
     "Browse free public profiles of motor rewind technicians, machinists, and field techs. Shops hire on IQMotorBase Careers. Create your free profile today.",
 });

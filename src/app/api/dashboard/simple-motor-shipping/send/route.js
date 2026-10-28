@@ -154,7 +154,7 @@ export async function POST(request) {
       ${logoHtml}
       <p style="margin-top:16px">— ${esc(shopCompanyName || "Our shop")}</p>
     `);
-    const subject = `${documentLabel} – ${shopCompanyName || "Motor Shop"}`;
+    const subject = `${documentLabel} – ${shopCompanyName || "Electric Motor Shop"}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);
     if (mail.error) {

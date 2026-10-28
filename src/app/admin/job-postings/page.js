@@ -82,7 +82,7 @@ export default function AdminJobPostingsPage() {
 
   const shopOptions = useMemo(
     () => [
-      { value: "", label: "Select a motor shop…" },
+      { value: "", label: "Select an electric motor shop…" },
       ...shops.map((s) => ({ value: s.id, label: s.label })),
     ],
     [shops]
@@ -157,7 +157,7 @@ export default function AdminJobPostingsPage() {
   async function handleCreate(e) {
     e.preventDefault();
     if (!listingId) {
-      toast.error("Select a motor shop.");
+      toast.error("Select an electric motor shop.");
       return;
     }
     if (!form.title?.trim()) {
@@ -368,7 +368,7 @@ export default function AdminJobPostingsPage() {
         <div>
           <h1 className="text-2xl font-bold text-title">Job postings</h1>
           <p className="mt-1 text-sm text-secondary">
-            Post careers listings for any approved motor shop. Same fields as Dashboards → Settings → Job
+            Post careers listings for any approved electric motor shop. Same fields as Dashboards → Settings → Job
             postings. The shop&apos;s listing email owns the posting.
           </p>
         </div>
@@ -400,7 +400,7 @@ export default function AdminJobPostingsPage() {
       <Modal
         open={createOpen}
         onClose={closeCreate}
-        title="Post a job for a motor shop"
+        title="Post a job for an electric motor shop"
         size="3xl"
         actions={
           <Button type="submit" form={CREATE_FORM_ID} variant="primary" size="sm" disabled={saving}>

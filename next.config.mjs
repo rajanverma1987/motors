@@ -67,6 +67,11 @@ const nextConfig = {
         permanent: true,
       },
       { source: "/emergency-motor-repair", destination: "/emergency-motor-repair-what-to-do", permanent: true },
+      {
+        source: "/blog/create-free-motor-shop-technician-profile",
+        destination: "/blog/create-free-electric-motor-shop-technician-profile",
+        permanent: true,
+      },
       { source: "/dashboard/quotes", destination: "/dashboard/rfq", permanent: true },
       { source: "/dashboard/quotes/:path*", destination: "/dashboard/rfq/:path*", permanent: true },
       {

@@ -140,7 +140,7 @@ export async function POST(request) {
       ${logoHtml}
       <p style="margin-top:16px">— ${esc(shopCompanyName || "Our shop")}</p>
     `);
-    const subject = `Purchase order ${poNumber || documentLabel} – ${shopCompanyName || "Motor Shop"}`;
+    const subject = `Purchase order ${poNumber || documentLabel} – ${shopCompanyName || "Electric Motor Shop"}`;
 
     const mail = resolveCustomerMailDelivery(uSettings, shopCompanyName);
     if (mail.error) {

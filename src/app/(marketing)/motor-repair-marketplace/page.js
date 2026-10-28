@@ -10,7 +10,7 @@ export async function generateMetadata() {
   const title =
     "Motor Repair Marketplace for Shops, Sell Parts, Surplus Motors & Tools | IQMotorBase.com";
   const description =
-    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your Shop Management System, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking, separate from job inventory. For industrial motor shops in the USA.";
+    "List electric motor parts, surplus equipment, and shop tools on a B2B-friendly marketplace built for repair and rewinding centers. Publish from your Shop Management System, get buyer requests (no forced checkout), SEO-optimized listing pages, and order tracking, separate from job inventory. For industrial electric motor shops in the USA.";
   return {
     title,
     description,
@@ -135,7 +135,7 @@ export default function MotorRepairMarketplaceMarketingPage() {
             <span className="text-title">Motor repair marketplace</span>
           </nav>
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-title sm:text-4xl lg:text-[2.5rem] lg:leading-tight">
-            Motor repair marketplace for electric motor shops, list surplus parts &amp; equipment from your Shop Management System
+            Motor repair marketplace for <<EMS_PLURAL_L>>, list surplus parts &amp; equipment from your Shop Management System
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-secondary sm:text-xl">
             IQMotorBase.com runs a <strong className="font-semibold text-title">public B2B marketplace</strong>{" "}

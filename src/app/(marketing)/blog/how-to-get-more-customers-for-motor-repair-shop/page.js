@@ -217,7 +217,7 @@ export default function BlogMoreCustomersPage() {
         </section>
 
         <section>
-          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">15. Common growth mistakes motor shops make</h2>
+          <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">15. Common growth mistakes electric motor shops make</h2>
           <p className="mt-4 text-secondary leading-relaxed">
             The first mistake is promising “all services for everyone,” which lowers credibility and attracts low-fit inquiries.
             The second is underestimating response speed as a competitive advantage. The third is treating marketing and

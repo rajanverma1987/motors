@@ -15,7 +15,7 @@ export const metadata = marketingPageMetadata({
   path: "/talent/login",
   title: "Create free talent profile | Motor shop job seekers",
   description:
-    "Free motor shop talent profile: email OTP sign-in, public directory listing, location-matched job alerts, and apply to Careers with your profile. No password.",
+    "Free electric motor shop talent profile: email OTP sign-in, public directory listing, location-matched job alerts, and apply to Careers with your profile. No password.",
 });
 
 const BENEFITS = [
@@ -86,7 +86,7 @@ export default async function TalentLoginPage({ searchParams }) {
                 For job seekers
               </p>
               <h1 className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-title sm:text-4xl">
-                Create your free motor shop talent profile
+                Create your free electric motor shop talent profile
               </h1>
               <p className="mt-4 max-w-xl text-lg text-secondary">
                 Built for winders, technicians, machinists, and field service pros. Sign in with email,
@@ -204,10 +204,10 @@ export default async function TalentLoginPage({ searchParams }) {
           <p className="mt-5 text-sm text-secondary">
             More detail:{" "}
             <Link
-              href="/blog/create-free-motor-shop-technician-profile"
+              href="/blog/create-free-electric-motor-shop-technician-profile"
               className="font-medium text-primary hover:underline"
             >
-              Create a free motor shop technician profile
+              Create a free electric motor shop technician profile
             </Link>
             .
           </p>

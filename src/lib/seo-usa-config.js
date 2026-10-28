@@ -34,7 +34,7 @@ export const SEO_USA_STATES = [
         name: "Austin",
         slug: "austin",
         blurb:
-          "Austin’s tech-adjacent manufacturing, data-center cooling, and regional contractors still lean on qualified motor shops for precision repair, balancing, and testing.",
+          "Austin’s tech-adjacent manufacturing, data-center cooling, and regional contractors still lean on qualified electric motor shops for precision repair, balancing, and testing.",
       },
       {
         name: "San Antonio",
@@ -268,7 +268,7 @@ export const SEO_USA_STATES = [
         name: "Fort Wayne",
         slug: "fort-wayne",
         blurb:
-          "Fort Wayne’s defense suppliers, metal fabrication, and specialty equipment builders rely on motor shops that can support complex rebuilds.",
+          "Fort Wayne’s defense suppliers, metal fabrication, and specialty equipment builders rely on electric motor shops that can support complex rebuilds.",
       },
     ],
   },
@@ -310,7 +310,7 @@ export const SEO_USA_HUB_PATH = "/usa/motor-repair-business-listing";
 export const SEO_DEFAULT_BENEFITS = [
   "More qualified repair and rewinding leads from buyers actively searching in your service area.",
   "Job cards, scheduling, and shop workflow so nothing falls through the cracks after the phone rings.",
-  "Quotes, invoices, and payment tracking tuned for motor shops, not generic field service tools.",
+  "Quotes, invoices, and payment tracking tuned for electric motor shops, not generic field service tools.",
   "A free Ultimate tier to get started fast; upgrade when you want deeper automation.",
 ];
 
@@ -332,7 +332,7 @@ export const SEO_USA_HUB_BENEFIT_GROUPS = [
   {
     title: "Shop operations & workflow",
     items: [
-      "Quotes and work orders with labor and parts lines that match how motor shops actually work, not generic “tickets.”",
+      "Quotes and work orders with labor and parts lines that match how electric motor shops actually work, not generic “tickets.”",
       "Job board / floor visibility so everyone knows what’s in disassembly, rewind, balance, test, or ready to ship.",
       "Each customer's motors and history in one place so repeat failures are easier to diagnose and quote honestly.",
       "Parts catalog with reservations against jobs so you don’t promise dates you can’t hit.",

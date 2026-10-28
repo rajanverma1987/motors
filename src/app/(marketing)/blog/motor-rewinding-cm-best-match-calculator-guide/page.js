@@ -62,7 +62,7 @@ export const metadata = {
     "CM best match",
     "magnet wire parallel",
     "electric motor rewind calculator",
-    "wire catalog motor shop",
+    "wire catalog electric motor shop",
   ],
   openGraph: {
     title: "CM Best Match Calculator for Motor Rewinding | IQMotorBase.com",

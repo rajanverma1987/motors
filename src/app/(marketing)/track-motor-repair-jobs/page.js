@@ -12,7 +12,7 @@ export const metadata = {
     "Practical ways motor repair shops track work-in-progress, communicate lead times, and reduce status calls, without living in spreadsheets.",
   keywords: [
     "track motor repair jobs",
-    "motor shop WIP",
+    "electric motor shop WIP",
     "repair shop lead time",
     "motor rewinding status tracking",
   ],

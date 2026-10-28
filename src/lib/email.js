@@ -783,7 +783,7 @@ export async function sendMarketingEmail(to, subject, html) {
   return sendEmail(to, subject, wrapPlatformBrandedHtml(html), { from: marketingFrom });
 }
 
-/** Send quote to customer with link to approve/reject. Uses motor shop name in subject and signature (no IQMotorBase.com). */
+/** Send quote to customer with link to approve/reject. Uses electric motor shop name in subject and signature (no IQMotorBase.com). */
 export async function sendQuoteToCustomer(
   toEmail,
   customerName,
@@ -802,7 +802,7 @@ export async function sendQuoteToCustomer(
     accountsEmailBlock: options.accountsEmailBlock,
     customMessage: options.customMessage,
   });
-  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
   return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
 }
 
@@ -817,7 +817,7 @@ export async function sendRepairFlowPreliminaryToCustomer(
 ) {
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
   const signature = esc(shopName);
   const jobRef = esc(jobNumber) || "your repair job";
   const subject = `Preliminary quote, Job ${jobRef} to ${shopName}`;
@@ -869,11 +869,11 @@ export async function sendInvoiceToCustomer(
     accountsEmailBlock: options.accountsEmailBlock,
     customMessage: options.customMessage,
   });
-  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Motor Shop";
+  const shopName = (shopCompanyName && String(shopCompanyName).trim()) ? shopCompanyName.trim() : "Electric Motor Shop";
   return sendCustomerFacingEmail(toEmail, subject, html, options, shopName);
 }
 
-/** Send purchase order to vendor with link to view, print, and update delivery status. Uses motor shop name in subject and signature. */
+/** Send purchase order to vendor with link to view, print, and update delivery status. Uses electric motor shop name in subject and signature. */
 export async function sendPoToVendor(toEmail, vendorName, poNumber, viewUrl, shopCompanyName, options = {}) {
   const { subject, html } = buildPoToVendorEmailContent({
     vendorName,
@@ -902,7 +902,7 @@ export async function sendWorkOrderPdfToRecipient(
 ) {
   const esc = (v) =>
     v == null ? "" : String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  const shopName = shopCompanyName && String(shopCompanyName).trim() ? shopCompanyName.trim() : "Motor Shop";
+  const shopName = shopCompanyName && String(shopCompanyName).trim() ? shopCompanyName.trim() : "Electric Motor Shop";
   const woNo = esc(workOrderNumber) || ", ";
   const subject = `Work order ${woNo} to ${esc(shopName)}`;
   const instructions = String(options.instructions ?? "").trim();

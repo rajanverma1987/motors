@@ -27,7 +27,7 @@ const faqJsonLd = {
     },
     {
       "@type": "Question",
-      name: "When do motor shops use belt and pulley speed calculators?",
+      name: "When do electric motor shops use belt and pulley speed calculators?",
       acceptedAnswer: {
         "@type": "Answer",
         text: "When verifying driven equipment speed from a known motor speed and pulley diameters, or when explaining ratio changes to customers. The calculator assumes no slip; V-belts and belt creep reduce driven speed slightly compared to the ideal ratio.",
@@ -71,12 +71,12 @@ export const metadata = {
     "motor torque calculator",
     "belt pulley speed calculator",
     "delta wye resistance",
-    "motor shop calculators",
+    "electric motor shop calculators",
   ],
   openGraph: {
     title: "Electric Motor Calculators: FLA, Torque, Speed & Power | IQMotorBase.com",
     description:
-      "Field-focused math for motor shops: FLA estimates, sync speed, drives, torque, and bench DC tools, explained.",
+      "Field-focused math for electric motor shops: FLA estimates, sync speed, drives, torque, and bench DC tools, explained.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",

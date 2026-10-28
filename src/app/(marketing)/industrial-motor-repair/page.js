@@ -341,7 +341,7 @@ export default function IndustrialMotorRepairPage() {
               Common industrial motor types &amp; applications
             </h2>
             <p className="mt-4 text-secondary">
-              Facilities teams most often send these categories to motor shops:
+              Facilities teams most often send these categories to electric motor shops:
             </p>
             <ul className="mt-4 list-disc pl-6 text-secondary space-y-2">
               <li>

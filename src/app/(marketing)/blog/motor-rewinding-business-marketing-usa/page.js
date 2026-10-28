@@ -15,7 +15,7 @@ export const metadata = {
     "electric motor rewinding leads",
     "industrial motor repair marketing",
     "EASA motor repair",
-    "motor shop SEO",
+    "electric motor shop SEO",
   ],
   openGraph: {
     title: "Motor Rewinding Business Marketing in the USA | IQMotorBase.com",

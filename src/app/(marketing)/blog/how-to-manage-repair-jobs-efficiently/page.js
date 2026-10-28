@@ -6,13 +6,13 @@ import { SEO_USA_HUB_PATH } from "@/lib/seo-usa-config";
 const path = "/blog/how-to-manage-repair-jobs-efficiently";
 
 export const metadata = {
-  title: "How to Manage Repair Jobs Efficiently (Motor Shop Playbook)",
+  title: "How to Manage Repair Jobs Efficiently (Electric Motor Shop Playbook)",
   description:
     "Reduce firefighting in electric motor repair shops: clear statuses, parts visibility, change orders, and customer updates, without extra headcount.",
-  keywords: ["manage repair jobs", "motor shop efficiency", "repair shop workflow"],
+  keywords: ["manage repair jobs", "electric motor shop efficiency", "repair shop workflow"],
   openGraph: {
     title: "How to Manage Repair Jobs Efficiently | IQMotorBase.com",
-    description: "Statuses, handoffs, and fewer status calls for motor shops.",
+    description: "Statuses, handoffs, and fewer status calls for electric motor shops.",
     url: path,
     type: "article",
     siteName: "IQMotorBase.com",
@@ -130,7 +130,7 @@ export default function BlogManageJobsEfficientlyPage() {
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">Tie purchasing to promised dates, not generic reorders</h2>
           <p className="mt-4 text-secondary leading-relaxed">
-            Procurement discipline is a major efficiency lever in motor shops. Link part orders directly to committed jobs and
+            Procurement discipline is a major efficiency lever in electric motor shops. Link part orders directly to committed jobs and
             promised milestones. Tag critical-path parts so buyers prioritize what affects customer delivery first, then handle
             routine stock replenishment.
           </p>

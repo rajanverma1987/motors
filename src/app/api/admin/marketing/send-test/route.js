@@ -45,7 +45,7 @@ export async function POST(request) {
     const ctx = {
       name: "Test Contact",
       email: to,
-      companyName: "Test Motor Shop",
+      companyName: "Test Electric Motor Shop",
       unsubscribeUrl: buildListingMarketingUnsubscribeUrl(to, request),
     };
 

@@ -16,7 +16,7 @@ const ogImageUrl = `${siteUrl}${OG_IMAGE_PATH}`;
 
 const TITLE = "Job Diagram Drawing Tool for Motor Repair Shops | IQMotorBase";
 const DESCRIPTION =
-  "Why paper sketches and phone photos fail motor shops, how IQMotorBase’s tablet-with-pen job diagram tool works from the datasheet, and how linked drawings protect handoffs and warranties.";
+  "Why paper sketches and phone photos fail electric motor shops, how IQMotorBase’s tablet-with-pen job diagram tool works from the datasheet, and how linked drawings protect handoffs and warranties.";
 
 export const metadata = {
   title: TITLE,
@@ -24,7 +24,7 @@ export const metadata = {
   keywords: [
     "motor repair diagram tool",
     "job diagram software",
-    "motor shop drawing tool",
+    "electric motor shop drawing tool",
     "electric motor datasheet diagram",
     "repair shop sketch tool",
     "winding connection diagram",
@@ -59,7 +59,7 @@ export default function BlogJobDiagramDrawingToolPage() {
   return (
     <BlogPageLayout
       title="Draw job diagrams where the work lives"
-      description="Every good motor shop already draws. The question is whether that drawing still exists when second shift, the office, or the customer needs it. We built a diagram tool inside the job so a tech can sketch on a tablet with a pen, save it with the datasheet, and keep the record with the job number."
+      description="Every good electric motor shop already draws. The question is whether that drawing still exists when second shift, the office, or the customer needs it. We built a diagram tool inside the job so a tech can sketch on a tablet with a pen, save it with the datasheet, and keep the record with the job number."
       breadcrumbLink={{ href: "/blog", label: "Blog" }}
       canonicalPath={path}
       heroImage={OG_IMAGE_PATH}
@@ -92,7 +92,7 @@ export default function BlogJobDiagramDrawingToolPage() {
 
         <section>
           <h2 className="text-2xl font-bold text-title sm:text-3xl mt-10">
-            The problem motor shops actually feel
+            The problem electric motor shops actually feel
           </h2>
           <p className="mt-4 text-secondary leading-relaxed">
             Motor repair is visual work. Nameplate fields matter, but they do not replace a connection sketch. A DC armature

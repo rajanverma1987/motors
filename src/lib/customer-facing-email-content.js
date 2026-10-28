@@ -63,7 +63,7 @@ export function formatCustomEmailMessageHtml(message) {
 
 /** @param {{ customerName?: string, rfqNumber?: string, respondUrl: string, shopCompanyName?: string, logoSrc?: string, accountsEmailBlock?: string, customMessage?: string }} opts */
 export function buildQuoteToCustomerEmailContent(opts) {
-  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
+  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Electric Motor Shop";
   const rfqNumber = opts.rfqNumber;
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
@@ -84,7 +84,7 @@ export function buildQuoteToCustomerEmailContent(opts) {
 
 /** @param {{ customerName?: string, invoiceNumber?: string, shopCompanyName?: string, viewUrl?: string, totalFormatted?: string, summaryHtml?: string, logoSrc?: string, accountsEmailBlock?: string, customMessage?: string }} opts */
 export function buildInvoiceToCustomerEmailContent(opts) {
-  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
+  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Electric Motor Shop";
   const invNo = escapeEmailHtml(opts.invoiceNumber) || ", ";
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);
@@ -131,7 +131,7 @@ export function buildInvoiceToCustomerEmailContent(opts) {
 
 /** @param {{ vendorName?: string, poNumber?: string, viewUrl: string, shopCompanyName?: string, logoSrc?: string, poVendorAddressesHtml?: string, customMessage?: string }} opts */
 export function buildPoToVendorEmailContent(opts) {
-  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Motor Shop";
+  const shopName = opts.shopCompanyName && String(opts.shopCompanyName).trim() ? opts.shopCompanyName.trim() : "Electric Motor Shop";
   const poNumber = opts.poNumber;
   const signature = escapeEmailHtml(shopName);
   const customBlock = formatCustomEmailMessageHtml(opts.customMessage);

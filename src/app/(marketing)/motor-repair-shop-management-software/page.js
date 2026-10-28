@@ -101,7 +101,7 @@ export default function MotorRepairShopManagementSoftwarePage() {
       <SoftwareSeoFaqJsonLd items={faqItems} />
       <BlogPageLayout
         title="Electric motor repair shop software for rewind and service shops"
-        description="Job write-ups, work orders, inventory, invoicing, time clock, and repair leads in one system for electric motor shops, not motorcycle or auto repair. Starts at $349/mo. Book a free 30-min demo."
+        description="Job write-ups, work orders, inventory, invoicing, time clock, and repair leads in one system for <<EMS_PLURAL_L>>, not motorcycle or auto repair. Starts at $349/mo. Book a free 30-min demo."
         breadcrumbLink={{ href: "/", label: "Home" }}
         canonicalPath={path}
         wideSidebar

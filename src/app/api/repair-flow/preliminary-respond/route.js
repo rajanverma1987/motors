@@ -38,7 +38,7 @@ export async function GET(request) {
     const shopName =
       (owner?.shopName && String(owner.shopName).trim()) ||
       process.env.MOTOR_SHOP_COMPANY_NAME?.trim() ||
-      "Motor Shop";
+      "Electric Motor Shop";
 
     if (job.phase !== "awaiting_preliminary_approval") {
       return NextResponse.json({

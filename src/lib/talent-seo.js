@@ -53,7 +53,7 @@ export function buildTalentProfileMetadata(profile, baseUrl) {
   const path = `/talent/${slug}`;
   const canonical = `${base}${path}`;
   const name = profile?.fullName || "Talent";
-  const title = `${name} | Motor Shop Talent | IQMotorBase`;
+  const title = `${name} | Electric Motor Shop Talent | IQMotorBase`;
   const description = buildTalentMetaDescription(profile || {});
   const ogImage = `${base}/og-image.png`;
   return {
@@ -62,7 +62,7 @@ export function buildTalentProfileMetadata(profile, baseUrl) {
     alternates: { canonical: path },
     robots: { index: true, follow: true, googleBot: { index: true, follow: true } },
     openGraph: {
-      title: `${name} | Motor Shop Talent`,
+      title: `${name} | Electric Motor Shop Talent`,
       description,
       url: canonical,
       siteName: "IQMotorBase.com",

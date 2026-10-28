@@ -125,7 +125,7 @@ export async function POST(request) {
     const body = await request.json().catch(() => ({}));
     const listingId = String(body?.listingId || "").trim();
     if (!listingId) {
-      return NextResponse.json({ error: "Select a motor shop." }, { status: 400 });
+      return NextResponse.json({ error: "Select an electric motor shop." }, { status: 400 });
     }
 
     const f = bodyFields(body);

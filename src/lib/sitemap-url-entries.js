@@ -222,7 +222,7 @@ export async function getSitemapEntries() {
     { url: `${baseUrl}/careers`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.75 },
     { url: `${baseUrl}/talent`, lastModified: new Date(), changeFrequency: "daily", priority: 0.8 },
     {
-      url: `${baseUrl}/blog/create-free-motor-shop-technician-profile`,
+      url: `${baseUrl}/blog/create-free-electric-motor-shop-technician-profile`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.78,

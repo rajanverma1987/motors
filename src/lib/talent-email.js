@@ -8,7 +8,7 @@ export { talentAvailabilityLabel };
 export async function sendTalentVerificationCodeEmail(to, code) {
   const subject = "Your IQMotorBase talent verification code";
   const html = `
-    <p>Your code to sign in to your free motor shop talent profile:</p>
+    <p>Your code to sign in to your free electric motor shop talent profile:</p>
     <p style="font-size:24px;font-weight:bold;letter-spacing:4px;font-family:monospace">${code}</p>
     <p>Enter this code on the website. It expires in 15 minutes.</p>
     <p>If you did not request this, you can ignore this email.</p>
@@ -27,7 +27,7 @@ export async function sendTalentJobAlertEmail({
 }) {
   const unsub = buildTalentUnsubscribeUrl(to, request);
   const name = seekerName || "there";
-  const subject = `New motor shop job near you: ${jobTitle}`;
+  const subject = `New electric motor shop job near you: ${jobTitle}`;
   const html = `
     <p>Hi ${escapeHtml(name)},</p>
     <p>A new role was posted that matches your preferred location:</p>

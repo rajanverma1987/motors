@@ -21,8 +21,8 @@ export function buildCityLeadCopy(state, city) {
       `${state.industryBlurb}`,
     ],
     introParagraphs: [
-      `Industrial buyers and facility teams in ${city.name}, ${state.name} don’t have time to hunt for a motor shop when a line is down. They search, shortlist, and call fast. If your capabilities aren’t visible, and your follow-up isn’t systematic, you lose the job to a competitor who answered first and sounded organized.`,
-      `This page is for owners who want more repair and rewinding work in ${city.name}: clearer positioning online, faster responses to inquiries, and a Shop Management System that matches how motor shops actually operate (quotes, job documentation, billing).`,
+      `Industrial buyers and facility teams in ${city.name}, ${state.name} don’t have time to hunt for an electric motor shop when a line is down. They search, shortlist, and call fast. If your capabilities aren’t visible, and your follow-up isn’t systematic, you lose the job to a competitor who answered first and sounded organized.`,
+      `This page is for owners who want more repair and rewinding work in ${city.name}: clearer positioning online, faster responses to inquiries, and a Shop Management System that matches how electric motor shops actually operate (quotes, job documentation, billing).`,
     ],
   };
 }
@@ -40,7 +40,7 @@ export function buildStateLeadCopy(state) {
           `If you serve ${state.name}, this is your hub to list your business for more qualified inquiries and adopt a Shop Management System that’s built around repair jobs, not generic tickets. You’ll connect your listing to the same workspace your team uses every day.`,
         ];
   return {
-    problemTitle: "Why great motor shops in " + state.name + " still lose work",
+    problemTitle: "Why great electric motor shops in " + state.name + " still lose work",
     problemParagraphs: [
       `Across ${state.name}, plants and contractors compare shops on speed, clarity, and proof of capability, not just price. If your website is outdated and your intake is informal, you’re invisible to new buyers even when your bench work is excellent.`,
       "Manual tracking breaks down when volume spikes: emergency calls stack, parts orders slip, and invoices lag. That’s not a discipline problem, it’s a systems problem. Shops that centralize leads and jobs respond faster and look more professional on every quote.",
@@ -60,7 +60,7 @@ export function buildUsaLeadCopy() {
     problemTitle: "Motor repair shops lose money twice: weak visibility + chaotic job tracking",
     problemParagraphs: [
       "Across the United States, industrial and commercial buyers still search online for motor repair, rewinding, balancing, and field service. Shops that don’t clearly publish capabilities, geography, and certifications get skipped, even if their bench work is world-class.",
-      "On the operations side, paper job bags and scattered spreadsheets break down when mix increases: quotes stall, WIP is unclear, and invoices go out late. That’s not a people problem, it’s the cost of tools that weren’t built for motor shops.",
+      "On the operations side, paper job bags and scattered spreadsheets break down when mix increases: quotes stall, WIP is unclear, and invoices go out late. That’s not a people problem, it’s the cost of tools that weren’t built for electric motor shops.",
       "The shops winning in 2026 combine discoverability with disciplined execution: they show up where buyers look, and they run the job lifecycle in one place.",
     ],
     solutionTitle: "More repair jobs + a Shop Management System that fits the workshop",

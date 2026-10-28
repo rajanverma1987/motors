@@ -15,8 +15,8 @@ export const metadata = marketingPageMetadata({
 
 const POSTS = [
   {
-    href: "/blog/create-free-motor-shop-technician-profile",
-    title: "Create a free motor shop technician profile",
+    href: "/blog/create-free-electric-motor-shop-technician-profile",
+    title: "Create a free electric motor shop technician profile",
     excerpt:
       "Free OTP talent profiles for winders and technicians, location-matched job alerts, and apply with profile on Careers.",
   },
