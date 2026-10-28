@@ -89,6 +89,9 @@ export async function PUT(request) {
     if (body.willingToRelocate != null) patch.willingToRelocate = Boolean(body.willingToRelocate);
     if (body.availability != null && TALENT_AVAILABILITY.includes(body.availability)) {
       patch.availability = body.availability;
+      if (body.availability === "not_looking") {
+        patch.jobAlertsEnabled = false;
+      }
     }
     if (body.yearsExperience != null) {
       const n = Number(body.yearsExperience);
@@ -113,7 +116,15 @@ export async function PUT(request) {
     }
     if (body.linkedinUrl != null) patch.linkedinUrl = clampString(body.linkedinUrl, 300);
     if (body.portfolioUrl != null) patch.portfolioUrl = clampString(body.portfolioUrl, 300);
-    if (body.jobAlertsEnabled != null) patch.jobAlertsEnabled = Boolean(body.jobAlertsEnabled);
+    if (body.jobAlertsEnabled != null) {
+      const nextAvailability =
+        patch.availability != null ? patch.availability : current.availability;
+      if (nextAvailability === "not_looking") {
+        patch.jobAlertsEnabled = false;
+      } else {
+        patch.jobAlertsEnabled = Boolean(body.jobAlertsEnabled);
+      }
+    }
     if (body.status === "active" || body.status === "paused") {
       patch.status = body.status;
     }

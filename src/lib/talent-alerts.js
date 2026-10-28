@@ -26,6 +26,7 @@ export async function maybeSendJobSeekerAlertsForPosting(jobId, request) {
     const seekers = await JobSeekerProfile.find({
       status: "active",
       jobAlertsEnabled: true,
+      availability: { $ne: "not_looking" },
       emailVerifiedAt: { $ne: null },
       email: { $exists: true, $nin: [null, ""] },
     })

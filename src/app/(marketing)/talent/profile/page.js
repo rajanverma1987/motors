@@ -41,7 +41,8 @@ export default async function TalentProfilePage() {
           </Link>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-title">Your talent profile</h1>
           <p className="mt-2 text-secondary">
-            Free forever. Fill every section you can. Complete profiles get better matches when shops post jobs.
+            Free forever. Edit anytime after login. Set hiring availability to Available now, Open to opportunities, or
+            Not available for hire. Complete profiles get better matches when shops post jobs.
           </p>
         </div>
         <Link

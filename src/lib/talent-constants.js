@@ -3,7 +3,13 @@ export const TALENT_AVAILABILITY = ["available_now", "open", "not_looking"];
 export const TALENT_AVAILABILITY_LABELS = {
   available_now: "Available now",
   open: "Open to opportunities",
-  not_looking: "Not looking",
+  not_looking: "Not available for hire",
+};
+
+export const TALENT_AVAILABILITY_HELP = {
+  available_now: "Shops see you as ready to start. You still get job alerts if enabled.",
+  open: "You are open to the right role. Job alerts stay on if enabled.",
+  not_looking: "You can keep editing your profile, but you will not get job alerts. Your public page shows Not available for hire.",
 };
 
 export const TALENT_STATUS = ["active", "paused", "banned"];

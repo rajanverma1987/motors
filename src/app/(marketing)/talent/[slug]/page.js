@@ -12,11 +12,13 @@ import {
   TALENT_EXPERIENCE_LEVELS,
 } from "@/lib/talent-constants";
 import {
-  buildTalentMetaDescription,
   buildTalentPersonJsonLd,
+  buildTalentProfileMetadata,
+  buildTalentShareText,
   talentRoleLabel,
   talentSkillLabel,
 } from "@/lib/talent-seo";
+import TalentShareButtons from "@/components/talent/talent-share-buttons";
 
 export const revalidate = 120;
 
@@ -29,13 +31,14 @@ function availabilityVariant(value) {
 export async function generateMetadata({ params }) {
   const p = typeof params?.then === "function" ? await params : params;
   const slug = String(p?.slug || "").trim();
+  const base = getPublicSiteUrl();
   await connectDB();
   const doc = await JobSeekerProfile.findOne({
     slug,
     status: "active",
     emailVerifiedAt: { $ne: null },
   })
-    .select("fullName headline city state availability skills bio")
+    .select("fullName headline city state availability skills bio slug")
     .lean();
   if (!doc) {
     return marketingPageMetadata({
@@ -45,11 +48,7 @@ export async function generateMetadata({ params }) {
     });
   }
   const profile = serializeTalentProfile(doc);
-  return marketingPageMetadata({
-    path: `/talent/${slug}`,
-    title: `${profile.fullName || "Talent"} | Motor Shop Professional`,
-    description: buildTalentMetaDescription(profile),
-  });
+  return buildTalentProfileMetadata(profile, base);
 }
 
 export default async function TalentPublicProfilePage({ params }) {
@@ -157,6 +156,20 @@ export default async function TalentPublicProfilePage({ params }) {
           <p className="mt-2 text-sm text-secondary">{profile.salaryExpectation}</p>
         </section>
       ) : null}
+
+      <section className="mt-10 border-t border-border pt-8">
+        <h2 className="text-lg font-semibold text-title">Share this profile</h2>
+        <p className="mt-1 text-sm text-secondary">
+          Post on LinkedIn, Facebook, or X so shops and peers can find this talent page.
+        </p>
+        <div className="mt-4">
+          <TalentShareButtons
+            profileUrl={canonical}
+            shareTitle={`${profile.fullName || "Talent"} | IQMotorBase Talent`}
+            shareText={buildTalentShareText(profile)}
+          />
+        </div>
+      </section>
 
       <div className="mt-10 flex flex-wrap gap-3 border-t border-border pt-8">
         <Link

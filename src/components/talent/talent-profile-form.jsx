@@ -9,6 +9,7 @@ import Badge from "@/components/ui/badge";
 import { Form } from "@/components/ui/form-layout";
 import {
   TALENT_AVAILABILITY,
+  TALENT_AVAILABILITY_HELP,
   TALENT_AVAILABILITY_LABELS,
   TALENT_EMPLOYMENT_TYPES,
   TALENT_EXPERIENCE_LEVELS,
@@ -16,6 +17,8 @@ import {
   TALENT_SKILLS,
   US_STATE_CODES,
 } from "@/lib/talent-constants";
+import { buildTalentShareText } from "@/lib/talent-seo";
+import TalentShareButtons from "@/components/talent/talent-share-buttons";
 
 function toggleInList(list, value) {
   const arr = Array.isArray(list) ? [...list] : [];
@@ -63,6 +66,7 @@ export default function TalentProfileForm({ initialProfile }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [savedMsg, setSavedMsg] = useState("");
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     if (!initialProfile) return;
@@ -76,6 +80,13 @@ export default function TalentProfileForm({ initialProfile }) {
       jobAlertsEnabled: initialProfile.jobAlertsEnabled !== false,
       status: initialProfile.status === "paused" ? "paused" : "active",
     }));
+    const canShare =
+      Boolean(initialProfile.slug) &&
+      initialProfile.status !== "paused" &&
+      initialProfile.status !== "banned" &&
+      String(initialProfile.fullName || "").trim().length >= 2 &&
+      Number(initialProfile.profileScore || 0) >= 40;
+    setShowShare(canShare);
   }, [initialProfile]);
 
   const scoreHint = useMemo(() => {
@@ -87,6 +98,15 @@ export default function TalentProfileForm({ initialProfile }) {
 
   function patch(key, value) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  function setAvailability(next) {
+    setForm((f) => ({
+      ...f,
+      availability: next,
+      // Not available for hire: stop job alert emails automatically.
+      jobAlertsEnabled: next === "not_looking" ? false : f.jobAlertsEnabled,
+    }));
   }
 
   async function handleSave(e) {
@@ -105,6 +125,13 @@ export default function TalentProfileForm({ initialProfile }) {
       if (!res.ok) throw new Error(data.error || "Save failed");
       setForm((f) => ({ ...f, ...data.profile }));
       setSavedMsg("Profile saved.");
+      const next = data.profile || {};
+      const canShare =
+        Boolean(next.slug) &&
+        next.status !== "paused" &&
+        next.status !== "banned" &&
+        String(next.fullName || "").trim().length >= 2;
+      setShowShare(canShare);
       router.refresh();
     } catch (err) {
       setError(err.message || "Save failed");
@@ -112,6 +139,18 @@ export default function TalentProfileForm({ initialProfile }) {
       setSaving(false);
     }
   }
+
+  const publicProfileUrl = useMemo(() => {
+    if (!form.slug || typeof window === "undefined") return "";
+    return `${window.location.origin}/talent/${encodeURIComponent(form.slug)}`;
+  }, [form.slug]);
+
+  const shareReady =
+    showShare &&
+    Boolean(form.slug) &&
+    form.status !== "paused" &&
+    form.status !== "banned" &&
+    String(form.fullName || "").trim().length >= 2;
 
   async function handleResume(e) {
     const file = e.target.files?.[0];
@@ -173,6 +212,44 @@ export default function TalentProfileForm({ initialProfile }) {
         <Button type="button" variant="outline" size="sm" onClick={() => void logout()}>
           Sign out
         </Button>
+      </div>
+
+      <div className="rounded-xl border border-border bg-bg p-4">
+        <p className="text-sm font-semibold text-title">Hiring availability</p>
+        <p className="mt-1 text-xs text-secondary">
+          Change this anytime after login. You can mark yourself not available for hire without deleting your profile.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          {TALENT_AVAILABILITY.map((value) => {
+            const selected = form.availability === value;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAvailability(value)}
+                aria-pressed={selected}
+                className={`rounded-md border px-3 py-3 text-left transition-colors ${
+                  selected
+                    ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                    : "border-border bg-card hover:border-primary/40"
+                }`}
+              >
+                <span className="block text-sm font-semibold text-title">
+                  {TALENT_AVAILABILITY_LABELS[value]}
+                </span>
+                <span className="mt-1 block text-[11px] leading-snug text-secondary">
+                  {TALENT_AVAILABILITY_HELP[value]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {form.availability === "not_looking" ? (
+          <p className="mt-3 text-xs text-secondary">
+            Job alerts are off while you are not available for hire. Turn alerts back on below when you set Available
+            now or Open to opportunities.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -252,21 +329,7 @@ export default function TalentProfileForm({ initialProfile }) {
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-title">Availability</label>
-          <select
-            className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-title"
-            value={form.availability}
-            onChange={(e) => patch("availability", e.target.value)}
-          >
-            {TALENT_AVAILABILITY.map((v) => (
-              <option key={v} value={v}>
-                {TALENT_AVAILABILITY_LABELS[v]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <Input
           label="Years experience"
           type="number"
@@ -350,22 +413,38 @@ export default function TalentProfileForm({ initialProfile }) {
         {uploading ? <p className="text-xs text-secondary">Uploading…</p> : null}
       </div>
 
-      <div className="flex flex-col gap-2">
-        <label className="flex items-center gap-2 text-sm text-title">
+      <div className="flex flex-col gap-2 rounded-md border border-border bg-card p-4">
+        <p className="text-sm font-medium text-title">Alerts and visibility</p>
+        <label className="flex items-start gap-2 text-sm text-title">
           <input
             type="checkbox"
+            className="mt-0.5"
             checked={form.jobAlertsEnabled}
+            disabled={form.availability === "not_looking"}
             onChange={(e) => patch("jobAlertsEnabled", e.target.checked)}
           />
-          Email me when matching jobs are posted
+          <span>
+            Email me when matching jobs are posted
+            {form.availability === "not_looking" ? (
+              <span className="mt-0.5 block text-xs text-secondary">
+                Turned off while Not available for hire. Change hiring availability above to re-enable.
+              </span>
+            ) : null}
+          </span>
         </label>
-        <label className="flex items-center gap-2 text-sm text-title">
+        <label className="flex items-start gap-2 text-sm text-title">
           <input
             type="checkbox"
+            className="mt-0.5"
             checked={form.status === "paused"}
             onChange={(e) => patch("status", e.target.checked ? "paused" : "active")}
           />
-          Hide my profile from the public directory (pause)
+          <span>
+            Hide my profile from the public directory (pause)
+            <span className="mt-0.5 block text-xs text-secondary">
+              Prefer Not available for hire if you want the page public but not open to offers.
+            </span>
+          </span>
         </label>
       </div>
 
@@ -375,6 +454,27 @@ export default function TalentProfileForm({ initialProfile }) {
       <Button type="submit" variant="primary" disabled={saving}>
         {saving ? "Saving…" : "Save profile"}
       </Button>
+
+      {shareReady ? (
+        <div className="rounded-xl border border-primary/30 bg-primary/[0.06] p-4 sm:p-5">
+          <p className="text-base font-semibold text-title">Share your profile</p>
+          <p className="mt-1 text-sm text-secondary">
+            Your public page is live. Share it on LinkedIn, Facebook, or X so shops can find you. Completeness:{" "}
+            {form.profileScore || 0}%.
+          </p>
+          <div className="mt-4">
+            <TalentShareButtons
+              profileUrl={publicProfileUrl}
+              shareTitle={`${form.fullName} | IQMotorBase Talent`}
+              shareText={buildTalentShareText(form)}
+            />
+          </div>
+          <p className="mt-3 text-xs text-secondary">
+            Tip: keep availability set to Available now or Open, and leave the profile unpaused, so your share link
+            stays public.
+          </p>
+        </div>
+      ) : null}
     </Form>
   );
 }
