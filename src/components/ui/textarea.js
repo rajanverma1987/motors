@@ -6,7 +6,9 @@ export default function Textarea({
   id: idProp,
   placeholder,
   value,
+  defaultValue,
   onChange,
+  onKeyDown,
   name,
   rows = 4,
   className = "",
@@ -16,6 +18,7 @@ export default function Textarea({
   maxLength,
 }) {
   const id = idProp ?? name;
+  const controlled = value !== undefined;
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
       {label && (
@@ -27,9 +30,10 @@ export default function Textarea({
       <textarea
         id={id}
         name={name}
-        value={value ?? ""}
+        {...(controlled ? { value: value ?? "" } : { defaultValue: defaultValue ?? "" })}
         placeholder={placeholder}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         rows={rows}
         disabled={disabled}
         maxLength={maxLength}

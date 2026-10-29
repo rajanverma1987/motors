@@ -2,6 +2,7 @@ import {
   SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_CUSTOMERS,
   SIMPLE_TAB_DASHBOARD,
+  SIMPLE_TAB_EXPENSES,
   SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_JOB_BOARD,
@@ -11,12 +12,13 @@ import {
   SIMPLE_TAB_SERVICE_PROPOSALS,
 } from "@/lib/simple-portal-tabs";
 
-/** Bottom bar primary destinations (4 slots). Drawer opens from the top hamburger. */
+/** Bottom bar primary destinations. Drawer opens from the top hamburger. */
 export const SIMPLE_PHONE_BOTTOM_TABS = [
   { id: SIMPLE_TAB_SERVICE_PROPOSALS, label: "Proposals" },
   { id: SIMPLE_TAB_INVOICES, label: "Invoices" },
+  { id: SIMPLE_TAB_EXPENSES, label: "Expenses" },
   { id: SIMPLE_TAB_PURCHASE_ORDERS, label: "Purchases" },
-  { id: SIMPLE_TAB_MASTER_DATA_SEARCH, label: "Master Search" },
+  { id: SIMPLE_TAB_MASTER_DATA_SEARCH, label: "Search" },
 ];
 
 export const SIMPLE_PHONE_BOTTOM_TAB_IDS = SIMPLE_PHONE_BOTTOM_TABS.map((t) => t.id);
@@ -37,6 +39,7 @@ export const SIMPLE_PHONE_TAB_TITLES = {
   [SIMPLE_TAB_CUSTOMERS]: "Customers",
   [SIMPLE_TAB_SERVICE_PROPOSALS]: "Service Proposals",
   [SIMPLE_TAB_INVOICES]: "Invoices / Receivables",
+  [SIMPLE_TAB_EXPENSES]: "Expenses",
   [SIMPLE_TAB_PURCHASE_ORDERS]: "Purchase / Payable",
   [SIMPLE_TAB_INVENTORY]: "Inventory",
   [SIMPLE_TAB_REPORTS]: "Reports",

@@ -17,6 +17,7 @@ import StatusFilterPillButton from "@/components/dashboard/status-filter-pill-bu
 import SimplePurchaseOrderFormModal from "@/components/simple/simple-purchase-order-form-modal";
 import SimplePoDueNotificationsModal from "@/components/simple/simple-po-due-notifications-modal";
 import SimpleVendorFormModal from "@/components/simple/simple-vendor-form-modal";
+import { SimpleExpensesModal } from "@/components/simple/simple-expenses-panel";
 import CustomerViewModal from "@/components/dashboard/customer-view-modal";
 import { useSimpleJobView } from "@/components/simple/simple-job-view-context";
 import { useConfirm, useAlert } from "@/components/confirm-provider";
@@ -119,6 +120,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
   const [dueNotificationData, setDueNotificationData] = useState(null);
   const [dueNotificationLoading, setDueNotificationLoading] = useState(false);
   const [dueNotificationModalOpen, setDueNotificationModalOpen] = useState(false);
+  const [expensesModalOpen, setExpensesModalOpen] = useState(false);
   const lastHandledCreateNonceRef = useRef(createNonce);
   const listRequestRef = useRef(0);
 
@@ -685,6 +687,19 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     </div>
   );
 
+  const expensesToolbar =
+    canViewFinancials ? (
+      <Button
+        type="button"
+        variant="primary"
+        size="sm"
+        className="!h-7 !min-h-0 shrink-0 !rounded-none !px-2 !text-[11px] font-semibold md:!h-9 md:!px-2.5 md:!text-sm"
+        onClick={() => setExpensesModalOpen(true)}
+      >
+        Record Expenses
+      </Button>
+    ) : null;
+
   const listPanel = (
     <>
       <div className={`${SIMPLE_SCREEN_FILTERS_CLASS} shrink-0`}>
@@ -742,6 +757,7 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
                   : "simple-purchase-orders-shop"
             }
             toolbarBeforeSearch={poToolbar}
+            toolbarBeforeRefresh={expensesToolbar}
             emptyMessage={emptyMessage}
             fillHeight
             responsive
@@ -878,6 +894,11 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
             })
           );
         }}
+      />
+
+      <SimpleExpensesModal
+        open={expensesModalOpen}
+        onClose={() => setExpensesModalOpen(false)}
       />
 
       <SimplePoDueNotificationsModal

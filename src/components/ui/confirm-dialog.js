@@ -41,10 +41,10 @@ export default function ConfirmDialog({
       aria-labelledby="confirm-title"
     >
       <div
-        className="absolute inset-0 bg-black/50"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[0.8px] dark:bg-black/65"
         onClick={closeOnOutsideClick ? onCancel : undefined}
       />
-      <div className="relative w-full max-w-[33.6rem] rounded-lg border border-border bg-card p-6 shadow-xl">
+      <div className="relative w-full max-w-[33.6rem] rounded-lg border border-primary/45 bg-card p-6 shadow-xl shadow-primary/10 ring-1 ring-primary/20 dark:border-primary/50 dark:shadow-primary/15 dark:ring-primary/25">
         <h2 id="confirm-title" className="mb-2 text-lg font-semibold text-title">
           {title}
         </h2>

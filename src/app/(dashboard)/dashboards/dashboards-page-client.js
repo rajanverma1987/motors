@@ -6,6 +6,7 @@ import {
   FiBarChart2,
   FiClipboard,
   FiDatabase,
+  FiDollarSign,
   FiFileText,
   FiGrid,
   FiHome,
@@ -27,12 +28,14 @@ import ReportsPanel from "./reports-panel";
 import MasterDataSearchPanel from "./master-data-search-panel";
 import CalculatorsPanel from "./calculators-panel";
 import DashboardOverviewPanel from "./dashboard-overview-panel";
+import SimpleExpensesPanel from "@/components/simple/simple-expenses-panel";
 import {
   SIMPLE_CUSTOMERS_LEADS_HREF,
   SIMPLE_PORTAL_PATH,
   SIMPLE_TAB_CALCULATORS,
   SIMPLE_TAB_CUSTOMERS,
   SIMPLE_TAB_DASHBOARD,
+  SIMPLE_TAB_EXPENSES,
   SIMPLE_TAB_IDS,
   SIMPLE_TAB_INVENTORY,
   SIMPLE_TAB_JOB_BOARD,
@@ -93,7 +96,8 @@ export default function DashboardsPageClient() {
     id === SIMPLE_TAB_JOB_BOARD ? showJobBoard : SIMPLE_TAB_IDS.includes(id);
   const urlTab = calcOnly
     ? SIMPLE_TAB_CALCULATORS
-    : !canViewFinancials && tabParam === SIMPLE_TAB_INVOICES
+    : !canViewFinancials &&
+        (tabParam === SIMPLE_TAB_INVOICES || tabParam === SIMPLE_TAB_EXPENSES)
       ? SIMPLE_TAB_SERVICE_PROPOSALS
       : tabParam === SIMPLE_TAB_TRACK_RFQS
         ? SIMPLE_TAB_CUSTOMERS
@@ -216,6 +220,13 @@ export default function DashboardsPageClient() {
         children: <ServiceProposalsPanel variant={SIMPLE_LIST_VARIANT_INVOICES} />,
       },
       {
+        id: SIMPLE_TAB_EXPENSES,
+        label: <TabLabel icon={FiDollarSign}>Expenses</TabLabel>,
+        /** Phone bottom nav only. Keep out of desktop Hub tab strip. */
+        hideInList: true,
+        children: <SimpleExpensesPanel />,
+      },
+      {
         id: SIMPLE_TAB_PURCHASE_ORDERS,
         label: <TabLabel icon={FiShoppingCart}>Purchase / Payable</TabLabel>,
         children: <PurchaseOrdersPanel />,
@@ -243,7 +254,7 @@ export default function DashboardsPageClient() {
     ];
     const allowed = canViewFinancials
       ? all
-      : all.filter((t) => t.id !== SIMPLE_TAB_INVOICES);
+      : all.filter((t) => t.id !== SIMPLE_TAB_INVOICES && t.id !== SIMPLE_TAB_EXPENSES);
     return calcOnly ? allowed.filter((t) => t.id === SIMPLE_TAB_CALCULATORS) : allowed;
   }, [calcOnly, canViewFinancials, showJobBoard]);
 

@@ -147,7 +147,15 @@ export default function MasterDataSearchResultsClient() {
                         {typeLabel}
                       </Badge>
                     }
-                    meta={row.contactName ? <span>{row.contactName}</span> : null}
+                    meta={
+                      row.contactName || (row.customerPo && row.customerPo !== "—") ? (
+                        <span>
+                          {[row.contactName, row.customerPo && row.customerPo !== "—" ? `PO: ${row.customerPo}` : ""]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      ) : null
+                    }
                     onClick={() => openProposal(row)}
                   />
                 </li>

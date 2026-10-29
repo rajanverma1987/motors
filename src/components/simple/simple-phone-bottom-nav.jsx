@@ -1,8 +1,9 @@
 "use client";
 
-import { FiClipboard, FiDatabase, FiFileText, FiShoppingCart } from "react-icons/fi";
+import { FiClipboard, FiDatabase, FiDollarSign, FiFileText, FiShoppingCart } from "react-icons/fi";
 import { SIMPLE_PHONE_BOTTOM_TABS } from "@/lib/simple-phone-nav";
 import {
+  SIMPLE_TAB_EXPENSES,
   SIMPLE_TAB_INVOICES,
   SIMPLE_TAB_MASTER_DATA_SEARCH,
   SIMPLE_TAB_PURCHASE_ORDERS,
@@ -13,6 +14,7 @@ import { useAuth } from "@/contexts/auth-context";
 const ICONS = {
   [SIMPLE_TAB_SERVICE_PROPOSALS]: FiFileText,
   [SIMPLE_TAB_INVOICES]: FiClipboard,
+  [SIMPLE_TAB_EXPENSES]: FiDollarSign,
   [SIMPLE_TAB_PURCHASE_ORDERS]: FiShoppingCart,
   [SIMPLE_TAB_MASTER_DATA_SEARCH]: FiDatabase,
 };
@@ -23,11 +25,20 @@ const ICONS = {
  */
 export default function SimplePhoneBottomNav({ activeTab, onSelectTab }) {
   const { canViewFinancials } = useAuth();
-  const tabs = SIMPLE_PHONE_BOTTOM_TABS.filter(
-    (item) => item.id !== SIMPLE_TAB_INVOICES || canViewFinancials
-  );
+  const tabs = SIMPLE_PHONE_BOTTOM_TABS.filter((item) => {
+    if (item.id === SIMPLE_TAB_INVOICES || item.id === SIMPLE_TAB_EXPENSES) {
+      return canViewFinancials;
+    }
+    return true;
+  });
   const colClass =
-    tabs.length >= 4 ? "grid-cols-4" : tabs.length === 3 ? "grid-cols-3" : "grid-cols-2";
+    tabs.length >= 5
+      ? "grid-cols-5"
+      : tabs.length >= 4
+        ? "grid-cols-4"
+        : tabs.length === 3
+          ? "grid-cols-3"
+          : "grid-cols-2";
 
   return (
     <nav

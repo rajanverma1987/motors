@@ -31,6 +31,20 @@ export const DEFAULT_QUOTE_TYPES = ["Phone", "Email", "Walk-in", "Other"];
 
 export const DEFAULT_PAYMENT_METHODS = ["Check", "ACH", "Card", "Cash", "Wire", "Other"];
 
+export const DEFAULT_EXPENSE_CATEGORIES = [
+  "Travel",
+  "Supplies",
+  "Tools",
+  "Fuel",
+  "Meals",
+  "Shipping",
+  "Utilities",
+  "Other",
+];
+
+/** Labels for cards used on Record Expenses (nickname or last four, not full PAN). */
+export const DEFAULT_EXPENSE_CREDIT_CARDS = ["Company Visa", "Company Mastercard", "Other"];
+
 export const PRODUCT_DROPDOWN_DEFINITIONS = {
   manner_of_transport_receiving: {
     key: "manner_of_transport_receiving",
@@ -59,6 +73,21 @@ export const PRODUCT_DROPDOWN_DEFINITIONS = {
     description: "Options when recording invoice or purchase order payments.",
     placeholder: "Select payment method",
     defaults: DEFAULT_PAYMENT_METHODS,
+  },
+  expense_category: {
+    key: "expense_category",
+    label: "Expense category",
+    description: "Categories when recording shop expenses (Record Expenses).",
+    placeholder: "Select category",
+    defaults: DEFAULT_EXPENSE_CATEGORIES,
+  },
+  expense_credit_card: {
+    key: "expense_credit_card",
+    label: "Credit card number",
+    description:
+      "Cards when recording shop expenses (Record Expenses). Use a nickname or last four digits, not the full card number.",
+    placeholder: "Select credit card",
+    defaults: DEFAULT_EXPENSE_CREDIT_CARDS,
   },
 };
 

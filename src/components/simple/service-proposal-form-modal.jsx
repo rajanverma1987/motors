@@ -57,6 +57,7 @@ import {
 import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useUserSettings, useFormatDate } from "@/contexts/user-settings-context";
+import useMediaQuery from "@/hooks/use-media-query";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import {
   buildCustomerPayload,
@@ -596,6 +597,9 @@ export default function ServiceProposalFormModal({
   presentation = "modal",
 }) {
   const isPage = presentation === "page";
+  /** PC-wide modal: status selects live in the header. Narrower tablets keep them in the body. */
+  const isPcModalWidth = useMediaQuery("(min-width: 1024px)");
+  const statusInModalHeader = !isPage && isPcModalWidth;
   const alert = useAlert();
   const confirm = useConfirm();
   const { user, canViewFinancials } = useAuth();
@@ -1661,7 +1665,13 @@ export default function ServiceProposalFormModal({
   const navBusy = saving || copying || loadingRecord || pagingRecord;
   const showSearchNav = Boolean(searchNav && Number(searchNav.total) > 1);
   const headerStatusSelects = (
-    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-3">
+    <div
+      className={`grid min-w-0 ${
+        statusInModalHeader
+          ? "mr-auto w-1/2 max-w-full grid-cols-3 gap-2 sm:gap-3"
+          : "w-full grid-cols-1 gap-3 sm:grid-cols-3"
+      }`}
+    >
       <div className="min-w-0">
         <label className={`${FIELD_LABEL} mb-0.5 block w-full !text-left`} htmlFor="sp-proposal-type">
           Proposal Type
@@ -1825,14 +1835,16 @@ export default function ServiceProposalFormModal({
             }`}
             aria-hidden={loadingRecord || copying || undefined}
           >
-          <div
-            className={`simple-sp-page-status border-b border-border ${
-              isPage ? "" : "mb-2 pb-2"
-            }`}
-          >
-            {headerStatusSelects}
-          </div>
-          {/* Toolbar buttons (status dropdowns are above) */}
+          {!statusInModalHeader ? (
+            <div
+              className={`simple-sp-page-status border-b border-border ${
+                isPage ? "" : "mb-2 pb-2"
+              }`}
+            >
+              {headerStatusSelects}
+            </div>
+          ) : null}
+          {/* Toolbar buttons (status dropdowns are in modal header on PC, or above on phone/tablet) */}
           <div
             className={`mb-2 flex flex-wrap gap-1.5 border-b border-border py-1.5 ${
               isPage
@@ -2756,6 +2768,7 @@ export default function ServiceProposalFormModal({
           showClose={!saving && !copying}
           closeOnOutsideClick={false}
           headerClassName="[&_h2]:max-w-[12rem] [&_h2]:self-center [&_h2]:text-xl [&_h2]:font-bold [&_h2]:tracking-wide sm:[&_h2]:max-w-[14rem]"
+          headerLeading={statusInModalHeader ? headerStatusSelects : undefined}
           actions={headerActions}
         >
           {formScrollBody}

@@ -236,7 +236,7 @@ export default function Modal({
       aria-labelledby={title ? "modal-title" : undefined}
     >
       <div
-        className="absolute inset-0 bg-black/50 dark:bg-black/70"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[0.8px] dark:bg-black/65"
         onClick={closeOnOutsideClick ? onClose : undefined}
       />
       <div
@@ -246,7 +246,7 @@ export default function Modal({
         className={
           fullscreen
             ? `absolute inset-0 flex h-[100dvh] max-h-none w-full min-w-0 flex-col rounded-none border-0 bg-card outline-none focus-visible:outline-none ${className}`
-            : `absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-border bg-card shadow-xl dark:shadow-2xl dark:shadow-black/40 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`
+            : `absolute left-1/2 top-1/2 w-full min-w-0 rounded-lg border border-primary/45 bg-card shadow-xl shadow-primary/10 ring-1 ring-primary/20 dark:border-primary/50 dark:shadow-2xl dark:shadow-primary/15 dark:ring-primary/25 flex flex-col max-h-[90vh] outline-none focus-visible:outline-none ${!w ? sizeClasses[size] ?? sizeClasses.md : ""} ${className}`
         }
         onClick={(e) => e.stopPropagation()}
       >

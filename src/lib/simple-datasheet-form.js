@@ -300,6 +300,7 @@ export const MASTER_DATA_SEARCH_FORMS = {
       { key: "companyName", label: "Customer Name" },
       { key: "primaryContactName", label: "Contact Name" },
       { key: "documentNumber", label: "RFQ#/Job#/Invoice#" },
+      { key: "customerPo", label: "Purchase Order" },
     ],
   },
 };

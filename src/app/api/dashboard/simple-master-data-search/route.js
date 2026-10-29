@@ -25,6 +25,7 @@ async function searchByCustomer(email, criteria) {
   const companyCriterion = filled.find((f) => f.fieldKey === "companyName");
   const contactCriterion = filled.find((f) => f.fieldKey === "primaryContactName");
   const documentCriterion = filled.find((f) => f.fieldKey === "documentNumber");
+  const purchaseOrderCriterion = filled.find((f) => f.fieldKey === "customerPo");
 
   /** @type {Record<string, unknown>[]} */
   const andClauses = [];
@@ -39,6 +40,12 @@ async function searchByCustomer(email, criteria) {
     const rx = { $regex: documentCriterion.regexSource, $options: "i" };
     andClauses.push({
       $or: [{ documentNumber: rx }, { quote: rx }],
+    });
+  }
+
+  if (purchaseOrderCriterion) {
+    andClauses.push({
+      customerPo: { $regex: purchaseOrderCriterion.regexSource, $options: "i" },
     });
   }
 
@@ -86,6 +93,7 @@ async function searchByCustomer(email, criteria) {
       companyName: 1,
       customerId: 1,
       recordType: 1,
+      customerPo: 1,
     })
     .sort({ updatedAt: -1 })
     .limit(MAX_RESULTS)
@@ -126,6 +134,7 @@ async function searchByCustomer(email, criteria) {
         "—",
       customerId: cid,
       contactName: cust?.primaryContactName || "—",
+      customerPo: String(doc.customerPo || "").trim() || "—",
       fields: {},
     };
   });
@@ -140,7 +149,7 @@ async function searchByCustomer(email, criteria) {
 /**
  * POST body:
  *  - formId: "ac" | "dc" | "armature" | "customer"
- *  - criteria: datasheet blocks OR { companyName, primaryContactName, documentNumber } for customer
+ *  - criteria: datasheet blocks OR { companyName, primaryContactName, documentNumber, customerPo } for customer
  */
 export async function POST(request) {
   try {

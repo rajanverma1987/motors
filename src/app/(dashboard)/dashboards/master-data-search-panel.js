@@ -38,7 +38,7 @@ import { simpleServiceProposalFormHref } from "@/lib/simple-portal-tabs";
 function emptyCriteriaForForm(formId) {
   const form = MASTER_DATA_SEARCH_FORMS[formId];
   if (form?.searchType === "customer") {
-    return { companyName: "", primaryContactName: "", documentNumber: "" };
+    return { companyName: "", primaryContactName: "", documentNumber: "", customerPo: "" };
   }
   /** @type {Record<string, Record<string, string>>} */
   const out = {};
@@ -294,12 +294,20 @@ export default function MasterDataSearchPanel() {
       },
     ];
     if (isCustomerSearch) {
-      base.push({
-        key: "contactName",
-        label: "Contact Name",
-        sortable: true,
-        render: (v) => String(v || "").trim() || "—",
-      });
+      base.push(
+        {
+          key: "contactName",
+          label: "Contact Name",
+          sortable: true,
+          render: (v) => String(v || "").trim() || "—",
+        },
+        {
+          key: "customerPo",
+          label: "Purchase Order",
+          sortable: true,
+          render: (v) => String(v || "").trim() || "—",
+        }
+      );
       return base;
     }
     const fieldCols = searched.map((f) => ({
@@ -364,6 +372,20 @@ export default function MasterDataSearchPanel() {
                   inputClassName={
                     highlightFilledFields &&
                     String(criteriaByForm.customer?.documentNumber || "").trim()
+                      ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
+                      : isPhoneForm
+                        ? "!h-10 !text-base"
+                        : ""
+                  }
+                />
+                <Input
+                  label="Purchase Order"
+                  value={criteriaByForm.customer?.customerPo ?? ""}
+                  onChange={(e) => patchCustomerField("customerPo", e.target.value)}
+                  placeholder="e.g. *PO-45* or exact PO"
+                  inputClassName={
+                    highlightFilledFields &&
+                    String(criteriaByForm.customer?.customerPo || "").trim()
                       ? "border-primary/50 bg-primary/[0.08] dark:bg-primary/15"
                       : isPhoneForm
                         ? "!h-10 !text-base"

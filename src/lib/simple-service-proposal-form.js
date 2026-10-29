@@ -5,7 +5,6 @@ import {
   invoiceStatusAllowedSlugs,
   resolveConfiguredStatusSlug,
 } from "@/lib/dropdown-catalog";
-import { normalizeInvoiceStatusSlug } from "@/lib/invoice-status";
 import {
   KIND_RECEIVING,
   KIND_SHIPPING,
@@ -211,17 +210,8 @@ export function resolveSimpleInvoiceStatusFromPayments({
     return current;
   }
 
-  const normalizedCurrent = normalizeInvoiceStatusSlug(current, mergedSettings);
-  const wasPaymentStatus =
-    (normalizedCurrent.includes("partial") && normalizedCurrent.includes("paid")) ||
-    (normalizedCurrent.includes("fully") && normalizedCurrent.includes("paid")) ||
-    normalizedCurrent === "paid";
-
-  if (wasPaymentStatus && summary.paymentStatus === "Unpaid") {
-    const sent = invoiceStatusAllowedSlugs(mergedSettings).find((s) => s === "sent");
-    if (sent) return resolveConfiguredStatusSlug(sent, mergedSettings);
-  }
-
+  // Unpaid (including after deleting all payment records): keep current Status.
+  // Do not reset to "sent" / proposal status; the user controls Status manually.
   return current;
 }
 

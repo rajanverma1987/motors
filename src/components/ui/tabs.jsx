@@ -98,6 +98,7 @@ export default function Tabs({
 
   const isSegmented = variant !== "pills";
   const activeTab = tabs.find((t) => t.id === activeId) ?? tabs[0];
+  const listTabs = tabs.filter((t) => !t.hideInList);
 
   const listClass = isSegmented
     ? `flex w-full max-w-full flex-wrap gap-1 rounded-lg border border-border bg-[hsl(var(--form-bg))] p-1 dark:bg-card/60 ${listClassName}`
@@ -119,6 +120,30 @@ export default function Tabs({
     return tabs.filter((tab) => tab.id === activeId || visitedIds.has(tab.id));
   }, [keepMounted, tabs, visitedIds, activeTab, activeId]);
 
+  const onListTabKeyDown = useCallback(
+    (e, index) => {
+      if (!listTabs.length) return;
+      let next = null;
+      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+        next = (index + 1) % listTabs.length;
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+        next = (index - 1 + listTabs.length) % listTabs.length;
+      } else if (e.key === "Home") {
+        next = 0;
+      } else if (e.key === "End") {
+        next = listTabs.length - 1;
+      }
+      if (next == null) return;
+      e.preventDefault();
+      const id = listTabs[next]?.id;
+      if (!id) return;
+      setActiveId(id);
+      const el = document.getElementById(`${uid}-tab-${id}`);
+      el?.focus();
+    },
+    [listTabs, setActiveId, uid]
+  );
+
   return (
     <div className={`flex flex-col ${className}`}>
       <div
@@ -126,7 +151,7 @@ export default function Tabs({
         aria-label={ariaLabel}
         className={`relative z-20 shrink-0 ${listClass}`}
       >
-        {tabs.map((tab, index) => {
+        {listTabs.map((tab, index) => {
           const isActive = activeId === tab.id;
           const activeClass = "bg-primary font-bold text-white shadow-sm";
           const idleClass = isSegmented
@@ -143,7 +168,7 @@ export default function Tabs({
               tabIndex={isActive ? 0 : -1}
               className={`${tabButtonBase} ${isActive ? activeClass : idleClass} ${tabButtonClassName}`.trim()}
               onClick={() => setActiveId(tab.id)}
-              onKeyDown={(e) => onTabKeyDown(e, index)}
+              onKeyDown={(e) => onListTabKeyDown(e, index)}
             >
               {tab.label}
             </button>

@@ -43,6 +43,8 @@ import {
   resolveSimplePoType,
   sanitizePoNumericInput,
   suggestReceivingStatus,
+  resolvePoStatus,
+  getPoLineReceivingStatus,
   SIMPLE_PO_PAYMENT_METHOD_OPTIONS,
   SIMPLE_PO_RECEIVING_STATUS_OPTIONS,
   SIMPLE_PO_RECEIVING_STATUS_CANCELLED,
@@ -157,6 +159,14 @@ function paymentStatusBadgeVariant(status) {
   return "default";
 }
 
+function receivingStatusBadgeVariant(status) {
+  const s = String(status || "").trim().toLowerCase();
+  if (s === "received") return "success";
+  if (s.includes("partial")) return "warning";
+  if (s === "cancelled" || s === "returned") return "danger";
+  return "default";
+}
+
 function applyPaymentFields(formLike, payments) {
   const totals = computePoFormTotals(formLike.lineItems, formLike.shippingCharge);
   const summary = computePoPaymentSummary(payments, totals.grandTotal);
@@ -259,6 +269,10 @@ export default function SimplePurchaseOrderFormModal({
   const showViewEmptyState =
     isExistingPoMode && !loadingForm && jobPos.length === 0 && !String(form.id || "").trim();
 
+  /** Job POs only: left list of all POs for this job (items + status). Hidden on phone page layout. */
+  const showJobPoSidebar =
+    !isPage && !isShopPo && !showViewEmptyState && Boolean(String(form.jobNumber || jobNumber || "").trim());
+
   const vendorOptions = useMemo(
     () =>
       vendors.map((v) => ({
@@ -291,6 +305,41 @@ export default function SimplePurchaseOrderFormModal({
       })),
     [jobPos]
   );
+
+  /** Flat rows for other job POs (excludes the PO currently open in the form). */
+  const otherJobPoTableRows = useMemo(() => {
+    const currentId = String(form.id || "").trim();
+    /** @type {Array<{ key: string, poId: string, poNumber: string, item: string, qty: string, itemStatus: string }>} */
+    const rows = [];
+    for (const p of Array.isArray(jobPos) ? jobPos : []) {
+      const poId = String(p.id || "").trim();
+      if (poId && currentId && poId === currentId) continue;
+      const poNumber = String(p.poNumber || p.id || "PO").trim() || "PO";
+      const lines = (Array.isArray(p.lineItems) ? p.lineItems : []).filter((line) => lineHasContent(line));
+      if (lines.length === 0) {
+        rows.push({
+          key: `${poId || poNumber}-empty`,
+          poId,
+          poNumber,
+          item: "-",
+          qty: "-",
+          itemStatus: resolvePoStatus(p.lineItems),
+        });
+        continue;
+      }
+      for (const line of lines) {
+        rows.push({
+          key: `${poId}-${String(line.id || line.itemName || rows.length)}`,
+          poId,
+          poNumber,
+          item: String(line.itemName || "").trim() || "Item",
+          qty: String(line.quantity ?? "").trim() || "0",
+          itemStatus: getPoLineReceivingStatus(line),
+        });
+      }
+    }
+    return rows;
+  }, [jobPos, form.id]);
 
   const paidByOptions = useMemo(
     () => buildEmployeeSelectOptions(employees, form.paidBy),
@@ -768,7 +817,14 @@ export default function SimplePurchaseOrderFormModal({
   const handleSelectPo = (poId) => {
     setPaymentDraft(emptyPoPayment());
     setEditPayment(null);
+    setActiveTab(TAB_PO);
     loadPoById(poId, jobPos);
+  };
+
+  const handleSelectOtherJobPo = (poId) => {
+    const id = String(poId || "").trim();
+    if (!id || id === String(form.id || "").trim()) return;
+    handleSelectPo(id);
   };
 
   const handleViewJob = () => {
@@ -1313,13 +1369,93 @@ export default function SimplePurchaseOrderFormModal({
               <span className="text-sm font-medium text-title">Loading…</span>
             </div>
           ) : null}
+        <div
+          className={
+            isPage
+              ? "flex min-h-0 flex-1 flex-col"
+              : "flex min-h-[calc(min(84.6vh,828px)-4.75rem)] min-w-0 gap-4"
+          }
+        >
+          {showJobPoSidebar ? (
+            <aside
+              className="flex w-[28rem] shrink-0 flex-col overflow-hidden rounded-sm border border-border bg-[hsl(var(--form-bg))] shadow-sm ring-1 ring-border/70 dark:bg-card/60 xl:w-[32rem]"
+              aria-label="Other purchase orders for this job"
+            >
+              <div className="shrink-0 border-b border-border bg-primary/5 px-2.5 py-2">
+                <p className="text-xs font-bold text-title">Other PO for the job</p>
+                <p className="mt-0.5 truncate text-[11px] text-secondary">
+                  {form.jobNumber || jobNumber || "Job"}
+                </p>
+              </div>
+              <div className="min-h-0 flex-1 overflow-auto">
+                {otherJobPoTableRows.length === 0 ? (
+                  <p className="px-2.5 py-4 text-xs text-secondary">No other purchase orders for this job.</p>
+                ) : (
+                  <table className="w-full min-w-[26rem] border-collapse border-spacing-0 text-xs">
+                    <thead className="sticky top-0 z-[1] bg-[color-mix(in_srgb,hsl(var(--primary))_4%,hsl(var(--card)))] text-title">
+                      <tr className="border-b-2 border-border">
+                        <th className="border-r border-border px-1.5 py-1.5 text-left font-semibold">PO</th>
+                        <th className="border-r border-border px-1.5 py-1.5 text-left font-semibold">Item</th>
+                        <th className="w-14 border-r border-border px-1.5 py-1.5 text-right font-semibold">Qty</th>
+                        <th className="px-1.5 py-1.5 text-left font-semibold">Item status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {otherJobPoTableRows.map((row) => (
+                        <tr
+                          key={row.key}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleSelectOtherJobPo(row.poId)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSelectOtherJobPo(row.poId);
+                            }
+                          }}
+                          className={`cursor-pointer border-t border-border bg-card hover:bg-primary/5 ${
+                            saving || loadingForm ? "pointer-events-none opacity-60" : ""
+                          }`}
+                        >
+                          <td className="border-r border-border px-1.5 py-1.5 align-top font-semibold tabular-nums text-title">
+                            {row.poNumber}
+                          </td>
+                          <td className="border-r border-border px-1.5 py-1.5 align-top text-title">
+                            {row.item}
+                          </td>
+                          <td className="border-r border-border px-1.5 py-1.5 align-top text-right tabular-nums text-title">
+                            {row.qty}
+                          </td>
+                          <td className="px-1.5 py-1.5 align-top">
+                            <Badge
+                              variant={receivingStatusBadgeVariant(row.itemStatus)}
+                              className="rounded-full px-2 py-0.5 text-[10px]"
+                            >
+                              {row.itemStatus}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </aside>
+          ) : null}
+          <div
+            className={
+              showJobPoSidebar
+                ? "flex min-h-0 min-w-0 flex-1 flex-col border-l-2 border-primary/35 pl-4"
+                : "flex min-h-0 min-w-0 flex-1 flex-col"
+            }
+          >
         <Form
           id={FORM_ID}
           onSubmit={handleSubmit}
           className={
             isPage
               ? "simple-po-form-page flex min-h-0 flex-col gap-4 overflow-x-hidden !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none px-3 py-3"
-              : "flex min-h-[calc(min(84.6vh,828px)-4.75rem)] flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
+              : "flex min-h-0 flex-1 flex-col gap-5 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
           }
           aria-hidden={loadingForm || undefined}
         >
@@ -1637,22 +1773,20 @@ export default function SimplePurchaseOrderFormModal({
           </div>
 
           <Tabs
-            value={isExistingPoMode ? (!canViewFinancials && activeTab === TAB_PAYMENT ? TAB_PO : activeTab) : TAB_PO}
+            value={!canViewFinancials && activeTab === TAB_PAYMENT ? TAB_PO : activeTab}
             onChange={setActiveTab}
             className="flex min-h-0 flex-1 flex-col"
             listClassName={
-              isExistingPoMode
-                ? isPage
-                  ? "simple-po-page-tabs shrink-0 !grid !w-full !grid-cols-3 !gap-0 !rounded-none !p-0"
-                  : "shrink-0"
-                : "hidden"
+              isPage
+                ? "simple-po-page-tabs shrink-0 !grid !w-full !grid-cols-3 !gap-0 !rounded-none !p-0"
+                : "shrink-0"
             }
             tabButtonClassName={
               isPage
                 ? "!min-w-0 !flex-1 !rounded-none !px-1 !py-2 !text-[11px] !font-bold"
                 : undefined
             }
-            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isExistingPoMode ? (isPage ? "pt-2" : "pt-3") : ""}`}
+            panelClassName={`flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto ${isPage ? "pt-2" : "pt-3"}`}
             ariaLabel="Purchase order sections"
             tabs={[
               {
@@ -2385,6 +2519,8 @@ export default function SimplePurchaseOrderFormModal({
             recordId={String(form?.id || initialPoId || "").trim()}
           />
         ) : null}
+          </div>
+        </div>
         </div>
   );
 
@@ -2419,7 +2555,7 @@ export default function SimplePurchaseOrderFormModal({
           onClose={() => !saving && onClose?.()}
           title={modalTitle}
           size="6xl"
-          width="min(1440px, 98vw)"
+          width="min(1760px, 98vw)"
           height={PO_MODAL_HEIGHT}
           zIndex={zIndex}
           showClose={!saving && !loadingForm}
