@@ -18,6 +18,7 @@ import {
 import { useFormatDate } from "@/contexts/user-settings-context";
 import { SIMPLE_PORTAL_ROOT_CLASS } from "@/lib/simple-screen-ui";
 import { nativeShareFile } from "@/lib/mobile-native-share";
+import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 
 const CATEGORY_ORDER = ["Accounting", "Operations", "Sales"];
 
@@ -63,6 +64,10 @@ export default function ReportsPanel() {
   const [viewPageSize, setViewPageSize] = useState(50);
   const [viewSortBy, setViewSortBy] = useState(null);
   const [viewSortDir, setViewSortDir] = useState("desc");
+  const [customerFilterOptions, setCustomerFilterOptions] = useState([
+    { value: "", label: "All customers" },
+  ]);
+  const [customerEmailById, setCustomerEmailById] = useState({});
   const viewOpenRef = useRef(false);
   const viewReportIdRef = useRef("");
   const viewPageSizeRef = useRef(50);
@@ -80,6 +85,36 @@ export default function ReportsPanel() {
       return { from: urlRange.from, to: urlRange.to };
     });
   }, [urlRange.from, urlRange.to]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const list = await fetchAllPaginatedDashboardItems("/api/dashboard/customers");
+        if (cancelled) return;
+        const emailMap = {};
+        const opts = [{ value: "", label: "All customers" }];
+        for (const c of Array.isArray(list) ? list : []) {
+          const id = String(c.id || c._id || "").trim();
+          if (!id) continue;
+          const label = String(c.companyName || c.name || id).trim() || id;
+          opts.push({ value: id, label });
+          const em = String(c.email || "").trim();
+          if (em) emailMap[id] = em;
+        }
+        setCustomerFilterOptions(opts);
+        setCustomerEmailById(emailMap);
+      } catch {
+        if (!cancelled) {
+          setCustomerFilterOptions([{ value: "", label: "All customers" }]);
+          setCustomerEmailById({});
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const setFilter = useCallback((reportId, key, value) => {
     setFiltersByReport((prev) => ({
@@ -459,21 +494,25 @@ export default function ReportsPanel() {
                             : "grid gap-2"
                         }
                       >
-                        {filters.map((filter) => (
-                          <label key={filter.key} className="grid min-w-0 gap-1">
-                            <span className="text-[11px] font-medium text-secondary">
-                              {filter.label}
-                            </span>
-                            <SimpleSelect
-                              aria-label={`${report.title} ${filter.label}`}
-                              options={filter.options}
-                              value={values[filter.key] ?? ""}
-                              onChange={(e) => setFilter(report.id, filter.key, e.target.value)}
-                              searchable={false}
-                              disabled={Boolean(busyId)}
-                            />
-                          </label>
-                        ))}
+                        {filters.map((filter) => {
+                          const isCustomer = filter.key === "customer";
+                          const options = isCustomer ? customerFilterOptions : filter.options;
+                          return (
+                            <label key={filter.key} className="grid min-w-0 gap-1">
+                              <span className="text-[11px] font-medium text-secondary">
+                                {filter.label}
+                              </span>
+                              <SimpleSelect
+                                aria-label={`${report.title} ${filter.label}`}
+                                options={options}
+                                value={values[filter.key] ?? ""}
+                                onChange={(e) => setFilter(report.id, filter.key, e.target.value)}
+                                searchable={isCustomer}
+                                disabled={Boolean(busyId)}
+                              />
+                            </label>
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>
@@ -507,6 +546,42 @@ export default function ReportsPanel() {
         sharing={busyId === viewReportId && busyAction === "share"}
         onDownload={viewReportId ? () => downloadReport(viewReportId) : undefined}
         onShare={viewReportId ? () => shareReportPdf(viewReportId) : undefined}
+        allowSendToCustomer={viewReportId === "invoices-ar"}
+        sendCustomerId={
+          viewReportId === "invoices-ar"
+            ? String(filtersByReport["invoices-ar"]?.customer || "").trim()
+            : ""
+        }
+        sendCustomerName={
+          viewReportId === "invoices-ar"
+            ? String(
+                customerFilterOptions.find(
+                  (o) => o.value === String(filtersByReport["invoices-ar"]?.customer || "").trim()
+                )?.label || ""
+              ).trim()
+            : ""
+        }
+        sendCustomerEmail={
+          viewReportId === "invoices-ar"
+            ? String(
+                customerEmailById[String(filtersByReport["invoices-ar"]?.customer || "").trim()] ||
+                  ""
+              ).trim()
+            : ""
+        }
+        getSendBody={
+          viewReportId === "invoices-ar"
+            ? () => {
+                const range = rangeRef.current;
+                return {
+                  report: "invoices-ar",
+                  from: range.from || "",
+                  to: range.to || "",
+                  filters: { ...(filtersByReport["invoices-ar"] || {}) },
+                };
+              }
+            : undefined
+        }
         getPrintSearchParams={
           viewReportId
             ? () => {

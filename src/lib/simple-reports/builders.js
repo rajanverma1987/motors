@@ -164,11 +164,29 @@ async function finalizeReport(sheetName, headers, rows, filenameBase, options = 
   const amountTotals = sumAmountColumns(sortedRows, amountColumns, safeHeaders.length);
 
   if (options.format === "json") {
+    const totalCount = sortedRows.length;
+    if (options.unpaginated) {
+      return {
+        buffer: null,
+        sheetName: String(sheetName || "Report"),
+        headers: safeHeaders,
+        rows: sortedRows,
+        amountColumns,
+        amountTotals,
+        rowCount: totalCount,
+        page: 1,
+        pageSize: totalCount || 1,
+        totalPages: 1,
+        sortBy,
+        sortDir,
+        defaultSortColumn,
+        filename: `${filenameBase}-${stamp}.xlsx`,
+      };
+    }
     const pageSize = Math.min(
       VIEW_MAX_PAGE_SIZE,
       Math.max(1, Number(options.pageSize) || VIEW_DEFAULT_PAGE_SIZE)
     );
-    const totalCount = sortedRows.length;
     const totalPages = Math.max(1, Math.ceil((totalCount || 1) / pageSize));
     const page = Math.min(totalPages, Math.max(1, Number(options.page) || 1));
     const start = (page - 1) * pageSize;
@@ -265,6 +283,7 @@ export async function buildSimpleReportExport(opts) {
     sortBy: opts.sortBy,
     sortDir: opts.sortDir,
     subtitle: opts.subtitle,
+    unpaginated: Boolean(opts.unpaginated),
   };
 
   switch (report) {
@@ -548,10 +567,24 @@ async function buildJobsPipeline(ownerEmail, from, to, currency, filters, report
 async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOpts = {}) {
   const docs = await loadServiceProposals(ownerEmail);
   const paymentFilter = String(filters.payment || "").toLowerCase();
+  const customerFilter = String(filters.customer || "").trim();
+  let customerCompanyLower = "";
+  if (customerFilter) {
+    try {
+      const cust = await Customer.findOne({ _id: customerFilter, createdByEmail: ownerEmail })
+        .select({ companyName: 1 })
+        .lean();
+      customerCompanyLower = String(cust?.companyName || "")
+        .trim()
+        .toLowerCase();
+    } catch {
+      customerCompanyLower = "";
+    }
+  }
   const headers = [
     "Invoice #",
+    "PO",
     "Customer",
-    "Status",
     "Payment status",
     "Date created",
     "Invoice submit date",
@@ -569,6 +602,15 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOp
   const hasRange = Boolean(toYmd(from) || toYmd(to));
   for (const doc of docs) {
     if (!isInvoiceSp(doc)) continue;
+    if (customerFilter) {
+      const docCid = String(doc.customerId || "").trim();
+      const docName = String(doc.companyName || "")
+        .trim()
+        .toLowerCase();
+      const idMatch = docCid && docCid === customerFilter;
+      const nameMatch = customerCompanyLower && docName === customerCompanyLower;
+      if (!idMatch && !nameMatch) continue;
+    }
     const money = computeSpInvoiceMoney(doc);
     const recorded = normalizeInvoicePayments(doc.payments).filter((payment) =>
       dayInRange(payment.date, from, to)
@@ -588,8 +630,8 @@ async function buildInvoicesAr(ownerEmail, from, to, currency, filters, reportOp
     const createdDay = resolveDocDay(doc, ["dateCreated", "date", "createdAt"]);
     pushReportRow(rows, sortKeys, paidDay, [
       String(doc.documentNumber || doc.quote || "").trim(),
+      String(doc.customerPo || "").trim(),
       String(doc.companyName || "").trim(),
-      String(doc.status || "").trim(),
       money.paymentStatus,
       formatReportDate(createdDay, currency),
       formatReportDate(doc.invoiceSubmitDate, currency),

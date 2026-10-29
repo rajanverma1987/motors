@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FiChevronDown, FiChevronUp, FiDownload, FiPrinter, FiShare2 } from "react-icons/fi";
+import { FiChevronDown, FiChevronUp, FiDownload, FiPrinter, FiSend, FiShare2 } from "react-icons/fi";
 import Modal from "@/components/ui/modal";
 import Button from "@/components/ui/button";
 import DocumentPrintOffscreenPortal from "@/components/dashboard/document-print-offscreen-portal";
+import SimpleReportSendModal from "@/components/simple/simple-report-send-modal";
 import { useAlert } from "@/components/confirm-provider";
 import { SIMPLE_TOOLBAR_BTN } from "@/lib/simple-typography";
 import {
@@ -145,17 +146,28 @@ export default function SimpleReportViewModal({
   sharing = false,
   /** Returns URLSearchParams for the report view API (without page). Used to print every row. */
   getPrintSearchParams,
+  allowSendToCustomer = false,
+  sendCustomerId = "",
+  sendCustomerName = "",
+  sendCustomerEmail = "",
+  /** Returns { report, from, to, filters } for send API. */
+  getSendBody,
 }) {
   const amountSet = useMemo(() => new Set(amountColumns || []), [amountColumns]);
   const [jumpPage, setJumpPage] = useState(String(page || 1));
   const [showShare, setShowShare] = useState(false);
   const [preparingPrint, setPreparingPrint] = useState(false);
   const [printPack, setPrintPack] = useState(null);
+  const [sendOpen, setSendOpen] = useState(false);
   const alert = useAlert();
 
   useEffect(() => {
     setJumpPage(String(page || 1));
   }, [page]);
+
+  useEffect(() => {
+    if (!open) setSendOpen(false);
+  }, [open]);
 
   useEffect(() => {
     setShowShare(shouldShowReportShareButton() && typeof onShare === "function");
@@ -217,6 +229,20 @@ export default function SimpleReportViewModal({
 
   const headerActions = (
     <div className="flex flex-nowrap items-center justify-end gap-1.5 sm:gap-2">
+      {allowSendToCustomer ? (
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          className={SIMPLE_TOOLBAR_BTN}
+          disabled={loading || Boolean(error) || !headers?.length}
+          onClick={() => setSendOpen(true)}
+          title="Email this report to the customer"
+        >
+          <FiSend className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Send to customer
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="primary"
@@ -475,6 +501,20 @@ export default function SimpleReportViewModal({
           amountTotals={printPack.amountTotals}
         />
       </DocumentPrintOffscreenPortal>
+    ) : null}
+    {allowSendToCustomer ? (
+      <SimpleReportSendModal
+        open={sendOpen}
+        onClose={() => setSendOpen(false)}
+        reportTitle={title || "Invoices / AR"}
+        defaultToEmail={sendCustomerEmail}
+        defaultToName={
+          sendCustomerName && sendCustomerName !== "All customers" ? sendCustomerName : ""
+        }
+        customerId={sendCustomerId}
+        getSendBody={getSendBody}
+        zIndex={140}
+      />
     ) : null}
     </>
   );

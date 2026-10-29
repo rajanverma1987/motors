@@ -50,6 +50,13 @@ export const SIMPLE_REPORT_FILTERS = {
         { value: "paid", label: "Paid" },
       ],
     },
+    {
+      key: "customer",
+      label: "Customer",
+      /** Options loaded at runtime from the customer list. */
+      allowAny: true,
+      options: [{ value: "", label: "All customers" }],
+    },
   ],
   "purchase-ap": [
     {
@@ -354,8 +361,12 @@ export function parseReportFilters(reportId, params) {
       : (key) => params?.[key];
 
   for (const def of defs) {
-    const raw = String(get(def.key) ?? "").trim();
-    const allowed = new Set(def.options.map((o) => o.value));
+    const raw = String(get(def.key) ?? "").trim().slice(0, 120);
+    if (def.allowAny) {
+      out[def.key] = raw;
+      continue;
+    }
+    const allowed = new Set((def.options || []).map((o) => o.value));
     out[def.key] = allowed.has(raw) ? raw : "";
   }
   return out;
