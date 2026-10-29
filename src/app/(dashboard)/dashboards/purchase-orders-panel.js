@@ -687,8 +687,9 @@ export default function PurchaseOrdersPanel({ createNonce = 0 }) {
     </div>
   );
 
+  /** Desktop/tablet only. Phone uses the dedicated Expenses bottom-nav tab. */
   const expensesToolbar =
-    canViewFinancials ? (
+    canViewFinancials && !isPhone ? (
       <Button
         type="button"
         variant="primary"

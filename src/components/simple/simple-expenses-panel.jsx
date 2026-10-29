@@ -23,6 +23,7 @@ import { useAlert, useConfirm } from "@/components/confirm-provider";
 import { useToast } from "@/components/toast-provider";
 import { useAuth } from "@/contexts/auth-context";
 import { useFormatDate, useFormatMoney, useUserSettings } from "@/contexts/user-settings-context";
+import { useIsPhone } from "@/hooks/use-media-query";
 import { fetchAllPaginatedDashboardItems } from "@/lib/fetch-all-paginated-dashboard-items";
 import {
   buildEmployeeSelectOptions,
@@ -36,6 +37,9 @@ import {
   SIMPLE_SCREEN_PANEL_CLASS,
   SIMPLE_SCREEN_TABLE_WRAP_CLASS,
 } from "@/lib/simple-screen-ui";
+
+const MOBILE_TAB_RECORD = "record";
+const MOBILE_TAB_LIST = "list";
 
 const FORM_ID = "simple-expense-form";
 
@@ -139,6 +143,7 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
   const alert = useAlert();
   const confirm = useConfirm();
   const toast = useToast();
+  const isPhone = useIsPhone();
   const { user } = useAuth();
   const formatDate = useFormatDate();
   const formatMoney = useFormatMoney();
@@ -160,6 +165,7 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
   const [customFrom, setCustomFrom] = useState(() => monthRangeIso().from);
   const [customTo, setCustomTo] = useState(() => todayIso());
   const [creditCardFilter, setCreditCardFilter] = useState("");
+  const [mobileTab, setMobileTab] = useState(MOBILE_TAB_RECORD);
 
   const chartRange = useMemo(() => {
     const preset = rangeForChartPeriod(chartPeriod);
@@ -289,6 +295,7 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
       amount: row.amount != null && row.amount !== "" ? String(row.amount) : "",
       notes: String(row.notes || ""),
     });
+    if (isPhone) setMobileTab(MOBILE_TAB_RECORD);
   };
 
   const handleSubmit = async (e) => {
@@ -340,6 +347,7 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
       toast.success(editingId ? "Expense updated." : "Expense recorded.");
       resetForm();
       await loadRows();
+      if (isPhone) setMobileTab(MOBILE_TAB_LIST);
     } catch (err) {
       await alert({
         title: "Error",
@@ -495,7 +503,7 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
   );
 
   const formCard = (
-    <div className="rounded-sm border border-border bg-card p-4">
+    <div className={`rounded-sm border border-border bg-card ${isPhone ? "p-3" : "p-4"}`}>
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-xs font-bold uppercase tracking-wide text-secondary">
           {form.id ? "Edit expense" : "Record expense"}
@@ -511,13 +519,35 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
         onSubmit={handleSubmit}
         className="flex flex-col gap-3 !space-y-0 !border-0 !bg-transparent !p-0 !shadow-none"
       >
-        <Input
-          label="Date *"
-          type="date"
-          value={form.expenseDate}
-          onChange={(e) => patch("expenseDate", e.target.value)}
-          required
-        />
+        {isPhone ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label="Date *"
+              type="date"
+              value={form.expenseDate}
+              onChange={(e) => patch("expenseDate", e.target.value)}
+              required
+            />
+            <Input
+              label="Amount *"
+              type="text"
+              inputMode="decimal"
+              value={form.amount}
+              onChange={(e) => patch("amount", e.target.value)}
+              placeholder="0.00"
+              required
+              inputClassName="text-right tabular-nums"
+            />
+          </div>
+        ) : (
+          <Input
+            label="Date *"
+            type="date"
+            value={form.expenseDate}
+            onChange={(e) => patch("expenseDate", e.target.value)}
+            required
+          />
+        )}
         <div className="min-w-0">
           <label className="mb-1 block text-sm text-title" htmlFor="simple-expense-category">
             Category *
@@ -531,13 +561,15 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
             searchable
             aria-label="Category"
           />
-          <p className="mt-1 text-xs text-secondary">
-            Manage categories in Settings → Dropdowns → Expense category.
-          </p>
+          {!isPhone ? (
+            <p className="mt-1 text-xs text-secondary">
+              Manage categories in Settings → Dropdowns → Expense category.
+            </p>
+          ) : null}
         </div>
         <div className="min-w-0">
           <label className="mb-1 block text-sm text-title" htmlFor="simple-expense-credit-card">
-            Credit card number
+            Credit card
           </label>
           <SimpleSelect
             id="simple-expense-credit-card"
@@ -546,11 +578,13 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
             onChange={(e) => patch("creditCardNumber", e.target.value)}
             placeholder="Select credit card…"
             searchable
-            aria-label="Credit card number"
+            aria-label="Credit card"
           />
-          <p className="mt-1 text-xs text-secondary">
-            Manage cards in Settings → Dropdowns → Credit card number.
-          </p>
+          {!isPhone ? (
+            <p className="mt-1 text-xs text-secondary">
+              Manage cards in Settings → Dropdowns → Credit card number.
+            </p>
+          ) : null}
         </div>
         <div className="min-w-0">
           <label className="mb-1 block text-sm text-title" htmlFor="simple-expense-employee">
@@ -566,23 +600,31 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
             aria-label="Employee"
           />
         </div>
-        <Input
-          label="Amount *"
-          type="text"
-          inputMode="decimal"
-          value={form.amount}
-          onChange={(e) => patch("amount", e.target.value)}
-          placeholder="0.00"
-          required
-          inputClassName="text-right tabular-nums"
-        />
+        {!isPhone ? (
+          <Input
+            label="Amount *"
+            type="text"
+            inputMode="decimal"
+            value={form.amount}
+            onChange={(e) => patch("amount", e.target.value)}
+            placeholder="0.00"
+            required
+            inputClassName="text-right tabular-nums"
+          />
+        ) : null}
         <Textarea
           label="Notes"
           value={form.notes}
           onChange={(e) => patch("notes", e.target.value)}
-          rows={3}
+          rows={isPhone ? 2 : 3}
         />
-        <Button type="submit" form={FORM_ID} variant="primary" disabled={saving} className="w-full">
+        <Button
+          type="submit"
+          form={FORM_ID}
+          variant="primary"
+          disabled={saving}
+          className={`w-full ${isPhone ? "!min-h-11 !text-base" : ""}`}
+        >
           {saving ? "Saving…" : form.id ? "Update expense" : "Save expense"}
         </Button>
       </Form>
@@ -590,32 +632,25 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
   );
 
   const dateFilterBar = (
-    <div className="flex shrink-0 flex-nowrap items-end gap-2 overflow-x-auto border-b border-border pb-2">
-      <div
-        className="inline-grid shrink-0 grid-cols-4 gap-1 border border-border bg-[hsl(var(--form-bg))] p-0.5"
-        role="group"
-        aria-label="Expense date range"
-      >
-        {CHART_PERIOD_OPTIONS.map((opt) => {
-          const active = chartPeriod === opt.value;
-          return (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => setChartPeriod(opt.value)}
-              className={`min-h-8 px-2 text-[11px] font-semibold whitespace-nowrap sm:text-xs ${
-                active
-                  ? "bg-primary text-white"
-                  : "bg-transparent text-secondary hover:bg-primary/10 hover:text-primary"
-              }`}
-              aria-pressed={active}
-            >
-              {opt.label}
-            </button>
-          );
-        })}
+    <div
+      className={`flex shrink-0 gap-2 border-b border-border pb-2 ${
+        isPhone ? "flex-col items-stretch" : "flex-wrap items-end"
+      }`}
+    >
+      <div className={isPhone ? "w-full min-w-0" : "w-[11.5rem] shrink-0"}>
+        <label className="mb-1 block text-xs text-title" htmlFor="simple-expense-period-filter">
+          Date range
+        </label>
+        <SimpleSelect
+          id="simple-expense-period-filter"
+          options={CHART_PERIOD_OPTIONS}
+          value={chartPeriod}
+          onChange={(e) => setChartPeriod(e.target.value)}
+          searchable={false}
+          aria-label="Date range"
+        />
       </div>
-      <div className="w-[13rem] shrink-0">
+      <div className={isPhone ? "w-full min-w-0" : "w-[13rem] shrink-0"}>
         <label className="mb-1 block text-xs text-title" htmlFor="simple-expense-card-filter">
           Credit card
         </label>
@@ -630,27 +665,31 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
         />
       </div>
       {chartPeriod === CHART_PERIOD_CUSTOM ? (
-        <>
+        <div className={`flex gap-2 ${isPhone ? "w-full" : ""}`}>
           <Input
             label="From"
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="w-[9.5rem] shrink-0"
+            className={isPhone ? "min-w-0 flex-1" : "w-[9.5rem] shrink-0"}
           />
           <Input
             label="To"
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="w-[9.5rem] shrink-0"
+            className={isPhone ? "min-w-0 flex-1" : "w-[9.5rem] shrink-0"}
           />
-        </>
+        </div>
       ) : null}
-      <p className="mb-1.5 ml-auto shrink-0 whitespace-nowrap text-xs text-secondary sm:text-sm">
+      <p
+        className={`text-xs text-secondary sm:text-sm ${
+          isPhone ? "pt-0.5" : "mb-1.5 ml-auto shrink-0 whitespace-nowrap"
+        }`}
+      >
         {filteredRows.length} ·{" "}
         <span className="font-semibold tabular-nums text-title">{formatMoney(chartTotal)}</span>
-        {chartRange.from || chartRange.to ? (
+        {!isPhone && (chartRange.from || chartRange.to) ? (
           <span>
             {" "}
             · {chartRange.from ? formatDate(chartRange.from) : "…"} to{" "}
@@ -742,13 +781,128 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
     </div>
   );
 
-  const body = (
+  const phoneList = (
+    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden">
+      {dateFilterBar}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+        {loading ? (
+          <p className="py-8 text-center text-sm text-secondary">Loading…</p>
+        ) : filteredRows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-secondary">
+            {creditCardFilter
+              ? "No expenses for this credit card in the selected date range."
+              : "No expenses in this date range."}
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2 pb-2">
+            {filteredRows.map((row) => {
+              const emp =
+                String(row.employeeName || "").trim() ||
+                resolveEmployeeDisplayName(employeesWithAdmin, row.employeeId) ||
+                "";
+              return (
+                <li
+                  key={row.id}
+                  className="rounded-sm border border-border bg-card p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold text-title">
+                        {String(row.category || "").trim() || "Expense"}
+                      </p>
+                      <p className="mt-0.5 text-xs text-secondary">
+                        {row.expenseDate ? formatDate(row.expenseDate) : "-"}
+                        {String(row.creditCardNumber || "").trim()
+                          ? ` · ${String(row.creditCardNumber).trim()}`
+                          : ""}
+                      </p>
+                      {emp ? <p className="mt-0.5 text-xs text-secondary">{emp}</p> : null}
+                      {String(row.notes || "").trim() ? (
+                        <p className="mt-1 line-clamp-2 text-xs text-secondary">
+                          {String(row.notes).trim()}
+                        </p>
+                      ) : null}
+                    </div>
+                    <p className="shrink-0 text-base font-bold tabular-nums text-title">
+                      {formatMoney(row.amount)}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-end gap-1 border-t border-border pt-2">
+                    <button
+                      type="button"
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-sm text-primary hover:bg-primary/10"
+                      title="Edit"
+                      aria-label="Edit expense"
+                      onClick={() => startEdit(row)}
+                    >
+                      <FiEdit2 className="h-5 w-5" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-sm text-danger hover:bg-danger/10"
+                      title="Delete"
+                      aria-label="Delete expense"
+                      onClick={() => void handleDelete(row)}
+                    >
+                      <FiTrash2 className="h-5 w-5" aria-hidden />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+
+  const phoneBody = (
+    <div className={`flex h-full min-h-0 flex-1 flex-col gap-3 ${className}`}>
+      <div
+        className="grid shrink-0 grid-cols-2 gap-1 border border-border bg-[hsl(var(--form-bg))] p-0.5"
+        role="tablist"
+        aria-label="Expenses sections"
+      >
+        {[
+          { id: MOBILE_TAB_RECORD, label: "Record" },
+          { id: MOBILE_TAB_LIST, label: "History" },
+        ].map((tab) => {
+          const active = mobileTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setMobileTab(tab.id)}
+              className={`min-h-10 px-3 text-sm font-bold ${
+                active ? "bg-primary text-white" : "bg-transparent text-secondary"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {mobileTab === MOBILE_TAB_RECORD ? (
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain pb-2">
+            {formCard}
+          </div>
+        ) : (
+          phoneList
+        )}
+      </div>
+    </div>
+  );
+
+  const desktopBody = (
     <div
       className={`grid h-full min-h-0 flex-1 grid-cols-1 gap-4 xl:grid-cols-[minmax(26rem,38rem)_minmax(0,2fr)] xl:items-stretch ${className}`}
     >
       <div className="flex min-h-0 min-w-0 flex-col gap-4 overflow-y-auto xl:max-h-full">
         {formCard}
-        {chartCard}
+        <div className="hidden xl:block">{chartCard}</div>
       </div>
       <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
         {tableCard}
@@ -756,13 +910,15 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
     </div>
   );
 
+  const body = isPhone ? phoneBody : desktopBody;
+
   if (presentation === "embedded") {
     return body;
   }
 
   return (
     <div className={`${SIMPLE_SCREEN_PANEL_CLASS} flex min-h-0 flex-1 flex-col gap-3 overflow-hidden`}>
-      <div className="hidden shrink-0 border-b border-border pb-3 sm:block">
+      <div className="hidden shrink-0 border-b border-border pb-3 md:block">
         <h2 className="text-lg font-bold text-title">Expenses</h2>
         <p className="mt-1 text-sm text-secondary">
           Record other shop expenses by category. Categories are managed in Settings → Dropdowns.
@@ -777,14 +933,16 @@ export default function SimpleExpensesPanel({ presentation = "panel", className 
  * Modal wrapper used from Purchase / Payable toolbar.
  */
 export function SimpleExpensesModal({ open, onClose, zIndex = 120 }) {
+  const isPhone = useIsPhone();
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Record Expenses"
       size="7xl"
-      width="min(1680px, 98vw)"
-      height="90vh"
+      fullscreen={isPhone}
+      width={isPhone ? undefined : "min(1680px, 98vw)"}
+      height={isPhone ? undefined : "90vh"}
       zIndex={zIndex}
       showClose
       closeOnOutsideClick={false}
