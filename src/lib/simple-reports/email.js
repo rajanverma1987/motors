@@ -107,10 +107,8 @@ export function buildSimpleReportCustomerEmailHtml(opts) {
   const idxPo = headerIndex(headers, "PO");
   const idxCustomer = headerIndex(headers, "Customer");
   const idxPayStatus = headerIndex(headers, "Payment status");
+  const idxSentDate = headerIndex(headers, "Invoice submit date");
   const idxDue = headerIndex(headers, "Due date");
-  const idxPaidDate = headerIndex(headers, "Invoice paid date");
-  const idxGrand = headerIndex(headers, "Grand total");
-  const idxPaid = headerIndex(headers, "Paid");
   const idxUnpaid = headerIndex(headers, "Unpaid");
 
   const customBlock = customMessage
@@ -129,10 +127,8 @@ export function buildSimpleReportCustomerEmailHtml(opts) {
       const po = formatCell(row?.[idxPo], false);
       const customer = formatCell(row?.[idxCustomer], false);
       const payStatus = formatCell(row?.[idxPayStatus], false);
+      const sentDate = formatCell(row?.[idxSentDate], false);
       const due = formatCell(row?.[idxDue], false);
-      const paidDate = formatCell(row?.[idxPaidDate], false);
-      const grand = formatCell(row?.[idxGrand], true);
-      const paid = formatCell(row?.[idxPaid], true);
       const unpaid = formatCell(row?.[idxUnpaid], true);
       const bg = i % 2 === 1 ? "background:#fafafa;" : "background:#ffffff;";
 
@@ -141,10 +137,8 @@ export function buildSimpleReportCustomerEmailHtml(opts) {
         ${td(po)}
         ${td(customer)}
         ${td(payStatus)}
+        ${td(sentDate)}
         ${td(due)}
-        ${td(paidDate)}
-        ${td(grand, { align: "right", strong: true })}
-        ${td(paid, { align: "right" })}
         ${td(unpaid, { align: "right", strong: true })}
       </tr>`;
     })
@@ -153,9 +147,7 @@ export function buildSimpleReportCustomerEmailHtml(opts) {
   const totalsRow =
     rows.length > 0
       ? `<tr style="background:#faf6f2">
-          <td colspan="6" style="padding:8px 10px;border:1px solid #d1d5db;font-size:13px;font-weight:700;color:#9a5d33;text-align:right">Grand totals</td>
-          ${td(formatCell(amountTotals[idxGrand] ?? 0, true), { align: "right", strong: true })}
-          ${td(formatCell(amountTotals[idxPaid] ?? 0, true), { align: "right", strong: true })}
+          <td colspan="6" style="padding:8px 10px;border:1px solid #d1d5db;font-size:13px;font-weight:700;color:#9a5d33;text-align:right">Total</td>
           ${td(formatCell(amountTotals[idxUnpaid] ?? 0, true), { align: "right", strong: true })}
         </tr>`
       : "";
@@ -169,11 +161,9 @@ export function buildSimpleReportCustomerEmailHtml(opts) {
               ${th("PO")}
               ${th("Customer")}
               ${th("Payment status")}
+              ${th("Invoice sent date")}
               ${th("Due date")}
-              ${th("Paid date")}
-              ${th("Grand total", { align: "right" })}
-              ${th("Paid", { align: "right" })}
-              ${th("Unpaid", { align: "right" })}
+              ${th("Unpaid Invoice Amount", { align: "right" })}
             </tr>
           </thead>
           <tbody>

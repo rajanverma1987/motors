@@ -339,7 +339,7 @@ function LineItemsTable({
   return (
     <div className="flex min-h-[16rem] min-w-0 max-w-full flex-1 flex-col overflow-hidden bg-card">
       <div className="mt-[10px] flex h-9 min-w-0 items-center justify-between gap-2 bg-transparent px-2">
-        <h4 className="min-w-0 truncate text-sm font-bold uppercase tracking-wide text-black dark:text-title">
+        <h4 className="min-w-0 truncate text-sm font-bold uppercase tracking-wide text-title dark:text-white">
           {title}
         </h4>
         {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
