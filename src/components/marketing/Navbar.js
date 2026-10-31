@@ -26,19 +26,22 @@ function isNavActive(pathname, href) {
   return pathname === base || pathname.startsWith(`${base}/`);
 }
 
-function ProductNavLink({ href, label, pathname, className = "", onClick }) {
+function ProductNavLink({ href, label, pathname, className = "", onClick, truncate = false }) {
   const active = isNavActive(pathname, href);
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`inline-flex min-h-11 items-center whitespace-normal rounded-md border px-3 py-2.5 text-left text-sm font-semibold leading-snug transition-colors touch-manipulation sm:whitespace-nowrap ${
+      title={label}
+      className={`inline-flex min-h-11 max-w-full items-center rounded-md border px-3 py-2.5 text-left text-sm font-semibold leading-snug transition-colors touch-manipulation ${
+        truncate ? "overflow-hidden whitespace-nowrap" : "whitespace-normal sm:whitespace-nowrap"
+      } ${
         active
           ? "border-primary bg-primary/15 text-primary shadow-sm"
           : "border-primary/35 bg-primary/10 text-primary hover:border-primary/50 hover:bg-primary/15"
       } ${className}`.trim()}
     >
-      {label}
+      <span className={truncate ? "min-w-0 truncate" : undefined}>{label}</span>
     </Link>
   );
 }
@@ -105,8 +108,8 @@ export default function Navbar() {
             Formerly known as IQMotorBase. Same product, new name: 3PhaseFlow.
           </p>
         </div>
-        <div className="mx-auto flex h-14 max-w-[86.4rem] items-center justify-between gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 md:h-[4.25rem] md:min-h-[4.5rem] md:gap-6 md:px-6">
-          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3 md:gap-4">
+        <div className="mx-auto flex h-14 max-w-[86.4rem] items-center justify-between gap-2 overflow-hidden px-3 sm:h-16 sm:gap-3 sm:px-4 md:h-[4.25rem] md:min-h-[4.5rem] md:gap-4 md:px-6 lg:gap-6">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden sm:gap-3 md:gap-4">
             <Link
               href="/"
               className="min-w-0 shrink-0 touch-manipulation transition-opacity hover:opacity-90"
@@ -115,21 +118,23 @@ export default function Navbar() {
               <BrandLogo
                 plain
                 priority
-                className="h-[1.5rem] w-auto max-w-[min(100%,9rem)] object-contain object-left sm:h-[1.625rem] sm:max-w-[min(100%,10rem)] md:h-[2.43rem] md:max-w-[min(100%,238px)]"
+                className="h-[1.5rem] w-auto max-w-[min(100%,9rem)] object-contain object-left sm:h-[1.625rem] sm:max-w-[min(100%,10rem)] md:h-[2.1rem] md:max-w-[min(100%,11.5rem)] lg:h-[2.43rem] lg:max-w-[min(100%,238px)]"
               />
             </Link>
-            <div className="hidden min-w-0 sm:block md:max-w-[min(100%,20rem)] lg:max-w-none">
+            {/* Long product chip only when there is room; always in the drawer below lg */}
+            <div className="hidden min-w-0 max-w-[11rem] xl:max-w-[16rem] 2xl:max-w-none lg:block">
               <ProductNavLink
                 href={productNav.href}
                 label={productNav.label}
                 pathname={pathname}
+                truncate
                 className="max-w-full"
               />
             </div>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-2 sm:gap-3 md:flex">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 md:gap-3">
+            <div className="hidden items-center gap-1.5 sm:gap-2 md:gap-3 lg:flex">
               {mounted && user ? (
                 <Link
                   href={dashboardHref}
@@ -147,21 +152,21 @@ export default function Navbar() {
                   </Link>
                   <Link
                     href="/contact"
-                    className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-3 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg"
+                    className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md border border-border bg-transparent px-2.5 py-2 text-sm font-medium text-text transition-colors hover:border-primary/30 hover:bg-form-bg xl:px-3"
                   >
                     Contact us
                   </Link>
                 </>
               )}
               <NavTextLink href="/pricing" label="Pricing" pathname={pathname} />
-              <DemoBookingLink className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92">
+              <DemoBookingLink className="inline-flex min-h-11 items-center whitespace-nowrap rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-92 xl:px-4">
                 Book a free demo
               </DemoBookingLink>
             </div>
             <button
               type="button"
               onClick={() => setMobileOpen((o) => !o)}
-              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-md border border-border text-title transition-colors hover:bg-form-bg md:hidden"
+              className="flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-md border border-border text-title transition-colors hover:bg-form-bg lg:hidden"
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
               aria-controls="marketing-mobile-drawer"
@@ -172,7 +177,7 @@ export default function Navbar() {
         </div>
       </header>
 
-      <div className="md:hidden">
+      <div className="lg:hidden">
         <div
           className={`fixed inset-0 z-[100] bg-black/40 backdrop-blur-[1px] transition-opacity duration-200 ${
             mobileOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
